@@ -16,6 +16,7 @@ public partial class PaintOverlayWindow : Window
     private Shape? _activeShape;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
+    private readonly Stack<StrokeCollection> _strokeHistory = new();
 
     public PaintOverlayWindow()
     {
@@ -24,7 +25,7 @@ public partial class PaintOverlayWindow : Window
         InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
         InkLayer.EraserShape = new RectangleStylusShape(24, 24);
-        InkLayer.StrokeCollected += (_, _) => { };
+        InkLayer.StrokeCollected += OnStrokeCollected;
         InkLayer.MouseLeftButtonDown += OnMouseDown;
         InkLayer.MouseMove += OnMouseMove;
         InkLayer.MouseLeftButtonUp += OnMouseUp;
@@ -91,9 +92,11 @@ public partial class PaintOverlayWindow : Window
     {
         InkLayer.Strokes.Clear();
         ShapeCanvas.Children.Clear();
+        _strokeHistory.Clear();
     }
 
     public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
+    public byte CurrentBrushOpacity => InkLayer.DefaultDrawingAttributes.Color.A;
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -145,6 +148,56 @@ public partial class PaintOverlayWindow : Window
                 : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
             _presentationService.TrySendForeground(command, _presentationOptions);
         }
+    }
+
+    public void Undo()
+    {
+        if (_strokeHistory.Count == 0)
+        {
+            return;
+        }
+        var snapshot = _strokeHistory.Pop();
+        InkLayer.Strokes.Clear();
+        InkLayer.Strokes.Add(snapshot);
+    }
+
+    public void SetBrushOpacity(byte opacity)
+    {
+        var current = InkLayer.DefaultDrawingAttributes;
+        var color = current.Color;
+        color.A = opacity;
+        current.Color = color;
+        InkLayer.DefaultDrawingAttributes = current;
+    }
+
+    public void SetBoardOpacity(byte opacity)
+    {
+        if (OverlayRoot.Background is SolidColorBrush brush)
+        {
+            var color = brush.Color;
+            color.A = opacity;
+            brush.Color = color;
+        }
+    }
+
+    public void UpdateWpsMode(string mode)
+    {
+        _presentationOptions.Strategy = mode switch
+        {
+            "raw" => ClassroomToolkit.Interop.Presentation.InputStrategy.Raw,
+            "message" => ClassroomToolkit.Interop.Presentation.InputStrategy.Message,
+            _ => ClassroomToolkit.Interop.Presentation.InputStrategy.Auto
+        };
+    }
+
+    public void UpdateWpsWheelMapping(bool enabled)
+    {
+        _presentationOptions.WheelAsKey = enabled;
+    }
+
+    private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
+    {
+        _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
     }
 
     private static DrawingAttributes BuildDrawingAttributes(MediaColor color, double size, byte opacity)

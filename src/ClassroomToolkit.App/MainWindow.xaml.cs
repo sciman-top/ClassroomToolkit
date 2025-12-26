@@ -62,11 +62,16 @@ public partial class MainWindow : Window
         _toolbarWindow = new Paint.PaintToolbarWindow();
         _toolbarWindow.ModeChanged += mode => _overlayWindow.SetMode(mode);
         _toolbarWindow.ShapeTypeChanged += type => _overlayWindow.SetShapeType(type);
-        _toolbarWindow.BrushColorChanged += color => _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, 255);
+        _toolbarWindow.BrushColorChanged += color => _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
         _toolbarWindow.BoardColorChanged += color => _overlayWindow.SetBoardColor(color);
-        _toolbarWindow.BrushSizeChanged += size => _overlayWindow.SetBrush(_overlayWindow.CurrentBrushColor, size, 255);
+        _toolbarWindow.BrushSizeChanged += size => _overlayWindow.SetBrush(_overlayWindow.CurrentBrushColor, size, _overlayWindow.CurrentBrushOpacity);
         _toolbarWindow.EraserSizeChanged += size => _overlayWindow.SetEraserSize(size);
         _toolbarWindow.ClearRequested += () => _overlayWindow.ClearAll();
+        _toolbarWindow.UndoRequested += () => _overlayWindow.Undo();
+        _toolbarWindow.BrushOpacityChanged += opacity => _overlayWindow.SetBrushOpacity(opacity);
+        _toolbarWindow.BoardOpacityChanged += opacity => _overlayWindow.SetBoardOpacity(opacity);
+        _toolbarWindow.WpsModeChanged += mode => _overlayWindow.UpdateWpsMode(mode);
+        _toolbarWindow.WpsWheelMappingChanged += enabled => _overlayWindow.UpdateWpsWheelMapping(enabled);
 
         _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(Colors.Red, 12, 255);

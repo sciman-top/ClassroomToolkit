@@ -12,6 +12,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
@@ -20,6 +21,7 @@
                           behaviors:LongPressBehavior.Command="{Binding OpenBrushColorCommand}" />
             <ToggleButton x:Name="EraserButton" Content="橡皮" Width="60" Margin="4" Click="OnModeClick" />
             <ToggleButton x:Name="ShapeButton" Content="形状" Width="60" Margin="4" Click="OnModeClick" />
+            <Button Content="撤销" Width="60" Margin="4" Click="OnUndoClick" />
             <Button Content="清空" Width="60" Margin="4" Click="OnClearClick" />
             <ToggleButton x:Name="BoardButton" Content="白板" Width="60" Margin="4" Click="OnBoardClick"
                           behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" />
@@ -32,11 +34,20 @@
             <Slider x:Name="EraserSizeSlider" Minimum="6" Maximum="60" Width="120" ValueChanged="OnEraserSizeChanged" />
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+            <TextBlock Text="透明度" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <Slider x:Name="BrushOpacitySlider" Minimum="10" Maximum="255" Width="120" ValueChanged="OnBrushOpacityChanged" />
+            <TextBlock Text="白板透明" VerticalAlignment="Center" Margin="12,0,8,0" />
+            <Slider x:Name="BoardOpacitySlider" Minimum="0" Maximum="255" Width="120" ValueChanged="OnBoardOpacityChanged" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
             <ComboBox x:Name="ShapeCombo" Width="120" SelectionChanged="OnShapeChanged" Margin="0,0,8,0" />
             <Button Content="黑" Width="40" Margin="4" Click="OnColorClick" Tag="#000000" />
             <Button Content="红" Width="40" Margin="4" Click="OnColorClick" Tag="#FF0000" />
             <Button Content="蓝" Width="40" Margin="4" Click="OnColorClick" Tag="#1E90FF" />
+            <ComboBox x:Name="WpsModeCombo" Width="120" Margin="8,0,0,0" SelectionChanged="OnWpsModeChanged" />
+            <CheckBox x:Name="WpsWheelCheck" Content="滚轮翻页" Margin="8,0,0,0" Checked="OnWpsWheelChanged" Unchecked="OnWpsWheelChanged" />
         </StackPanel>
     </Grid>
 </Window>

@@ -18,6 +18,11 @@ public partial class PaintToolbarWindow : Window
     public event Action<double>? BrushSizeChanged;
     public event Action<double>? EraserSizeChanged;
     public event Action? ClearRequested;
+    public event Action? UndoRequested;
+    public event Action<byte>? BrushOpacityChanged;
+    public event Action<byte>? BoardOpacityChanged;
+    public event Action<string>? WpsModeChanged;
+    public event Action<bool>? WpsWheelMappingChanged;
 
     public ICommand OpenBrushColorCommand { get; }
     public ICommand OpenBoardColorCommand { get; }
@@ -44,6 +49,11 @@ public partial class PaintToolbarWindow : Window
         ShapeCombo.SelectedIndex = 0;
         BrushSizeSlider.Value = 12;
         EraserSizeSlider.Value = 24;
+        BrushOpacitySlider.Value = 255;
+        BoardOpacitySlider.Value = 0;
+        WpsModeCombo.ItemsSource = new[] { "auto", "raw", "message" };
+        WpsModeCombo.SelectedIndex = 0;
+        WpsWheelCheck.IsChecked = true;
     }
 
     private void OnModeClick(object sender, RoutedEventArgs e)
@@ -92,6 +102,11 @@ public partial class PaintToolbarWindow : Window
         ClearRequested?.Invoke();
     }
 
+    private void OnUndoClick(object sender, RoutedEventArgs e)
+    {
+        UndoRequested?.Invoke();
+    }
+
     private void OnBoardClick(object sender, RoutedEventArgs e)
     {
         if (BoardButton.IsChecked == true)
@@ -102,6 +117,29 @@ public partial class PaintToolbarWindow : Window
         {
             BoardColorChanged?.Invoke(Colors.Transparent);
         }
+    }
+
+    private void OnBrushOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        BrushOpacityChanged?.Invoke((byte)Math.Clamp((int)e.NewValue, 10, 255));
+    }
+
+    private void OnBoardOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        BoardOpacityChanged?.Invoke((byte)Math.Clamp((int)e.NewValue, 0, 255));
+    }
+
+    private void OnWpsModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (WpsModeCombo.SelectedItem is string mode)
+        {
+            WpsModeChanged?.Invoke(mode);
+        }
+    }
+
+    private void OnWpsWheelChanged(object sender, RoutedEventArgs e)
+    {
+        WpsWheelMappingChanged?.Invoke(WpsWheelCheck.IsChecked == true);
     }
 
     private void ResetModeButtons(ToggleButton active)
