@@ -11,7 +11,7 @@ public sealed class PresentationControlPlannerTests
     {
         var classifier = new PresentationClassifier();
         var planner = new PresentationControlPlanner(classifier);
-        var info = new PresentationWindowInfo("wpspresentation.exe", new[] { "wpsshowframe" });
+        var info = new PresentationWindowInfo(123, "wpspresentation.exe", new[] { "wpsshowframe" });
         var options = new PresentationControlOptions { Strategy = InputStrategy.Auto, WheelAsKey = true };
 
         var plan = planner.Plan(info, options, PresentationCommand.Next);
@@ -27,7 +27,7 @@ public sealed class PresentationControlPlannerTests
     {
         var classifier = new PresentationClassifier();
         var planner = new PresentationControlPlanner(classifier);
-        var info = new PresentationWindowInfo("powerpnt.exe", new[] { "screenclass" });
+        var info = new PresentationWindowInfo(456, "powerpnt.exe", new[] { "screenclass" });
         var options = new PresentationControlOptions { Strategy = InputStrategy.Auto };
 
         var plan = planner.Plan(info, options, PresentationCommand.Next);
@@ -42,7 +42,7 @@ public sealed class PresentationControlPlannerTests
     {
         var classifier = new PresentationClassifier();
         var planner = new PresentationControlPlanner(classifier);
-        var info = new PresentationWindowInfo("wpspresentation.exe", new[] { "wpsshowframe" });
+        var info = new PresentationWindowInfo(789, "wpspresentation.exe", new[] { "wpsshowframe" });
         var options = new PresentationControlOptions { Strategy = InputStrategy.Raw };
 
         var plan = planner.Plan(info, options, PresentationCommand.Next);
@@ -56,7 +56,7 @@ public sealed class PresentationControlPlannerTests
     {
         var classifier = new PresentationClassifier();
         var planner = new PresentationControlPlanner(classifier);
-        var info = new PresentationWindowInfo("wpspresentation.exe", new[] { "wpsshowframe" });
+        var info = new PresentationWindowInfo(789, "wpspresentation.exe", new[] { "wpsshowframe" });
         var options = new PresentationControlOptions { Strategy = InputStrategy.Auto, AllowWps = false };
 
         var plan = planner.Plan(info, options, PresentationCommand.Next);

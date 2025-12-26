@@ -22,6 +22,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private readonly TimerEngine _timerEngine = new();
     private int _timerMinutes = 5;
     private int _timerSeconds;
+    private string _remotePresenterKey = "tab";
 
     public RollCallViewModel(string dataPath)
     {
@@ -69,6 +70,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         get => _timeDisplay;
         private set => SetField(ref _timeDisplay, value);
+    }
+
+    public string RemotePresenterKey
+    {
+        get => _remotePresenterKey;
+        set => SetField(ref _remotePresenterKey, value);
     }
 
     public int TimerMinutes => _timerMinutes;
@@ -189,6 +196,11 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         var json = RollStateSerializer.SerializeWorkbookStates(states);
         var store = new StudentWorkbookStore();
         store.Save(_workbook, _dataPath, json);
+    }
+
+    public void SetRemotePresenterKey(string value)
+    {
+        RemotePresenterKey = string.IsNullOrWhiteSpace(value) ? "tab" : value.Trim().ToLowerInvariant();
     }
 
     private void RefreshGroups()

@@ -9,6 +9,8 @@ public sealed class PresentationControlService
     private readonly IInputSender _inputSender;
     private readonly Win32PresentationResolver _resolver;
     private DateTime _lastWpsCommand = DateTime.MinValue;
+    private PresentationTarget _lastTarget = PresentationTarget.Empty;
+    private readonly uint _currentProcessId;
 
     public PresentationControlService(
         PresentationControlPlanner planner,
@@ -20,11 +22,16 @@ public sealed class PresentationControlService
         _mapper = mapper;
         _inputSender = inputSender;
         _resolver = resolver;
+        _currentProcessId = (uint)Environment.ProcessId;
     }
 
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
     {
         var target = _resolver.ResolveForeground();
+        if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
+        {
+            target = _lastTarget;
+        }
         if (!target.IsValid)
         {
             return false;
@@ -45,9 +52,13 @@ public sealed class PresentationControlService
         }
         var binding = _mapper.Map(plan.TargetType, command);
         var sent = _inputSender.SendKey(target.Handle, binding.Key, binding.Modifiers, plan.Strategy);
-        if (sent && plan.TargetType == PresentationType.Wps)
+        if (sent)
         {
-            _lastWpsCommand = DateTime.UtcNow;
+            _lastTarget = target;
+            if (plan.TargetType == PresentationType.Wps)
+            {
+                _lastWpsCommand = DateTime.UtcNow;
+            }
         }
         return sent;
     }

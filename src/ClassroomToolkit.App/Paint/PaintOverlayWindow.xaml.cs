@@ -12,6 +12,8 @@ public partial class PaintOverlayWindow : Window
     private bool _isDrawingShape;
     private Point _shapeStart;
     private Shape? _activeShape;
+    private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
+    private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
 
     public PaintOverlayWindow()
     {
@@ -24,6 +26,21 @@ public partial class PaintOverlayWindow : Window
         InkLayer.MouseLeftButtonDown += OnMouseDown;
         InkLayer.MouseMove += OnMouseMove;
         InkLayer.MouseLeftButtonUp += OnMouseUp;
+        MouseWheel += OnMouseWheel;
+
+        var classifier = new ClassroomToolkit.Interop.Presentation.PresentationClassifier();
+        var planner = new ClassroomToolkit.Services.Presentation.PresentationControlPlanner(classifier);
+        var mapper = new ClassroomToolkit.Services.Presentation.PresentationCommandMapper();
+        var sender = new ClassroomToolkit.Interop.Presentation.Win32InputSender();
+        var resolver = new ClassroomToolkit.Interop.Presentation.Win32PresentationResolver();
+        _presentationService = new ClassroomToolkit.Services.Presentation.PresentationControlService(planner, mapper, sender, resolver);
+        _presentationOptions = new ClassroomToolkit.Services.Presentation.PresentationControlOptions
+        {
+            Strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Auto,
+            WheelAsKey = true,
+            AllowOffice = true,
+            AllowWps = true
+        };
     }
 
     public void SetMode(PaintToolMode mode)
@@ -114,6 +131,17 @@ public partial class PaintOverlayWindow : Window
         {
             _isDrawingShape = false;
             _activeShape = null;
+        }
+    }
+
+    private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (_mode == PaintToolMode.Cursor || _mode == PaintToolMode.Brush || _mode == PaintToolMode.Shape || _mode == PaintToolMode.Eraser)
+        {
+            var command = e.Delta < 0
+                ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
+                : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
+            _presentationService.TrySendForeground(command, _presentationOptions);
         }
     }
 

@@ -17,8 +17,9 @@ public sealed class Win32PresentationResolver
             return PresentationTarget.Empty;
         }
         var className = GetClassName(hwnd);
-        var processName = GetProcessName(hwnd);
-        var info = new PresentationWindowInfo(processName, string.IsNullOrWhiteSpace(className)
+        var processId = GetProcessId(hwnd);
+        var processName = GetProcessName(processId);
+        var info = new PresentationWindowInfo(processId, processName, string.IsNullOrWhiteSpace(className)
             ? Array.Empty<string>()
             : new[] { className });
         return new PresentationTarget(hwnd, info);
@@ -31,16 +32,21 @@ public sealed class Win32PresentationResolver
         return length > 0 ? builder.ToString() : string.Empty;
     }
 
-    private static string GetProcessName(IntPtr hwnd)
+    private static uint GetProcessId(IntPtr hwnd)
     {
         NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
-        if (pid == 0)
+        return pid;
+    }
+
+    private static string GetProcessName(uint processId)
+    {
+        if (processId == 0)
         {
             return string.Empty;
         }
         try
         {
-            using var process = Process.GetProcessById((int)pid);
+            using var process = Process.GetProcessById((int)processId);
             return process.ProcessName + ".exe";
         }
         catch

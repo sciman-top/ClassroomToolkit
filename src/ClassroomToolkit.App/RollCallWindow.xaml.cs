@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App;
 
@@ -11,6 +12,8 @@ public partial class RollCallWindow : Window
     private readonly RollCallViewModel _viewModel;
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch;
+    private KeyboardHook? _keyboardHook;
+    private Action<KeyBinding>? _remoteHandler;
 
     public RollCallWindow(string dataPath)
     {
@@ -33,12 +36,14 @@ public partial class RollCallWindow : Window
         _viewModel.LoadData();
         _stopwatch.Restart();
         _timer.Start();
+        StartKeyboardHook();
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _timer.Stop();
         _stopwatch.Stop();
+        StopKeyboardHook();
         _viewModel.SaveState();
     }
 
@@ -97,5 +102,44 @@ public partial class RollCallWindow : Window
         var elapsed = _stopwatch.Elapsed;
         _stopwatch.Restart();
         _viewModel.TickTimer(elapsed);
+    }
+
+    private void StartKeyboardHook()
+    {
+        if (_keyboardHook != null)
+        {
+            return;
+        }
+        var fallback = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+        var binding = KeyBindingParser.ParseOrDefault(_viewModel.RemotePresenterKey, fallback);
+        _keyboardHook = new KeyboardHook
+        {
+            TargetBinding = binding,
+            SuppressWhenMatched = true
+        };
+        _remoteHandler = _ =>
+        {
+            if (_viewModel.IsRollCallMode)
+            {
+                _viewModel.RollNext();
+            }
+        };
+        _keyboardHook.BindingTriggered += _remoteHandler;
+        _keyboardHook.Start();
+    }
+
+    private void StopKeyboardHook()
+    {
+        if (_keyboardHook == null)
+        {
+            return;
+        }
+        if (_remoteHandler != null)
+        {
+            _keyboardHook.BindingTriggered -= _remoteHandler;
+        }
+        _keyboardHook.Stop();
+        _keyboardHook = null;
+        _remoteHandler = null;
     }
 }
