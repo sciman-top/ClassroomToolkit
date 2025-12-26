@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.RollCallSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="点名设置" Height="320" Width="420"
+        Title="点名设置" Height="420" Width="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Grid Margin="16">
@@ -15,6 +15,19 @@
             <StackPanel Margin="8">
                 <CheckBox x:Name="ShowIdCheck" Content="显示学号" Margin="0,4,0,0" />
                 <CheckBox x:Name="ShowNameCheck" Content="显示姓名" Margin="0,4,0,0" />
+                <CheckBox x:Name="ShowPhotoCheck" Content="显示照片" Margin="0,8,0,0"
+                          Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="照片显示时间：" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Slider x:Name="PhotoDurationSlider" Width="140" Minimum="0" Maximum="10"
+                            ValueChanged="OnPhotoDurationChanged" />
+                    <TextBlock x:Name="PhotoDurationLabel" Margin="8,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="照片文件夹：" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBox x:Name="PhotoSharedBox" Width="200" />
+                </StackPanel>
+                <TextBlock Text="留空表示按当前班级文件夹读取" Foreground="#666666" FontSize="11" Margin="0,2,0,0" />
             </StackPanel>
         </GroupBox>
 

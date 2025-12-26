@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Interop.Presentation;
@@ -19,6 +21,9 @@ public partial class RollCallWindow : Window
     private readonly Stopwatch _stopwatch;
     private KeyboardHook? _keyboardHook;
     private Action<ClassroomToolkit.Interop.Presentation.KeyBinding>? _remoteHandler;
+    private PhotoOverlayWindow? _photoOverlay;
+    private StudentPhotoResolver? _photoResolver;
+    private string? _lastPhotoStudentId;
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -55,8 +60,12 @@ public partial class RollCallWindow : Window
         _timer.Stop();
         _stopwatch.Stop();
         StopKeyboardHook();
+        ClosePhotoOverlay();
         _settings.RollCallShowId = _viewModel.ShowId;
         _settings.RollCallShowName = _viewModel.ShowName;
+        _settings.RollCallShowPhoto = _viewModel.ShowPhoto;
+        _settings.RollCallPhotoDurationSeconds = _viewModel.PhotoDurationSeconds;
+        _settings.RollCallPhotoSharedClass = _viewModel.PhotoSharedClass;
         _settings.RollCallRemoteEnabled = _viewModel.RemotePresenterEnabled;
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settingsService.Save(_settings);
@@ -68,23 +77,27 @@ public partial class RollCallWindow : Window
         if (sender is System.Windows.Controls.Button button && button.Tag is string group)
         {
             _viewModel.SetCurrentGroup(group);
+            UpdatePhotoDisplay(forceHide: true);
         }
     }
 
     private void OnRollClick(object sender, RoutedEventArgs e)
     {
         _viewModel.RollNext();
+        UpdatePhotoDisplay();
     }
 
     private void OnResetClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ResetCurrentGroup();
+        UpdatePhotoDisplay(forceHide: true);
     }
 
     private void OnToggleModeClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ToggleMode();
         UpdateRemoteHookState();
+        UpdatePhotoDisplay(forceHide: true);
     }
 
     private void OnTimerModeClick(object sender, RoutedEventArgs e)
@@ -112,6 +125,104 @@ public partial class RollCallWindow : Window
         {
             _viewModel.SetCountdown(dialog.Minutes, dialog.Seconds);
         }
+    }
+
+    private void UpdatePhotoDisplay(bool forceHide = false)
+    {
+        if (forceHide || !_viewModel.ShowPhoto || !_viewModel.IsRollCallMode)
+        {
+            HidePhotoOverlay();
+            _lastPhotoStudentId = null;
+            return;
+        }
+        var studentId = _viewModel.CurrentStudentId;
+        if (string.IsNullOrWhiteSpace(studentId))
+        {
+            HidePhotoOverlay();
+            _lastPhotoStudentId = null;
+            return;
+        }
+        if (_lastPhotoStudentId == studentId && _photoOverlay?.IsVisible == true)
+        {
+            return;
+        }
+        _lastPhotoStudentId = studentId;
+        var resolver = EnsurePhotoResolver();
+        var className = ResolvePhotoClassName();
+        var path = resolver.ResolvePhotoPath(className, studentId);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            HidePhotoOverlay();
+            return;
+        }
+        var overlay = EnsurePhotoOverlay();
+        overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.PhotoDurationSeconds, this);
+    }
+
+    private StudentPhotoResolver EnsurePhotoResolver()
+    {
+        if (_photoResolver != null)
+        {
+            return _photoResolver;
+        }
+        var root = ResolvePhotoRoot();
+        _photoResolver = new StudentPhotoResolver(root);
+        return _photoResolver;
+    }
+
+    private static string ResolvePhotoRoot()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var basePath = Path.Combine(baseDir, "student_photos");
+        var cwdPath = Path.Combine(Environment.CurrentDirectory, "student_photos");
+        if (Directory.Exists(basePath))
+        {
+            return basePath;
+        }
+        if (Directory.Exists(cwdPath))
+        {
+            return cwdPath;
+        }
+        return basePath;
+    }
+
+    private string ResolvePhotoClassName()
+    {
+        if (!string.IsNullOrWhiteSpace(_viewModel.PhotoSharedClass))
+        {
+            return _viewModel.PhotoSharedClass;
+        }
+        return _viewModel.ActiveClassName;
+    }
+
+    private PhotoOverlayWindow EnsurePhotoOverlay()
+    {
+        if (_photoOverlay != null)
+        {
+            return _photoOverlay;
+        }
+        _photoOverlay = new PhotoOverlayWindow();
+        return _photoOverlay;
+    }
+
+    private void HidePhotoOverlay()
+    {
+        if (_photoOverlay == null)
+        {
+            return;
+        }
+        _photoOverlay.CloseOverlay();
+    }
+
+    private void ClosePhotoOverlay()
+    {
+        if (_photoOverlay == null)
+        {
+            return;
+        }
+        _photoOverlay.CloseOverlay();
+        _photoOverlay.Close();
+        _photoOverlay = null;
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
@@ -183,9 +294,13 @@ public partial class RollCallWindow : Window
     {
         _viewModel.ShowId = settings.RollCallShowId;
         _viewModel.ShowName = settings.RollCallShowName;
+        _viewModel.ShowPhoto = settings.RollCallShowPhoto;
+        _viewModel.PhotoDurationSeconds = settings.RollCallPhotoDurationSeconds;
+        _viewModel.PhotoSharedClass = settings.RollCallPhotoSharedClass;
         _viewModel.RemotePresenterEnabled = settings.RollCallRemoteEnabled;
         _viewModel.SetRemotePresenterKey(settings.RemotePresenterKey);
         UpdateRemoteHookState();
+        UpdatePhotoDisplay();
     }
 
     private void RestartKeyboardHook()

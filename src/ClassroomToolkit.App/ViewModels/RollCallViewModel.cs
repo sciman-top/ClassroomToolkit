@@ -25,7 +25,11 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private bool _showId = true;
     private bool _showName = true;
     private bool _remotePresenterEnabled;
+    private bool _showPhoto;
+    private int _photoDurationSeconds;
+    private string _photoSharedClass = string.Empty;
     private string _remotePresenterKey = "tab";
+    private string _activeClassName = string.Empty;
 
     public RollCallViewModel(string dataPath)
     {
@@ -120,6 +124,30 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         set => SetField(ref _remotePresenterEnabled, value);
     }
 
+    public bool ShowPhoto
+    {
+        get => _showPhoto;
+        set => SetField(ref _showPhoto, value);
+    }
+
+    public int PhotoDurationSeconds
+    {
+        get => _photoDurationSeconds;
+        set => SetField(ref _photoDurationSeconds, Math.Max(0, value));
+    }
+
+    public string PhotoSharedClass
+    {
+        get => _photoSharedClass;
+        set => SetField(ref _photoSharedClass, value ?? string.Empty);
+    }
+
+    public string ActiveClassName
+    {
+        get => _activeClassName;
+        private set => SetField(ref _activeClassName, value ?? string.Empty);
+    }
+
     public int TimerMinutes => _timerMinutes;
 
     public int TimerSeconds => _timerSeconds;
@@ -130,6 +158,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         var result = store.LoadOrCreate(_dataPath);
         _workbook = result.Workbook;
         _engine = new RollCallEngine(_workbook.GetActiveRoster());
+        ActiveClassName = _workbook.ActiveClass;
 
         if (!string.IsNullOrWhiteSpace(result.RollStateJson))
         {

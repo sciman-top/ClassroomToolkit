@@ -23,6 +23,9 @@ public sealed class AppSettingsService
             settings.RollCallShowId = GetBool(roll, "show_id", settings.RollCallShowId);
             settings.RollCallShowName = GetBool(roll, "show_name", settings.RollCallShowName);
             settings.RollCallRemoteEnabled = GetBool(roll, "remote_roll_enabled", settings.RollCallRemoteEnabled);
+            settings.RollCallShowPhoto = GetBool(roll, "show_photo", settings.RollCallShowPhoto);
+            settings.RollCallPhotoDurationSeconds = GetInt(roll, "photo_duration_seconds", settings.RollCallPhotoDurationSeconds);
+            settings.RollCallPhotoSharedClass = GetString(roll, "photo_shared_class", settings.RollCallPhotoSharedClass);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
         }
         if (data.TryGetValue("Paint", out var paint))
@@ -50,6 +53,9 @@ public sealed class AppSettingsService
         roll["show_id"] = settings.RollCallShowId ? "True" : "False";
         roll["show_name"] = settings.RollCallShowName ? "True" : "False";
         roll["remote_roll_enabled"] = settings.RollCallRemoteEnabled ? "True" : "False";
+        roll["show_photo"] = settings.RollCallShowPhoto ? "True" : "False";
+        roll["photo_duration_seconds"] = settings.RollCallPhotoDurationSeconds.ToString(CultureInfo.InvariantCulture);
+        roll["photo_shared_class"] = settings.RollCallPhotoSharedClass ?? string.Empty;
         roll["remote_roll_key"] = settings.RemotePresenterKey;
 
         var paint = GetOrCreate(data, "Paint");
@@ -99,6 +105,15 @@ public sealed class AppSettingsService
             return fallback;
         }
         return byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) ? result : fallback;
+    }
+
+    private static int GetInt(Dictionary<string, string> section, string key, int fallback)
+    {
+        if (!section.TryGetValue(key, out var value))
+        {
+            return fallback;
+        }
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) ? result : fallback;
     }
 
     private static bool GetBool(Dictionary<string, string> section, string key, bool fallback)
