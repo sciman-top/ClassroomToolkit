@@ -33,6 +33,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private bool _timerSoundEnabled = true;
     private bool _timerReminderEnabled;
     private int _timerReminderIntervalMinutes;
+    private bool _speechEnabled;
 
     public RollCallViewModel(string dataPath)
     {
@@ -184,6 +185,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
                 ApplyReminderInterval();
             }
         }
+    }
+
+    public bool SpeechEnabled
+    {
+        get => _speechEnabled;
+        set => SetField(ref _speechEnabled, value);
     }
 
     public int TimerMinutes => _timerMinutes;

@@ -16,6 +16,7 @@ public partial class RollCallSettingsDialog : Window
     public bool RollCallTimerSoundEnabled { get; private set; }
     public bool RollCallTimerReminderEnabled { get; private set; }
     public int RollCallTimerReminderIntervalMinutes { get; private set; }
+    public bool RollCallSpeechEnabled { get; private set; }
 
     public RollCallSettingsDialog(AppSettings settings)
     {
@@ -25,6 +26,7 @@ public partial class RollCallSettingsDialog : Window
         ShowPhotoCheck.IsChecked = settings.RollCallShowPhoto;
         PhotoDurationSlider.Value = Math.Max(0, Math.Min(10, settings.RollCallPhotoDurationSeconds));
         PhotoSharedBox.Text = settings.RollCallPhotoSharedClass ?? string.Empty;
+        SpeechCheck.IsChecked = settings.RollCallSpeechEnabled;
         TimerSoundCheck.IsChecked = settings.RollCallTimerSoundEnabled;
         TimerReminderCheck.IsChecked = settings.RollCallTimerReminderEnabled;
         TimerReminderCombo.ItemsSource = new[] { "1", "3", "5", "10" };
@@ -106,6 +108,7 @@ public partial class RollCallSettingsDialog : Window
         RollCallTimerSoundEnabled = TimerSoundCheck.IsChecked == true;
         RollCallTimerReminderEnabled = TimerReminderCheck.IsChecked == true;
         RollCallTimerReminderIntervalMinutes = ParseReminderMinutes(TimerReminderCombo.Text);
+        RollCallSpeechEnabled = SpeechCheck.IsChecked == true;
         RollCallRemoteEnabled = RemoteEnabledCheck.IsChecked == true;
         RemotePresenterKey = keyText;
         DialogResult = true;

@@ -29,6 +29,7 @@ public sealed class AppSettingsService
             settings.RollCallTimerSoundEnabled = GetBool(roll, "timer_sound_enabled", settings.RollCallTimerSoundEnabled);
             settings.RollCallTimerReminderEnabled = GetBool(roll, "timer_reminder_enabled", settings.RollCallTimerReminderEnabled);
             settings.RollCallTimerReminderIntervalMinutes = GetInt(roll, "timer_reminder_interval_minutes", settings.RollCallTimerReminderIntervalMinutes);
+            settings.RollCallSpeechEnabled = GetBool(roll, "speech_enabled", settings.RollCallSpeechEnabled);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
         }
         if (data.TryGetValue("Paint", out var paint))
@@ -62,6 +63,7 @@ public sealed class AppSettingsService
         roll["timer_sound_enabled"] = settings.RollCallTimerSoundEnabled ? "True" : "False";
         roll["timer_reminder_enabled"] = settings.RollCallTimerReminderEnabled ? "True" : "False";
         roll["timer_reminder_interval_minutes"] = settings.RollCallTimerReminderIntervalMinutes.ToString(CultureInfo.InvariantCulture);
+        roll["speech_enabled"] = settings.RollCallSpeechEnabled ? "True" : "False";
         roll["remote_roll_key"] = settings.RemotePresenterKey;
 
         var paint = GetOrCreate(data, "Paint");

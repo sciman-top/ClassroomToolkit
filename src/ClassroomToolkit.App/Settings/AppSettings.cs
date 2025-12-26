@@ -17,6 +17,7 @@ public sealed class AppSettings
     public bool RollCallTimerSoundEnabled { get; set; } = true;
     public bool RollCallTimerReminderEnabled { get; set; } = false;
     public int RollCallTimerReminderIntervalMinutes { get; set; } = 0;
+    public bool RollCallSpeechEnabled { get; set; } = false;
     public string RemotePresenterKey { get; set; } = "tab";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;

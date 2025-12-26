@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Media;
+using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -25,6 +26,7 @@ public partial class RollCallWindow : Window
     private PhotoOverlayWindow? _photoOverlay;
     private StudentPhotoResolver? _photoResolver;
     private string? _lastPhotoStudentId;
+    private SpeechSynthesizer? _speechSynthesizer;
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -64,6 +66,7 @@ public partial class RollCallWindow : Window
         _stopwatch.Stop();
         StopKeyboardHook();
         ClosePhotoOverlay();
+        _speechSynthesizer?.Dispose();
         _settings.RollCallShowId = _viewModel.ShowId;
         _settings.RollCallShowName = _viewModel.ShowName;
         _settings.RollCallShowPhoto = _viewModel.ShowPhoto;
@@ -72,6 +75,7 @@ public partial class RollCallWindow : Window
         _settings.RollCallTimerSoundEnabled = _viewModel.TimerSoundEnabled;
         _settings.RollCallTimerReminderEnabled = _viewModel.TimerReminderEnabled;
         _settings.RollCallTimerReminderIntervalMinutes = _viewModel.TimerReminderIntervalMinutes;
+        _settings.RollCallSpeechEnabled = _viewModel.SpeechEnabled;
         _settings.RollCallRemoteEnabled = _viewModel.RemotePresenterEnabled;
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settingsService.Save(_settings);
@@ -91,6 +95,7 @@ public partial class RollCallWindow : Window
     {
         _viewModel.RollNext();
         UpdatePhotoDisplay();
+        SpeakStudentName();
     }
 
     private void OnResetClick(object sender, RoutedEventArgs e)
@@ -254,6 +259,29 @@ public partial class RollCallWindow : Window
         }
     }
 
+    private void SpeakStudentName()
+    {
+        if (!_viewModel.SpeechEnabled)
+        {
+            return;
+        }
+        var name = _viewModel.CurrentStudentName;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+        try
+        {
+            _speechSynthesizer ??= new SpeechSynthesizer();
+            _speechSynthesizer.SpeakAsyncCancelAll();
+            _speechSynthesizer.SpeakAsync(name);
+        }
+        catch
+        {
+            // 保持静默，避免语音失败影响点名流程。
+        }
+    }
+
     private void StartKeyboardHook()
     {
         if (_keyboardHook != null)
@@ -322,6 +350,7 @@ public partial class RollCallWindow : Window
         _viewModel.TimerSoundEnabled = settings.RollCallTimerSoundEnabled;
         _viewModel.TimerReminderEnabled = settings.RollCallTimerReminderEnabled;
         _viewModel.TimerReminderIntervalMinutes = settings.RollCallTimerReminderIntervalMinutes;
+        _viewModel.SpeechEnabled = settings.RollCallSpeechEnabled;
         _viewModel.RemotePresenterEnabled = settings.RollCallRemoteEnabled;
         _viewModel.SetRemotePresenterKey(settings.RemotePresenterKey);
         UpdateRemoteHookState();

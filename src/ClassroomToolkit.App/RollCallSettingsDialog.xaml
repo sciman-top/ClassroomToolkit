@@ -18,6 +18,7 @@
                 <CheckBox x:Name="ShowNameCheck" Content="显示姓名" Margin="0,4,0,0" />
                 <CheckBox x:Name="ShowPhotoCheck" Content="显示照片" Margin="0,8,0,0"
                           Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
+                <CheckBox x:Name="SpeechCheck" Content="点名语音提示" Margin="0,8,0,0" />
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                     <TextBlock Text="照片显示时间：" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <Slider x:Name="PhotoDurationSlider" Width="140" Minimum="0" Maximum="10"

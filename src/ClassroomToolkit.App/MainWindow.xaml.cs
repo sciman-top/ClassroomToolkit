@@ -155,6 +155,7 @@ public partial class MainWindow : Window
         _settings.RollCallTimerSoundEnabled = dialog.RollCallTimerSoundEnabled;
         _settings.RollCallTimerReminderEnabled = dialog.RollCallTimerReminderEnabled;
         _settings.RollCallTimerReminderIntervalMinutes = dialog.RollCallTimerReminderIntervalMinutes;
+        _settings.RollCallSpeechEnabled = dialog.RollCallSpeechEnabled;
         _settings.RollCallRemoteEnabled = dialog.RollCallRemoteEnabled;
         _settings.RemotePresenterKey = dialog.RemotePresenterKey;
         SaveSettings();

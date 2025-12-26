@@ -13,4 +13,7 @@
     <ProjectReference Include="..\ClassroomToolkit.Services\ClassroomToolkit.Services.csproj" />
     <ProjectReference Include="..\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
 </Project>
