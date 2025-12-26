@@ -55,7 +55,7 @@ public static class LongPressBehavior
         }
     }
 
-    private static void OnMouseDown(object sender, MouseButtonEventArgs e)
+    private static void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is not UIElement element)
         {
@@ -75,12 +75,12 @@ public static class LongPressBehavior
         timer.Start();
     }
 
-    private static void OnMouseUp(object sender, MouseButtonEventArgs e)
+    private static void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         StopTimer(sender as UIElement);
     }
 
-    private static void OnMouseLeave(object sender, MouseEventArgs e)
+    private static void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         StopTimer(sender as UIElement);
     }

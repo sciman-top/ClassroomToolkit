@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using MediaColor = System.Windows.Media.Color;
 using System.Windows.Media;
 using ClassroomToolkit.App.Commands;
 
@@ -10,8 +12,8 @@ public partial class PaintToolbarWindow : Window
 {
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
-    public event Action<Color>? BrushColorChanged;
-    public event Action<Color>? BoardColorChanged;
+    public event Action<MediaColor>? BrushColorChanged;
+    public event Action<MediaColor>? BoardColorChanged;
     public event Action<double>? BrushSizeChanged;
     public event Action<double>? EraserSizeChanged;
     public event Action? ClearRequested;
@@ -69,7 +71,7 @@ public partial class PaintToolbarWindow : Window
     {
         if (sender is Button button && button.Tag is string hex)
         {
-            var color = (Color)ColorConverter.ConvertFromString(hex);
+            var color = (MediaColor)ColorConverter.ConvertFromString(hex);
             BrushColorChanged?.Invoke(color);
         }
     }
@@ -114,7 +116,7 @@ public partial class PaintToolbarWindow : Window
         using var dialog = new System.Windows.Forms.ColorDialog();
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
-            var color = Color.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
+            var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
             BrushColorChanged?.Invoke(color);
         }
     }
@@ -124,7 +126,7 @@ public partial class PaintToolbarWindow : Window
         using var dialog = new System.Windows.Forms.ColorDialog();
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
-            var color = Color.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
+            var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
             BoardColorChanged?.Invoke(color);
         }
     }

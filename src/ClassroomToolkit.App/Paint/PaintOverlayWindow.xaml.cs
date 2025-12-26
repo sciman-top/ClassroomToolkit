@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using MediaColor = System.Windows.Media.Color;
+using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -10,7 +12,7 @@ public partial class PaintOverlayWindow : Window
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
     private bool _isDrawingShape;
-    private Point _shapeStart;
+    private WpfPoint _shapeStart;
     private Shape? _activeShape;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
@@ -64,7 +66,7 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    public void SetBrush(Color color, double size, byte opacity)
+    public void SetBrush(MediaColor color, double size, byte opacity)
     {
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(color, size, opacity);
     }
@@ -80,7 +82,7 @@ public partial class PaintOverlayWindow : Window
         _shapeType = type;
     }
 
-    public void SetBoardColor(Color color)
+    public void SetBoardColor(MediaColor color)
     {
         OverlayRoot.Background = new SolidColorBrush(color);
     }
@@ -91,7 +93,7 @@ public partial class PaintOverlayWindow : Window
         ShapeCanvas.Children.Clear();
     }
 
-    public Color CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
+    public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -114,7 +116,7 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
         {
-            var point = e.GetPosition(ShapeCanvas);
+        var point = e.GetPosition(ShapeCanvas);
             RemoveShapeAt(point);
         }
         if (!_isDrawingShape || _activeShape == null)
@@ -145,11 +147,11 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private static DrawingAttributes BuildDrawingAttributes(Color color, double size, byte opacity)
+    private static DrawingAttributes BuildDrawingAttributes(MediaColor color, double size, byte opacity)
     {
         var drawing = new DrawingAttributes
         {
-            Color = Color.FromArgb(opacity, color.R, color.G, color.B),
+            Color = MediaColor.FromArgb(opacity, color.R, color.G, color.B),
             Width = size,
             Height = size,
             FitToCurve = true,
@@ -189,7 +191,7 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private static void UpdateShape(Shape shape, Point start, Point end)
+    private static void UpdateShape(Shape shape, WpfPoint start, WpfPoint end)
     {
         var left = Math.Min(start.X, end.X);
         var top = Math.Min(start.Y, end.Y);
@@ -211,7 +213,7 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private void RemoveShapeAt(Point point)
+    private void RemoveShapeAt(WpfPoint point)
     {
         var hit = VisualTreeHelper.HitTest(ShapeCanvas, point);
         if (hit?.VisualHit is Shape shape)

@@ -1,7 +1,7 @@
-using System.Windows;
+using WpfApplication = System.Windows.Application;
 
 namespace ClassroomToolkit.App;
 
-public partial class App : Application
+public partial class App : WpfApplication
 {
 }
