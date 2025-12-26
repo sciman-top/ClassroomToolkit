@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$CommitMessage = "模块迁移：本地自动提交",
     [switch]$SkipCommit,
     [switch]$SkipTests
