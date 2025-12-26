@@ -1,0 +1,1 @@
+scripts/release/prereq/windowsdesktop-runtime-10.0.5-win-x64.exe filter=lfs diff=lfs merge=lfs -text
