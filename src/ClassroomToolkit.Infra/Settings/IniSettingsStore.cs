@@ -1,0 +1,92 @@
+using System.Text;
+
+namespace ClassroomToolkit.Infra.Settings;
+
+public sealed class IniSettingsStore
+{
+    private readonly string _path;
+
+    public IniSettingsStore(string path)
+    {
+        _path = path;
+    }
+
+    public string Path => _path;
+
+    public Dictionary<string, Dictionary<string, string>> Load()
+    {
+        var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        if (!File.Exists(_path))
+        {
+            return data;
+        }
+        string[] lines;
+        try
+        {
+            lines = File.ReadAllLines(_path, Encoding.UTF8);
+        }
+        catch
+        {
+            return data;
+        }
+
+        string? currentSection = null;
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+            if (line.StartsWith("#", StringComparison.Ordinal) || line.StartsWith(";", StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
+            {
+                currentSection = line.Substring(1, line.Length - 2).Trim();
+                if (!data.ContainsKey(currentSection))
+                {
+                    data[currentSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                }
+                continue;
+            }
+            if (currentSection == null)
+            {
+                continue;
+            }
+            var separatorIndex = line.IndexOf('=');
+            if (separatorIndex < 0)
+            {
+                separatorIndex = line.IndexOf(':');
+            }
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+            var key = line.Substring(0, separatorIndex).Trim();
+            var value = line.Substring(separatorIndex + 1).Trim();
+            if (string.IsNullOrEmpty(key))
+            {
+                continue;
+            }
+            data[currentSection][key] = value;
+        }
+        return data;
+    }
+
+    public void Save(Dictionary<string, Dictionary<string, string>> data)
+    {
+        var builder = new StringBuilder();
+        foreach (var section in data)
+        {
+            builder.Append('[').Append(section.Key).Append(']').AppendLine();
+            foreach (var pair in section.Value)
+            {
+                builder.Append(pair.Key).Append('=').Append(pair.Value).AppendLine();
+            }
+            builder.AppendLine();
+        }
+        File.WriteAllText(_path, builder.ToString(), Encoding.UTF8);
+    }
+}
