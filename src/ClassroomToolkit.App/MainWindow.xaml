@@ -1,10 +1,15 @@
 <Window x:Class="ClassroomToolkit.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="课堂工具箱" Height="240" Width="360" WindowStartupLocation="CenterScreen">
     <StackPanel Margin="20" VerticalAlignment="Center" HorizontalAlignment="Center">
         <TextBlock Text="课堂工具箱" FontSize="18" Margin="0,0,0,16" HorizontalAlignment="Center" />
-        <Button Content="点名/计时" Width="180" Height="36" Margin="0,0,0,10" Click="OnRollCallClick" />
-        <Button Content="画笔" Width="180" Height="36" Click="OnPaintClick" />
+        <Button Content="点名/计时" Width="180" Height="36" Margin="0,0,0,10"
+                Click="OnRollCallClick"
+                behaviors:LongPressBehavior.Command="{Binding OpenSettingsCommand}" />
+        <Button Content="画笔" Width="180" Height="36"
+                Click="OnPaintClick"
+                behaviors:LongPressBehavior.Command="{Binding OpenSettingsCommand}" />
     </StackPanel>
 </Window>
