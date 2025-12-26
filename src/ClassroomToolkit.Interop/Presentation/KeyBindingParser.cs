@@ -36,6 +36,9 @@ public static class KeyBindingParser
                 case "b":
                     key = VirtualKey.B;
                     break;
+                case "w":
+                    key = VirtualKey.W;
+                    break;
             }
         }
         if (key == null)
