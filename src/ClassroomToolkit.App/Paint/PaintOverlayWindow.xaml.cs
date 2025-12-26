@@ -195,7 +195,7 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions.WheelAsKey = enabled;
     }
 
-    private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
+    private void OnStrokeCollected(object? sender, System.Windows.Controls.InkCanvasStrokeCollectedEventArgs e)
     {
         _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
     }
