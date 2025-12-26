@@ -119,7 +119,7 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
         {
-        var point = e.GetPosition(ShapeCanvas);
+            var point = e.GetPosition(ShapeCanvas);
             RemoveShapeAt(point);
         }
         if (!_isDrawingShape || _activeShape == null)

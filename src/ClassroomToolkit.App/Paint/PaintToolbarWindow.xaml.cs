@@ -6,11 +6,13 @@ using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using System.Windows.Media;
 using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
+    private bool _initializing;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action<MediaColor>? BrushColorChanged;
@@ -56,6 +58,37 @@ public partial class PaintToolbarWindow : Window
         WpsWheelCheck.IsChecked = true;
     }
 
+    public void ApplySettings(AppSettings settings)
+    {
+        _initializing = true;
+        try
+        {
+            BrushSizeSlider.Value = settings.BrushSize;
+            EraserSizeSlider.Value = settings.EraserSize;
+            BrushOpacitySlider.Value = settings.BrushOpacity;
+            BoardOpacitySlider.Value = settings.BoardOpacity;
+
+            ShapeCombo.SelectedItem = settings.ShapeType;
+            if (ShapeCombo.SelectedItem == null)
+            {
+                ShapeCombo.SelectedIndex = 0;
+            }
+
+            WpsModeCombo.SelectedItem = settings.WpsInputMode;
+            if (WpsModeCombo.SelectedItem == null)
+            {
+                WpsModeCombo.SelectedIndex = 0;
+            }
+
+            WpsWheelCheck.IsChecked = settings.WpsWheelForward;
+            BoardButton.IsChecked = settings.BoardOpacity > 0;
+        }
+        finally
+        {
+            _initializing = false;
+        }
+    }
+
     private void OnModeClick(object sender, RoutedEventArgs e)
     {
         if (sender is not ToggleButton button)
@@ -72,6 +105,10 @@ public partial class PaintToolbarWindow : Window
 
     private void OnShapeChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         if (ShapeCombo.SelectedItem is PaintShapeType type)
         {
             ShapeTypeChanged?.Invoke(type);
@@ -89,11 +126,19 @@ public partial class PaintToolbarWindow : Window
 
     private void OnBrushSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         BrushSizeChanged?.Invoke(e.NewValue);
     }
 
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         EraserSizeChanged?.Invoke(e.NewValue);
     }
 
@@ -121,16 +166,28 @@ public partial class PaintToolbarWindow : Window
 
     private void OnBrushOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         BrushOpacityChanged?.Invoke((byte)Math.Clamp((int)e.NewValue, 10, 255));
     }
 
     private void OnBoardOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         BoardOpacityChanged?.Invoke((byte)Math.Clamp((int)e.NewValue, 0, 255));
     }
 
     private void OnWpsModeChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         if (WpsModeCombo.SelectedItem is string mode)
         {
             WpsModeChanged?.Invoke(mode);
@@ -139,6 +196,10 @@ public partial class PaintToolbarWindow : Window
 
     private void OnWpsWheelChanged(object sender, RoutedEventArgs e)
     {
+        if (_initializing)
+        {
+            return;
+        }
         WpsWheelMappingChanged?.Invoke(WpsWheelCheck.IsChecked == true);
     }
 

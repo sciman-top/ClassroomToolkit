@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Interop.Presentation;
 
@@ -10,14 +13,19 @@ namespace ClassroomToolkit.App;
 public partial class RollCallWindow : Window
 {
     private readonly RollCallViewModel _viewModel;
+    private readonly AppSettingsService _settingsService;
+    private readonly AppSettings _settings;
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch;
     private KeyboardHook? _keyboardHook;
     private Action<KeyBinding>? _remoteHandler;
+    public ICommand OpenRemoteKeyCommand { get; }
 
-    public RollCallWindow(string dataPath)
+    public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
     {
         InitializeComponent();
+        _settingsService = settingsService;
+        _settings = settings;
         _viewModel = new RollCallViewModel(dataPath);
         DataContext = _viewModel;
         Loaded += OnLoaded;
@@ -29,11 +37,14 @@ public partial class RollCallWindow : Window
             Interval = TimeSpan.FromMilliseconds(100)
         };
         _timer.Tick += OnTimerTick;
+
+        OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _viewModel.LoadData();
+        _viewModel.SetRemotePresenterKey(_settings.RemotePresenterKey);
         _stopwatch.Restart();
         _timer.Start();
         StartKeyboardHook();
@@ -44,6 +55,8 @@ public partial class RollCallWindow : Window
         _timer.Stop();
         _stopwatch.Stop();
         StopKeyboardHook();
+        _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
+        _settingsService.Save(_settings);
         _viewModel.SaveState();
     }
 
@@ -141,5 +154,26 @@ public partial class RollCallWindow : Window
         _keyboardHook.Stop();
         _keyboardHook = null;
         _remoteHandler = null;
+    }
+
+    private void OpenRemoteKeyDialog()
+    {
+        var dialog = new RemoteKeyDialog(_viewModel.RemotePresenterKey)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _viewModel.SetRemotePresenterKey(dialog.SelectedKey);
+            _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
+            _settingsService.Save(_settings);
+            RestartKeyboardHook();
+        }
+    }
+
+    private void RestartKeyboardHook()
+    {
+        StopKeyboardHook();
+        StartKeyboardHook();
     }
 }
