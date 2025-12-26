@@ -134,6 +134,7 @@ public partial class MainWindow : Window
         _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
         _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
+        _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
     }
 
     private void OnOpenRollCallSettings()
@@ -156,7 +157,27 @@ public partial class MainWindow : Window
 
     private void OnOpenPaintSettings()
     {
-        System.Windows.MessageBox.Show("画笔设置将通过工具条调整（迁移中）。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        var dialog = new Paint.PaintSettingsDialog(_settings)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        _settings.ControlMsPpt = dialog.ControlMsPpt;
+        _settings.ControlWpsPpt = dialog.ControlWpsPpt;
+        _settings.WpsInputMode = dialog.WpsInputMode;
+        _settings.WpsWheelForward = dialog.WpsWheelForward;
+        SaveSettings();
+
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
+            _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
+            _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+        }
+        _toolbarWindow?.ApplySettings(_settings);
     }
 
     private void SaveSettings()

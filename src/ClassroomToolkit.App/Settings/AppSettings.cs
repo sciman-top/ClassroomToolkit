@@ -12,6 +12,8 @@ public sealed class AppSettings
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; } = false;
     public string RemotePresenterKey { get; set; } = "tab";
+    public bool ControlMsPpt { get; set; } = true;
+    public bool ControlWpsPpt { get; set; } = true;
     public string WpsInputMode { get; set; } = "auto";
     public bool WpsWheelForward { get; set; } = false;
 

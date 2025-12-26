@@ -33,6 +33,8 @@ public sealed class AppSettingsService
             settings.BoardOpacity = GetByte(paint, "board_opacity", settings.BoardOpacity);
             settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
             settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
+            settings.ControlMsPpt = GetBool(paint, "control_ms_ppt", settings.ControlMsPpt);
+            settings.ControlWpsPpt = GetBool(paint, "control_wps_ppt", settings.ControlWpsPpt);
             settings.WpsInputMode = GetString(paint, "wps_input_mode", settings.WpsInputMode);
             settings.WpsWheelForward = GetBool(paint, "wps_wheel_forward", settings.WpsWheelForward);
             settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
@@ -57,6 +59,8 @@ public sealed class AppSettingsService
         paint["board_opacity"] = settings.BoardOpacity.ToString(CultureInfo.InvariantCulture);
         paint["brush_color"] = settings.BrushColorHex;
         paint["board_color"] = settings.BoardColorHex;
+        paint["control_ms_ppt"] = settings.ControlMsPpt ? "True" : "False";
+        paint["control_wps_ppt"] = settings.ControlWpsPpt ? "True" : "False";
         paint["wps_input_mode"] = settings.WpsInputMode;
         paint["wps_wheel_forward"] = settings.WpsWheelForward ? "True" : "False";
         paint["shape_type"] = settings.ShapeType.ToString();

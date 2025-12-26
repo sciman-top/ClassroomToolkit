@@ -195,6 +195,12 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions.WheelAsKey = enabled;
     }
 
+    public void UpdatePresentationTargets(bool allowOffice, bool allowWps)
+    {
+        _presentationOptions.AllowOffice = allowOffice;
+        _presentationOptions.AllowWps = allowWps;
+    }
+
     private void OnStrokeCollected(object? sender, System.Windows.Controls.InkCanvasStrokeCollectedEventArgs e)
     {
         _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
