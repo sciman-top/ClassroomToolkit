@@ -1,4 +1,4 @@
-﻿param(
+﻿﻿param(
     [string]$CommitMessage = "模块迁移：本地自动提交",
     [switch]$SkipCommit,
     [switch]$SkipTests
@@ -21,24 +21,16 @@ Write-Host "==> 环境检测" -ForegroundColor Cyan
 Assert-Command -Name dotnet -Hint "请安装 .NET 8 SDK。"
 Assert-Command -Name git -Hint "请安装 Git。"
 
-$sdks = dotnet --list-sdks
-$lines = @()
-if ($sdks -is [string]) {
-    $lines = $sdks -split "`r?`n"
-}
-else {
-    $lines = $sdks
-}
-
-$hasNet8 = $false
-foreach ($sdk in $lines) {
-    $line = "$sdk".Trim()
-    if ($line -match "^(\\s*)8\\.0") {
-        $hasNet8 = $true
-        break
+$sdks = & dotnet --list-sdks 2>$null
+$versions = @()
+foreach ($sdk in $sdks) {
+    $text = "$sdk"
+    $match = [regex]::Match($text, "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    if ($match.Success) {
+        $versions += [version]::new($match.Groups[1].Value, $match.Groups[2].Value, $match.Groups[3].Value)
     }
 }
-if (-not $hasNet8) {
+if (-not ($versions | Where-Object { $_.Major -eq 8 })) {
     throw "未检测到 .NET 8 SDK。"
 }
 
