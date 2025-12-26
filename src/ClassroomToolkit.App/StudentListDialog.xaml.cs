@@ -78,10 +78,10 @@ public partial class StudentListDialog : Window
         var formatted = new FormattedText(
             text ?? string.Empty,
             CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
+            System.Windows.FlowDirection.LeftToRight,
             typeface,
             fontSize,
-            Brushes.Black,
+            System.Windows.Media.Brushes.Black,
             pixelsPerDip);
         return formatted.Width;
     }

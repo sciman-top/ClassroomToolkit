@@ -430,10 +430,10 @@ public partial class MainWindow : Window
         var formatted = new FormattedText(
             text,
             CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
+            System.Windows.FlowDirection.LeftToRight,
             typeface,
             button.FontSize,
-            Brushes.Black,
+            System.Windows.Media.Brushes.Black,
             pixelsPerDip);
         return formatted.Width;
     }

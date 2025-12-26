@@ -12,7 +12,7 @@ public partial class LauncherBubbleWindow : Window
     public LauncherBubbleWindow()
     {
         InitializeComponent();
-        Cursor = Cursors.Hand;
+        Cursor = System.Windows.Input.Cursors.Hand;
         MouseLeftButtonDown += OnMouseDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseUp;

@@ -48,9 +48,9 @@ public partial class RollCallSettingsDialog : Window
         BuildTimerSoundCombo(settings.RollCallTimerSoundVariant);
         RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "gentle";
 
-        TimerReminderCheck.IsChecked = settings.RollCallTimerReminderEnabled;
+        ReminderSoundCheck.IsChecked = settings.RollCallTimerReminderEnabled;
         BuildReminderSoundCombo(settings.RollCallTimerReminderSoundVariant);
-        TimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "soft_beep";
+        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "soft_beep";
         var interval = settings.RollCallTimerReminderIntervalMinutes;
         if (interval <= 0)
         {
@@ -125,7 +125,7 @@ public partial class RollCallSettingsDialog : Window
     private void UpdateTimerControls()
     {
         TimerSoundCombo.IsEnabled = TimerSoundCheck.IsChecked == true;
-        var reminderEnabled = TimerReminderCheck.IsChecked == true;
+        var reminderEnabled = ReminderSoundCheck.IsChecked == true;
         ReminderSoundCombo.IsEnabled = reminderEnabled;
         ReminderIntervalSlider.IsEnabled = reminderEnabled;
     }
@@ -173,7 +173,7 @@ public partial class RollCallSettingsDialog : Window
         RollCallPhotoSharedClass = GetSelectedValue(PhotoSharedCombo, string.Empty);
         RollCallTimerSoundEnabled = TimerSoundCheck.IsChecked == true;
         RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "gentle");
-        RollCallTimerReminderEnabled = TimerReminderCheck.IsChecked == true;
+        RollCallTimerReminderEnabled = ReminderSoundCheck.IsChecked == true;
         RollCallTimerReminderIntervalMinutes = (int)Math.Round(ReminderIntervalSlider.Value);
         RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "soft_beep");
         RollCallSpeechEnabled = SpeechCheck.IsChecked == true;
