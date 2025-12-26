@@ -22,7 +22,14 @@ Assert-Command -Name dotnet -Hint "请安装 .NET 8 SDK。"
 Assert-Command -Name git -Hint "请安装 Git。"
 
 $sdks = dotnet --list-sdks
-if ($sdks -notmatch "^8\.0") {
+$hasNet8 = $false
+foreach ($sdk in $sdks) {
+    if ($sdk -match "^8\\.0") {
+        $hasNet8 = $true
+        break
+    }
+}
+if (-not $hasNet8) {
     throw "未检测到 .NET 8 SDK。"
 }
 
