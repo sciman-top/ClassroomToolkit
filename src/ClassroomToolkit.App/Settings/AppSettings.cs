@@ -1,5 +1,7 @@
 using System.Globalization;
-using System.Windows.Media;
+using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using MediaColors = System.Windows.Media.Colors;
 using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.App.Settings;
@@ -14,18 +16,18 @@ public sealed class AppSettings
     public double EraserSize { get; set; } = 24;
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 0;
-    public Color BrushColor { get; set; } = Colors.Red;
-    public Color BoardColor { get; set; } = Colors.White;
+    public MediaColor BrushColor { get; set; } = MediaColors.Red;
+    public MediaColor BoardColor { get; set; } = MediaColors.White;
     public PaintShapeType ShapeType { get; set; } = PaintShapeType.Line;
 
     public string BrushColorHex => ToHex(BrushColor);
     public string BoardColorHex => ToHex(BoardColor);
 
-    public static Color ParseColor(string value, Color fallback)
+    public static MediaColor ParseColor(string value, MediaColor fallback)
     {
         try
         {
-            var parsed = (Color)ColorConverter.ConvertFromString(value);
+            var parsed = (MediaColor)MediaColorConverter.ConvertFromString(value);
             return parsed;
         }
         catch
@@ -34,7 +36,7 @@ public sealed class AppSettings
         }
     }
 
-    private static string ToHex(Color color)
+    private static string ToHex(MediaColor color)
     {
         return string.Create(CultureInfo.InvariantCulture, $"#{color.R:X2}{color.G:X2}{color.B:X2}");
     }

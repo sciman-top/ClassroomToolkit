@@ -18,7 +18,7 @@ public partial class RollCallWindow : Window
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch;
     private KeyboardHook? _keyboardHook;
-    private Action<KeyBinding>? _remoteHandler;
+    private Action<ClassroomToolkit.Interop.Presentation.KeyBinding>? _remoteHandler;
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -123,7 +123,7 @@ public partial class RollCallWindow : Window
         {
             return;
         }
-        var fallback = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+        var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.Tab, KeyModifiers.None);
         var binding = KeyBindingParser.ParseOrDefault(_viewModel.RemotePresenterKey, fallback);
         _keyboardHook = new KeyboardHook
         {
