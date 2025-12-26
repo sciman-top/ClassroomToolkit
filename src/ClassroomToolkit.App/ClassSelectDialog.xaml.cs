@@ -49,7 +49,7 @@ public partial class ClassSelectDialog : Window
         }
     }
 
-    private void OnClassKeyDown(object? sender, KeyEventArgs e)
+    private void OnClassKeyDown(object? sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == Key.Enter && ClassList.SelectedItem is string)
         {

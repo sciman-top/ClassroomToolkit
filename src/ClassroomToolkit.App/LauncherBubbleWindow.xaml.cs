@@ -70,7 +70,7 @@ public partial class LauncherBubbleWindow : Window
         PositionChanged?.Invoke(new System.Windows.Point(Left, Top));
     }
 
-    private void OnMouseDown(object sender, MouseButtonEventArgs e)
+    private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)
         {
@@ -81,7 +81,7 @@ public partial class LauncherBubbleWindow : Window
         _dragOffset = e.GetPosition(this);
     }
 
-    private void OnMouseMove(object sender, MouseEventArgs e)
+    private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
         if (!_dragging || e.LeftButton != MouseButtonState.Pressed)
         {
@@ -93,7 +93,7 @@ public partial class LauncherBubbleWindow : Window
         _moved = true;
     }
 
-    private void OnMouseUp(object sender, MouseButtonEventArgs e)
+    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)
         {
