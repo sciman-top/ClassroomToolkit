@@ -9,6 +9,7 @@ internal static class NativeMethods
 
     public const int WmKeyDown = 0x0100;
     public const int WmKeyUp = 0x0101;
+    public const int WmMouseWheel = 0x020A;
 
     [DllImport("user32.dll")]
     internal static extern IntPtr GetForegroundWindow();
@@ -21,6 +22,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetCursorPos(out Point point);
 
     [DllImport("user32.dll")]
     internal static extern bool SetForegroundWindow(IntPtr hwnd);
@@ -40,6 +44,8 @@ internal static class NativeMethods
     {
         [FieldOffset(0)]
         public KeyboardInput Keyboard;
+        [FieldOffset(0)]
+        public MouseInput Mouse;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -50,5 +56,23 @@ internal static class NativeMethods
         public uint Flags;
         public uint Time;
         public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MouseInput
+    {
+        public int Dx;
+        public int Dy;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Point
+    {
+        public int X;
+        public int Y;
     }
 }

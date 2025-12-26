@@ -40,7 +40,7 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions = new ClassroomToolkit.Services.Presentation.PresentationControlOptions
         {
             Strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Auto,
-            WheelAsKey = true,
+            WheelAsKey = false,
             AllowOffice = true,
             AllowWps = true
         };

@@ -2,6 +2,25 @@ namespace ClassroomToolkit.Interop.Presentation;
 
 public static class KeyBindingParser
 {
+    private static readonly Dictionary<string, VirtualKey> TokenMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["tab"] = VirtualKey.Tab,
+        ["enter"] = VirtualKey.Enter,
+        ["space"] = VirtualKey.Space,
+        ["esc"] = VirtualKey.Escape,
+        ["escape"] = VirtualKey.Escape,
+        ["pageup"] = VirtualKey.PageUp,
+        ["pagedown"] = VirtualKey.PageDown,
+        ["pgup"] = VirtualKey.PageUp,
+        ["pgdn"] = VirtualKey.PageDown,
+        ["left"] = VirtualKey.Left,
+        ["right"] = VirtualKey.Right,
+        ["up"] = VirtualKey.Up,
+        ["down"] = VirtualKey.Down,
+        ["b"] = VirtualKey.B,
+        ["w"] = VirtualKey.W
+    };
+
     public static bool TryParse(string? value, out KeyBinding? binding)
     {
         binding = null;
@@ -30,14 +49,21 @@ public static class KeyBindingParser
                 case "alt":
                     modifiers |= KeyModifiers.Alt;
                     break;
-                case "tab":
-                    key = VirtualKey.Tab;
-                    break;
-                case "b":
-                    key = VirtualKey.B;
-                    break;
-                case "w":
-                    key = VirtualKey.W;
+                default:
+                    if (TokenMap.TryGetValue(token, out var mapped))
+                    {
+                        key = mapped;
+                        break;
+                    }
+                    if (TryParseAlphaNumeric(token, out var alphaNumeric))
+                    {
+                        key = alphaNumeric;
+                        break;
+                    }
+                    if (TryParseFunctionKey(token, out var functionKey))
+                    {
+                        key = functionKey;
+                    }
                     break;
             }
         }
@@ -52,5 +78,45 @@ public static class KeyBindingParser
     public static KeyBinding ParseOrDefault(string? value, KeyBinding fallback)
     {
         return TryParse(value, out var binding) ? binding! : fallback;
+    }
+
+    private static bool TryParseAlphaNumeric(string token, out VirtualKey key)
+    {
+        key = default;
+        if (token.Length != 1)
+        {
+            return false;
+        }
+        var ch = token[0];
+        if (ch >= 'a' && ch <= 'z')
+        {
+            key = (VirtualKey)((int)VirtualKey.A + (ch - 'a'));
+            return true;
+        }
+        if (ch >= '0' && ch <= '9')
+        {
+            key = (VirtualKey)((int)VirtualKey.D0 + (ch - '0'));
+            return true;
+        }
+        return false;
+    }
+
+    private static bool TryParseFunctionKey(string token, out VirtualKey key)
+    {
+        key = default;
+        if (!token.StartsWith("f", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        if (!int.TryParse(token[1..], out var number))
+        {
+            return false;
+        }
+        if (number is < 1 or > 12)
+        {
+            return false;
+        }
+        key = (VirtualKey)((int)VirtualKey.F1 + (number - 1));
+        return true;
     }
 }

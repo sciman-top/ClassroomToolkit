@@ -124,13 +124,11 @@ public sealed class KeyboardHook : IDisposable
 
     private static VirtualKey? MapKey(VirtualKey key)
     {
-        return key switch
+        if (key is VirtualKey.Shift or VirtualKey.Control or VirtualKey.Alt)
         {
-            VirtualKey.Tab => VirtualKey.Tab,
-            VirtualKey.B => VirtualKey.B,
-            VirtualKey.W => VirtualKey.W,
-            _ => null
-        };
+            return null;
+        }
+        return Enum.IsDefined(typeof(VirtualKey), key) ? key : null;
     }
 
     private static IntPtr SetHook(HookProc proc)

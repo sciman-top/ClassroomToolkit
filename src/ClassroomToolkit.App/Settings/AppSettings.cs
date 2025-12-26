@@ -10,7 +10,7 @@ public sealed class AppSettings
 {
     public string RemotePresenterKey { get; set; } = "tab";
     public string WpsInputMode { get; set; } = "auto";
-    public bool WpsWheelForward { get; set; } = true;
+    public bool WpsWheelForward { get; set; } = false;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;

@@ -5,10 +5,12 @@ namespace ClassroomToolkit.Interop.Presentation;
 public sealed class Win32InputSender : IInputSender
 {
     private const uint InputKeyboard = 1;
+    private const uint InputMouse = 0;
     private const uint KeyeventfKeyup = 0x0002;
     private const uint KeyeventfExtended = 0x0001;
+    private const uint MouseeventfWheel = 0x0800;
 
-    public bool SendKey(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, InputStrategy strategy)
+    public bool SendKey(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, InputStrategy strategy, bool keyDownOnly)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -19,11 +21,26 @@ public sealed class Win32InputSender : IInputSender
             return false;
         }
         return strategy == InputStrategy.Message
-            ? SendKeyMessage(hwnd, key, modifiers)
-            : SendKeyInput(key, modifiers);
+            ? SendKeyMessage(hwnd, key, modifiers, keyDownOnly)
+            : SendKeyInput(key, modifiers, keyDownOnly);
     }
 
-    private static bool SendKeyMessage(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers)
+    public bool SendWheel(IntPtr hwnd, int delta, InputStrategy strategy)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+        if (hwnd == IntPtr.Zero || delta == 0)
+        {
+            return false;
+        }
+        return strategy == InputStrategy.Message
+            ? SendWheelMessage(hwnd, delta)
+            : SendWheelInput(delta);
+    }
+
+    private static bool SendKeyMessage(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, bool keyDownOnly)
     {
         var downParam = BuildKeyLParam(isKeyUp: false);
         var upParam = BuildKeyLParam(isKeyUp: true);
@@ -32,19 +49,48 @@ public sealed class Win32InputSender : IInputSender
             return false;
         }
         var down = NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyDown, (IntPtr)key, downParam);
-        var up = NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyUp, (IntPtr)key, upParam);
+        var up = keyDownOnly || !down
+            ? true
+            : NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyUp, (IntPtr)key, upParam);
         SendModifiers(hwnd, modifiers, false);
         return down && up;
     }
 
-    private static bool SendKeyInput(VirtualKey key, KeyModifiers modifiers)
+    private static bool SendKeyInput(VirtualKey key, KeyModifiers modifiers, bool keyDownOnly)
     {
         var inputs = new List<NativeMethods.Input>();
         AddModifierInputs(inputs, modifiers, true);
         inputs.Add(CreateKeyInput(key, isKeyUp: false));
-        inputs.Add(CreateKeyInput(key, isKeyUp: true));
+        if (!keyDownOnly)
+        {
+            inputs.Add(CreateKeyInput(key, isKeyUp: true));
+        }
         AddModifierInputs(inputs, modifiers, false);
         return SendInputs(inputs);
+    }
+
+    private static bool SendWheelMessage(IntPtr hwnd, int delta)
+    {
+        var wParam = BuildWheelWParam(delta);
+        var lParam = BuildWheelLParam();
+        return NativeMethods.PostMessage(hwnd, NativeMethods.WmMouseWheel, wParam, lParam);
+    }
+
+    private static bool SendWheelInput(int delta)
+    {
+        var input = new NativeMethods.Input
+        {
+            Type = InputMouse,
+            Data = new NativeMethods.InputUnion
+            {
+                Mouse = new NativeMethods.MouseInput
+                {
+                    MouseData = unchecked((uint)delta),
+                    Flags = MouseeventfWheel
+                }
+            }
+        };
+        return SendInputs(new List<NativeMethods.Input> { input });
     }
 
     private static bool SendModifiers(IntPtr hwnd, KeyModifiers modifiers, bool isKeyDown)
@@ -124,5 +170,24 @@ public sealed class Win32InputSender : IInputSender
     private static bool IsExtendedKey(VirtualKey key)
     {
         return key == VirtualKey.PageDown || key == VirtualKey.PageUp;
+    }
+
+    private static IntPtr BuildWheelWParam(int delta)
+    {
+        var deltaWord = unchecked((short)delta);
+        var packed = (deltaWord << 16) & unchecked((int)0xFFFF0000);
+        return new IntPtr(packed);
+    }
+
+    private static IntPtr BuildWheelLParam()
+    {
+        if (!NativeMethods.GetCursorPos(out var point))
+        {
+            return IntPtr.Zero;
+        }
+        var x = point.X & 0xFFFF;
+        var y = point.Y & 0xFFFF;
+        var packed = x | (y << 16);
+        return new IntPtr(packed);
     }
 }

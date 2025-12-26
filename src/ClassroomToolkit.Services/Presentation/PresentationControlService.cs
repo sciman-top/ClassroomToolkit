@@ -50,8 +50,22 @@ public sealed class PresentationControlService
         {
             return false;
         }
+        var keyDownOnly = plan.TargetType == PresentationType.Wps;
+        if (plan.TargetType == PresentationType.Wps
+            && !plan.UseWheelAsKey
+            && command is PresentationCommand.Next or PresentationCommand.Previous)
+        {
+            var delta = command == PresentationCommand.Next ? -120 : 120;
+            var wheelSent = _inputSender.SendWheel(target.Handle, delta, plan.Strategy);
+            if (wheelSent)
+            {
+                _lastTarget = target;
+                _lastWpsCommand = DateTime.UtcNow;
+            }
+            return wheelSent;
+        }
         var binding = _mapper.Map(plan.TargetType, command);
-        var sent = _inputSender.SendKey(target.Handle, binding.Key, binding.Modifiers, plan.Strategy);
+        var sent = _inputSender.SendKey(target.Handle, binding.Key, binding.Modifiers, plan.Strategy, keyDownOnly);
         if (sent)
         {
             _lastTarget = target;

@@ -55,7 +55,7 @@ public partial class PaintToolbarWindow : Window
         BoardOpacitySlider.Value = 0;
         WpsModeCombo.ItemsSource = new[] { "auto", "raw", "message" };
         WpsModeCombo.SelectedIndex = 0;
-        WpsWheelCheck.IsChecked = true;
+        WpsWheelCheck.IsChecked = false;
     }
 
     public void ApplySettings(AppSettings settings)
