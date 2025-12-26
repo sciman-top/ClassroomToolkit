@@ -7,9 +7,9 @@
         <TextBlock Text="课堂工具箱" FontSize="18" Margin="0,0,0,16" HorizontalAlignment="Center" />
         <Button Content="点名/计时" Width="180" Height="36" Margin="0,0,0,10"
                 Click="OnRollCallClick"
-                behaviors:LongPressBehavior.Command="{Binding OpenSettingsCommand}" />
+                behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}" />
         <Button Content="画笔" Width="180" Height="36"
                 Click="OnPaintClick"
-                behaviors:LongPressBehavior.Command="{Binding OpenSettingsCommand}" />
+                behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}" />
     </StackPanel>
 </Window>

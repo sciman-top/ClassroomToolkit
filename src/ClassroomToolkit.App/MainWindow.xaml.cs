@@ -14,14 +14,16 @@ public partial class MainWindow : Window
     private Paint.PaintToolbarWindow? _toolbarWindow;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
-    public ICommand OpenSettingsCommand { get; }
+    public ICommand OpenRollCallSettingsCommand { get; }
+    public ICommand OpenPaintSettingsCommand { get; }
 
     public MainWindow()
     {
         InitializeComponent();
         _settingsService = new AppSettingsService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini"));
         _settings = _settingsService.Load();
-        OpenSettingsCommand = new RelayCommand(OnOpenSettings);
+        OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
+        OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
         DataContext = this;
     }
 
@@ -134,9 +136,27 @@ public partial class MainWindow : Window
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
     }
 
-    private void OnOpenSettings()
+    private void OnOpenRollCallSettings()
     {
-        System.Windows.MessageBox.Show("设置面板将通过长按触发（迁移中）。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        var dialog = new RollCallSettingsDialog(_settings)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        _settings.RollCallShowId = dialog.RollCallShowId;
+        _settings.RollCallShowName = dialog.RollCallShowName;
+        _settings.RollCallRemoteEnabled = dialog.RollCallRemoteEnabled;
+        _settings.RemotePresenterKey = dialog.RemotePresenterKey;
+        SaveSettings();
+        _rollCallWindow?.ApplySettings(_settings);
+    }
+
+    private void OnOpenPaintSettings()
+    {
+        System.Windows.MessageBox.Show("画笔设置将通过工具条调整（迁移中）。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void SaveSettings()

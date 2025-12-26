@@ -22,6 +22,9 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private readonly TimerEngine _timerEngine = new();
     private int _timerMinutes = 5;
     private int _timerSeconds;
+    private bool _showId = true;
+    private bool _showName = true;
+    private bool _remotePresenterEnabled;
     private string _remotePresenterKey = "tab";
 
     public RollCallViewModel(string dataPath)
@@ -76,6 +79,45 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         get => _remotePresenterKey;
         set => SetField(ref _remotePresenterKey, value);
+    }
+
+    public bool ShowId
+    {
+        get => _showId;
+        set
+        {
+            if (SetField(ref _showId, value))
+            {
+                RaisePropertyChanged(nameof(InfoColumnCount));
+            }
+        }
+    }
+
+    public bool ShowName
+    {
+        get => _showName;
+        set
+        {
+            if (SetField(ref _showName, value))
+            {
+                RaisePropertyChanged(nameof(InfoColumnCount));
+            }
+        }
+    }
+
+    public int InfoColumnCount
+    {
+        get
+        {
+            var count = (ShowId ? 1 : 0) + (ShowName ? 1 : 0);
+            return Math.Max(1, count);
+        }
+    }
+
+    public bool RemotePresenterEnabled
+    {
+        get => _remotePresenterEnabled;
+        set => SetField(ref _remotePresenterEnabled, value);
     }
 
     public int TimerMinutes => _timerMinutes;
@@ -253,14 +295,15 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         return $"{span.Minutes:00}:{span.Seconds:00}";
     }
 
-    private void SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
         {
-            return;
+            return false;
         }
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        return true;
     }
 
     private void RaisePropertyChanged(string propertyName)

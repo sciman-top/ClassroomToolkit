@@ -20,6 +20,9 @@ public sealed class AppSettingsService
 
         if (data.TryGetValue("RollCallTimer", out var roll))
         {
+            settings.RollCallShowId = GetBool(roll, "show_id", settings.RollCallShowId);
+            settings.RollCallShowName = GetBool(roll, "show_name", settings.RollCallShowName);
+            settings.RollCallRemoteEnabled = GetBool(roll, "remote_roll_enabled", settings.RollCallRemoteEnabled);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
         }
         if (data.TryGetValue("Paint", out var paint))
@@ -42,6 +45,9 @@ public sealed class AppSettingsService
     {
         var data = _repository.Load();
         var roll = GetOrCreate(data, "RollCallTimer");
+        roll["show_id"] = settings.RollCallShowId ? "True" : "False";
+        roll["show_name"] = settings.RollCallShowName ? "True" : "False";
+        roll["remote_roll_enabled"] = settings.RollCallRemoteEnabled ? "True" : "False";
         roll["remote_roll_key"] = settings.RemotePresenterKey;
 
         var paint = GetOrCreate(data, "Paint");

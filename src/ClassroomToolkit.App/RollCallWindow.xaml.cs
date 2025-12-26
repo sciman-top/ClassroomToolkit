@@ -44,10 +44,10 @@ public partial class RollCallWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _viewModel.LoadData();
-        _viewModel.SetRemotePresenterKey(_settings.RemotePresenterKey);
+        ApplySettings(_settings);
         _stopwatch.Restart();
         _timer.Start();
-        StartKeyboardHook();
+        UpdateRemoteHookState();
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -55,6 +55,9 @@ public partial class RollCallWindow : Window
         _timer.Stop();
         _stopwatch.Stop();
         StopKeyboardHook();
+        _settings.RollCallShowId = _viewModel.ShowId;
+        _settings.RollCallShowName = _viewModel.ShowName;
+        _settings.RollCallRemoteEnabled = _viewModel.RemotePresenterEnabled;
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settingsService.Save(_settings);
         _viewModel.SaveState();
@@ -81,6 +84,7 @@ public partial class RollCallWindow : Window
     private void OnToggleModeClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ToggleMode();
+        UpdateRemoteHookState();
     }
 
     private void OnTimerModeClick(object sender, RoutedEventArgs e)
@@ -120,6 +124,10 @@ public partial class RollCallWindow : Window
     private void StartKeyboardHook()
     {
         if (_keyboardHook != null)
+        {
+            return;
+        }
+        if (!_viewModel.RemotePresenterEnabled || !_viewModel.IsRollCallMode)
         {
             return;
         }
@@ -171,9 +179,30 @@ public partial class RollCallWindow : Window
         }
     }
 
+    public void ApplySettings(AppSettings settings)
+    {
+        _viewModel.ShowId = settings.RollCallShowId;
+        _viewModel.ShowName = settings.RollCallShowName;
+        _viewModel.RemotePresenterEnabled = settings.RollCallRemoteEnabled;
+        _viewModel.SetRemotePresenterKey(settings.RemotePresenterKey);
+        UpdateRemoteHookState();
+    }
+
     private void RestartKeyboardHook()
     {
         StopKeyboardHook();
         StartKeyboardHook();
+    }
+
+    private void UpdateRemoteHookState()
+    {
+        if (_viewModel.RemotePresenterEnabled && _viewModel.IsRollCallMode)
+        {
+            RestartKeyboardHook();
+        }
+        else
+        {
+            StopKeyboardHook();
+        }
     }
 }

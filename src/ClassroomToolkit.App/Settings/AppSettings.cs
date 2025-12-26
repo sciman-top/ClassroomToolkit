@@ -8,6 +8,9 @@ namespace ClassroomToolkit.App.Settings;
 
 public sealed class AppSettings
 {
+    public bool RollCallShowId { get; set; } = true;
+    public bool RollCallShowName { get; set; } = true;
+    public bool RollCallRemoteEnabled { get; set; } = false;
     public string RemotePresenterKey { get; set; } = "tab";
     public string WpsInputMode { get; set; } = "auto";
     public bool WpsWheelForward { get; set; } = false;

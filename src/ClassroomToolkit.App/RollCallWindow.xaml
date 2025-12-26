@@ -30,21 +30,19 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Grid Grid.Row="1" Margin="0,12,0,12"
-              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="#1976D2" CornerRadius="8" Margin="4">
+        <UniformGrid Grid.Row="1" Margin="0,12,0,12" Columns="{Binding InfoColumnCount}"
+                     Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+            <Border Background="#1976D2" CornerRadius="8" Margin="4"
+                    Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="{Binding CurrentStudentId}" Foreground="White" FontSize="28"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <Border Grid.Column="1" Background="#1976D2" CornerRadius="8" Margin="4">
+            <Border Background="#1976D2" CornerRadius="8" Margin="4"
+                    Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="{Binding CurrentStudentName}" Foreground="White" FontSize="28"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-        </Grid>
+        </UniformGrid>
 
         <Border Grid.Row="1" Margin="0,12,0,12" Background="#37474F" CornerRadius="8"
                 Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
