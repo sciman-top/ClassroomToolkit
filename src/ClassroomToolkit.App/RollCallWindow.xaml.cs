@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using ClassroomToolkit.App.ViewModels;
 
 namespace ClassroomToolkit.App;
@@ -7,6 +9,8 @@ namespace ClassroomToolkit.App;
 public partial class RollCallWindow : Window
 {
     private readonly RollCallViewModel _viewModel;
+    private readonly DispatcherTimer _timer;
+    private readonly Stopwatch _stopwatch;
 
     public RollCallWindow(string dataPath)
     {
@@ -15,15 +19,26 @@ public partial class RollCallWindow : Window
         DataContext = _viewModel;
         Loaded += OnLoaded;
         Closing += OnClosing;
+
+        _stopwatch = new Stopwatch();
+        _timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        _timer.Tick += OnTimerTick;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _viewModel.LoadData();
+        _stopwatch.Restart();
+        _timer.Start();
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        _timer.Stop();
+        _stopwatch.Stop();
         _viewModel.SaveState();
     }
 
@@ -45,8 +60,42 @@ public partial class RollCallWindow : Window
         _viewModel.ResetCurrentGroup();
     }
 
-    private void OnToggleTimerClick(object sender, RoutedEventArgs e)
+    private void OnToggleModeClick(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("计时功能正在迁移中。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        _viewModel.ToggleMode();
+    }
+
+    private void OnTimerModeClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ToggleTimerMode();
+    }
+
+    private void OnTimerStartPauseClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ToggleTimer();
+    }
+
+    private void OnTimerResetClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ResetTimer();
+    }
+
+    private void OnTimerSetClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new TimerSetDialog(_viewModel.TimerMinutes, _viewModel.TimerSeconds)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _viewModel.SetCountdown(dialog.Minutes, dialog.Seconds);
+        }
+    }
+
+    private void OnTimerTick(object? sender, EventArgs e)
+    {
+        var elapsed = _stopwatch.Elapsed;
+        _stopwatch.Restart();
+        _viewModel.TickTimer(elapsed);
     }
 }

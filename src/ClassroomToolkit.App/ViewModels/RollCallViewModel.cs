@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Services;
+using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Infra.Storage;
 
 namespace ClassroomToolkit.App.ViewModels;
@@ -16,11 +17,18 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _currentGroup = "全部";
     private string _currentStudentId = string.Empty;
     private string _currentStudentName = string.Empty;
+    private bool _isRollCallMode = true;
+    private string _timeDisplay = "00:00";
+    private readonly TimerEngine _timerEngine = new();
+    private int _timerMinutes = 5;
+    private int _timerSeconds;
 
     public RollCallViewModel(string dataPath)
     {
         _dataPath = dataPath;
         Groups = new ObservableCollection<string>();
+        _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
+        UpdateTimeDisplay();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -44,6 +52,28 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         get => _currentStudentName;
         private set => SetField(ref _currentStudentName, value);
     }
+
+    public bool IsRollCallMode
+    {
+        get => _isRollCallMode;
+        private set => SetField(ref _isRollCallMode, value);
+    }
+
+    public string ModeToggleLabel => IsRollCallMode ? "切换到计时" : "切换到点名";
+
+    public string TimerModeLabel => _timerEngine.Mode == TimerMode.Countdown ? "倒计时" : "秒表";
+
+    public string StartPauseLabel => _timerEngine.Running ? "暂停" : "开始";
+
+    public string TimeDisplay
+    {
+        get => _timeDisplay;
+        private set => SetField(ref _timeDisplay, value);
+    }
+
+    public int TimerMinutes => _timerMinutes;
+
+    public int TimerSeconds => _timerSeconds;
 
     public void LoadData()
     {
@@ -77,6 +107,49 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         CurrentStudentId = student.StudentId;
         CurrentStudentName = student.Name;
+    }
+
+    public void ToggleMode()
+    {
+        IsRollCallMode = !IsRollCallMode;
+        RaisePropertyChanged(nameof(ModeToggleLabel));
+    }
+
+    public void ToggleTimerMode()
+    {
+        var nextMode = _timerEngine.Mode == TimerMode.Countdown ? TimerMode.Stopwatch : TimerMode.Countdown;
+        _timerEngine.SetMode(nextMode);
+        UpdateTimeDisplay();
+        RaisePropertyChanged(nameof(TimerModeLabel));
+        RaisePropertyChanged(nameof(StartPauseLabel));
+    }
+
+    public void ToggleTimer()
+    {
+        _timerEngine.Toggle();
+        RaisePropertyChanged(nameof(StartPauseLabel));
+    }
+
+    public void ResetTimer()
+    {
+        _timerEngine.Reset();
+        UpdateTimeDisplay();
+        RaisePropertyChanged(nameof(StartPauseLabel));
+    }
+
+    public void SetCountdown(int minutes, int seconds)
+    {
+        _timerMinutes = Math.Max(0, minutes);
+        _timerSeconds = Math.Clamp(seconds, 0, 59);
+        _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
+        UpdateTimeDisplay();
+    }
+
+    public void TickTimer(TimeSpan elapsed)
+    {
+        _timerEngine.Tick(elapsed);
+        UpdateTimeDisplay();
+        RaisePropertyChanged(nameof(StartPauseLabel));
     }
 
     public void ResetCurrentGroup()
@@ -144,6 +217,30 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         CurrentStudentName = student.Name;
     }
 
+    private void UpdateTimeDisplay()
+    {
+        if (_timerEngine.Mode == TimerMode.Countdown)
+        {
+            TimeDisplay = FormatTime(_timerEngine.SecondsLeft);
+        }
+        else
+        {
+            TimeDisplay = FormatTime(_timerEngine.StopwatchSeconds);
+        }
+        RaisePropertyChanged(nameof(TimerModeLabel));
+    }
+
+    private static string FormatTime(int totalSeconds)
+    {
+        totalSeconds = Math.Max(0, totalSeconds);
+        var span = TimeSpan.FromSeconds(totalSeconds);
+        if (span.TotalHours >= 1)
+        {
+            return $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
+        }
+        return $"{span.Minutes:00}:{span.Seconds:00}";
+    }
+
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
@@ -152,5 +249,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private void RaisePropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
