@@ -95,7 +95,7 @@ public partial class RollCallSettingsDialog : Window
         {
             if (!KeyBindingParser.TryParse(keyText, out var binding) || binding == null)
             {
-                MessageBox.Show("请输入有效的按键组合。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("请输入有效的按键组合。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             keyText = binding.ToString();
