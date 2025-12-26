@@ -1,15 +1,25 @@
 # Repository Guidelines
 
+# Output Language Policy
+
+## 用户可见输出语言
+- 所有最终输出、分析说明、代码解释、设计决策、文档、列表、任务进度更新**必须使用中文**
+- 技术术语保持英文原文（如 WPF, Grid, DependencyProperty），避免歧义
+- 允许在代码注释中使用中文
+
+## 模型内部推理（不可见内容）
+- 模型的内部思考、推理链、规划语句（chain-of-thought / reasoning）无需翻译成中文
+- 若 reasoning 被展示，则无需更改英文形式
+- **模型在开始执行前必须用中文复述任务理解**（用于同步上下文）
+
+## 上下文连续性
+每次输出前执行以下步骤：
+1. 用中文总结当前任务理解
+2. 输出结果（中文）
+3. 若 reasoning 被展示，无需翻译，保持英文
+
 ## Project Structure & Module Organization
 This repository is a single-file PyQt desktop app with supporting assets.
-
-- 始终使用【简体中文】回答，除非我在指令里明确要求使用其他语言。
-- 解释代码、命令行输出、你的思考过程等，所有都尽量用中文讲解。
-- 避免自我介绍和客套话，直接进入解决问题。
-
-- 只有在：
-  - 需要执行「危险操作」（删除大量文件、强制覆盖等），或
-  - 我给的需求明显含糊不清时再停下来向我确认。
 
 - `ClassroomToolkit.py`: main application entry point and all logic.
 - `students.xlsx`: default student data template (auto-created/used by the app).
