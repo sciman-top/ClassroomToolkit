@@ -1,27 +1,38 @@
 <Window x:Class="ClassroomToolkit.App.TimerSetDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="设定时间" Height="200" Width="320" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
-    <Grid Margin="16">
+        Title="设置倒计时"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="分钟：" VerticalAlignment="Center" Margin="0,0,8,8" />
-        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding MinutesText}" Margin="0,0,0,8" />
+        <TextBlock Grid.Row="0" Text="分钟 (0-150，滑块 0-25):" Margin="0,0,0,4" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+            <TextBox x:Name="MinutesBox" Width="60" TextChanged="OnMinutesTextChanged" />
+        </StackPanel>
+        <Slider Grid.Row="2" x:Name="MinutesSlider" Minimum="0" Maximum="25"
+                ValueChanged="OnMinutesSliderChanged" Margin="0,0,0,8" />
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="秒：" VerticalAlignment="Center" Margin="0,0,8,8" />
-        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SecondsText}" Margin="0,0,0,8" />
+        <TextBlock Grid.Row="3" Text="秒 (0-59):" Margin="0,0,0,4" />
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,6">
+            <TextBox x:Name="SecondsBox" Width="60" TextChanged="OnSecondsTextChanged" />
+        </StackPanel>
+        <Slider Grid.Row="5" x:Name="SecondsSlider" Minimum="0" Maximum="59"
+                ValueChanged="OnSecondsSliderChanged" Margin="0,0,0,8" />
 
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="确定" Width="70" Margin="0,8,8,0" Click="OnConfirm" />
-            <Button Content="取消" Width="70" Margin="0,8,0,0" Click="OnCancel" />
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="确定" Width="80" Height="32" Margin="0,8,8,0" Click="OnConfirm" />
+            <Button Content="取消" Width="80" Height="32" Margin="0,8,0,0" Click="OnCancel" />
         </StackPanel>
     </Grid>
 </Window>

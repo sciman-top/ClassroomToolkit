@@ -16,6 +16,8 @@ public sealed class TimerEngine
 
     public int StopwatchSeconds => _stopwatchSeconds;
 
+    public int CountdownSeconds => _countdownSeconds;
+
     public int ReminderIntervalSeconds
     {
         get => _reminderSeconds;
@@ -40,6 +42,22 @@ public sealed class TimerEngine
     {
         _countdownSeconds = Math.Max(0, minutes * 60 + seconds);
         _secondsLeft = _countdownSeconds;
+    }
+
+    public void SetState(TimerMode mode, int countdownSeconds, int secondsLeft, int stopwatchSeconds, bool running)
+    {
+        Mode = mode;
+        _countdownSeconds = Math.Max(0, countdownSeconds);
+        if (Mode == TimerMode.Countdown)
+        {
+            _secondsLeft = Math.Max(0, Math.Min(secondsLeft, _countdownSeconds));
+        }
+        else
+        {
+            _stopwatchSeconds = Math.Max(0, stopwatchSeconds);
+        }
+        _reminderCounter = 0;
+        Running = running;
     }
 
     public void Start()

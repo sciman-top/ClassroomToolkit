@@ -2,69 +2,110 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
-        xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
-        Title="点名/计时" Height="360" Width="560" WindowStartupLocation="CenterScreen">
+        Title="点名 / 计时"
+        Height="360"
+        Width="560"
+        MinWidth="260"
+        MinHeight="160"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <local:BoolToGridLengthConverter x:Key="BoolToGridLength" />
     </Window.Resources>
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ItemsControl Grid.Row="0" ItemsSource="{Binding Groups}"
-                      Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Button Content="{Binding}" Tag="{Binding}" Margin="4" Padding="10,4"
-                            Click="OnGroupClick" />
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding ModeTitle}" FontWeight="Bold" Margin="0,0,12,0" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="{Binding ModeToggleLabel}" MinWidth="92" Margin="0,0,6,0"
+                    Click="OnToggleModeClick" />
+            <Button Grid.Column="2" Content="{Binding ClassButtonLabel}" MinWidth="60" Margin="0,0,4,0" Click="OnClassClick" />
+            <Button Grid.Column="3" Content="名单" MinWidth="60" Margin="0,0,4,0" Click="OnListClick" />
+            <Button Grid.Column="4" Content="设置" MinWidth="60" Click="OnSettingsClick" />
+        </Grid>
 
-        <UniformGrid Grid.Row="1" Margin="0,12,0,12" Columns="{Binding InfoColumnCount}"
-                     Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-            <Border Background="#1976D2" CornerRadius="8" Margin="4"
-                    Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="{Binding CurrentStudentId}" Foreground="White" FontSize="28"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-            <Border Background="#1976D2" CornerRadius="8" Margin="4"
-                    Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="{Binding CurrentStudentName}" Foreground="White" FontSize="28"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
-        </UniformGrid>
+        <Grid Grid.Row="1" Margin="0,4,0,0" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="分组" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <DockPanel Grid.Column="1" LastChildFill="True">
+                <ItemsControl ItemsSource="{Binding Groups}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding}" Tag="{Binding}" Margin="2" Padding="10,4"
+                                    Click="OnGroupClick" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="10,4" Click="OnResetClick" />
+            </DockPanel>
+        </Grid>
 
-        <Border Grid.Row="1" Margin="0,12,0,12" Background="#37474F" CornerRadius="8"
-                Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-            <TextBlock Text="{Binding TimeDisplay}" Foreground="White" FontSize="36"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-        </Border>
+        <Grid Grid.Row="2" Margin="0,6,0,0">
+            <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                <Border Background="Transparent" MouseLeftButtonUp="OnRollClick">
+                    <Grid Margin="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{Binding ShowId, Converter={StaticResource BoolToGridLength}}" />
+                            <ColumnDefinition Width="{Binding ShowName, Converter={StaticResource BoolToGridLength}}" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="#1976D2" CornerRadius="8" Margin="4"
+                                Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding CurrentStudentId}" Foreground="White" FontSize="28"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border Grid.Column="1" Background="#1976D2" CornerRadius="8" Margin="4"
+                                Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding CurrentStudentName}" Foreground="White" FontSize="28"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
-                    Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-            <Button Content="点名" Margin="6" Padding="16,6" Click="OnRollClick"
-                    behaviors:LongPressBehavior.Command="{Binding OpenRemoteKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-            <Button Content="重置" Margin="6" Padding="16,6" Click="OnResetClick" />
-            <Button Content="{Binding ModeToggleLabel}" Margin="6" Padding="16,6" Click="OnToggleModeClick" />
-        </StackPanel>
-
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
-                    Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-            <Button Content="{Binding TimerModeLabel}" Margin="4" Padding="12,6" Click="OnTimerModeClick" />
-            <Button Content="{Binding StartPauseLabel}" Margin="4" Padding="12,6" Click="OnTimerStartPauseClick" />
-            <Button Content="重置" Margin="4" Padding="12,6" Click="OnTimerResetClick" />
-            <Button Content="设定" Margin="4" Padding="12,6" Click="OnTimerSetClick" />
-            <Button Content="{Binding ModeToggleLabel}" Margin="4" Padding="12,6" Click="OnToggleModeClick" />
-        </StackPanel>
+            <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" CornerRadius="8" Margin="6">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#263238" Offset="0" />
+                            <GradientStop Color="#37474F" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="{Binding TimeDisplay}" Foreground="White" FontSize="36"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                    <Button Content="{Binding TimerModeLabel}" Margin="4" Padding="12,6" Click="OnTimerModeClick" />
+                    <Button Content="{Binding StartPauseLabel}" Margin="4" Padding="12,6" Click="OnTimerStartPauseClick" />
+                    <Button Content="重置" Margin="4" Padding="12,6" Click="OnTimerResetClick" />
+                    <Button Content="设定" Margin="4" Padding="12,6" Click="OnTimerSetClick" />
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

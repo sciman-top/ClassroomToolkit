@@ -140,6 +140,23 @@ public sealed class RollCallEngine
         return state;
     }
 
+    public void SetCurrentStudentIndex(int? index)
+    {
+        if (!index.HasValue)
+        {
+            CurrentStudentIndex = null;
+            PendingStudentIndex = null;
+            return;
+        }
+        var value = index.Value;
+        if (value < 0 || value >= _roster.Students.Count)
+        {
+            return;
+        }
+        CurrentStudentIndex = value;
+        PendingStudentIndex = null;
+    }
+
     public void RestoreState(ClassRollState? state)
     {
         if (state == null)

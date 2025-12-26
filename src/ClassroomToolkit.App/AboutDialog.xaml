@@ -1,0 +1,27 @@
+<Window x:Class="ClassroomToolkit.App.AboutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="关于"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Border Padding="18">
+        <TextBlock TextWrapping="Wrap">
+            <Run Text="课堂工具箱 V6.0" FontWeight="Bold" />
+            <LineBreak />
+            <Run Text="作者：广州番禺王耀强" />
+            <LineBreak />
+            <Run Text="知乎主页：" />
+            <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate">sciman</Hyperlink>
+            <LineBreak />
+            <Run Text="公众号：sciman逸居" />
+            <LineBreak />
+            <Run Text="GitHub：" />
+            <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate">sciman-top/ClassroomTools</Hyperlink>
+            <LineBreak />
+            <Run Text="“初中物理教研”Q群：323728546" />
+        </TextBlock>
+    </Border>
+</Window>
