@@ -10,6 +10,7 @@ internal static class NativeMethods
     public const int WmKeyDown = 0x0100;
     public const int WmKeyUp = 0x0101;
     public const int WmMouseWheel = 0x020A;
+    public const uint GaRoot = 2;
 
     [DllImport("user32.dll")]
     internal static extern IntPtr GetForegroundWindow();
@@ -25,6 +26,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern bool GetCursorPos(out Point point);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
 
     [DllImport("user32.dll")]
     internal static extern bool SetForegroundWindow(IntPtr hwnd);
