@@ -14,6 +14,9 @@ public sealed class AppSettings
     public bool RollCallShowPhoto { get; set; } = false;
     public int RollCallPhotoDurationSeconds { get; set; } = 0;
     public string RollCallPhotoSharedClass { get; set; } = string.Empty;
+    public bool RollCallTimerSoundEnabled { get; set; } = true;
+    public bool RollCallTimerReminderEnabled { get; set; } = false;
+    public int RollCallTimerReminderIntervalMinutes { get; set; } = 0;
     public string RemotePresenterKey { get; set; } = "tab";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;

@@ -26,6 +26,9 @@ public sealed class AppSettingsService
             settings.RollCallShowPhoto = GetBool(roll, "show_photo", settings.RollCallShowPhoto);
             settings.RollCallPhotoDurationSeconds = GetInt(roll, "photo_duration_seconds", settings.RollCallPhotoDurationSeconds);
             settings.RollCallPhotoSharedClass = GetString(roll, "photo_shared_class", settings.RollCallPhotoSharedClass);
+            settings.RollCallTimerSoundEnabled = GetBool(roll, "timer_sound_enabled", settings.RollCallTimerSoundEnabled);
+            settings.RollCallTimerReminderEnabled = GetBool(roll, "timer_reminder_enabled", settings.RollCallTimerReminderEnabled);
+            settings.RollCallTimerReminderIntervalMinutes = GetInt(roll, "timer_reminder_interval_minutes", settings.RollCallTimerReminderIntervalMinutes);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
         }
         if (data.TryGetValue("Paint", out var paint))
@@ -56,6 +59,9 @@ public sealed class AppSettingsService
         roll["show_photo"] = settings.RollCallShowPhoto ? "True" : "False";
         roll["photo_duration_seconds"] = settings.RollCallPhotoDurationSeconds.ToString(CultureInfo.InvariantCulture);
         roll["photo_shared_class"] = settings.RollCallPhotoSharedClass ?? string.Empty;
+        roll["timer_sound_enabled"] = settings.RollCallTimerSoundEnabled ? "True" : "False";
+        roll["timer_reminder_enabled"] = settings.RollCallTimerReminderEnabled ? "True" : "False";
+        roll["timer_reminder_interval_minutes"] = settings.RollCallTimerReminderIntervalMinutes.ToString(CultureInfo.InvariantCulture);
         roll["remote_roll_key"] = settings.RemotePresenterKey;
 
         var paint = GetOrCreate(data, "Paint");

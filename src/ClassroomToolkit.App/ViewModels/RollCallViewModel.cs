@@ -30,16 +30,23 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _photoSharedClass = string.Empty;
     private string _remotePresenterKey = "tab";
     private string _activeClassName = string.Empty;
+    private bool _timerSoundEnabled = true;
+    private bool _timerReminderEnabled;
+    private int _timerReminderIntervalMinutes;
 
     public RollCallViewModel(string dataPath)
     {
         _dataPath = dataPath;
         Groups = new ObservableCollection<string>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
+        _timerEngine.TimerCompleted += () => TimerCompleted?.Invoke();
+        _timerEngine.ReminderTriggered += () => ReminderTriggered?.Invoke();
         UpdateTimeDisplay();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event Action? TimerCompleted;
+    public event Action? ReminderTriggered;
 
     public ObservableCollection<string> Groups { get; }
 
@@ -146,6 +153,37 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         get => _activeClassName;
         private set => SetField(ref _activeClassName, value ?? string.Empty);
+    }
+
+    public bool TimerSoundEnabled
+    {
+        get => _timerSoundEnabled;
+        set => SetField(ref _timerSoundEnabled, value);
+    }
+
+    public bool TimerReminderEnabled
+    {
+        get => _timerReminderEnabled;
+        set
+        {
+            if (SetField(ref _timerReminderEnabled, value))
+            {
+                ApplyReminderInterval();
+            }
+        }
+    }
+
+    public int TimerReminderIntervalMinutes
+    {
+        get => _timerReminderIntervalMinutes;
+        set
+        {
+            var minutes = Math.Max(0, value);
+            if (SetField(ref _timerReminderIntervalMinutes, minutes))
+            {
+                ApplyReminderInterval();
+            }
+        }
     }
 
     public int TimerMinutes => _timerMinutes;
@@ -322,6 +360,16 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
         }
         return $"{span.Minutes:00}:{span.Seconds:00}";
+    }
+
+    private void ApplyReminderInterval()
+    {
+        if (!TimerReminderEnabled || TimerReminderIntervalMinutes <= 0)
+        {
+            _timerEngine.ReminderIntervalSeconds = 0;
+            return;
+        }
+        _timerEngine.ReminderIntervalSeconds = TimerReminderIntervalMinutes * 60;
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)

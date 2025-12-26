@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Media;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -44,6 +45,8 @@ public partial class RollCallWindow : Window
         _timer.Tick += OnTimerTick;
 
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
+        _viewModel.TimerCompleted += OnTimerCompleted;
+        _viewModel.ReminderTriggered += OnReminderTriggered;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -66,6 +69,9 @@ public partial class RollCallWindow : Window
         _settings.RollCallShowPhoto = _viewModel.ShowPhoto;
         _settings.RollCallPhotoDurationSeconds = _viewModel.PhotoDurationSeconds;
         _settings.RollCallPhotoSharedClass = _viewModel.PhotoSharedClass;
+        _settings.RollCallTimerSoundEnabled = _viewModel.TimerSoundEnabled;
+        _settings.RollCallTimerReminderEnabled = _viewModel.TimerReminderEnabled;
+        _settings.RollCallTimerReminderIntervalMinutes = _viewModel.TimerReminderIntervalMinutes;
         _settings.RollCallRemoteEnabled = _viewModel.RemotePresenterEnabled;
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settingsService.Save(_settings);
@@ -232,6 +238,22 @@ public partial class RollCallWindow : Window
         _viewModel.TickTimer(elapsed);
     }
 
+    private void OnTimerCompleted()
+    {
+        if (_viewModel.TimerSoundEnabled)
+        {
+            SystemSounds.Exclamation.Play();
+        }
+    }
+
+    private void OnReminderTriggered()
+    {
+        if (_viewModel.TimerReminderEnabled)
+        {
+            SystemSounds.Asterisk.Play();
+        }
+    }
+
     private void StartKeyboardHook()
     {
         if (_keyboardHook != null)
@@ -297,6 +319,9 @@ public partial class RollCallWindow : Window
         _viewModel.ShowPhoto = settings.RollCallShowPhoto;
         _viewModel.PhotoDurationSeconds = settings.RollCallPhotoDurationSeconds;
         _viewModel.PhotoSharedClass = settings.RollCallPhotoSharedClass;
+        _viewModel.TimerSoundEnabled = settings.RollCallTimerSoundEnabled;
+        _viewModel.TimerReminderEnabled = settings.RollCallTimerReminderEnabled;
+        _viewModel.TimerReminderIntervalMinutes = settings.RollCallTimerReminderIntervalMinutes;
         _viewModel.RemotePresenterEnabled = settings.RollCallRemoteEnabled;
         _viewModel.SetRemotePresenterKey(settings.RemotePresenterKey);
         UpdateRemoteHookState();
