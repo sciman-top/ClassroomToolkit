@@ -21,7 +21,7 @@ public partial class PaintOverlayWindow : Window
     {
         InitializeComponent();
         WindowState = WindowState.Maximized;
-        InkLayer.EditingMode = InkCanvasEditingMode.Ink;
+        InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
         InkLayer.EraserShape = new RectangleStylusShape(24, 24);
         InkLayer.StrokeCollected += (_, _) => { };
@@ -52,16 +52,16 @@ public partial class PaintOverlayWindow : Window
         switch (mode)
         {
             case PaintToolMode.Brush:
-                InkLayer.EditingMode = InkCanvasEditingMode.Ink;
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
                 break;
             case PaintToolMode.Eraser:
-                InkLayer.EditingMode = InkCanvasEditingMode.EraseByPoint;
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
                 break;
             case PaintToolMode.Shape:
-                InkLayer.EditingMode = InkCanvasEditingMode.None;
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
                 break;
             default:
-                InkLayer.EditingMode = InkCanvasEditingMode.None;
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
                 break;
         }
     }
@@ -166,8 +166,8 @@ public partial class PaintOverlayWindow : Window
         {
             PaintShapeType.Line => new Line(),
             PaintShapeType.DashedLine => new Line(),
-            PaintShapeType.Rectangle => new Rectangle(),
-            PaintShapeType.RectangleFill => new Rectangle(),
+            PaintShapeType.Rectangle => new System.Windows.Shapes.Rectangle(),
+            PaintShapeType.RectangleFill => new System.Windows.Shapes.Rectangle(),
             PaintShapeType.Ellipse => new Ellipse(),
             _ => null
         };
@@ -206,8 +206,8 @@ public partial class PaintOverlayWindow : Window
         }
         else
         {
-            Canvas.SetLeft(shape, left);
-            Canvas.SetTop(shape, top);
+            System.Windows.Controls.Canvas.SetLeft(shape, left);
+            System.Windows.Controls.Canvas.SetTop(shape, top);
             shape.Width = Math.Max(1, width);
             shape.Height = Math.Max(1, height);
         }

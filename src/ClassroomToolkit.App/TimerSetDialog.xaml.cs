@@ -39,12 +39,12 @@ public partial class TimerSetDialog : Window, INotifyPropertyChanged
     {
         if (!int.TryParse(MinutesText, out var minutes) || minutes < 0)
         {
-            MessageBox.Show("请输入有效的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show("请输入有效的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!int.TryParse(SecondsText, out var seconds) || seconds < 0 || seconds > 59)
         {
-            MessageBox.Show("请输入 0-59 的秒数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show("请输入 0-59 的秒数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         Minutes = Math.Min(minutes, 9999);

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
 using System.Windows.Media;
 using ClassroomToolkit.App.Commands;
 
@@ -69,9 +70,9 @@ public partial class PaintToolbarWindow : Window
 
     private void OnColorClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is string hex)
+        if (sender is System.Windows.Controls.Button button && button.Tag is string hex)
         {
-            var color = (MediaColor)ColorConverter.ConvertFromString(hex);
+            var color = (MediaColor)MediaColorConverter.ConvertFromString(hex);
             BrushColorChanged?.Invoke(color);
         }
     }

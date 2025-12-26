@@ -49,7 +49,7 @@ public partial class RollCallWindow : Window
 
     private void OnGroupClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is string group)
+        if (sender is System.Windows.Controls.Button button && button.Tag is string group)
         {
             _viewModel.SetCurrentGroup(group);
         }

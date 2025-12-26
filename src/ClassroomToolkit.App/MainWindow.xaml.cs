@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using ClassroomToolkit.App.Commands;
 
 namespace ClassroomToolkit.App;
@@ -75,6 +76,6 @@ public partial class MainWindow : Window
 
     private void OnOpenSettings()
     {
-        MessageBox.Show("设置面板将通过长按触发（迁移中）。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        System.Windows.MessageBox.Show("设置面板将通过长按触发（迁移中）。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
