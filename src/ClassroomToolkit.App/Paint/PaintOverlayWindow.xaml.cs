@@ -21,6 +21,7 @@ public partial class PaintOverlayWindow : Window
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
     private const int WsExNoActivate = 0x08000000;
+    private const uint MonitorDefaultToNearest = 2;
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
@@ -483,6 +484,15 @@ public partial class PaintOverlayWindow : Window
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
 
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo info);
+
     private void UpdateFocusAcceptance()
     {
         if (_hwnd == IntPtr.Zero)
@@ -606,6 +616,11 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        var fullscreen = IsFullscreenPresentationWindow(target);
+        if (!fullscreen)
+        {
+            return;
+        }
         var force = ShouldForcePresentationForeground(target);
         if (!force && !IsForegroundOwnedByCurrentProcess())
         {
@@ -636,7 +651,69 @@ public partial class PaintOverlayWindow : Window
         {
             return false;
         }
-        return _presentationClassifier.IsSlideshowWindow(target.Info);
+        return IsFullscreenPresentationWindow(target);
+    }
+
+    private bool IsFullscreenPresentationWindow(
+        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    {
+        if (!target.IsValid)
+        {
+            return false;
+        }
+        if (!_presentationClassifier.IsSlideshowWindow(target.Info))
+        {
+            return false;
+        }
+        return IsFullscreenWindow(target.Handle);
+    }
+
+    private static bool IsFullscreenWindow(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+        if (!GetWindowRect(hwnd, out var rect))
+        {
+            return false;
+        }
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero)
+        {
+            return false;
+        }
+        var info = new MonitorInfo
+        {
+            Size = Marshal.SizeOf<MonitorInfo>()
+        };
+        if (!GetMonitorInfo(monitor, ref info))
+        {
+            return false;
+        }
+        const int tolerance = 2;
+        return Math.Abs(rect.Left - info.Monitor.Left) <= tolerance
+               && Math.Abs(rect.Top - info.Monitor.Top) <= tolerance
+               && Math.Abs(rect.Right - info.Monitor.Right) <= tolerance
+               && Math.Abs(rect.Bottom - info.Monitor.Bottom) <= tolerance;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
     }
 
     private void OnWpsNavHookRequested(int direction, string source)

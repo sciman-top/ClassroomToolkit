@@ -55,6 +55,8 @@
                                 <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
+                                           FontSize="16"
+                                           FontWeight="Bold"
                                            Margin="0,0,8,0"
                                            TextTrimming="CharacterEllipsis" />
                                 <Ellipse Grid.Column="1" Width="10" Height="10" Fill="#d93025"

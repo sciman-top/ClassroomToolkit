@@ -9,6 +9,7 @@ namespace ClassroomToolkit.App;
 
 public partial class StudentListDialog : Window
 {
+    private const double StudentNameFontSize = 16d;
     public static readonly DependencyProperty StudentButtonWidthProperty =
         DependencyProperty.Register(nameof(StudentButtonWidth), typeof(double), typeof(StudentListDialog), new PropertyMetadata(120d));
 
@@ -42,13 +43,13 @@ public partial class StudentListDialog : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var typeface = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+        var typeface = new Typeface(FontFamily, FontStyle, FontWeights.Bold, FontStretch);
         var maxTextWidth = 120d;
         var maxTextHeight = 0d;
         foreach (var item in _students)
         {
             var text = item.DisplayText;
-            var size = MeasureTextSize(text, typeface, FontSize, dpi);
+            var size = MeasureTextSize(text, typeface, StudentNameFontSize, dpi);
             if (size.Width > maxTextWidth)
             {
                 maxTextWidth = size.Width;
