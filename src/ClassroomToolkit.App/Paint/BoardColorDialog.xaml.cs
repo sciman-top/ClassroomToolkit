@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using MediaColor = System.Windows.Media.Color;
+using WpfButton = System.Windows.Controls.Button;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -13,7 +14,7 @@ public partial class BoardColorDialog : Window
     {
         new("白板", Colors.White),
         new("黑板", Colors.Black),
-        new("绿板", Color.FromRgb(0x0E, 0x40, 0x20))
+        new("绿板", MediaColor.FromRgb(0x0E, 0x40, 0x20))
     };
 
     public MediaColor? SelectedColor { get; private set; }
@@ -28,7 +29,7 @@ public partial class BoardColorDialog : Window
     {
         foreach (var option in Options)
         {
-            var button = new Button
+            var button = new WpfButton
             {
                 Content = option.Name,
                 Width = 72,
@@ -36,15 +37,16 @@ public partial class BoardColorDialog : Window
                 Margin = new Thickness(0, 0, 6, 0),
                 Background = new SolidColorBrush(option.Color),
                 Foreground = new SolidColorBrush(GetContrastingColor(option.Color)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(120, 0, 0, 0)),
+                BorderBrush = new SolidColorBrush(MediaColor.FromArgb(120, 0, 0, 0)),
                 BorderThickness = new Thickness(1)
             };
             button.Click += (_, _) => SelectColor(option.Color);
             OptionsPanel.Children.Add(button);
         }
-        if (OptionsPanel.Children.Count > 0)
+        if (OptionsPanel.Children.Count > 0
+            && OptionsPanel.Children[^1] is FrameworkElement last)
         {
-            OptionsPanel.Children[^1].Margin = new Thickness(0);
+            last.Margin = new Thickness(0);
         }
     }
 
