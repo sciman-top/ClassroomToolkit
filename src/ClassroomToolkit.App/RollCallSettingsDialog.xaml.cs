@@ -1,5 +1,7 @@
+using System.IO;
 using System.Speech.Synthesis;
 using System.Windows;
+using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
@@ -8,6 +10,7 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
+    private readonly AppSettings _settings;
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
 
@@ -31,6 +34,7 @@ public partial class RollCallSettingsDialog : Window
     public RollCallSettingsDialog(AppSettings settings, IReadOnlyList<string> availableClasses)
     {
         InitializeComponent();
+        _settings = settings;
         _initialVoiceId = settings.RollCallSpeechVoiceId ?? string.Empty;
         _initialOutputId = settings.RollCallSpeechOutputId ?? string.Empty;
         ShowIdCheck.IsChecked = settings.RollCallShowId;
@@ -100,7 +104,16 @@ public partial class RollCallSettingsDialog : Window
 
     private void OnDiagnosticClick(object sender, RoutedEventArgs e)
     {
-        System.Windows.MessageBox.Show("系统兼容性诊断正在迁移中。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var settingsPath = Path.Combine(baseDir, "settings.ini");
+        var studentPath = Path.Combine(baseDir, "students.xlsx");
+        var photoRoot = Path.Combine(baseDir, "student_photos");
+        var result = SystemDiagnostics.CollectSystemDiagnostics(_settings, settingsPath, studentPath, photoRoot);
+        var dialog = new DiagnosticsDialog(result)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
     }
 
     private void UpdateRemoteKeyEnabled()

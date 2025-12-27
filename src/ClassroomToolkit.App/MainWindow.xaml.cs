@@ -6,8 +6,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App;
@@ -56,6 +58,7 @@ public partial class MainWindow : Window
         {
             UpdateToggleButtons();
         }
+        RunStartupDiagnostics();
     }
 
     private void OnRollCallClick(object sender, RoutedEventArgs e)
@@ -531,6 +534,36 @@ public partial class MainWindow : Window
             _autoExitTimer.Interval = TimeSpan.FromSeconds(_settings.LauncherAutoExitSeconds);
             _autoExitTimer.Start();
         }
+    }
+
+    private void RunStartupDiagnostics()
+    {
+        var flag = Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG");
+        if (string.Equals(flag, "1", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
+        _ = Task.Run(() =>
+        {
+            var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);
+            if (!result.HasIssues)
+            {
+                return;
+            }
+            Dispatcher.Invoke(() =>
+            {
+                if (!IsLoaded)
+                {
+                    return;
+                }
+                var dialog = new DiagnosticsDialog(result)
+                {
+                    Owner = this
+                };
+                dialog.ShowDialog();
+            });
+        });
     }
 
     private void SaveLauncherSettings()
