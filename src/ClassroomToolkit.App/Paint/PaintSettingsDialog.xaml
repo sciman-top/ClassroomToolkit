@@ -12,6 +12,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <GroupBox Header="基本画笔设置">
@@ -76,7 +77,11 @@
             <ComboBox x:Name="ShapeCombo" Width="200" />
         </StackPanel>
 
-        <GroupBox Header="WPS 兼容" Grid.Row="3" Margin="0,12,0,0">
+        <StackPanel Grid.Row="3" Margin="0,8,0,0">
+            <CheckBox x:Name="ForceForegroundCheck" Content="检测到全屏放映时自动切到前台" />
+        </StackPanel>
+
+        <GroupBox Header="WPS 兼容" Grid.Row="4" Margin="0,12,0,0">
             <StackPanel Margin="8">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="兼容策略：" VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -87,7 +92,7 @@
             </StackPanel>
         </GroupBox>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button Content="确定" Width="60" Height="26" Margin="0,0,6,0" Click="OnConfirm" />
             <Button Content="取消" Width="60" Height="26" Click="OnCancel" />
         </StackPanel>

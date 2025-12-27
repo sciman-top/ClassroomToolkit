@@ -24,6 +24,7 @@ public partial class PaintOverlayWindow : Window
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
+    private bool _forcePresentationForegroundOnFullscreen;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private sealed class PaintSnapshot
     {
@@ -581,6 +582,11 @@ public partial class PaintOverlayWindow : Window
         UpdateFocusAcceptance();
     }
 
+    public void UpdatePresentationForegroundPolicy(bool forceForegroundOnFullscreen)
+    {
+        _forcePresentationForegroundOnFullscreen = forceForegroundOnFullscreen;
+    }
+
     public void RestorePresentationFocusIfNeeded()
     {
         if (!IsVisible)
@@ -591,16 +597,17 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        if (!IsForegroundOwnedByCurrentProcess())
-        {
-            return;
-        }
         var target = _presentationResolver.ResolvePresentationTarget(
             _presentationClassifier,
             _presentationOptions.AllowWps,
             _presentationOptions.AllowOffice,
             _currentProcessId);
         if (!target.IsValid)
+        {
+            return;
+        }
+        var force = ShouldForcePresentationForeground(target);
+        if (!force && !IsForegroundOwnedByCurrentProcess())
         {
             return;
         }
@@ -620,6 +627,16 @@ public partial class PaintOverlayWindow : Window
         }
         GetWindowThreadProcessId(foreground, out var processId);
         return processId == _currentProcessId;
+    }
+
+    private bool ShouldForcePresentationForeground(
+        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    {
+        if (!_forcePresentationForegroundOnFullscreen || !target.IsValid)
+        {
+            return false;
+        }
+        return _presentationClassifier.IsSlideshowWindow(target.Info);
     }
 
     private void OnWpsNavHookRequested(int direction, string source)

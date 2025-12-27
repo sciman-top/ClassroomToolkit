@@ -26,6 +26,11 @@ public sealed class PresentationClassifier
         "powerpointframeclass",
         "pptframeclass"
     };
+    private static readonly HashSet<string> SlideshowClassTokens = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "screenclass",
+        "pptviewwndclass"
+    };
 
     public PresentationType Classify(PresentationWindowInfo info)
     {
@@ -60,6 +65,25 @@ public sealed class PresentationClassifier
             return PresentationType.Office;
         }
         return PresentationType.Other;
+    }
+
+    public bool IsSlideshowWindow(PresentationWindowInfo info)
+    {
+        if (info == null)
+        {
+            return false;
+        }
+        var process = Normalize(info.ProcessName);
+        var classNames = info.ClassNames ?? Array.Empty<string>();
+        if (classNames.Any(name => HasWpsPresentationSignature(name)))
+        {
+            return true;
+        }
+        if (classNames.Any(name => SlideshowClassTokens.Contains(Normalize(name))))
+        {
+            return IsOfficeProcess(process) || IsWpsLikeProcess(process);
+        }
+        return false;
     }
 
     private static bool HasWpsPresentationSignature(string className)

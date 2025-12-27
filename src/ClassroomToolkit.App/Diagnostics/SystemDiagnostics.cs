@@ -52,6 +52,7 @@ public static class SystemDiagnostics
         lines.Add($"控制WPS演示：{(settings.ControlWpsPpt ? "启用" : "禁用")}");
         lines.Add($"WPS兼容策略：{settings.WpsInputMode}");
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
+        lines.Add($"全屏演示前台保障：{(settings.ForcePresentationForegroundOnFullscreen ? "启用" : "禁用")}");
 
         if (OperatingSystem.IsWindows())
         {

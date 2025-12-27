@@ -73,6 +73,10 @@ public sealed class AppSettingsService
             settings.ControlWpsPpt = GetBool(paint, "control_wps_ppt", settings.ControlWpsPpt);
             settings.WpsInputMode = GetString(paint, "wps_input_mode", settings.WpsInputMode);
             settings.WpsWheelForward = GetBool(paint, "wps_wheel_forward", settings.WpsWheelForward);
+            settings.ForcePresentationForegroundOnFullscreen = GetBool(
+                paint,
+                "force_presentation_foreground_on_fullscreen",
+                settings.ForcePresentationForegroundOnFullscreen);
             settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
@@ -146,6 +150,8 @@ public sealed class AppSettingsService
         paint["control_wps_ppt"] = settings.ControlWpsPpt ? "True" : "False";
         paint["wps_input_mode"] = settings.WpsInputMode;
         paint["wps_wheel_forward"] = settings.WpsWheelForward ? "True" : "False";
+        paint["force_presentation_foreground_on_fullscreen"] =
+            settings.ForcePresentationForegroundOnFullscreen ? "True" : "False";
         paint["shape_type"] = settings.ShapeType.ToString();
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);

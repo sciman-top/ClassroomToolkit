@@ -36,6 +36,7 @@ public partial class PaintSettingsDialog : Window
     public bool ControlWpsPpt { get; private set; }
     public string WpsInputMode { get; private set; } = "auto";
     public bool WpsWheelForward { get; private set; }
+    public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
     public double EraserSize { get; private set; }
@@ -53,6 +54,7 @@ public partial class PaintSettingsDialog : Window
         }
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
+        ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
 
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
@@ -86,6 +88,7 @@ public partial class PaintSettingsDialog : Window
         ControlWpsPpt = true;
         WpsInputMode = GetSelectedTag(WpsModeCombo, "auto");
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
+        ForcePresentationForegroundOnFullscreen = ForceForegroundCheck.IsChecked == true;
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);

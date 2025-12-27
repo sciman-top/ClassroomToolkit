@@ -111,6 +111,10 @@ public partial class MainWindow : Window
             _toolbarWindow.Show();
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
             _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
+            if (_settings.ForcePresentationForegroundOnFullscreen)
+            {
+                _overlayWindow.RestorePresentationFocusIfNeeded();
+            }
         }
         UpdateToggleButtons();
     }
@@ -227,6 +231,7 @@ public partial class MainWindow : Window
         _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
         _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+        _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
     }
 
     private void ApplyPaintToolbarPosition()
@@ -345,6 +350,7 @@ public partial class MainWindow : Window
             _settings.ControlWpsPpt = dialog.ControlWpsPpt;
             _settings.WpsInputMode = dialog.WpsInputMode;
             _settings.WpsWheelForward = dialog.WpsWheelForward;
+            _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
             _settings.EraserSize = dialog.EraserSize;
@@ -359,6 +365,7 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
                 _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
                 _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+                _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
                 _overlayWindow.SetEraserSize(_settings.EraserSize);
                 _overlayWindow.SetShapeType(_settings.ShapeType);
