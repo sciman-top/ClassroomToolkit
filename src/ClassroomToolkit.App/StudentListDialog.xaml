@@ -5,6 +5,7 @@
         Title="学生名单"
         Width="640"
         Height="480"
+        FontFamily="楷体"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip">
     <Window.Resources>
@@ -26,14 +27,18 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Click="OnStudentClick"
-                                Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonWidth}"
+                        <Border Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonWidth}"
                                 Height="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonHeight}"
                                 Margin="3"
-                                Padding="8,0"
-                                VerticalContentAlignment="Center">
-                            <Button.Style>
-                                <Style TargetType="Button">
+                                Padding="8,4"
+                                Background="#F7F8FA"
+                                BorderBrush="#D0D7DE"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnStudentClick">
+                            <Border.Style>
+                                <Style TargetType="Border">
                                     <Setter Property="ToolTip" Value="本轮已点名" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Called}" Value="False">
@@ -41,7 +46,7 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Button.Style>
+                            </Border.Style>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -56,7 +61,7 @@
                                          HorizontalAlignment="Right" VerticalAlignment="Center"
                                          Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}" />
                             </Grid>
-                        </Button>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

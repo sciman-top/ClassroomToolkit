@@ -42,26 +42,32 @@ public partial class StudentListDialog : Window
     {
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var typeface = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
-        var maxText = 120d;
+        var maxTextWidth = 120d;
+        var maxTextHeight = 0d;
         foreach (var item in _students)
         {
             var text = item.DisplayText;
-            var width = MeasureTextWidth(text, typeface, FontSize, dpi);
-            if (width > maxText)
+            var size = MeasureTextSize(text, typeface, FontSize, dpi);
+            if (size.Width > maxTextWidth)
             {
-                maxText = width;
+                maxTextWidth = size.Width;
+            }
+            if (size.Height > maxTextHeight)
+            {
+                maxTextHeight = size.Height;
             }
         }
 
         var dotPadding = 20d;
-        var minWidth = Math.Max(120d, maxText + dotPadding);
+        var minWidth = Math.Max(120d, maxTextWidth + dotPadding);
         var workArea = SystemParameters.WorkArea;
         var itemMargin = 3d;
         var columns = 10;
         var rootWidthMargin = Root.Margin.Left + Root.Margin.Right;
         var maxWidthPerButton = (workArea.Width * 0.95 - rootWidthMargin) / columns - itemMargin * 2d;
         StudentButtonWidth = Math.Min(minWidth, Math.Max(96d, maxWidthPerButton));
-        StudentButtonHeight = Math.Max(42d, FontSize + 22d);
+        var paddingY = 6d;
+        StudentButtonHeight = Math.Max(42d, maxTextHeight + paddingY * 2d);
 
         var count = Math.Max(1, _students.Count);
         var totalRows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
@@ -84,7 +90,7 @@ public partial class StudentListDialog : Window
         return rootMargin + hintHeight + hintMargin + footerHeight + footerMargin + 6d;
     }
 
-    private static double MeasureTextWidth(string text, Typeface typeface, double fontSize, double pixelsPerDip)
+    private static Size MeasureTextSize(string text, Typeface typeface, double fontSize, double pixelsPerDip)
     {
         var formatted = new FormattedText(
             text ?? string.Empty,
@@ -94,7 +100,7 @@ public partial class StudentListDialog : Window
             fontSize,
             System.Windows.Media.Brushes.Black,
             pixelsPerDip);
-        return formatted.Width;
+        return new Size(formatted.Width, formatted.Height);
     }
 
     private void OnStudentClick(object sender, RoutedEventArgs e)
