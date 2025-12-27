@@ -24,7 +24,7 @@ public partial class DiagnosticsDialog : Window
         {
             text += $"{Environment.NewLine}{Environment.NewLine}{_result.Suggestion}";
         }
-        Clipboard.SetText(text);
+        System.Windows.Clipboard.SetText(text);
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
