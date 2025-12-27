@@ -60,7 +60,7 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
-    public void Office_ShouldSendKeyWithKeyUp()
+    public void Office_ShouldFallbackToMessageWhenNotForeground()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -82,7 +82,7 @@ public sealed class PresentationControlServiceTests
         sender.KeyCalls.Should().Be(1);
         sender.LastKeyDownOnly.Should().BeFalse();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
-        sender.LastKeyStrategy.Should().Be(InputStrategy.Raw);
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
         sender.WheelCalls.Should().Be(0);
     }
 

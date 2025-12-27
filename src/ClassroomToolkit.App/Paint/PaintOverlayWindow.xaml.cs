@@ -887,8 +887,8 @@ public partial class PaintOverlayWindow : Window
             _wpsNavHookActive = false;
             if (_presentationOptions.AllowWps)
             {
-                var target = ResolveWpsTarget();
-                MarkWpsHookUnavailable(target.IsValid);
+                var hookTarget = ResolveWpsTarget();
+                MarkWpsHookUnavailable(hookTarget.IsValid);
             }
             return;
         }
@@ -1019,7 +1019,7 @@ public partial class PaintOverlayWindow : Window
         _wpsHookUnavailableNotified = true;
         Dispatcher.BeginInvoke(() =>
         {
-            var owner = Application.Current?.MainWindow;
+            var owner = System.Windows.Application.Current?.MainWindow;
             var message = "检测到 WPS 放映全局钩子不可用，已自动切换为消息投递模式。";
             System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         });
