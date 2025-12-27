@@ -1,10 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using MediaColor = System.Windows.Media.Color;
+using MediaBrushes = System.Windows.Media.Brushes;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using WpfButton = System.Windows.Controls.Button;
+using WpfComboBox = System.Windows.Controls.ComboBox;
+using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -36,7 +41,7 @@ public partial class PaintSettingsDialog : Window
     public double EraserSize { get; private set; }
     public byte BoardOpacity { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
-    public Color BrushColor { get; private set; }
+    public MediaColor BrushColor { get; private set; }
     public double ToolbarScale { get; private set; } = 1.0;
 
     public PaintSettingsDialog(AppSettings settings)
@@ -45,7 +50,7 @@ public partial class PaintSettingsDialog : Window
         BrushColor = settings.BrushColor;
         foreach (var (label, value) in WpsModeChoices)
         {
-            WpsModeCombo.Items.Add(new ComboBoxItem { Content = label, Tag = value });
+            WpsModeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
@@ -57,7 +62,7 @@ public partial class PaintSettingsDialog : Window
 
         foreach (var (label, type) in ShapeChoices)
         {
-            var item = new ComboBoxItem { Content = label, Tag = type };
+            var item = new WpfComboBoxItem { Content = label, Tag = type };
             ShapeCombo.Items.Add(item);
         }
         SelectShapeType(settings.ShapeType);
@@ -65,7 +70,7 @@ public partial class PaintSettingsDialog : Window
         foreach (var scale in ToolbarScaleChoices)
         {
             var percent = (int)Math.Round(scale * 100);
-            ToolbarScaleCombo.Items.Add(new ComboBoxItem { Content = $"{percent}%", Tag = scale });
+            ToolbarScaleCombo.Items.Add(new WpfComboBoxItem { Content = $"{percent}%", Tag = scale });
         }
         var selectedScale = FindNearestScale(settings.PaintToolbarScale);
         SelectComboByTag(ToolbarScaleCombo, selectedScale, 1.0);
@@ -156,7 +161,7 @@ public partial class PaintSettingsDialog : Window
 
     private void OnTempColorClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button)
+        if (sender is not WpfButton button)
         {
             return;
         }
@@ -165,31 +170,31 @@ public partial class PaintSettingsDialog : Window
         {
             return;
         }
-        BrushColor = (Color)ColorConverter.ConvertFromString(hex);
+        BrushColor = (MediaColor)MediaColorConverter.ConvertFromString(hex);
         HighlightTempColor(button);
     }
 
-    private void HighlightTempColor(Button selected)
+    private void HighlightTempColor(WpfButton selected)
     {
         if (selected == null)
         {
             return;
         }
-        var parent = VisualTreeHelper.GetParent(selected) as Panel;
+        var parent = VisualTreeHelper.GetParent(selected) as System.Windows.Controls.Panel;
         if (parent == null)
         {
             return;
         }
-        foreach (var child in parent.Children.OfType<Button>())
+        foreach (var child in parent.Children.OfType<WpfButton>())
         {
             child.BorderThickness = new Thickness(1);
-            child.BorderBrush = Brushes.Transparent;
+            child.BorderBrush = MediaBrushes.Transparent;
         }
         selected.BorderThickness = new Thickness(2);
-        selected.BorderBrush = Brushes.DeepSkyBlue;
+        selected.BorderBrush = MediaBrushes.DeepSkyBlue;
     }
 
-    private void HighlightTempColorByValue(Color color)
+    private void HighlightTempColorByValue(MediaColor color)
     {
         var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         foreach (var button in FindTempColorButtons())
@@ -203,9 +208,9 @@ public partial class PaintSettingsDialog : Window
         }
     }
 
-    private IEnumerable<Button> FindTempColorButtons()
+    private IEnumerable<WpfButton> FindTempColorButtons()
     {
-        return FindVisualChildren<Button>(this)
+        return FindVisualChildren<WpfButton>(this)
             .Where(btn => btn.Tag is string tag && tag.StartsWith("#", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -261,25 +266,25 @@ public partial class PaintSettingsDialog : Window
 
     private PaintShapeType ResolveShapeType()
     {
-        if (ShapeCombo.SelectedItem is ComboBoxItem item && item.Tag is PaintShapeType type)
+        if (ShapeCombo.SelectedItem is WpfComboBoxItem item && item.Tag is PaintShapeType type)
         {
             return type;
         }
         return PaintShapeType.None;
     }
 
-    private static string GetSelectedTag(ComboBox combo, string fallback)
+    private static string GetSelectedTag(WpfComboBox combo, string fallback)
     {
-        if (combo.SelectedItem is ComboBoxItem item && item.Tag is string text)
+        if (combo.SelectedItem is WpfComboBoxItem item && item.Tag is string text)
         {
             return text;
         }
         return fallback;
     }
 
-    private static void SelectComboByTag(ComboBox combo, string value, string fallback)
+    private static void SelectComboByTag(WpfComboBox combo, string value, string fallback)
     {
-        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
             if ((item.Tag as string ?? string.Empty) == value)
             {
@@ -287,7 +292,7 @@ public partial class PaintSettingsDialog : Window
                 return;
             }
         }
-        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
             if ((item.Tag as string ?? string.Empty) == fallback)
             {
@@ -306,7 +311,7 @@ public partial class PaintSettingsDialog : Window
 
     private double GetSelectedScale()
     {
-        if (ToolbarScaleCombo.SelectedItem is ComboBoxItem item && item.Tag is double scale)
+        if (ToolbarScaleCombo.SelectedItem is WpfComboBoxItem item && item.Tag is double scale)
         {
             return scale;
         }

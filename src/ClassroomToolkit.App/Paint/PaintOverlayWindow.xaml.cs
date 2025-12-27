@@ -9,6 +9,7 @@ using ClassroomToolkit.App.Helpers;
 using MediaColor = System.Windows.Media.Color;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
+using WpfBrush = System.Windows.Media.Brush;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -90,7 +91,7 @@ public partial class PaintOverlayWindow : Window
             return null;
         }
 
-        private static MediaColor ResolveColor(Brush? brush, bool allowTransparent = false)
+        private static MediaColor ResolveColor(WpfBrush? brush, bool allowTransparent = false)
         {
             if (brush is SolidColorBrush solid)
             {
