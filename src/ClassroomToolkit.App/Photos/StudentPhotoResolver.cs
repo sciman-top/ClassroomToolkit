@@ -50,6 +50,21 @@ public sealed class StudentPhotoResolver
         return index.TryGetValue(key, out var path) ? path : null;
     }
 
+    public void InvalidateStudentCache(string className, string studentId)
+    {
+        if (string.IsNullOrWhiteSpace(studentId))
+        {
+            return;
+        }
+        var normalizedClass = SanitizeSegment(className);
+        if (string.IsNullOrWhiteSpace(normalizedClass))
+        {
+            normalizedClass = "default";
+        }
+        var directory = Path.Combine(_rootPath, normalizedClass);
+        _cache.TryRemove(directory, out _);
+    }
+
     public static string SanitizeSegment(string value)
     {
         var text = (value ?? string.Empty).Trim();

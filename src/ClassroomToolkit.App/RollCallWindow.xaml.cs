@@ -352,7 +352,7 @@ public partial class RollCallWindow : Window
             return;
         }
         var overlay = EnsurePhotoOverlay();
-        overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.PhotoDurationSeconds, this);
+        overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.CurrentStudentId, _viewModel.PhotoDurationSeconds, this);
     }
 
     private StudentPhotoResolver EnsurePhotoResolver()
@@ -387,6 +387,7 @@ public partial class RollCallWindow : Window
             return _photoOverlay;
         }
         _photoOverlay = new PhotoOverlayWindow();
+        _photoOverlay.PhotoClosed += OnPhotoClosed;
         return _photoOverlay;
     }
 
@@ -407,7 +408,18 @@ public partial class RollCallWindow : Window
         }
         _photoOverlay.CloseOverlay();
         _photoOverlay.Close();
+        _photoOverlay.PhotoClosed -= OnPhotoClosed;
         _photoOverlay = null;
+    }
+
+    private void OnPhotoClosed(string? studentId)
+    {
+        if (string.IsNullOrWhiteSpace(studentId) || _photoResolver == null)
+        {
+            return;
+        }
+        var className = ResolvePhotoClassName();
+        _photoResolver.InvalidateStudentCache(className, studentId);
     }
 
     private void OnTimerTick(object? sender, EventArgs e)

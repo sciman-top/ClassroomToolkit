@@ -141,6 +141,8 @@ public partial class PaintOverlayWindow : Window
     private bool _wpsNavHookActive;
     private bool _wpsHookInterceptKeyboard = true;
     private bool _wpsHookInterceptWheel = true;
+    private bool _wpsForceMessageFallback;
+    private bool _wpsHookUnavailableNotified;
     private DateTime _wpsNavBlockUntil = DateTime.MinValue;
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = DateTime.MinValue;
@@ -598,6 +600,9 @@ public partial class PaintOverlayWindow : Window
             _ => ClassroomToolkit.Interop.Presentation.InputStrategy.Auto
         };
         _presentationService.ResetWpsAutoFallback();
+        _presentationService.ResetOfficeAutoFallback();
+        _wpsForceMessageFallback = false;
+        _wpsHookUnavailableNotified = false;
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
     }
@@ -613,6 +618,12 @@ public partial class PaintOverlayWindow : Window
     {
         _presentationOptions.AllowOffice = allowOffice;
         _presentationOptions.AllowWps = allowWps;
+        if (!allowWps)
+        {
+            _wpsForceMessageFallback = false;
+            _wpsHookUnavailableNotified = false;
+        }
+        _presentationService.ResetOfficeAutoFallback();
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
         UpdatePresentationFocusMonitor();
@@ -852,6 +863,10 @@ public partial class PaintOverlayWindow : Window
     private ClassroomToolkit.Services.Presentation.PresentationControlOptions BuildWpsOptions(string? source = null)
     {
         var strategy = _presentationOptions.Strategy;
+        if (_wpsForceMessageFallback)
+        {
+            strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+        }
         if (string.Equals(source, "wheel", StringComparison.OrdinalIgnoreCase) && _presentationOptions.WheelAsKey)
         {
             strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
@@ -870,8 +885,14 @@ public partial class PaintOverlayWindow : Window
         if (_wpsNavHook == null || !_wpsNavHook.Available)
         {
             _wpsNavHookActive = false;
+            if (_presentationOptions.AllowWps)
+            {
+                var target = ResolveWpsTarget();
+                MarkWpsHookUnavailable(target.IsValid);
+            }
             return;
         }
+        _wpsForceMessageFallback = false;
         var shouldEnable = _presentationOptions.AllowWps && !IsBoardActive() && _mode != PaintToolMode.Cursor && IsVisible;
         var blockOnly = false;
         var interceptKeyboard = true;
@@ -922,6 +943,11 @@ public partial class PaintOverlayWindow : Window
             if (!_wpsNavHookActive)
             {
                 StopWpsNavHook();
+                MarkWpsHookUnavailable(target.IsValid);
+            }
+            else
+            {
+                _wpsForceMessageFallback = false;
             }
             return;
         }
@@ -957,6 +983,10 @@ public partial class PaintOverlayWindow : Window
     private ClassroomToolkit.Interop.Presentation.InputStrategy ResolveWpsSendMode(
         ClassroomToolkit.Interop.Presentation.PresentationTarget target)
     {
+        if (_wpsForceMessageFallback)
+        {
+            return ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+        }
         var mode = _presentationOptions.Strategy;
         if (mode == ClassroomToolkit.Interop.Presentation.InputStrategy.Auto)
         {
@@ -969,6 +999,30 @@ public partial class PaintOverlayWindow : Window
                 : ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
         }
         return mode;
+    }
+
+    private void MarkWpsHookUnavailable(bool notify)
+    {
+        _wpsForceMessageFallback = true;
+        if (notify)
+        {
+            NotifyWpsHookUnavailable();
+        }
+    }
+
+    private void NotifyWpsHookUnavailable()
+    {
+        if (_wpsHookUnavailableNotified)
+        {
+            return;
+        }
+        _wpsHookUnavailableNotified = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            var owner = Application.Current?.MainWindow;
+            var message = "检测到 WPS 放映全局钩子不可用，已自动切换为消息投递模式。";
+            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        });
     }
 
     private bool IsWpsRawInputPassthrough(ClassroomToolkit.Interop.Presentation.PresentationTarget target)

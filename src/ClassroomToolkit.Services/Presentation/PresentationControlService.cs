@@ -14,6 +14,7 @@ public sealed class PresentationControlService
     private PresentationTarget _lastTarget = PresentationTarget.Empty;
     private readonly uint _currentProcessId;
     private bool _wpsAutoForceMessage;
+    private bool _officeAutoForceMessage;
 
     public PresentationControlService(
         PresentationControlPlanner planner,
@@ -29,10 +30,16 @@ public sealed class PresentationControlService
     }
 
     public bool IsWpsAutoForcedMessage => _wpsAutoForceMessage;
+    public bool IsOfficeAutoForcedMessage => _officeAutoForceMessage;
 
     public void ResetWpsAutoFallback()
     {
         _wpsAutoForceMessage = false;
+    }
+
+    public void ResetOfficeAutoFallback()
+    {
+        _officeAutoForceMessage = false;
     }
 
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
@@ -72,16 +79,43 @@ public sealed class PresentationControlService
 
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        var targetType = _planner.Classifier.Classify(target.Info);
+        if (targetType == PresentationType.Wps && !options.AllowWps)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.Office && !options.AllowOffice)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.None)
+        {
+            return false;
+        }
+
         var strategy = options.Strategy;
-        if (strategy == InputStrategy.Auto && _wpsAutoForceMessage)
+        if (targetType == PresentationType.Wps && _wpsAutoForceMessage && strategy != InputStrategy.Message)
         {
             strategy = InputStrategy.Message;
         }
-        var sent = TrySendWithStrategy(target, command, options, strategy, out var targetType);
-        if (!sent && options.Strategy == InputStrategy.Auto && targetType == PresentationType.Wps && !_wpsAutoForceMessage)
+        if (targetType == PresentationType.Office && _officeAutoForceMessage && strategy != InputStrategy.Message)
         {
-            _wpsAutoForceMessage = true;
-            sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
+            strategy = InputStrategy.Message;
+        }
+
+        var sent = TrySendWithStrategy(target, command, options, strategy, out var effectiveType);
+        if (!sent && strategy != InputStrategy.Message)
+        {
+            if (effectiveType == PresentationType.Wps)
+            {
+                _wpsAutoForceMessage = true;
+                sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
+            }
+            else if (effectiveType == PresentationType.Office)
+            {
+                _officeAutoForceMessage = true;
+                sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
+            }
         }
         return sent;
     }

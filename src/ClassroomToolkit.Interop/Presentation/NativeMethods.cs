@@ -6,6 +6,9 @@ namespace ClassroomToolkit.Interop.Presentation;
 internal static class NativeMethods
 {
     public const int MaxClassName = 256;
+    public const int GwlStyle = -16;
+    public const int WsCaption = 0x00C00000;
+    public const uint MonitorDefaultToNearest = 2;
 
     public const int WmKeyDown = 0x0100;
     public const int WmKeyUp = 0x0101;
@@ -26,6 +29,18 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    internal static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo info);
 
     [DllImport("user32.dll")]
     internal static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -84,6 +99,24 @@ internal static class NativeMethods
     {
         public int X;
         public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
     }
 
     internal delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);

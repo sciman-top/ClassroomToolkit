@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
@@ -53,6 +54,8 @@ public static class SystemDiagnostics
         lines.Add($"WPS兼容策略：{settings.WpsInputMode}");
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
         lines.Add($"全屏演示前台保障：{(settings.ForcePresentationForegroundOnFullscreen ? "启用" : "禁用")}");
+
+        AppendPresentationDiagnostics(lines, issues, fixes, settings);
 
         if (OperatingSystem.IsWindows())
         {
@@ -181,5 +184,103 @@ public static class SystemDiagnostics
             lines.AddRange(fixes.Select(item => $"· {item}"));
         }
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static void AppendPresentationDiagnostics(
+        ICollection<string> lines,
+        ICollection<string> issues,
+        ICollection<string> fixes,
+        AppSettings settings)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        var classifier = new PresentationClassifier();
+        var resolver = new Win32PresentationResolver();
+
+        var foreground = resolver.ResolveForeground();
+        if (foreground.IsValid)
+        {
+            lines.Add($"前台窗口进程：{foreground.Info.ProcessName}");
+            lines.Add($"前台窗口类名：{FormatClassNames(foreground.Info.ClassNames)}");
+            var check = resolver.CheckWindow(foreground.Handle, classifier);
+            if (check != null)
+            {
+                lines.Add($"前台窗口判定：{check.Type} 评分={check.Score}");
+                lines.Add($"前台窗口全屏：{(check.IsFullscreen ? "是" : "否")} 标题栏：{(check.HasCaption ? "有" : "无")}");
+            }
+            else
+            {
+                lines.Add("前台窗口判定：非放映窗口或可信度不足");
+            }
+        }
+        else
+        {
+            lines.Add("前台窗口：无法获取");
+        }
+
+        var target = resolver.ResolvePresentationTarget(
+            classifier,
+            settings.ControlWpsPpt,
+            settings.ControlMsPpt,
+            (uint)Environment.ProcessId);
+        if (target.IsValid)
+        {
+            var check = resolver.CheckWindow(target.Handle, classifier);
+            lines.Add($"检测到演示窗口：{target.Info.ProcessName}");
+            lines.Add($"演示窗口类名：{FormatClassNames(target.Info.ClassNames)}");
+            if (check != null)
+            {
+                lines.Add($"演示窗口判定：{check.Type} 评分={check.Score}");
+                lines.Add($"演示窗口全屏：{(check.IsFullscreen ? "是" : "否")} 标题栏：{(check.HasCaption ? "有" : "无")}");
+            }
+        }
+        else
+        {
+            lines.Add("检测到演示窗口：未找到");
+        }
+
+        var hookAvailable = TryCheckWpsHook(out var hookError);
+        lines.Add($"WPS全局钩子：{(hookAvailable ? "可用" : "不可用")}");
+        if (!hookAvailable)
+        {
+            if (!string.IsNullOrWhiteSpace(hookError))
+            {
+                lines.Add($"WPS钩子错误：{hookError}");
+            }
+            issues.Add("WPS 全局钩子不可用：已自动降级为消息投递模式。");
+            fixes.Add("可尝试以管理员身份运行，或检查安全软件是否拦截全局钩子。");
+        }
+    }
+
+    private static bool TryCheckWpsHook(out string error)
+    {
+        error = string.Empty;
+        try
+        {
+            using var hook = new WpsSlideshowNavigationHook();
+            if (!hook.Available)
+            {
+                return false;
+            }
+            var started = hook.Start();
+            hook.Stop();
+            return started;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static string FormatClassNames(IReadOnlyList<string> names)
+    {
+        if (names == null || names.Count == 0)
+        {
+            return "（空）";
+        }
+        return string.Join(" | ", names.Where(name => !string.IsNullOrWhiteSpace(name)));
     }
 }

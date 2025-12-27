@@ -10,6 +10,10 @@ namespace ClassroomToolkit.App.Photos;
 public partial class PhotoOverlayWindow : Window
 {
     private readonly DispatcherTimer _autoCloseTimer;
+    private string? _currentStudentId;
+    private string? _currentPhotoPath;
+
+    public event Action<string?>? PhotoClosed;
 
     public PhotoOverlayWindow()
     {
@@ -23,7 +27,7 @@ public partial class PhotoOverlayWindow : Window
         _autoCloseTimer.Tick += OnAutoCloseTick;
     }
 
-    public void ShowPhoto(string path, string studentName, int durationSeconds, Window? owner)
+    public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
     {
         var bitmap = LoadBitmap(path);
         if (bitmap == null)
@@ -31,6 +35,8 @@ public partial class PhotoOverlayWindow : Window
             Hide();
             return;
         }
+        _currentPhotoPath = path;
+        _currentStudentId = studentId?.Trim();
         NameText.Text = studentName ?? string.Empty;
         NameText.Visibility = string.IsNullOrWhiteSpace(NameText.Text) ? Visibility.Collapsed : Visibility.Visible;
 
@@ -66,18 +72,34 @@ public partial class PhotoOverlayWindow : Window
     public void CloseOverlay()
     {
         _autoCloseTimer.Stop();
+        ClearPhotoCache();
         Hide();
     }
 
     private void OnAutoCloseTick(object? sender, EventArgs e)
     {
-        _autoCloseTimer.Stop();
-        Hide();
+        CloseOverlay();
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         CloseOverlay();
+    }
+
+    private void ClearPhotoCache()
+    {
+        PhotoImage.Source = null;
+        PhotoImage.Width = double.NaN;
+        PhotoImage.Height = double.NaN;
+        NameText.Text = string.Empty;
+        NameText.Visibility = Visibility.Collapsed;
+        var studentId = _currentStudentId;
+        _currentStudentId = null;
+        _currentPhotoPath = null;
+        if (!string.IsNullOrWhiteSpace(studentId))
+        {
+            PhotoClosed?.Invoke(studentId);
+        }
     }
 
     private static BitmapImage? LoadBitmap(string path)
