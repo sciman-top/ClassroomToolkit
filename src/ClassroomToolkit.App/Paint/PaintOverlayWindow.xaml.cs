@@ -161,8 +161,8 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.RegionErase && _isRegionSelecting && _regionRect != null)
         {
-            var current = e.GetPosition(ShapeCanvas);
-            UpdateSelectionRect(_regionRect, _regionStart, current);
+            var position = e.GetPosition(ShapeCanvas);
+            UpdateSelectionRect(_regionRect, _regionStart, position);
             return;
         }
         if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
@@ -174,8 +174,8 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var current = e.GetPosition(ShapeCanvas);
-        UpdateShape(_activeShape, _shapeStart, current);
+        var position = e.GetPosition(ShapeCanvas);
+        UpdateShape(_activeShape, _shapeStart, position);
     }
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)

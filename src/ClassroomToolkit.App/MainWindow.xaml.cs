@@ -313,7 +313,7 @@ public partial class MainWindow : Window
     {
         var dialog = new Paint.PaintSettingsDialog(_settings)
         {
-            Owner = _toolbarWindow ?? this
+            Owner = _toolbarWindow != null ? (Window)_toolbarWindow : this
         };
         if (dialog.ShowDialog() != true)
         {
