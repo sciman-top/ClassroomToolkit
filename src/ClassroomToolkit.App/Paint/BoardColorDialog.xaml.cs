@@ -1,12 +1,13 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using MediaColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class BoardColorDialog : Window
 {
-    private sealed record BoardColorOption(string Name, Color Color);
+    private sealed record BoardColorOption(string Name, MediaColor Color);
 
     private static readonly BoardColorOption[] Options =
     {
@@ -15,7 +16,7 @@ public partial class BoardColorDialog : Window
         new("绿板", Color.FromRgb(0x0E, 0x40, 0x20))
     };
 
-    public Color? SelectedColor { get; private set; }
+    public MediaColor? SelectedColor { get; private set; }
 
     public BoardColorDialog()
     {
@@ -47,13 +48,13 @@ public partial class BoardColorDialog : Window
         }
     }
 
-    private void SelectColor(Color color)
+    private void SelectColor(MediaColor color)
     {
         SelectedColor = color;
         DialogResult = true;
     }
 
-    private static Color GetContrastingColor(Color color)
+    private static MediaColor GetContrastingColor(MediaColor color)
     {
         var luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B;
         return luminance >= 160 ? Colors.Black : Colors.White;
