@@ -27,6 +27,7 @@ public partial class PaintToolbarWindow : Window
     private PaintOverlayWindow? _overlay;
     private double _uiScale = 1.0;
     private bool _modeInitialized;
+    private PaintToolMode _currentMode = PaintToolMode.Brush;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -49,6 +50,7 @@ public partial class PaintToolbarWindow : Window
     public bool BoardActive => _boardActive;
     public MediaColor BoardColor => _boardColor;
     public bool HasOverlay => _overlay != null;
+    public PaintToolMode CurrentMode => _currentMode;
 
     public PaintToolbarWindow()
     {
@@ -212,6 +214,7 @@ public partial class PaintToolbarWindow : Window
         _initializing = true;
         try
         {
+            _currentMode = mode;
             CursorButton.IsChecked = mode == PaintToolMode.Cursor;
             EraserButton.IsChecked = mode == PaintToolMode.Eraser;
             RegionEraseButton.IsChecked = mode == PaintToolMode.RegionErase;
@@ -365,13 +368,30 @@ public partial class PaintToolbarWindow : Window
         var current = source;
         while (current != null)
         {
-            if (current is System.Windows.Controls.Primitives.ButtonBase
-                || current is System.Windows.Controls.Primitives.ToggleButton)
+            if (current is System.Windows.Controls.Primitives.ButtonBase)
             {
                 return true;
             }
-            current = VisualTreeHelper.GetParent(current);
+            current = GetParent(current);
         }
         return false;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject obj)
+    {
+        if (obj is System.Windows.Documents.TextElement textElement)
+        {
+            return textElement.Parent;
+        }
+        if (obj is FrameworkContentElement contentElement)
+        {
+            return contentElement.Parent;
+        }
+        var parent = VisualTreeHelper.GetParent(obj);
+        if (parent == null && obj is FrameworkElement element)
+        {
+            parent = element.Parent as DependencyObject;
+        }
+        return parent ?? LogicalTreeHelper.GetParent(obj);
     }
 }

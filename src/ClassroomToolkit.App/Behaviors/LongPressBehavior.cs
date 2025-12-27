@@ -69,7 +69,6 @@ public static class LongPressBehavior
             return;
         }
         element.SetValue(TriggeredProperty, false);
-        element.CaptureMouse();
         var duration = Math.Max(100, GetDuration(element));
         var timer = new DispatcherTimer
         {
@@ -92,7 +91,6 @@ public static class LongPressBehavior
         StopTimer(element);
         if (element != null)
         {
-            element.ReleaseMouseCapture();
             element.SetValue(TriggeredProperty, false);
         }
         if (triggered)
@@ -107,7 +105,6 @@ public static class LongPressBehavior
         StopTimer(element);
         if (element != null)
         {
-            element.ReleaseMouseCapture();
             element.SetValue(TriggeredProperty, false);
         }
     }

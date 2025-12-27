@@ -111,6 +111,7 @@ public partial class MainWindow : Window
             _toolbarWindow.Show();
             _toolbarWindow.Activate();
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
+            _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
         }
         UpdateToggleButtons();
     }
@@ -426,8 +427,7 @@ public partial class MainWindow : Window
 
     private bool IsDragBlocked(object? source)
     {
-        var button = FindAncestor<System.Windows.Controls.Button>(source as DependencyObject);
-        return button != null;
+        return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source as DependencyObject) != null;
     }
 
     private static T? FindAncestor<T>(DependencyObject? obj) where T : DependencyObject
@@ -438,9 +438,27 @@ public partial class MainWindow : Window
             {
                 return match;
             }
-            obj = VisualTreeHelper.GetParent(obj);
+            obj = GetParent(obj);
         }
         return null;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject obj)
+    {
+        if (obj is System.Windows.Documents.TextElement textElement)
+        {
+            return textElement.Parent;
+        }
+        if (obj is FrameworkContentElement contentElement)
+        {
+            return contentElement.Parent;
+        }
+        var parent = VisualTreeHelper.GetParent(obj);
+        if (parent == null && obj is FrameworkElement element)
+        {
+            parent = element.Parent as DependencyObject;
+        }
+        return parent ?? LogicalTreeHelper.GetParent(obj);
     }
 
     private void ApplyLauncherPosition()
