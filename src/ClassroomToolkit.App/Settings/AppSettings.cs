@@ -35,7 +35,7 @@ public sealed class AppSettings
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
     public string WpsInputMode { get; set; } = "auto";
-    public bool WpsWheelForward { get; set; } = false;
+    public bool WpsWheelForward { get; set; } = true;
     public int LauncherX { get; set; } = 120;
     public int LauncherY { get; set; } = 120;
     public int LauncherBubbleX { get; set; } = 120;

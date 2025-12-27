@@ -28,9 +28,44 @@ public static class SettingsMigrator
             CreateBackup(settingsPath);
         }
 
-        // 未来版本迁移逻辑放在这里。
+        NormalizeWpsInputMode(data);
         meta[VersionKey] = CurrentVersion;
         return data;
+    }
+
+    private static void NormalizeWpsInputMode(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (!data.TryGetValue("Paint", out var paint))
+        {
+            return;
+        }
+        var mode = paint.TryGetValue("wps_input_mode", out var value) ? value : string.Empty;
+        var rawInput = paint.TryGetValue("wps_raw_input", out var rawValue)
+            && (rawValue.Trim().Equals("true", StringComparison.OrdinalIgnoreCase)
+                || rawValue.Trim().Equals("1", StringComparison.OrdinalIgnoreCase));
+
+        var normalized = NormalizeWpsMode(mode, rawInput);
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            paint["wps_input_mode"] = normalized;
+        }
+    }
+
+    private static string NormalizeWpsMode(string? mode, bool rawInput)
+    {
+        if (string.IsNullOrWhiteSpace(mode))
+        {
+            return "auto";
+        }
+        var lower = mode.Trim().ToLowerInvariant();
+        return lower switch
+        {
+            "auto" => "auto",
+            "raw" => "raw",
+            "message" => "message",
+            "manual" => rawInput ? "raw" : "message",
+            _ => "auto"
+        };
     }
 
     private static void CreateBackup(string path)
