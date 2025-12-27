@@ -37,7 +37,7 @@ public sealed class TimerEngineTests
     public void Reminder_ShouldTrigger()
     {
         var engine = new TimerEngine();
-        engine.SetMode(TimerMode.Stopwatch);
+        engine.SetCountdown(0, 5);
         engine.ReminderIntervalSeconds = 2;
         var reminders = 0;
         engine.ReminderTriggered += () => reminders++;
@@ -46,5 +46,20 @@ public sealed class TimerEngineTests
         engine.Tick(TimeSpan.FromSeconds(5));
 
         reminders.Should().Be(2);
+    }
+
+    [Fact]
+    public void Reminder_ShouldNotTriggerOutsideCountdown()
+    {
+        var engine = new TimerEngine();
+        engine.SetMode(TimerMode.Stopwatch);
+        engine.ReminderIntervalSeconds = 2;
+        var reminders = 0;
+        engine.ReminderTriggered += () => reminders++;
+
+        engine.Start();
+        engine.Tick(TimeSpan.FromSeconds(5));
+
+        reminders.Should().Be(0);
     }
 }
