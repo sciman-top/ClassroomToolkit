@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="工具条"
-        Height="96" Width="232"
+        Height="104" Width="244"
         WindowStartupLocation="Manual"
         Topmost="True"
         ShowActivated="False"
@@ -20,20 +20,20 @@
             <Setter Property="IsTabStop" Value="False" />
         </Style>
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="24" />
-            <Setter Property="Margin" Value="1" />
-            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Padding" Value="5,0" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Background" Value="#FDFDFD" />
             <Setter Property="BorderBrush" Value="#D0D6DC" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
         <Style x:Key="ToolbarToggleButtonStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="24" />
-            <Setter Property="Margin" Value="1" />
-            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Padding" Value="5,0" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Background" Value="#FDFDFD" />
             <Setter Property="BorderBrush" Value="#D0D6DC" />
@@ -68,14 +68,14 @@
         </Style>
     </Window.Resources>
     <Border x:Name="ToolbarContainer" Background="#F4F6F8" BorderBrush="#CBD2D9" BorderThickness="1"
-            CornerRadius="8" Padding="4">
+            CornerRadius="9" Padding="6">
         <Grid x:Name="ToolbarRoot" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,3">
                 <ToggleButton x:Name="CursorButton" Content="光标" Style="{StaticResource ToolbarToggleButtonStyle}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                               ToolTip="光标" />

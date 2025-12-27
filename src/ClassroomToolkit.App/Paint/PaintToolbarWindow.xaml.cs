@@ -17,8 +17,8 @@ public partial class PaintToolbarWindow : Window
 {
     private const int GwlExstyle = -20;
     private const int WsExNoActivate = 0x08000000;
-    private const double BaseWidth = 232;
-    private const double BaseHeight = 96;
+    private const double BaseWidth = 244;
+    private const double BaseHeight = 104;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];

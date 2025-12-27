@@ -14,6 +14,9 @@ public partial class StudentListDialog : Window
     public static readonly DependencyProperty StudentButtonHeightProperty =
         DependencyProperty.Register(nameof(StudentButtonHeight), typeof(double), typeof(StudentListDialog), new PropertyMetadata(34d));
 
+    public static readonly DependencyProperty StudentColumnCountProperty =
+        DependencyProperty.Register(nameof(StudentColumnCount), typeof(int), typeof(StudentListDialog), new PropertyMetadata(10));
+
     private readonly IReadOnlyList<StudentListItem> _students;
 
     public StudentListDialog(IReadOnlyList<StudentListItem> students)
@@ -34,6 +37,12 @@ public partial class StudentListDialog : Window
     {
         get => (double)GetValue(StudentButtonHeightProperty);
         private set => SetValue(StudentButtonHeightProperty, value);
+    }
+
+    public int StudentColumnCount
+    {
+        get => (int)GetValue(StudentColumnCountProperty);
+        private set => SetValue(StudentColumnCountProperty, value);
     }
 
     public int? SelectedIndex { get; private set; }
@@ -60,11 +69,18 @@ public partial class StudentListDialog : Window
         StudentButtonWidth = Math.Min(minWidth, maxWidthPerButton);
         StudentButtonHeight = Math.Max(34d, FontSize + 16d);
 
-        var totalRows = Math.Max(1, (int)Math.Ceiling(_students.Count / 10d));
+        var count = Math.Max(1, _students.Count);
         var hSpacing = 6d;
         var vSpacing = 6d;
-        var preferredWidth = Math.Min(workArea.Width * 0.9, StudentButtonWidth * 10d + hSpacing * 9d + 40d);
-        var extraHeight = 120d;
+        var maxColumnsByWidth = Math.Max(1, Math.Min(10,
+            (int)Math.Floor((workArea.Width * 0.9 - 40d + hSpacing) / (StudentButtonWidth + hSpacing))));
+        var idealColumns = (int)Math.Ceiling(Math.Sqrt(count));
+        var columns = Math.Max(1, Math.Min(maxColumnsByWidth, idealColumns));
+        StudentColumnCount = columns;
+
+        var totalRows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
+        var preferredWidth = Math.Min(workArea.Width * 0.9, StudentButtonWidth * columns + hSpacing * (columns - 1) + 40d);
+        var extraHeight = 80d;
         var desiredHeight = totalRows * StudentButtonHeight + Math.Max(0, totalRows - 1) * vSpacing + extraHeight;
         var preferredHeight = Math.Min(workArea.Height * 0.85, Math.Max(240d, desiredHeight));
         Width = preferredWidth;
