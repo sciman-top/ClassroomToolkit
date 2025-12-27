@@ -12,6 +12,7 @@ using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
 using WpfBrush = System.Windows.Media.Brush;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -24,10 +25,14 @@ public partial class PaintOverlayWindow : Window
     private const int WsExNoActivate = 0x08000000;
     private const int WsCaption = 0x00C00000;
     private const uint MonitorDefaultToNearest = 2;
+    private const int PresentationFocusMonitorIntervalMs = 500;
+    private const int PresentationFocusCooldownMs = 1200;
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
     private bool _forcePresentationForegroundOnFullscreen;
+    private readonly DispatcherTimer _presentationFocusMonitor;
+    private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private sealed class PaintSnapshot
     {
@@ -147,6 +152,11 @@ public partial class PaintOverlayWindow : Window
     {
         InitializeComponent();
         WindowState = WindowState.Maximized;
+        _presentationFocusMonitor = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
+        };
+        _presentationFocusMonitor.Tick += (_, _) => MonitorPresentationFocus();
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
         {
@@ -192,11 +202,16 @@ public partial class PaintOverlayWindow : Window
         {
             _wpsNavHook.NavigationRequested += OnWpsNavHookRequested;
         }
-        Closed += (_, _) => StopWpsNavHook();
+        Closed += (_, _) =>
+        {
+            StopWpsNavHook();
+            _presentationFocusMonitor.Stop();
+        };
         IsVisibleChanged += (_, _) =>
         {
             UpdateWpsNavHookState();
             UpdateFocusAcceptance();
+            UpdatePresentationFocusMonitor();
         };
     }
 
@@ -592,6 +607,7 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions.AllowWps = allowWps;
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
+        UpdatePresentationFocusMonitor();
     }
 
     public void UpdatePresentationForegroundPolicy(bool forceForegroundOnFullscreen)
@@ -599,15 +615,15 @@ public partial class PaintOverlayWindow : Window
         _forcePresentationForegroundOnFullscreen = forceForegroundOnFullscreen;
     }
 
-    public void RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
+    public bool RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
     {
         if (!IsVisible)
         {
-            return;
+            return false;
         }
         if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
         {
-            return;
+            return false;
         }
         var target = _presentationResolver.ResolvePresentationTarget(
             _presentationClassifier,
@@ -616,26 +632,60 @@ public partial class PaintOverlayWindow : Window
             _currentProcessId);
         if (!target.IsValid)
         {
-            return;
+            return false;
         }
         if (!_presentationClassifier.IsSlideshowWindow(target.Info))
         {
-            return;
+            return false;
         }
         if (requireFullscreen && !IsFullscreenPresentationWindow(target))
         {
-            return;
+            return false;
         }
-        var force = ShouldForcePresentationForeground(target) || requireFullscreen;
+        var force = ShouldForcePresentationForeground(target);
         if (!force && !IsForegroundOwnedByCurrentProcess())
         {
-            return;
+            return false;
         }
         if (ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle))
         {
+            return false;
+        }
+        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+    }
+
+    private void UpdatePresentationFocusMonitor()
+    {
+        var shouldMonitor = IsVisible && (_presentationOptions.AllowOffice || _presentationOptions.AllowWps);
+        if (shouldMonitor)
+        {
+            if (!_presentationFocusMonitor.IsEnabled)
+            {
+                _presentationFocusMonitor.Start();
+            }
             return;
         }
-        ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+        if (_presentationFocusMonitor.IsEnabled)
+        {
+            _presentationFocusMonitor.Stop();
+        }
+    }
+
+    private void MonitorPresentationFocus()
+    {
+        if (DateTime.UtcNow < _nextPresentationFocusAttempt)
+        {
+            return;
+        }
+        if (!IsForegroundOwnedByCurrentProcess())
+        {
+            return;
+        }
+        var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
+        if (restored)
+        {
+            _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
+        }
     }
 
     private bool IsForegroundOwnedByCurrentProcess()

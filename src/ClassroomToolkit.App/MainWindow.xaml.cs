@@ -377,7 +377,7 @@ public partial class MainWindow : Window
             }
             _toolbarWindow?.ApplySettings(_settings);
         }
-        _overlayWindow?.RestorePresentationFocusIfNeeded();
+        _overlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)

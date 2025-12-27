@@ -273,7 +273,7 @@ public partial class PaintToolbarWindow : Window
             _overlay.SetMode(mode);
             if (mode == PaintToolMode.Cursor)
             {
-                _overlay.RestorePresentationFocusIfNeeded();
+                _overlay.RestorePresentationFocusIfNeeded(requireFullscreen: true);
             }
         }
     }
