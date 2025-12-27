@@ -4,7 +4,7 @@
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="工具条"
         Height="200" Width="420"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         Topmost="True"
         ResizeMode="NoResize">
     <Grid Margin="10">

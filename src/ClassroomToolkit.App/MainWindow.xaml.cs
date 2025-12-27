@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App;
@@ -85,6 +86,7 @@ public partial class MainWindow : Window
         }
         if (_overlayWindow.IsVisible)
         {
+            CapturePaintToolbarPosition(save: true);
             _overlayWindow.Hide();
             _toolbarWindow.Hide();
         }
@@ -112,9 +114,12 @@ public partial class MainWindow : Window
         };
         _toolbarWindow.Closed += (_, _) =>
         {
+            CapturePaintToolbarPosition(save: true);
             _toolbarWindow = null;
             UpdateToggleButtons();
         };
+        _toolbarWindow.LocationChanged += (_, _) => CapturePaintToolbarPosition(save: false);
+        ApplyPaintToolbarPosition();
         _toolbarWindow.ApplySettings(_settings);
         _toolbarWindow.ModeChanged += mode => _overlayWindow.SetMode(mode);
         _toolbarWindow.ShapeTypeChanged += type =>
@@ -183,6 +188,37 @@ public partial class MainWindow : Window
         _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
         _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+    }
+
+    private void ApplyPaintToolbarPosition()
+    {
+        if (_toolbarWindow == null)
+        {
+            return;
+        }
+        _toolbarWindow.Left = _settings.PaintToolbarX;
+        _toolbarWindow.Top = _settings.PaintToolbarY;
+        if (_settings.PaintToolbarX == AppSettings.UnsetPosition
+            && _settings.PaintToolbarY == AppSettings.UnsetPosition)
+        {
+            WindowPlacementHelper.CenterOnVirtualScreen(_toolbarWindow);
+            return;
+        }
+        WindowPlacementHelper.EnsureVisible(_toolbarWindow);
+    }
+
+    private void CapturePaintToolbarPosition(bool save)
+    {
+        if (_toolbarWindow == null)
+        {
+            return;
+        }
+        _settings.PaintToolbarX = (int)Math.Round(_toolbarWindow.Left);
+        _settings.PaintToolbarY = (int)Math.Round(_toolbarWindow.Top);
+        if (save)
+        {
+            SaveSettings();
+        }
     }
 
     private void EnsureRollCallWindow()
@@ -516,6 +552,7 @@ public partial class MainWindow : Window
             return;
         }
         _allowClose = true;
+        CapturePaintToolbarPosition(save: true);
         SaveLauncherSettings();
         if (_bubbleWindow != null)
         {

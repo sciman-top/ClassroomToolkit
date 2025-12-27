@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.Infra.Settings;
 
@@ -44,6 +45,14 @@ public sealed class AppSettingsService
             settings.RollCallSpeechOutputId = GetString(roll, "speech_output_id", settings.RollCallSpeechOutputId);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
             settings.RollCallCurrentClass = GetString(roll, "current_class", settings.RollCallCurrentClass);
+            var geometry = GetString(roll, "geometry", string.Empty);
+            if (TryParseGeometry(geometry, out var width, out var height, out var x, out var y))
+            {
+                settings.RollCallWindowWidth = width;
+                settings.RollCallWindowHeight = height;
+                settings.RollCallWindowX = x;
+                settings.RollCallWindowY = y;
+            }
         }
         if (data.TryGetValue("Paint", out var paint))
         {
@@ -58,6 +67,8 @@ public sealed class AppSettingsService
             settings.WpsInputMode = GetString(paint, "wps_input_mode", settings.WpsInputMode);
             settings.WpsWheelForward = GetBool(paint, "wps_wheel_forward", settings.WpsWheelForward);
             settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
+            settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
+            settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -100,6 +111,14 @@ public sealed class AppSettingsService
         roll["speech_output_id"] = settings.RollCallSpeechOutputId ?? string.Empty;
         roll["remote_roll_key"] = settings.RemotePresenterKey;
         roll["current_class"] = settings.RollCallCurrentClass ?? string.Empty;
+        if (HasGeometry(settings))
+        {
+            roll["geometry"] = FormatGeometry(
+                settings.RollCallWindowWidth,
+                settings.RollCallWindowHeight,
+                settings.RollCallWindowX,
+                settings.RollCallWindowY);
+        }
 
         var paint = GetOrCreate(data, "Paint");
         paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
@@ -113,6 +132,8 @@ public sealed class AppSettingsService
         paint["wps_input_mode"] = settings.WpsInputMode;
         paint["wps_wheel_forward"] = settings.WpsWheelForward ? "True" : "False";
         paint["shape_type"] = settings.ShapeType.ToString();
+        paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
+        paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);
@@ -184,5 +205,56 @@ public sealed class AppSettingsService
             return parsed;
         }
         return PaintShapeType.Line;
+    }
+
+    private static bool HasGeometry(AppSettings settings)
+    {
+        return settings.RollCallWindowWidth > 0
+               && settings.RollCallWindowHeight > 0
+               && settings.RollCallWindowX != AppSettings.UnsetPosition
+               && settings.RollCallWindowY != AppSettings.UnsetPosition;
+    }
+
+    private static bool TryParseGeometry(string value, out int width, out int height, out int x, out int y)
+    {
+        width = 0;
+        height = 0;
+        x = 0;
+        y = 0;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+        var match = Regex.Match(value.Trim(), @"^(?<w>\d+)x(?<h>\d+)(?<x>[+-]\d+)(?<y>[+-]\d+)$");
+        if (!match.Success)
+        {
+            return false;
+        }
+        if (!int.TryParse(match.Groups["w"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out width))
+        {
+            return false;
+        }
+        if (!int.TryParse(match.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out height))
+        {
+            return false;
+        }
+        if (!int.TryParse(match.Groups["x"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out x))
+        {
+            return false;
+        }
+        if (!int.TryParse(match.Groups["y"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out y))
+        {
+            return false;
+        }
+        return width > 0 && height > 0;
+    }
+
+    private static string FormatGeometry(int width, int height, int x, int y)
+    {
+        var safeWidth = Math.Max(1, width);
+        var safeHeight = Math.Max(1, height);
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{safeWidth}x{safeHeight}{x:+#;-#;0}{y:+#;-#;0}");
     }
 }

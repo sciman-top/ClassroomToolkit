@@ -8,6 +8,8 @@ namespace ClassroomToolkit.App.Settings;
 
 public sealed class AppSettings
 {
+    public const int UnsetPosition = int.MinValue;
+
     public bool RollCallShowId { get; set; } = true;
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; } = false;
@@ -26,6 +28,10 @@ public sealed class AppSettings
     public int RollCallTimerSecondsLeft { get; set; } = 300;
     public int RollCallStopwatchSeconds { get; set; } = 0;
     public bool RollCallTimerRunning { get; set; } = false;
+    public int RollCallWindowX { get; set; } = UnsetPosition;
+    public int RollCallWindowY { get; set; } = UnsetPosition;
+    public int RollCallWindowWidth { get; set; }
+    public int RollCallWindowHeight { get; set; }
     public bool RollCallSpeechEnabled { get; set; } = false;
     public string RollCallSpeechEngine { get; set; } = "pyttsx3";
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
@@ -42,6 +48,8 @@ public sealed class AppSettings
     public int LauncherBubbleY { get; set; } = 120;
     public bool LauncherMinimized { get; set; } = false;
     public int LauncherAutoExitSeconds { get; set; } = 0;
+    public int PaintToolbarX { get; set; } = 260;
+    public int PaintToolbarY { get; set; } = 260;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;

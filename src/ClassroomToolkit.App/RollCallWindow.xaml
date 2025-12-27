@@ -7,7 +7,7 @@
         Width="560"
         MinWidth="260"
         MinHeight="160"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         Topmost="True">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />

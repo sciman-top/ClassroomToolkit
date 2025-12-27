@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
@@ -39,6 +40,7 @@ public partial class RollCallWindow : Window
         InitializeComponent();
         _settingsService = settingsService;
         _settings = settings;
+        ApplyWindowBounds(settings);
         _viewModel = new RollCallViewModel(dataPath);
         DataContext = _viewModel;
         Loaded += OnLoaded;
@@ -562,6 +564,7 @@ public partial class RollCallWindow : Window
 
     private void PersistSettings()
     {
+        CaptureWindowBounds();
         _settings.RollCallShowId = _viewModel.ShowId;
         _settings.RollCallShowName = _viewModel.ShowName;
         _settings.RollCallShowPhoto = _viewModel.ShowPhoto;
@@ -641,5 +644,38 @@ public partial class RollCallWindow : Window
                 TimerSetButton.IsEnabled = false;
                 break;
         }
+    }
+
+    private void ApplyWindowBounds(AppSettings settings)
+    {
+        if (settings.RollCallWindowWidth > 0)
+        {
+            Width = settings.RollCallWindowWidth;
+        }
+        if (settings.RollCallWindowHeight > 0)
+        {
+            Height = settings.RollCallWindowHeight;
+        }
+        if (settings.RollCallWindowX != AppSettings.UnsetPosition
+            && settings.RollCallWindowY != AppSettings.UnsetPosition)
+        {
+            Left = settings.RollCallWindowX;
+            Top = settings.RollCallWindowY;
+            WindowPlacementHelper.EnsureVisible(this);
+        }
+        else
+        {
+            WindowPlacementHelper.CenterOnVirtualScreen(this);
+        }
+    }
+
+    private void CaptureWindowBounds()
+    {
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        _settings.RollCallWindowWidth = (int)Math.Round(width);
+        _settings.RollCallWindowHeight = (int)Math.Round(height);
+        _settings.RollCallWindowX = (int)Math.Round(Left);
+        _settings.RollCallWindowY = (int)Math.Round(Top);
     }
 }
