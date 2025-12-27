@@ -68,13 +68,13 @@
         </GroupBox>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0">
-            <TextBlock Text="画笔工具条的界面大小：" VerticalAlignment="Center" Width="140" />
-            <ComboBox x:Name="ToolbarScaleCombo" Width="120" />
+            <TextBlock Text="图形工具：" VerticalAlignment="Center" Width="80" />
+            <ComboBox x:Name="ShapeCombo" Width="200" />
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-            <TextBlock Text="图形工具：" VerticalAlignment="Center" Width="80" />
-            <ComboBox x:Name="ShapeCombo" Width="200" />
+            <TextBlock Text="画笔工具条的界面大小：" VerticalAlignment="Center" Width="140" />
+            <ComboBox x:Name="ToolbarScaleCombo" Width="120" />
         </StackPanel>
 
         <StackPanel Grid.Row="3" Margin="0,8,0,0">

@@ -56,18 +56,19 @@ public partial class StudentListDialog : Window
         var dotPadding = 20d;
         var minWidth = Math.Max(120d, maxText + dotPadding);
         var workArea = SystemParameters.WorkArea;
-        var hSpacing = 6d;
-        var maxWidthPerButton = Math.Max(96d, (workArea.Width * 0.95 - 32d - hSpacing * 9d) / 10d);
-        StudentButtonWidth = Math.Min(minWidth, maxWidthPerButton);
-        StudentButtonHeight = Math.Max(40d, FontSize + 22d);
+        var itemMargin = 3d;
+        var columns = 10;
+        var rootWidthMargin = Root.Margin.Left + Root.Margin.Right;
+        var maxWidthPerButton = (workArea.Width * 0.95 - rootWidthMargin) / columns - itemMargin * 2d;
+        StudentButtonWidth = Math.Min(minWidth, Math.Max(96d, maxWidthPerButton));
+        StudentButtonHeight = Math.Max(42d, FontSize + 22d);
 
         var count = Math.Max(1, _students.Count);
-        var vSpacing = 6d;
-        var columns = 10;
         var totalRows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
-        var preferredWidth = StudentButtonWidth * columns + hSpacing * (columns - 1) + 32d;
+        var preferredWidth = columns * (StudentButtonWidth + itemMargin * 2d) + rootWidthMargin;
         var extraHeight = CalculateExtraHeight();
-        var desiredHeight = totalRows * StudentButtonHeight + Math.Max(0, totalRows - 1) * vSpacing + extraHeight;
+        var rowHeight = StudentButtonHeight + itemMargin * 2d;
+        var desiredHeight = totalRows * rowHeight + extraHeight;
         Width = Math.Max(200d, preferredWidth);
         Height = Math.Max(200d, desiredHeight);
         WindowPlacementHelper.EnsureVisible(this);
