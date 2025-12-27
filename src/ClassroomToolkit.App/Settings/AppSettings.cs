@@ -51,6 +51,7 @@ public sealed class AppSettings
     public int LauncherAutoExitSeconds { get; set; } = 0;
     public int PaintToolbarX { get; set; } = 260;
     public int PaintToolbarY { get; set; } = 260;
+    public double PaintToolbarScale { get; set; } = 1.0;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;

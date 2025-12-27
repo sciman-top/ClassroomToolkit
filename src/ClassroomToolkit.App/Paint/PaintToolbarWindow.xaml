@@ -37,7 +37,7 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Grid Margin="6">
+    <Grid x:Name="ToolbarRoot" Margin="6" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Collections.Generic;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
 using MediaColor = System.Windows.Media.Color;
@@ -13,6 +14,94 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow : Window
 {
+    private sealed class PaintSnapshot
+    {
+        public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes)
+        {
+            Strokes = strokes;
+            Shapes = shapes;
+        }
+
+        public StrokeCollection Strokes { get; }
+        public List<ShapeSnapshot> Shapes { get; }
+    }
+
+    private sealed class ShapeSnapshot
+    {
+        public PaintShapeType Type { get; init; }
+        public WpfPoint Start { get; init; }
+        public WpfPoint End { get; init; }
+        public Rect Bounds { get; init; }
+        public MediaColor StrokeColor { get; init; }
+        public double StrokeThickness { get; init; }
+        public DoubleCollection? DashArray { get; init; }
+        public MediaColor? FillColor { get; init; }
+
+        public static ShapeSnapshot? FromShape(Shape shape)
+        {
+            if (shape is Line line)
+            {
+                return new ShapeSnapshot
+                {
+                    Type = line.StrokeDashArray?.Count > 0 ? PaintShapeType.DashedLine : PaintShapeType.Line,
+                    Start = new WpfPoint(line.X1, line.Y1),
+                    End = new WpfPoint(line.X2, line.Y2),
+                    StrokeColor = ResolveColor(line.Stroke),
+                    StrokeThickness = line.StrokeThickness,
+                    DashArray = line.StrokeDashArray
+                };
+            }
+
+            if (shape is System.Windows.Shapes.Rectangle rectangle)
+            {
+                var fill = ResolveColor(rectangle.Fill, allowTransparent: true);
+                return new ShapeSnapshot
+                {
+                    Type = rectangle.Fill != null ? PaintShapeType.RectangleFill : PaintShapeType.Rectangle,
+                    Bounds = new Rect(
+                        System.Windows.Controls.Canvas.GetLeft(rectangle),
+                        System.Windows.Controls.Canvas.GetTop(rectangle),
+                        rectangle.Width,
+                        rectangle.Height),
+                    StrokeColor = ResolveColor(rectangle.Stroke),
+                    StrokeThickness = rectangle.StrokeThickness,
+                    DashArray = rectangle.StrokeDashArray,
+                    FillColor = fill
+                };
+            }
+
+            if (shape is Ellipse ellipse)
+            {
+                return new ShapeSnapshot
+                {
+                    Type = PaintShapeType.Ellipse,
+                    Bounds = new Rect(
+                        System.Windows.Controls.Canvas.GetLeft(ellipse),
+                        System.Windows.Controls.Canvas.GetTop(ellipse),
+                        ellipse.Width,
+                        ellipse.Height),
+                    StrokeColor = ResolveColor(ellipse.Stroke),
+                    StrokeThickness = ellipse.StrokeThickness,
+                    DashArray = ellipse.StrokeDashArray,
+                    FillColor = ResolveColor(ellipse.Fill, allowTransparent: true)
+                };
+            }
+
+            return null;
+        }
+
+        private static MediaColor ResolveColor(Brush? brush, bool allowTransparent = false)
+        {
+            if (brush is SolidColorBrush solid)
+            {
+                if (allowTransparent || solid.Color.A > 0)
+                {
+                    return solid.Color;
+                }
+            }
+            return Colors.Transparent;
+        }
+    }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
     private bool _isDrawingShape;
@@ -23,7 +112,8 @@ public partial class PaintOverlayWindow : Window
     private WpfRectangle? _regionRect;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
-    private readonly Stack<StrokeCollection> _strokeHistory = new();
+    private readonly Stack<PaintSnapshot> _history = new();
+    private bool _erasing;
 
     public PaintOverlayWindow()
     {
@@ -41,6 +131,7 @@ public partial class PaintOverlayWindow : Window
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
         InkLayer.EraserShape = new RectangleStylusShape(24, 24);
         InkLayer.StrokeCollected += OnStrokeCollected;
+        InkLayer.StrokeErasing += OnStrokeErasing;
         InkLayer.MouseLeftButtonDown += OnMouseDown;
         InkLayer.MouseMove += OnMouseMove;
         InkLayer.MouseLeftButtonUp += OnMouseUp;
@@ -65,6 +156,7 @@ public partial class PaintOverlayWindow : Window
     {
         _mode = mode;
         OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
+        InkLayer.IsHitTestVisible = mode != PaintToolMode.Cursor;
         switch (mode)
         {
             case PaintToolMode.Brush:
@@ -112,9 +204,13 @@ public partial class PaintOverlayWindow : Window
 
     public void ClearAll()
     {
+        if (InkLayer.Strokes.Count > 0 || ShapeCanvas.Children.Count > 0)
+        {
+            PushHistory();
+        }
         InkLayer.Strokes.Clear();
         ShapeCanvas.Children.Clear();
-        _strokeHistory.Clear();
+        _history.Clear();
     }
 
     public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
@@ -196,7 +292,9 @@ public partial class PaintOverlayWindow : Window
         {
             _isDrawingShape = false;
             _activeShape = null;
+            PushHistory();
         }
+        _erasing = false;
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -212,13 +310,15 @@ public partial class PaintOverlayWindow : Window
 
     public void Undo()
     {
-        if (_strokeHistory.Count == 0)
+        if (_history.Count == 0)
         {
             return;
         }
-        var snapshot = _strokeHistory.Pop();
+        var snapshot = _history.Pop();
         InkLayer.Strokes.Clear();
-        InkLayer.Strokes.Add(snapshot);
+        InkLayer.Strokes.Add(snapshot.Strokes);
+        ShapeCanvas.Children.Clear();
+        RestoreShapes(snapshot.Shapes);
     }
 
     public void SetBrushOpacity(byte opacity)
@@ -263,7 +363,17 @@ public partial class PaintOverlayWindow : Window
 
     private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
     {
-        _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
+        PushHistory();
+    }
+
+    private void OnStrokeErasing(object? sender, InkCanvasStrokeErasingEventArgs e)
+    {
+        if (_erasing)
+        {
+            return;
+        }
+        _erasing = true;
+        PushHistory();
     }
 
     private static DrawingAttributes BuildDrawingAttributes(MediaColor color, double size, byte opacity)
@@ -344,9 +454,9 @@ public partial class PaintOverlayWindow : Window
 
     private void EraseRegion(Rect region)
     {
+        PushHistory();
         if (InkLayer.Strokes.Count > 0)
         {
-            _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
             var hits = InkLayer.Strokes.HitTest(region, 60);
             foreach (var stroke in hits.ToList())
             {
@@ -412,5 +522,67 @@ public partial class PaintOverlayWindow : Window
         var width = Math.Abs(end.X - start.X);
         var height = Math.Abs(end.Y - start.Y);
         return new Rect(left, top, Math.Max(1, width), Math.Max(1, height));
+    }
+
+    private void PushHistory()
+    {
+        var strokes = new StrokeCollection(InkLayer.Strokes);
+        var shapes = CaptureShapes();
+        _history.Push(new PaintSnapshot(strokes, shapes));
+    }
+
+    private List<ShapeSnapshot> CaptureShapes()
+    {
+        var list = new List<ShapeSnapshot>();
+        foreach (var shape in ShapeCanvas.Children.OfType<Shape>())
+        {
+            if (ReferenceEquals(shape, _regionRect))
+            {
+                continue;
+            }
+            var snapshot = ShapeSnapshot.FromShape(shape);
+            if (snapshot != null)
+            {
+                list.Add(snapshot);
+            }
+        }
+        return list;
+    }
+
+    private void RestoreShapes(IEnumerable<ShapeSnapshot> shapes)
+    {
+        foreach (var snapshot in shapes)
+        {
+            var shape = CreateShape(snapshot.Type);
+            if (shape == null)
+            {
+                continue;
+            }
+            if (shape is Line line)
+            {
+                line.X1 = snapshot.Start.X;
+                line.Y1 = snapshot.Start.Y;
+                line.X2 = snapshot.End.X;
+                line.Y2 = snapshot.End.Y;
+            }
+            else
+            {
+                System.Windows.Controls.Canvas.SetLeft(shape, snapshot.Bounds.Left);
+                System.Windows.Controls.Canvas.SetTop(shape, snapshot.Bounds.Top);
+                shape.Width = Math.Max(1, snapshot.Bounds.Width);
+                shape.Height = Math.Max(1, snapshot.Bounds.Height);
+            }
+            shape.Stroke = new SolidColorBrush(snapshot.StrokeColor);
+            shape.StrokeThickness = Math.Max(1, snapshot.StrokeThickness);
+            if (snapshot.DashArray != null && snapshot.DashArray.Count > 0)
+            {
+                shape.StrokeDashArray = new DoubleCollection(snapshot.DashArray);
+            }
+            if (snapshot.FillColor.HasValue && snapshot.FillColor.Value.A > 0)
+            {
+                shape.Fill = new SolidColorBrush(snapshot.FillColor.Value);
+            }
+            ShapeCanvas.Children.Add(shape);
+        }
     }
 }

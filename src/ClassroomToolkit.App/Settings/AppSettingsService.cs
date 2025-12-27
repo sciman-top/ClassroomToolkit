@@ -73,6 +73,7 @@ public sealed class AppSettingsService
             settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
+            settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -142,6 +143,7 @@ public sealed class AppSettingsService
         paint["shape_type"] = settings.ShapeType.ToString();
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
+        paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);

@@ -202,9 +202,7 @@ public partial class MainWindow : Window
         };
         _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
 
-        _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
-            ? Paint.PaintToolMode.Brush
-            : Paint.PaintToolMode.Shape);
+        _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
         _overlayWindow.SetEraserSize(_settings.EraserSize);
         _overlayWindow.SetShapeType(_settings.ShapeType);
@@ -345,6 +343,8 @@ public partial class MainWindow : Window
         _settings.EraserSize = dialog.EraserSize;
         _settings.BoardOpacity = dialog.BoardOpacity;
         _settings.ShapeType = dialog.ShapeType;
+        _settings.BrushColor = dialog.BrushColor;
+        _settings.PaintToolbarScale = dialog.ToolbarScale;
         SaveSettings();
 
         if (_overlayWindow != null)

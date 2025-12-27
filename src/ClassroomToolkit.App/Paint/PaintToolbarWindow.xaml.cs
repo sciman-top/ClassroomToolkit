@@ -13,6 +13,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
+    private const double BaseWidth = 260;
+    private const double BaseHeight = 120;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
     private double _brushSize = 12;
@@ -23,6 +25,8 @@ public partial class PaintToolbarWindow : Window
     private bool _boardActive;
     private MediaColor _boardColor = Colors.White;
     private PaintOverlayWindow? _overlay;
+    private double _uiScale = 1.0;
+    private bool _modeInitialized;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -87,16 +91,34 @@ public partial class PaintToolbarWindow : Window
             SetQuickColorSlot(2, settings.QuickColor3);
             BoardButton.IsChecked = _boardActive;
             UpdateQuickColorSelection(settings.BrushColor);
+            ApplyUiScale(settings.PaintToolbarScale);
         }
         finally
         {
             _initializing = false;
+        }
+        if (!_modeInitialized)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+            _modeInitialized = true;
         }
     }
 
     public void AttachOverlay(PaintOverlayWindow overlay)
     {
         _overlay = overlay;
+    }
+
+    private void ApplyUiScale(double scale)
+    {
+        _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
+        if (ToolbarRoot != null)
+        {
+            ToolbarRoot.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
+        }
+        Width = BaseWidth * _uiScale;
+        Height = BaseHeight * _uiScale;
+        WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnModeClick(object sender, RoutedEventArgs e)
@@ -316,5 +338,39 @@ public partial class PaintToolbarWindow : Window
                            && _quickColors[i].B == match.B;
             buttons[i].IsChecked = isActive;
         }
+    }
+
+    private void OnToolbarDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+        try
+        {
+            DragMove();
+        }
+        catch
+        {
+            // 忽略拖拽异常。
+        }
+    }
+
+    private static bool IsInteractiveElement(DependencyObject? source)
+    {
+        var current = source;
+        while (current != null)
+        {
+            if (current is ButtonBase || current is ToggleButton)
+            {
+                return true;
+            }
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return false;
     }
 }

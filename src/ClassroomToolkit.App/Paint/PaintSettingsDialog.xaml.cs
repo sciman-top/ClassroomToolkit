@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 
@@ -17,6 +19,13 @@ public partial class PaintSettingsDialog : Window
         ("矩形（实心）", PaintShapeType.RectangleFill),
         ("圆形", PaintShapeType.Ellipse)
     };
+    private static readonly (string Label, string Value)[] WpsModeChoices =
+    {
+        ("自动判断（推荐）", "auto"),
+        ("强制原始输入（SendInput）", "raw"),
+        ("强制消息投递（PostMessage）", "message")
+    };
+    private static readonly double[] ToolbarScaleChoices = { 0.8, 1.0, 1.25, 1.5, 1.75, 2.0 };
 
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
@@ -27,18 +36,18 @@ public partial class PaintSettingsDialog : Window
     public double EraserSize { get; private set; }
     public byte BoardOpacity { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
+    public Color BrushColor { get; private set; }
+    public double ToolbarScale { get; private set; } = 1.0;
 
     public PaintSettingsDialog(AppSettings settings)
     {
         InitializeComponent();
-        ControlOfficeCheck.IsChecked = settings.ControlMsPpt;
-        ControlWpsCheck.IsChecked = settings.ControlWpsPpt;
-        WpsModeCombo.ItemsSource = new[] { "auto", "raw", "message" };
-        WpsModeCombo.SelectedItem = settings.WpsInputMode;
-        if (WpsModeCombo.SelectedItem == null)
+        BrushColor = settings.BrushColor;
+        foreach (var (label, value) in WpsModeChoices)
         {
-            WpsModeCombo.SelectedIndex = 0;
+            WpsModeCombo.Items.Add(new ComboBoxItem { Content = label, Tag = value });
         }
+        SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
 
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
@@ -53,24 +62,34 @@ public partial class PaintSettingsDialog : Window
         }
         SelectShapeType(settings.ShapeType);
 
+        foreach (var scale in ToolbarScaleChoices)
+        {
+            var percent = (int)Math.Round(scale * 100);
+            ToolbarScaleCombo.Items.Add(new ComboBoxItem { Content = $"{percent}%", Tag = scale });
+        }
+        var selectedScale = FindNearestScale(settings.PaintToolbarScale);
+        SelectComboByTag(ToolbarScaleCombo, selectedScale, 1.0);
+
         UpdateBrushSizeLabel();
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
         UpdateBoardOpacityLabel();
+        HighlightTempColorByValue(BrushColor);
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
-        ControlMsPpt = ControlOfficeCheck.IsChecked == true;
-        ControlWpsPpt = ControlWpsCheck.IsChecked == true;
-        WpsInputMode = WpsModeCombo.SelectedItem as string ?? "auto";
+        ControlMsPpt = true;
+        ControlWpsPpt = true;
+        WpsInputMode = GetSelectedTag(WpsModeCombo, "auto");
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BoardOpacity = ToByte(BoardOpacitySlider.Value);
         ShapeType = ResolveShapeType();
+        ToolbarScale = GetSelectedScale();
         DialogResult = true;
     }
 
@@ -135,6 +154,82 @@ public partial class PaintSettingsDialog : Window
         BoardOpacityValue.Text = $"{Math.Round(BoardOpacitySlider.Value)}%";
     }
 
+    private void OnTempColorClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button)
+        {
+            return;
+        }
+        var hex = button.Tag as string;
+        if (string.IsNullOrWhiteSpace(hex))
+        {
+            return;
+        }
+        BrushColor = (Color)ColorConverter.ConvertFromString(hex);
+        HighlightTempColor(button);
+    }
+
+    private void HighlightTempColor(Button selected)
+    {
+        if (selected == null)
+        {
+            return;
+        }
+        var parent = VisualTreeHelper.GetParent(selected) as Panel;
+        if (parent == null)
+        {
+            return;
+        }
+        foreach (var child in parent.Children.OfType<Button>())
+        {
+            child.BorderThickness = new Thickness(1);
+            child.BorderBrush = Brushes.Transparent;
+        }
+        selected.BorderThickness = new Thickness(2);
+        selected.BorderBrush = Brushes.DeepSkyBlue;
+    }
+
+    private void HighlightTempColorByValue(Color color)
+    {
+        var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        foreach (var button in FindTempColorButtons())
+        {
+            var tag = button.Tag as string;
+            if (string.Equals(tag, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                HighlightTempColor(button);
+                return;
+            }
+        }
+    }
+
+    private IEnumerable<Button> FindTempColorButtons()
+    {
+        return FindVisualChildren<Button>(this)
+            .Where(btn => btn.Tag is string tag && tag.StartsWith("#", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null)
+        {
+            yield break;
+        }
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+            {
+                yield return match;
+            }
+            foreach (var nested in FindVisualChildren<T>(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
     private static double Clamp(double value, double min, double max)
     {
         return Math.Max(min, Math.Min(max, value));
@@ -171,5 +266,50 @@ public partial class PaintSettingsDialog : Window
             return type;
         }
         return PaintShapeType.None;
+    }
+
+    private static string GetSelectedTag(ComboBox combo, string fallback)
+    {
+        if (combo.SelectedItem is ComboBoxItem item && item.Tag is string text)
+        {
+            return text;
+        }
+        return fallback;
+    }
+
+    private static void SelectComboByTag(ComboBox combo, string value, string fallback)
+    {
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if ((item.Tag as string ?? string.Empty) == value)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if ((item.Tag as string ?? string.Empty) == fallback)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        combo.SelectedIndex = 0;
+    }
+
+    private static double FindNearestScale(double value)
+    {
+        var target = Clamp(value, 0.8, 2.0);
+        return ToolbarScaleChoices.OrderBy(choice => Math.Abs(choice - target)).First();
+    }
+
+    private double GetSelectedScale()
+    {
+        if (ToolbarScaleCombo.SelectedItem is ComboBoxItem item && item.Tag is double scale)
+        {
+            return scale;
+        }
+        return 1.0;
     }
 }

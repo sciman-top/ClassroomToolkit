@@ -27,6 +27,13 @@ public static class LongPressBehavior
             typeof(LongPressBehavior),
             new PropertyMetadata(null));
 
+    private static readonly DependencyProperty TriggeredProperty =
+        DependencyProperty.RegisterAttached(
+            "Triggered",
+            typeof(bool),
+            typeof(LongPressBehavior),
+            new PropertyMetadata(false));
+
     public static void SetCommand(DependencyObject element, ICommand? value)
         => element.SetValue(CommandProperty, value);
 
@@ -61,6 +68,8 @@ public static class LongPressBehavior
         {
             return;
         }
+        element.SetValue(TriggeredProperty, false);
+        element.CaptureMouse();
         var duration = Math.Max(100, GetDuration(element));
         var timer = new DispatcherTimer
         {
@@ -69,6 +78,7 @@ public static class LongPressBehavior
         timer.Tick += (_, _) =>
         {
             timer.Stop();
+            element.SetValue(TriggeredProperty, true);
             ExecuteCommand(element);
         };
         element.SetValue(TimerProperty, timer);
@@ -77,12 +87,29 @@ public static class LongPressBehavior
 
     private static void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        StopTimer(sender as UIElement);
+        var element = sender as UIElement;
+        var triggered = element != null && (bool)element.GetValue(TriggeredProperty);
+        StopTimer(element);
+        if (element != null)
+        {
+            element.ReleaseMouseCapture();
+            element.SetValue(TriggeredProperty, false);
+        }
+        if (triggered)
+        {
+            e.Handled = true;
+        }
     }
 
     private static void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        StopTimer(sender as UIElement);
+        var element = sender as UIElement;
+        StopTimer(element);
+        if (element != null)
+        {
+            element.ReleaseMouseCapture();
+            element.SetValue(TriggeredProperty, false);
+        }
     }
 
     private static void StopTimer(UIElement? element)
