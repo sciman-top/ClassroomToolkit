@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="启动器设置"
         SizeToContent="WidthAndHeight"
+        MinWidth="360"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -24,7 +25,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button x:Name="DiagnosticButton" Grid.Column="0" Content="系统兼容性诊断"
-                    Width="140" Height="28" Click="OnDiagnosticClick" />
+                    Width="140" Height="28" Margin="0,0,12,0" Click="OnDiagnosticClick" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="确定" Width="80" Height="28" Margin="0,0,8,0" Click="OnConfirm" />
                 <Button Content="取消" Width="80" Height="28" Click="OnCancel" />
