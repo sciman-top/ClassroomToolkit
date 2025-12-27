@@ -699,8 +699,7 @@ public partial class PaintOverlayWindow : Window
         {
             return false;
         }
-        var foreground = ClassroomToolkit.Interop.Presentation.NativeMethods.GetForegroundWindow();
-        return foreground != IntPtr.Zero && foreground == target.Handle;
+        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle);
     }
 
     private bool ShouldSuppressWpsNav(int direction, IntPtr target)

@@ -19,4 +19,18 @@ public static class PresentationWindowFocus
         }
         return NativeMethods.SetForegroundWindow(hwnd);
     }
+
+    public static bool IsForeground(IntPtr hwnd)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+        var foreground = NativeMethods.GetForegroundWindow();
+        return foreground != IntPtr.Zero && foreground == hwnd;
+    }
 }
