@@ -47,6 +47,7 @@ public partial class RollCallWindow : Window
         DataContext = _viewModel;
         Loaded += OnLoaded;
         Closing += OnClosing;
+        PreviewKeyDown += OnPreviewKeyDown;
 
         _stopwatch = new Stopwatch();
         _timer = new DispatcherTimer
@@ -366,6 +367,19 @@ public partial class RollCallWindow : Window
         var elapsed = _stopwatch.Elapsed;
         _stopwatch.Restart();
         _viewModel.TickTimer(elapsed);
+    }
+
+    private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Escape)
+        {
+            return;
+        }
+        if (_photoOverlay != null && _photoOverlay.IsVisible)
+        {
+            _photoOverlay.CloseOverlay();
+            e.Handled = true;
+        }
     }
 
     private void OnRollStateSaveTick(object? sender, EventArgs e)
