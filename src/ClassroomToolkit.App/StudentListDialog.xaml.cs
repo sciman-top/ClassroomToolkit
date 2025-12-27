@@ -65,12 +65,11 @@ public partial class StudentListDialog : Window
         var vSpacing = 6d;
         var columns = 10;
         var totalRows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
-        var preferredWidth = Math.Min(workArea.Width * 0.95, StudentButtonWidth * columns + hSpacing * (columns - 1) + 32d);
-        var extraHeight = 64d;
+        var preferredWidth = StudentButtonWidth * columns + hSpacing * (columns - 1) + 32d;
+        var extraHeight = 56d;
         var desiredHeight = totalRows * StudentButtonHeight + Math.Max(0, totalRows - 1) * vSpacing + extraHeight;
-        var preferredHeight = Math.Min(workArea.Height * 0.9, Math.Max(200d, desiredHeight));
-        Width = preferredWidth;
-        Height = preferredHeight;
+        Width = Math.Max(200d, preferredWidth);
+        Height = Math.Max(200d, desiredHeight);
         WindowPlacementHelper.EnsureVisible(this);
     }
 

@@ -373,7 +373,6 @@ public partial class MainWindow : Window
             }
             _toolbarWindow?.ApplySettings(_settings);
         }
-        _overlayWindow?.RestorePresentationFocus();
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
