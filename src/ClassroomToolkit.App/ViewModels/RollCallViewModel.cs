@@ -95,9 +95,14 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public string ModeTitle => IsRollCallMode ? "点名" : "计时";
 
-    public string TimerModeLabel => _timerEngine.Mode == TimerMode.Countdown ? "倒计时" : "秒表";
+    public string TimerModeLabel => _timerEngine.Mode switch
+    {
+        TimerMode.Countdown => "倒计时",
+        TimerMode.Stopwatch => "秒表",
+        _ => "时钟"
+    };
 
-    public string StartPauseLabel => _timerEngine.Running ? "暂停" : "开始";
+    public string StartPauseLabel => _timerEngine.Mode == TimerMode.Clock ? "开始" : (_timerEngine.Running ? "暂停" : "开始");
 
     public TimerMode CurrentTimerMode => _timerEngine.Mode;
 
@@ -461,21 +466,45 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public void ToggleTimerMode()
     {
-        var nextMode = _timerEngine.Mode == TimerMode.Countdown ? TimerMode.Stopwatch : TimerMode.Countdown;
+        if (_timerEngine.Running)
+        {
+            return;
+        }
+        var nextMode = _timerEngine.Mode switch
+        {
+            TimerMode.Countdown => TimerMode.Stopwatch,
+            TimerMode.Stopwatch => TimerMode.Clock,
+            _ => TimerMode.Countdown
+        };
         _timerEngine.SetMode(nextMode);
+        ApplyReminderInterval();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(TimerModeLabel));
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(CurrentTimerMode));
     }
 
     public void ToggleTimer()
     {
+        if (_timerEngine.Mode == TimerMode.Clock)
+        {
+            return;
+        }
+        if (!_timerEngine.Running && _timerEngine.Mode == TimerMode.Countdown && _timerEngine.SecondsLeft <= 0)
+        {
+            _timerEngine.Reset();
+            UpdateTimeDisplay();
+        }
         _timerEngine.Toggle();
         RaisePropertyChanged(nameof(StartPauseLabel));
     }
 
     public void ResetTimer()
     {
+        if (_timerEngine.Mode == TimerMode.Clock)
+        {
+            return;
+        }
         _timerEngine.Reset();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(StartPauseLabel));
@@ -500,13 +529,20 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             secondsLeft = countdownTotal;
         }
         _timerEngine.SetState(timerMode, countdownTotal, secondsLeft, stopwatchSeconds, running);
+        ApplyReminderInterval();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(TimerModeLabel));
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(CurrentTimerMode));
     }
 
     public void TickTimer(TimeSpan elapsed)
     {
+        if (_timerEngine.Mode == TimerMode.Clock)
+        {
+            UpdateTimeDisplay();
+            return;
+        }
         _timerEngine.Tick(elapsed);
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(StartPauseLabel));
@@ -583,7 +619,11 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     private void UpdateTimeDisplay()
     {
-        if (_timerEngine.Mode == TimerMode.Countdown)
+        if (_timerEngine.Mode == TimerMode.Clock)
+        {
+            TimeDisplay = DateTime.Now.ToString("HH:mm:ss");
+        }
+        else if (_timerEngine.Mode == TimerMode.Countdown)
         {
             TimeDisplay = FormatTime(_timerEngine.SecondsLeft);
         }
@@ -607,7 +647,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     private void ApplyReminderInterval()
     {
-        if (!TimerReminderEnabled || TimerReminderIntervalMinutes <= 0)
+        if (_timerEngine.Mode != TimerMode.Countdown || !TimerReminderEnabled || TimerReminderIntervalMinutes <= 0)
         {
             _timerEngine.ReminderIntervalSeconds = 0;
             return;

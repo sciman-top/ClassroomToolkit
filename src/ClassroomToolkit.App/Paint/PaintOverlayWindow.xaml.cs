@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -201,7 +202,7 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions.AllowWps = allowWps;
     }
 
-    private void OnStrokeCollected(object? sender, System.Windows.Controls.InkCanvasStrokeCollectedEventArgs e)
+    private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
     {
         _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
     }

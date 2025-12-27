@@ -100,10 +100,10 @@
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
-                    <Button Content="{Binding TimerModeLabel}" Margin="4" Padding="12,6" Click="OnTimerModeClick" />
-                    <Button Content="{Binding StartPauseLabel}" Margin="4" Padding="12,6" Click="OnTimerStartPauseClick" />
-                    <Button Content="重置" Margin="4" Padding="12,6" Click="OnTimerResetClick" />
-                    <Button Content="设定" Margin="4" Padding="12,6" Click="OnTimerSetClick" />
+                    <Button x:Name="TimerModeButton" Content="{Binding TimerModeLabel}" Margin="4" Padding="12,6" Click="OnTimerModeClick" />
+                    <Button x:Name="TimerStartPauseButton" Content="{Binding StartPauseLabel}" Margin="4" Padding="12,6" Click="OnTimerStartPauseClick" />
+                    <Button x:Name="TimerResetButton" Content="重置" Margin="4" Padding="12,6" Click="OnTimerResetClick" />
+                    <Button x:Name="TimerSetButton" Content="设定" Margin="4" Padding="12,6" Click="OnTimerSetClick" />
                 </StackPanel>
             </Grid>
         </Grid>

@@ -65,6 +65,7 @@ public partial class RollCallWindow : Window
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
+        UpdateTimerButtons();
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -219,6 +220,7 @@ public partial class RollCallWindow : Window
     private void OnTimerModeClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ToggleTimerMode();
+        UpdateTimerButtons();
     }
 
     private void OnTimerStartPauseClick(object sender, RoutedEventArgs e)
@@ -531,9 +533,12 @@ public partial class RollCallWindow : Window
         if (!_timerStateApplied)
         {
             var isRollCallMode = !string.Equals(settings.RollCallMode, "timer", StringComparison.OrdinalIgnoreCase);
-            var timerMode = string.Equals(settings.RollCallTimerMode, "stopwatch", StringComparison.OrdinalIgnoreCase)
-                ? TimerMode.Stopwatch
-                : TimerMode.Countdown;
+            var timerMode = settings.RollCallTimerMode?.Trim().ToLowerInvariant() switch
+            {
+                "stopwatch" => TimerMode.Stopwatch,
+                "clock" => TimerMode.Clock,
+                _ => TimerMode.Countdown
+            };
             _viewModel.ApplyTimerState(
                 isRollCallMode,
                 timerMode,
@@ -546,6 +551,7 @@ public partial class RollCallWindow : Window
         }
         UpdateRemoteHookState();
         UpdatePhotoDisplay();
+        UpdateTimerButtons();
     }
 
     public void RequestClose()
@@ -567,7 +573,12 @@ public partial class RollCallWindow : Window
         _settings.RollCallTimerSoundVariant = _viewModel.TimerSoundVariant;
         _settings.RollCallTimerReminderSoundVariant = _viewModel.TimerReminderSoundVariant;
         _settings.RollCallMode = _viewModel.IsRollCallMode ? "roll_call" : "timer";
-        _settings.RollCallTimerMode = _viewModel.CurrentTimerMode == TimerMode.Stopwatch ? "stopwatch" : "countdown";
+        _settings.RollCallTimerMode = _viewModel.CurrentTimerMode switch
+        {
+            TimerMode.Stopwatch => "stopwatch",
+            TimerMode.Clock => "clock",
+            _ => "countdown"
+        };
         _settings.RollCallTimerMinutes = _viewModel.TimerMinutes;
         _settings.RollCallTimerSeconds = _viewModel.TimerSeconds;
         _settings.RollCallTimerSecondsLeft = _viewModel.TimerSecondsLeft;
@@ -603,6 +614,32 @@ public partial class RollCallWindow : Window
         else
         {
             StopKeyboardHook();
+        }
+    }
+
+    private void UpdateTimerButtons()
+    {
+        if (TimerStartPauseButton == null || TimerResetButton == null || TimerSetButton == null)
+        {
+            return;
+        }
+        switch (_viewModel.CurrentTimerMode)
+        {
+            case TimerMode.Countdown:
+                TimerStartPauseButton.IsEnabled = true;
+                TimerResetButton.IsEnabled = true;
+                TimerSetButton.IsEnabled = true;
+                break;
+            case TimerMode.Stopwatch:
+                TimerStartPauseButton.IsEnabled = true;
+                TimerResetButton.IsEnabled = true;
+                TimerSetButton.IsEnabled = false;
+                break;
+            default:
+                TimerStartPauseButton.IsEnabled = false;
+                TimerResetButton.IsEnabled = false;
+                TimerSetButton.IsEnabled = false;
+                break;
         }
     }
 }

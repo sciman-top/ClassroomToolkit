@@ -35,7 +35,16 @@ public sealed class TimerEngine
             return;
         }
         Mode = mode;
-        Reset();
+        Running = false;
+        _reminderCounter = 0;
+        if (Mode == TimerMode.Countdown)
+        {
+            _secondsLeft = _countdownSeconds;
+        }
+        else if (Mode == TimerMode.Stopwatch)
+        {
+            _stopwatchSeconds = 0;
+        }
     }
 
     public void SetCountdown(int minutes, int seconds)
@@ -48,16 +57,10 @@ public sealed class TimerEngine
     {
         Mode = mode;
         _countdownSeconds = Math.Max(0, countdownSeconds);
-        if (Mode == TimerMode.Countdown)
-        {
-            _secondsLeft = Math.Max(0, Math.Min(secondsLeft, _countdownSeconds));
-        }
-        else
-        {
-            _stopwatchSeconds = Math.Max(0, stopwatchSeconds);
-        }
+        _secondsLeft = Math.Max(0, Math.Min(secondsLeft, _countdownSeconds));
+        _stopwatchSeconds = Math.Max(0, stopwatchSeconds);
         _reminderCounter = 0;
-        Running = running;
+        Running = mode != TimerMode.Clock && running;
     }
 
     public void Start()
@@ -83,7 +86,7 @@ public sealed class TimerEngine
         {
             _secondsLeft = _countdownSeconds;
         }
-        else
+        else if (Mode == TimerMode.Stopwatch)
         {
             _stopwatchSeconds = 0;
         }
@@ -91,7 +94,7 @@ public sealed class TimerEngine
 
     public void Tick(TimeSpan elapsed)
     {
-        if (!Running)
+        if (!Running || Mode == TimerMode.Clock)
         {
             return;
         }
@@ -121,16 +124,15 @@ public sealed class TimerEngine
                 }
             }
         }
-        else
+        else if (Mode == TimerMode.Stopwatch)
         {
             _stopwatchSeconds++;
-            TriggerReminder();
         }
     }
 
     private void TriggerReminder()
     {
-        if (_reminderSeconds <= 0)
+        if (_reminderSeconds <= 0 || Mode != TimerMode.Countdown)
         {
             return;
         }
