@@ -112,7 +112,7 @@ public sealed class PresentationControlService
             return false;
         }
         var keyDownOnly = plan.TargetType == PresentationType.Wps;
-        if (plan.TargetType == PresentationType.Wps && strategy == InputStrategy.Raw)
+        if (plan.TargetType == PresentationType.Wps && plan.Strategy == InputStrategy.Raw)
         {
             var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
             if (!isForeground)
