@@ -211,7 +211,6 @@ public partial class PaintOverlayWindow : Window
         }
         InkLayer.Strokes.Clear();
         ShapeCanvas.Children.Clear();
-        _history.Clear();
     }
 
     public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
@@ -287,6 +286,7 @@ public partial class PaintOverlayWindow : Window
             {
                 EraseRegion(region);
             }
+            _erasing = false;
             return;
         }
         if (_mode == PaintToolMode.Shape)
@@ -449,6 +449,11 @@ public partial class PaintOverlayWindow : Window
         var hit = VisualTreeHelper.HitTest(ShapeCanvas, point);
         if (hit?.VisualHit is Shape shape)
         {
+            if (!_erasing)
+            {
+                _erasing = true;
+                PushHistory();
+            }
             ShapeCanvas.Children.Remove(shape);
         }
     }

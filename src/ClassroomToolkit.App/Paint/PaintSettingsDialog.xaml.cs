@@ -39,7 +39,6 @@ public partial class PaintSettingsDialog : Window
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
     public double EraserSize { get; private set; }
-    public byte BoardOpacity { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
     public double ToolbarScale { get; private set; } = 1.0;
@@ -58,7 +57,6 @@ public partial class PaintSettingsDialog : Window
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
         BrushOpacitySlider.Value = ToPercent(settings.BrushOpacity);
-        BoardOpacitySlider.Value = ToPercent(settings.BoardOpacity);
 
         foreach (var (label, type) in ShapeChoices)
         {
@@ -78,7 +76,6 @@ public partial class PaintSettingsDialog : Window
         UpdateBrushSizeLabel();
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
-        UpdateBoardOpacityLabel();
         HighlightTempColorByValue(BrushColor);
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
@@ -92,7 +89,6 @@ public partial class PaintSettingsDialog : Window
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
-        BoardOpacity = ToByte(BoardOpacitySlider.Value);
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         DialogResult = true;
@@ -118,10 +114,6 @@ public partial class PaintSettingsDialog : Window
         UpdateEraserSizeLabel();
     }
 
-    private void OnBoardOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        UpdateBoardOpacityLabel();
-    }
 
     private void UpdateBrushSizeLabel()
     {
@@ -150,14 +142,6 @@ public partial class PaintSettingsDialog : Window
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
     }
 
-    private void UpdateBoardOpacityLabel()
-    {
-        if (BoardOpacityValue == null)
-        {
-            return;
-        }
-        BoardOpacityValue.Text = $"{Math.Round(BoardOpacitySlider.Value)}%";
-    }
 
     private void OnTempColorClick(object sender, RoutedEventArgs e)
     {

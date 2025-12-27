@@ -163,7 +163,7 @@ public partial class MainWindow : Window
             if (_toolbarWindow.BoardActive && !_toolbarWindow.HasOverlay)
             {
                 _overlayWindow.SetBoardColor(color);
-                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+                _overlayWindow.SetBoardOpacity(255);
             }
         };
         _toolbarWindow.ClearRequested += () => _overlayWindow.ClearAll();
@@ -191,7 +191,7 @@ public partial class MainWindow : Window
                 if (active)
                 {
                     _overlayWindow.SetBoardColor(_settings.BoardColor);
-                    _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+                    _overlayWindow.SetBoardOpacity(255);
                     _toolbarWindow.Activate();
                 }
                 else
@@ -210,7 +210,7 @@ public partial class MainWindow : Window
         if (_toolbarWindow.BoardActive)
         {
             _overlayWindow.SetBoardColor(_settings.BoardColor);
-            _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+            _overlayWindow.SetBoardOpacity(255);
         }
         else
         {
@@ -342,7 +342,7 @@ public partial class MainWindow : Window
         _settings.BrushSize = dialog.BrushSize;
         _settings.BrushOpacity = dialog.BrushOpacity;
         _settings.EraserSize = dialog.EraserSize;
-        _settings.BoardOpacity = dialog.BoardOpacity;
+        _settings.BoardOpacity = 255;
         _settings.ShapeType = dialog.ShapeType;
         _settings.BrushColor = dialog.BrushColor;
         _settings.PaintToolbarScale = dialog.ToolbarScale;
@@ -362,7 +362,7 @@ public partial class MainWindow : Window
             if (_toolbarWindow?.BoardActive == true)
             {
                 _overlayWindow.SetBoardColor(_settings.BoardColor);
-                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+                _overlayWindow.SetBoardOpacity(255);
             }
         }
         _toolbarWindow?.ApplySettings(_settings);

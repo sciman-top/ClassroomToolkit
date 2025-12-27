@@ -60,7 +60,7 @@ public sealed class AppSettingsService
             settings.BrushSize = GetDouble(paint, "brush_base_size", settings.BrushSize);
             settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
             settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
-            settings.BoardOpacity = GetByte(paint, "board_opacity", settings.BoardOpacity);
+            settings.BoardOpacity = 255;
             settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
             settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
             settings.QuickColor1 = AppSettings.ParseColor(GetString(paint, "quick_color_1", settings.QuickColor1Hex), settings.QuickColor1);

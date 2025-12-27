@@ -20,7 +20,7 @@ public partial class PaintToolbarWindow : Window
     private double _brushSize = 12;
     private double _eraserSize = 24;
     private byte _brushOpacity = 255;
-    private byte _boardOpacity = 0;
+    private byte _boardOpacity = 255;
     private PaintShapeType _shapeType = PaintShapeType.Line;
     private bool _boardActive;
     private MediaColor _boardColor = Colors.White;
@@ -85,7 +85,7 @@ public partial class PaintToolbarWindow : Window
             _brushSize = settings.BrushSize;
             _eraserSize = settings.EraserSize;
             _brushOpacity = settings.BrushOpacity;
-            _boardOpacity = settings.BoardOpacity;
+            _boardOpacity = 255;
             _shapeType = settings.ShapeType;
             _boardColor = settings.BoardColor;
             SetQuickColorSlot(0, settings.QuickColor1);
@@ -198,7 +198,7 @@ public partial class PaintToolbarWindow : Window
             if (_boardActive)
             {
                 _overlay.SetBoardColor(_boardColor);
-                _overlay.SetBoardOpacity(_boardOpacity == 0 ? (byte)255 : _boardOpacity);
+                _overlay.SetBoardOpacity(255);
             }
             else
             {
@@ -238,12 +238,26 @@ public partial class PaintToolbarWindow : Window
 
     private void OpenBoardColorDialog()
     {
-        using var dialog = new System.Windows.Forms.ColorDialog();
-        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        var dialog = new BoardColorDialog
         {
-            var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
-            _boardColor = color;
-            BoardColorChanged?.Invoke(color);
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true || dialog.SelectedColor == null)
+        {
+            return;
+        }
+        var color = dialog.SelectedColor.Value;
+        ApplyBoardColor(color);
+        BoardColorChanged?.Invoke(color);
+    }
+
+    private void ApplyBoardColor(MediaColor color)
+    {
+        _boardColor = color;
+        if (_overlay != null && _boardActive)
+        {
+            _overlay.SetBoardColor(color);
+            _overlay.SetBoardOpacity(255);
         }
     }
 
