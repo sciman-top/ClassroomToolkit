@@ -397,6 +397,10 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        if (_mode == PaintToolMode.Cursor && _inputPassthroughEnabled)
+        {
+            return;
+        }
         if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
         {
             return;
@@ -426,9 +430,13 @@ public partial class PaintOverlayWindow : Window
         }
         if (TrySendWpsNavigation(command))
         {
+            e.Handled = true;
             return;
         }
-        _presentationService.TrySendForeground(command, _presentationOptions);
+        if (_presentationService.TrySendForeground(command, _presentationOptions))
+        {
+            e.Handled = true;
+        }
     }
 
     public void Undo()

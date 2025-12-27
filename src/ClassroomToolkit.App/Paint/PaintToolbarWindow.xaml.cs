@@ -409,12 +409,21 @@ public partial class PaintToolbarWindow : Window
     {
         var match = color;
         var buttons = new[] { QuickColor1Button, QuickColor2Button, QuickColor3Button };
+        var matched = false;
         for (var i = 0; i < _quickColors.Length && i < buttons.Length; i++)
         {
             var isActive = _quickColors[i].R == match.R
                            && _quickColors[i].G == match.G
                            && _quickColors[i].B == match.B;
-            buttons[i].IsChecked = isActive;
+            if (isActive && !matched)
+            {
+                buttons[i].IsChecked = true;
+                matched = true;
+            }
+            else
+            {
+                buttons[i].IsChecked = false;
+            }
         }
     }
 

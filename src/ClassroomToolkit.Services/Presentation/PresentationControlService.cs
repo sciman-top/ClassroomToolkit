@@ -125,6 +125,14 @@ public sealed class PresentationControlService
                 plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
             }
         }
+        if (plan.TargetType == PresentationType.Office && plan.Strategy == InputStrategy.Raw)
+        {
+            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
+            if (!isForeground)
+            {
+                plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
+            }
+        }
         if (plan.TargetType == PresentationType.Wps
             && !plan.UseWheelAsKey
             && command is PresentationCommand.Next or PresentationCommand.Previous)

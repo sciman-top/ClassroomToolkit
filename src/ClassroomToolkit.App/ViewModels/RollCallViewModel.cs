@@ -482,9 +482,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             SetPlaceholderStudent();
             return false;
         }
-        if (!_engine.GroupRemaining.TryGetValue(CurrentGroup, out var remaining) || remaining.Count == 0)
+        var groupKey = ResolveGroupKey(CurrentGroup);
+        if (!_engine.GroupRemaining.TryGetValue(groupKey, out var remaining) || remaining.Count == 0)
         {
-            if (!_engine.GroupAll.TryGetValue(CurrentGroup, out var baseList) || baseList.Count == 0)
+            if (!_engine.GroupAll.TryGetValue(groupKey, out var baseList) || baseList.Count == 0)
             {
                 message = $"'{CurrentGroup}' 分组当前没有可点名的学生。";
                 SetPlaceholderStudent();
