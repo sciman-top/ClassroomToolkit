@@ -111,10 +111,7 @@ public partial class MainWindow : Window
             _toolbarWindow.Show();
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
             _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
-            if (_settings.ForcePresentationForegroundOnFullscreen)
-            {
-                _overlayWindow.RestorePresentationFocusIfNeeded();
-            }
+            _overlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
         }
         UpdateToggleButtons();
     }

@@ -599,7 +599,7 @@ public partial class PaintOverlayWindow : Window
         _forcePresentationForegroundOnFullscreen = forceForegroundOnFullscreen;
     }
 
-    public void RestorePresentationFocusIfNeeded()
+    public void RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
     {
         if (!IsVisible)
         {
@@ -622,7 +622,11 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var force = ShouldForcePresentationForeground(target);
+        if (requireFullscreen && !IsFullscreenPresentationWindow(target))
+        {
+            return;
+        }
+        var force = ShouldForcePresentationForeground(target) || requireFullscreen;
         if (!force && !IsForegroundOwnedByCurrentProcess())
         {
             return;
