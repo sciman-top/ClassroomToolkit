@@ -174,14 +174,14 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        var wasShapeMode = _currentMode == PaintToolMode.Shape;
+        var shouldResetShape = _shapeType != PaintShapeType.None;
         var index = ResolveQuickColorIndex(button.Tag);
         if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
         {
             return;
         }
         UpdateQuickColorSelection(_quickColors[index.Value]);
-        if (wasShapeMode)
+        if (shouldResetShape)
         {
             ResetShapeType();
         }

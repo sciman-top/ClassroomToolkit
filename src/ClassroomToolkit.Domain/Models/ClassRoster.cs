@@ -4,15 +4,19 @@ namespace ClassroomToolkit.Domain.Models;
 
 public sealed class ClassRoster
 {
+    public static readonly string[] DefaultColumns = { "学号", "姓名", "班级", "分组" };
+    public const string InternalRowIdColumn = "__row_id__";
+
     private readonly List<StudentRecord> _students;
     private readonly Dictionary<string, List<int>> _groupIndexMap;
 
-    public ClassRoster(string className, IEnumerable<StudentRecord> students)
+    public ClassRoster(string className, IEnumerable<StudentRecord> students, IReadOnlyList<string>? columnOrder = null)
     {
         ClassName = IdentityUtils.NormalizeText(className);
         _students = students?.ToList() ?? new List<StudentRecord>();
         _groupIndexMap = BuildGroupIndexMap(_students);
         Groups = BuildGroupList(_groupIndexMap.Keys);
+        ColumnOrder = BuildColumnOrder(columnOrder);
     }
 
     public string ClassName { get; }
@@ -22,6 +26,8 @@ public sealed class ClassRoster
     public IReadOnlyList<string> Groups { get; }
 
     public IReadOnlyDictionary<string, List<int>> GroupIndexMap => _groupIndexMap;
+
+    public IReadOnlyList<string> ColumnOrder { get; }
 
     private static Dictionary<string, List<int>> BuildGroupIndexMap(List<StudentRecord> students)
     {
@@ -66,5 +72,44 @@ public sealed class ClassRoster
             }
         }
         return list;
+    }
+
+    private static IReadOnlyList<string> BuildColumnOrder(IReadOnlyList<string>? columnOrder)
+    {
+        var normalized = new List<string>();
+        if (columnOrder != null)
+        {
+            foreach (var column in columnOrder)
+            {
+                var trimmed = IdentityUtils.NormalizeText(column);
+                if (string.IsNullOrWhiteSpace(trimmed))
+                {
+                    continue;
+                }
+                if (!normalized.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+                {
+                    normalized.Add(trimmed);
+                }
+            }
+        }
+        if (normalized.Count == 0)
+        {
+            normalized.AddRange(DefaultColumns);
+        }
+        else
+        {
+            foreach (var column in DefaultColumns)
+            {
+                if (!normalized.Contains(column, StringComparer.OrdinalIgnoreCase))
+                {
+                    normalized.Add(column);
+                }
+            }
+        }
+        if (!normalized.Contains(InternalRowIdColumn, StringComparer.OrdinalIgnoreCase))
+        {
+            normalized.Add(InternalRowIdColumn);
+        }
+        return normalized;
     }
 }

@@ -46,7 +46,7 @@ public sealed class PresentationControlPlanner
         }
         return type switch
         {
-            PresentationType.Wps => InputStrategy.Message,
+            PresentationType.Wps => InputStrategy.Raw,
             PresentationType.Office => InputStrategy.Raw,
             _ => InputStrategy.Raw
         };

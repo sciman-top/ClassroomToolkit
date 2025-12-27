@@ -7,16 +7,19 @@ public sealed class RollCallEngine
 {
     private readonly Random _random = new();
     private ClassRoster _roster;
+    private Dictionary<string, List<int>> _groupAll = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, List<int>> _groupRemaining = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, List<int>> _groupInitialSequences = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, HashSet<int>> _groupDrawnHistory = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, int?> _groupLastStudent = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<int> _globalDrawn = new();
+    private Dictionary<int, HashSet<string>> _studentGroups = new();
 
     public RollCallEngine(ClassRoster roster)
     {
         _roster = roster;
         CurrentGroup = IdentityUtils.AllGroupName;
-        RebuildPools();
+        RebuildGroupIndices();
     }
 
     public string CurrentGroup { get; private set; }
@@ -29,13 +32,15 @@ public sealed class RollCallEngine
 
     public IReadOnlyDictionary<string, List<int>> GroupRemaining => _groupRemaining;
 
+    public IReadOnlyDictionary<string, List<int>> GroupAll => _groupAll;
+
     public void SetRoster(ClassRoster roster)
     {
         _roster = roster;
         CurrentStudentIndex = null;
         PendingStudentIndex = null;
         CurrentGroup = IdentityUtils.AllGroupName;
-        RebuildPools();
+        RebuildGroupIndices();
     }
 
     public void SetCurrentGroup(string? groupName)
@@ -45,7 +50,7 @@ public sealed class RollCallEngine
             return;
         }
         var normalized = IdentityUtils.NormalizeGroupName(groupName);
-        if (!_groupRemaining.ContainsKey(normalized))
+        if (!_groupAll.ContainsKey(normalized))
         {
             normalized = IdentityUtils.AllGroupName;
         }
@@ -59,21 +64,23 @@ public sealed class RollCallEngine
         {
             return null;
         }
+        ValidateAndRepairState("roll_next");
         var group = CurrentGroup;
         if (!_groupRemaining.TryGetValue(group, out var remaining) || remaining.Count == 0)
         {
-            EnsureGroupPool(group, forceReset: true);
+            EnsureGroupPool(group, forceReset: false);
             if (!_groupRemaining.TryGetValue(group, out remaining) || remaining.Count == 0)
             {
                 return null;
             }
         }
-        var idx = _random.Next(remaining.Count);
-        var studentIndex = remaining[idx];
-        remaining.RemoveAt(idx);
-        MarkStudentDrawn(studentIndex);
+        var index = remaining.Count > 1 ? _random.Next(remaining.Count) : 0;
+        var studentIndex = remaining[index];
+        remaining.RemoveAt(index);
         CurrentStudentIndex = studentIndex;
-        PendingStudentIndex = null;
+        PendingStudentIndex = studentIndex;
+        _groupLastStudent[group] = studentIndex;
+        MarkStudentDrawn(studentIndex);
         return _roster.Students[studentIndex];
     }
 
@@ -82,10 +89,12 @@ public sealed class RollCallEngine
         _groupDrawnHistory.Clear();
         _globalDrawn.Clear();
         _groupLastStudent.Clear();
-        RebuildPools();
-        CurrentStudentIndex = null;
         PendingStudentIndex = null;
+        CurrentStudentIndex = null;
         CurrentGroup = IdentityUtils.AllGroupName;
+        RebuildGroupIndices();
+        EnsureGroupPool(CurrentGroup, forceReset: false);
+        ValidateAndRepairState("reset_all");
     }
 
     public void ResetGroup(string groupName)
@@ -96,20 +105,54 @@ public sealed class RollCallEngine
             ResetAll();
             return;
         }
-        if (!_groupRemaining.ContainsKey(normalized))
+        if (!_groupAll.TryGetValue(normalized, out var baseList) || baseList.Count == 0)
         {
             return;
         }
-        if (_groupDrawnHistory.TryGetValue(normalized, out var drawn))
+        var history = _groupDrawnHistory.GetValueOrDefault(normalized);
+        if (history != null)
         {
-            foreach (var index in drawn)
+            foreach (var index in history.ToList())
             {
                 RemoveFromGlobalHistory(index, normalized);
             }
-            _groupDrawnHistory.Remove(normalized);
+            history.Clear();
         }
-        _groupLastStudent.Remove(normalized);
-        EnsureGroupPool(normalized, forceReset: true);
+        var baseIndices = CollectBaseIndices(baseList);
+        var shuffled = baseIndices.Where(idx => !_globalDrawn.Contains(idx)).ToList();
+        Shuffle(shuffled);
+        _groupRemaining[normalized] = shuffled;
+        _groupInitialSequences[normalized] = new List<int>(shuffled);
+        _groupLastStudent[normalized] = null;
+        if (PendingStudentIndex.HasValue && baseIndices.Contains(PendingStudentIndex.Value))
+        {
+            PendingStudentIndex = null;
+        }
+        RefreshAllGroupPool();
+        ValidateAndRepairState($"reset_group:{normalized}");
+    }
+
+    public bool AllGroupsCompleted()
+    {
+        var totalStudents = _groupAll.TryGetValue(IdentityUtils.AllGroupName, out var total)
+            ? total.Count
+            : 0;
+        if (totalStudents == 0)
+        {
+            return true;
+        }
+        if (_globalDrawn.Count < totalStudents)
+        {
+            return false;
+        }
+        foreach (var group in _groupAll.Keys)
+        {
+            if (_groupRemaining.TryGetValue(group, out var remaining) && remaining.Count > 0)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     public ClassRollState CaptureState()
@@ -194,74 +237,461 @@ public sealed class RollCallEngine
         CurrentStudentIndex = ResolveIndex(state.CurrentStudent, lookup);
         PendingStudentIndex = ResolveIndex(state.PendingStudent, lookup);
 
-        // 修正缺失的分组池，避免恢复后无法点名。
         foreach (var group in _roster.Groups)
         {
             EnsureGroupPool(group, forceReset: false);
         }
+        ValidateAndRepairState("restore_state");
     }
 
-    private void RebuildPools()
+    private void RebuildGroupIndices()
     {
+        _groupAll = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         _groupRemaining = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
-        _groupDrawnHistory = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
         _groupLastStudent = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
+        _groupInitialSequences = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        _groupDrawnHistory = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
         _globalDrawn = new HashSet<int>();
+        _studentGroups = new Dictionary<int, HashSet<string>>();
 
-        foreach (var pair in _roster.GroupIndexMap)
+        var totalIndices = Enumerable.Range(0, _roster.Students.Count).ToList();
+        _groupAll[IdentityUtils.AllGroupName] = totalIndices;
+        foreach (var idx in totalIndices)
         {
-            _groupRemaining[pair.Key] = new List<int>(pair.Value);
+            _studentGroups[idx] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                IdentityUtils.AllGroupName
+            };
+        }
+
+        foreach (var group in _roster.Groups)
+        {
+            if (group.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (_roster.GroupIndexMap.TryGetValue(group, out var indices))
+            {
+                _groupAll[group] = new List<int>(indices);
+                foreach (var idx in indices)
+                {
+                    if (!_studentGroups.TryGetValue(idx, out var set))
+                    {
+                        set = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            IdentityUtils.AllGroupName
+                        };
+                        _studentGroups[idx] = set;
+                    }
+                    set.Add(group);
+                }
+            }
+        }
+
+        foreach (var pair in _groupAll)
+        {
+            var pool = new List<int>(pair.Value);
+            Shuffle(pool);
+            _groupRemaining[pair.Key] = pool;
+            _groupInitialSequences[pair.Key] = new List<int>(pool);
+            _groupLastStudent[pair.Key] = null;
+            _groupDrawnHistory[pair.Key] = new HashSet<int>();
+        }
+        _groupDrawnHistory[IdentityUtils.AllGroupName] = _globalDrawn;
+        RefreshAllGroupPool();
+    }
+
+    private void ValidateAndRepairState(string context)
+    {
+        var baseAll = CollectBaseIndices(_groupAll.GetValueOrDefault(IdentityUtils.AllGroupName));
+        var baseAllSet = new HashSet<int>(baseAll);
+        var changed = false;
+
+        var knownGroups = new HashSet<string>(_groupAll.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in _roster.Groups)
+        {
+            knownGroups.Add(group);
+        }
+
+        foreach (var group in _groupRemaining.Keys.ToList())
+        {
+            if (!knownGroups.Contains(group))
+            {
+                _groupRemaining.Remove(group);
+                changed = true;
+            }
+        }
+        foreach (var group in _groupLastStudent.Keys.ToList())
+        {
+            if (!knownGroups.Contains(group))
+            {
+                _groupLastStudent.Remove(group);
+                changed = true;
+            }
+        }
+        foreach (var group in _groupDrawnHistory.Keys.ToList())
+        {
+            if (!knownGroups.Contains(group) && !group.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                _groupDrawnHistory.Remove(group);
+                changed = true;
+            }
+        }
+
+        if (!ReferenceEquals(_groupDrawnHistory.GetValueOrDefault(IdentityUtils.AllGroupName), _globalDrawn))
+        {
+            _groupDrawnHistory[IdentityUtils.AllGroupName] = _globalDrawn;
+            changed = true;
+        }
+
+        if (_globalDrawn.Count > 0)
+        {
+            var filtered = new HashSet<int>(_globalDrawn.Where(idx => baseAllSet.Contains(idx)));
+            if (!filtered.SetEquals(_globalDrawn))
+            {
+                _globalDrawn = filtered;
+                _groupDrawnHistory[IdentityUtils.AllGroupName] = _globalDrawn;
+                changed = true;
+            }
+        }
+
+        foreach (var pair in _groupAll)
+        {
+            var group = pair.Key;
+            if (group.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            var baseList = CollectBaseIndices(pair.Value);
+            var baseSet = new HashSet<int>(baseList);
+
+            var historyRaw = _groupDrawnHistory.GetValueOrDefault(group) ?? new HashSet<int>();
+            var history = new HashSet<int>(historyRaw.Where(idx => baseSet.Contains(idx)));
+            if (!history.SetEquals(historyRaw))
+            {
+                _groupDrawnHistory[group] = history;
+                changed = true;
+            }
+            if (history.Count > 0 && !history.IsSubsetOf(_globalDrawn))
+            {
+                _globalDrawn.UnionWith(history);
+                _groupDrawnHistory[IdentityUtils.AllGroupName] = _globalDrawn;
+                changed = true;
+            }
+
+            var poolRaw = _groupRemaining.GetValueOrDefault(group) ?? new List<int>();
+            var normalizedPool = NormalizeIndices(poolRaw, baseSet);
+            if (_globalDrawn.Count > 0 || history.Count > 0)
+            {
+                normalizedPool = normalizedPool.Where(idx => !_globalDrawn.Contains(idx) && !history.Contains(idx)).ToList();
+            }
+            if (!SequenceEquals(normalizedPool, poolRaw))
+            {
+                _groupRemaining[group] = new List<int>(normalizedPool);
+                changed = true;
+            }
+
+            var lastValue = _groupLastStudent.GetValueOrDefault(group);
+            if (lastValue.HasValue && baseSet.Count > 0 && !baseSet.Contains(lastValue.Value))
+            {
+                _groupLastStudent[group] = null;
+                changed = true;
+            }
+
+            if (!_groupInitialSequences.TryGetValue(group, out var seqRaw) || seqRaw.Count == 0)
+            {
+                var seq = new List<int>(normalizedPool);
+                foreach (var idx in baseList)
+                {
+                    if (!seq.Contains(idx))
+                    {
+                        seq.Add(idx);
+                    }
+                }
+                _groupInitialSequences[group] = seq;
+                changed = true;
+            }
+        }
+
+        if (_roster.Groups.Count > 0)
+        {
+            if (!_roster.Groups.Contains(CurrentGroup, StringComparer.OrdinalIgnoreCase))
+            {
+                var fallback = _roster.Groups.Contains(IdentityUtils.AllGroupName, StringComparer.OrdinalIgnoreCase)
+                    ? IdentityUtils.AllGroupName
+                    : _roster.Groups[0];
+                CurrentGroup = fallback;
+                changed = true;
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(CurrentGroup))
+        {
+            CurrentGroup = string.Empty;
+            changed = true;
+        }
+
+        CurrentStudentIndex = SanitizeIndex(CurrentStudentIndex, baseAllSet);
+        PendingStudentIndex = SanitizeIndex(PendingStudentIndex, baseAllSet);
+
+        if (changed)
+        {
+            RefreshAllGroupPool();
         }
     }
 
     private void EnsureGroupPool(string groupName, bool forceReset)
     {
-        if (!_roster.GroupIndexMap.TryGetValue(groupName, out var baseList))
+        if (!_groupAll.TryGetValue(groupName, out var baseList))
         {
+            baseList = new List<int>();
+            if (groupName.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                baseList = Enumerable.Range(0, _roster.Students.Count).ToList();
+            }
+            else if (_roster.GroupIndexMap.TryGetValue(groupName, out var rawList))
+            {
+                baseList = new List<int>(rawList);
+            }
+            _groupAll[groupName] = baseList;
+            _groupRemaining[groupName] = new List<int>();
+            _groupLastStudent[groupName] = null;
+            _groupDrawnHistory[groupName] = groupName.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase)
+                ? _globalDrawn
+                : new HashSet<int>();
+            foreach (var idx in baseList)
+            {
+                if (!_studentGroups.TryGetValue(idx, out var groups))
+                {
+                    groups = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        IdentityUtils.AllGroupName
+                    };
+                    _studentGroups[idx] = groups;
+                }
+                groups.Add(groupName);
+            }
+            var shuffled = new List<int>(baseList);
+            Shuffle(shuffled);
+            _groupInitialSequences[groupName] = shuffled;
+        }
+
+        var baseIndices = CollectBaseIndices(baseList);
+        var referenceDrawn = groupName.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase)
+            ? _globalDrawn
+            : _groupDrawnHistory.GetValueOrDefault(groupName) ?? new HashSet<int>();
+
+        if (groupName.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_groupInitialSequences.ContainsKey(groupName))
+            {
+                var shuffled = new List<int>(baseIndices);
+                Shuffle(shuffled);
+                _groupInitialSequences[groupName] = shuffled;
+            }
+            RefreshAllGroupPool();
+            _groupLastStudent.TryAdd(groupName, null);
             return;
         }
-        if (!_groupRemaining.TryGetValue(groupName, out var remaining))
+
+        if (forceReset || !_groupRemaining.ContainsKey(groupName))
         {
-            remaining = new List<int>();
-            _groupRemaining[groupName] = remaining;
-        }
-        if (!forceReset && remaining.Count > 0)
-        {
+            referenceDrawn.Clear();
+            var pool = new List<int>(baseIndices.Where(idx => !_globalDrawn.Contains(idx)));
+            Shuffle(pool);
+            _groupRemaining[groupName] = pool;
+            _groupLastStudent[groupName] = null;
+            _groupInitialSequences[groupName] = new List<int>(pool);
+            RefreshAllGroupPool();
             return;
         }
-        remaining.Clear();
-        foreach (var index in baseList)
+
+        var rawPool = _groupRemaining.GetValueOrDefault(groupName) ?? new List<int>();
+        var normalizedPool = new List<int>();
+        var seen = new HashSet<int>();
+        foreach (var value in rawPool)
         {
-            if (_globalDrawn.Contains(index))
+            if (!baseIndices.Contains(value) || seen.Contains(value) || referenceDrawn.Contains(value))
             {
                 continue;
             }
-            remaining.Add(index);
+            normalizedPool.Add(value);
+            seen.Add(value);
         }
-        Shuffle(remaining);
+        var sourceOrder = _groupInitialSequences.GetValueOrDefault(groupName);
+        if (sourceOrder == null || sourceOrder.Count == 0)
+        {
+            sourceOrder = new List<int>(baseIndices);
+            _groupInitialSequences[groupName] = new List<int>(sourceOrder);
+        }
+        foreach (var idx in sourceOrder)
+        {
+            if (referenceDrawn.Contains(idx) || seen.Contains(idx) || !baseIndices.Contains(idx))
+            {
+                continue;
+            }
+            normalizedPool.Add(idx);
+            seen.Add(idx);
+        }
+        var additional = new List<int>();
+        foreach (var idx in baseIndices)
+        {
+            if (referenceDrawn.Contains(idx) || seen.Contains(idx))
+            {
+                continue;
+            }
+            additional.Add(idx);
+            seen.Add(idx);
+        }
+        if (additional.Count > 0)
+        {
+            Shuffle(additional);
+            foreach (var value in additional)
+            {
+                var insertAt = normalizedPool.Count > 0 ? _random.Next(normalizedPool.Count + 1) : 0;
+                normalizedPool.Insert(insertAt, value);
+            }
+        }
+        _groupRemaining[groupName] = normalizedPool;
+        _groupInitialSequences[groupName] = new List<int>(normalizedPool);
+        _groupLastStudent.TryAdd(groupName, null);
+        RefreshAllGroupPool();
+    }
+
+    private void RefreshAllGroupPool()
+    {
+        var baseAllList = CollectBaseIndices(_groupAll.GetValueOrDefault(IdentityUtils.AllGroupName));
+        var baseAllSet = new HashSet<int>(baseAllList);
+        var subgroupBase = new Dictionary<string, (List<int> BaseList, HashSet<int> BaseSet)>(StringComparer.OrdinalIgnoreCase);
+        var subgroupRemaining = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        var subgroupRemainingUnion = new HashSet<int>();
+        var drawnFromSubgroups = new HashSet<int>();
+
+        foreach (var pair in _groupAll)
+        {
+            var group = pair.Key;
+            if (group.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            var baseList = CollectBaseIndices(pair.Value);
+            var baseSet = new HashSet<int>(baseList);
+            subgroupBase[group] = (baseList, baseSet);
+            var pool = _groupRemaining.GetValueOrDefault(group) ?? new List<int>();
+            var sanitized = NormalizeIndices(pool, baseSet);
+            if (!SequenceEquals(sanitized, pool))
+            {
+                _groupRemaining[group] = sanitized;
+            }
+            subgroupRemaining[group] = sanitized;
+            subgroupRemainingUnion.UnionWith(sanitized);
+            drawnFromSubgroups.UnionWith(baseSet.Where(idx => !sanitized.Contains(idx)));
+
+            if (!_groupInitialSequences.TryGetValue(group, out var initial) || initial.Count == 0)
+            {
+                _groupInitialSequences[group] = new List<int>(baseList);
+            }
+            else
+            {
+                var cleanedInitial = NormalizeIndices(initial, baseSet);
+                if (!SequenceEquals(cleanedInitial, initial))
+                {
+                    _groupInitialSequences[group] = cleanedInitial;
+                }
+                foreach (var idx in baseList)
+                {
+                    if (!_groupInitialSequences[group].Contains(idx))
+                    {
+                        _groupInitialSequences[group].Add(idx);
+                    }
+                }
+            }
+        }
+
+        var validGlobal = new HashSet<int>(_globalDrawn.Where(idx => baseAllSet.Contains(idx) && !subgroupRemainingUnion.Contains(idx)));
+        var newGlobal = new HashSet<int>(drawnFromSubgroups.Where(idx => baseAllSet.Contains(idx)));
+        newGlobal.UnionWith(validGlobal);
+        _globalDrawn = newGlobal;
+        _groupDrawnHistory[IdentityUtils.AllGroupName] = _globalDrawn;
+
+        foreach (var pair in subgroupBase)
+        {
+            var group = pair.Key;
+            var baseSet = pair.Value.BaseSet;
+            var pool = subgroupRemaining.GetValueOrDefault(group) ?? new List<int>();
+            var filtered = pool.Where(idx => baseSet.Contains(idx) && !_globalDrawn.Contains(idx)).ToList();
+            if (!SequenceEquals(filtered, pool))
+            {
+                _groupRemaining[group] = filtered;
+                pool = filtered;
+            }
+            var drawnSet = new HashSet<int>(baseSet.Where(idx => !pool.Contains(idx)));
+            _groupDrawnHistory[group] = drawnSet;
+        }
+
+        if (!_groupInitialSequences.TryGetValue(IdentityUtils.AllGroupName, out var orderHint) || orderHint.Count == 0)
+        {
+            var shuffled = new List<int>(baseAllList);
+            Shuffle(shuffled);
+            orderHint = shuffled;
+        }
+        else
+        {
+            var cleanedAll = NormalizeIndices(orderHint, baseAllSet);
+            orderHint = cleanedAll;
+        }
+        foreach (var idx in baseAllList)
+        {
+            if (!orderHint.Contains(idx))
+            {
+                orderHint.Add(idx);
+            }
+        }
+        _groupInitialSequences[IdentityUtils.AllGroupName] = new List<int>(orderHint);
+
+        var normalizedAll = orderHint.Where(idx => !_globalDrawn.Contains(idx)).ToList();
+        var seenAll = new HashSet<int>(normalizedAll);
+        foreach (var idx in baseAllList)
+        {
+            if (seenAll.Contains(idx) || _globalDrawn.Contains(idx))
+            {
+                continue;
+            }
+            normalizedAll.Add(idx);
+            seenAll.Add(idx);
+        }
+        _groupRemaining[IdentityUtils.AllGroupName] = normalizedAll;
     }
 
     private void MarkStudentDrawn(int studentIndex)
     {
+        if (!_studentGroups.TryGetValue(studentIndex, out var groups))
+        {
+            return;
+        }
         _globalDrawn.Add(studentIndex);
-        if (!_groupDrawnHistory.TryGetValue(CurrentGroup, out var history))
+        foreach (var group in groups)
         {
-            history = new HashSet<int>();
-            _groupDrawnHistory[CurrentGroup] = history;
+            var history = group.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase)
+                ? _groupDrawnHistory.GetValueOrDefault(IdentityUtils.AllGroupName) ?? _globalDrawn
+                : _groupDrawnHistory.GetValueOrDefault(group) ?? new HashSet<int>();
+            history.Add(studentIndex);
+            _groupDrawnHistory[group] = history;
+            if (_groupRemaining.TryGetValue(group, out var pool) && pool.Count > 0)
+            {
+                pool.RemoveAll(idx => idx == studentIndex);
+            }
         }
-        history.Add(studentIndex);
-        _groupLastStudent[CurrentGroup] = studentIndex;
-
-        foreach (var pair in _groupRemaining)
-        {
-            pair.Value.Remove(studentIndex);
-        }
+        RefreshAllGroupPool();
     }
 
     private void RemoveFromGlobalHistory(int studentIndex, string? ignoreGroup)
     {
         foreach (var pair in _groupDrawnHistory)
         {
+            if (pair.Key.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             if (!string.IsNullOrWhiteSpace(ignoreGroup) && pair.Key.Equals(ignoreGroup, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
@@ -281,6 +711,55 @@ public sealed class RollCallEngine
             var j = _random.Next(i + 1);
             (values[i], values[j]) = (values[j], values[i]);
         }
+    }
+
+    private static List<int> NormalizeIndices(IEnumerable<int> values, HashSet<int>? allowed = null)
+    {
+        var normalized = new List<int>();
+        var seen = new HashSet<int>();
+        foreach (var value in values)
+        {
+            if (allowed != null && !allowed.Contains(value))
+            {
+                continue;
+            }
+            if (!seen.Add(value))
+            {
+                continue;
+            }
+            normalized.Add(value);
+        }
+        return normalized;
+    }
+
+    private static List<int> CollectBaseIndices(IEnumerable<int>? values)
+    {
+        return values == null ? new List<int>() : NormalizeIndices(values);
+    }
+
+    private static bool SequenceEquals(IReadOnlyList<int> left, IReadOnlyList<int> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (left[i] != right[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int? SanitizeIndex(int? value, HashSet<int> allowed)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+        return allowed.Contains(value.Value) ? value : null;
     }
 
     private string ToSaveKey(int index)

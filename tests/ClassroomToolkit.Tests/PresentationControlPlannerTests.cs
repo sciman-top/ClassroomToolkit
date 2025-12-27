@@ -7,7 +7,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class PresentationControlPlannerTests
 {
     [Fact]
-    public void AutoStrategy_ShouldPreferWpsMessageMode()
+    public void AutoStrategy_ShouldPreferWpsRawMode()
     {
         var classifier = new PresentationClassifier();
         var planner = new PresentationControlPlanner(classifier);
@@ -18,7 +18,7 @@ public sealed class PresentationControlPlannerTests
 
         plan.Should().NotBeNull();
         plan!.TargetType.Should().Be(PresentationType.Wps);
-        plan.Strategy.Should().Be(InputStrategy.Message);
+        plan.Strategy.Should().Be(InputStrategy.Raw);
         plan.UseWheelAsKey.Should().BeTrue();
     }
 

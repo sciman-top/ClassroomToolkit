@@ -11,7 +11,8 @@ public sealed class StudentWorkbookStore
     public const string RollStateSheetName = "_ROLL_STATE";
     public const string RollStateColumn = "ROLL_STATE_JSON";
 
-    private static readonly string[] DefaultHeaders = { "学号", "姓名", "班级", "分组" };
+    private static readonly string[] DefaultHeaders = ClassRoster.DefaultColumns;
+    private const string InternalRowIdColumn = ClassRoster.InternalRowIdColumn;
 
     private static readonly Dictionary<string, string> HeaderAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -105,7 +106,8 @@ public sealed class StudentWorkbookStore
         {
             return new ClassRoster(sheet.Name, Array.Empty<StudentRecord>());
         }
-        var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var columnOrder = new List<string>();
+        var headerMap = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         foreach (var cell in headerRow.CellsUsed())
         {
             var raw = cell.GetString().Trim();
@@ -117,10 +119,28 @@ public sealed class StudentWorkbookStore
             {
                 raw = canonical;
             }
-            if (!headerMap.ContainsKey(raw))
+            if (!columnOrder.Contains(raw, StringComparer.OrdinalIgnoreCase))
             {
-                headerMap[raw] = cell.Address.ColumnNumber;
+                columnOrder.Add(raw);
             }
+            if (!headerMap.TryGetValue(raw, out var list))
+            {
+                list = new List<int>();
+                headerMap[raw] = list;
+            }
+            list.Add(cell.Address.ColumnNumber);
+        }
+
+        foreach (var column in DefaultHeaders)
+        {
+            if (!columnOrder.Contains(column, StringComparer.OrdinalIgnoreCase))
+            {
+                columnOrder.Add(column);
+            }
+        }
+        if (!columnOrder.Contains(InternalRowIdColumn, StringComparer.OrdinalIgnoreCase))
+        {
+            columnOrder.Add(InternalRowIdColumn);
         }
 
         var students = new List<StudentRecord>();
@@ -138,36 +158,126 @@ public sealed class StudentWorkbookStore
                 className = sheet.Name;
             }
             var groupName = GetCellValue(row, headerMap, "分组");
-            var record = StudentRecord.Create(studentId, name, className, groupName);
+            var rowId = GetCellValue(row, headerMap, InternalRowIdColumn);
+            if (string.IsNullOrWhiteSpace(rowId))
+            {
+                rowId = Guid.NewGuid().ToString("N");
+            }
+
+            var extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var column in columnOrder)
+            {
+                if (IsDefaultColumn(column) || column.Equals(InternalRowIdColumn, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                var extraValue = GetCellValue(row, headerMap, column);
+                if (string.IsNullOrWhiteSpace(extraValue))
+                {
+                    continue;
+                }
+                extras[column] = IdentityUtils.NormalizeText(extraValue);
+            }
+            var record = StudentRecord.Create(studentId, name, className, groupName, rowId, extras);
             students.Add(record);
         }
-        return new ClassRoster(sheet.Name, students);
+        return new ClassRoster(sheet.Name, students, columnOrder);
     }
 
-    private static string GetCellValue(IXLRow row, Dictionary<string, int> map, string key)
+    private static string GetCellValue(IXLRow row, Dictionary<string, List<int>> map, string key)
     {
-        if (!map.TryGetValue(key, out var col))
+        if (!map.TryGetValue(key, out var cols))
         {
             return string.Empty;
         }
-        return row.Cell(col).GetString().Trim();
+        foreach (var col in cols)
+        {
+            var value = row.Cell(col).GetString().Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+        return string.Empty;
     }
 
     private static void WriteWorksheet(IXLWorksheet sheet, ClassRoster roster)
     {
-        for (var i = 0; i < DefaultHeaders.Length; i++)
+        var columns = BuildWriteColumns(roster);
+        for (var i = 0; i < columns.Count; i++)
         {
-            sheet.Cell(1, i + 1).Value = DefaultHeaders[i];
+            sheet.Cell(1, i + 1).Value = columns[i];
         }
         var rowIndex = 2;
         foreach (var student in roster.Students)
         {
-            sheet.Cell(rowIndex, 1).Value = student.StudentId;
-            sheet.Cell(rowIndex, 2).Value = student.Name;
-            sheet.Cell(rowIndex, 3).Value = student.ClassName;
-            sheet.Cell(rowIndex, 4).Value = student.GroupName;
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var column = columns[i];
+                var cell = sheet.Cell(rowIndex, i + 1);
+                if (column.Equals("学号", StringComparison.OrdinalIgnoreCase))
+                {
+                    cell.Value = student.StudentId;
+                }
+                else if (column.Equals("姓名", StringComparison.OrdinalIgnoreCase))
+                {
+                    cell.Value = student.Name;
+                }
+                else if (column.Equals("班级", StringComparison.OrdinalIgnoreCase))
+                {
+                    cell.Value = student.ClassName;
+                }
+                else if (column.Equals("分组", StringComparison.OrdinalIgnoreCase))
+                {
+                    cell.Value = student.GroupName;
+                }
+                else if (column.Equals(InternalRowIdColumn, StringComparison.OrdinalIgnoreCase))
+                {
+                    cell.Value = student.RowId;
+                }
+                else if (student.ExtraFields.TryGetValue(column, out var extra))
+                {
+                    cell.Value = extra;
+                }
+            }
             rowIndex++;
         }
         sheet.Columns().AdjustToContents();
+    }
+
+    private static bool IsDefaultColumn(string column)
+    {
+        return DefaultHeaders.Contains(column, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static List<string> BuildWriteColumns(ClassRoster roster)
+    {
+        var columns = roster.ColumnOrder?.ToList() ?? new List<string>();
+        if (columns.Count == 0)
+        {
+            columns.AddRange(DefaultHeaders);
+        }
+        foreach (var column in DefaultHeaders)
+        {
+            if (!columns.Contains(column, StringComparer.OrdinalIgnoreCase))
+            {
+                columns.Add(column);
+            }
+        }
+        if (!columns.Contains(InternalRowIdColumn, StringComparer.OrdinalIgnoreCase))
+        {
+            columns.Add(InternalRowIdColumn);
+        }
+        foreach (var student in roster.Students)
+        {
+            foreach (var extra in student.ExtraFields.Keys)
+            {
+                if (!columns.Contains(extra, StringComparer.OrdinalIgnoreCase))
+                {
+                    columns.Add(extra);
+                }
+            }
+        }
+        return columns;
     }
 }

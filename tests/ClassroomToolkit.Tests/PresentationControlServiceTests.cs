@@ -55,7 +55,7 @@ public sealed class PresentationControlServiceTests
         sender.KeyCalls.Should().Be(1);
         sender.LastKeyDownOnly.Should().BeTrue();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
-        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Raw);
         sender.WheelCalls.Should().Be(0);
     }
 

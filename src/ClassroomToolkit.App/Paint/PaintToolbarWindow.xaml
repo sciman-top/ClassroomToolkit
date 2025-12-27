@@ -7,7 +7,8 @@
         WindowStartupLocation="Manual"
         Topmost="True"
         ShowInTaskbar="False"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        WindowStyle="None">
     <Window.Resources>
         <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton">
             <Setter Property="BorderBrush" Value="#66000000" />

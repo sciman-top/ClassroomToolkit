@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.Domain.Models;
@@ -10,7 +11,8 @@ public sealed record StudentRecord
         string className,
         string groupName,
         string rowId,
-        string rowKey)
+        string rowKey,
+        IReadOnlyDictionary<string, string>? extraFields = null)
     {
         StudentId = studentId;
         Name = name;
@@ -18,6 +20,9 @@ public sealed record StudentRecord
         GroupName = groupName;
         RowId = rowId;
         RowKey = rowKey;
+        ExtraFields = extraFields == null
+            ? new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+            : new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(extraFields, StringComparer.OrdinalIgnoreCase));
     }
 
     public string StudentId { get; }
@@ -26,13 +31,15 @@ public sealed record StudentRecord
     public string GroupName { get; }
     public string RowId { get; }
     public string RowKey { get; }
+    public IReadOnlyDictionary<string, string> ExtraFields { get; }
 
     public static StudentRecord Create(
         string studentId,
         string name,
         string className,
         string groupName,
-        string? rowId = null)
+        string? rowId = null,
+        IReadOnlyDictionary<string, string>? extraFields = null)
     {
         var normalizedId = IdentityUtils.CompactText(studentId);
         var normalizedName = IdentityUtils.NormalizeText(name);
@@ -40,6 +47,6 @@ public sealed record StudentRecord
         var normalizedGroup = IdentityUtils.NormalizeGroupName(groupName);
         var resolvedRowId = string.IsNullOrWhiteSpace(rowId) ? Guid.NewGuid().ToString("N") : rowId.Trim();
         var rowKey = IdentityUtils.BuildRowKey(normalizedId, normalizedName, normalizedClass, normalizedGroup);
-        return new StudentRecord(normalizedId, normalizedName, normalizedClass, normalizedGroup, resolvedRowId, rowKey);
+        return new StudentRecord(normalizedId, normalizedName, normalizedClass, normalizedGroup, resolvedRowId, rowKey, extraFields);
     }
 }

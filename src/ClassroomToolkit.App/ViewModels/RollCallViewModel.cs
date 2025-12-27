@@ -358,9 +358,9 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return false;
         }
 
-        if (!roster.GroupIndexMap.TryGetValue(CurrentGroup, out var indices))
+        if (!_engine.GroupAll.TryGetValue(CurrentGroup, out var indices))
         {
-            roster.GroupIndexMap.TryGetValue(IdentityUtils.AllGroupName, out indices);
+            _engine.GroupAll.TryGetValue(IdentityUtils.AllGroupName, out indices);
         }
         indices ??= new List<int>();
         if (indices.Count == 0)
@@ -432,13 +432,13 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         if (!_engine.GroupRemaining.TryGetValue(CurrentGroup, out var remaining) || remaining.Count == 0)
         {
-            if (!_engine.Roster.GroupIndexMap.TryGetValue(CurrentGroup, out var baseList) || baseList.Count == 0)
+            if (!_engine.GroupAll.TryGetValue(CurrentGroup, out var baseList) || baseList.Count == 0)
             {
                 message = $"'{CurrentGroup}' 分组当前没有可点名的学生。";
                 SetPlaceholderStudent();
                 return false;
             }
-            if (AreAllGroupsCompleted())
+            if (_engine.AllGroupsCompleted())
             {
                 message = "所有学生都已完成点名，请点击“重置”按钮重新开始。";
             }
@@ -555,6 +555,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return;
         }
         _engine.ResetGroup(CurrentGroup);
+        _engine.SetCurrentStudentIndex(null);
         SetPlaceholderStudent();
     }
 
@@ -670,14 +671,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         {
             return false;
         }
-        foreach (var group in _engine.Roster.Groups)
-        {
-            if (_engine.GroupRemaining.TryGetValue(group, out var remaining) && remaining.Count > 0)
-            {
-                return false;
-            }
-        }
-        return true;
+        return _engine.AllGroupsCompleted();
     }
 
     private static StudentSortKey BuildStudentSortKey(string studentId, string studentName)

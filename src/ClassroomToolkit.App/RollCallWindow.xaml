@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
         Title="点名 / 计时"
-        Height="360"
-        Width="560"
+        Height="280"
+        Width="480"
         MinWidth="260"
         MinHeight="160"
         WindowStartupLocation="Manual"
@@ -70,14 +70,14 @@
                             <ColumnDefinition Width="{Binding ShowId, Converter={StaticResource BoolToGridLength}}" />
                             <ColumnDefinition Width="{Binding ShowName, Converter={StaticResource BoolToGridLength}}" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="#1976D2" CornerRadius="8" Margin="4"
+                        <Border x:Name="IdBorder" Grid.Column="0" Background="#1976D2" CornerRadius="8" Margin="4"
                                 Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding CurrentStudentId}" Foreground="White" FontSize="28"
+                            <TextBlock x:Name="IdTextBlock" Text="{Binding CurrentStudentId}" Foreground="White" FontSize="28"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <Border Grid.Column="1" Background="#1976D2" CornerRadius="8" Margin="4"
+                        <Border x:Name="NameBorder" Grid.Column="1" Background="#1976D2" CornerRadius="8" Margin="4"
                                 Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding CurrentStudentName}" Foreground="White" FontSize="28"
+                            <TextBlock x:Name="NameTextBlock" Text="{Binding CurrentStudentName}" Foreground="White" FontSize="28"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </Grid>
@@ -89,14 +89,14 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Border Grid.Row="0" CornerRadius="8" Margin="6">
+                <Border x:Name="TimerDisplayBorder" Grid.Row="0" CornerRadius="8" Margin="6">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#263238" Offset="0" />
                             <GradientStop Color="#37474F" Offset="1" />
                         </LinearGradientBrush>
                     </Border.Background>
-                    <TextBlock Text="{Binding TimeDisplay}" Foreground="White" FontSize="36"
+                    <TextBlock x:Name="TimerTextBlock" Text="{Binding TimeDisplay}" Foreground="White" FontSize="36"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">

@@ -39,6 +39,9 @@ public sealed class AppSettingsService
             settings.RollCallTimerSecondsLeft = GetInt(roll, "timer_seconds_left", settings.RollCallTimerSecondsLeft);
             settings.RollCallStopwatchSeconds = GetInt(roll, "timer_stopwatch_seconds", settings.RollCallStopwatchSeconds);
             settings.RollCallTimerRunning = GetBool(roll, "timer_running", settings.RollCallTimerRunning);
+            settings.RollCallIdFontSize = GetInt(roll, "id_font_size", settings.RollCallIdFontSize);
+            settings.RollCallNameFontSize = GetInt(roll, "name_font_size", settings.RollCallNameFontSize);
+            settings.RollCallTimerFontSize = GetInt(roll, "timer_font_size", settings.RollCallTimerFontSize);
             settings.RollCallSpeechEnabled = GetBool(roll, "speech_enabled", settings.RollCallSpeechEnabled);
             settings.RollCallSpeechEngine = GetString(roll, "speech_engine", settings.RollCallSpeechEngine);
             settings.RollCallSpeechVoiceId = GetString(roll, "speech_voice_id", settings.RollCallSpeechVoiceId);
@@ -110,6 +113,9 @@ public sealed class AppSettingsService
         roll["timer_seconds_left"] = settings.RollCallTimerSecondsLeft.ToString(CultureInfo.InvariantCulture);
         roll["timer_stopwatch_seconds"] = settings.RollCallStopwatchSeconds.ToString(CultureInfo.InvariantCulture);
         roll["timer_running"] = settings.RollCallTimerRunning ? "True" : "False";
+        roll["id_font_size"] = settings.RollCallIdFontSize.ToString(CultureInfo.InvariantCulture);
+        roll["name_font_size"] = settings.RollCallNameFontSize.ToString(CultureInfo.InvariantCulture);
+        roll["timer_font_size"] = settings.RollCallTimerFontSize.ToString(CultureInfo.InvariantCulture);
         roll["speech_enabled"] = settings.RollCallSpeechEnabled ? "True" : "False";
         roll["speech_engine"] = settings.RollCallSpeechEngine ?? "pyttsx3";
         roll["speech_voice_id"] = settings.RollCallSpeechVoiceId ?? string.Empty;

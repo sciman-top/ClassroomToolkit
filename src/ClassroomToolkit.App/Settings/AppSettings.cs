@@ -32,6 +32,9 @@ public sealed class AppSettings
     public int RollCallWindowY { get; set; } = UnsetPosition;
     public int RollCallWindowWidth { get; set; }
     public int RollCallWindowHeight { get; set; }
+    public int RollCallIdFontSize { get; set; } = 48;
+    public int RollCallNameFontSize { get; set; } = 60;
+    public int RollCallTimerFontSize { get; set; } = 56;
     public bool RollCallSpeechEnabled { get; set; } = false;
     public string RollCallSpeechEngine { get; set; } = "pyttsx3";
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
@@ -48,7 +51,7 @@ public sealed class AppSettings
     public int LauncherBubbleX { get; set; } = 120;
     public int LauncherBubbleY { get; set; } = 120;
     public bool LauncherMinimized { get; set; } = false;
-    public int LauncherAutoExitSeconds { get; set; } = 0;
+    public int LauncherAutoExitSeconds { get; set; } = 2400;
     public int PaintToolbarX { get; set; } = 260;
     public int PaintToolbarY { get; set; } = 260;
     public double PaintToolbarScale { get; set; } = 1.0;
