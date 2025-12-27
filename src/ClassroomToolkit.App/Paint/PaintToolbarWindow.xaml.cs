@@ -365,7 +365,8 @@ public partial class PaintToolbarWindow : Window
         var current = source;
         while (current != null)
         {
-            if (current is ButtonBase || current is ToggleButton)
+            if (current is System.Windows.Controls.Primitives.ButtonBase
+                || current is System.Windows.Controls.Primitives.ToggleButton)
             {
                 return true;
             }

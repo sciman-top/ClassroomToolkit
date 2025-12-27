@@ -73,7 +73,7 @@ public partial class PaintSettingsDialog : Window
             ToolbarScaleCombo.Items.Add(new WpfComboBoxItem { Content = $"{percent}%", Tag = scale });
         }
         var selectedScale = FindNearestScale(settings.PaintToolbarScale);
-        SelectComboByTag(ToolbarScaleCombo, selectedScale, 1.0);
+        SelectComboByTag(ToolbarScaleCombo, selectedScale);
 
         UpdateBrushSizeLabel();
         UpdateBrushOpacityLabel();
@@ -253,7 +253,7 @@ public partial class PaintSettingsDialog : Window
 
     private void SelectShapeType(PaintShapeType type)
     {
-        foreach (var item in ShapeCombo.Items.OfType<ComboBoxItem>())
+        foreach (var item in ShapeCombo.Items.OfType<WpfComboBoxItem>())
         {
             if (item.Tag is PaintShapeType tagged && tagged == type)
             {
@@ -295,6 +295,19 @@ public partial class PaintSettingsDialog : Window
         foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
             if ((item.Tag as string ?? string.Empty) == fallback)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        combo.SelectedIndex = 0;
+    }
+
+    private static void SelectComboByTag(WpfComboBox combo, double value)
+    {
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is double tag && Math.Abs(tag - value) < 0.001)
             {
                 combo.SelectedItem = item;
                 return;
