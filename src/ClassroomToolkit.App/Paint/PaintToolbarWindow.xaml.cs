@@ -13,6 +13,7 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintToolbarWindow : Window
 {
     private bool _initializing;
+    private readonly MediaColor[] _quickColors = new MediaColor[3];
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action<MediaColor>? BrushColorChanged;
@@ -25,9 +26,13 @@ public partial class PaintToolbarWindow : Window
     public event Action<byte>? BoardOpacityChanged;
     public event Action<string>? WpsModeChanged;
     public event Action<bool>? WpsWheelMappingChanged;
+    public event Action<int, MediaColor>? QuickColorSlotChanged;
 
     public ICommand OpenBrushColorCommand { get; }
     public ICommand OpenBoardColorCommand { get; }
+    public ICommand OpenQuickColor1Command { get; }
+    public ICommand OpenQuickColor2Command { get; }
+    public ICommand OpenQuickColor3Command { get; }
 
     public double BrushSize => BrushSizeSlider.Value;
 
@@ -36,6 +41,9 @@ public partial class PaintToolbarWindow : Window
         InitializeComponent();
         OpenBrushColorCommand = new RelayCommand(OpenBrushColorDialog);
         OpenBoardColorCommand = new RelayCommand(OpenBoardColorDialog);
+        OpenQuickColor1Command = new RelayCommand(() => OpenQuickColorDialog(0));
+        OpenQuickColor2Command = new RelayCommand(() => OpenQuickColorDialog(1));
+        OpenQuickColor3Command = new RelayCommand(() => OpenQuickColorDialog(2));
         DataContext = this;
 
         CursorButton.IsChecked = false;
@@ -53,6 +61,9 @@ public partial class PaintToolbarWindow : Window
         EraserSizeSlider.Value = 24;
         BrushOpacitySlider.Value = 255;
         BoardOpacitySlider.Value = 0;
+        SetQuickColorSlot(0, Colors.Black);
+        SetQuickColorSlot(1, Colors.Red);
+        SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
         WpsModeCombo.ItemsSource = new[] { "auto", "raw", "message" };
         WpsModeCombo.SelectedIndex = 0;
         WpsWheelCheck.IsChecked = false;
@@ -67,6 +78,9 @@ public partial class PaintToolbarWindow : Window
             EraserSizeSlider.Value = settings.EraserSize;
             BrushOpacitySlider.Value = settings.BrushOpacity;
             BoardOpacitySlider.Value = settings.BoardOpacity;
+            SetQuickColorSlot(0, settings.QuickColor1);
+            SetQuickColorSlot(1, settings.QuickColor2);
+            SetQuickColorSlot(2, settings.QuickColor3);
 
             ShapeCombo.SelectedItem = settings.ShapeType;
             if (ShapeCombo.SelectedItem == null)
@@ -117,11 +131,16 @@ public partial class PaintToolbarWindow : Window
 
     private void OnColorClick(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.Button button && button.Tag is string hex)
+        if (sender is not System.Windows.Controls.Button button)
         {
-            var color = (MediaColor)MediaColorConverter.ConvertFromString(hex);
-            BrushColorChanged?.Invoke(color);
+            return;
         }
+        var index = ResolveQuickColorIndex(button.Tag);
+        if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
+        {
+            return;
+        }
+        BrushColorChanged?.Invoke(_quickColors[index.Value]);
     }
 
     private void OnBrushSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -228,6 +247,77 @@ public partial class PaintToolbarWindow : Window
         {
             var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
             BoardColorChanged?.Invoke(color);
+        }
+    }
+
+    private void OpenQuickColorDialog(int index)
+    {
+        using var dialog = new System.Windows.Forms.ColorDialog();
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+        {
+            return;
+        }
+        var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
+        SetQuickColorSlot(index, color);
+        QuickColorSlotChanged?.Invoke(index, color);
+        BrushColorChanged?.Invoke(color);
+    }
+
+    private void SetQuickColorSlot(int index, MediaColor color)
+    {
+        if (index < 0 || index >= _quickColors.Length)
+        {
+            return;
+        }
+        _quickColors[index] = color;
+        UpdateQuickColorButton(index, color);
+    }
+
+    private void UpdateQuickColorButton(int index, MediaColor color)
+    {
+        var button = index switch
+        {
+            0 => QuickColor1Button,
+            1 => QuickColor2Button,
+            2 => QuickColor3Button,
+            _ => null
+        };
+        if (button == null)
+        {
+            return;
+        }
+        button.Background = new SolidColorBrush(color);
+        button.Foreground = GetContrastingBrush(color);
+    }
+
+    private static Brush GetContrastingBrush(MediaColor color)
+    {
+        var luminance = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
+        return luminance > 0.6 ? Brushes.Black : Brushes.White;
+    }
+
+    private static int? ResolveQuickColorIndex(object? tag)
+    {
+        if (tag is int index)
+        {
+            return index;
+        }
+        if (tag is string text && int.TryParse(text, out var parsed))
+        {
+            return parsed;
+        }
+        return null;
+    }
+
+    private static MediaColor ColorFromHex(string value, MediaColor fallback)
+    {
+        try
+        {
+            return (MediaColor)MediaColorConverter.ConvertFromString(value);
+        }
+        catch
+        {
+            return fallback;
         }
     }
 }

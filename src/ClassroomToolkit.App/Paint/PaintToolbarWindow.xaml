@@ -43,9 +43,12 @@
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
             <ComboBox x:Name="ShapeCombo" Width="120" SelectionChanged="OnShapeChanged" Margin="0,0,8,0" />
-            <Button Content="黑" Width="40" Margin="4" Click="OnColorClick" Tag="#000000" />
-            <Button Content="红" Width="40" Margin="4" Click="OnColorClick" Tag="#FF0000" />
-            <Button Content="蓝" Width="40" Margin="4" Click="OnColorClick" Tag="#1E90FF" />
+            <Button x:Name="QuickColor1Button" Content="黑" Width="40" Margin="4" Click="OnColorClick" Tag="0"
+                    behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}" />
+            <Button x:Name="QuickColor2Button" Content="红" Width="40" Margin="4" Click="OnColorClick" Tag="1"
+                    behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}" />
+            <Button x:Name="QuickColor3Button" Content="蓝" Width="40" Margin="4" Click="OnColorClick" Tag="2"
+                    behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}" />
             <ComboBox x:Name="WpsModeCombo" Width="120" Margin="8,0,0,0" SelectionChanged="OnWpsModeChanged" />
             <CheckBox x:Name="WpsWheelCheck" Content="滚轮翻页" Margin="8,0,0,0" Checked="OnWpsWheelChanged" Unchecked="OnWpsWheelChanged" />
         </StackPanel>

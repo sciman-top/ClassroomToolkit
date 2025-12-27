@@ -58,10 +58,16 @@ public sealed class AppSettings
     public byte BoardOpacity { get; set; } = 0;
     public MediaColor BrushColor { get; set; } = MediaColors.Red;
     public MediaColor BoardColor { get; set; } = MediaColors.White;
+    public MediaColor QuickColor1 { get; set; } = MediaColors.Black;
+    public MediaColor QuickColor2 { get; set; } = MediaColors.Red;
+    public MediaColor QuickColor3 { get; set; } = MediaColors.DodgerBlue;
     public PaintShapeType ShapeType { get; set; } = PaintShapeType.Line;
 
     public string BrushColorHex => ToHex(BrushColor);
     public string BoardColorHex => ToHex(BoardColor);
+    public string QuickColor1Hex => ToHex(QuickColor1);
+    public string QuickColor2Hex => ToHex(QuickColor2);
+    public string QuickColor3Hex => ToHex(QuickColor3);
 
     public static MediaColor ParseColor(string value, MediaColor fallback)
     {

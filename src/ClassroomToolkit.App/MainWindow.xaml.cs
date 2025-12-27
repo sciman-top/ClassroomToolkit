@@ -169,6 +169,22 @@ public partial class MainWindow : Window
             _settings.BoardOpacity = opacity;
             SaveSettings();
         };
+        _toolbarWindow.QuickColorSlotChanged += (index, color) =>
+        {
+            switch (index)
+            {
+                case 0:
+                    _settings.QuickColor1 = color;
+                    break;
+                case 1:
+                    _settings.QuickColor2 = color;
+                    break;
+                case 2:
+                    _settings.QuickColor3 = color;
+                    break;
+            }
+            SaveSettings();
+        };
         _toolbarWindow.WpsModeChanged += mode =>
         {
             _overlayWindow.UpdateWpsMode(mode);
