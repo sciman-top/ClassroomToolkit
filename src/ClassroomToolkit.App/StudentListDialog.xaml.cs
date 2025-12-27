@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Helpers;
+using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App;
 
@@ -90,7 +91,7 @@ public partial class StudentListDialog : Window
         return rootMargin + hintHeight + hintMargin + footerHeight + footerMargin + 6d;
     }
 
-    private static Size MeasureTextSize(string text, Typeface typeface, double fontSize, double pixelsPerDip)
+    private static WpfSize MeasureTextSize(string text, Typeface typeface, double fontSize, double pixelsPerDip)
     {
         var formatted = new FormattedText(
             text ?? string.Empty,
@@ -100,7 +101,7 @@ public partial class StudentListDialog : Window
             fontSize,
             System.Windows.Media.Brushes.Black,
             pixelsPerDip);
-        return new Size(formatted.Width, formatted.Height);
+        return new WpfSize(formatted.Width, formatted.Height);
     }
 
     private void OnStudentClick(object sender, RoutedEventArgs e)
