@@ -290,7 +290,9 @@ public partial class RollCallWindow : Window
         _settings.RollCallRemoteEnabled = dialog.RollCallRemoteEnabled;
         _settings.RemotePresenterKey = dialog.RemotePresenterKey;
         _settingsService.Save(_settings);
-        ApplySettings(_settings);
+        ApplySettings(_settings, updatePhoto: false);
+        HidePhotoOverlay();
+        _lastPhotoStudentId = null;
     }
 
     private void OnTimerModeClick(object sender, RoutedEventArgs e)
@@ -615,7 +617,7 @@ public partial class RollCallWindow : Window
         }
     }
 
-    public void ApplySettings(AppSettings settings)
+    public void ApplySettings(AppSettings settings, bool updatePhoto = true)
     {
         _viewModel.ShowId = settings.RollCallShowId;
         _viewModel.ShowName = settings.RollCallShowName;
@@ -662,7 +664,10 @@ public partial class RollCallWindow : Window
         ApplyFontSizes();
         ScheduleFontUpdate();
         UpdateRemoteHookState();
-        UpdatePhotoDisplay();
+        if (updatePhoto)
+        {
+            UpdatePhotoDisplay();
+        }
         UpdateTimerButtons();
     }
 
