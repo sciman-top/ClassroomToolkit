@@ -46,6 +46,7 @@ public partial class RollCallWindow : Window
     private double _lastTimerFontSize;
     private MediaFontFamily _nameFontFamily = new("Microsoft YaHei UI");
     private bool _fontUpdatePending;
+    private bool _classSelectionReady;
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -100,6 +101,7 @@ public partial class RollCallWindow : Window
         _viewModel.LoadData(_settings.RollCallCurrentClass);
         ApplySettings(_settings);
         RestoreGroupSelection();
+        _classSelectionReady = true;
         WindowPlacementHelper.EnsureVisible(this);
         _stopwatch.Restart();
         _timer.Start();
@@ -203,6 +205,24 @@ public partial class RollCallWindow : Window
                 PersistSettings();
                 _viewModel.SaveState();
             }
+        }
+    }
+
+    private void OnClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_classSelectionReady || !_viewModel.IsRollCallMode)
+        {
+            return;
+        }
+        if (sender is not ComboBox combo || combo.SelectedItem is not string selected)
+        {
+            return;
+        }
+        if (_viewModel.SwitchClass(selected))
+        {
+            UpdatePhotoDisplay(forceHide: true);
+            PersistSettings();
+            _viewModel.SaveState();
         }
     }
 
@@ -753,14 +773,15 @@ public partial class RollCallWindow : Window
         }
         if (_viewModel.IsRollCallMode)
         {
+            double? idSize = null;
+            double? nameSize = null;
             if (_viewModel.ShowId && IdBorder != null)
             {
                 var width = Math.Max(40d, IdBorder.ActualWidth);
                 var height = Math.Max(40d, IdBorder.ActualHeight);
                 var text = IdTextBlock.Text ?? string.Empty;
                 var size = CalculateFontSize(width, height, text, monospace: false);
-                _lastIdFontSize = size;
-                IdTextBlock.FontSize = size;
+                idSize = size;
             }
             if (_viewModel.ShowName && NameBorder != null)
             {
@@ -768,8 +789,25 @@ public partial class RollCallWindow : Window
                 var height = Math.Max(40d, NameBorder.ActualHeight);
                 var text = NameTextBlock.Text ?? string.Empty;
                 var size = CalculateFontSize(width, height, text, monospace: false);
-                _lastNameFontSize = size;
-                NameTextBlock.FontSize = size;
+                nameSize = size;
+            }
+            if (idSize.HasValue && nameSize.HasValue)
+            {
+                var unified = Math.Min(idSize.Value, nameSize.Value);
+                _lastIdFontSize = unified;
+                _lastNameFontSize = unified;
+                IdTextBlock.FontSize = unified;
+                NameTextBlock.FontSize = unified;
+            }
+            else if (idSize.HasValue)
+            {
+                _lastIdFontSize = idSize.Value;
+                IdTextBlock.FontSize = idSize.Value;
+            }
+            else if (nameSize.HasValue)
+            {
+                _lastNameFontSize = nameSize.Value;
+                NameTextBlock.FontSize = nameSize.Value;
             }
         }
         if (!_viewModel.IsRollCallMode && TimerDisplayBorder != null)
@@ -830,8 +868,11 @@ public partial class RollCallWindow : Window
             ?? idFont;
         if (IdTextBlock != null)
         {
-            IdTextBlock.FontFamily = idFont;
-            IdTextBlock.FontWeight = FontWeights.Bold;
+            IdTextBlock.FontFamily = _nameFontFamily;
+            IdTextBlock.FontWeight = _nameFontFamily.Source.Contains("Kai", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_nameFontFamily.Source, "楷体", StringComparison.OrdinalIgnoreCase)
+                ? FontWeights.Normal
+                : FontWeights.Bold;
         }
         if (NameTextBlock != null)
         {

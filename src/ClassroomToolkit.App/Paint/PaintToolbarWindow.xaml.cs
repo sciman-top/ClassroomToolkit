@@ -17,8 +17,8 @@ public partial class PaintToolbarWindow : Window
 {
     private const int GwlExstyle = -20;
     private const int WsExNoActivate = 0x08000000;
-    private const double BaseWidth = 248;
-    private const double BaseHeight = 108;
+    private const double BaseWidth = 232;
+    private const double BaseHeight = 96;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
@@ -301,12 +301,22 @@ public partial class PaintToolbarWindow : Window
 
     private void OpenQuickColorDialog(int index)
     {
-        using var dialog = new System.Windows.Forms.ColorDialog();
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+        var picker = new QuickColorPaletteWindow
+        {
+            Owner = this
+        };
+        var button = GetQuickColorButton(index);
+        if (button != null)
+        {
+            var anchor = button.PointToScreen(new Point(0, button.ActualHeight + 4));
+            picker.Left = anchor.X;
+            picker.Top = anchor.Y;
+        }
+        if (picker.ShowDialog() != true || picker.SelectedColor == null)
         {
             return;
         }
-        var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
+        var color = picker.SelectedColor.Value;
         SetQuickColorSlot(index, color);
         QuickColorSlotChanged?.Invoke(index, color);
         if (_currentMode == PaintToolMode.Shape)
@@ -335,19 +345,24 @@ public partial class PaintToolbarWindow : Window
 
     private void UpdateQuickColorButton(int index, MediaColor color)
     {
-        var button = index switch
-        {
-            0 => QuickColor1Button,
-            1 => QuickColor2Button,
-            2 => QuickColor3Button,
-            _ => null
-        };
+        var button = GetQuickColorButton(index);
         if (button == null)
         {
             return;
         }
         button.Background = new SolidColorBrush(color);
         button.Foreground = GetContrastingBrush(color);
+    }
+
+    private ToggleButton? GetQuickColorButton(int index)
+    {
+        return index switch
+        {
+            0 => QuickColor1Button,
+            1 => QuickColor2Button,
+            2 => QuickColor3Button,
+            _ => null
+        };
     }
 
     private static System.Windows.Media.Brush GetContrastingBrush(MediaColor color)

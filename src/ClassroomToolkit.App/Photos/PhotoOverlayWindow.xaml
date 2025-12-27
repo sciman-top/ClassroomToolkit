@@ -20,15 +20,25 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="20,24,20,0" />
-                <Button x:Name="CloseButton"
-                        Content="X"
-                        Width="24"
-                        Height="24"
-                        FontSize="12"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="8"
-                        Click="OnCloseClick" />
+                <Grid VerticalAlignment="Bottom" Margin="20,0,20,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="CloseButtonLeft"
+                            Grid.Column="0"
+                            Content="关闭"
+                            Width="60"
+                            Height="26"
+                            Click="OnCloseClick" />
+                    <Button x:Name="CloseButtonRight"
+                            Grid.Column="2"
+                            Content="关闭"
+                            Width="60"
+                            Height="26"
+                            Click="OnCloseClick" />
+                </Grid>
             </Grid>
         </Border>
     </Grid>

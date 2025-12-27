@@ -27,9 +27,10 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Button Click="OnStudentClick"
-                                Width="{Binding ElementName=Root, Path=StudentButtonWidth}"
-                                Height="{Binding ElementName=Root, Path=StudentButtonHeight}"
-                                Margin="3">
+                                Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonWidth}"
+                                Height="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonHeight}"
+                                Margin="3"
+                                Padding="8,0">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="ToolTip" Value="本轮已点名" />
@@ -41,9 +42,17 @@
                                 </Style>
                             </Button.Style>
                             <Grid>
-                                <TextBlock Text="{Binding DisplayText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                <Ellipse Width="10" Height="10" Fill="#d93025"
-                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"
+                                           TextTrimming="CharacterEllipsis" />
+                                <Ellipse Grid.Column="1" Width="10" Height="10" Fill="#d93025"
+                                         HorizontalAlignment="Right" VerticalAlignment="Center"
                                          Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}" />
                             </Grid>
                         </Button>

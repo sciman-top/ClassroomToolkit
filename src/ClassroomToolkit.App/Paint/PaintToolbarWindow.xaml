@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="工具条"
-        Height="108" Width="248"
+        Height="96" Width="232"
         WindowStartupLocation="Manual"
         Topmost="True"
         ShowActivated="False"
@@ -19,7 +19,27 @@
             <Setter Property="Focusable" Value="False" />
             <Setter Property="IsTabStop" Value="False" />
         </Style>
-        <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="#FDFDFD" />
+            <Setter Property="BorderBrush" Value="#D0D6DC" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style x:Key="ToolbarToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="#FDFDFD" />
+            <Setter Property="BorderBrush" Value="#D0D6DC" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource ToolbarToggleButtonStyle}">
             <Setter Property="BorderBrush" Value="#66000000" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="0" />
@@ -47,46 +67,46 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Border x:Name="ToolbarContainer" Background="#F7F7F7" BorderBrush="#D6D6D6" BorderThickness="1"
-            CornerRadius="10" Padding="6">
+    <Border x:Name="ToolbarContainer" Background="#F4F6F8" BorderBrush="#CBD2D9" BorderThickness="1"
+            CornerRadius="8" Padding="4">
         <Grid x:Name="ToolbarRoot" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                <ToggleButton x:Name="CursorButton" Content="光标" Width="32" Height="26" Margin="2"
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1">
+                <ToggleButton x:Name="CursorButton" Content="光标" Style="{StaticResource ToolbarToggleButtonStyle}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                               ToolTip="光标" />
-                <ToggleButton x:Name="QuickColor1Button" Content="黑" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="0"
+                <ToggleButton x:Name="QuickColor1Button" Content="黑" Click="OnColorClick" Tag="0"
                               Style="{StaticResource QuickColorButtonStyle}"
                               ToolTip="长按更换颜色"
                               behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}" />
-                <ToggleButton x:Name="QuickColor2Button" Content="红" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="1"
+                <ToggleButton x:Name="QuickColor2Button" Content="红" Click="OnColorClick" Tag="1"
                               Style="{StaticResource QuickColorButtonStyle}"
                               ToolTip="长按更换颜色"
                               behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}" />
-                <ToggleButton x:Name="QuickColor3Button" Content="蓝" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="2"
+                <ToggleButton x:Name="QuickColor3Button" Content="蓝" Click="OnColorClick" Tag="2"
                               Style="{StaticResource QuickColorButtonStyle}"
                               ToolTip="长按更换颜色"
                               behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}" />
-                <Button x:Name="SettingsButton" Content="设置" Width="32" Height="26" Margin="2" Click="OnSettingsClick"
+                <Button x:Name="SettingsButton" Content="设置" Style="{StaticResource ToolbarButtonStyle}" Click="OnSettingsClick"
                         ToolTip="画笔设置" />
             </StackPanel>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="UndoButton" Content="撤销" Width="32" Height="26" Margin="2" Click="OnUndoClick"
+                <Button x:Name="UndoButton" Content="撤销" Style="{StaticResource ToolbarButtonStyle}" Click="OnUndoClick"
                         ToolTip="撤销" />
-                <ToggleButton x:Name="EraserButton" Content="橡皮" Width="32" Height="26" Margin="2"
+                <ToggleButton x:Name="EraserButton" Content="橡皮" Style="{StaticResource ToolbarToggleButtonStyle}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                               ToolTip="橡皮擦" />
-                <ToggleButton x:Name="RegionEraseButton" Content="框删" Width="32" Height="26" Margin="2"
+                <ToggleButton x:Name="RegionEraseButton" Content="框删" Style="{StaticResource ToolbarToggleButtonStyle}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                               ToolTip="框选删除" />
-                <Button x:Name="ClearButton" Content="清空" Width="32" Height="26" Margin="2" Click="OnClearClick"
+                <Button x:Name="ClearButton" Content="清空" Style="{StaticResource ToolbarButtonStyle}" Click="OnClearClick"
                         ToolTip="一键清屏" />
-                <ToggleButton x:Name="BoardButton" Content="白板" Width="32" Height="26" Margin="2" Click="OnBoardClick"
+                <ToggleButton x:Name="BoardButton" Content="白板" Style="{StaticResource ToolbarToggleButtonStyle}" Click="OnBoardClick"
                               ToolTip="白板（单击开关 / 长按换色）"
                               behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" />
             </StackPanel>

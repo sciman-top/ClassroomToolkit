@@ -358,7 +358,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return false;
         }
 
-        if (!_engine.GroupAll.TryGetValue(CurrentGroup, out var indices))
+        var groupKey = ResolveGroupKey(CurrentGroup);
+        if (!_engine.GroupAll.TryGetValue(groupKey, out var indices))
         {
             _engine.GroupAll.TryGetValue(IdentityUtils.AllGroupName, out indices);
         }
@@ -371,7 +372,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return false;
         }
 
-        var remaining = _engine.GroupRemaining.TryGetValue(CurrentGroup, out var pool)
+        var remaining = _engine.GroupRemaining.TryGetValue(groupKey, out var pool)
             ? new HashSet<int>(pool)
             : new HashSet<int>();
         var list = new List<(StudentSortKey Key, StudentListItem Item)>();
@@ -398,6 +399,54 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         list.Sort((a, b) => a.Key.CompareTo(b.Key));
         students = list.Select(item => item.Item).ToList();
         return true;
+    }
+
+    private string ResolveGroupKey(string group)
+    {
+        if (_engine == null)
+        {
+            return group;
+        }
+        var normalized = IdentityUtils.NormalizeGroupName(group);
+        if (_engine.GroupAll.ContainsKey(normalized))
+        {
+            return normalized;
+        }
+        var trimmed = normalized.Trim();
+        if (trimmed.EndsWith("组", StringComparison.Ordinal))
+        {
+            var stripped = trimmed[..^1];
+            if (_engine.GroupAll.ContainsKey(stripped))
+            {
+                return stripped;
+            }
+        }
+        else
+        {
+            var withSuffix = $"{trimmed}组";
+            if (_engine.GroupAll.ContainsKey(withSuffix))
+            {
+                return withSuffix;
+            }
+        }
+        foreach (var key in _engine.GroupAll.Keys)
+        {
+            if (NormalizeGroupKey(key) == NormalizeGroupKey(trimmed))
+            {
+                return key;
+            }
+        }
+        return normalized;
+    }
+
+    private static string NormalizeGroupKey(string group)
+    {
+        var normalized = IdentityUtils.NormalizeGroupName(group);
+        if (normalized.EndsWith("组", StringComparison.Ordinal))
+        {
+            normalized = normalized[..^1];
+        }
+        return normalized;
     }
 
     public bool SetCurrentStudentByIndex(int index)
