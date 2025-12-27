@@ -37,7 +37,7 @@
                       x:Name="ClassComboBox"
                       ItemsSource="{Binding AvailableClasses}"
                       SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
-                      MinWidth="110"
+                      MinWidth="90"
                       Margin="0,0,4,0"
                       IsEnabled="{Binding IsRollCallMode}"
                       SelectionChanged="OnClassSelectionChanged" />
@@ -65,7 +65,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="10,4" Click="OnResetClick" />
+                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="8,3" MinWidth="54" Click="OnResetClick" />
             </DockPanel>
         </Grid>
 
