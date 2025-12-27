@@ -618,8 +618,7 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var fullscreen = IsFullscreenPresentationWindow(target);
-        if (!fullscreen)
+        if (!_presentationClassifier.IsSlideshowWindow(target.Info))
         {
             return;
         }
