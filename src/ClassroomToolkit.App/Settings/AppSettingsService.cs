@@ -45,6 +45,7 @@ public sealed class AppSettingsService
             settings.RollCallSpeechOutputId = GetString(roll, "speech_output_id", settings.RollCallSpeechOutputId);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
             settings.RollCallCurrentClass = GetString(roll, "current_class", settings.RollCallCurrentClass);
+            settings.RollCallCurrentGroup = GetString(roll, "current_group", settings.RollCallCurrentGroup);
             var geometry = GetString(roll, "geometry", string.Empty);
             if (TryParseGeometry(geometry, out var width, out var height, out var x, out var y))
             {
@@ -111,6 +112,7 @@ public sealed class AppSettingsService
         roll["speech_output_id"] = settings.RollCallSpeechOutputId ?? string.Empty;
         roll["remote_roll_key"] = settings.RemotePresenterKey;
         roll["current_class"] = settings.RollCallCurrentClass ?? string.Empty;
+        roll["current_group"] = settings.RollCallCurrentGroup ?? "全部";
         if (HasGeometry(settings))
         {
             roll["geometry"] = FormatGeometry(

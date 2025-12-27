@@ -38,6 +38,7 @@ public sealed class AppSettings
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
     public string RemotePresenterKey { get; set; } = "tab";
     public string RollCallCurrentClass { get; set; } = string.Empty;
+    public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
     public string WpsInputMode { get; set; } = "auto";

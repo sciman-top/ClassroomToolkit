@@ -23,6 +23,7 @@ public partial class RollCallWindow : Window
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _timer;
+    private readonly DispatcherTimer _rollStateSaveTimer;
     private readonly Stopwatch _stopwatch;
     private KeyboardHook? _keyboardHook;
     private Action<ClassroomToolkit.Interop.Presentation.KeyBinding>? _remoteHandler;
@@ -33,6 +34,7 @@ public partial class RollCallWindow : Window
     private string _lastVoiceId = string.Empty;
     private bool _allowClose;
     private bool _timerStateApplied;
+    private bool _rollStateDirty;
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -53,6 +55,12 @@ public partial class RollCallWindow : Window
         };
         _timer.Tick += OnTimerTick;
 
+        _rollStateSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(1200)
+        };
+        _rollStateSaveTimer.Tick += OnRollStateSaveTick;
+
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
         _viewModel.ReminderTriggered += OnReminderTriggered;
@@ -64,6 +72,7 @@ public partial class RollCallWindow : Window
     {
         _viewModel.LoadData(_settings.RollCallCurrentClass);
         ApplySettings(_settings);
+        RestoreGroupSelection();
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
@@ -79,10 +88,14 @@ public partial class RollCallWindow : Window
             HidePhotoOverlay();
             PersistSettings();
             _viewModel.SaveState();
+            _rollStateSaveTimer.Stop();
+            _rollStateDirty = false;
             return;
         }
         _timer.Stop();
         _stopwatch.Stop();
+        _rollStateSaveTimer.Stop();
+        _rollStateDirty = false;
         StopKeyboardHook();
         ClosePhotoOverlay();
         _speechSynthesizer?.Dispose();
@@ -96,6 +109,7 @@ public partial class RollCallWindow : Window
         {
             _viewModel.SetCurrentGroup(group);
             UpdatePhotoDisplay(forceHide: true);
+            PersistSettings();
         }
     }
 
@@ -105,6 +119,7 @@ public partial class RollCallWindow : Window
         {
             UpdatePhotoDisplay();
             SpeakStudentName();
+            ScheduleRollStateSave();
             return;
         }
         if (!string.IsNullOrWhiteSpace(message))
@@ -126,6 +141,7 @@ public partial class RollCallWindow : Window
         }
         _viewModel.ResetCurrentGroup();
         UpdatePhotoDisplay(forceHide: true);
+        ScheduleRollStateSave();
     }
 
     private void OnToggleModeClick(object sender, RoutedEventArgs e)
@@ -352,6 +368,17 @@ public partial class RollCallWindow : Window
         _viewModel.TickTimer(elapsed);
     }
 
+    private void OnRollStateSaveTick(object? sender, EventArgs e)
+    {
+        _rollStateSaveTimer.Stop();
+        if (!_rollStateDirty)
+        {
+            return;
+        }
+        _rollStateDirty = false;
+        _viewModel.SaveState();
+    }
+
     private void OnTimerCompleted()
     {
         if (_viewModel.TimerSoundEnabled)
@@ -468,6 +495,7 @@ public partial class RollCallWindow : Window
                 {
                     UpdatePhotoDisplay();
                     SpeakStudentName();
+                    ScheduleRollStateSave();
                     return;
                 }
                 if (!string.IsNullOrWhiteSpace(message))
@@ -594,6 +622,7 @@ public partial class RollCallWindow : Window
         _settings.RollCallRemoteEnabled = _viewModel.RemotePresenterEnabled;
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
+        _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
         _settingsService.Save(_settings);
     }
 
@@ -644,6 +673,30 @@ public partial class RollCallWindow : Window
                 TimerSetButton.IsEnabled = false;
                 break;
         }
+    }
+
+    private void RestoreGroupSelection()
+    {
+        var group = _settings.RollCallCurrentGroup;
+        if (string.IsNullOrWhiteSpace(group))
+        {
+            return;
+        }
+        if (_viewModel.Groups.Contains(group))
+        {
+            _viewModel.SetCurrentGroup(group);
+            UpdatePhotoDisplay(forceHide: true);
+        }
+    }
+
+    private void ScheduleRollStateSave()
+    {
+        _rollStateDirty = true;
+        if (_rollStateSaveTimer.IsEnabled)
+        {
+            _rollStateSaveTimer.Stop();
+        }
+        _rollStateSaveTimer.Start();
     }
 
     private void ApplyWindowBounds(AppSettings settings)
