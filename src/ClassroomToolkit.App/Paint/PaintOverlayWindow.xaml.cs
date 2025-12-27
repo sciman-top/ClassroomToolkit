@@ -6,6 +6,7 @@ using System.Windows.Shapes;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
 using MediaColor = System.Windows.Media.Color;
+using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
@@ -19,7 +20,7 @@ public partial class PaintOverlayWindow : Window
     private Shape? _activeShape;
     private bool _isRegionSelecting;
     private WpfPoint _regionStart;
-    private Rectangle? _regionRect;
+    private WpfRectangle? _regionRect;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
     private readonly Stack<StrokeCollection> _strokeHistory = new();
@@ -124,7 +125,7 @@ public partial class PaintOverlayWindow : Window
         if (_mode == PaintToolMode.RegionErase)
         {
             _regionStart = e.GetPosition(ShapeCanvas);
-            _regionRect = new Rectangle
+            _regionRect = new WpfRectangle
             {
                 Stroke = new SolidColorBrush(MediaColor.FromArgb(200, 255, 200, 60)),
                 StrokeThickness = 2,
@@ -392,7 +393,7 @@ public partial class PaintOverlayWindow : Window
         _isRegionSelecting = false;
     }
 
-    private static void UpdateSelectionRect(Rectangle rect, WpfPoint start, WpfPoint end)
+    private static void UpdateSelectionRect(WpfRectangle rect, WpfPoint start, WpfPoint end)
     {
         var left = Math.Min(start.X, end.X);
         var top = Math.Min(start.Y, end.Y);
