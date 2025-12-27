@@ -1,7 +1,5 @@
-using System.IO;
 using System.Speech.Synthesis;
 using System.Windows;
-using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
@@ -11,7 +9,6 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
-    private readonly AppSettings _settings;
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
 
@@ -35,7 +32,6 @@ public partial class RollCallSettingsDialog : Window
     public RollCallSettingsDialog(AppSettings settings, IReadOnlyList<string> availableClasses)
     {
         InitializeComponent();
-        _settings = settings;
         _initialVoiceId = settings.RollCallSpeechVoiceId ?? string.Empty;
         _initialOutputId = settings.RollCallSpeechOutputId ?? string.Empty;
         ShowIdCheck.IsChecked = settings.RollCallShowId;
@@ -102,20 +98,6 @@ public partial class RollCallSettingsDialog : Window
     private void OnSpeechEngineChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         UpdateSpeechControls();
-    }
-
-    private void OnDiagnosticClick(object sender, RoutedEventArgs e)
-    {
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var settingsPath = Path.Combine(baseDir, "settings.ini");
-        var studentPath = StudentResourceLocator.ResolveStudentWorkbookPath();
-        var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
-        var result = SystemDiagnostics.CollectSystemDiagnostics(_settings, settingsPath, studentPath, photoRoot);
-        var dialog = new DiagnosticsDialog(result)
-        {
-            Owner = this
-        };
-        dialog.ShowDialog();
     }
 
     private void UpdateRemoteKeyEnabled()

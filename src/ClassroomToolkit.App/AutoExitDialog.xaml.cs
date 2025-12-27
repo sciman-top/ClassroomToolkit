@@ -1,13 +1,19 @@
+using System.IO;
 using System.Windows;
+using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App;
 
 public partial class AutoExitDialog : Window
 {
-    public AutoExitDialog(int minutes)
+    private readonly AppSettings _settings;
+
+    public AutoExitDialog(int minutes, AppSettings settings)
     {
         InitializeComponent();
+        _settings = settings;
         MinutesBox.Text = Math.Max(0, minutes).ToString();
         MinutesBox.SelectAll();
         MinutesBox.Focus();
@@ -31,5 +37,19 @@ public partial class AutoExitDialog : Window
     private void OnCancel(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+    }
+
+    private void OnDiagnosticClick(object sender, RoutedEventArgs e)
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var settingsPath = Path.Combine(baseDir, "settings.ini");
+        var studentPath = StudentResourceLocator.ResolveStudentWorkbookPath();
+        var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
+        var result = SystemDiagnostics.CollectSystemDiagnostics(_settings, settingsPath, studentPath, photoRoot);
+        var dialog = new DiagnosticsDialog(result)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
     }
 }

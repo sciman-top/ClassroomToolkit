@@ -397,7 +397,7 @@ public partial class MainWindow : Window
     private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / 60);
-        var dialog = new AutoExitDialog(currentMinutes)
+        var dialog = new AutoExitDialog(currentMinutes, _settings)
         {
             Owner = this
         };
