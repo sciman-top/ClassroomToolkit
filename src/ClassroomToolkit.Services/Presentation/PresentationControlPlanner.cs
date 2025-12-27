@@ -9,7 +9,10 @@ public sealed class PresentationControlPlanner
     public PresentationControlPlanner(PresentationClassifier classifier)
     {
         _classifier = classifier;
+        Classifier = classifier;
     }
+
+    public PresentationClassifier Classifier { get; }
 
     public PresentationControlPlan? Plan(
         PresentationWindowInfo info,

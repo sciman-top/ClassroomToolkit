@@ -31,12 +31,33 @@ public sealed class PresentationControlService
         if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
         {
             target = _lastTarget;
+            if (!target.IsValid)
+            {
+                target = _resolver.ResolvePresentationTarget(
+                    _planner.Classifier,
+                    options.AllowWps,
+                    options.AllowOffice,
+                    _currentProcessId);
+            }
         }
         if (!target.IsValid)
         {
             return false;
         }
-        return TrySendToTarget(target, command, options);
+        if (TrySendToTarget(target, command, options))
+        {
+            return true;
+        }
+        var fallback = _resolver.ResolvePresentationTarget(
+            _planner.Classifier,
+            options.AllowWps,
+            options.AllowOffice,
+            _currentProcessId);
+        if (!fallback.IsValid || fallback.Equals(target))
+        {
+            return false;
+        }
+        return TrySendToTarget(fallback, command, options);
     }
 
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)

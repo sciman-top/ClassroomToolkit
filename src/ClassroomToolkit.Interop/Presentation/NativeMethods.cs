@@ -15,6 +15,12 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern IntPtr GetForegroundWindow();
 
+    [DllImport("user32.dll")]
+    internal static extern bool EnumWindows(EnumWindowsProc enumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    internal static extern bool IsWindowVisible(IntPtr hwnd);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern int GetClassName(IntPtr hwnd, StringBuilder className, int maxCount);
 
@@ -79,4 +85,6 @@ internal static class NativeMethods
         public int X;
         public int Y;
     }
+
+    internal delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 }

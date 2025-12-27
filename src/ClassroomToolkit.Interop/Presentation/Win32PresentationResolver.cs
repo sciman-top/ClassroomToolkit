@@ -16,11 +16,56 @@ public sealed class Win32PresentationResolver
         {
             return PresentationTarget.Empty;
         }
-        var classNames = BuildClassNames(hwnd);
-        var processId = GetProcessId(hwnd);
-        var processName = GetProcessName(processId);
-        var info = new PresentationWindowInfo(processId, processName, classNames);
+        var info = BuildWindowInfo(hwnd);
         return new PresentationTarget(hwnd, info);
+    }
+
+    public PresentationTarget ResolvePresentationTarget(
+        PresentationClassifier classifier,
+        bool allowWps,
+        bool allowOffice,
+        uint? excludeProcessId = null)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return PresentationTarget.Empty;
+        }
+        PresentationTarget wpsTarget = PresentationTarget.Empty;
+        PresentationTarget officeTarget = PresentationTarget.Empty;
+        NativeMethods.EnumWindows(
+            (hwnd, _) =>
+            {
+                if (hwnd == IntPtr.Zero || !NativeMethods.IsWindowVisible(hwnd))
+                {
+                    return true;
+                }
+                var info = BuildWindowInfo(hwnd);
+                if (excludeProcessId.HasValue && info.ProcessId == excludeProcessId.Value)
+                {
+                    return true;
+                }
+                var type = classifier.Classify(info);
+                if (type == PresentationType.Wps && allowWps && !wpsTarget.IsValid)
+                {
+                    wpsTarget = new PresentationTarget(hwnd, info);
+                }
+                else if (type == PresentationType.Office && allowOffice && !officeTarget.IsValid)
+                {
+                    officeTarget = new PresentationTarget(hwnd, info);
+                }
+                return true;
+            },
+            IntPtr.Zero);
+
+        if (wpsTarget.IsValid)
+        {
+            return wpsTarget;
+        }
+        if (officeTarget.IsValid)
+        {
+            return officeTarget;
+        }
+        return PresentationTarget.Empty;
     }
 
     private static IReadOnlyList<string> BuildClassNames(IntPtr hwnd)
@@ -33,6 +78,14 @@ public sealed class Win32PresentationResolver
             AddClassName(names, root);
         }
         return names;
+    }
+
+    private static PresentationWindowInfo BuildWindowInfo(IntPtr hwnd)
+    {
+        var classNames = BuildClassNames(hwnd);
+        var processId = GetProcessId(hwnd);
+        var processName = GetProcessName(processId);
+        return new PresentationWindowInfo(processId, processName, classNames);
     }
 
     private static void AddClassName(ICollection<string> list, IntPtr hwnd)
