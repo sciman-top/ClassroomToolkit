@@ -22,6 +22,7 @@ public partial class PaintToolbarWindow : Window
     private PaintShapeType _shapeType = PaintShapeType.Line;
     private bool _boardActive;
     private MediaColor _boardColor = Colors.White;
+    private PaintOverlayWindow? _overlay;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -43,6 +44,7 @@ public partial class PaintToolbarWindow : Window
     public PaintShapeType ShapeType => _shapeType;
     public bool BoardActive => _boardActive;
     public MediaColor BoardColor => _boardColor;
+    public bool HasOverlay => _overlay != null;
 
     public PaintToolbarWindow()
     {
@@ -92,6 +94,11 @@ public partial class PaintToolbarWindow : Window
         }
     }
 
+    public void AttachOverlay(PaintOverlayWindow overlay)
+    {
+        _overlay = overlay;
+    }
+
     private void OnModeClick(object sender, RoutedEventArgs e)
     {
         if (sender is not ToggleButton button || _initializing)
@@ -127,16 +134,31 @@ public partial class PaintToolbarWindow : Window
         }
         UpdateQuickColorSelection(_quickColors[index.Value]);
         UpdateToolButtons(PaintToolMode.Brush);
+        if (_overlay != null)
+        {
+            _overlay.SetMode(PaintToolMode.Brush);
+            _overlay.SetBrush(_quickColors[index.Value], _brushSize, _brushOpacity);
+        }
         BrushColorChanged?.Invoke(_quickColors[index.Value]);
     }
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
+        if (_overlay != null)
+        {
+            _overlay.ClearAll();
+            return;
+        }
         ClearRequested?.Invoke();
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
     {
+        if (_overlay != null)
+        {
+            _overlay.Undo();
+            return;
+        }
         UndoRequested?.Invoke();
     }
 
@@ -147,6 +169,19 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         _boardActive = BoardButton.IsChecked == true;
+        if (_overlay != null)
+        {
+            if (_boardActive)
+            {
+                _overlay.SetBoardColor(_boardColor);
+                _overlay.SetBoardOpacity(_boardOpacity == 0 ? (byte)255 : _boardOpacity);
+            }
+            else
+            {
+                _overlay.SetBoardColor(Colors.Transparent);
+                _overlay.SetBoardOpacity(0);
+            }
+        }
         WhiteboardToggled?.Invoke(_boardActive);
     }
 
@@ -170,6 +205,10 @@ public partial class PaintToolbarWindow : Window
             _initializing = false;
         }
         ModeChanged?.Invoke(mode);
+        if (_overlay != null)
+        {
+            _overlay.SetMode(mode);
+        }
     }
 
     private void OpenBoardColorDialog()
@@ -195,6 +234,11 @@ public partial class PaintToolbarWindow : Window
         QuickColorSlotChanged?.Invoke(index, color);
         UpdateToolButtons(PaintToolMode.Brush);
         UpdateQuickColorSelection(color);
+        if (_overlay != null)
+        {
+            _overlay.SetMode(PaintToolMode.Brush);
+            _overlay.SetBrush(color, _brushSize, _brushOpacity);
+        }
         BrushColorChanged?.Invoke(color);
     }
 

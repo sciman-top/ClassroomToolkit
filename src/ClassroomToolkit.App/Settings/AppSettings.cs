@@ -61,7 +61,7 @@ public sealed class AppSettings
     public MediaColor QuickColor1 { get; set; } = MediaColors.Black;
     public MediaColor QuickColor2 { get; set; } = MediaColors.Red;
     public MediaColor QuickColor3 { get; set; } = MediaColors.DodgerBlue;
-    public PaintShapeType ShapeType { get; set; } = PaintShapeType.Line;
+    public PaintShapeType ShapeType { get; set; } = PaintShapeType.None;
 
     public string BrushColorHex => ToHex(BrushColor);
     public string BoardColorHex => ToHex(BoardColor);

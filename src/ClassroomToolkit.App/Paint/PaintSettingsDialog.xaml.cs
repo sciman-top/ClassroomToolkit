@@ -101,21 +101,37 @@ public partial class PaintSettingsDialog : Window
 
     private void UpdateBrushSizeLabel()
     {
+        if (BrushSizeValue == null)
+        {
+            return;
+        }
         BrushSizeValue.Text = $"{Math.Round(BrushSizeSlider.Value)}px";
     }
 
     private void UpdateBrushOpacityLabel()
     {
+        if (BrushOpacityValue == null)
+        {
+            return;
+        }
         BrushOpacityValue.Text = $"{Math.Round(BrushOpacitySlider.Value)}%";
     }
 
     private void UpdateEraserSizeLabel()
     {
+        if (EraserSizeValue == null)
+        {
+            return;
+        }
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
     }
 
     private void UpdateBoardOpacityLabel()
     {
+        if (BoardOpacityValue == null)
+        {
+            return;
+        }
         BoardOpacityValue.Text = $"{Math.Round(BoardOpacitySlider.Value)}%";
     }
 

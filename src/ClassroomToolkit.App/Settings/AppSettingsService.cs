@@ -212,7 +212,7 @@ public sealed class AppSettingsService
         {
             return parsed;
         }
-        return PaintShapeType.Line;
+        return PaintShapeType.None;
     }
 
     private static bool HasGeometry(AppSettings settings)

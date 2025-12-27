@@ -104,6 +104,10 @@ public partial class MainWindow : Window
         else
         {
             _overlayWindow.Show();
+            if (_toolbarWindow.Owner != _overlayWindow && _overlayWindow.IsVisible)
+            {
+                _toolbarWindow.Owner = _overlayWindow;
+            }
             _toolbarWindow.Show();
             _toolbarWindow.Activate();
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
@@ -119,7 +123,7 @@ public partial class MainWindow : Window
         }
         _overlayWindow = new Paint.PaintOverlayWindow();
         _toolbarWindow = new Paint.PaintToolbarWindow();
-        _toolbarWindow.Owner = _overlayWindow;
+        _toolbarWindow.AttachOverlay(_overlayWindow);
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
@@ -134,10 +138,20 @@ public partial class MainWindow : Window
         _toolbarWindow.LocationChanged += (_, _) => CapturePaintToolbarPosition(save: false);
         ApplyPaintToolbarPosition();
         _toolbarWindow.ApplySettings(_settings);
-        _toolbarWindow.ModeChanged += mode => _overlayWindow.SetMode(mode);
+        _toolbarWindow.ModeChanged += mode =>
+        {
+            if (_toolbarWindow.HasOverlay)
+            {
+                return;
+            }
+            _overlayWindow.SetMode(mode);
+        };
         _toolbarWindow.BrushColorChanged += color =>
         {
-            _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
+            if (!_toolbarWindow.HasOverlay)
+            {
+                _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
+            }
             _settings.BrushColor = color;
             SaveSettings();
         };
@@ -145,7 +159,7 @@ public partial class MainWindow : Window
         {
             _settings.BoardColor = color;
             SaveSettings();
-            if (_toolbarWindow.BoardActive)
+            if (_toolbarWindow.BoardActive && !_toolbarWindow.HasOverlay)
             {
                 _overlayWindow.SetBoardColor(color);
                 _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
@@ -171,16 +185,19 @@ public partial class MainWindow : Window
         };
         _toolbarWindow.WhiteboardToggled += active =>
         {
-            if (active)
+            if (!_toolbarWindow.HasOverlay)
             {
-                _overlayWindow.SetBoardColor(_settings.BoardColor);
-                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
-                _toolbarWindow.Activate();
-            }
-            else
-            {
-                _overlayWindow.SetBoardColor(Colors.Transparent);
-                _overlayWindow.SetBoardOpacity(0);
+                if (active)
+                {
+                    _overlayWindow.SetBoardColor(_settings.BoardColor);
+                    _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+                    _toolbarWindow.Activate();
+                }
+                else
+                {
+                    _overlayWindow.SetBoardColor(Colors.Transparent);
+                    _overlayWindow.SetBoardOpacity(0);
+                }
             }
         };
         _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
