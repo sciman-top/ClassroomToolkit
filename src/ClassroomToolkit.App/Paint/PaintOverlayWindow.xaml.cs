@@ -489,18 +489,6 @@ public partial class PaintOverlayWindow : Window
         }
         _focusBlocked = blockFocus;
         ApplyWindowStyles();
-        if (_focusBlocked)
-        {
-            var target = _presentationResolver.ResolvePresentationTarget(
-                _presentationClassifier,
-                _presentationOptions.AllowWps,
-                _presentationOptions.AllowOffice,
-                _currentProcessId);
-            if (target.IsValid)
-            {
-                ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
-            }
-        }
     }
 
     private bool ShouldBlockFocus()

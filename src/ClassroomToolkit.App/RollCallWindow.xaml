@@ -37,12 +37,12 @@
                       x:Name="ClassComboBox"
                       ItemsSource="{Binding AvailableClasses}"
                       SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
-                      MinWidth="90"
+                      Width="60"
                       Margin="0,0,4,0"
                       IsEnabled="{Binding IsRollCallMode}"
                       SelectionChanged="OnClassSelectionChanged" />
-            <Button Grid.Column="3" Content="名单" MinWidth="60" Margin="0,0,4,0" Click="OnListClick" />
-            <Button Grid.Column="4" Content="设置" MinWidth="60" Click="OnSettingsClick" />
+            <Button Grid.Column="3" Content="名单" Width="60" Margin="0,0,4,0" Click="OnListClick" />
+            <Button Grid.Column="4" Content="设置" Width="60" Click="OnSettingsClick" />
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,4,0,0" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
@@ -65,7 +65,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="8,3" MinWidth="54" Click="OnResetClick" />
+                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="6,3" Width="60" Click="OnResetClick" />
             </DockPanel>
         </Grid>
 
