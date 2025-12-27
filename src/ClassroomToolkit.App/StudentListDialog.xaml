@@ -30,7 +30,8 @@
                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonWidth}"
                                 Height="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonHeight}"
                                 Margin="3"
-                                Padding="8,0">
+                                Padding="8,0"
+                                VerticalContentAlignment="Center">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="ToolTip" Value="本轮已点名" />
@@ -61,10 +62,10 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <TextBlock Grid.Row="1" Text="红点标记本轮未点名（无标记即已点名）" Foreground="#4a525a"
+        <TextBlock x:Name="HintText" Grid.Row="1" Text="红点标记本轮未点名（无标记即已点名）" Foreground="#4a525a"
                    Margin="0,6,0,0" />
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+        <StackPanel x:Name="FooterPanel" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
             <Button Content="关闭" Width="80" Height="30" Click="OnCloseClick" />
         </StackPanel>
     </Grid>

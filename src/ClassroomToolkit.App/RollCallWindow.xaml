@@ -51,22 +51,30 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="分组" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,8,0" />
-            <DockPanel Grid.Column="1" LastChildFill="True">
-                <ItemsControl ItemsSource="{Binding Groups}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Content="{Binding}" Tag="{Binding}" Margin="2" Padding="10,4"
-                                    Click="OnGroupClick" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button DockPanel.Dock="Right" Content="重置" Margin="6,0,0,0" Padding="6,3" Width="60" Click="OnResetClick" />
-            </DockPanel>
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding GroupButtons}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding Label}" Margin="2" Padding="10,4"
+                                Click="OnGroupEntryClick">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReset}" Value="True">
+                                            <Setter Property="Width" Value="60" />
+                                            <Setter Property="Padding" Value="6,3" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
 
         <Grid Grid.Row="2" Margin="0,6,0,0">

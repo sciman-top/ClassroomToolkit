@@ -48,6 +48,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         _dataPath = dataPath;
         Groups = new ObservableCollection<string>();
+        GroupButtons = new ObservableCollection<GroupButtonItem>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
         _timerEngine.TimerCompleted += () => TimerCompleted?.Invoke();
         _timerEngine.ReminderTriggered += () => ReminderTriggered?.Invoke();
@@ -59,6 +60,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     public event Action? ReminderTriggered;
 
     public ObservableCollection<string> Groups { get; }
+
+    public ObservableCollection<GroupButtonItem> GroupButtons { get; }
 
     public string CurrentGroup
     {
@@ -639,6 +642,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private void RefreshGroups()
     {
         Groups.Clear();
+        GroupButtons.Clear();
         if (_engine == null)
         {
             return;
@@ -646,7 +650,9 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         foreach (var group in _engine.Roster.Groups)
         {
             Groups.Add(group);
+            GroupButtons.Add(new GroupButtonItem(group, isReset: false));
         }
+        GroupButtons.Add(new GroupButtonItem("重置", isReset: true));
     }
 
     private void UpdateCurrentStudent()

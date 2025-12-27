@@ -56,21 +56,31 @@ public partial class StudentListDialog : Window
         var dotPadding = 20d;
         var minWidth = Math.Max(120d, maxText + dotPadding);
         var workArea = SystemParameters.WorkArea;
-        var maxWidthPerButton = Math.Max(96d, (workArea.Width * 0.9 - 40d) / 10d);
+        var hSpacing = 6d;
+        var maxWidthPerButton = Math.Max(96d, (workArea.Width * 0.95 - 32d - hSpacing * 9d) / 10d);
         StudentButtonWidth = Math.Min(minWidth, maxWidthPerButton);
-        StudentButtonHeight = Math.Max(34d, FontSize + 16d);
+        StudentButtonHeight = Math.Max(40d, FontSize + 22d);
 
         var count = Math.Max(1, _students.Count);
-        var hSpacing = 6d;
         var vSpacing = 6d;
         var columns = 10;
         var totalRows = Math.Max(1, (int)Math.Ceiling(count / (double)columns));
         var preferredWidth = StudentButtonWidth * columns + hSpacing * (columns - 1) + 32d;
-        var extraHeight = 56d;
+        var extraHeight = CalculateExtraHeight();
         var desiredHeight = totalRows * StudentButtonHeight + Math.Max(0, totalRows - 1) * vSpacing + extraHeight;
         Width = Math.Max(200d, preferredWidth);
         Height = Math.Max(200d, desiredHeight);
         WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private double CalculateExtraHeight()
+    {
+        var rootMargin = Root.Margin.Top + Root.Margin.Bottom;
+        var hintHeight = HintText?.ActualHeight ?? 18d;
+        var hintMargin = HintText != null ? HintText.Margin.Top + HintText.Margin.Bottom : 0d;
+        var footerHeight = FooterPanel?.ActualHeight ?? 30d;
+        var footerMargin = FooterPanel != null ? FooterPanel.Margin.Top + FooterPanel.Margin.Bottom : 0d;
+        return rootMargin + hintHeight + hintMargin + footerHeight + footerMargin + 6d;
     }
 
     private static double MeasureTextWidth(string text, Typeface typeface, double fontSize, double pixelsPerDip)

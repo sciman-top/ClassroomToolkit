@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
@@ -134,13 +135,21 @@ public partial class RollCallWindow : Window
         _viewModel.SaveState();
     }
 
-    private void OnGroupClick(object sender, RoutedEventArgs e)
+    private void OnGroupEntryClick(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.Button button && button.Tag is string group)
+        if (sender is System.Windows.Controls.Button button && button.DataContext is GroupButtonItem item)
         {
-            _viewModel.SetCurrentGroup(group);
-            UpdatePhotoDisplay(forceHide: true);
-            PersistSettings();
+            if (item.IsReset)
+            {
+                OnResetClick(sender, e);
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(item.Label))
+            {
+                _viewModel.SetCurrentGroup(item.Label);
+                UpdatePhotoDisplay(forceHide: true);
+                PersistSettings();
+            }
         }
     }
 
