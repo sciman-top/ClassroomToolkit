@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Models;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -71,6 +72,7 @@ public partial class StudentListDialog : Window
             totalRows * StudentButtonHeight + Math.Max(0, totalRows - 1) * vSpacing + 90d);
         Width = preferredWidth;
         Height = preferredHeight;
+        WindowPlacementHelper.EnsureVisible(this);
     }
 
     private static double MeasureTextWidth(string text, Typeface typeface, double fontSize, double pixelsPerDip)

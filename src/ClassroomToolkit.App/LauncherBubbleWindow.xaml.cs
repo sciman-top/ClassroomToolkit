@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -16,6 +17,14 @@ public partial class LauncherBubbleWindow : Window
         MouseLeftButtonDown += OnMouseDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseUp;
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                WindowPlacementHelper.EnsureVisible(this);
+            }
+        };
     }
 
     public event Action? RestoreRequested;

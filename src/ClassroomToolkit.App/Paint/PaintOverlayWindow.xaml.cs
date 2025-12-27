@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Linq;
+using ClassroomToolkit.App.Helpers;
 using MediaColor = System.Windows.Media.Color;
 using WpfPoint = System.Windows.Point;
 
@@ -15,6 +17,9 @@ public partial class PaintOverlayWindow : Window
     private bool _isDrawingShape;
     private WpfPoint _shapeStart;
     private Shape? _activeShape;
+    private bool _isRegionSelecting;
+    private WpfPoint _regionStart;
+    private Rectangle? _regionRect;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
     private readonly Stack<StrokeCollection> _strokeHistory = new();
@@ -23,6 +28,14 @@ public partial class PaintOverlayWindow : Window
     {
         InitializeComponent();
         WindowState = WindowState.Maximized;
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                WindowPlacementHelper.EnsureVisible(this);
+            }
+        };
         InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
         InkLayer.EraserShape = new RectangleStylusShape(24, 24);
@@ -62,9 +75,16 @@ public partial class PaintOverlayWindow : Window
             case PaintToolMode.Shape:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
                 break;
+            case PaintToolMode.RegionErase:
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
+                break;
             default:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
                 break;
+        }
+        if (mode != PaintToolMode.RegionErase)
+        {
+            ClearRegionSelection();
         }
     }
 
@@ -101,7 +121,27 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_mode == PaintToolMode.RegionErase)
+        {
+            _regionStart = e.GetPosition(ShapeCanvas);
+            _regionRect = new Rectangle
+            {
+                Stroke = new SolidColorBrush(MediaColor.FromArgb(200, 255, 200, 60)),
+                StrokeThickness = 2,
+                StrokeDashArray = new DoubleCollection { 6, 4 },
+                Fill = new SolidColorBrush(MediaColor.FromArgb(30, 255, 200, 60))
+            };
+            System.Windows.Controls.Canvas.SetLeft(_regionRect, _regionStart.X);
+            System.Windows.Controls.Canvas.SetTop(_regionRect, _regionStart.Y);
+            ShapeCanvas.Children.Add(_regionRect);
+            _isRegionSelecting = true;
+            return;
+        }
         if (_mode != PaintToolMode.Shape)
+        {
+            return;
+        }
+        if (_shapeType == PaintShapeType.None)
         {
             return;
         }
@@ -118,6 +158,12 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (_mode == PaintToolMode.RegionErase && _isRegionSelecting && _regionRect != null)
+        {
+            var current = e.GetPosition(ShapeCanvas);
+            UpdateSelectionRect(_regionRect, _regionStart, current);
+            return;
+        }
         if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
         {
             var point = e.GetPosition(ShapeCanvas);
@@ -133,6 +179,18 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_mode == PaintToolMode.RegionErase && _isRegionSelecting)
+        {
+            _isRegionSelecting = false;
+            var end = e.GetPosition(ShapeCanvas);
+            var region = BuildRegionRect(_regionStart, end);
+            ClearRegionSelection();
+            if (region.Width > 2 && region.Height > 2)
+            {
+                EraseRegion(region);
+            }
+            return;
+        }
         if (_mode == PaintToolMode.Shape)
         {
             _isDrawingShape = false;
@@ -142,7 +200,7 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
-        if (_mode == PaintToolMode.Cursor || _mode == PaintToolMode.Brush || _mode == PaintToolMode.Shape || _mode == PaintToolMode.Eraser)
+        if (_mode == PaintToolMode.Cursor || _mode == PaintToolMode.Brush || _mode == PaintToolMode.Shape || _mode == PaintToolMode.Eraser || _mode == PaintToolMode.RegionErase)
         {
             var command = e.Delta < 0
                 ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
@@ -224,6 +282,7 @@ public partial class PaintOverlayWindow : Window
     {
         return type switch
         {
+            PaintShapeType.None => null,
             PaintShapeType.Line => new Line(),
             PaintShapeType.DashedLine => new Line(),
             PaintShapeType.Rectangle => new System.Windows.Shapes.Rectangle(),
@@ -280,5 +339,77 @@ public partial class PaintOverlayWindow : Window
         {
             ShapeCanvas.Children.Remove(shape);
         }
+    }
+
+    private void EraseRegion(Rect region)
+    {
+        if (InkLayer.Strokes.Count > 0)
+        {
+            _strokeHistory.Push(new StrokeCollection(InkLayer.Strokes));
+            var hits = InkLayer.Strokes.HitTest(region, 60);
+            foreach (var stroke in hits.ToList())
+            {
+                InkLayer.Strokes.Remove(stroke);
+            }
+        }
+
+        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
+        foreach (var shape in shapes)
+        {
+            if (shape == _regionRect)
+            {
+                continue;
+            }
+            if (IsShapeHit(region, shape))
+            {
+                ShapeCanvas.Children.Remove(shape);
+            }
+        }
+    }
+
+    private static bool IsShapeHit(Rect region, Shape shape)
+    {
+        try
+        {
+            var bounds = shape.RenderedGeometry.Bounds;
+            var transform = shape.TransformToAncestor((Visual)shape.Parent);
+            var transformed = transform.TransformBounds(bounds);
+            return region.IntersectsWith(transformed);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ClearRegionSelection()
+    {
+        if (_regionRect != null)
+        {
+            ShapeCanvas.Children.Remove(_regionRect);
+            _regionRect = null;
+        }
+        _isRegionSelecting = false;
+    }
+
+    private static void UpdateSelectionRect(Rectangle rect, WpfPoint start, WpfPoint end)
+    {
+        var left = Math.Min(start.X, end.X);
+        var top = Math.Min(start.Y, end.Y);
+        var width = Math.Abs(end.X - start.X);
+        var height = Math.Abs(end.Y - start.Y);
+        System.Windows.Controls.Canvas.SetLeft(rect, left);
+        System.Windows.Controls.Canvas.SetTop(rect, top);
+        rect.Width = Math.Max(1, width);
+        rect.Height = Math.Max(1, height);
+    }
+
+    private static Rect BuildRegionRect(WpfPoint start, WpfPoint end)
+    {
+        var left = Math.Min(start.X, end.X);
+        var top = Math.Min(start.Y, end.Y);
+        var width = Math.Abs(end.X - start.X);
+        var height = Math.Abs(end.Y - start.Y);
+        return new Rect(left, top, Math.Max(1, width), Math.Max(1, height));
     }
 }

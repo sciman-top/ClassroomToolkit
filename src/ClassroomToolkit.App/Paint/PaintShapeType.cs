@@ -2,7 +2,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public enum PaintShapeType
 {
-    Line = 0,
+    None = 0,
+    Line,
     DashedLine,
     Rectangle,
     RectangleFill,

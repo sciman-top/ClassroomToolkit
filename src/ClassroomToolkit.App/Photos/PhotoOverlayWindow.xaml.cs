@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -48,6 +49,7 @@ public partial class PhotoOverlayWindow : Window
         Height = targetHeight;
         Left = screen.X + (screen.Width - targetWidth) / 2;
         Top = screen.Y + (screen.Height - targetHeight) / 2;
+        WindowPlacementHelper.EnsureVisible(this);
 
         Show();
         if (durationSeconds > 0)

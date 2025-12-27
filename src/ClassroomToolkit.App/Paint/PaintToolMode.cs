@@ -5,5 +5,6 @@ public enum PaintToolMode
     Cursor = 0,
     Brush,
     Eraser,
-    Shape
+    Shape,
+    RegionErase
 }

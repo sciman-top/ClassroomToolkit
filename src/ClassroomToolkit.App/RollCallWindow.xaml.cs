@@ -46,6 +46,13 @@ public partial class RollCallWindow : Window
         _viewModel = new RollCallViewModel(dataPath);
         DataContext = _viewModel;
         Loaded += OnLoaded;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                WindowPlacementHelper.EnsureVisible(this);
+            }
+        };
         Closing += OnClosing;
         PreviewKeyDown += OnPreviewKeyDown;
 
@@ -74,6 +81,7 @@ public partial class RollCallWindow : Window
         _viewModel.LoadData(_settings.RollCallCurrentClass);
         ApplySettings(_settings);
         RestoreGroupSelection();
+        WindowPlacementHelper.EnsureVisible(this);
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();

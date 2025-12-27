@@ -1,4 +1,5 @@
 using System.Windows;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
@@ -14,6 +15,7 @@ public partial class DiagnosticsDialog : Window
         SummaryText.Text = result.Summary;
         DetailBox.Text = result.Detail;
         SuggestionBox.Text = string.IsNullOrWhiteSpace(result.Suggestion) ? "暂无建议。" : result.Suggestion;
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnCopyClick(object sender, RoutedEventArgs e)

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Navigation;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -9,6 +10,7 @@ public partial class AboutDialog : Window
     public AboutDialog()
     {
         InitializeComponent();
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnRequestNavigate(object sender, RequestNavigateEventArgs e)

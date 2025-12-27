@@ -1,4 +1,5 @@
 using System.Windows;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App;
@@ -25,6 +26,7 @@ public partial class RemoteKeyDialog : Window
         {
             PresetCombo.SelectedIndex = 2;
         }
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnPresetChanged(object sender, RoutedEventArgs e)

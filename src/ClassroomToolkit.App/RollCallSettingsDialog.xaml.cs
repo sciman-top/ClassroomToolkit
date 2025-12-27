@@ -5,6 +5,7 @@ using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -70,6 +71,7 @@ public partial class RollCallSettingsDialog : Window
         UpdateReminderIntervalLabel();
         UpdateSpeechControls();
         UpdateRemoteKeyEnabled();
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnRemoteEnabledChanged(object sender, RoutedEventArgs e)

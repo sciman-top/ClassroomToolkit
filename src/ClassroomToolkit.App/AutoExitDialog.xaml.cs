@@ -1,4 +1,5 @@
 using System.Windows;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -10,6 +11,7 @@ public partial class AutoExitDialog : Window
         MinutesBox.Text = Math.Max(0, minutes).ToString();
         MinutesBox.SelectAll();
         MinutesBox.Focus();
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     public int Minutes { get; private set; }

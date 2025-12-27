@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -25,6 +26,7 @@ public partial class ClassSelectDialog : Window
         }
         ClassList.MouseDoubleClick += OnClassDoubleClick;
         ClassList.KeyDown += OnClassKeyDown;
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)

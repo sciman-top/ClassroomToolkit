@@ -42,12 +42,20 @@ public partial class MainWindow : Window
         OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
         DataContext = this;
         Loaded += OnLoaded;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                WindowPlacementHelper.EnsureVisible(this);
+            }
+        };
         Closing += OnClosing;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ApplyLauncherPosition();
+        WindowPlacementHelper.EnsureVisible(this);
         UpdateButtonMetrics();
         ScheduleAutoExitTimer();
         if (_settings.LauncherMinimized)
@@ -97,7 +105,8 @@ public partial class MainWindow : Window
         {
             _overlayWindow.Show();
             _toolbarWindow.Show();
-            _overlayWindow.Activate();
+            _toolbarWindow.Activate();
+            WindowPlacementHelper.EnsureVisible(_toolbarWindow);
         }
         UpdateToggleButtons();
     }
@@ -110,6 +119,7 @@ public partial class MainWindow : Window
         }
         _overlayWindow = new Paint.PaintOverlayWindow();
         _toolbarWindow = new Paint.PaintToolbarWindow();
+        _toolbarWindow.Owner = _overlayWindow;
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
@@ -125,12 +135,6 @@ public partial class MainWindow : Window
         ApplyPaintToolbarPosition();
         _toolbarWindow.ApplySettings(_settings);
         _toolbarWindow.ModeChanged += mode => _overlayWindow.SetMode(mode);
-        _toolbarWindow.ShapeTypeChanged += type =>
-        {
-            _overlayWindow.SetShapeType(type);
-            _settings.ShapeType = type;
-            SaveSettings();
-        };
         _toolbarWindow.BrushColorChanged += color =>
         {
             _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
@@ -139,36 +143,16 @@ public partial class MainWindow : Window
         };
         _toolbarWindow.BoardColorChanged += color =>
         {
-            _overlayWindow.SetBoardColor(color);
             _settings.BoardColor = color;
             SaveSettings();
-        };
-        _toolbarWindow.BrushSizeChanged += size =>
-        {
-            _overlayWindow.SetBrush(_overlayWindow.CurrentBrushColor, size, _overlayWindow.CurrentBrushOpacity);
-            _settings.BrushSize = size;
-            SaveSettings();
-        };
-        _toolbarWindow.EraserSizeChanged += size =>
-        {
-            _overlayWindow.SetEraserSize(size);
-            _settings.EraserSize = size;
-            SaveSettings();
+            if (_toolbarWindow.BoardActive)
+            {
+                _overlayWindow.SetBoardColor(color);
+                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+            }
         };
         _toolbarWindow.ClearRequested += () => _overlayWindow.ClearAll();
         _toolbarWindow.UndoRequested += () => _overlayWindow.Undo();
-        _toolbarWindow.BrushOpacityChanged += opacity =>
-        {
-            _overlayWindow.SetBrushOpacity(opacity);
-            _settings.BrushOpacity = opacity;
-            SaveSettings();
-        };
-        _toolbarWindow.BoardOpacityChanged += opacity =>
-        {
-            _overlayWindow.SetBoardOpacity(opacity);
-            _settings.BoardOpacity = opacity;
-            SaveSettings();
-        };
         _toolbarWindow.QuickColorSlotChanged += (index, color) =>
         {
             switch (index)
@@ -185,25 +169,38 @@ public partial class MainWindow : Window
             }
             SaveSettings();
         };
-        _toolbarWindow.WpsModeChanged += mode =>
+        _toolbarWindow.WhiteboardToggled += active =>
         {
-            _overlayWindow.UpdateWpsMode(mode);
-            _settings.WpsInputMode = mode;
-            SaveSettings();
+            if (active)
+            {
+                _overlayWindow.SetBoardColor(_settings.BoardColor);
+                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+                _toolbarWindow.Activate();
+            }
+            else
+            {
+                _overlayWindow.SetBoardColor(Colors.Transparent);
+                _overlayWindow.SetBoardOpacity(0);
+            }
         };
-        _toolbarWindow.WpsWheelMappingChanged += enabled =>
-        {
-            _overlayWindow.UpdateWpsWheelMapping(enabled);
-            _settings.WpsWheelForward = enabled;
-            SaveSettings();
-        };
+        _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
 
-        _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
+        _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
+            ? Paint.PaintToolMode.Brush
+            : Paint.PaintToolMode.Shape);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
         _overlayWindow.SetEraserSize(_settings.EraserSize);
         _overlayWindow.SetShapeType(_settings.ShapeType);
-        _overlayWindow.SetBoardColor(_settings.BoardColor);
-        _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+        if (_toolbarWindow.BoardActive)
+        {
+            _overlayWindow.SetBoardColor(_settings.BoardColor);
+            _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+        }
+        else
+        {
+            _overlayWindow.SetBoardColor(Colors.Transparent);
+            _overlayWindow.SetBoardOpacity(0);
+        }
         _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
         _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
@@ -316,7 +313,7 @@ public partial class MainWindow : Window
     {
         var dialog = new Paint.PaintSettingsDialog(_settings)
         {
-            Owner = this
+            Owner = _toolbarWindow ?? this
         };
         if (dialog.ShowDialog() != true)
         {
@@ -326,6 +323,11 @@ public partial class MainWindow : Window
         _settings.ControlWpsPpt = dialog.ControlWpsPpt;
         _settings.WpsInputMode = dialog.WpsInputMode;
         _settings.WpsWheelForward = dialog.WpsWheelForward;
+        _settings.BrushSize = dialog.BrushSize;
+        _settings.BrushOpacity = dialog.BrushOpacity;
+        _settings.EraserSize = dialog.EraserSize;
+        _settings.BoardOpacity = dialog.BoardOpacity;
+        _settings.ShapeType = dialog.ShapeType;
         SaveSettings();
 
         if (_overlayWindow != null)
@@ -333,6 +335,17 @@ public partial class MainWindow : Window
             _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
             _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
             _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+            _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+            _overlayWindow.SetEraserSize(_settings.EraserSize);
+            _overlayWindow.SetShapeType(_settings.ShapeType);
+            _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
+                ? Paint.PaintToolMode.Brush
+                : Paint.PaintToolMode.Shape);
+            if (_toolbarWindow?.BoardActive == true)
+            {
+                _overlayWindow.SetBoardColor(_settings.BoardColor);
+                _overlayWindow.SetBoardOpacity(_settings.BoardOpacity);
+            }
         }
         _toolbarWindow?.ApplySettings(_settings);
     }

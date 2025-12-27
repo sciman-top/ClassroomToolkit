@@ -1,4 +1,5 @@
 using System.Windows;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
 
@@ -11,6 +12,7 @@ public partial class TimerSetDialog : Window
         InitializeComponent();
         SetMinutes(Math.Clamp(minutes, 0, 150), updateSlider: true);
         SetSeconds(Math.Clamp(seconds, 0, 59));
+        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     public int Minutes { get; private set; }
