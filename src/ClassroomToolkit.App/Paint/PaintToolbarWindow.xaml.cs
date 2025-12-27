@@ -290,7 +290,7 @@ public partial class PaintToolbarWindow : Window
         button.Foreground = GetContrastingBrush(color);
     }
 
-    private static Brush GetContrastingBrush(MediaColor color)
+    private static System.Windows.Media.Brush GetContrastingBrush(MediaColor color)
     {
         var luminance = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
         return luminance > 0.6 ? Brushes.Black : Brushes.White;
