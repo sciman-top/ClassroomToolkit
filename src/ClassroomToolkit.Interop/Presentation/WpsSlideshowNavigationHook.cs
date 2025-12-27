@@ -22,6 +22,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
     private bool _interceptKeyboard = true;
     private bool _interceptWheel = true;
     private bool _emitWheelOnBlock = true;
+    public int LastError { get; private set; }
     private readonly HashSet<VirtualKey> _allowedKeys = new()
     {
         VirtualKey.Up,
@@ -69,9 +70,11 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, moduleHandle, 0);
         if (_keyboardHook == IntPtr.Zero || _mouseHook == IntPtr.Zero)
         {
+            LastError = Marshal.GetLastWin32Error();
             Stop();
             return false;
         }
+        LastError = 0;
         return true;
     }
 

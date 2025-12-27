@@ -252,6 +252,18 @@ public static class SystemDiagnostics
             issues.Add("WPS 全局钩子不可用：已自动降级为消息投递模式。");
             fixes.Add("可尝试以管理员身份运行，或检查安全软件是否拦截全局钩子。");
         }
+
+        var remoteHookAvailable = TryCheckRemoteHook(out var remoteHookError);
+        lines.Add($"遥控点名钩子：{(remoteHookAvailable ? "可用" : "不可用")}");
+        if (!remoteHookAvailable)
+        {
+            if (!string.IsNullOrWhiteSpace(remoteHookError))
+            {
+                lines.Add($"遥控钩子错误：{remoteHookError}");
+            }
+            issues.Add("遥控点名钩子不可用：翻页笔快捷键可能无法工作。");
+            fixes.Add("可尝试以管理员身份运行，或检查安全软件是否拦截全局钩子。");
+        }
     }
 
     private static bool TryCheckWpsHook(out string error)
@@ -265,8 +277,34 @@ public static class SystemDiagnostics
                 return false;
             }
             var started = hook.Start();
+            if (!started && hook.LastError != 0)
+            {
+                error = $"Win32 Error {hook.LastError}";
+            }
             hook.Stop();
             return started;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool TryCheckRemoteHook(out string error)
+    {
+        error = string.Empty;
+        try
+        {
+            using var hook = new KeyboardHook();
+            hook.Start();
+            var active = hook.IsActive;
+            if (!active && hook.LastError != 0)
+            {
+                error = $"Win32 Error {hook.LastError}";
+            }
+            hook.Stop();
+            return active;
         }
         catch (Exception ex)
         {

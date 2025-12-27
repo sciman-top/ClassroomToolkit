@@ -16,6 +16,10 @@ public sealed class KeyboardHook : IDisposable
     private bool _ctrlDown;
     private bool _altDown;
 
+    public bool IsActive => _hookId != IntPtr.Zero;
+
+    public int LastError { get; private set; }
+
     public KeyboardHook()
     {
         _hookProc = HookCallback;
@@ -38,6 +42,14 @@ public sealed class KeyboardHook : IDisposable
             return;
         }
         _hookId = SetHook(_hookProc);
+        if (_hookId == IntPtr.Zero)
+        {
+            LastError = Marshal.GetLastWin32Error();
+        }
+        else
+        {
+            LastError = 0;
+        }
     }
 
     public void Stop()

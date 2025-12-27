@@ -42,6 +42,8 @@ public partial class RollCallWindow : Window
     private bool _allowClose;
     private bool _timerStateApplied;
     private bool _rollStateDirty;
+    private bool _speechUnavailableNotified;
+    private bool _remoteHookUnavailableNotified;
     private double _lastIdFontSize;
     private double _lastNameFontSize;
     private double _lastTimerFontSize;
@@ -553,7 +555,17 @@ public partial class RollCallWindow : Window
         }
         catch
         {
-            // 保持静默，避免语音失败影响点名流程。
+            if (_speechUnavailableNotified)
+            {
+                return;
+            }
+            _speechUnavailableNotified = true;
+            Dispatcher.BeginInvoke(() =>
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
+                System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            });
         }
     }
 
@@ -597,6 +609,18 @@ public partial class RollCallWindow : Window
         };
         _keyboardHook.BindingTriggered += _remoteHandler;
         _keyboardHook.Start();
+        if (!_keyboardHook.IsActive && !_remoteHookUnavailableNotified)
+        {
+            _remoteHookUnavailableNotified = true;
+            var error = _keyboardHook.LastError;
+            Dispatcher.BeginInvoke(() =>
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                var suffix = error == 0 ? string.Empty : $"（错误码：{error}）";
+                var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截{suffix}。可尝试以管理员身份运行。";
+                System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            });
+        }
     }
 
     private void StopKeyboardHook()
