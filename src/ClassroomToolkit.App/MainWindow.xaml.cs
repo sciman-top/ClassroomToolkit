@@ -184,6 +184,15 @@ public partial class MainWindow : Window
             }
             SaveSettings();
         };
+        _toolbarWindow.ShapeTypeChanged += type =>
+        {
+            _settings.ShapeType = type;
+            SaveSettings();
+            if (_overlayWindow != null)
+            {
+                _overlayWindow.SetShapeType(type);
+            }
+        };
         _toolbarWindow.WhiteboardToggled += active =>
         {
             if (!_toolbarWindow.HasOverlay)
@@ -259,7 +268,7 @@ public partial class MainWindow : Window
         {
             return;
         }
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "students.xlsx");
+        var path = ResolveStudentWorkbookPath();
         _rollCallWindow = new RollCallWindow(path, _settingsService, _settings);
         _rollCallWindow.IsVisibleChanged += (_, _) => UpdateToggleButtons();
         _rollCallWindow.Closed += (_, _) =>
@@ -459,6 +468,11 @@ public partial class MainWindow : Window
             parent = element.Parent as DependencyObject;
         }
         return parent ?? LogicalTreeHelper.GetParent(obj);
+    }
+
+    private static string ResolveStudentWorkbookPath()
+    {
+        return ClassroomToolkit.App.Helpers.StudentResourceLocator.ResolveStudentWorkbookPath();
     }
 
     private void ApplyLauncherPosition()

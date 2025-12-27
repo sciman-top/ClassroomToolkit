@@ -108,8 +108,8 @@ public partial class RollCallSettingsDialog : Window
     {
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         var settingsPath = Path.Combine(baseDir, "settings.ini");
-        var studentPath = Path.Combine(baseDir, "students.xlsx");
-        var photoRoot = Path.Combine(baseDir, "student_photos");
+        var studentPath = StudentResourceLocator.ResolveStudentWorkbookPath();
+        var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
         var result = SystemDiagnostics.CollectSystemDiagnostics(_settings, settingsPath, studentPath, photoRoot);
         var dialog = new DiagnosticsDialog(result)
         {
@@ -334,6 +334,10 @@ public partial class RollCallSettingsDialog : Window
 
     private void UpdateReminderIntervalLabel()
     {
+        if (ReminderIntervalLabel == null || ReminderIntervalSlider == null)
+        {
+            return;
+        }
         var minutes = (int)Math.Round(ReminderIntervalSlider.Value);
         ReminderIntervalLabel.Text = $"每 {minutes} 分钟";
     }

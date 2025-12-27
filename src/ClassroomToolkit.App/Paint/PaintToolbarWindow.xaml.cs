@@ -34,6 +34,7 @@ public partial class PaintToolbarWindow : Window
     public event Action? ClearRequested;
     public event Action? UndoRequested;
     public event Action<int, MediaColor>? QuickColorSlotChanged;
+    public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action? SettingsRequested;
     public event Action<bool>? WhiteboardToggled;
 
@@ -123,25 +124,47 @@ public partial class PaintToolbarWindow : Window
         WindowPlacementHelper.EnsureVisible(this);
     }
 
-    private void OnModeClick(object sender, RoutedEventArgs e)
+    private void OnModeChecked(object sender, RoutedEventArgs e)
     {
-        if (sender is not ToggleButton button || _initializing)
+        if (sender is not ToggleButton || _initializing)
         {
             return;
         }
-        if (button == CursorButton)
+        if (ReferenceEquals(sender, CursorButton))
         {
-            UpdateToolButtons(CursorButton.IsChecked == true ? PaintToolMode.Cursor : PaintToolMode.Brush);
+            UpdateToolButtons(PaintToolMode.Cursor);
             return;
         }
-        if (button == EraserButton)
+        if (ReferenceEquals(sender, EraserButton))
         {
-            UpdateToolButtons(EraserButton.IsChecked == true ? PaintToolMode.Eraser : PaintToolMode.Brush);
+            UpdateToolButtons(PaintToolMode.Eraser);
             return;
         }
-        if (button == RegionEraseButton)
+        if (ReferenceEquals(sender, RegionEraseButton))
         {
-            UpdateToolButtons(RegionEraseButton.IsChecked == true ? PaintToolMode.RegionErase : PaintToolMode.Brush);
+            UpdateToolButtons(PaintToolMode.RegionErase);
+        }
+    }
+
+    private void OnModeUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+        {
+            return;
+        }
+        if (ReferenceEquals(sender, CursorButton) && _currentMode == PaintToolMode.Cursor)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+            return;
+        }
+        if (ReferenceEquals(sender, EraserButton) && _currentMode == PaintToolMode.Eraser)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+            return;
+        }
+        if (ReferenceEquals(sender, RegionEraseButton) && _currentMode == PaintToolMode.RegionErase)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
         }
     }
 
@@ -151,12 +174,17 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
+        var wasShapeMode = _currentMode == PaintToolMode.Shape;
         var index = ResolveQuickColorIndex(button.Tag);
         if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
         {
             return;
         }
         UpdateQuickColorSelection(_quickColors[index.Value]);
+        if (wasShapeMode)
+        {
+            ResetShapeType();
+        }
         UpdateToolButtons(PaintToolMode.Brush);
         if (_overlay != null)
         {
@@ -271,6 +299,10 @@ public partial class PaintToolbarWindow : Window
         var color = MediaColor.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
         SetQuickColorSlot(index, color);
         QuickColorSlotChanged?.Invoke(index, color);
+        if (_currentMode == PaintToolMode.Shape)
+        {
+            ResetShapeType();
+        }
         UpdateToolButtons(PaintToolMode.Brush);
         UpdateQuickColorSelection(color);
         if (_overlay != null)
@@ -355,6 +387,20 @@ public partial class PaintToolbarWindow : Window
                            && _quickColors[i].B == match.B;
             buttons[i].IsChecked = isActive;
         }
+    }
+
+    private void ResetShapeType()
+    {
+        if (_shapeType == PaintShapeType.None)
+        {
+            return;
+        }
+        _shapeType = PaintShapeType.None;
+        if (_overlay != null)
+        {
+            _overlay.SetShapeType(_shapeType);
+        }
+        ShapeTypeChanged?.Invoke(_shapeType);
     }
 
     private void OnToolbarDrag(object sender, MouseButtonEventArgs e)

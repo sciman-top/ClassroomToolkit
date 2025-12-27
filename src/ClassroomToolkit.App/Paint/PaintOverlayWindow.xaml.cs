@@ -5,16 +5,22 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 using MediaColor = System.Windows.Media.Color;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
 using WpfBrush = System.Windows.Media.Brush;
+using System.Windows.Interop;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow : Window
 {
+    private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
+    private const int GwlExstyle = -20;
+    private const int WsExTransparent = 0x20;
+    private IntPtr _hwnd;
     private sealed class PaintSnapshot
     {
         public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes)
@@ -105,6 +111,8 @@ public partial class PaintOverlayWindow : Window
     }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
+    private MediaColor _boardColor = Colors.Transparent;
+    private byte _boardOpacity;
     private bool _isDrawingShape;
     private WpfPoint _shapeStart;
     private Shape? _activeShape;
@@ -128,6 +136,11 @@ public partial class PaintOverlayWindow : Window
                 WindowPlacementHelper.EnsureVisible(this);
             }
         };
+        SourceInitialized += (_, _) =>
+        {
+            _hwnd = new WindowInteropHelper(this).Handle;
+            UpdateInputPassthrough();
+        };
         InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
         InkLayer.EraserShape = new RectangleStylusShape(24, 24);
@@ -137,6 +150,7 @@ public partial class PaintOverlayWindow : Window
         InkLayer.MouseMove += OnMouseMove;
         InkLayer.MouseLeftButtonUp += OnMouseUp;
         MouseWheel += OnMouseWheel;
+        UpdateBoardBackground();
 
         var classifier = new ClassroomToolkit.Interop.Presentation.PresentationClassifier();
         var planner = new ClassroomToolkit.Services.Presentation.PresentationControlPlanner(classifier);
@@ -158,13 +172,16 @@ public partial class PaintOverlayWindow : Window
         _mode = mode;
         OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
         InkLayer.IsHitTestVisible = mode != PaintToolMode.Cursor;
+        InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
         switch (mode)
         {
             case PaintToolMode.Brush:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
+                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.Ink;
                 break;
             case PaintToolMode.Eraser:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
+                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
                 break;
             case PaintToolMode.Shape:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
@@ -180,6 +197,7 @@ public partial class PaintOverlayWindow : Window
         {
             ClearRegionSelection();
         }
+        UpdateInputPassthrough();
     }
 
     public void SetBrush(MediaColor color, double size, byte opacity)
@@ -200,7 +218,8 @@ public partial class PaintOverlayWindow : Window
 
     public void SetBoardColor(MediaColor color)
     {
-        OverlayRoot.Background = new SolidColorBrush(color);
+        _boardColor = color;
+        UpdateBoardBackground();
     }
 
     public void ClearAll()
@@ -220,6 +239,7 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.RegionErase)
         {
+            e.Handled = true;
             _regionStart = e.GetPosition(ShapeCanvas);
             _regionRect = new WpfRectangle
             {
@@ -232,7 +252,12 @@ public partial class PaintOverlayWindow : Window
             System.Windows.Controls.Canvas.SetTop(_regionRect, _regionStart.Y);
             ShapeCanvas.Children.Add(_regionRect);
             _isRegionSelecting = true;
+            InkLayer.CaptureMouse();
             return;
+        }
+        if (_mode == PaintToolMode.Eraser)
+        {
+            RemoveShapeAt(e.GetPosition(ShapeCanvas));
         }
         if (_mode != PaintToolMode.Shape)
         {
@@ -257,6 +282,7 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.RegionErase && _isRegionSelecting && _regionRect != null)
         {
+            e.Handled = true;
             var regionPosition = e.GetPosition(ShapeCanvas);
             UpdateSelectionRect(_regionRect, _regionStart, regionPosition);
             return;
@@ -278,6 +304,7 @@ public partial class PaintOverlayWindow : Window
     {
         if (_mode == PaintToolMode.RegionErase && _isRegionSelecting)
         {
+            e.Handled = true;
             _isRegionSelecting = false;
             var end = e.GetPosition(ShapeCanvas);
             var region = BuildRegionRect(_regionStart, end);
@@ -287,6 +314,10 @@ public partial class PaintOverlayWindow : Window
                 EraseRegion(region);
             }
             _erasing = false;
+            if (InkLayer.IsMouseCaptured)
+            {
+                InkLayer.ReleaseMouseCapture();
+            }
             return;
         }
         if (_mode == PaintToolMode.Shape)
@@ -333,13 +364,50 @@ public partial class PaintOverlayWindow : Window
 
     public void SetBoardOpacity(byte opacity)
     {
-        if (OverlayRoot.Background is SolidColorBrush brush)
-        {
-            var color = brush.Color;
-            color.A = opacity;
-            brush.Color = color;
-        }
+        _boardOpacity = opacity;
+        UpdateBoardBackground();
+        UpdateInputPassthrough();
     }
+
+    private void UpdateBoardBackground()
+    {
+        var color = _boardColor;
+        var opacity = _boardOpacity;
+        if (opacity == 0 || color.A == 0)
+        {
+            color = TransparentHitTestColor;
+        }
+        else
+        {
+            color = MediaColor.FromArgb(opacity, color.R, color.G, color.B);
+        }
+        OverlayRoot.Background = new SolidColorBrush(color);
+    }
+
+    private void UpdateInputPassthrough()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var enable = _mode == PaintToolMode.Cursor && _boardOpacity == 0;
+        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        if (enable)
+        {
+            exStyle |= WsExTransparent;
+        }
+        else
+        {
+            exStyle &= ~WsExTransparent;
+        }
+        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 
     public void UpdateWpsMode(string mode)
     {
@@ -463,11 +531,7 @@ public partial class PaintOverlayWindow : Window
         PushHistory();
         if (InkLayer.Strokes.Count > 0)
         {
-            var hits = InkLayer.Strokes.HitTest(region, 60);
-            foreach (var stroke in hits.ToList())
-            {
-                InkLayer.Strokes.Remove(stroke);
-            }
+            InkLayer.Strokes.Erase(region);
         }
 
         var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
@@ -507,6 +571,10 @@ public partial class PaintOverlayWindow : Window
             _regionRect = null;
         }
         _isRegionSelecting = false;
+        if (InkLayer.IsMouseCaptured)
+        {
+            InkLayer.ReleaseMouseCapture();
+        }
     }
 
     private static void UpdateSelectionRect(WpfRectangle rect, WpfPoint start, WpfPoint end)

@@ -22,6 +22,7 @@ public partial class RollCallWindow : Window
     private readonly RollCallViewModel _viewModel;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly string _dataPath;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _rollStateSaveTimer;
     private readonly Stopwatch _stopwatch;
@@ -40,6 +41,7 @@ public partial class RollCallWindow : Window
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
     {
         InitializeComponent();
+        _dataPath = dataPath;
         _settingsService = settingsService;
         _settings = settings;
         ApplyWindowBounds(settings);
@@ -315,20 +317,9 @@ public partial class RollCallWindow : Window
         return _photoResolver;
     }
 
-    private static string ResolvePhotoRoot()
+    private string ResolvePhotoRoot()
     {
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var basePath = Path.Combine(baseDir, "student_photos");
-        var cwdPath = Path.Combine(Environment.CurrentDirectory, "student_photos");
-        if (Directory.Exists(basePath))
-        {
-            return basePath;
-        }
-        if (Directory.Exists(cwdPath))
-        {
-            return cwdPath;
-        }
-        return basePath;
+        return StudentResourceLocator.ResolveStudentPhotoRoot();
     }
 
     private string ResolvePhotoClassName()

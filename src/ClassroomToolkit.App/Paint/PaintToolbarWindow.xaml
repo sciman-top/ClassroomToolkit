@@ -44,7 +44,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
-            <ToggleButton x:Name="CursorButton" Content="光标" Width="34" Height="28" Margin="3" Click="OnModeClick"
+            <ToggleButton x:Name="CursorButton" Content="光标" Width="34" Height="28" Margin="3"
+                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                           ToolTip="光标" />
             <ToggleButton x:Name="QuickColor1Button" Content="黑" Width="34" Height="28" Margin="3" Click="OnColorClick" Tag="0"
                           Style="{StaticResource QuickColorButtonStyle}"
@@ -65,9 +66,11 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button x:Name="UndoButton" Content="撤销" Width="34" Height="28" Margin="3" Click="OnUndoClick"
                     ToolTip="撤销" />
-            <ToggleButton x:Name="EraserButton" Content="橡皮" Width="34" Height="28" Margin="3" Click="OnModeClick"
+            <ToggleButton x:Name="EraserButton" Content="橡皮" Width="34" Height="28" Margin="3"
+                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                           ToolTip="橡皮擦" />
-            <ToggleButton x:Name="RegionEraseButton" Content="框删" Width="34" Height="28" Margin="3" Click="OnModeClick"
+            <ToggleButton x:Name="RegionEraseButton" Content="框删" Width="34" Height="28" Margin="3"
+                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
                           ToolTip="框选删除" />
             <Button x:Name="ClearButton" Content="清空" Width="34" Height="28" Margin="3" Click="OnClearClick"
                     ToolTip="一键清屏" />
