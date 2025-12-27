@@ -15,6 +15,7 @@ using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Interop.Presentation;
+using MediaFontFamily = System.Windows.Media.FontFamily;
 
 namespace ClassroomToolkit.App;
 
@@ -43,7 +44,7 @@ public partial class RollCallWindow : Window
     private double _lastIdFontSize;
     private double _lastNameFontSize;
     private double _lastTimerFontSize;
-    private FontFamily _nameFontFamily = new("Microsoft YaHei UI");
+    private MediaFontFamily _nameFontFamily = new("Microsoft YaHei UI");
     private bool _fontUpdatePending;
     public ICommand OpenRemoteKeyCommand { get; }
 
@@ -829,7 +830,7 @@ public partial class RollCallWindow : Window
         }
         if (IdTextBlock != null)
         {
-            IdTextBlock.FontFamily = new FontFamily("Microsoft YaHei UI");
+            IdTextBlock.FontFamily = new MediaFontFamily("Microsoft YaHei UI");
             IdTextBlock.FontWeight = FontWeights.Bold;
         }
         if (NameTextBlock != null)
@@ -842,7 +843,7 @@ public partial class RollCallWindow : Window
         }
         if (TimerTextBlock != null)
         {
-            TimerTextBlock.FontFamily = new FontFamily("Consolas");
+            TimerTextBlock.FontFamily = new MediaFontFamily("Consolas");
             TimerTextBlock.FontWeight = FontWeights.Bold;
         }
     }
