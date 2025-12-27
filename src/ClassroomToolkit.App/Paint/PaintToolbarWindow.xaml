@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="工具条"
-        Height="120" Width="260"
+        Height="108" Width="248"
         WindowStartupLocation="Manual"
         Topmost="True"
         ShowInTaskbar="False"
@@ -38,46 +38,49 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Grid x:Name="ToolbarRoot" Margin="6" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Border x:Name="ToolbarContainer" Background="#F7F7F7" BorderBrush="#D6D6D6" BorderThickness="1"
+            CornerRadius="10" Padding="6">
+        <Grid x:Name="ToolbarRoot" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
-            <ToggleButton x:Name="CursorButton" Content="光标" Width="34" Height="28" Margin="3"
-                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                          ToolTip="光标" />
-            <ToggleButton x:Name="QuickColor1Button" Content="黑" Width="34" Height="28" Margin="3" Click="OnColorClick" Tag="0"
-                          Style="{StaticResource QuickColorButtonStyle}"
-                          ToolTip="长按更换颜色"
-                          behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}" />
-            <ToggleButton x:Name="QuickColor2Button" Content="红" Width="34" Height="28" Margin="3" Click="OnColorClick" Tag="1"
-                          Style="{StaticResource QuickColorButtonStyle}"
-                          ToolTip="长按更换颜色"
-                          behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}" />
-            <ToggleButton x:Name="QuickColor3Button" Content="蓝" Width="34" Height="28" Margin="3" Click="OnColorClick" Tag="2"
-                          Style="{StaticResource QuickColorButtonStyle}"
-                          ToolTip="长按更换颜色"
-                          behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}" />
-            <Button x:Name="SettingsButton" Content="设置" Width="34" Height="28" Margin="3" Click="OnSettingsClick"
-                    ToolTip="画笔设置" />
-        </StackPanel>
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
+                <ToggleButton x:Name="CursorButton" Content="光标" Width="32" Height="26" Margin="2"
+                              Checked="OnModeChecked" Unchecked="OnModeUnchecked"
+                              ToolTip="光标" />
+                <ToggleButton x:Name="QuickColor1Button" Content="黑" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="0"
+                              Style="{StaticResource QuickColorButtonStyle}"
+                              ToolTip="长按更换颜色"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}" />
+                <ToggleButton x:Name="QuickColor2Button" Content="红" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="1"
+                              Style="{StaticResource QuickColorButtonStyle}"
+                              ToolTip="长按更换颜色"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}" />
+                <ToggleButton x:Name="QuickColor3Button" Content="蓝" Width="32" Height="26" Margin="2" Click="OnColorClick" Tag="2"
+                              Style="{StaticResource QuickColorButtonStyle}"
+                              ToolTip="长按更换颜色"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}" />
+                <Button x:Name="SettingsButton" Content="设置" Width="32" Height="26" Margin="2" Click="OnSettingsClick"
+                        ToolTip="画笔设置" />
+            </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button x:Name="UndoButton" Content="撤销" Width="34" Height="28" Margin="3" Click="OnUndoClick"
-                    ToolTip="撤销" />
-            <ToggleButton x:Name="EraserButton" Content="橡皮" Width="34" Height="28" Margin="3"
-                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                          ToolTip="橡皮擦" />
-            <ToggleButton x:Name="RegionEraseButton" Content="框删" Width="34" Height="28" Margin="3"
-                          Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                          ToolTip="框选删除" />
-            <Button x:Name="ClearButton" Content="清空" Width="34" Height="28" Margin="3" Click="OnClearClick"
-                    ToolTip="一键清屏" />
-            <ToggleButton x:Name="BoardButton" Content="白板" Width="34" Height="28" Margin="3" Click="OnBoardClick"
-                          ToolTip="白板（单击开关 / 长按换色）"
-                          behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" />
-        </StackPanel>
-    </Grid>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="UndoButton" Content="撤销" Width="32" Height="26" Margin="2" Click="OnUndoClick"
+                        ToolTip="撤销" />
+                <ToggleButton x:Name="EraserButton" Content="橡皮" Width="32" Height="26" Margin="2"
+                              Checked="OnModeChecked" Unchecked="OnModeUnchecked"
+                              ToolTip="橡皮擦" />
+                <ToggleButton x:Name="RegionEraseButton" Content="框删" Width="32" Height="26" Margin="2"
+                              Checked="OnModeChecked" Unchecked="OnModeUnchecked"
+                              ToolTip="框选删除" />
+                <Button x:Name="ClearButton" Content="清空" Width="32" Height="26" Margin="2" Click="OnClearClick"
+                        ToolTip="一键清屏" />
+                <ToggleButton x:Name="BoardButton" Content="白板" Width="32" Height="26" Margin="2" Click="OnBoardClick"
+                              ToolTip="白板（单击开关 / 长按换色）"
+                              behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" />
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>

@@ -77,7 +77,7 @@ public partial class RollCallWindow : Window
         _stopwatch = new Stopwatch();
         _timer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(100)
+            Interval = TimeSpan.FromMilliseconds(1000)
         };
         _timer.Tick += OnTimerTick;
 
@@ -819,18 +819,18 @@ public partial class RollCallWindow : Window
 
     private void ApplyFontFamilies()
     {
-        foreach (var family in Fonts.SystemFontFamilies)
-        {
-            if (string.Equals(family.Source, "楷体", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(family.Source, "KaiTi", StringComparison.OrdinalIgnoreCase))
-            {
-                _nameFontFamily = family;
-                break;
-            }
-        }
+        var idFont = FindFontFamily("Microsoft YaHei UI")
+            ?? FindFontFamily("Microsoft YaHei")
+            ?? new MediaFontFamily("Segoe UI");
+        _nameFontFamily = FindFontFamily("楷体")
+            ?? FindFontFamily("KaiTi")
+            ?? idFont;
+        var timerFont = FindFontFamily("Consolas")
+            ?? FindFontFamily("Courier New")
+            ?? idFont;
         if (IdTextBlock != null)
         {
-            IdTextBlock.FontFamily = new MediaFontFamily("Microsoft YaHei UI");
+            IdTextBlock.FontFamily = idFont;
             IdTextBlock.FontWeight = FontWeights.Bold;
         }
         if (NameTextBlock != null)
@@ -843,9 +843,21 @@ public partial class RollCallWindow : Window
         }
         if (TimerTextBlock != null)
         {
-            TimerTextBlock.FontFamily = new MediaFontFamily("Consolas");
+            TimerTextBlock.FontFamily = timerFont;
             TimerTextBlock.FontWeight = FontWeights.Bold;
         }
+    }
+
+    private static MediaFontFamily? FindFontFamily(string name)
+    {
+        foreach (var family in Fonts.SystemFontFamilies)
+        {
+            if (string.Equals(family.Source, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return family;
+            }
+        }
+        return null;
     }
 
     private void ApplyFontSizes()

@@ -56,6 +56,7 @@ public sealed class ClassRoster
     private static IReadOnlyList<string> BuildGroupList(IEnumerable<string> groups)
     {
         var list = new List<string> { IdentityUtils.AllGroupName };
+        var unique = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in groups)
         {
             if (string.IsNullOrWhiteSpace(group))
@@ -66,11 +67,14 @@ public sealed class ClassRoster
             {
                 continue;
             }
-            if (!list.Contains(group, StringComparer.OrdinalIgnoreCase))
+            if (!unique.ContainsKey(group))
             {
-                list.Add(group);
+                unique[group] = group;
             }
         }
+        var sorted = unique.Values.ToList();
+        sorted.Sort(StringComparer.Ordinal);
+        list.AddRange(sorted);
         return list;
     }
 

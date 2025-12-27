@@ -754,6 +754,16 @@ public partial class PaintOverlayWindow : Window
 
     private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
     {
+        if (_mode == PaintToolMode.Brush)
+        {
+            if (!_inkStrokeInProgress)
+            {
+                var strokes = new StrokeCollection(InkLayer.Strokes);
+                strokes.Remove(e.Stroke);
+                var shapes = CaptureShapes();
+                _history.Push(new PaintSnapshot(strokes, shapes));
+            }
+        }
         _inkStrokeInProgress = false;
     }
 

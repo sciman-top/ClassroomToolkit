@@ -13,8 +13,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
-    private const double BaseWidth = 260;
-    private const double BaseHeight = 120;
+    private const double BaseWidth = 248;
+    private const double BaseHeight = 108;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
     private double _brushSize = 12;

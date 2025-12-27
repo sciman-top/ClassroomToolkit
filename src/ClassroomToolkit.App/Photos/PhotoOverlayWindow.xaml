@@ -18,8 +18,8 @@
                            TextAlignment="Center"
                            TextWrapping="Wrap"
                            HorizontalAlignment="Center"
-                           VerticalAlignment="Bottom"
-                           Margin="20,20,20,24" />
+                           VerticalAlignment="Top"
+                           Margin="20,24,20,0" />
                 <Button x:Name="CloseButton"
                         Content="X"
                         Width="24"
