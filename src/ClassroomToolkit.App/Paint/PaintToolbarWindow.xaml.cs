@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
@@ -13,8 +15,11 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
+    private const int GwlExstyle = -20;
+    private const int WsExNoActivate = 0x08000000;
     private const double BaseWidth = 248;
     private const double BaseHeight = 108;
+    private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
     private double _brushSize = 12;
@@ -68,6 +73,11 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(0, Colors.Black);
         SetQuickColorSlot(1, Colors.Red);
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
+        SourceInitialized += (_, _) =>
+        {
+            _hwnd = new WindowInteropHelper(this).Handle;
+            ApplyNoActivate();
+        };
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
         {
@@ -454,4 +464,20 @@ public partial class PaintToolbarWindow : Window
         }
         return parent ?? LogicalTreeHelper.GetParent(obj);
     }
+
+    private void ApplyNoActivate()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

@@ -6217,7 +6217,7 @@ class _PresentationWindowMixin:
         if class_name != "screenclass":
             return False
         if not process_name:
-            return False
+            return True
         if self._is_ms_presentation_process_name(process_name):
             return False
         return True
@@ -6712,8 +6712,6 @@ class _PresentationWindowMixin:
             return True
         process_name = self._window_process_name(hwnd)
         if self._is_wps_presentation_process(process_name, class_name, ""):
-            return True
-        if self._is_ms_presentation_process_name(process_name):
             return True
         rect = _user32_window_rect(hwnd)
         if not rect:
@@ -8490,7 +8488,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
         self._wps_binding_retry_timer: Optional[QTimer] = None
         self._wps_binding_retry_attempts = 0
         self._pending_wps_cursor_pulse = False
-        self._presentation_focus_pending = False
         self._wps_cursor_reset_timer: Optional[QTimer] = None
         self._last_wps_nav_event: Optional[Tuple[int, int, float]] = None
         self._wps_nav_block_until: float = 0.0
@@ -10225,49 +10222,30 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
             return self._send_wps_slideshow_virtual_key(hwnd, vk_code)
         forwarder = getattr(self, "_forwarder", None)
         if forwarder is None or win32con is None:
-            self._focus_presentation_window_fallback()
-            success = self._fallback_send_virtual_key(vk_code)
-            if success:
-                try:
-                    self._last_target_hwnd = hwnd
-                except Exception:
-                    pass
-            return success
+            return False
         self._focus_presentation_window_fallback()
-        success = False
         try:
-            for target_hwnd, update_cache in forwarder._iter_key_targets(hwnd):
-                if forwarder._send_key_message_sequence(target_hwnd, vk_code):
-                    success = True
-                    if update_cache:
-                        try:
-                            self._last_target_hwnd = hwnd
-                        except Exception:
-                            pass
-                        try:
-                            forwarder._last_target_hwnd = hwnd  # type: ignore[attr-defined]
-                        except Exception:
-                            pass
-                    break
+            down_param = forwarder._build_basic_key_lparam(vk_code, is_press=True)
+            up_param = forwarder._build_basic_key_lparam(vk_code, is_press=False)
         except Exception:
-            success = False
-        if not success:
-            try:
-                success = forwarder._send_key_message_sequence(hwnd, vk_code)
-            except Exception:
-                success = False
-        if not success:
-            success = self._fallback_send_virtual_key(vk_code)
-        if success:
+            return False
+        try:
+            press = forwarder._deliver_key_message(hwnd, win32con.WM_KEYDOWN, vk_code, down_param)
+            release = forwarder._deliver_key_message(hwnd, win32con.WM_KEYUP, vk_code, up_param)
+        except Exception:
+            return False
+        if press and release:
             try:
                 self._last_target_hwnd = hwnd
             except Exception:
                 pass
-            try:
-                forwarder._last_target_hwnd = hwnd  # type: ignore[attr-defined]
-            except Exception:
-                pass
-        return success
+            if forwarder is not None:
+                try:
+                    forwarder._last_target_hwnd = hwnd  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+            return True
+        return False
 
     def _fallback_send_wheel(self, delta: int) -> bool:
         if delta == 0 or _USER32 is None:
@@ -10733,43 +10711,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
         except Exception:
             pass
 
-    def _schedule_presentation_focus(self, delay_ms: int = 60) -> None:
-        if self.whiteboard_active:
-            return
-        if getattr(self, "_presentation_focus_pending", False):
-            return
-        self._presentation_focus_pending = True
-
-        def _apply_focus() -> None:
-            self._presentation_focus_pending = False
-            self._focus_presentation_window()
-
-        QTimer.singleShot(max(0, int(delay_ms)), _apply_focus)
-
-    def _focus_presentation_window(self) -> None:
-        if self.whiteboard_active:
-            return
-        target: Optional[int]
-        try:
-            target = self._resolve_control_target()
-        except Exception:
-            target = None
-        forwarder = getattr(self, "_forwarder", None)
-        if target and forwarder is not None:
-            try:
-                if self._is_wps_slideshow_target(target):
-                    if forwarder.force_focus_presentation_window():
-                        return
-                else:
-                    if forwarder.focus_presentation_window():
-                        return
-            except Exception:
-                pass
-        try:
-            self._focus_presentation_window_fallback()
-        except Exception:
-            pass
-
     def _apply_focus_acceptance(self, allow_focus: bool) -> None:
         block_focus = not bool(allow_focus)
         if bool(getattr(self, "_focus_accept_blocked", False)) == block_focus:
@@ -10811,7 +10752,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                     pass
             self._log_nav_trace("kbd_capture_skip", reason="wps_raw_input")
             self._force_wps_foreground_for_raw_input()
-            self._schedule_presentation_focus()
             try:
                 self._update_wps_nav_hook_state()
             except Exception:
@@ -11136,8 +11076,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
         process_name = self._window_process_name(hwnd)
         if self._is_wps_presentation_process(process_name, class_name, ""):
             return True
-        if self._is_ms_presentation_process_name(process_name):
-            return True
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception:
@@ -11158,7 +11096,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 self._update_wps_nav_hook_state()
             except Exception:
                 pass
-            self._schedule_presentation_focus()
             return
         if not self.isVisible():
             self.show()
@@ -11458,12 +11395,8 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 delta=wheel_delta,
                 target=hex(wps_target),
             )
-            delivered = self._send_wps_slideshow_wheel(wps_target, wheel_delta)
-            if not delivered:
-                delivered = self._fallback_send_wheel(wheel_delta)
-            if delivered:
-                e.accept()
-                return
+            e.accept()
+            return
         if wheel_delta and wps_target and not self.whiteboard_active and wps_wheel_forward:
             if self._send_navigation_wheel(wheel_delta):
                 e.accept()
@@ -11983,8 +11916,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 self._apply_dirty_region(dirty_region)
             self.raise_toolbar()
             e.accept()
-            if not self._should_capture_keyboard():
-                self._schedule_presentation_focus()
         super().mouseReleaseEvent(e)
         if self.whiteboard_active and self.mode == "cursor" and not inside_toolbar:
             try:
@@ -12026,12 +11957,11 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
             )
             e.accept()
             return
-        hook_intercept = (
-            key in _QT_WPS_SLIDESHOW_KEYS
-            and self._wps_nav_hook_active
-            and self._wps_hook_intercept_keyboard
-        )
-        if hook_intercept and self._wps_hook_recently_fired():
+        if key in _QT_WPS_SLIDESHOW_KEYS and self._wps_nav_hook_active and self._wps_hook_intercept_keyboard:
+            self._log_nav_trace("key_swallow", reason="wps_hook_active", key=key)
+            e.accept()
+            return
+        if key in _QT_WPS_SLIDESHOW_KEYS and self._wps_hook_recently_fired() and self._wps_hook_intercept_keyboard:
             self._log_nav_trace("key_swallow", reason="wps_hook_recent", key=key)
             e.accept()
             return
@@ -12047,11 +11977,7 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 and is_wps_nav
                 and self._presentation_control_allowed(target)
             ):
-                if (
-                    self._wps_nav_hook_active
-                    and self._wps_hook_intercept_keyboard
-                    and self._wps_hook_recently_fired()
-                ):
+                if self._wps_nav_hook_active and self._wps_hook_intercept_keyboard:
                     self._log_nav_trace(
                         "key_swallow",
                         reason="wps_hook_active_target",
@@ -12125,10 +12051,13 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 wps_target = self._resolve_control_target()
         is_wps_nav = bool(wps_target and (wps_forced or self._is_wps_slideshow_target(wps_target)))
         if key in _QT_WPS_SLIDESHOW_KEYS and self._wps_nav_hook_active and self._wps_hook_intercept_keyboard:
-            if self._wps_hook_recently_fired():
-                self._log_nav_trace("key_release_swallow", reason="wps_hook_active", key=key)
-                e.accept()
-                return
+            self._log_nav_trace("key_release_swallow", reason="wps_hook_active", key=key)
+            e.accept()
+            return
+        if key in _QT_WPS_SLIDESHOW_KEYS and self._wps_hook_recently_fired() and self._wps_hook_intercept_keyboard:
+            self._log_nav_trace("key_release_swallow", reason="wps_hook_recent", key=key)
+            e.accept()
+            return
         # WPS 放映：仅在启用全局拦截钩子时吞掉 KeyRelease，避免 KeyUp 二次响应。
         if key in _QT_WPS_SLIDESHOW_KEYS:
             target = wps_target if wps_target is not None else self._resolve_control_target()
@@ -12137,7 +12066,6 @@ class OverlayWindow(QWidget, _PresentationWindowMixin):
                 and is_wps_nav
                 and self._wps_nav_hook_active
                 and self._wps_hook_intercept_keyboard
-                and self._wps_hook_recently_fired()
             ):
                 e.accept()
                 return

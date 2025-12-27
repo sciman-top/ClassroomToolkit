@@ -6,11 +6,20 @@
         Height="108" Width="248"
         WindowStartupLocation="Manual"
         Topmost="True"
+        ShowActivated="False"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         WindowStyle="None">
     <Window.Resources>
-        <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton">
+        <Style TargetType="Button">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+        </Style>
+        <Style TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+        </Style>
+        <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
             <Setter Property="BorderBrush" Value="#66000000" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="0" />

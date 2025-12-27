@@ -33,7 +33,7 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
-    public void WpsWheelForwardEnabled_ShouldSendKeyDownOnly()
+    public void WpsWheelForwardEnabled_ShouldSendKeyDownOnlyUsingMessageFallback()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -55,7 +55,7 @@ public sealed class PresentationControlServiceTests
         sender.KeyCalls.Should().Be(1);
         sender.LastKeyDownOnly.Should().BeTrue();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
-        sender.LastKeyStrategy.Should().Be(InputStrategy.Raw);
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
         sender.WheelCalls.Should().Be(0);
     }
 

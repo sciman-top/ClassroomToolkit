@@ -114,7 +114,16 @@ public sealed class PresentationControlService
         var keyDownOnly = plan.TargetType == PresentationType.Wps;
         if (plan.TargetType == PresentationType.Wps && strategy == InputStrategy.Raw)
         {
-            PresentationWindowFocus.EnsureForeground(target.Handle);
+            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
+            if (!isForeground)
+            {
+                PresentationWindowFocus.EnsureForeground(target.Handle);
+                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
+            }
+            if (!isForeground)
+            {
+                plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
+            }
         }
         if (plan.TargetType == PresentationType.Wps
             && !plan.UseWheelAsKey

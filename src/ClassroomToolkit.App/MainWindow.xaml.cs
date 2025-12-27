@@ -109,7 +109,6 @@ public partial class MainWindow : Window
                 _toolbarWindow.Owner = _overlayWindow;
             }
             _toolbarWindow.Show();
-            _toolbarWindow.Activate();
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
             _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
         }
@@ -201,7 +200,6 @@ public partial class MainWindow : Window
                 {
                     _overlayWindow.SetBoardColor(_settings.BoardColor);
                     _overlayWindow.SetBoardOpacity(255);
-                    _toolbarWindow.Activate();
                 }
                 else
                 {

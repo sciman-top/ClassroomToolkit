@@ -20,7 +20,11 @@ public partial class PaintOverlayWindow : Window
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
+    private const int WsExNoActivate = 0x08000000;
     private IntPtr _hwnd;
+    private bool _inputPassthroughEnabled;
+    private bool _focusBlocked;
+    private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private sealed class PaintSnapshot
     {
         public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes)
@@ -151,6 +155,7 @@ public partial class PaintOverlayWindow : Window
         {
             _hwnd = new WindowInteropHelper(this).Handle;
             UpdateInputPassthrough();
+            UpdateFocusAcceptance();
         };
         InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
         InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
@@ -184,7 +189,11 @@ public partial class PaintOverlayWindow : Window
             _wpsNavHook.NavigationRequested += OnWpsNavHookRequested;
         }
         Closed += (_, _) => StopWpsNavHook();
-        IsVisibleChanged += (_, _) => UpdateWpsNavHookState();
+        IsVisibleChanged += (_, _) =>
+        {
+            UpdateWpsNavHookState();
+            UpdateFocusAcceptance();
+        };
     }
 
     public void SetMode(PaintToolMode mode)
@@ -219,6 +228,7 @@ public partial class PaintOverlayWindow : Window
         }
         UpdateInputPassthrough();
         UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
     }
 
     public void SetBrush(MediaColor color, double size, byte opacity)
@@ -389,7 +399,7 @@ public partial class PaintOverlayWindow : Window
             if (target.IsValid)
             {
                 var wpsForeground = IsTargetForeground(target);
-                if (!IsBoardActive() && wpsForeground && !_presentationOptions.WheelAsKey)
+                if (!IsBoardActive() && wpsForeground && !_presentationOptions.WheelAsKey && _inputPassthroughEnabled)
                 {
                     return;
                 }
@@ -430,6 +440,7 @@ public partial class PaintOverlayWindow : Window
         UpdateBoardBackground();
         UpdateInputPassthrough();
         UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
     }
 
     private void UpdateBoardBackground()
@@ -454,16 +465,9 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         var enable = _mode == PaintToolMode.Cursor && _boardOpacity == 0;
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
-        if (enable)
-        {
-            exStyle |= WsExTransparent;
-        }
-        else
-        {
-            exStyle &= ~WsExTransparent;
-        }
-        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+        _inputPassthroughEnabled = enable;
+        ApplyWindowStyles();
+        UpdateFocusAcceptance();
     }
 
     [DllImport("user32.dll")]
@@ -471,6 +475,89 @@ public partial class PaintOverlayWindow : Window
 
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
+
+    private void UpdateFocusAcceptance()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var blockFocus = ShouldBlockFocus();
+        if (_focusBlocked == blockFocus)
+        {
+            return;
+        }
+        _focusBlocked = blockFocus;
+        ApplyWindowStyles();
+        if (_focusBlocked)
+        {
+            var target = _presentationResolver.ResolvePresentationTarget(
+                _presentationClassifier,
+                _presentationOptions.AllowWps,
+                _presentationOptions.AllowOffice,
+                _currentProcessId);
+            if (target.IsValid)
+            {
+                ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+            }
+        }
+    }
+
+    private bool ShouldBlockFocus()
+    {
+        if (_inputPassthroughEnabled)
+        {
+            return true;
+        }
+        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
+        {
+            return false;
+        }
+        var target = _presentationResolver.ResolvePresentationTarget(
+            _presentationClassifier,
+            _presentationOptions.AllowWps,
+            _presentationOptions.AllowOffice,
+            _currentProcessId);
+        if (target.IsValid)
+        {
+            return true;
+        }
+        if (_presentationOptions.AllowWps)
+        {
+            var wpsTarget = ResolveWpsTarget();
+            if (wpsTarget.IsValid && ResolveWpsSendMode(wpsTarget) == ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void ApplyWindowStyles()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        if (_inputPassthroughEnabled)
+        {
+            exStyle |= WsExTransparent;
+        }
+        else
+        {
+            exStyle &= ~WsExTransparent;
+        }
+        if (_focusBlocked)
+        {
+            exStyle |= WsExNoActivate;
+        }
+        else
+        {
+            exStyle &= ~WsExNoActivate;
+        }
+        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+    }
 
     public void UpdateWpsMode(string mode)
     {
@@ -482,12 +569,14 @@ public partial class PaintOverlayWindow : Window
         };
         _presentationService.ResetWpsAutoFallback();
         UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
     }
 
     public void UpdateWpsWheelMapping(bool enabled)
     {
         _presentationOptions.WheelAsKey = enabled;
         UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
     }
 
     public void UpdatePresentationTargets(bool allowOffice, bool allowWps)
@@ -495,6 +584,7 @@ public partial class PaintOverlayWindow : Window
         _presentationOptions.AllowOffice = allowOffice;
         _presentationOptions.AllowWps = allowWps;
         UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
     }
 
     private void OnWpsNavHookRequested(int direction, string source)
