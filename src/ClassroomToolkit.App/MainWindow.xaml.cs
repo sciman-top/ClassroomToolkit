@@ -338,41 +338,42 @@ public partial class MainWindow : Window
         {
             Owner = _toolbarWindow != null ? (Window)_toolbarWindow : this
         };
-        if (dialog.ShowDialog() != true)
+        var applied = dialog.ShowDialog() == true;
+        if (applied)
         {
-            return;
-        }
-        _settings.ControlMsPpt = dialog.ControlMsPpt;
-        _settings.ControlWpsPpt = dialog.ControlWpsPpt;
-        _settings.WpsInputMode = dialog.WpsInputMode;
-        _settings.WpsWheelForward = dialog.WpsWheelForward;
-        _settings.BrushSize = dialog.BrushSize;
-        _settings.BrushOpacity = dialog.BrushOpacity;
-        _settings.EraserSize = dialog.EraserSize;
-        _settings.BoardOpacity = 255;
-        _settings.ShapeType = dialog.ShapeType;
-        _settings.BrushColor = dialog.BrushColor;
-        _settings.PaintToolbarScale = dialog.ToolbarScale;
-        SaveSettings();
+            _settings.ControlMsPpt = dialog.ControlMsPpt;
+            _settings.ControlWpsPpt = dialog.ControlWpsPpt;
+            _settings.WpsInputMode = dialog.WpsInputMode;
+            _settings.WpsWheelForward = dialog.WpsWheelForward;
+            _settings.BrushSize = dialog.BrushSize;
+            _settings.BrushOpacity = dialog.BrushOpacity;
+            _settings.EraserSize = dialog.EraserSize;
+            _settings.BoardOpacity = 255;
+            _settings.ShapeType = dialog.ShapeType;
+            _settings.BrushColor = dialog.BrushColor;
+            _settings.PaintToolbarScale = dialog.ToolbarScale;
+            SaveSettings();
 
-        if (_overlayWindow != null)
-        {
-            _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
-            _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
-            _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
-            _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
-            _overlayWindow.SetEraserSize(_settings.EraserSize);
-            _overlayWindow.SetShapeType(_settings.ShapeType);
-            _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
-                ? Paint.PaintToolMode.Brush
-                : Paint.PaintToolMode.Shape);
-            if (_toolbarWindow?.BoardActive == true)
+            if (_overlayWindow != null)
             {
-                _overlayWindow.SetBoardColor(_settings.BoardColor);
-                _overlayWindow.SetBoardOpacity(255);
+                _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
+                _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
+                _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
+                _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+                _overlayWindow.SetEraserSize(_settings.EraserSize);
+                _overlayWindow.SetShapeType(_settings.ShapeType);
+                _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
+                    ? Paint.PaintToolMode.Brush
+                    : Paint.PaintToolMode.Shape);
+                if (_toolbarWindow?.BoardActive == true)
+                {
+                    _overlayWindow.SetBoardColor(_settings.BoardColor);
+                    _overlayWindow.SetBoardOpacity(255);
+                }
             }
+            _toolbarWindow?.ApplySettings(_settings);
         }
-        _toolbarWindow?.ApplySettings(_settings);
+        _overlayWindow?.RestorePresentationFocus();
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)

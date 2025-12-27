@@ -587,6 +587,23 @@ public partial class PaintOverlayWindow : Window
         UpdateFocusAcceptance();
     }
 
+    public void RestorePresentationFocus()
+    {
+        if (!IsVisible)
+        {
+            return;
+        }
+        var target = _presentationResolver.ResolvePresentationTarget(
+            _presentationClassifier,
+            _presentationOptions.AllowWps,
+            _presentationOptions.AllowOffice,
+            _currentProcessId);
+        if (target.IsValid)
+        {
+            ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+        }
+    }
+
     private void OnWpsNavHookRequested(int direction, string source)
     {
         if (!_presentationOptions.AllowWps)
