@@ -476,6 +476,12 @@ public partial class PaintOverlayWindow : Window
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
     private void UpdateFocusAcceptance()
     {
         if (_hwnd == IntPtr.Zero)
@@ -575,9 +581,17 @@ public partial class PaintOverlayWindow : Window
         UpdateFocusAcceptance();
     }
 
-    public void RestorePresentationFocus()
+    public void RestorePresentationFocusIfNeeded()
     {
         if (!IsVisible)
+        {
+            return;
+        }
+        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
+        {
+            return;
+        }
+        if (!IsForegroundOwnedByCurrentProcess())
         {
             return;
         }
@@ -586,10 +600,26 @@ public partial class PaintOverlayWindow : Window
             _presentationOptions.AllowWps,
             _presentationOptions.AllowOffice,
             _currentProcessId);
-        if (target.IsValid)
+        if (!target.IsValid)
         {
-            ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+            return;
         }
+        if (ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle))
+        {
+            return;
+        }
+        ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+    }
+
+    private bool IsForegroundOwnedByCurrentProcess()
+    {
+        var foreground = GetForegroundWindow();
+        if (foreground == IntPtr.Zero)
+        {
+            return false;
+        }
+        GetWindowThreadProcessId(foreground, out var processId);
+        return processId == _currentProcessId;
     }
 
     private void OnWpsNavHookRequested(int direction, string source)

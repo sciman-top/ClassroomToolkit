@@ -271,6 +271,10 @@ public partial class PaintToolbarWindow : Window
         if (_overlay != null)
         {
             _overlay.SetMode(mode);
+            if (mode == PaintToolMode.Cursor)
+            {
+                _overlay.RestorePresentationFocusIfNeeded();
+            }
         }
     }
 
