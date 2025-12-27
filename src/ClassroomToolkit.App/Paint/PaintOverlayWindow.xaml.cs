@@ -18,9 +18,11 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
+    private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
     private const int WsExNoActivate = 0x08000000;
+    private const int WsCaption = 0x00C00000;
     private const uint MonitorDefaultToNearest = 2;
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
@@ -671,6 +673,11 @@ public partial class PaintOverlayWindow : Window
     private static bool IsFullscreenWindow(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+        var style = GetWindowLong(hwnd, GwlStyle);
+        if ((style & WsCaption) != 0)
         {
             return false;
         }
