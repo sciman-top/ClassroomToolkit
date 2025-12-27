@@ -214,7 +214,7 @@ public partial class RollCallWindow : Window
         {
             return;
         }
-        if (sender is not ComboBox combo || combo.SelectedItem is not string selected)
+        if (sender is not System.Windows.Controls.ComboBox combo || combo.SelectedItem is not string selected)
         {
             return;
         }

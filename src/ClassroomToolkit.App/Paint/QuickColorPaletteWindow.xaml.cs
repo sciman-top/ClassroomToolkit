@@ -40,7 +40,7 @@ public partial class QuickColorPaletteWindow : Window
     {
         foreach (var option in Options)
         {
-            var button = new Button
+            var button = new System.Windows.Controls.Button
             {
                 Width = 22,
                 Height = 22,

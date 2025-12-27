@@ -308,7 +308,7 @@ public partial class PaintToolbarWindow : Window
         var button = GetQuickColorButton(index);
         if (button != null)
         {
-            var anchor = button.PointToScreen(new Point(0, button.ActualHeight + 4));
+            var anchor = button.PointToScreen(new System.Windows.Point(0, button.ActualHeight + 4));
             picker.Left = anchor.X;
             picker.Top = anchor.Y;
         }
