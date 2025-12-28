@@ -4,24 +4,41 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
+using WpfSize = System.Windows.Size;
 using WpfColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
 public class BrushPhysicsConfig
 {
-    public double MinWidthFactor { get; set; } = 0.25;
-    public double MaxWidthFactor { get; set; } = 1.3;
+    public double MinWidthFactor { get; set; } = 0.15;
+    public double MaxWidthFactor { get; set; } = 1.5;
+    public double MinStrokeWidthPx { get; set; } = 2.0;
+    public double MaxStrokeWidthMultiplier { get; set; } = 2.5;
     public double WidthSmoothing { get; set; } = 0.85;
     public bool SimulateStartCap { get; set; } = true;
     public bool SimulateEndTaper { get; set; } = true;
-    public double VelocityThreshold { get; set; } = 2.0;
-    
+    public double VelocityThreshold { get; set; } = 1.5;
+    public int VelocitySmoothWindow { get; set; } = 4;
+    public int PressureSmoothWindow { get; set; } = 5;
+    public double CapIgnoreVelocityRatio { get; set; } = 0.1;
+
+    // 笔锋效果参数
+    public double StartCapLength { get; set; } = 0.05; // 起笔占笔画长度的比例
+    public double EndTaperLength { get; set; } = 0.12;  // 收笔占笔画长度的比例
+    public int MinTaperPoints { get; set; } = 5;        // 笔锋最少点数
+
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
+    private const int UpsampleSteps = 8;
+    private const int PressureSmoothWindow = 7;
+    private const double CornerAngleThreshold = 90.0;
+    private const double CornerMinAngle = 5.0;
+    private const int CornerArcSegments = 4;
+
     private struct StrokePoint
     {
         public WpfPoint Position;
@@ -143,8 +160,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     private double CalculateTargetWidth(double velocity)
     {
-        var t = Math.Min(velocity / _config.VelocityThreshold, 1.0); 
-        var factor = 1.0 - (t * t); 
+        // 使用更强的非线性函数（三次方）来增强快慢对比
+        var t = Math.Min(velocity / _config.VelocityThreshold, 1.0);
+        var factor = 1.0 - Math.Pow(t, 3); // 三次函数，让高速时更细
         var range = _config.MaxWidthFactor - _config.MinWidthFactor;
         return _baseSize * (_config.MinWidthFactor + (range * factor));
     }
@@ -158,36 +176,13 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         using (var ctx = geometry.Open())
         {
+            var samples = BuildCenterlineSamples();
+            if (samples.Count < 2) return null;
+
             var leftEdge = new List<WpfPoint>();
             var rightEdge = new List<WpfPoint>();
 
-            // --- 阶段 1：生成左右边缘点 ---
-            // 使用贝塞尔插值生成高密度的点云
-            for (int i = 0; i < _points.Count - 1; i++)
-            {
-                var p0 = _points[i];
-                var p1 = _points[i+1];
-
-                if (i == _points.Count - 2)
-                {
-                    // 最后一段
-                    var normal = GetNormal(p0.Position, p1.Position);
-                    AddRibbonPoints(p1.Position, normal, p1.Width, leftEdge, rightEdge);
-                }
-                else
-                {
-                    var p2 = _points[i+2];
-                    var startPos = (i == 0) ? p0.Position : Mid(p0.Position, p1.Position);
-                    var endPos = Mid(p1.Position, p2.Position);
-                    var controlPos = p1.Position;
-
-                    var wStart = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
-                    var wEnd = (p1.Width + p2.Width) / 2.0;
-                    var wControl = p1.Width;
-
-                    TessellateBezier(startPos, controlPos, endPos, wStart, wControl, wEnd, leftEdge, rightEdge);
-                }
-            }
+            BuildRibbonEdges(samples, leftEdge, rightEdge);
 
             // --- 阶段 2：过滤倒刺 (Spike Removal) ---
             // 简单的距离过滤器：如果下一个点离当前点太近（或者回头了），说明内侧打结了
@@ -195,30 +190,321 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             FilterLoops(rightEdge);
 
             // --- 阶段 3：构建 Path ---
-            if (leftEdge.Count > 0)
+            if (leftEdge.Count > 1 && rightEdge.Count > 1)
             {
                 ctx.BeginFigure(leftEdge[0], true, true);
-                
+
                 // 左边缘
-                for (int i = 1; i < leftEdge.Count; i++) ctx.LineTo(leftEdge[i], true, true);
-                
-                // 收笔圆头 (Arc To Right Edge End)
-                // 从左边缘最后一点画一个半圆到右边缘最后一点
-                var lastLeft = leftEdge.Last();
-                var lastRight = rightEdge.Last();
-                // 使用较小的半径，防止画出大圆圈
-                ctx.ArcTo(lastRight, new Size(_baseSize/2, _baseSize/2), 0, false, SweepDirection.Clockwise, true, true);
+                AddBezierPath(ctx, leftEdge);
+
+                // 收笔：直接连接右边缘最后一点，不使用圆头
+                // 如果收笔宽度接近零，两个边缘点应该已经非常接近，自然形成尖头
+                ctx.LineTo(rightEdge.Last(), true, true);
 
                 // 右边缘 (倒序)
-                for (int i = rightEdge.Count - 2; i >= 0; i--) ctx.LineTo(rightEdge[i], true, true);
+                var rightEdgeReversed = rightEdge.AsEnumerable().Reverse().ToList();
+                AddBezierPath(ctx, rightEdgeReversed);
 
-                // 起笔圆头 (Arc Back To Start)
-                var firstLeft = leftEdge[0];
-                var firstRight = rightEdge[0];
-                ctx.ArcTo(firstLeft, new Size(_baseSize/2, _baseSize/2), 0, false, SweepDirection.Clockwise, true, true);
+                // 起笔：直接闭合，不使用圆头
+                ctx.LineTo(leftEdge[0], true, true);
             }
         }
         return geometry;
+    }
+
+    private List<StrokePoint> BuildCenterlineSamples()
+    {
+        var samples = new List<StrokePoint>();
+        if (_points.Count == 0) return samples;
+        if (_points.Count == 1)
+        {
+            samples.Add(_points[0]);
+            return samples;
+        }
+
+        for (int i = 0; i < _points.Count - 1; i++)
+        {
+            var p0 = _points[Math.Max(i - 1, 0)];
+            var p1 = _points[i];
+            var p2 = _points[i + 1];
+            var p3 = _points[Math.Min(i + 2, _points.Count - 1)];
+
+            int startStep = (i == 0) ? 0 : 1;
+            for (int step = startStep; step <= UpsampleSteps; step++)
+            {
+                double t = step / (double)UpsampleSteps;
+                var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
+                double width = CatmullRomValue(p0.Width, p1.Width, p2.Width, p3.Width, t);
+                width = Math.Max(width, 0.1);
+                samples.Add(new StrokePoint(pos, width));
+            }
+        }
+
+        SmoothWidths(samples);
+        ApplyTaperingEffect(samples); // 应用笔锋效果
+        return samples;
+    }
+
+    /// <summary>
+    /// 应用笔锋效果：起笔顿笔、收笔削尖
+    /// </summary>
+    private void ApplyTaperingEffect(List<StrokePoint> samples)
+    {
+        if (samples.Count < _config.MinTaperPoints * 2) return;
+
+        // 计算笔画总长度（用于确定笔锋范围）
+        double totalLength = 0;
+        for (int i = 1; i < samples.Count; i++)
+        {
+            totalLength += (samples[i].Position - samples[i - 1].Position).Length;
+        }
+
+        if (totalLength < 1.0) return; // 笔画太短，不应用笔锋
+
+        // 起笔笔锋（顿笔效果）
+        if (_config.SimulateStartCap)
+        {
+            int startCapPoints = Math.Max(_config.MinTaperPoints, (int)(samples.Count * _config.StartCapLength));
+            double startTargetWidth = samples[startCapPoints].Width;
+
+            for (int i = 0; i < startCapPoints; i++)
+            {
+                double t = (double)i / startCapPoints;
+                // 使用平滑的缓入函数：easeOutQuad
+                double factor = t * t;
+                double taperedWidth = startTargetWidth * (0.3 + 0.7 * factor);
+                samples[i] = new StrokePoint(samples[i].Position, Math.Max(taperedWidth, 0.5));
+            }
+        }
+
+        // 收笔笔锋（削尖效果）
+        if (_config.SimulateEndTaper)
+        {
+            int endTaperPoints = Math.Max(_config.MinTaperPoints, (int)(samples.Count * _config.EndTaperLength));
+            int startIndex = samples.Count - endTaperPoints;
+            double baseWidth = samples[startIndex].Width;
+
+            for (int i = 0; i < endTaperPoints; i++)
+            {
+                int idx = startIndex + i;
+                double t = (double)i / endTaperPoints;
+                // 线性缩减到零，形成尖锐笔锋
+                double taperedWidth = baseWidth * (1.0 - t);
+                samples[idx] = new StrokePoint(samples[idx].Position, Math.Max(taperedWidth, 0.0));
+            }
+        }
+    }
+
+    private static WpfPoint CatmullRomPoint(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3, double t)
+    {
+        double t2 = t * t;
+        double t3 = t2 * t;
+
+        double x = 0.5 * ((2 * p1.X) + (-p0.X + p2.X) * t +
+                          (2 * p0.X - 5 * p1.X + 4 * p2.X - p3.X) * t2 +
+                          (-p0.X + 3 * p1.X - 3 * p2.X + p3.X) * t3);
+
+        double y = 0.5 * ((2 * p1.Y) + (-p0.Y + p2.Y) * t +
+                          (2 * p0.Y - 5 * p1.Y + 4 * p2.Y - p3.Y) * t2 +
+                          (-p0.Y + 3 * p1.Y - 3 * p2.Y + p3.Y) * t3);
+
+        return new WpfPoint(x, y);
+    }
+
+    private static double CatmullRomValue(double v0, double v1, double v2, double v3, double t)
+    {
+        double t2 = t * t;
+        double t3 = t2 * t;
+
+        return 0.5 * ((2 * v1) + (-v0 + v2) * t +
+                      (2 * v0 - 5 * v1 + 4 * v2 - v3) * t2 +
+                      (-v0 + 3 * v1 - 3 * v2 + v3) * t3);
+    }
+
+    private static void SmoothWidths(List<StrokePoint> samples)
+    {
+        if (samples.Count < 3) return;
+
+        int window = PressureSmoothWindow;
+        int half = window / 2;
+        var smoothed = new double[samples.Count];
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            int start = Math.Max(0, i - half);
+            int end = Math.Min(samples.Count - 1, i + half);
+            double sum = 0;
+            int count = 0;
+
+            for (int j = start; j <= end; j++)
+            {
+                sum += samples[j].Width;
+                count++;
+            }
+
+            smoothed[i] = sum / count;
+        }
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var sample = samples[i];
+            samples[i] = new StrokePoint(sample.Position, smoothed[i]);
+        }
+    }
+
+    private void BuildRibbonEdges(List<StrokePoint> samples, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge)
+    {
+        if (samples.Count < 2) return;
+
+        Vector lastNormal = new Vector(0, 1);
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var pos = samples[i].Position;
+            var width = Math.Max(samples[i].Width, 0.1);
+
+            Vector dir;
+            if (i == 0) dir = samples[i + 1].Position - pos;
+            else if (i == samples.Count - 1) dir = pos - samples[i - 1].Position;
+            else dir = samples[i + 1].Position - samples[i - 1].Position;
+
+            var normal = GetNormalFromVector(dir, lastNormal);
+            lastNormal = normal;
+
+            var leftPoint = pos + normal * (width * 0.5);
+            var rightPoint = pos - normal * (width * 0.5);
+
+            bool handledCorner = false;
+            if (i > 0 && i < samples.Count - 1)
+            {
+                var dirPrev = pos - samples[i - 1].Position;
+                var dirNext = samples[i + 1].Position - pos;
+
+                if (dirPrev.LengthSquared > 0.0001 && dirNext.LengthSquared > 0.0001)
+                {
+                    dirPrev.Normalize();
+                    dirNext.Normalize();
+
+                    double angle = Math.Abs(Vector.AngleBetween(dirPrev, dirNext));
+                    if (angle < CornerAngleThreshold && angle > CornerMinAngle)
+                    {
+                        double cross = (dirPrev.X * dirNext.Y) - (dirPrev.Y * dirNext.X);
+                        var normalPrev = GetNormalFromVector(dirPrev, normal);
+                        var normalNext = GetNormalFromVector(dirNext, normal);
+
+                        if (cross > 0.0001)
+                        {
+                            AddCornerArc(leftEdge, pos, normalPrev, normalNext, width * 0.5, false);
+                            rightEdge.Add(rightPoint);
+                            handledCorner = true;
+                        }
+                        else if (cross < -0.0001)
+                        {
+                            AddCornerArc(rightEdge, pos, -normalPrev, -normalNext, width * 0.5, true);
+                            leftEdge.Add(leftPoint);
+                            handledCorner = true;
+                        }
+                    }
+                }
+            }
+
+            if (!handledCorner)
+            {
+                leftEdge.Add(leftPoint);
+                rightEdge.Add(rightPoint);
+            }
+        }
+    }
+
+    private static void AddCornerArc(List<WpfPoint> edge, WpfPoint center, Vector startNormal, Vector endNormal, double radius, bool clockwise)
+    {
+        if (startNormal.LengthSquared < 0.0001 || endNormal.LengthSquared < 0.0001)
+        {
+            edge.Add(center + startNormal * radius);
+            edge.Add(center + endNormal * radius);
+            return;
+        }
+
+        startNormal.Normalize();
+        endNormal.Normalize();
+
+        double startAngle = Math.Atan2(startNormal.Y, startNormal.X);
+        double endAngle = Math.Atan2(endNormal.Y, endNormal.X);
+        double delta = endAngle - startAngle;
+
+        if (clockwise)
+        {
+            if (delta > 0) delta -= Math.PI * 2;
+        }
+        else
+        {
+            if (delta < 0) delta += Math.PI * 2;
+        }
+
+        int segments = CornerArcSegments;
+        var startPoint = center + startNormal * radius;
+        if (edge.Count == 0 || (edge.Last() - startPoint).Length > 0.1)
+        {
+            edge.Add(startPoint);
+        }
+
+        for (int i = 1; i < segments; i++)
+        {
+            double t = i / (double)segments;
+            double angle = startAngle + delta * t;
+            edge.Add(new WpfPoint(center.X + Math.Cos(angle) * radius, center.Y + Math.Sin(angle) * radius));
+        }
+
+        var endPoint = center + endNormal * radius;
+        edge.Add(endPoint);
+    }
+
+    private static Vector GetNormalFromVector(Vector dir, Vector fallback)
+    {
+        if (dir.LengthSquared < 0.0001)
+        {
+            if (fallback.LengthSquared < 0.0001) return new Vector(0, 1);
+            return fallback;
+        }
+
+        dir.Normalize();
+        return new Vector(-dir.Y, dir.X);
+    }
+
+    private static void AddBezierPath(StreamGeometryContext ctx, List<WpfPoint> points)
+    {
+        if (points.Count < 2) return;
+        var bezierPoints = GetBezierPoints(points);
+        if (bezierPoints.Count == 0)
+        {
+            for (int i = 1; i < points.Count; i++) ctx.LineTo(points[i], true, true);
+            return;
+        }
+
+        ctx.PolyBezierTo(bezierPoints, true, true);
+    }
+
+    private static List<WpfPoint> GetBezierPoints(List<WpfPoint> points)
+    {
+        var bezierPoints = new List<WpfPoint>();
+        if (points.Count < 2) return bezierPoints;
+
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            var p0 = (i == 0) ? points[i] : points[i - 1];
+            var p1 = points[i];
+            var p2 = points[i + 1];
+            var p3 = (i + 2 < points.Count) ? points[i + 2] : points[i + 1];
+
+            var c1 = new WpfPoint(p1.X + (p2.X - p0.X) / 6.0, p1.Y + (p2.Y - p0.Y) / 6.0);
+            var c2 = new WpfPoint(p2.X - (p3.X - p1.X) / 6.0, p2.Y - (p3.Y - p1.Y) / 6.0);
+
+            bezierPoints.Add(c1);
+            bezierPoints.Add(c2);
+            bezierPoints.Add(p2);
+        }
+
+        return bezierPoints;
     }
 
     /// <summary>
