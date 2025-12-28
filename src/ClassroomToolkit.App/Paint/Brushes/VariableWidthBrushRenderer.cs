@@ -10,7 +10,7 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 
 public class BrushPhysicsConfig
 {
-    public double MinWidthFactor { get; set; } = 0.3;
+    public double MinWidthFactor { get; set; } = 0.25;
     public double MaxWidthFactor { get; set; } = 1.3;
     public double WidthSmoothing { get; set; } = 0.85;
     public bool SimulateStartCap { get; set; } = true;
@@ -41,7 +41,6 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private long _lastTimestamp;
     
     private double _smoothedWidth; 
-    // 新增：坐标平滑状态
     private WpfPoint _smoothedPos;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
@@ -53,7 +52,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _color = color;
         _baseSize = baseSize;
         _smoothedWidth = baseSize * 0.8;
-        _smoothedPos = new WpfPoint(0, 0); // 将在 OnDown 时初始化
+        _smoothedPos = new WpfPoint(0, 0); 
     }
 
     public void OnDown(WpfPoint point)
@@ -63,7 +62,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
         _smoothedWidth = _baseSize * 0.5; 
-        _smoothedPos = point; // 初始化平滑坐标
+        _smoothedPos = point; 
         
         _points.Add(new StrokePoint(point, _smoothedWidth));
     }
@@ -72,9 +71,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (!_isActive) return;
 
-        // --- Step 3: 输入平滑 (Input Smoothing) ---
-        // 使用简单的指数移动平均 (EMA) 平滑坐标，减少手抖
-        // 坐标平滑因子：0.7 (反应较快)，太大会有延迟感
+        // 坐标平滑 (EMA)
         double posAlpha = 0.7;
         _smoothedPos = new WpfPoint(
             _smoothedPos.X * (1 - posAlpha) + point.X * posAlpha,
@@ -105,7 +102,6 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (!_isActive) return;
         
-        // 收笔处理
         var last = _points.Last();
         var dir = point - last.Position;
         if (dir.Length > 0.1) dir.Normalize();
@@ -158,40 +154,15 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         if (_points.Count < 2) return null;
 
         var geometry = new StreamGeometry();
-        // --- Step 1: 修复镂空 (NonZero FillRule) ---
-        // 确保重叠部分被填充而不是镂空
-        geometry.FillRule = FillRule.NonZero;
+        geometry.FillRule = FillRule.Nonzero;
 
         using (var ctx = geometry.Open())
         {
             var leftEdge = new List<WpfPoint>();
             var rightEdge = new List<WpfPoint>();
 
-            // 起笔扇形
-            if (_config.SimulateStartCap && _points.Count > 1)
-            {
-                var p0 = _points[0];
-                var p1 = _points[1];
-                var dir = p1.Position - p0.Position;
-                dir.Normalize();
-                var normal = new Vector(-dir.Y, dir.X); 
-                
-                double capWidth = _baseSize * _config.MaxWidthFactor * 0.8;
-                var center = p0.Position - dir * (capWidth * 0.2); 
-                
-                leftEdge.Add(center + normal * (capWidth * 0.5));
-                leftEdge.Add(center - dir * (capWidth * 0.5)); 
-                rightEdge.Add(center - normal * (capWidth * 0.5));
-            }
-            else
-            {
-                var p0 = _points[0];
-                var p1 = _points[1];
-                var normal = GetNormal(p0.Position, p1.Position);
-                AddRibbonPoints(p0.Position, normal, p0.Width, leftEdge, rightEdge);
-            }
-
-            // 中段生成
+            // --- 阶段 1：生成左右边缘点 ---
+            // 使用贝塞尔插值生成高密度的点云
             for (int i = 0; i < _points.Count - 1; i++)
             {
                 var p0 = _points[i];
@@ -199,34 +170,89 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                 if (i == _points.Count - 2)
                 {
+                    // 最后一段
                     var normal = GetNormal(p0.Position, p1.Position);
                     AddRibbonPoints(p1.Position, normal, p1.Width, leftEdge, rightEdge);
                 }
                 else
                 {
                     var p2 = _points[i+2];
-                    
                     var startPos = (i == 0) ? p0.Position : Mid(p0.Position, p1.Position);
                     var endPos = Mid(p1.Position, p2.Position);
                     var controlPos = p1.Position;
 
-                    var startWidth = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
-                    var endWidth = (p1.Width + p2.Width) / 2.0;
-                    var controlWidth = p1.Width;
+                    var wStart = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
+                    var wEnd = (p1.Width + p2.Width) / 2.0;
+                    var wControl = p1.Width;
 
-                    TessellateBezier(startPos, controlPos, endPos, startWidth, controlWidth, endWidth, leftEdge, rightEdge);
+                    TessellateBezier(startPos, controlPos, endPos, wStart, wControl, wEnd, leftEdge, rightEdge);
                 }
             }
 
-            // 构建轮廓
+            // --- 阶段 2：过滤倒刺 (Spike Removal) ---
+            // 简单的距离过滤器：如果下一个点离当前点太近（或者回头了），说明内侧打结了
+            FilterLoops(leftEdge);
+            FilterLoops(rightEdge);
+
+            // --- 阶段 3：构建 Path ---
             if (leftEdge.Count > 0)
             {
                 ctx.BeginFigure(leftEdge[0], true, true);
+                
+                // 左边缘
                 for (int i = 1; i < leftEdge.Count; i++) ctx.LineTo(leftEdge[i], true, true);
-                for (int i = rightEdge.Count - 1; i >= 0; i--) ctx.LineTo(rightEdge[i], true, true);
+                
+                // 收笔圆头 (Arc To Right Edge End)
+                // 从左边缘最后一点画一个半圆到右边缘最后一点
+                var lastLeft = leftEdge.Last();
+                var lastRight = rightEdge.Last();
+                // 使用较小的半径，防止画出大圆圈
+                ctx.ArcTo(lastRight, new Size(_baseSize/2, _baseSize/2), 0, false, SweepDirection.Clockwise, true, true);
+
+                // 右边缘 (倒序)
+                for (int i = rightEdge.Count - 2; i >= 0; i--) ctx.LineTo(rightEdge[i], true, true);
+
+                // 起笔圆头 (Arc Back To Start)
+                var firstLeft = leftEdge[0];
+                var firstRight = rightEdge[0];
+                ctx.ArcTo(firstLeft, new Size(_baseSize/2, _baseSize/2), 0, false, SweepDirection.Clockwise, true, true);
             }
         }
         return geometry;
+    }
+
+    /// <summary>
+    /// 简单的去倒刺逻辑：移除距离过近的点
+    /// </summary>
+    private void FilterLoops(List<WpfPoint> edge)
+    {
+        if (edge.Count < 3) return;
+        
+        // 我们新建一个列表，只保留“有效推进”的点
+        // 这是一种简化的 Loop Removal，不是严格的几何裁剪
+        // 但对于手写笔画来说，大部分倒刺都是因为内侧点“退回”造成的
+        
+        for (int i = edge.Count - 2; i >= 1; i--)
+        {
+            var prev = edge[i - 1];
+            var curr = edge[i];
+            var next = edge[i + 1];
+
+            // 检查锐角：如果 prev->curr 和 curr->next 夹角过小 (<30度)，说明这里是个尖刺
+            var v1 = curr - prev;
+            var v2 = next - curr;
+            
+            if (v1.Length < 0.1 || v2.Length < 0.1) continue; // 忽略重合点
+
+            double angle = Vector.AngleBetween(v1, v2);
+            // AngleBetween 返回 -180 到 180
+            // 尖刺通常意味着角度接近 180 (反向)
+            if (Math.Abs(angle) > 135) 
+            {
+                // 这是一个折返点，移除它
+                edge.RemoveAt(i);
+            }
+        }
     }
 
     private void TessellateBezier(WpfPoint start, WpfPoint control, WpfPoint end, 
@@ -234,16 +260,6 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                                   List<WpfPoint> lefts, List<WpfPoint> rights)
     {
         const int steps = 6; 
-        
-        // --- Step 2: 尖角/毛刺处理 (Round Joins Logic) ---
-        // 我们不直接计算每一点的法线，而是检查法线是否突变。
-        // 由于贝塞尔曲线本身是连续的，只要控制点不重合，法线变化通常是平滑的。
-        // 真正产生毛刺的是当宽度很大且曲率很急时（内侧边缘打结）。
-        
-        // 为了简单高效，我们在这里限制 Offset 的最大变化率，
-        // 或者简单地接受偶尔的自相交（因为 FillRule 已经是 NonZero 了，自相交会被填满，不会露白）。
-        // 如果需要严格的 Round Join，需要更复杂的几何裁剪。
-        // 鉴于这是实时书写，NonZero FillRule 通常足以掩盖内侧打结的问题。
 
         for (int i = 1; i <= steps; i++)
         {
@@ -262,6 +278,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
             double width = u * u * wStart + 2 * u * t * wControl + t * t * wEnd;
 
+            // --- 倒刺预防 (Angle Limiting) ---
+            // 不再无脑延伸，我们检查这个偏移点是否与骨架线“打架”
+            // 但在 Tessellate 阶段很难获取全局上下文。
+            // 最好的办法是在生成后统一 Filter (见 FilterLoops)
+            
             AddRibbonPoints(pos, normal, width, lefts, rights);
         }
     }

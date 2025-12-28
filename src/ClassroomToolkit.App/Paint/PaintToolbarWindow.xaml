@@ -90,6 +90,17 @@
         <Grid x:Name="ToolbarRoot" Background="Transparent">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 
+                <!-- 0. 拖动把手 (Drag Handle) -->
+                <!-- 专门用于触屏拖动的区域，防止误触按钮 -->
+                <Grid x:Name="DragHandle" Width="28" Background="Transparent" 
+                      Margin="2,0,4,0" Cursor="SizeAll"
+                      MouseLeftButtonDown="OnToolbarDrag"
+                      ToolTip="按住此处拖动">
+                    <Path Data="M4,6 L20,6 M4,10 L20,10 M4,14 L20,14" 
+                          Stroke="#BBB" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Grid>
+
                 <!-- 1. 鼠标/选择 -->
                 <ToggleButton x:Name="CursorButton" 
                               Style="{StaticResource Style_IconButton_Active}"
