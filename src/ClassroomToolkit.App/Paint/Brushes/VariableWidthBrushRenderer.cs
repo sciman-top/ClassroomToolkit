@@ -30,9 +30,10 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private long _lastTimestamp;
     
     // Configuration for the brush dynamics
-    private const double MinWidthFactor = 0.2; // Fast strokes are 20% of base size
-    private const double MaxWidthFactor = 1.2; // Slow strokes are 120% of base size
-    private const double VelocityThreshold = 2.0; // Velocity scaling factor
+    private const double MinWidthFactor = 0.25; 
+    private const double MaxWidthFactor = 1.1; 
+    private const double VelocityThreshold = 1.5;
+    private const double MinDistanceThreshold = 2.0; // Filter out points closer than 2px
 
     public bool IsActive => _isActive;
 
@@ -40,7 +41,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         _color = color;
         _baseSize = baseSize;
-        _opacity = opacity / 255.0; // Normalize to 0-1
+        _opacity = 1.0; // Use color's alpha channel directly
     }
 
     public void OnDown(Point point)
@@ -49,33 +50,31 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _isActive = true;
         _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         
-        // Initial point has default width
-        _points.Add(new PointData(point, _lastTimestamp, _baseSize));
+        // Start with a thinner width for entry
+        _points.Add(new PointData(point, _lastTimestamp, _baseSize * 0.5));
     }
 
     public void OnMove(Point point)
     {
         if (!_isActive) return;
 
+        var lastData = _points.Last();
+        var dist = (point - lastData.Point).Length;
+
+        // Input filtering: ignore tiny movements to reduce jitter
+        if (dist < MinDistanceThreshold) return;
+
         var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         var dt = now - _lastTimestamp;
-        
-        // Avoid division by zero or extremely small time intervals
         if (dt < 1) dt = 1;
 
-        var lastPoint = _points.Last().Point;
-        var distance = (point - lastPoint).Length;
-        var velocity = distance / dt;
-
-        // Calculate dynamic width based on velocity
-        // Higher velocity -> Thinner line
-        // Lower velocity -> Thicker line
-        
+        var velocity = dist / dt;
         var targetWidth = CalculateWidth(velocity);
         
-        // Smooth the width transition to avoid jagged edges
-        var prevWidth = _points.Last().Width;
-        var smoothedWidth = Lerp(prevWidth, targetWidth, 0.3); // 0.3 smoothing factor
+        // Width smoothing (Low-pass filter)
+        // alpha determines how much weight the new width has. Lower = smoother changes.
+        var alpha = 0.4; 
+        var smoothedWidth = lastData.Width + (targetWidth - lastData.Width) * alpha;
 
         _points.Add(new PointData(point, now, smoothedWidth));
         _lastTimestamp = now;
@@ -85,9 +84,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (!_isActive) return;
         
-        // Add final point with tapering
         var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-        _points.Add(new PointData(point, now, 0.1)); // Taper to tip
+        // End with a sharp taper
+        _points.Add(new PointData(point, now, 0.0));
         _isActive = false;
     }
 
@@ -123,87 +122,167 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     private double CalculateWidth(double velocity)
     {
-        // Simple inverse relationship: fast = thin, slow = thick
-        // Map velocity (approx 0 to 5 px/ms) to factor
+        // Sigmoid-like easing for more natural pressure simulation
+        // Fast (high velocity) -> Thin
+        // Slow (low velocity) -> Thick
         
-        var factor = Math.Max(MinWidthFactor, Math.Min(MaxWidthFactor, 1.0 - (velocity / VelocityThreshold)));
+        var normalizedVel = Math.Min(velocity / VelocityThreshold, 1.0);
         
-        // If velocity is very low (start/stop), boost width slightly for ink bleed effect
-        if (velocity < 0.1) factor = MaxWidthFactor;
-
-        return _baseSize * factor;
+        // Easing function: 1 - t^2 (starts slow, drops fast) or Cosine
+        var ease = 1.0 - (normalizedVel * normalizedVel); 
+        
+        var range = MaxWidthFactor - MinWidthFactor;
+        return _baseSize * (MinWidthFactor + (range * ease));
     }
 
     private Geometry? GenerateGeometry()
     {
         if (_points.Count < 2) return null;
 
+        // If very few points, just return a simple line geometry to avoid processing overhead
+        if (_points.Count < 4)
+        {
+            return GenerateSimpleGeometry();
+        }
+
         var geometry = new StreamGeometry();
         using (var ctx = geometry.Open())
         {
-            // We will construct a mesh (strip of triangles) representing the stroke
+            var leftEdge = new List<Point>();
+            var rightEdge = new List<Point>();
+
+            // We use the "Midpoint Quadratic Bezier" technique.
+            // Curve passes through midpoints of segments, using the points as control points.
             
-            // 1. Calculate left and right boundary points
-            var leftPoints = new List<Point>();
-            var rightPoints = new List<Point>();
+            // Start P0
+            AddRibbonPoints(_points[0].Point, CalculateNormal(_points[0].Point, _points[1].Point), _points[0].Width, leftEdge, rightEdge);
 
             for (int i = 0; i < _points.Count - 1; i++)
             {
-                var p1 = _points[i];
-                var p2 = _points[i + 1];
+                var p0 = _points[i];
+                var p1 = _points[i+1];
 
-                var dir = p2.Point - p1.Point;
-                if (dir.LengthSquared < 0.0001) continue;
-                dir.Normalize();
-
-                var normal = new Vector(-dir.Y, dir.X);
-                
-                var w1 = p1.Width / 2.0;
-                var w2 = p2.Width / 2.0;
-
-                if (i == 0)
+                // For the last segment, we just go to the end point
+                if (i == _points.Count - 2)
                 {
-                    // Start cap
-                    leftPoints.Add(p1.Point + normal * w1);
-                    rightPoints.Add(p1.Point - normal * w1);
+                     // Treat as line for the very last bit
+                     AddRibbonPoints(p1.Point, CalculateNormal(p0.Point, p1.Point), p1.Width, leftEdge, rightEdge);
+                     continue;
+                }
+                
+                // For internal segments, we draw a Quad Bezier from Mid(i) to Mid(i+1) using P(i+1) as control?
+                // Standard algorithm:
+                // From: Mid(P_i, P_{i+1}) 
+                // To: Mid(P_{i+1}, P_{i+2})
+                // Control: P_{i+1}
+                
+                var p2 = _points[i+2];
+
+                var start = (i == 0) ? p0.Point : Mid(p0.Point, p1.Point);
+                var end = Mid(p1.Point, p2.Point);
+                var control = p1.Point;
+
+                var startWidth = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
+                var endWidth = (p1.Width + p2.Width) / 2.0;
+                var controlWidth = p1.Width;
+
+                // Discretize this Bezier curve to generate variable width ribbon
+                TessellateBezier(start, control, end, startWidth, controlWidth, endWidth, leftEdge, rightEdge);
+            }
+            
+            // Construct the closed shape
+            if (leftEdge.Count > 0)
+            {
+                ctx.BeginFigure(leftEdge[0], true, true);
+                
+                // Trace Left Edge
+                for (int i = 1; i < leftEdge.Count; i++)
+                {
+                    ctx.LineTo(leftEdge[i], true, true);
                 }
 
-                leftPoints.Add(p2.Point + normal * w2);
-                rightPoints.Add(p2.Point - normal * w2);
+                // Trace Right Edge (Backwards)
+                for (int i = rightEdge.Count - 1; i >= 0; i--)
+                {
+                    ctx.LineTo(rightEdge[i], true, true);
+                }
             }
-
-            // 2. Build the path
-            // Start at the first left point
-            if (leftPoints.Count == 0) return null;
-
-            ctx.BeginFigure(leftPoints[0], true, true);
-
-            // Go down the left side (using Bezier or PolyLine? Let's use PolyLine for performance first, or Bezier if needed)
-            // For smoother look, we should use PolyQuadraticBezier or similar, but let's try straight lines for the hull first.
-            // With high sample rate, straight lines are fine.
-            
-            for (int i = 1; i < leftPoints.Count; i++)
-            {
-                ctx.LineTo(leftPoints[i], true, true);
-            }
-
-            // Cross over to the end of right side (which is the last point, reversed)
-            // The tip is effectively the line between last left and last right.
-            
-            // Come back up the right side
-            for (int i = rightPoints.Count - 1; i >= 0; i--)
-            {
-                ctx.LineTo(rightPoints[i], true, true);
-            }
-            
-            // Close the figure (connect back to start)
         }
-
+        
         return geometry;
     }
 
-    private static double Lerp(double a, double b, double t)
+    private void TessellateBezier(Point start, Point control, Point end, double wStart, double wControl, double wEnd, List<Point> lefts, List<Point> rights)
     {
-        return a + (b - a) * t;
+        // Number of steps depends on curvature/length, but fixed count is usually fine for handwriting strokes
+        const int steps = 8; 
+
+        for (int i = 1; i <= steps; i++)
+        {
+            double t = i / (double)steps;
+            
+            // Quadratic Bezier Formula: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+            double u = 1 - t;
+            double tt = t * t;
+            double uu = u * u;
+
+            double x = uu * start.X + 2 * u * t * control.X + tt * end.X;
+            double y = uu * start.Y + 2 * u * t * control.Y + tt * end.Y;
+            var pos = new Point(x, y);
+
+            // Derivative for Tangent: B'(t) = 2(1-t)(P1-P0) + 2t(P2-P1)
+            double tx = 2 * u * (control.X - start.X) + 2 * t * (end.X - control.X);
+            double ty = 2 * u * (control.Y - start.Y) + 2 * t * (end.Y - control.Y);
+            
+            // Normal is (-y, x)
+            var normal = new Vector(-ty, tx);
+            if (normal.LengthSquared > 0.000001) normal.Normalize();
+
+            // Interpolate width
+            // This is an approximation. Ideally we calculate width at 't' based on arc length, 
+            // but linear t interpolation is sufficient for short segments.
+            double w = uu * wStart + 2 * u * t * wControl + tt * wEnd;
+
+            AddRibbonPoints(pos, normal, w, lefts, rights);
+        }
+    }
+
+    private void AddRibbonPoints(Point center, Vector normal, double width, List<Point> lefts, List<Point> rights)
+    {
+        var offset = normal * (width * 0.5);
+        lefts.Add(center + offset);
+        rights.Add(center - offset);
+    }
+
+    private Geometry GenerateSimpleGeometry()
+    {
+        // Fallback for very short strokes (dots, tiny dashes)
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            if (_points.Count > 0)
+            {
+                var p = _points[0];
+                var r = p.Width / 2.0;
+                ctx.BeginFigure(new Point(p.Point.X - r, p.Point.Y - r), true, true);
+                ctx.LineTo(new Point(p.Point.X + r, p.Point.Y - r), true, true);
+                ctx.LineTo(new Point(p.Point.X + r, p.Point.Y + r), true, true);
+                ctx.LineTo(new Point(p.Point.X - r, p.Point.Y + r), true, true);
+            }
+        }
+        return geometry;
+    }
+
+    private static Point Mid(Point a, Point b)
+    {
+        return new Point((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5);
+    }
+
+    private static Vector CalculateNormal(Point p1, Point p2)
+    {
+        var dir = p2 - p1;
+        if (dir.LengthSquared < 0.000001) return new Vector(0, 1);
+        dir.Normalize();
+        return new Vector(-dir.Y, dir.X);
     }
 }

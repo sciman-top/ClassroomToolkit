@@ -476,8 +476,7 @@ public partial class PaintOverlayWindow : Window
                 var path = new Path
                 {
                     Data = geometry,
-                    Fill = new SolidColorBrush(attr.Color), // Use Fill because the geometry IS the stroke body
-                    Opacity = attr.Color.A / 255.0
+                    Fill = new SolidColorBrush(attr.Color) // Color already contains Alpha
                 };
                 ShapeCanvas.Children.Add(path);
             }
