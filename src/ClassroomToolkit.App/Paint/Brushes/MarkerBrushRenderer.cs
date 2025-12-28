@@ -8,22 +8,32 @@ using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
+public enum MarkerRenderMode
+{
+    SegmentUnion = 0,
+    Ribbon
+}
+
 public class MarkerBrushRenderer : IBrushRenderer
 {
-    private const double SpeedWidthFactor = 0.1;
+    private const double SpeedWidthFactor = 0.08;
     private const double MinWidthFactor = 0.85;
     private const double PositionSmoothing = 0.75;
-    private const double WidthSmoothing = 0.4;
+    private const double WidthSmoothing = 0.45;
     private const double MinMoveDistance = 0.5;
     private const double VelocityDecay = 0.985;
-    private const double SplineTargetSpacing = 1.8;
-    private const double MinSampleSpacing = 0.15;
+    private const double SplineTargetSpacing = 2.0;
+    private const double MinSampleSpacing = 0.2;
     private const double StartTaperFactor = 0.8;
-    private const double EndTaperFactor = 0.75;
+    private const double EndTaperFactor = 0.6;
     private const double TaperLengthRatio = 0.1;
     private const double MaxTaperLengthFactor = 2.8;
-    private const bool DebugDrawCenters = false;
-    private static readonly WpfPen DebugCenterPen = CreateFrozenPen(Colors.LimeGreen, 1);
+    private const double RibbonEndCapScale = 0.9;
+    private const double RibbonJoinScale = 0.9;
+    private const double RibbonQuadOverlap = 1.02;
+    private const double RibbonMiterLimit = 2.5;
+    private const double RibbonNormalSmoothing = 0.8;
+    private const int RibbonCapSegments = 10;
 
     private struct MarkerPoint
     {
@@ -45,8 +55,20 @@ public class MarkerBrushRenderer : IBrushRenderer
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
     private double _velocityPeak;
+    private readonly MarkerRenderMode _renderMode;
 
     public bool IsActive => _isActive;
+    public MarkerRenderMode RenderMode => _renderMode;
+
+    public MarkerBrushRenderer()
+        : this(MarkerRenderMode.SegmentUnion)
+    {
+    }
+
+    public MarkerBrushRenderer(MarkerRenderMode renderMode)
+    {
+        _renderMode = renderMode;
+    }
 
     public void Initialize(WpfColor color, double baseSize, double opacity)
     {
@@ -119,16 +141,6 @@ public class MarkerBrushRenderer : IBrushRenderer
         var brush = new SolidColorBrush(GetMarkerColor());
         brush.Freeze();
         dc.DrawGeometry(brush, null, geometry);
-
-#pragma warning disable CS0162
-        if (DebugDrawCenters && _points.Count > 1)
-        {
-            for (int i = 1; i < _points.Count; i++)
-            {
-                dc.DrawLine(DebugCenterPen, _points[i - 1].Position, _points[i].Position);
-            }
-        }
-#pragma warning restore CS0162
     }
 
     public Geometry? GetLastStrokeGeometry()
@@ -164,6 +176,13 @@ public class MarkerBrushRenderer : IBrushRenderer
     }
 
     private Geometry? BuildStrokeGeometry()
+    {
+        return _renderMode == MarkerRenderMode.Ribbon
+            ? BuildRibbonGeometry()
+            : BuildSegmentGeometry();
+    }
+
+    private Geometry? BuildSegmentGeometry()
     {
         if (_points.Count == 0)
         {
@@ -251,6 +270,108 @@ public class MarkerBrushRenderer : IBrushRenderer
         return group;
     }
 
+    private Geometry? BuildRibbonGeometry()
+    {
+        var samples = BuildSmoothSamples();
+        if (samples.Count == 0)
+        {
+            return null;
+        }
+        if (samples.Count < 2)
+        {
+            var single = samples[0];
+            var circle = new EllipseGeometry(single.Position, single.Width * 0.5, single.Width * 0.5);
+            if (circle.CanFreeze) circle.Freeze();
+            return circle;
+        }
+        SmoothSamplePositions(samples);
+
+        var left = new List<WpfPoint>(samples.Count);
+        var right = new List<WpfPoint>(samples.Count);
+        var lastNormal = new Vector(0, 0);
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var prev = i > 0 ? samples[i - 1].Position : samples[i].Position;
+            var next = i < samples.Count - 1 ? samples[i + 1].Position : samples[i].Position;
+            var tangent = next - prev;
+            if (tangent.LengthSquared < 0.0001)
+            {
+                tangent = i > 0 ? samples[i].Position - samples[i - 1].Position : new Vector(1, 0);
+            }
+            if (tangent.LengthSquared < 0.0001)
+            {
+                tangent = new Vector(1, 0);
+            }
+            tangent.Normalize();
+
+            var normal = new Vector(-tangent.Y, tangent.X);
+            if (lastNormal.LengthSquared > 0.0001 && Vector.Multiply(lastNormal, normal) < 0)
+            {
+                normal = -normal;
+            }
+            if (lastNormal.LengthSquared > 0.0001)
+            {
+                normal = LerpVector(lastNormal, normal, RibbonNormalSmoothing);
+            }
+            if (normal.LengthSquared < 0.0001)
+            {
+                normal = lastNormal.LengthSquared > 0.0001 ? lastNormal : new Vector(0, -1);
+            }
+            normal.Normalize();
+            lastNormal = normal;
+
+            double width = samples[i].Width;
+            if (i == 0 || i == samples.Count - 1)
+            {
+                width *= RibbonEndCapScale;
+            }
+            else
+            {
+                width = Math.Max(width, samples[i - 1].Width);
+                width = Math.Max(width, samples[i + 1].Width);
+                width *= RibbonJoinScale;
+            }
+
+            double halfWidth = Math.Max(width * 0.5, 0.1) * RibbonQuadOverlap;
+            left.Add(samples[i].Position + (normal * halfWidth));
+            right.Add(samples[i].Position - (normal * halfWidth));
+        }
+
+        ClampRibbonMiters(samples, left, right);
+
+        bool clockwise = true;
+        if (left.Count > 1)
+        {
+            clockwise = IsQuadClockwise(left[0], left[1], right[1], right[0]);
+        }
+
+        var geometry = new StreamGeometry { FillRule = FillRule.Nonzero };
+        using (var ctx = geometry.Open())
+        {
+            for (int i = 0; i < samples.Count - 1; i++)
+            {
+                ctx.BeginFigure(left[i], isFilled: true, isClosed: true);
+                ctx.LineTo(left[i + 1], isStroked: true, isSmoothJoin: true);
+                ctx.LineTo(right[i + 1], isStroked: true, isSmoothJoin: true);
+                ctx.LineTo(right[i], isStroked: true, isSmoothJoin: true);
+            }
+
+            for (int i = 0; i < samples.Count; i++)
+            {
+                double radius = (left[i] - right[i]).Length * 0.5;
+                if (radius < 0.1)
+                {
+                    continue;
+                }
+                AppendCircleFigure(ctx, samples[i].Position, radius, clockwise);
+            }
+        }
+
+        if (geometry.CanFreeze) geometry.Freeze();
+        return geometry;
+    }
+
     private static WpfPen CreateFrozenPen(WpfColor color, double thickness)
     {
         var pen = new WpfPen(new SolidColorBrush(color), thickness);
@@ -321,6 +442,30 @@ public class MarkerBrushRenderer : IBrushRenderer
         for (int i = 0; i < samples.Count; i++)
         {
             samples[i] = new MarkerPoint(samples[i].Position, widths[i]);
+        }
+    }
+
+    private static void SmoothSamplePositions(List<MarkerPoint> samples)
+    {
+        if (samples.Count < 3)
+        {
+            return;
+        }
+        var positions = new WpfPoint[samples.Count];
+        positions[0] = samples[0].Position;
+        positions[^1] = samples[^1].Position;
+        for (int i = 1; i < samples.Count - 1; i++)
+        {
+            var prev = samples[i - 1].Position;
+            var curr = samples[i].Position;
+            var next = samples[i + 1].Position;
+            positions[i] = new WpfPoint(
+                (prev.X + (curr.X * 2.0) + next.X) * 0.25,
+                (prev.Y + (curr.Y * 2.0) + next.Y) * 0.25);
+        }
+        for (int i = 0; i < samples.Count; i++)
+        {
+            samples[i] = new MarkerPoint(positions[i], samples[i].Width);
         }
     }
 
@@ -404,6 +549,98 @@ public class MarkerBrushRenderer : IBrushRenderer
         return new WpfPoint(
             start.X + ((end.X - start.X) * t),
             start.Y + ((end.Y - start.Y) * t));
+    }
+
+    private static Vector LerpVector(Vector start, Vector end, double t)
+    {
+        return new Vector(
+            start.X + ((end.X - start.X) * t),
+            start.Y + ((end.Y - start.Y) * t));
+    }
+
+    private static void AppendCircleFigure(StreamGeometryContext ctx, WpfPoint center, double radius, bool clockwise)
+    {
+        int segments = Math.Max(6, RibbonCapSegments * 2);
+        double step = (Math.PI * 2.0 / segments) * (clockwise ? 1 : -1);
+
+        var start = new WpfPoint(center.X + radius, center.Y);
+        ctx.BeginFigure(start, isFilled: true, isClosed: true);
+        for (int i = 1; i <= segments; i++)
+        {
+            double angle = step * i;
+            var p = new WpfPoint(center.X + (Math.Cos(angle) * radius), center.Y + (Math.Sin(angle) * radius));
+            ctx.LineTo(p, isStroked: true, isSmoothJoin: true);
+        }
+    }
+
+    private static bool IsQuadClockwise(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3)
+    {
+        double area = 0;
+        area += (p0.X * p1.Y) - (p1.X * p0.Y);
+        area += (p1.X * p2.Y) - (p2.X * p1.Y);
+        area += (p2.X * p3.Y) - (p3.X * p2.Y);
+        area += (p3.X * p0.Y) - (p0.X * p3.Y);
+        return area > 0;
+    }
+
+    private void ClampRibbonMiters(List<MarkerPoint> samples, List<WpfPoint> left, List<WpfPoint> right)
+    {
+        if (samples.Count < 3)
+        {
+            return;
+        }
+
+        for (int i = 1; i < samples.Count - 1; i++)
+        {
+            var pPrev = samples[i - 1].Position;
+            var pCurr = samples[i].Position;
+            var pNext = samples[i + 1].Position;
+
+            var tPrev = pCurr - pPrev;
+            var tNext = pNext - pCurr;
+            if (tPrev.LengthSquared < 0.0001 || tNext.LengthSquared < 0.0001)
+            {
+                continue;
+            }
+
+            tPrev.Normalize();
+            tNext.Normalize();
+            var avg = tPrev + tNext;
+            if (avg.LengthSquared < 0.0001)
+            {
+                continue;
+            }
+            avg.Normalize();
+
+            double width = samples[i].Width;
+            width = Math.Max(width, samples[i - 1].Width);
+            width = Math.Max(width, samples[i + 1].Width);
+            width *= RibbonJoinScale;
+
+            double halfWidth = Math.Max(width * 0.5, 0.1);
+            double angle = Math.Acos(Math.Clamp(Vector.Multiply(-tPrev, tNext), -1.0, 1.0));
+            double sinHalf = Math.Sin(angle * 0.5);
+            if (sinHalf < 0.001)
+            {
+                continue;
+            }
+            double miterLength = halfWidth / sinHalf;
+            double maxMiter = halfWidth * RibbonMiterLimit;
+            if (miterLength <= maxMiter)
+            {
+                continue;
+            }
+
+            double scale = maxMiter / miterLength;
+            var normal = new Vector(-avg.Y, avg.X);
+            if (normal.LengthSquared < 0.0001)
+            {
+                continue;
+            }
+            normal.Normalize();
+            left[i] = pCurr + (normal * (halfWidth * scale));
+            right[i] = pCurr - (normal * (halfWidth * scale));
+        }
     }
 
     private static double Smoothstep(double t)

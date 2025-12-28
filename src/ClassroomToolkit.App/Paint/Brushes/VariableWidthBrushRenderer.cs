@@ -15,17 +15,17 @@ public class BrushPhysicsConfig
     public double MaxWidthFactor { get; set; } = 1.5;
     public double MinStrokeWidthPx { get; set; } = 2.0;
     public double MaxStrokeWidthMultiplier { get; set; } = 2.5;
-    public double WidthSmoothing { get; set; } = 0.93;
+    public double WidthSmoothing { get; set; } = 0.91;
     public bool SimulateStartCap { get; set; } = true;
     public bool SimulateEndTaper { get; set; } = true;
     public double VelocityThreshold { get; set; } = 1.5;
-    public int VelocitySmoothWindow { get; set; } = 7;
-    public int PressureSmoothWindow { get; set; } = 8;
+    public int VelocitySmoothWindow { get; set; } = 6;
+    public int PressureSmoothWindow { get; set; } = 7;
     public double CapIgnoreVelocityRatio { get; set; } = 0.1;
 
     // 笔锋效果参数
     public double StartCapLength { get; set; } = 0.05;
-    public double EndTaperLength { get; set; } = 0.22;  // v10: 增加到25%
+    public double EndTaperLength { get; set; } = 0.3;  // v10: 增加到25%
     public int MinTaperPoints { get; set; } = 5;
 
     // 修复蝌蚪头：起笔阶段忽略速度
@@ -36,31 +36,35 @@ public class BrushPhysicsConfig
     public double MaxPointJumpDistance { get; set; } = 100.0;
 
     // v10 新增参数
-    public double VelocityWidthFactor { get; set; } = 0.64;  // kWidth: 速度影响强度
+    public double VelocityWidthFactor { get; set; } = 0.66;  // kWidth: 速度影响强度
     public double EndTaperStartProgress { get; set; } = 0.75;  // 收笔开始位置
     public double EndVelocityDecoupleStart { get; set; } = 0.85;  // 速度解耦开始位置
-    public double FlyingWhiteThreshold { get; set; } = 0.84;  // 飞白速度阈值
-    public double FlyingWhiteNoiseIntensity { get; set; } = 0.045;  // 飞白噪声强度
+    public double FlyingWhiteThreshold { get; set; } = 0.86;  // 飞白速度阈值
+    public double FlyingWhiteNoiseIntensity { get; set; } = 0.026;  // 飞白噪声强度
 
     // v11 新增参数
     public double DunBiSpeedThreshold { get; set; } = 0.4;  // 顿笔速度阈值
-    public double DunBiSpreadRate { get; set; } = 0.8;     // 墨水扩散速率
-    public double DunBiMaxAccumulation { get; set; } = 1.3; // 最大累积倍数
-    public double DunBiDecayRate { get; set; } = 0.15;     // 累积衰减速率
-    public double FlyingWhiteNoiseFrequency { get; set; } = 4.7;  // 噪声频率
-    public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.79;  // 噪声减少起点
-    public double CapRoundThreshold { get; set; } = 0.58;   // 圆笔锋阈值（相对于 baseSize）
-    public double TaperMinWidthFactor { get; set; } = 0.43; // 笔锋最小宽度因子
+    public double DunBiSpreadRate { get; set; } = 0.55;     // 墨水扩散速率
+    public double DunBiMaxAccumulation { get; set; } = 1.2; // 最大累积倍数
+    public double DunBiDecayRate { get; set; } = 0.2;     // 累积衰减速率
+    public double FlyingWhiteNoiseFrequency { get; set; } = 4.2;  // 噪声频率
+    public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.78;  // 噪声减少起点
+    public double CapRoundThreshold { get; set; } = 0.72;   // 圆笔锋阈值（相对于 baseSize）
+    public double TaperMinWidthFactor { get; set; } = 0.6; // 笔锋最小宽度因子
+    public double FiberNoiseIntensity { get; set; } = 0.005; // 纸张纤维噪声强度
+    public double FiberNoiseFrequency { get; set; } = 0.35; // 纸张纤维噪声频率
+    public double AnisotropyStrength { get; set; } = 0.05; // 笔锋方向性强度
+    public double BrushAngleDegrees { get; set; } = -45.0; // 笔锋默认角度
 
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
-    private const double DirectionNoiseAmplitude = 0.021;
-    private const double DirectionNoiseFrequency = 0.45;
+    private const double DirectionNoiseAmplitude = 0.009;
+    private const double DirectionNoiseFrequency = 0.4;
 
-    private const int UpsampleSteps = 12;
+    private const int UpsampleSteps = 8;
     private const double CornerAngleThreshold = 90.0;
     private const double CornerMinAngle = 5.0;
     private const int CornerArcSegments = 6;
@@ -177,6 +181,20 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         double smoothVelocity = PushAndAverage(_velocityBuffer, _config.VelocitySmoothWindow, velocity);
         double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount);
 
+        // 轻微各向异性：模拟毛笔扁平笔锋（仅轻度影响宽度）
+        if (dist > 0.001)
+        {
+            var dir = _smoothedPos - lastPt.Position;
+            if (dir.LengthSquared > 0.0001)
+            {
+                double angle = Math.Atan2(dir.Y, dir.X);
+                double brushAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
+                double angleFactor = 1.0 - (_config.AnisotropyStrength * Math.Cos(2 * (angle - brushAngle)));
+                angleFactor = Math.Clamp(angleFactor, 0.9, 1.1);
+                targetWidth = ClampWidth(targetWidth * angleFactor);
+            }
+        }
+
         // v11: 顿笔逻辑 - 低速时累积墨水扩散
         double normalizedSpeed = Math.Clamp((smoothVelocity - _config.MinVelocityClamp) /
                                             (_config.VelocityThreshold - _config.MinVelocityClamp), 0, 1);
@@ -228,10 +246,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         if (dir.Length > 0.1) dir.Normalize();
         else dir = new Vector(1, 0);
 
-        var extension = _baseSize * 0.5;
+        var extension = _baseSize * 0.2;
         var endPos = point + dir * extension;
 
-        _points.Add(new StrokePoint(endPos, 0.1, 0, 1));
+        var minWidth = ClampWidth(_baseSize * _config.TaperMinWidthFactor);
+        _points.Add(new StrokePoint(endPos, minWidth, 0, 1));
         _isActive = false;
     }
 
@@ -656,15 +675,13 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
             // ===== v11 修复: 使用平滑噪声函数代替随机噪声 =====
             double edgeNoise = 0;
+            double phase = i * 0.45 + (progress * 3.2) + ((pos.X + pos.Y) * 0.01);
 
             if (speed > _config.FlyingWhiteThreshold && progress < _config.FlyingWhiteNoiseReductionProgress)
             {
                 // v11: 使用正弦波代替 Random()，产生平滑有机的波动
                 double frequency = _config.FlyingWhiteNoiseFrequency;
-                double phase = i * 0.5; // 相位偏移
-
-                // 正弦波噪声: 在 [-1, 1] 之间平滑变化
-                double smoothNoise = Math.Sin(frequency * phase);
+                double smoothNoise = FractalNoise(phase, frequency);
 
                 // 噪声振幅
                 double noiseAmplitude = _baseSize * _config.FlyingWhiteNoiseIntensity * speed;
@@ -683,9 +700,17 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                 // ===== v11 安全约束: 防止左右轮廓交叉 =====
                 // 确保噪声不超过宽度的一半
-                double maxNoise = width * 0.4; // 最大为 40% 半宽
+                double maxNoise = width * 0.14; // 最大为 14% 半宽
                 edgeNoise = Math.Clamp(edgeNoise, -maxNoise, maxNoise);
             }
+
+            // 纸张纤维噪声（轻微，增强质感）
+            double fiberNoise = FractalNoise(phase, _config.FiberNoiseFrequency);
+            double fiberFactor = 0.2 + (speed * 0.8);
+            double accumulation = Math.Clamp(samples[i].AccumulatedWidth / (_baseSize * 0.8), 0, 1);
+            double fiberAttenuation = 1.0 - (accumulation * 0.6);
+            double fiberAmplitude = width * _config.FiberNoiseIntensity * fiberFactor * fiberAttenuation;
+            edgeNoise += fiberNoise * fiberAmplitude;
 
             // 应用噪声（只在法线方向）
             var halfWidth = width * 0.5;
@@ -719,14 +744,16 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                         var normalPrev = GetNormalFromVector(dirPrev, normal);
                         var normalNext = GetNormalFromVector(dirNext, normal);
 
-                        if (cross > 0.0001)
+                        bool allowCornerPatch = speed < 0.35 && angle < 80 && angle > 12;
+
+                        if (allowCornerPatch && cross > 0.0001)
                         {
                             AddCornerReinforcement(leftEdge, pos, normalPrev, normalNext, width);
                             AddCornerArc(leftEdge, pos, normalPrev, normalNext, halfWidth, false);
                             rightEdge.Add(rightPoint);
                             handledCorner = true;
                         }
-                        else if (cross < -0.0001)
+                        else if (allowCornerPatch && cross < -0.0001)
                         {
                             AddCornerReinforcement(rightEdge, pos, -normalPrev, -normalNext, width);
                             AddCornerArc(rightEdge, pos, -normalPrev, -normalNext, halfWidth, true);
@@ -817,9 +844,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     private static double ClampTipLength(double width)
     {
-        double minLen = width * 0.5;
-        double maxLen = width * 2.0;
-        double desired = width * 1.5;
+        double minLen = width * 0.3;
+        double maxLen = width * 1.2;
+        double desired = width * 0.9;
         return Math.Clamp(desired, minLen, maxLen);
     }
 
@@ -846,11 +873,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     private void AddCapV13(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, CapData cap)
     {
-        double sharpThreshold = _baseSize * 0.5;
-        double dropThreshold = 1.2;
+        double sharpThreshold = _baseSize * 0.2;
+        double dropThreshold = 3.2;
 
         double normalizedDrop = cap.PressureDropRate / Math.Max(_baseSize, 0.001);
-        bool useSharp = cap.Width < sharpThreshold || normalizedDrop > dropThreshold;
+        bool useSharp = cap.Width < sharpThreshold && normalizedDrop > dropThreshold;
 
         if (useSharp)
         {
@@ -945,7 +972,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         bisector.Normalize();
 
-        double baseOffset = _baseSize * 0.15;
+        double baseOffset = _baseSize * 0.1;
         double minOffset = _baseSize * 0.05;
         double maxOffset = _baseSize * 0.35;
         double offset = Math.Clamp(baseOffset, minOffset, maxOffset);
@@ -1049,6 +1076,14 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         return bezierPoints;
+    }
+
+    private static double FractalNoise(double phase, double frequency)
+    {
+        double n1 = Math.Sin(phase * frequency);
+        double n2 = Math.Sin((phase * frequency * 2.13) + 1.7);
+        double n3 = Math.Sin((phase * frequency * 4.27) + 2.9);
+        return (n1 * 0.6) + (n2 * 0.3) + (n3 * 0.1);
     }
 
     /// <summary>

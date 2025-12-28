@@ -634,6 +634,14 @@ public partial class PaintOverlayWindow : Window
             }
             return;
         }
+        if (_brushStyle == PaintBrushStyle.StandardRibbon)
+        {
+            if (force || _activeRenderer is not MarkerBrushRenderer marker || marker.RenderMode != MarkerRenderMode.Ribbon)
+            {
+                _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon);
+            }
+            return;
+        }
         if (force || _activeRenderer is not MarkerBrushRenderer)
         {
             _activeRenderer = new MarkerBrushRenderer();

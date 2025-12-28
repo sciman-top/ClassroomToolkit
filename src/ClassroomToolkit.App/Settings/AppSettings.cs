@@ -61,7 +61,7 @@ public sealed class AppSettings
     public double EraserSize { get; set; } = 24;
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 255;
-    public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.Standard;
+    public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
     public MediaColor BrushColor { get; set; } = MediaColors.Red;
     public MediaColor BoardColor { get; set; } = MediaColors.White;
     public MediaColor QuickColor1 { get; set; } = MediaColors.Black;

@@ -235,9 +235,13 @@ public sealed class AppSettingsService
     {
         if (Enum.TryParse<PaintBrushStyle>(raw, true, out var parsed))
         {
+            if (parsed == PaintBrushStyle.Standard)
+            {
+                return PaintBrushStyle.StandardRibbon;
+            }
             return parsed;
         }
-        return PaintBrushStyle.Standard;
+        return PaintBrushStyle.StandardRibbon;
     }
 
     private static bool HasGeometry(AppSettings settings)

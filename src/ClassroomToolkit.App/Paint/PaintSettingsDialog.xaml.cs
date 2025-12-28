@@ -26,7 +26,8 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
     {
-        ("白板笔", PaintBrushStyle.Standard),
+        ("白板笔（兼容）", PaintBrushStyle.Standard),
+        ("白板笔", PaintBrushStyle.StandardRibbon),
         ("毛笔", PaintBrushStyle.Calligraphy)
     };
     private static readonly (string Label, string Value)[] WpsModeChoices =
