@@ -120,15 +120,19 @@
             <!-- 2. 内容区 -->
             
             <!-- A. 点名展示 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}" Margin="20,0,20,10">
-                <Border Background="White" CornerRadius="12" MouseLeftButtonUp="OnRollClick">
+            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                <!-- 优化：VerticalAlignment="Center" 让卡片高度根据文字自适应，不再强制拉伸 -->
+                <Border Background="White" CornerRadius="12" 
+                        VerticalAlignment="Center"
+                        Margin="40,10"
+                        MouseLeftButtonUp="OnRollClick">
                     <!-- 卡片阴影 -->
                     <Border.Effect>
-                        <DropShadowEffect Color="#007ACC" BlurRadius="30" ShadowDepth="0" Opacity="0.1"/>
+                        <DropShadowEffect Color="#007ACC" BlurRadius="30" ShadowDepth="0" Opacity="0.15"/>
                     </Border.Effect>
                     
                     <!-- 核心名字展示 -->
-                    <Viewbox Stretch="Uniform" Margin="20">
+                    <Viewbox Stretch="Uniform" Margin="40,20">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
                                     x:Name="NameContainer" RenderTransformOrigin="0.5,0.5">
                             <StackPanel.RenderTransform>
