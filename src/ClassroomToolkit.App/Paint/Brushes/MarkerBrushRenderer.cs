@@ -4,20 +4,25 @@ using System.Windows;
 using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
 using WpfColor = System.Windows.Media.Color;
-using WpfBrush = System.Windows.Media.Brush;
-using WpfBrushes = System.Windows.Media.Brushes;
 using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
 public class MarkerBrushRenderer : IBrushRenderer
 {
-    private const double SpeedWidthFactor = 0.18;
-    private const double MinWidthFactor = 0.7;
-    private const double PositionSmoothing = 0.6;
-    private const double MinMoveDistance = 0.8;
+    private const double SpeedWidthFactor = 0.1;
+    private const double MinWidthFactor = 0.85;
+    private const double PositionSmoothing = 0.75;
+    private const double WidthSmoothing = 0.4;
+    private const double MinMoveDistance = 0.5;
+    private const double VelocityDecay = 0.985;
+    private const double SplineTargetSpacing = 1.8;
+    private const double MinSampleSpacing = 0.15;
+    private const double StartTaperFactor = 0.8;
+    private const double EndTaperFactor = 0.75;
+    private const double TaperLengthRatio = 0.1;
+    private const double MaxTaperLengthFactor = 2.8;
     private const bool DebugDrawCenters = false;
-    private const double WidthQuantizationStep = 0.5;
     private static readonly WpfPen DebugCenterPen = CreateFrozenPen(Colors.LimeGreen, 1);
 
     private struct MarkerPoint
@@ -39,7 +44,7 @@ public class MarkerBrushRenderer : IBrushRenderer
     private long _lastTimestamp;
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
-    private double _maxVelocity;
+    private double _velocityPeak;
 
     public bool IsActive => _isActive;
 
@@ -49,7 +54,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         _baseSize = baseSize;
         _smoothedWidth = baseSize;
         _smoothedPos = new WpfPoint(0, 0);
-        _maxVelocity = 0.001;
+        _velocityPeak = 0.001;
     }
 
     public void OnDown(WpfPoint point)
@@ -59,7 +64,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         _smoothedWidth = _baseSize;
         _smoothedPos = point;
-        _maxVelocity = 0.001;
+        _velocityPeak = 0.001;
         _points.Add(new MarkerPoint(point, _smoothedWidth));
     }
 
@@ -81,14 +86,14 @@ public class MarkerBrushRenderer : IBrushRenderer
         if (dt < 1) dt = 1;
 
         double velocity = dist / dt;
-        _maxVelocity = Math.Max(_maxVelocity, velocity);
-        double normSpeed = Math.Clamp(velocity / _maxVelocity, 0, 1);
+        _velocityPeak = Math.Max(_velocityPeak * VelocityDecay, velocity);
+        double normSpeed = Math.Clamp(velocity / (_velocityPeak + 0.0001), 0, 1);
 
         double targetWidth = _baseSize * (1.0 - (SpeedWidthFactor * normSpeed));
         double minWidth = _baseSize * MinWidthFactor;
         targetWidth = Math.Max(targetWidth, minWidth);
 
-        _smoothedWidth = (_smoothedWidth * 0.6) + (targetWidth * 0.4);
+        _smoothedWidth = Lerp(_smoothedWidth, targetWidth, WidthSmoothing);
         _points.Add(new MarkerPoint(_smoothedPos, _smoothedWidth));
         _lastTimestamp = now;
     }
@@ -106,51 +111,14 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public void Render(DrawingContext dc)
     {
-        if (_points.Count == 0)
+        var geometry = BuildStrokeGeometry();
+        if (geometry == null)
         {
             return;
         }
-
         var brush = new SolidColorBrush(GetMarkerColor());
         brush.Freeze();
-
-        var pen = new WpfPen(brush, Math.Max(QuantizeWidth(_points[0].Width), 0.1))
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-
-        var first = _points[0];
-        DrawStamp(dc, brush, first.Position, first.Width);
-        int batchStart = 0;
-        double batchWidth = QuantizeWidth(first.Width);
-
-        for (int i = 0; i < _points.Count - 1; i++)
-        {
-            var p0 = _points[i];
-            var p1 = _points[i + 1];
-            double w0 = Math.Max(p0.Width, 0.1);
-            double w1 = Math.Max(p1.Width, 0.1);
-            double nextWidth = QuantizeWidth(w1);
-            bool split = nextWidth != batchWidth || ShouldStampJoin(i, w0, w1);
-
-            if (split)
-            {
-                DrawBatchStroke(dc, pen, batchStart, i + 1, batchWidth);
-                DrawStamp(dc, brush, p1.Position, w1);
-                batchStart = i + 1;
-                batchWidth = nextWidth;
-            }
-        }
-
-        DrawBatchStroke(dc, pen, batchStart, _points.Count - 1, batchWidth);
-
-        if (_points.Count > 1)
-        {
-            var last = _points[_points.Count - 1];
-            DrawStamp(dc, brush, last.Position, last.Width);
-        }
+        dc.DrawGeometry(brush, null, geometry);
 
 #pragma warning disable CS0162
         if (DebugDrawCenters && _points.Count > 1)
@@ -165,9 +133,7 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public Geometry? GetLastStrokeGeometry()
     {
-        var geometry = GenerateMarkerGeometry();
-        if (geometry != null) geometry.Freeze();
-        return geometry;
+        return BuildStrokeGeometry();
     }
 
     /// <summary>
@@ -197,65 +163,92 @@ public class MarkerBrushRenderer : IBrushRenderer
         return WpfColor.FromArgb(alpha, _color.R, _color.G, _color.B);
     }
 
-    private Geometry? GenerateMarkerGeometry()
+    private Geometry? BuildStrokeGeometry()
     {
         if (_points.Count == 0)
         {
             return null;
         }
-
-        var geometry = new GeometryGroup
+        if (_points.Count == 1)
         {
-            FillRule = FillRule.Nonzero
-        };
-        var pen = new WpfPen(WpfBrushes.Black, QuantizeWidth(_points[0].Width))
+            var single = _points[0];
+            var circle = new EllipseGeometry(single.Position, single.Width * 0.5, single.Width * 0.5);
+            if (circle.CanFreeze) circle.Freeze();
+            return circle;
+        }
+
+        var samples = BuildSmoothSamples();
+        if (samples.Count < 2)
+        {
+            var point = _points[0];
+            var circle = new EllipseGeometry(point.Position, point.Width * 0.5, point.Width * 0.5);
+            if (circle.CanFreeze) circle.Freeze();
+            return circle;
+        }
+
+        var group = new GeometryGroup { FillRule = FillRule.Nonzero };
+        var pen = new WpfPen(Brushes.Black, 1)
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
             LineJoin = PenLineJoin.Round
         };
 
-        var first = _points[0];
-        geometry.Children.Add(CreateStampGeometry(first.Position, first.Width));
-        int batchStart = 0;
-        double batchWidth = QuantizeWidth(first.Width);
-
-        for (int i = 0; i < _points.Count - 1; i++)
+        for (int i = 0; i < samples.Count - 1; i++)
         {
-            var p0 = _points[i];
-            var p1 = _points[i + 1];
-            double w0 = Math.Max(p0.Width, 0.1);
-            double w1 = Math.Max(p1.Width, 0.1);
-            double nextWidth = QuantizeWidth(w1);
-            bool split = nextWidth != batchWidth || ShouldStampJoin(i, w0, w1);
-
-            if (split)
+            var p0 = samples[i];
+            var p1 = samples[i + 1];
+            if ((p1.Position - p0.Position).Length < 0.01)
             {
-                var batch = CreateBatchGeometry(pen, batchStart, i + 1, batchWidth);
-                if (batch != null)
-                {
-                    geometry.Children.Add(batch);
-                }
-                geometry.Children.Add(CreateStampGeometry(p1.Position, w1));
-                batchStart = i + 1;
-                batchWidth = nextWidth;
+                continue;
             }
+            double width = Math.Max(p0.Width, p1.Width);
+            pen.Thickness = Math.Max(width, 0.1);
+            var segment = new StreamGeometry();
+            using (var ctx = segment.Open())
+            {
+                ctx.BeginFigure(p0.Position, isFilled: false, isClosed: false);
+                ctx.LineTo(p1.Position, isStroked: true, isSmoothJoin: true);
+            }
+            var widened = segment.GetWidenedPathGeometry(pen);
+            if (widened.CanFreeze) widened.Freeze();
+            group.Children.Add(widened);
         }
 
-        var lastBatch = CreateBatchGeometry(pen, batchStart, _points.Count - 1, batchWidth);
-        if (lastBatch != null)
+        if (samples.Count == 0)
         {
-            geometry.Children.Add(lastBatch);
+            return null;
         }
 
-        if (_points.Count > 1)
+        if (samples.Count == 1)
         {
-            var last = _points[_points.Count - 1];
-            geometry.Children.Add(CreateStampGeometry(last.Position, last.Width));
+            var single = samples[0];
+            var circle = new EllipseGeometry(single.Position, single.Width * 0.5, single.Width * 0.5);
+            if (circle.CanFreeze) circle.Freeze();
+            return circle;
         }
 
-        if (geometry.CanFreeze) geometry.Freeze();
-        return geometry;
+        if (group.Children.Count == 0)
+        {
+            var single = samples[0];
+            var circle = new EllipseGeometry(single.Position, single.Width * 0.5, single.Width * 0.5);
+            if (circle.CanFreeze) circle.Freeze();
+            return circle;
+        }
+
+        for (int i = 1; i < samples.Count - 1; i++)
+        {
+            double width = samples[i].Width;
+            width = Math.Max(width, samples[i - 1].Width);
+            width = Math.Max(width, samples[i + 1].Width);
+            double radius = Math.Max(width * 0.5, 0.1);
+            var join = new EllipseGeometry(samples[i].Position, radius, radius);
+            if (join.CanFreeze) join.Freeze();
+            group.Children.Add(join);
+        }
+
+        if (group.CanFreeze) group.Freeze();
+        return group;
     }
 
     private static WpfPen CreateFrozenPen(WpfColor color, double thickness)
@@ -265,113 +258,157 @@ public class MarkerBrushRenderer : IBrushRenderer
         return pen;
     }
 
-    private static void DrawStamp(DrawingContext dc, WpfBrush brush, WpfPoint point, double width)
-    {
-        double radius = Math.Max(width * 0.5, 0.1);
-        dc.DrawEllipse(brush, null, point, radius, radius);
-    }
-
-    private static EllipseGeometry CreateStampGeometry(WpfPoint point, double width)
-    {
-        double radius = Math.Max(width * 0.5, 0.1);
-        var geometry = new EllipseGeometry(point, radius, radius);
-        if (geometry.CanFreeze) geometry.Freeze();
-        return geometry;
-    }
-
-    private static double QuantizeWidth(double width)
-    {
-        double clamped = Math.Max(width, 0.1);
-        return Math.Max(0.1, Math.Round(clamped / WidthQuantizationStep) * WidthQuantizationStep);
-    }
-
-    private void DrawBatchStroke(DrawingContext dc, WpfPen pen, int startIndex, int endIndex, double width)
-    {
-        if (endIndex <= startIndex)
-        {
-            return;
-        }
-
-        pen.Thickness = width;
-        var geometry = BuildPolylineGeometry(startIndex, endIndex);
-        if (geometry == null)
-        {
-            return;
-        }
-        dc.DrawGeometry(null, pen, geometry);
-    }
-
-    private Geometry? CreateBatchGeometry(WpfPen pen, int startIndex, int endIndex, double width)
-    {
-        if (endIndex <= startIndex)
-        {
-            return null;
-        }
-
-        pen.Thickness = width;
-        var geometry = BuildPolylineGeometry(startIndex, endIndex);
-        if (geometry == null)
-        {
-            return null;
-        }
-
-        var widened = geometry.GetWidenedPathGeometry(pen);
-        if (widened.CanFreeze) widened.Freeze();
-        return widened;
-    }
-
-    private StreamGeometry? BuildPolylineGeometry(int startIndex, int endIndex)
-    {
-        if (endIndex <= startIndex)
-        {
-            return null;
-        }
-
-        var geometry = new StreamGeometry();
-        using (var ctx = geometry.Open())
-        {
-            ctx.BeginFigure(_points[startIndex].Position, isFilled: false, isClosed: false);
-            for (int i = startIndex + 1; i <= endIndex; i++)
-            {
-                ctx.LineTo(_points[i].Position, isStroked: true, isSmoothJoin: true);
-            }
-        }
-        if (geometry.CanFreeze) geometry.Freeze();
-        return geometry;
-    }
-
     private static double Lerp(double start, double end, double t)
     {
         return start + ((end - start) * t);
     }
 
-    private bool ShouldStampJoin(int index, double w0, double w1)
+    private List<MarkerPoint> BuildSmoothSamples()
     {
-        int nextIndex = index + 2;
-        if (nextIndex >= _points.Count)
+        var samples = new List<MarkerPoint>();
+        if (_points.Count == 0)
         {
-            return false;
+            return samples;
+        }
+        if (_points.Count == 1)
+        {
+            samples.Add(_points[0]);
+            return samples;
         }
 
-        var p0 = _points[index].Position;
-        var p1 = _points[index + 1].Position;
-        var p2 = _points[nextIndex].Position;
-
-        var v1 = p1 - p0;
-        var v2 = p2 - p1;
-        double len1 = v1.Length;
-        double len2 = v2.Length;
-
-        bool sharpTurn = false;
-        if (len1 > 0.001 && len2 > 0.001)
+        for (int i = 0; i < _points.Count - 1; i++)
         {
-            double cos = Vector.Multiply(v1, v2) / (len1 * len2);
-            sharpTurn = cos < 0.5;
+            var p0 = _points[Math.Max(i - 1, 0)];
+            var p1 = _points[i];
+            var p2 = _points[i + 1];
+            var p3 = _points[Math.Min(i + 2, _points.Count - 1)];
+
+            var segment = p2.Position - p1.Position;
+            double length = segment.Length;
+            int steps = Math.Max(1, (int)Math.Ceiling(length / SplineTargetSpacing));
+            int startStep = i == 0 ? 0 : 1;
+            for (int s = startStep; s <= steps; s++)
+            {
+                double t = steps == 0 ? 0 : s / (double)steps;
+                var pos = CatmullRomCentripetal(p0.Position, p1.Position, p2.Position, p3.Position, t);
+                double width = Lerp(p1.Width, p2.Width, t);
+                if (samples.Count > 0 && (pos - samples[^1].Position).Length < MinSampleSpacing)
+                {
+                    continue;
+                }
+                samples.Add(new MarkerPoint(pos, width));
+            }
         }
 
-        double w2 = Math.Max(_points[nextIndex].Width, 0.1);
-        bool widthJump = w1 > Math.Max(w0, w2) * 1.25;
+        SmoothSampleWidths(samples);
+        ApplyTaper(samples);
+        return samples;
+    }
 
-        return sharpTurn || widthJump;
+    private static void SmoothSampleWidths(List<MarkerPoint> samples)
+    {
+        if (samples.Count < 3)
+        {
+            return;
+        }
+        var widths = new double[samples.Count];
+        widths[0] = samples[0].Width;
+        widths[^1] = samples[^1].Width;
+        for (int i = 1; i < samples.Count - 1; i++)
+        {
+            widths[i] = (samples[i - 1].Width * 0.25) + (samples[i].Width * 0.5) + (samples[i + 1].Width * 0.25);
+        }
+        for (int i = 0; i < samples.Count; i++)
+        {
+            samples[i] = new MarkerPoint(samples[i].Position, widths[i]);
+        }
+    }
+
+    private void ApplyTaper(List<MarkerPoint> samples)
+    {
+        if (samples.Count < 2)
+        {
+            return;
+        }
+        double total = 0;
+        for (int i = 1; i < samples.Count; i++)
+        {
+            total += (samples[i].Position - samples[i - 1].Position).Length;
+        }
+        if (total <= 0.01)
+        {
+            return;
+        }
+        double maxTaper = _baseSize * MaxTaperLengthFactor;
+        double taperLength = Math.Min(total * TaperLengthRatio, maxTaper);
+        if (taperLength <= 0.1)
+        {
+            return;
+        }
+
+        double accumulated = 0;
+        var distances = new double[samples.Count];
+        distances[0] = 0;
+        for (int i = 1; i < samples.Count; i++)
+        {
+            accumulated += (samples[i].Position - samples[i - 1].Position).Length;
+            distances[i] = accumulated;
+        }
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            double startDist = distances[i];
+            double endDist = total - distances[i];
+            double width = samples[i].Width;
+
+            if (startDist < taperLength)
+            {
+                double t = Smoothstep(startDist / taperLength);
+                width *= Lerp(StartTaperFactor, 1.0, t);
+            }
+            if (endDist < taperLength)
+            {
+                double t = Smoothstep(endDist / taperLength);
+                width *= Lerp(EndTaperFactor, 1.0, t);
+            }
+            samples[i] = new MarkerPoint(samples[i].Position, width);
+        }
+    }
+
+    private static WpfPoint CatmullRomCentripetal(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3, double t)
+    {
+        const double alpha = 0.5;
+        double t0 = 0;
+        double t1 = t0 + Math.Pow((p1 - p0).Length, alpha);
+        double t2 = t1 + Math.Pow((p2 - p1).Length, alpha);
+        double t3 = t2 + Math.Pow((p3 - p2).Length, alpha);
+
+        if (t1 - t0 < 0.0001) t1 = t0 + 0.0001;
+        if (t2 - t1 < 0.0001) t2 = t1 + 0.0001;
+        if (t3 - t2 < 0.0001) t3 = t2 + 0.0001;
+
+        double tt = t1 + (t2 - t1) * t;
+
+        var a1 = LerpPoint(p0, p1, (tt - t0) / (t1 - t0));
+        var a2 = LerpPoint(p1, p2, (tt - t1) / (t2 - t1));
+        var a3 = LerpPoint(p2, p3, (tt - t2) / (t3 - t2));
+
+        var b1 = LerpPoint(a1, a2, (tt - t0) / (t2 - t0));
+        var b2 = LerpPoint(a2, a3, (tt - t1) / (t3 - t1));
+
+        return LerpPoint(b1, b2, (tt - t1) / (t2 - t1));
+    }
+
+    private static WpfPoint LerpPoint(WpfPoint start, WpfPoint end, double t)
+    {
+        return new WpfPoint(
+            start.X + ((end.X - start.X) * t),
+            start.Y + ((end.Y - start.Y) * t));
+    }
+
+    private static double Smoothstep(double t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        return t * t * (3 - (2 * t));
     }
 }
