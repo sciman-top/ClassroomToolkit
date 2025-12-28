@@ -170,6 +170,16 @@ public partial class PaintOverlayWindow : Window
         public string GroupId { get; }
         public CalligraphyLayerRole Role { get; }
     }
+
+    private sealed class CustomStrokeTag
+    {
+        public CustomStrokeTag(string groupId)
+        {
+            GroupId = groupId;
+        }
+
+        public string GroupId { get; }
+    }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
     private MediaColor _boardColor = Colors.Transparent;
@@ -1828,6 +1838,12 @@ public partial class PaintOverlayWindow : Window
             if (shape.Tag is CalligraphyLayerTag tag && tag.GroupId == groupId)
             {
                 ShapeCanvas.Children.Remove(shape);
+                continue;
+            }
+
+            if (shape.Tag is CustomStrokeTag customTag && customTag.GroupId == groupId)
+            {
+                ShapeCanvas.Children.Remove(shape);
             }
         }
     }
@@ -1967,11 +1983,11 @@ public partial class PaintOverlayWindow : Window
             }
         }
 
-        var pen = new Pen(Brushes.Black, Math.Max(1, _eraserSize))
+        var pen = new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, Math.Max(1, _eraserSize))
         {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
+            StartLineCap = System.Windows.Media.PenLineCap.Round,
+            EndLineCap = System.Windows.Media.PenLineCap.Round,
+            LineJoin = System.Windows.Media.PenLineJoin.Round
         };
         return pathGeometry.GetWidenedPathGeometry(pen);
     }

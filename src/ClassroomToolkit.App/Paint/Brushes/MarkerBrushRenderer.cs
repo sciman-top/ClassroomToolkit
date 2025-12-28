@@ -116,6 +116,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         brush.Freeze();
         dc.DrawGeometry(brush, null, geometry);
 
+#pragma warning disable CS0162
         if (DebugDrawEdges && _debugLeftEdge != null && _debugRightEdge != null)
         {
             for (int i = 1; i < _debugLeftEdge.Count; i++)
@@ -128,6 +129,7 @@ public class MarkerBrushRenderer : IBrushRenderer
                 dc.DrawLine(DebugRightPen, _debugRightEdge[i - 1], _debugRightEdge[i]);
             }
         }
+#pragma warning restore CS0162
     }
 
     public Geometry? GetLastStrokeGeometry()
@@ -204,11 +206,13 @@ public class MarkerBrushRenderer : IBrushRenderer
             rightEdge.Add(pos - normal * half);
         }
 
+#pragma warning disable CS0162
         if (DebugDrawEdges)
         {
             _debugLeftEdge = leftEdge;
             _debugRightEdge = rightEdge;
         }
+#pragma warning restore CS0162
 
         var geometry = new StreamGeometry
         {
