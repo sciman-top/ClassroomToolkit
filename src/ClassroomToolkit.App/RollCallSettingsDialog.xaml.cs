@@ -109,10 +109,6 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
-        if (RemoteKeyCustomButton != null)
-        {
-            RemoteKeyCustomButton.IsEnabled = enabled;
-        }
     }
 
     private void UpdatePhotoControls()
@@ -272,18 +268,13 @@ public partial class RollCallSettingsDialog : Window
 
             foreach (var voice in allVoices)
             {
+                // 只跳过未启用的发音人，显示所有已启用的发音人
                 if (!voice.Enabled)
                 {
                     continue;
                 }
 
                 var info = voice.VoiceInfo;
-
-                // 过滤掉已知的"静音"发音人
-                if (SilentVoices.Contains(info.Name))
-                {
-                    continue;
-                }
 
                 // 根据语言分组
                 if (info.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
@@ -463,22 +454,6 @@ public partial class RollCallSettingsDialog : Window
             return selected;
         }
         return (RemoteKeyCombo.Text ?? string.Empty).Trim().ToLowerInvariant();
-    }
-
-    private void OnRemoteKeyCustomClick(object sender, RoutedEventArgs e)
-    {
-        var current = GetRemoteKey();
-        var dialog = new RemoteKeyDialog(string.IsNullOrWhiteSpace(current) ? "tab" : current)
-        {
-            Owner = this
-        };
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-        var keyText = dialog.SelectedKey;
-        RemoteKeyCombo.SelectedValue = keyText;
-        RemoteKeyCombo.Text = keyText;
     }
 
     private static string GetSelectedValue(System.Windows.Controls.ComboBox combo, string fallback)

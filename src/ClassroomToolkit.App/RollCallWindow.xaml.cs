@@ -859,7 +859,8 @@ public partial class RollCallWindow : Window
         var nameText = showName ? _viewModel.CurrentStudentName : string.Empty;
         var idText = showId ? _viewModel.CurrentStudentId : string.Empty;
 
-        var maxNameFont = Math.Max(28, availableHeight * (showId ? 0.6 : 0.75));
+        // 增加字体大小系数，让姓名充满窗口空间（从 0.6/0.75 → 0.75/0.85）
+        var maxNameFont = Math.Max(28, availableHeight * (showId ? 0.75 : 0.85));
         var maxIdFont = Math.Max(14, maxNameFont * 0.4);
 
         var nameSize = MeasureText(nameText, BigNameText, maxNameFont);

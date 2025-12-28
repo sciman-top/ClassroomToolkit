@@ -102,7 +102,7 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public void Render(DrawingContext dc)
     {
-        var geometry = GetMarkerGeometry();
+        var geometry = GenerateMarkerGeometry();
         if (geometry == null) return;
 
         var brush = new SolidColorBrush(GetMarkerColor());
@@ -112,7 +112,7 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public Geometry? GetLastStrokeGeometry()
     {
-        var geometry = GetMarkerGeometry();
+        var geometry = GenerateMarkerGeometry();
         if (geometry != null) geometry.Freeze();
         return geometry;
     }
@@ -129,7 +129,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         return WpfColor.FromArgb(alpha, _color.R, _color.G, _color.B);
     }
 
-    private Geometry? GetMarkerGeometry()
+    private Geometry? GenerateMarkerGeometry()
     {
         if (_points.Count < 2) return null;
 

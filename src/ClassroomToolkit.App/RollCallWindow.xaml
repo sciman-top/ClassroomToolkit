@@ -150,9 +150,12 @@
                                        TextOptions.TextRenderingMode="ClearType"/>
                             
                             <!-- 姓名 -->
-                            <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}" 
+                            <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}"
                                        Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
                                        Foreground="#333" FontWeight="Bold"
+                                       TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
                                        TextOptions.TextFormattingMode="Display"
                                        TextOptions.TextRenderingMode="ClearType">
                                 <!-- 这里的 Effect 会在代码中动态控制 (Blur) -->
