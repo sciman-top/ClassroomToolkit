@@ -22,7 +22,7 @@ public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
     private static readonly BlurEffect CalligraphyBaseEffect = CreateInkBleedEffect(0.8);
-    private static readonly BlurEffect CalligraphyBleedEffect = CreateInkBleedEffect(5.0);
+    private static readonly BlurEffect CalligraphyBleedEffect = CreateInkBleedEffect(2.6);
     private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
     private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
@@ -537,17 +537,18 @@ public partial class PaintOverlayWindow : Window
         return cache;
     }
 
-    public void DrawStrokeToCanvas(Canvas canvas, StreamGeometry geo, double baseWidth)
+    public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth)
     {
-        var bleedBrush = new SolidColorBrush(Color.FromArgb(32, 0, 0, 0));
+        var bleedBrush = new SolidColorBrush(MediaColor.FromArgb(28, 0, 0, 0));
         bleedBrush.Freeze();
 
-        var coreBrush = new SolidColorBrush(Color.FromArgb(255, 0x15, 0x15, 0x15));
+        var coreBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0x15, 0x15, 0x15));
         coreBrush.Freeze();
 
+        var bleedGeometry = CreateBleedGeometry(geo, baseWidth);
         var bleedPath = new Path
         {
-            Data = geo,
+            Data = bleedGeometry,
             Fill = bleedBrush,
             Effect = CalligraphyBleedEffect,
             CacheMode = CalligraphyInkBleedCache
@@ -563,6 +564,16 @@ public partial class PaintOverlayWindow : Window
 
         canvas.Children.Add(bleedPath);
         canvas.Children.Add(basePath);
+    }
+
+    private static Geometry CreateBleedGeometry(Geometry geo, double baseWidth)
+    {
+        double expand = Math.Clamp(baseWidth * 0.12, 0.5, baseWidth * 0.25);
+        var pen = new Pen(Brushes.Black, expand * 2.0);
+        pen.Freeze();
+        var widened = geo.GetWidenedPathGeometry(pen);
+        widened.Freeze();
+        return widened;
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
