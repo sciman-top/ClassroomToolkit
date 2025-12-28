@@ -204,7 +204,10 @@ public class MarkerBrushRenderer : IBrushRenderer
             return null;
         }
 
-        var geometry = new GeometryGroup();
+        var geometry = new GeometryGroup
+        {
+            FillRule = FillRule.Nonzero
+        };
         var pen = new WpfPen(WpfBrushes.Black, QuantizeWidth(_points[0].Width))
         {
             StartLineCap = PenLineCap.Round,

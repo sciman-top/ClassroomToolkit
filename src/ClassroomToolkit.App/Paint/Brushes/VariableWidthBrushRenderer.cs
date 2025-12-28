@@ -15,17 +15,17 @@ public class BrushPhysicsConfig
     public double MaxWidthFactor { get; set; } = 1.5;
     public double MinStrokeWidthPx { get; set; } = 2.0;
     public double MaxStrokeWidthMultiplier { get; set; } = 2.5;
-    public double WidthSmoothing { get; set; } = 0.85;
+    public double WidthSmoothing { get; set; } = 0.93;
     public bool SimulateStartCap { get; set; } = true;
     public bool SimulateEndTaper { get; set; } = true;
     public double VelocityThreshold { get; set; } = 1.5;
-    public int VelocitySmoothWindow { get; set; } = 4;
-    public int PressureSmoothWindow { get; set; } = 5;
+    public int VelocitySmoothWindow { get; set; } = 7;
+    public int PressureSmoothWindow { get; set; } = 8;
     public double CapIgnoreVelocityRatio { get; set; } = 0.1;
 
     // 笔锋效果参数
     public double StartCapLength { get; set; } = 0.05;
-    public double EndTaperLength { get; set; } = 0.25;  // v10: 增加到25%
+    public double EndTaperLength { get; set; } = 0.22;  // v10: 增加到25%
     public int MinTaperPoints { get; set; } = 5;
 
     // 修复蝌蚪头：起笔阶段忽略速度
@@ -36,34 +36,34 @@ public class BrushPhysicsConfig
     public double MaxPointJumpDistance { get; set; } = 100.0;
 
     // v10 新增参数
-    public double VelocityWidthFactor { get; set; } = 0.65;  // kWidth: 速度影响强度
+    public double VelocityWidthFactor { get; set; } = 0.64;  // kWidth: 速度影响强度
     public double EndTaperStartProgress { get; set; } = 0.75;  // 收笔开始位置
     public double EndVelocityDecoupleStart { get; set; } = 0.85;  // 速度解耦开始位置
-    public double FlyingWhiteThreshold { get; set; } = 0.7;  // 飞白速度阈值
-    public double FlyingWhiteNoiseIntensity { get; set; } = 0.15;  // 飞白噪声强度
+    public double FlyingWhiteThreshold { get; set; } = 0.84;  // 飞白速度阈值
+    public double FlyingWhiteNoiseIntensity { get; set; } = 0.045;  // 飞白噪声强度
 
     // v11 新增参数
     public double DunBiSpeedThreshold { get; set; } = 0.4;  // 顿笔速度阈值
     public double DunBiSpreadRate { get; set; } = 0.8;     // 墨水扩散速率
     public double DunBiMaxAccumulation { get; set; } = 1.3; // 最大累积倍数
     public double DunBiDecayRate { get; set; } = 0.15;     // 累积衰减速率
-    public double FlyingWhiteNoiseFrequency { get; set; } = 8.0;  // 噪声频率
-    public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.7;  // 噪声减少起点
-    public double CapRoundThreshold { get; set; } = 0.4;   // 圆笔锋阈值（相对于 baseSize）
-    public double TaperMinWidthFactor { get; set; } = 0.35; // 笔锋最小宽度因子
+    public double FlyingWhiteNoiseFrequency { get; set; } = 4.7;  // 噪声频率
+    public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.79;  // 噪声减少起点
+    public double CapRoundThreshold { get; set; } = 0.58;   // 圆笔锋阈值（相对于 baseSize）
+    public double TaperMinWidthFactor { get; set; } = 0.43; // 笔锋最小宽度因子
 
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
-    private const double DirectionNoiseAmplitude = 0.08;
-    private const double DirectionNoiseFrequency = 0.6;
+    private const double DirectionNoiseAmplitude = 0.021;
+    private const double DirectionNoiseFrequency = 0.45;
 
-    private const int UpsampleSteps = 8;
+    private const int UpsampleSteps = 12;
     private const double CornerAngleThreshold = 90.0;
     private const double CornerMinAngle = 5.0;
-    private const int CornerArcSegments = 4;
+    private const int CornerArcSegments = 6;
 
     // v10/v11: 扩展点结构以存储速度、进度和累积宽度信息
     private struct StrokePoint
