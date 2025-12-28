@@ -175,7 +175,7 @@ public partial class PaintSettingsDialog : Window
         foreach (var child in parent.Children.OfType<WpfButton>())
         {
             child.BorderThickness = new Thickness(1);
-            child.BorderBrush = MediaBrushes.Transparent;
+            child.BorderBrush = new SolidColorBrush(MediaColor.FromArgb(0x20, 0, 0, 0));
         }
         selected.BorderThickness = new Thickness(2);
         selected.BorderBrush = MediaBrushes.DeepSkyBlue;
@@ -219,6 +219,14 @@ public partial class PaintSettingsDialog : Window
             {
                 yield return nested;
             }
+        }
+    }
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
         }
     }
 

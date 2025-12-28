@@ -139,12 +139,12 @@
                 <Rectangle Style="{StaticResource Style_Separator}"/>
 
                 <!-- 4. 操作与设置 -->
-                <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
-                    <Path Data="{StaticResource Icon_Undo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
-                </Button>
-
                 <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="一键清屏">
                     <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="18" Height="18"/>
+                </Button>
+
+                <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
+                    <Path Data="{StaticResource Icon_Undo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                 </Button>
 
                 <ToggleButton x:Name="BoardButton" 
