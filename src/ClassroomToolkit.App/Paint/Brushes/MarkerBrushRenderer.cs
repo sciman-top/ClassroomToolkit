@@ -6,6 +6,7 @@ using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
 using WpfColor = System.Windows.Media.Color;
 using WpfSize = System.Windows.Size;
+using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
@@ -17,8 +18,8 @@ public class MarkerBrushRenderer : IBrushRenderer
     private const double MinMoveDistance = 0.8;
     private const bool DebugDrawEdges = true;
 
-    private static readonly Pen DebugLeftPen = CreateFrozenPen(Colors.Red, 1);
-    private static readonly Pen DebugRightPen = CreateFrozenPen(Colors.DodgerBlue, 1);
+    private static readonly WpfPen DebugLeftPen = CreateFrozenPen(Colors.Red, 1);
+    private static readonly WpfPen DebugRightPen = CreateFrozenPen(Colors.DodgerBlue, 1);
 
     private struct MarkerPoint
     {
@@ -246,9 +247,9 @@ public class MarkerBrushRenderer : IBrushRenderer
         return normal;
     }
 
-    private static Pen CreateFrozenPen(WpfColor color, double thickness)
+    private static WpfPen CreateFrozenPen(WpfColor color, double thickness)
     {
-        var pen = new Pen(new SolidColorBrush(color), thickness);
+        var pen = new WpfPen(new SolidColorBrush(color), thickness);
         pen.Freeze();
         return pen;
     }
