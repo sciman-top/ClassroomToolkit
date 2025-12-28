@@ -63,13 +63,12 @@
             <!-- 1. 顶部工具栏 -->
             <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/> <!-- Left: Mode -->
+                    <ColumnDefinition Width="*"/>    <!-- Center: Class/List/Reset Control -->
+                    <ColumnDefinition Width="Auto"/> <!-- Right: System -->
                 </Grid.ColumnDefinitions>
 
-                <!-- 模式切换 -->
+                <!-- 左侧：模式切换 -->
                 <Button Grid.Column="0" Margin="12,0,0,0" Style="{StaticResource Style_SecondaryButton}" 
                         Click="OnToggleModeClick" Padding="12,6">
                     <StackPanel Orientation="Horizontal">
@@ -89,22 +88,31 @@
                     </StackPanel>
                 </Button>
 
-                <!-- 班级选择 (仅点名模式) -->
-                <ComboBox Grid.Column="1" Margin="12,0,0,0" Width="120" Height="32"
-                          ItemsSource="{Binding AvailableClasses}"
-                          SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
-                          Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                          SelectionChanged="OnClassSelectionChanged"
-                          VerticalContentAlignment="Center"
-                          Style="{x:Null}"/> <!-- Default Style for now, maybe custom later -->
-
-                <!-- 右侧按钮 -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,12,0">
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnListClick" ToolTip="名单管理"
+                <!-- 中间：核心控制 (仅点名模式) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
-                    </Button>
                     
+                    <!-- 班级选择 -->
+                    <ComboBox Width="140" Height="32" Margin="0,0,8,0"
+                              ItemsSource="{Binding AvailableClasses}"
+                              SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
+                              SelectionChanged="OnClassSelectionChanged"
+                              VerticalContentAlignment="Center"
+                              ToolTip="切换班级"/>
+                    
+                    <!-- 名单管理 -->
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnListClick" ToolTip="查看名单" Margin="0,0,4,0">
+                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                    </Button>
+
+                    <!-- 重置状态 -->
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="0,0,4,0">
+                        <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- 右侧：系统按钮 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0">
                     <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
                         <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
                     </Button>
@@ -173,6 +181,7 @@
             <!-- 3. 底部控件 -->
             <Grid Grid.Row="2" Margin="0,0,0,16">
                 <!-- 分组按钮 (点名模式) -->
+                <!-- 移除了 IsReset=True 的按钮逻辑，因为我们在顶部加了专门的重置按钮。但为了兼容旧习惯，保留也无妨，或者可以在 ViewModel 里处理 -->
                 <ItemsControl ItemsSource="{Binding GroupButtons}" 
                               Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
                               HorizontalAlignment="Center">
@@ -183,10 +192,25 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
+                            <!-- 只有非重置类型的按钮才显示，因为重置已经上移了？ 
+                                 或者我们依然显示所有分组，让用户自己选。
+                                 为了界面整洁，这里只显示“分组切换”按钮。重置按钮已独立。
+                                 我们可以通过 Style Trigger 隐藏 IsReset 的项。
+                            -->
                             <Button Content="{Binding Label}" 
                                     Margin="4" 
                                     Style="{StaticResource Style_SecondaryButton}"
-                                    Click="OnGroupEntryClick"/>
+                                    Click="OnGroupEntryClick">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsReset}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

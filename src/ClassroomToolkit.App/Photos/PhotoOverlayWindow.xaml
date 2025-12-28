@@ -3,41 +3,77 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent"
+        Background="{x:Null}"
         ShowInTaskbar="False"
         Topmost="True"
         ResizeMode="NoResize">
+    
+    <Window.Resources>
+        <!-- 圆形半透明关闭按钮 -->
+        <Style x:Key="Style_PhotoCloseButton" TargetType="Button">
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="24" Background="{TemplateBinding Background}">
+                            <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="16" Height="16" 
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#A0000000"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
-        <Border x:Name="PhotoBorder" Background="Transparent">
+        <Border x:Name="PhotoBorder" Background="Black">
             <Grid>
+                <!-- 照片 -->
                 <Image x:Name="PhotoImage" Stretch="Uniform" />
+                
+                <!-- 姓名 (带描边阴影) -->
                 <TextBlock x:Name="NameText"
-                           Foreground="#F0F2F5"
-                           FontSize="48"
+                           Foreground="White"
+                           FontSize="64"
                            FontWeight="Bold"
                            TextAlignment="Center"
                            TextWrapping="Wrap"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
-                           Margin="20,24,20,0" />
-                <Grid VerticalAlignment="Bottom" Margin="20,0,20,16">
+                           Margin="0,40,0,0">
+                    <TextBlock.Effect>
+                        <!-- 强烈的黑色阴影模拟描边，确保在亮色背景下也清晰可见 -->
+                        <DropShadowEffect Color="Black" BlurRadius="4" ShadowDepth="0" Opacity="1.0" Direction="0"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <!-- 底部关闭按钮区域 -->
+                <Grid VerticalAlignment="Bottom" Margin="30">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    
                     <Button x:Name="CloseButtonLeft"
                             Grid.Column="0"
-                            Content="关闭"
-                            Width="60"
-                            Height="26"
-                            Click="OnCloseClick" />
+                            Style="{StaticResource Style_PhotoCloseButton}"
+                            Click="OnCloseClick" 
+                            ToolTip="关闭展示"/>
+                    
                     <Button x:Name="CloseButtonRight"
                             Grid.Column="2"
-                            Content="关闭"
-                            Width="60"
-                            Height="26"
-                            Click="OnCloseClick" />
+                            Style="{StaticResource Style_PhotoCloseButton}"
+                            Click="OnCloseClick"
+                            ToolTip="关闭展示"/>
                 </Grid>
             </Grid>
         </Border>

@@ -3,77 +3,135 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
         Title="学生名单"
-        Width="640"
-        Height="480"
-        FontFamily="楷体"
+        Height="500" Width="800"
+        MinHeight="400" MinWidth="600"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResizeWithGrip">
+        ResizeMode="CanResizeWithGrip"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}">
+
     <Window.Resources>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        
+        <!-- 学生卡片样式 -->
+        <Style x:Key="Style_StudentCard" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#EEE"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <!-- 鼠标悬停 -->
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F0F8FF"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                </Trigger>
+                <!-- 已点名状态 (Called=True) -->
+                <!-- 注意：这里需要通过 DataTrigger 绑定 DataContext.Called，稍后在 ItemTemplate 里实现 -->
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
-    <Grid Margin="10" x:Name="Root">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl x:Name="StudentItems">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="10" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonWidth}"
-                                Height="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=StudentButtonHeight}"
-                                Margin="3"
-                                Padding="8,4"
-                                Background="#F7F8FA"
-                                BorderBrush="#D0D7DE"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Cursor="Hand"
-                                MouseLeftButtonUp="OnStudentClick">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="ToolTip" Value="本轮已点名" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Called}" Value="False">
-                                            <Setter Property="ToolTip" Value="本轮未点名" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontSize="16"
-                                           FontWeight="Bold"
-                                           Margin="0,0,8,0"
-                                           TextTrimming="CharacterEllipsis" />
-                                <Ellipse Grid.Column="1" Width="10" Height="10" Fill="#d93025"
-                                         HorizontalAlignment="Right" VerticalAlignment="Center"
-                                         Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+    <Border Background="White" CornerRadius="8" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.2"/>
+        </Border.Effect>
 
-        <TextBlock x:Name="HintText" Grid.Row="1" Text="红点标记本轮未点名（无标记即已点名）" Foreground="#4a525a"
-                   Margin="0,6,0,0" />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title -->
+                <RowDefinition Height="*"/>    <!-- List -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
 
-        <StackPanel x:Name="FooterPanel" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-            <Button Content="关闭" Width="80" Height="30" Click="OnCloseClick" />
-        </StackPanel>
-    </Grid>
+            <!-- 1. 标题栏 -->
+            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
+                    <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"/>
+                    <TextBlock Text="学生名单" FontWeight="Bold" Foreground="#333"/>
+                </StackPanel>
+                
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,8,0">
+                    <Path Data="{StaticResource Icon_Close}" Fill="#888" Stretch="Uniform" Width="10" Height="10"/>
+                </Button>
+            </Grid>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
+
+            <!-- 2. 名单区域 -->
+            <ScrollViewer Grid.Row="1" Margin="12" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="StudentItems">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- 保持 UniformGrid 以维持整齐的网格布局 -->
+                            <UniformGrid Columns="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border MouseLeftButtonUp="OnStudentClick" ToolTip="{Binding DisplayText}">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource Style_StudentCard}">
+                                        <Style.Triggers>
+                                            <!-- 已点名：灰色背景 -->
+                                            <DataTrigger Binding="{Binding Called}" Value="True">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="Opacity" Value="0.6"/>
+                                            </DataTrigger>
+                                            <!-- 未点名：白色背景 -->
+                                            <DataTrigger Binding="{Binding Called}" Value="False">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BorderBrush" Value="#DDD"/>
+                                            </DataTrigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Opacity" Value="1.0"/>
+                                                <Setter Property="Background" Value="{StaticResource Brush_Accent}"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- 名字 -->
+                                    <Viewbox Stretch="Uniform" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayText}" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="#333"/>
+                                    </Viewbox>
+                                    
+                                    <!-- 未点名标记 (红点) -->
+                                    <Ellipse Grid.Column="1" Width="8" Height="8" Fill="{StaticResource Brush_Danger}"
+                                             Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}"
+                                             VerticalAlignment="Top" HorizontalAlignment="Right"
+                                             Margin="4,0,0,0"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 3. 底部 -->
+            <Grid Grid.Row="2" Margin="16,0,16,16">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource Brush_Danger}" Margin="0,0,6,0"/>
+                    <TextBlock Text="红点标记表示本轮未被点名" FontSize="12" Foreground="#888"/>
+                </StackPanel>
+                
+                <Button Content="关闭" 
+                        Style="{StaticResource Style_PrimaryButton}" 
+                        HorizontalAlignment="Right" 
+                        Width="80" 
+                        Click="OnCloseClick"/>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>
