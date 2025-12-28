@@ -12,21 +12,31 @@
     <Grid>
         <!-- 悬浮球主体 -->
         <Border Width="48" Height="48" 
-                CornerRadius="24"
-                Background="{StaticResource Brush_Primary}"
-                BorderThickness="0">
+                CornerRadius="100"
+                BorderThickness="1.5"
+                BorderBrush="#80FFFFFF">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#4FACFE" Offset="0"/>
+                    <GradientStop Color="#00F2FE" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
             <Border.Effect>
                 <!-- 阴影让它浮起来 -->
-                <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="4" Opacity="0.3"/>
+                <DropShadowEffect Color="#204FACFE" BlurRadius="16" ShadowDepth="4" Opacity="0.6"/>
             </Border.Effect>
             
             <!-- 图标 -->
             <Path Data="{StaticResource Icon_Apps}" 
                   Fill="White" 
                   Stretch="Uniform" 
-                  Width="24" Height="24"
+                  Width="22" Height="22"
                   HorizontalAlignment="Center" 
-                  VerticalAlignment="Center"/>
+                  VerticalAlignment="Center">
+                <Path.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.2"/>
+                </Path.Effect>
+            </Path>
             
             <!-- 鼠标交互反馈 -->
             <Border.Triggers>
@@ -35,7 +45,6 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Width" To="52" Duration="0:0:0.1"/>
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="52" Duration="0:0:0.1"/>
-                            <DoubleAnimation Storyboard.TargetProperty="CornerRadius" To="26" Duration="0:0:0.1"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
@@ -44,7 +53,6 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Width" To="48" Duration="0:0:0.2"/>
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="48" Duration="0:0:0.2"/>
-                            <DoubleAnimation Storyboard.TargetProperty="CornerRadius" To="24" Duration="0:0:0.2"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>

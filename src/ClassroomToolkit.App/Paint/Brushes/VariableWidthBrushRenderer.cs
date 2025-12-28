@@ -8,34 +8,43 @@ using WpfColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
+public class BrushPhysicsConfig
+{
+    public double MinWidthFactor { get; set; } = 0.3;
+    public double MaxWidthFactor { get; set; } = 1.3;
+    public double WidthSmoothing { get; set; } = 0.85;
+    public bool SimulateStartCap { get; set; } = true;
+    public bool SimulateEndTaper { get; set; } = true;
+    public double VelocityThreshold { get; set; } = 2.0;
+    
+    public static BrushPhysicsConfig DefaultSmooth => new();
+}
+
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
-    private struct PointData
+    private struct StrokePoint
     {
-        public WpfPoint Point;
-        public long Timestamp;
+        public WpfPoint Position;
         public double Width;
 
-        public PointData(WpfPoint point, long timestamp, double width)
+        public StrokePoint(WpfPoint pos, double width)
         {
-            Point = point;
-            Timestamp = timestamp;
+            Position = pos;
             Width = width;
         }
     }
 
-    private readonly List<PointData> _points = new();
+    private readonly List<StrokePoint> _points = new();
     private WpfColor _color;
     private double _baseSize;
-    private double _opacity;
     private bool _isActive;
     private long _lastTimestamp;
     
-    // Configuration for the brush dynamics
-    private const double MinWidthFactor = 0.25; 
-    private const double MaxWidthFactor = 1.1; 
-    private const double VelocityThreshold = 1.5;
-    private const double MinDistanceThreshold = 2.0; // Filter out points closer than 2px
+    private double _smoothedWidth; 
+    // 新增：坐标平滑状态
+    private WpfPoint _smoothedPos;
+
+    private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
 
     public bool IsActive => _isActive;
 
@@ -43,7 +52,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         _color = color;
         _baseSize = baseSize;
-        _opacity = 1.0; // Use color's alpha channel directly
+        _smoothedWidth = baseSize * 0.8;
+        _smoothedPos = new WpfPoint(0, 0); // 将在 OnDown 时初始化
     }
 
     public void OnDown(WpfPoint point)
@@ -51,34 +61,43 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _points.Clear();
         _isActive = true;
         _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+
+        _smoothedWidth = _baseSize * 0.5; 
+        _smoothedPos = point; // 初始化平滑坐标
         
-        // Start with a thinner width for entry
-        _points.Add(new PointData(point, _lastTimestamp, _baseSize * 0.5));
+        _points.Add(new StrokePoint(point, _smoothedWidth));
     }
 
     public void OnMove(WpfPoint point)
     {
         if (!_isActive) return;
 
-        var lastData = _points.Last();
-        var dist = (point - lastData.Point).Length;
+        // --- Step 3: 输入平滑 (Input Smoothing) ---
+        // 使用简单的指数移动平均 (EMA) 平滑坐标，减少手抖
+        // 坐标平滑因子：0.7 (反应较快)，太大会有延迟感
+        double posAlpha = 0.7;
+        _smoothedPos = new WpfPoint(
+            _smoothedPos.X * (1 - posAlpha) + point.X * posAlpha,
+            _smoothedPos.Y * (1 - posAlpha) + point.Y * posAlpha
+        );
 
-        // Input filtering: ignore tiny movements to reduce jitter
-        if (dist < MinDistanceThreshold) return;
+        var lastPt = _points.Last();
+        var dist = (_smoothedPos - lastPt.Position).Length;
+
+        // 去噪：忽略过小的移动
+        if (dist < 2.0) return;
 
         var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         var dt = now - _lastTimestamp;
         if (dt < 1) dt = 1;
 
-        var velocity = dist / dt;
-        var targetWidth = CalculateWidth(velocity);
-        
-        // Width smoothing (Low-pass filter)
-        // alpha determines how much weight the new width has. Lower = smoother changes.
-        var alpha = 0.4; 
-        var smoothedWidth = lastData.Width + (targetWidth - lastData.Width) * alpha;
+        double velocity = dist / dt;
+        double targetWidth = CalculateTargetWidth(velocity);
 
-        _points.Add(new PointData(point, now, smoothedWidth));
+        double widthAlpha = _config.WidthSmoothing;
+        _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
+
+        _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth));
         _lastTimestamp = now;
     }
 
@@ -86,9 +105,16 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (!_isActive) return;
         
-        var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-        // End with a sharp taper
-        _points.Add(new PointData(point, now, 0.0));
+        // 收笔处理
+        var last = _points.Last();
+        var dir = point - last.Position;
+        if (dir.Length > 0.1) dir.Normalize();
+        else dir = new Vector(1, 0);
+        
+        var extension = _baseSize * 0.5;
+        var endPos = point + dir * extension;
+
+        _points.Add(new StrokePoint(endPos, 0.1));
         _isActive = false;
     }
 
@@ -102,10 +128,10 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (_points.Count < 2) return;
 
-        var geometry = GenerateGeometry();
+        var geometry = GenerateSmoothGeometry();
         if (geometry != null)
         {
-            var brush = new SolidColorBrush(_color) { Opacity = _opacity };
+            var brush = new SolidColorBrush(_color);
             brush.Freeze();
             dc.DrawGeometry(brush, null, geometry);
         }
@@ -114,165 +140,137 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var geo = GenerateGeometry();
-        if (geo != null)
-        {
-            geo.Freeze();
-        }
+        var geo = GenerateSmoothGeometry();
+        if (geo != null) geo.Freeze();
         return geo;
     }
 
-    private double CalculateWidth(double velocity)
+    private double CalculateTargetWidth(double velocity)
     {
-        // Sigmoid-like easing for more natural pressure simulation
-        // Fast (high velocity) -> Thin
-        // Slow (low velocity) -> Thick
-        
-        var normalizedVel = Math.Min(velocity / VelocityThreshold, 1.0);
-        
-        // Easing function: 1 - t^2 (starts slow, drops fast) or Cosine
-        var ease = 1.0 - (normalizedVel * normalizedVel); 
-        
-        var range = MaxWidthFactor - MinWidthFactor;
-        return _baseSize * (MinWidthFactor + (range * ease));
+        var t = Math.Min(velocity / _config.VelocityThreshold, 1.0); 
+        var factor = 1.0 - (t * t); 
+        var range = _config.MaxWidthFactor - _config.MinWidthFactor;
+        return _baseSize * (_config.MinWidthFactor + (range * factor));
     }
 
-    private Geometry? GenerateGeometry()
+    private Geometry? GenerateSmoothGeometry()
     {
         if (_points.Count < 2) return null;
 
-        // If very few points, just return a simple line geometry to avoid processing overhead
-        if (_points.Count < 4)
-        {
-            return GenerateSimpleGeometry();
-        }
-
         var geometry = new StreamGeometry();
+        // --- Step 1: 修复镂空 (NonZero FillRule) ---
+        // 确保重叠部分被填充而不是镂空
+        geometry.FillRule = FillRule.NonZero;
+
         using (var ctx = geometry.Open())
         {
             var leftEdge = new List<WpfPoint>();
             var rightEdge = new List<WpfPoint>();
 
-            // We use the "Midpoint Quadratic Bezier" technique.
-            // Curve passes through midpoints of segments, using the points as control points.
-            
-            // Start P0
-            AddRibbonPoints(_points[0].Point, CalculateNormal(_points[0].Point, _points[1].Point), _points[0].Width, leftEdge, rightEdge);
+            // 起笔扇形
+            if (_config.SimulateStartCap && _points.Count > 1)
+            {
+                var p0 = _points[0];
+                var p1 = _points[1];
+                var dir = p1.Position - p0.Position;
+                dir.Normalize();
+                var normal = new Vector(-dir.Y, dir.X); 
+                
+                double capWidth = _baseSize * _config.MaxWidthFactor * 0.8;
+                var center = p0.Position - dir * (capWidth * 0.2); 
+                
+                leftEdge.Add(center + normal * (capWidth * 0.5));
+                leftEdge.Add(center - dir * (capWidth * 0.5)); 
+                rightEdge.Add(center - normal * (capWidth * 0.5));
+            }
+            else
+            {
+                var p0 = _points[0];
+                var p1 = _points[1];
+                var normal = GetNormal(p0.Position, p1.Position);
+                AddRibbonPoints(p0.Position, normal, p0.Width, leftEdge, rightEdge);
+            }
 
+            // 中段生成
             for (int i = 0; i < _points.Count - 1; i++)
             {
                 var p0 = _points[i];
                 var p1 = _points[i+1];
 
-                // For the last segment, we just go to the end point
                 if (i == _points.Count - 2)
                 {
-                     // Treat as line for the very last bit
-                     AddRibbonPoints(p1.Point, CalculateNormal(p0.Point, p1.Point), p1.Width, leftEdge, rightEdge);
-                     continue;
+                    var normal = GetNormal(p0.Position, p1.Position);
+                    AddRibbonPoints(p1.Position, normal, p1.Width, leftEdge, rightEdge);
                 }
-                
-                // For internal segments, we draw a Quad Bezier from Mid(i) to Mid(i+1) using P(i+1) as control?
-                // Standard algorithm:
-                // From: Mid(P_i, P_{i+1}) 
-                // To: Mid(P_{i+1}, P_{i+2})
-                // Control: P_{i+1}
-                
-                var p2 = _points[i+2];
+                else
+                {
+                    var p2 = _points[i+2];
+                    
+                    var startPos = (i == 0) ? p0.Position : Mid(p0.Position, p1.Position);
+                    var endPos = Mid(p1.Position, p2.Position);
+                    var controlPos = p1.Position;
 
-                var start = (i == 0) ? p0.Point : Mid(p0.Point, p1.Point);
-                var end = Mid(p1.Point, p2.Point);
-                var control = p1.Point;
+                    var startWidth = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
+                    var endWidth = (p1.Width + p2.Width) / 2.0;
+                    var controlWidth = p1.Width;
 
-                var startWidth = (i == 0) ? p0.Width : (p0.Width + p1.Width) / 2.0;
-                var endWidth = (p1.Width + p2.Width) / 2.0;
-                var controlWidth = p1.Width;
-
-                // Discretize this Bezier curve to generate variable width ribbon
-                TessellateBezier(start, control, end, startWidth, controlWidth, endWidth, leftEdge, rightEdge);
+                    TessellateBezier(startPos, controlPos, endPos, startWidth, controlWidth, endWidth, leftEdge, rightEdge);
+                }
             }
-            
-            // Construct the closed shape
+
+            // 构建轮廓
             if (leftEdge.Count > 0)
             {
                 ctx.BeginFigure(leftEdge[0], true, true);
-                
-                // Trace Left Edge
-                for (int i = 1; i < leftEdge.Count; i++)
-                {
-                    ctx.LineTo(leftEdge[i], true, true);
-                }
-
-                // Trace Right Edge (Backwards)
-                for (int i = rightEdge.Count - 1; i >= 0; i--)
-                {
-                    ctx.LineTo(rightEdge[i], true, true);
-                }
+                for (int i = 1; i < leftEdge.Count; i++) ctx.LineTo(leftEdge[i], true, true);
+                for (int i = rightEdge.Count - 1; i >= 0; i--) ctx.LineTo(rightEdge[i], true, true);
             }
         }
-        
         return geometry;
     }
 
-    private void TessellateBezier(WpfPoint start, WpfPoint control, WpfPoint end, double wStart, double wControl, double wEnd, List<WpfPoint> lefts, List<WpfPoint> rights)
+    private void TessellateBezier(WpfPoint start, WpfPoint control, WpfPoint end, 
+                                  double wStart, double wControl, double wEnd, 
+                                  List<WpfPoint> lefts, List<WpfPoint> rights)
     {
-        // Number of steps depends on curvature/length, but fixed count is usually fine for handwriting strokes
-        const int steps = 8; 
+        const int steps = 6; 
+        
+        // --- Step 2: 尖角/毛刺处理 (Round Joins Logic) ---
+        // 我们不直接计算每一点的法线，而是检查法线是否突变。
+        // 由于贝塞尔曲线本身是连续的，只要控制点不重合，法线变化通常是平滑的。
+        // 真正产生毛刺的是当宽度很大且曲率很急时（内侧边缘打结）。
+        
+        // 为了简单高效，我们在这里限制 Offset 的最大变化率，
+        // 或者简单地接受偶尔的自相交（因为 FillRule 已经是 NonZero 了，自相交会被填满，不会露白）。
+        // 如果需要严格的 Round Join，需要更复杂的几何裁剪。
+        // 鉴于这是实时书写，NonZero FillRule 通常足以掩盖内侧打结的问题。
 
         for (int i = 1; i <= steps; i++)
         {
             double t = i / (double)steps;
-            
-            // Quadratic Bezier Formula: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
-            double u = 1 - t;
-            double tt = t * t;
-            double uu = u * u;
+            double u = 1.0 - t;
 
-            double x = uu * start.X + 2 * u * t * control.X + tt * end.X;
-            double y = uu * start.Y + 2 * u * t * control.Y + tt * end.Y;
+            double x = u * u * start.X + 2 * u * t * control.X + t * t * end.X;
+            double y = u * u * start.Y + 2 * u * t * control.Y + t * t * end.Y;
             var pos = new WpfPoint(x, y);
 
-            // Derivative for Tangent: B'(t) = 2(1-t)(P1-P0) + 2t(P2-P1)
             double tx = 2 * u * (control.X - start.X) + 2 * t * (end.X - control.X);
             double ty = 2 * u * (control.Y - start.Y) + 2 * t * (end.Y - control.Y);
             
-            // Normal is (-y, x)
             var normal = new Vector(-ty, tx);
-            if (normal.LengthSquared > 0.000001) normal.Normalize();
+            if (normal.LengthSquared > 0.0001) normal.Normalize();
 
-            // Interpolate width
-            // This is an approximation. Ideally we calculate width at 't' based on arc length, 
-            // but linear t interpolation is sufficient for short segments.
-            double w = uu * wStart + 2 * u * t * wControl + tt * wEnd;
+            double width = u * u * wStart + 2 * u * t * wControl + t * t * wEnd;
 
-            AddRibbonPoints(pos, normal, w, lefts, rights);
+            AddRibbonPoints(pos, normal, width, lefts, rights);
         }
     }
 
     private void AddRibbonPoints(WpfPoint center, Vector normal, double width, List<WpfPoint> lefts, List<WpfPoint> rights)
     {
-        var offset = normal * (width * 0.5);
-        lefts.Add(center + offset);
-        rights.Add(center - offset);
-    }
-
-    private Geometry GenerateSimpleGeometry()
-    {
-        // Fallback for very short strokes (dots, tiny dashes)
-        var geometry = new StreamGeometry();
-        using (var ctx = geometry.Open())
-        {
-            if (_points.Count > 0)
-            {
-                var p = _points[0];
-                var r = p.Width / 2.0;
-                ctx.BeginFigure(new WpfPoint(p.Point.X - r, p.Point.Y - r), true, true);
-                ctx.LineTo(new WpfPoint(p.Point.X + r, p.Point.Y - r), true, true);
-                ctx.LineTo(new WpfPoint(p.Point.X + r, p.Point.Y + r), true, true);
-                ctx.LineTo(new WpfPoint(p.Point.X - r, p.Point.Y + r), true, true);
-            }
-        }
-        return geometry;
+        var half = width * 0.5;
+        lefts.Add(center + normal * half);
+        rights.Add(center - normal * half);
     }
 
     private static WpfPoint Mid(WpfPoint a, WpfPoint b)
@@ -280,10 +278,10 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return new WpfPoint((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5);
     }
 
-    private static Vector CalculateNormal(WpfPoint p1, WpfPoint p2)
+    private static Vector GetNormal(WpfPoint a, WpfPoint b)
     {
-        var dir = p2 - p1;
-        if (dir.LengthSquared < 0.000001) return new Vector(0, 1);
+        var dir = b - a;
+        if (dir.LengthSquared < 0.0001) return new Vector(0, 1);
         dir.Normalize();
         return new Vector(-dir.Y, dir.X);
     }

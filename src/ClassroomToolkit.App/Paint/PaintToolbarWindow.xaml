@@ -81,12 +81,13 @@
             BorderBrush="{StaticResource Brush_Border}" 
             BorderThickness="1"
             CornerRadius="8" 
-            Padding="6,4">
+            Padding="6,4"
+            MouseLeftButtonDown="OnToolbarDrag">
         <Border.Effect>
             <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="10" ShadowDepth="2"/>
         </Border.Effect>
 
-        <Grid x:Name="ToolbarRoot" MouseLeftButtonDown="OnToolbarDrag">
+        <Grid x:Name="ToolbarRoot" Background="Transparent">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 
                 <!-- 1. 鼠标/选择 -->

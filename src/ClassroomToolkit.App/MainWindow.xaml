@@ -95,9 +95,8 @@
                 <!-- 左侧：最小化 -->
                 <Button x:Name="MinimizeButton" Grid.Column="0" 
                         Style="{StaticResource Style_IconButton}"
-                        Click="OnMinimizeClick" ToolTip="收起菜单">
-                     <Path Data="{StaticResource Icon_Close}" Fill="#999" Stretch="Uniform" Width="12" Height="12"/>
-                     <!-- 其实是用 Close 图标代表收起，或者用 Menu 再次收起 -->
+                        Click="OnMinimizeClick" ToolTip="最小化">
+                     <Path Data="M2,11 L14,11 L14,13 L2,13 Z" Fill="#999" Stretch="Uniform" Width="12" Height="12"/>
                 </Button>
 
                 <!-- 右侧：辅助功能 -->

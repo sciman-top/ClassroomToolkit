@@ -439,21 +439,16 @@ public partial class PaintToolbarWindow : Window
 
     private void OnToolbarDrag(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left)
+        if (e.ChangedButton == MouseButton.Left)
         {
-            return;
-        }
-        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
-        {
-            return;
-        }
-        try
-        {
-            DragMove();
-        }
-        catch
-        {
-            // 忽略拖拽异常。
+            try
+            {
+                DragMove();
+            }
+            catch
+            {
+                // 忽略异常
+            }
         }
     }
 
