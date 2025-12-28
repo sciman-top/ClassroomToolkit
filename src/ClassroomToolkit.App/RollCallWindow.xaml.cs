@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Media;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
@@ -96,6 +98,7 @@ public partial class RollCallWindow : Window
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
+        UpdateNameTextLayout();
     }
 
     // --- Window Control ---
@@ -443,6 +446,13 @@ public partial class RollCallWindow : Window
             {
                 sb.Begin(NameContainer);
             }
+        }
+        if (e.PropertyName == nameof(RollCallViewModel.CurrentStudentName)
+            || e.PropertyName == nameof(RollCallViewModel.CurrentStudentId)
+            || e.PropertyName == nameof(RollCallViewModel.ShowId)
+            || e.PropertyName == nameof(RollCallViewModel.ShowName))
+        {
+            UpdateNameTextLayout();
         }
     }
 
@@ -823,5 +833,66 @@ public partial class RollCallWindow : Window
         _settings.RollCallWindowHeight = (int)Math.Round(height);
         _settings.RollCallWindowX = (int)Math.Round(Left);
         _settings.RollCallWindowY = (int)Math.Round(Top);
+    }
+
+    private void OnNameCardSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateNameTextLayout();
+    }
+
+    private void UpdateNameTextLayout()
+    {
+        if (NameCardBody == null || BigNameText == null || IdText == null)
+        {
+            return;
+        }
+        var availableWidth = NameCardBody.ActualWidth;
+        var availableHeight = NameCardBody.ActualHeight;
+        if (availableWidth <= 0 || availableHeight <= 0)
+        {
+            return;
+        }
+
+        var showName = _viewModel.ShowName && !string.IsNullOrWhiteSpace(_viewModel.CurrentStudentName);
+        var showId = _viewModel.ShowId && !string.IsNullOrWhiteSpace(_viewModel.CurrentStudentId);
+        var nameText = showName ? _viewModel.CurrentStudentName : string.Empty;
+        var idText = showId ? _viewModel.CurrentStudentId : string.Empty;
+
+        var maxNameFont = Math.Max(28, availableHeight * (showId ? 0.6 : 0.75));
+        var maxIdFont = Math.Max(14, maxNameFont * 0.4);
+
+        var nameSize = MeasureText(nameText, BigNameText, maxNameFont);
+        var idSize = showId ? MeasureText(idText, IdText, maxIdFont) : new Size(0, 0);
+        var gap = showId ? IdText.Margin.Left + IdText.Margin.Right : 0;
+        var totalWidth = nameSize.Width + (showId ? idSize.Width + gap : 0);
+        var maxHeight = Math.Max(nameSize.Height, idSize.Height);
+
+        var scale = 1.0;
+        if (totalWidth > availableWidth)
+        {
+            scale = Math.Min(scale, availableWidth / totalWidth);
+        }
+        if (maxHeight > availableHeight)
+        {
+            scale = Math.Min(scale, availableHeight / maxHeight);
+        }
+
+        BigNameText.FontSize = Math.Max(18, maxNameFont * scale);
+        IdText.FontSize = Math.Max(12, maxIdFont * scale);
+    }
+
+    private Size MeasureText(string text, TextBlock textBlock, double fontSize)
+    {
+        var content = string.IsNullOrWhiteSpace(text) ? " " : text;
+        var typeface = new Typeface(textBlock.FontFamily, textBlock.FontStyle, textBlock.FontWeight, textBlock.FontStretch);
+        var formatted = new FormattedText(
+            content,
+            CultureInfo.CurrentUICulture,
+            FlowDirection.LeftToRight,
+            typeface,
+            fontSize,
+            Brushes.Black,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        return new Size(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
     }
 }

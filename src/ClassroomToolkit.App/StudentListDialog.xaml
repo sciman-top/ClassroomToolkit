@@ -20,7 +20,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Margin" Value="4"/>
-            <Setter Property="Padding" Value="5,8"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="MinHeight" Value="32"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <!-- 鼠标悬停 -->
@@ -64,8 +65,7 @@
                 <ItemsControl x:Name="StudentItems">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <!-- 保持 UniformGrid 以维持整齐的网格布局 -->
-                            <UniformGrid Columns="10" />
+                            <WrapPanel ItemWidth="110" ItemHeight="38" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>

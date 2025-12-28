@@ -9,6 +9,11 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
+    private static readonly HashSet<string> SilentVoices = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Microsoft Zira Desktop",
+        "Microsoft David Desktop"
+    };
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
 
@@ -104,6 +109,10 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
+        if (RemoteKeyCustomButton != null)
+        {
+            RemoteKeyCustomButton.IsEnabled = enabled;
+        }
     }
 
     private void UpdatePhotoControls()
@@ -215,6 +224,15 @@ public partial class RollCallSettingsDialog : Window
         var items = new[]
         {
             new ComboOption("tab", "Tab键（切换超链接）"),
+            new ComboOption("enter", "Enter键"),
+            new ComboOption("space", "Space键"),
+            new ComboOption("pageup", "PageUp键"),
+            new ComboOption("pagedown", "PageDown键"),
+            new ComboOption("left", "方向键←"),
+            new ComboOption("right", "方向键→"),
+            new ComboOption("up", "方向键↑"),
+            new ComboOption("down", "方向键↓"),
+            new ComboOption("f5", "F5键"),
             new ComboOption("shift+b", "Shift+B键（黑屏）")
         };
         RemoteKeyCombo.ItemsSource = items;
@@ -248,7 +266,15 @@ public partial class RollCallSettingsDialog : Window
             using var synth = new SpeechSynthesizer();
             foreach (var voice in synth.GetInstalledVoices())
             {
+                if (!voice.Enabled)
+                {
+                    continue;
+                }
                 var name = voice.VoiceInfo.Name;
+                if (SilentVoices.Contains(name))
+                {
+                    continue;
+                }
                 voices.Add(new ComboOption(name, name));
             }
         }
@@ -268,7 +294,19 @@ public partial class RollCallSettingsDialog : Window
         SpeechVoiceCombo.ItemsSource = voices;
         SpeechVoiceCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechVoiceCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechVoiceCombo.SelectedValue = string.IsNullOrWhiteSpace(current) ? _initialVoiceId : current;
+        if (voices.Count == 0)
+        {
+            SpeechVoiceCombo.SelectedValue = string.Empty;
+        }
+        else
+        {
+            var target = string.IsNullOrWhiteSpace(current) ? _initialVoiceId : current;
+            if (!voices.Any(option => option.Value.Equals(target, StringComparison.OrdinalIgnoreCase)))
+            {
+                target = voices[0].Value;
+            }
+            SpeechVoiceCombo.SelectedValue = target;
+        }
     }
 
     private void BuildOutputCombo(string? engine, string? current)
@@ -332,6 +370,22 @@ public partial class RollCallSettingsDialog : Window
             return selected;
         }
         return (RemoteKeyCombo.Text ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private void OnRemoteKeyCustomClick(object sender, RoutedEventArgs e)
+    {
+        var current = GetRemoteKey();
+        var dialog = new RemoteKeyDialog(string.IsNullOrWhiteSpace(current) ? "tab" : current)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        var keyText = dialog.SelectedKey;
+        RemoteKeyCombo.SelectedValue = keyText;
+        RemoteKeyCombo.Text = keyText;
     }
 
     private static string GetSelectedValue(System.Windows.Controls.ComboBox combo, string fallback)

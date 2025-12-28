@@ -132,29 +132,33 @@
                     </Border.Effect>
                     
                     <!-- 核心名字展示 -->
-                    <Viewbox Stretch="Uniform" Margin="40,20" MaxHeight="160">
+                    <Grid x:Name="NameCardBody" Margin="40,20"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          SnapsToDevicePixels="True" UseLayoutRounding="True"
+                          SizeChanged="OnNameCardSizeChanged">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
                                     x:Name="NameContainer" RenderTransformOrigin="0.5,0.5">
-                            <StackPanel.CacheMode>
-                                <BitmapCache RenderAtScale="1.5"/> <!-- 1.5倍超采样，防止变糊 -->
-                            </StackPanel.CacheMode>
                             <StackPanel.RenderTransform>
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
                             </StackPanel.RenderTransform>
 
                             <!-- 学号 (可选显示) -->
-                            <TextBlock Text="{Binding CurrentStudentId}" 
+                            <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}" 
                                        Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                       Foreground="#888" Margin="0,0,20,0" FontWeight="Light"/>
+                                       Foreground="#888" Margin="0,0,20,0" FontWeight="Light"
+                                       TextOptions.TextFormattingMode="Display"
+                                       TextOptions.TextRenderingMode="ClearType"/>
                             
                             <!-- 姓名 -->
                             <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}" 
                                        Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                       Foreground="#333" FontWeight="Bold">
+                                       Foreground="#333" FontWeight="Bold"
+                                       TextOptions.TextFormattingMode="Display"
+                                       TextOptions.TextRenderingMode="ClearType">
                                 <!-- 这里的 Effect 会在代码中动态控制 (Blur) -->
                             </TextBlock>
                         </StackPanel>
-                    </Viewbox>
+                    </Grid>
                 </Border>
             </Grid>
 
