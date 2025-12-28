@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
 using WpfColor = System.Windows.Media.Color;
+using WpfBrush = System.Windows.Media.Brush;
 using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
@@ -303,7 +304,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         return pen;
     }
 
-    private static void DrawStamp(DrawingContext dc, Brush brush, WpfPoint point, double width)
+    private static void DrawStamp(DrawingContext dc, WpfBrush brush, WpfPoint point, double width)
     {
         double radius = Math.Max(width * 0.5, 0.1);
         dc.DrawEllipse(brush, null, point, radius, radius);
