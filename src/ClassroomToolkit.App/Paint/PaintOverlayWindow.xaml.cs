@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Ink;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
@@ -1606,31 +1607,25 @@ public partial class PaintOverlayWindow : Window
         ProcessCustomStrokesPartialErase(region);
 
         // 3. 处理其他形状（完全删除）
+        // 注意：不处理 CalligraphyLayerTag 的形状，因为它们已经被步骤2处理过了
         var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
-        var calligraphyGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var shape in shapes)
         {
             if (shape == _regionRect)
             {
                 continue;
             }
+
+            // 跳过自定义笔画（有 CalligraphyLayerTag），它们已经被 ProcessCustomStrokesPartialErase 处理
+            if (shape.Tag is CalligraphyLayerTag)
+            {
+                continue;
+            }
+
             if (IsShapeHit(region, shape))
             {
-                var tag = shape.Tag as CalligraphyLayerTag;
-                if (tag != null)
-                {
-                    calligraphyGroups.Add(tag.GroupId);
-                }
-                else
-                {
-                    ShapeCanvas.Children.Remove(shape);
-                }
+                ShapeCanvas.Children.Remove(shape);
             }
-        }
-
-        if (calligraphyGroups.Count > 0)
-        {
-            RemoveCalligraphyGroups(calligraphyGroups);
         }
     }
 
