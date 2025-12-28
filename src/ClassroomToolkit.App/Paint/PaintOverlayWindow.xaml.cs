@@ -687,10 +687,12 @@ public partial class PaintOverlayWindow : Window
 
     public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth, string groupId)
     {
-        if (canvas.Background == null)
-        {
-            canvas.Background = CalligraphyCanvasBackground;
-        }
+        // 不再设置米色背景，避免用户误以为进入了白板模式
+        // 毛笔的墨水晕染效果仍然在透明背景上正常工作
+        // if (canvas.Background == null)
+        // {
+        //     canvas.Background = CalligraphyCanvasBackground;
+        // }
         if (canvas.CacheMode == null)
         {
             canvas.CacheMode = CalligraphyInkBleedCache;

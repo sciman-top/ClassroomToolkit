@@ -17,7 +17,7 @@ public class MarkerBrushRenderer : IBrushRenderer
     private const double PositionSmoothing = 0.6;
     private const double MinMoveDistance = 0.8;
     private const bool DebugDrawCenters = false;
-    private const double PenThicknessQuantization = 0.1;
+    private const double WidthQuantizationStep = 0.5;
     private static readonly WpfPen DebugCenterPen = CreateFrozenPen(Colors.LimeGreen, 1);
 
     private struct MarkerPoint
@@ -114,32 +114,17 @@ public class MarkerBrushRenderer : IBrushRenderer
         var brush = new SolidColorBrush(GetMarkerColor());
         brush.Freeze();
 
-        var penCache = new Dictionary<int, WpfPen>();
-        WpfPen GetPen(double thickness)
+        var pen = new WpfPen(brush, Math.Max(QuantizeWidth(_points[0].Width), 0.1))
         {
-            double clamped = Math.Max(thickness, 0.1);
-            int key = (int)Math.Round(clamped / PenThicknessQuantization);
-            if (key < 1) key = 1;
-
-            if (!penCache.TryGetValue(key, out var cached))
-            {
-                double actual = key * PenThicknessQuantization;
-                var pen = new WpfPen(brush, actual)
-                {
-                    StartLineCap = PenLineCap.Round,
-                    EndLineCap = PenLineCap.Round,
-                    LineJoin = PenLineJoin.Round
-                };
-                pen.Freeze();
-                penCache[key] = pen;
-                cached = pen;
-            }
-
-            return cached;
-        }
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
 
         var first = _points[0];
         DrawStamp(dc, brush, first.Position, first.Width);
+        int batchStart = 0;
+        double batchWidth = QuantizeWidth(first.Width);
 
         for (int i = 0; i < _points.Count - 1; i++)
         {
@@ -147,33 +132,24 @@ public class MarkerBrushRenderer : IBrushRenderer
             var p1 = _points[i + 1];
             double w0 = Math.Max(p0.Width, 0.1);
             double w1 = Math.Max(p1.Width, 0.1);
+            double nextWidth = QuantizeWidth(w1);
+            bool split = nextWidth != batchWidth || ShouldStampJoin(i, w0, w1);
 
-            double dx = p1.Position.X - p0.Position.X;
-            double dy = p1.Position.Y - p0.Position.Y;
-            double dist = Math.Sqrt((dx * dx) + (dy * dy));
-
-            if (dist < 0.001)
+            if (split)
             {
+                DrawBatchStroke(dc, pen, batchStart, i + 1, batchWidth);
                 DrawStamp(dc, brush, p1.Position, w1);
-                continue;
+                batchStart = i + 1;
+                batchWidth = nextWidth;
             }
+        }
 
-            double step = Math.Max(0.5, Math.Min(w0, w1) * 0.6);
-            int segments = Math.Max(1, (int)Math.Ceiling(dist / step));
+        DrawBatchStroke(dc, pen, batchStart, _points.Count - 1, batchWidth);
 
-            var prev = p0.Position;
-            for (int s = 1; s <= segments; s++)
-            {
-                double t = (double)s / segments;
-                var cur = new WpfPoint(
-                    p0.Position.X + (dx * t),
-                    p0.Position.Y + (dy * t));
-                double width = Lerp(w0, w1, t);
-                var pen = GetPen(width);
-                dc.DrawLine(pen, prev, cur);
-                DrawStamp(dc, brush, cur, width);
-                prev = cur;
-            }
+        if (_points.Count > 1)
+        {
+            var last = _points[_points.Count - 1];
+            DrawStamp(dc, brush, last.Position, last.Width);
         }
 
 #pragma warning disable CS0162
@@ -229,32 +205,17 @@ public class MarkerBrushRenderer : IBrushRenderer
         }
 
         var geometry = new GeometryGroup();
-        var penCache = new Dictionary<int, WpfPen>();
-
-        WpfPen GetPen(double thickness)
+        var pen = new WpfPen(WpfBrushes.Black, QuantizeWidth(_points[0].Width))
         {
-            double clamped = Math.Max(thickness, 0.1);
-            int key = (int)Math.Round(clamped / PenThicknessQuantization);
-            if (key < 1) key = 1;
-
-            if (!penCache.TryGetValue(key, out var cached))
-            {
-                double actual = key * PenThicknessQuantization;
-                var pen = new WpfPen(WpfBrushes.Black, actual)
-                {
-                    StartLineCap = PenLineCap.Round,
-                    EndLineCap = PenLineCap.Round,
-                    LineJoin = PenLineJoin.Round
-                };
-                pen.Freeze();
-                penCache[key] = pen;
-                cached = pen;
-            }
-            return cached;
-        }
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
 
         var first = _points[0];
         geometry.Children.Add(CreateStampGeometry(first.Position, first.Width));
+        int batchStart = 0;
+        double batchWidth = QuantizeWidth(first.Width);
 
         for (int i = 0; i < _points.Count - 1; i++)
         {
@@ -262,36 +223,32 @@ public class MarkerBrushRenderer : IBrushRenderer
             var p1 = _points[i + 1];
             double w0 = Math.Max(p0.Width, 0.1);
             double w1 = Math.Max(p1.Width, 0.1);
+            double nextWidth = QuantizeWidth(w1);
+            bool split = nextWidth != batchWidth || ShouldStampJoin(i, w0, w1);
 
-            double dx = p1.Position.X - p0.Position.X;
-            double dy = p1.Position.Y - p0.Position.Y;
-            double dist = Math.Sqrt((dx * dx) + (dy * dy));
-
-            if (dist < 0.001)
+            if (split)
             {
+                var batch = CreateBatchGeometry(pen, batchStart, i + 1, batchWidth);
+                if (batch != null)
+                {
+                    geometry.Children.Add(batch);
+                }
                 geometry.Children.Add(CreateStampGeometry(p1.Position, w1));
-                continue;
+                batchStart = i + 1;
+                batchWidth = nextWidth;
             }
+        }
 
-            double step = Math.Max(0.5, Math.Min(w0, w1) * 0.6);
-            int segments = Math.Max(1, (int)Math.Ceiling(dist / step));
+        var lastBatch = CreateBatchGeometry(pen, batchStart, _points.Count - 1, batchWidth);
+        if (lastBatch != null)
+        {
+            geometry.Children.Add(lastBatch);
+        }
 
-            var prev = p0.Position;
-            for (int s = 1; s <= segments; s++)
-            {
-                double t = (double)s / segments;
-                var cur = new WpfPoint(
-                    p0.Position.X + (dx * t),
-                    p0.Position.Y + (dy * t));
-                double width = Lerp(w0, w1, t);
-                var pen = GetPen(width);
-                var line = new LineGeometry(prev, cur);
-                var capsule = line.GetWidenedPathGeometry(pen);
-                if (capsule.CanFreeze) capsule.Freeze();
-                geometry.Children.Add(capsule);
-                geometry.Children.Add(CreateStampGeometry(cur, width));
-                prev = cur;
-            }
+        if (_points.Count > 1)
+        {
+            var last = _points[_points.Count - 1];
+            geometry.Children.Add(CreateStampGeometry(last.Position, last.Width));
         }
 
         if (geometry.CanFreeze) geometry.Freeze();
@@ -319,8 +276,97 @@ public class MarkerBrushRenderer : IBrushRenderer
         return geometry;
     }
 
-    private static double Lerp(double start, double end, double t)
+    private static double QuantizeWidth(double width)
+    {
+        double clamped = Math.Max(width, 0.1);
+        return Math.Max(0.1, Math.Round(clamped / WidthQuantizationStep) * WidthQuantizationStep);
+    }
+
+    private void DrawBatchStroke(DrawingContext dc, WpfPen pen, int startIndex, int endIndex, double width)
+    {
+        if (endIndex <= startIndex)
+        {
+            return;
+        }
+
+        pen.Thickness = width;
+        var geometry = BuildPolylineGeometry(startIndex, endIndex);
+        if (geometry == null)
+        {
+            return;
+        }
+        dc.DrawGeometry(null, pen, geometry);
+    }
+
+    private Geometry? CreateBatchGeometry(WpfPen pen, int startIndex, int endIndex, double width)
+    {
+        if (endIndex <= startIndex)
+        {
+            return null;
+        }
+
+        pen.Thickness = width;
+        var geometry = BuildPolylineGeometry(startIndex, endIndex);
+        if (geometry == null)
+        {
+            return null;
+        }
+
+        var widened = geometry.GetWidenedPathGeometry(pen);
+        if (widened.CanFreeze) widened.Freeze();
+        return widened;
+    }
+
+    private StreamGeometry? BuildPolylineGeometry(int startIndex, int endIndex)
+    {
+        if (endIndex <= startIndex)
+        {
+            return null;
+        }
+
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            ctx.BeginFigure(_points[startIndex].Position, isFilled: false, isClosed: false);
+            for (int i = startIndex + 1; i <= endIndex; i++)
+            {
+                ctx.LineTo(_points[i].Position, isStroked: true, isSmoothJoin: true);
+            }
+        }
+        if (geometry.CanFreeze) geometry.Freeze();
+        return geometry;
+    }
     {
         return start + ((end - start) * t);
+    }
+
+    private bool ShouldStampJoin(int index, double w0, double w1)
+    {
+        int nextIndex = index + 2;
+        if (nextIndex >= _points.Count)
+        {
+            return false;
+        }
+
+        var p0 = _points[index].Position;
+        var p1 = _points[index + 1].Position;
+        var p2 = _points[nextIndex].Position;
+
+        var v1 = p1 - p0;
+        var v2 = p2 - p1;
+        double len1 = v1.Length;
+        double len2 = v2.Length;
+
+        bool sharpTurn = false;
+        if (len1 > 0.001 && len2 > 0.001)
+        {
+            double cos = Vector.Multiply(v1, v2) / (len1 * len2);
+            sharpTurn = cos < 0.5;
+        }
+
+        double w2 = Math.Max(_points[nextIndex].Width, 0.1);
+        bool widthJump = w1 > Math.Max(w0, w2) * 1.25;
+
+        return sharpTurn || widthJump;
     }
 }
