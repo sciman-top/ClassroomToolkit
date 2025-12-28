@@ -633,8 +633,7 @@ public partial class PaintOverlayWindow : Window
         var path = new Path
         {
             Data = geo,
-            Fill = brush,
-            FillRule = FillRule.Nonzero
+            Fill = brush
         };
 
         canvas.Children.Add(path);
