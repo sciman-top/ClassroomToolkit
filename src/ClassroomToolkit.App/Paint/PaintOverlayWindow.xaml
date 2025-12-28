@@ -9,7 +9,7 @@
         ShowInTaskbar="False"
         ResizeMode="NoResize">
     <Grid x:Name="OverlayRoot" Background="Transparent">
-        <Image x:Name="RasterImage" Stretch="None" SnapsToDevicePixels="True" />
+        <Image x:Name="RasterImage" Stretch="None" SnapsToDevicePixels="True" HorizontalAlignment="Left" VerticalAlignment="Top" />
         <Canvas x:Name="PreviewCanvas" IsHitTestVisible="False" />
         <Border x:Name="CustomDrawHost" Background="Transparent" IsHitTestVisible="False" />
     </Grid>

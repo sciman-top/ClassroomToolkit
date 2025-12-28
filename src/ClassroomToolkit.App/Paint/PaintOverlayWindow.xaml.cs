@@ -1,19 +1,16 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
 using MediaColor = System.Windows.Media.Color;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
-using WpfBrush = System.Windows.Media.Brush;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
@@ -22,14 +19,6 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
-    private static readonly BlurEffect CalligraphyWashEffect = CreateInkBleedEffect(8.0);
-    private static readonly BlurEffect CalligraphyBridgeEffect = CreateInkBleedEffect(2.5);
-    private static readonly BlurEffect CalligraphyCoreEffect = CreateInkBleedEffect(0.6);
-    private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
-    private static readonly SolidColorBrush CalligraphyCanvasBackground = CreateFrozenBrush(MediaColor.FromArgb(255, 0xF8, 0xF5, 0xEE));
-    private static readonly SolidColorBrush CalligraphyWashBrush = CreateFrozenBrush(MediaColor.FromArgb(0x15, 0, 0, 0));
-    private static readonly SolidColorBrush CalligraphyBridgeBrush = CreateFrozenBrush(MediaColor.FromArgb(0x40, 0x10, 0x10, 0x10));
-    private static readonly SolidColorBrush CalligraphyCoreBrush = CreateFrozenBrush(MediaColor.FromArgb(0xFF, 0x15, 0x15, 0x15));
     private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
@@ -45,143 +34,24 @@ public partial class PaintOverlayWindow : Window
     private readonly DispatcherTimer _presentationFocusMonitor;
     private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
-    private sealed class PaintSnapshot
+    private const int HistoryLimit = 30;
+
+    private sealed class RasterSnapshot
     {
-        public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes, List<CustomStrokeData> customStrokes)
+        public RasterSnapshot(int width, int height, double dpiX, double dpiY, byte[] pixels)
         {
-            Strokes = strokes;
-            Shapes = shapes;
-            CustomStrokes = customStrokes;
+            PixelWidth = width;
+            PixelHeight = height;
+            DpiX = dpiX;
+            DpiY = dpiY;
+            Pixels = pixels;
         }
 
-        public StrokeCollection Strokes { get; }
-        public List<ShapeSnapshot> Shapes { get; }
-        public List<CustomStrokeData> CustomStrokes { get; }
-    }
-
-    private sealed class ShapeSnapshot
-    {
-        public PaintShapeType Type { get; init; }
-        public WpfPoint Start { get; init; }
-        public WpfPoint End { get; init; }
-        public Rect Bounds { get; init; }
-        public MediaColor StrokeColor { get; init; }
-        public double StrokeThickness { get; init; }
-        public DoubleCollection? DashArray { get; init; }
-        public MediaColor? FillColor { get; init; }
-        public string? PathData { get; init; }
-        public string? CalligraphyGroupId { get; init; }
-        public CalligraphyLayerRole? CalligraphyRole { get; init; }
-        public string? CustomStrokeGroupId { get; init; }
-
-        public static ShapeSnapshot? FromShape(Shape shape)
-        {
-            if (shape is Path path)
-            {
-                var tag = path.Tag as CalligraphyLayerTag;
-                var customTag = path.Tag as CustomStrokeTag;
-                return new ShapeSnapshot
-                {
-                    Type = PaintShapeType.Path,
-                    StrokeColor = ResolveColor(path.Fill), // Note: For our filled paths, the "stroke" is the fill
-                    PathData = path.Data.ToString(),
-                    CalligraphyGroupId = tag?.GroupId,
-                    CalligraphyRole = tag?.Role,
-                    CustomStrokeGroupId = customTag?.GroupId
-                };
-            }
-
-            if (shape is Line line)
-            {
-                return new ShapeSnapshot
-                {
-                    Type = line.StrokeDashArray?.Count > 0 ? PaintShapeType.DashedLine : PaintShapeType.Line,
-                    Start = new WpfPoint(line.X1, line.Y1),
-                    End = new WpfPoint(line.X2, line.Y2),
-                    StrokeColor = ResolveColor(line.Stroke),
-                    StrokeThickness = line.StrokeThickness,
-                    DashArray = line.StrokeDashArray
-                };
-            }
-
-            if (shape is System.Windows.Shapes.Rectangle rectangle)
-            {
-                var fill = ResolveColor(rectangle.Fill, allowTransparent: true);
-                return new ShapeSnapshot
-                {
-                    Type = rectangle.Fill != null ? PaintShapeType.RectangleFill : PaintShapeType.Rectangle,
-                    Bounds = new Rect(
-                        System.Windows.Controls.Canvas.GetLeft(rectangle),
-                        System.Windows.Controls.Canvas.GetTop(rectangle),
-                        rectangle.Width,
-                        rectangle.Height),
-                    StrokeColor = ResolveColor(rectangle.Stroke),
-                    StrokeThickness = rectangle.StrokeThickness,
-                    DashArray = rectangle.StrokeDashArray,
-                    FillColor = fill
-                };
-            }
-
-            if (shape is Ellipse ellipse)
-            {
-                return new ShapeSnapshot
-                {
-                    Type = PaintShapeType.Ellipse,
-                    Bounds = new Rect(
-                        System.Windows.Controls.Canvas.GetLeft(ellipse),
-                        System.Windows.Controls.Canvas.GetTop(ellipse),
-                        ellipse.Width,
-                        ellipse.Height),
-                    StrokeColor = ResolveColor(ellipse.Stroke),
-                    StrokeThickness = ellipse.StrokeThickness,
-                    DashArray = ellipse.StrokeDashArray,
-                    FillColor = ResolveColor(ellipse.Fill, allowTransparent: true)
-                };
-            }
-
-            return null;
-        }
-
-        private static MediaColor ResolveColor(WpfBrush? brush, bool allowTransparent = false)
-        {
-            if (brush is SolidColorBrush solid)
-            {
-                if (allowTransparent || solid.Color.A > 0)
-                {
-                    return solid.Color;
-                }
-            }
-            return Colors.Transparent;
-        }
-    }
-
-    private enum CalligraphyLayerRole
-    {
-        Wash,
-        Bridge,
-        Core
-    }
-
-    private sealed class CalligraphyLayerTag
-    {
-        public CalligraphyLayerTag(string groupId, CalligraphyLayerRole role)
-        {
-            GroupId = groupId;
-            Role = role;
-        }
-
-        public string GroupId { get; }
-        public CalligraphyLayerRole Role { get; }
-    }
-
-    private sealed class CustomStrokeTag
-    {
-        public CustomStrokeTag(string groupId)
-        {
-            GroupId = groupId;
-        }
-
-        public string GroupId { get; }
+        public int PixelWidth { get; }
+        public int PixelHeight { get; }
+        public double DpiX { get; }
+        public double DpiY { get; }
+        public byte[] Pixels { get; }
     }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
@@ -207,42 +77,24 @@ public partial class PaintOverlayWindow : Window
     private DateTime _wpsNavBlockUntil = DateTime.MinValue;
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = DateTime.MinValue;
-    private readonly Stack<PaintSnapshot> _history = new();
-    private bool _erasing;
-    private bool _inkStrokeInProgress;
+    private readonly List<RasterSnapshot> _history = new();
 
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
     private IBrushRenderer? _activeRenderer;
     private DrawingVisualHost _visualHost;
-
-    // 笔画数据存储（用于部分删除）
-    private sealed class CustomStrokeData
-    {
-        public string GroupId { get; }
-        public List<StrokePointData> Points { get; }
-        public PaintBrushStyle Style { get; }
-        public MediaColor Color { get; }
-        public double BaseSize { get; }
-        public Guid RendererId { get; }
-
-        public CustomStrokeData(string groupId, List<StrokePointData> points, PaintBrushStyle style,
-            MediaColor color, double baseSize, Guid rendererId)
-        {
-            GroupId = groupId;
-            Points = points;
-            Style = style;
-            Color = color;
-            BaseSize = baseSize;
-            RendererId = rendererId;
-        }
-    }
-
-    private readonly List<CustomStrokeData> _customStrokes = new();
-
-    // 橡皮擦路径跟踪（用于部分擦除）
-    private readonly List<WpfPoint> _eraserPath = new();
-    private double _eraserSize = 24;
+    private WriteableBitmap? _rasterSurface;
+    private int _surfacePixelWidth;
+    private int _surfacePixelHeight;
+    private double _surfaceDpiX = 96.0;
+    private double _surfaceDpiY = 96.0;
+    private MediaColor _brushColor = Colors.Red;
+    private double _brushSize = 12.0;
+    private byte _brushOpacity = 255;
+    private double _eraserSize = 24.0;
     private bool _isErasing;
+    private bool _strokeInProgress;
+    private WpfPoint? _lastEraserPoint;
+    private bool _hasDrawing;
 
     private class DrawingVisualHost : FrameworkElement
     {
@@ -320,17 +172,15 @@ public partial class PaintOverlayWindow : Window
             UpdateInputPassthrough();
             UpdateFocusAcceptance();
         };
-        InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
-        InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(Colors.Red, 12, 255);
-        InkLayer.EraserShape = new RectangleStylusShape(24, 24);
-        InkLayer.StrokeCollected += OnStrokeCollected;
-        InkLayer.StrokeErasing += OnStrokeErasing;
-        InkLayer.MouseLeftButtonDown += OnMouseDown;
-        InkLayer.MouseMove += OnMouseMove;
-        InkLayer.MouseLeftButtonUp += OnMouseUp;
-        InkLayer.StylusDown += OnStylusDown;
-        InkLayer.StylusUp += OnStylusUp;
+        OverlayRoot.MouseLeftButtonDown += OnMouseDown;
+        OverlayRoot.MouseMove += OnMouseMove;
+        OverlayRoot.MouseLeftButtonUp += OnMouseUp;
+        OverlayRoot.StylusDown += OnStylusDown;
+        OverlayRoot.StylusMove += OnStylusMove;
+        OverlayRoot.StylusUp += OnStylusUp;
         MouseWheel += OnMouseWheel;
+        Loaded += (_, _) => EnsureRasterSurface();
+        SizeChanged += (_, _) => EnsureRasterSurface();
         UpdateBoardBackground();
 
         _presentationClassifier = new ClassroomToolkit.Interop.Presentation.PresentationClassifier();
@@ -368,40 +218,13 @@ public partial class PaintOverlayWindow : Window
     {
         _mode = mode;
         OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
-        InkLayer.IsHitTestVisible = mode != PaintToolMode.Cursor;
-        InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
-        switch (mode)
-        {
-            case PaintToolMode.Brush:
-                if (UseCustomBrushRenderer())
-                {
-                    // Custom brush modes manage rendering manually
-                    InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
-                    InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
-                }
-                else
-                {
-                    InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
-                    InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.Ink;
-                }
-                break;
-            case PaintToolMode.Eraser:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
-                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
-                break;
-            case PaintToolMode.Shape:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
-                break;
-            case PaintToolMode.RegionErase:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
-                break;
-            default:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
-                break;
-        }
         if (mode != PaintToolMode.RegionErase)
         {
             ClearRegionSelection();
+        }
+        if (mode != PaintToolMode.Shape)
+        {
+            ClearShapePreview();
         }
         UpdateInputPassthrough();
         UpdateWpsNavHookState();
@@ -410,14 +233,14 @@ public partial class PaintOverlayWindow : Window
 
     public void SetBrush(MediaColor color, double size, byte opacity)
     {
-        InkLayer.DefaultDrawingAttributes = BuildDrawingAttributes(color, size, opacity);
+        _brushColor = color;
+        _brushSize = Math.Max(1.0, size);
+        _brushOpacity = opacity;
     }
 
     public void SetEraserSize(double size)
     {
-        var value = Math.Max(4, size);
-        _eraserSize = value; // 保存橡皮擦大小（用于部分擦除）
-        InkLayer.EraserShape = new RectangleStylusShape(value, value);
+        _eraserSize = Math.Max(4.0, size);
     }
 
     public void SetShapeType(PaintShapeType type)
@@ -433,317 +256,292 @@ public partial class PaintOverlayWindow : Window
 
     public void ClearAll()
     {
-        if (InkLayer.Strokes.Count > 0 || ShapeCanvas.Children.Count > 0)
+        if (_hasDrawing)
         {
             PushHistory();
         }
-        InkLayer.Strokes.Clear();
-        ShapeCanvas.Children.Clear();
+        ClearSurface();
         _visualHost.Clear();
-        if (_activeRenderer != null)
-        {
-            _activeRenderer.Reset();
-        }
+        ClearShapePreview();
+        ClearRegionSelection();
+        _hasDrawing = false;
     }
 
-    public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
-    public byte CurrentBrushOpacity => InkLayer.DefaultDrawingAttributes.Color.A;
+    public MediaColor CurrentBrushColor => _brushColor;
+    public byte CurrentBrushOpacity => _brushOpacity;
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+        {
+            return;
+        }
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerDown(position);
+        e.Handled = true;
+    }
+
+    private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+        {
+            return;
+        }
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerMove(position);
+        e.Handled = true;
+    }
+
+    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerUp(position);
+        e.Handled = true;
+    }
+
+    private void HandlePointerDown(WpfPoint position)
+    {
         if (_mode == PaintToolMode.RegionErase)
         {
-            e.Handled = true;
-            _regionStart = e.GetPosition(ShapeCanvas);
+            BeginRegionSelection(position);
+            OverlayRoot.CaptureMouse();
+            return;
+        }
+        if (_mode == PaintToolMode.Eraser)
+        {
+            BeginEraser(position);
+            OverlayRoot.CaptureMouse();
+            return;
+        }
+        if (_mode == PaintToolMode.Shape)
+        {
+            BeginShape(position);
+            OverlayRoot.CaptureMouse();
+            return;
+        }
+        if (_mode == PaintToolMode.Brush)
+        {
+            BeginBrushStroke(position);
+            OverlayRoot.CaptureMouse();
+        }
+    }
+
+    private void HandlePointerMove(WpfPoint position)
+    {
+        if (_mode == PaintToolMode.Brush)
+        {
+            UpdateBrushStroke(position);
+            return;
+        }
+        if (_mode == PaintToolMode.Eraser)
+        {
+            UpdateEraser(position);
+            return;
+        }
+        if (_mode == PaintToolMode.RegionErase)
+        {
+            UpdateRegionSelection(position);
+            return;
+        }
+        if (_mode == PaintToolMode.Shape)
+        {
+            UpdateShapePreview(position);
+        }
+    }
+
+    private void HandlePointerUp(WpfPoint position)
+    {
+        if (_mode == PaintToolMode.Brush)
+        {
+            EndBrushStroke(position);
+        }
+        else if (_mode == PaintToolMode.Eraser)
+        {
+            EndEraser(position);
+        }
+        else if (_mode == PaintToolMode.RegionErase)
+        {
+            EndRegionSelection(position);
+        }
+        else if (_mode == PaintToolMode.Shape)
+        {
+            EndShape(position);
+        }
+        if (OverlayRoot.IsMouseCaptured)
+        {
+            OverlayRoot.ReleaseMouseCapture();
+        }
+    }
+
+    private void BeginBrushStroke(WpfPoint position)
+    {
+        EnsureActiveRenderer();
+        if (_activeRenderer == null)
+        {
+            return;
+        }
+        PushHistory();
+        _strokeInProgress = true;
+        var color = EffectiveBrushColor();
+        _activeRenderer.Initialize(color, _brushSize, color.A);
+        _activeRenderer.OnDown(position);
+        _visualHost.UpdateVisual(_activeRenderer.Render);
+    }
+
+    private void UpdateBrushStroke(WpfPoint position)
+    {
+        if (!_strokeInProgress || _activeRenderer == null)
+        {
+            return;
+        }
+        _activeRenderer.OnMove(position);
+        _visualHost.UpdateVisual(_activeRenderer.Render);
+    }
+
+    private void EndBrushStroke(WpfPoint position)
+    {
+        if (!_strokeInProgress || _activeRenderer == null)
+        {
+            return;
+        }
+        _activeRenderer.OnUp(position);
+        var geometry = _activeRenderer.GetLastStrokeGeometry();
+        if (geometry != null)
+        {
+            CommitGeometryFill(geometry, EffectiveBrushColor());
+        }
+        _activeRenderer.Reset();
+        _visualHost.Clear();
+        _strokeInProgress = false;
+    }
+
+    private void BeginEraser(WpfPoint position)
+    {
+        PushHistory();
+        _isErasing = true;
+        _lastEraserPoint = position;
+        ApplyEraserAt(position);
+    }
+
+    private void UpdateEraser(WpfPoint position)
+    {
+        if (!_isErasing || _lastEraserPoint == null)
+        {
+            return;
+        }
+        var last = _lastEraserPoint.Value;
+        var distance = (position - last).Length;
+        var threshold = Math.Max(1.0, _eraserSize * 0.2);
+        if (distance < threshold)
+        {
+            return;
+        }
+        var geometry = BuildEraserGeometry(last, position);
+        if (geometry != null)
+        {
+            EraseGeometry(geometry);
+        }
+        _lastEraserPoint = position;
+    }
+
+    private void EndEraser(WpfPoint position)
+    {
+        if (!_isErasing)
+        {
+            return;
+        }
+        if (_lastEraserPoint == null || (_lastEraserPoint.Value - position).Length < 0.5)
+        {
+            ApplyEraserAt(position);
+        }
+        _isErasing = false;
+        _lastEraserPoint = null;
+    }
+
+    private void BeginRegionSelection(WpfPoint position)
+    {
+        PushHistory();
+        _regionStart = position;
+        if (_regionRect == null)
+        {
             _regionRect = new WpfRectangle
             {
                 Stroke = new SolidColorBrush(MediaColor.FromArgb(200, 255, 200, 60)),
                 StrokeThickness = 2,
                 StrokeDashArray = new DoubleCollection { 6, 4 },
-                Fill = new SolidColorBrush(MediaColor.FromArgb(30, 255, 200, 60))
+                Fill = new SolidColorBrush(MediaColor.FromArgb(30, 255, 200, 60)),
+                IsHitTestVisible = false
             };
-            System.Windows.Controls.Canvas.SetLeft(_regionRect, _regionStart.X);
-            System.Windows.Controls.Canvas.SetTop(_regionRect, _regionStart.Y);
-            ShapeCanvas.Children.Add(_regionRect);
-            _isRegionSelecting = true;
-            InkLayer.CaptureMouse();
-            return;
+            PreviewCanvas.Children.Add(_regionRect);
         }
-        if (_mode == PaintToolMode.Brush)
+        UpdateSelectionRect(_regionRect, _regionStart, position);
+        _isRegionSelecting = true;
+    }
+
+    private void UpdateRegionSelection(WpfPoint position)
+    {
+        if (_isRegionSelecting && _regionRect != null)
         {
-            if (UseCustomBrushRenderer())
-            {
-                if (_activeRenderer != null)
-                {
-                    var attr = InkLayer.DefaultDrawingAttributes;
-                    _activeRenderer.Initialize(attr.Color, attr.Width, attr.Color.A);
-                    _activeRenderer.OnDown(e.GetPosition(CustomDrawHost));
-                    InkLayer.CaptureMouse(); // Capture on InkLayer because we are hooking its events
-                    e.Handled = true;
-                }
-                return;
-            }
-            EnsureInkHistory();
+            UpdateSelectionRect(_regionRect, _regionStart, position);
         }
-        if (_mode == PaintToolMode.Eraser)
-        {
-            // 开始橡皮擦操作：记录路径起点
-            _eraserPath.Clear();
-            _eraserPath.Add(e.GetPosition(ShapeCanvas));
-            _isErasing = true;
-            PushHistory(); // 保存当前状态
-            InkLayer.CaptureMouse();
-            e.Handled = true;
-        }
-        if (_mode != PaintToolMode.Shape)
+    }
+
+    private void EndRegionSelection(WpfPoint position)
+    {
+        if (!_isRegionSelecting)
         {
             return;
         }
+        _isRegionSelecting = false;
+        var region = BuildRegionRect(_regionStart, position);
+        ClearRegionSelection();
+        if (region.Width > 2 && region.Height > 2)
+        {
+            EraseRect(region);
+        }
+    }
+
+    private void BeginShape(WpfPoint position)
+    {
         if (_shapeType == PaintShapeType.None)
         {
             return;
         }
         PushHistory();
-        _shapeStart = e.GetPosition(ShapeCanvas);
+        _shapeStart = position;
         _activeShape = CreateShape(_shapeType);
         if (_activeShape == null)
         {
             return;
         }
         ApplyShapeStyle(_activeShape);
-        ShapeCanvas.Children.Add(_activeShape);
+        PreviewCanvas.Children.Add(_activeShape);
+        UpdateShape(_activeShape, _shapeStart, position);
         _isDrawingShape = true;
     }
 
-    private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    private void UpdateShapePreview(WpfPoint position)
     {
-        if (_mode == PaintToolMode.Brush && _activeRenderer != null && _activeRenderer.IsActive && UseCustomBrushRenderer())
-        {
-            _activeRenderer.OnMove(e.GetPosition(CustomDrawHost));
-            _visualHost.UpdateVisual(_activeRenderer.Render);
-            e.Handled = true;
-            return;
-        }
-
-        if (_mode == PaintToolMode.RegionErase && _isRegionSelecting && _regionRect != null)
-        {
-            e.Handled = true;
-            var regionPosition = e.GetPosition(ShapeCanvas);
-            UpdateSelectionRect(_regionRect, _regionStart, regionPosition);
-            return;
-        }
-        if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
-        {
-            var point = e.GetPosition(ShapeCanvas);
-
-            // 记录橡皮擦路径（用于部分擦除）
-            if (_isErasing && _eraserPath.Count > 0)
-            {
-                var lastPoint = _eraserPath.Last();
-                var distance = (point - lastPoint).Length;
-
-                // 只有移动距离超过一定阈值时才记录点（避免点过于密集）
-                if (distance > _eraserSize * 0.2)
-                {
-                    _eraserPath.Add(point);
-                }
-            }
-        }
         if (!_isDrawingShape || _activeShape == null)
         {
             return;
         }
-        var shapePosition = e.GetPosition(ShapeCanvas);
-        UpdateShape(_activeShape, _shapeStart, shapePosition);
+        UpdateShape(_activeShape, _shapeStart, position);
     }
 
-    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void EndShape(WpfPoint position)
     {
-        if (_mode == PaintToolMode.Brush && _activeRenderer != null && _activeRenderer.IsActive && UseCustomBrushRenderer())
+        if (!_isDrawingShape || _activeShape == null)
         {
-            PushHistory(); // Save state before adding new shape
-
-            _activeRenderer.OnUp(e.GetPosition(CustomDrawHost));
-            var geometry = _activeRenderer.GetLastStrokeGeometry();
-            var points = _activeRenderer.GetLastStrokePoints();
-
-            if (geometry != null && points != null)
-            {
-                var attr = InkLayer.DefaultDrawingAttributes;
-                var groupId = Guid.NewGuid().ToString("N");
-                var baseWidth = Math.Max(attr.Width, attr.Height);
-
-                // 保存笔画数据（用于部分删除）
-                var strokeData = new CustomStrokeData(
-                    groupId,
-                    points,
-                    _brushStyle,
-                    attr.Color,
-                    baseWidth,
-                    Guid.NewGuid() // 唯一标识此笔画
-                );
-                _customStrokes.Add(strokeData);
-
-                if (_brushStyle == PaintBrushStyle.Calligraphy)
-                {
-                    DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth, groupId);
-                }
-                else
-                {
-                    DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, attr.Color, groupId);
-                }
-            }
-
-            _activeRenderer.Reset();
-            _visualHost.Clear();
-            InkLayer.ReleaseMouseCapture();
-            e.Handled = true;
             return;
         }
-
-        if (_mode == PaintToolMode.RegionErase && _isRegionSelecting)
+        var geometry = BuildShapeGeometry(_shapeType, _shapeStart, position);
+        if (geometry != null)
         {
-            e.Handled = true;
-            _isRegionSelecting = false;
-            var end = e.GetPosition(ShapeCanvas);
-            var region = BuildRegionRect(_regionStart, end);
-            ClearRegionSelection();
-            if (region.Width > 2 && region.Height > 2)
-            {
-                EraseRegion(region);
-            }
-            _erasing = false;
-            if (InkLayer.IsMouseCaptured)
-            {
-                InkLayer.ReleaseMouseCapture();
-            }
-            return;
+            var pen = BuildShapePen();
+            CommitGeometryStroke(geometry, pen);
         }
-
-        // 橡皮擦部分擦除处理
-        if (_mode == PaintToolMode.Eraser && _isErasing)
-        {
-            e.Handled = true;
-            _isErasing = false;
-
-            if (InkLayer.IsMouseCaptured)
-            {
-                InkLayer.ReleaseMouseCapture();
-            }
-
-            // 执行橡皮擦路径的部分擦除
-            if (_eraserPath.Count > 0)
-            {
-                // 1. 擦除 InkCanvas 的内置笔画（使用路径上的矩形区域）
-                EraseInkStrokesAlongPath();
-
-                // 2. 处理自定义笔画的部分擦除
-                ProcessEraserPathPartialErase();
-
-                // 3. 处理图形工具绘制的形状（线/矩形/椭圆等）
-                EraseShapesAlongPath();
-            }
-
-            _eraserPath.Clear();
-            return;
-        }
-        if (_mode == PaintToolMode.Brush)
-        {
-            _inkStrokeInProgress = false;
-        }
-        if (_mode == PaintToolMode.Shape)
-        {
-            _isDrawingShape = false;
-            _activeShape = null;
-        }
-        _erasing = false;
-    }
-
-    private static BlurEffect CreateInkBleedEffect(double radius)
-    {
-        var effect = new BlurEffect
-        {
-            Radius = radius,
-            KernelType = KernelType.Gaussian,
-            RenderingBias = RenderingBias.Quality
-        };
-        effect.Freeze();
-        return effect;
-    }
-
-    private static SolidColorBrush CreateFrozenBrush(MediaColor color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
-    }
-
-    private static BitmapCache CreateInkBleedCache()
-    {
-        var cache = new BitmapCache { RenderAtScale = 1.0 };
-        cache.Freeze();
-        return cache;
-    }
-
-    public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth, string groupId)
-    {
-        // 不再设置米色背景，避免用户误以为进入了白板模式
-        // 毛笔的墨水晕染效果仍然在透明背景上正常工作
-        // if (canvas.Background == null)
-        // {
-        //     canvas.Background = CalligraphyCanvasBackground;
-        // }
-        if (canvas.CacheMode == null)
-        {
-            canvas.CacheMode = CalligraphyInkBleedCache;
-        }
-
-        var washPath = new Path
-        {
-            Data = geo,
-            Fill = CalligraphyWashBrush,
-            Effect = CalligraphyWashEffect,
-            CacheMode = CalligraphyInkBleedCache,
-            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Wash),
-            IsHitTestVisible = false
-        };
-        var bridgePath = new Path
-        {
-            Data = geo,
-            Fill = CalligraphyBridgeBrush,
-            Effect = CalligraphyBridgeEffect,
-            CacheMode = CalligraphyInkBleedCache,
-            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Bridge),
-            IsHitTestVisible = false
-        };
-        var corePath = new Path
-        {
-            Data = geo,
-            Fill = CalligraphyCoreBrush,
-            Effect = CalligraphyCoreEffect,
-            CacheMode = CalligraphyInkBleedCache,
-            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Core)
-        };
-
-        canvas.Children.Add(washPath);
-        canvas.Children.Add(bridgePath);
-        canvas.Children.Add(corePath);
-    }
-
-    private void DrawMarkerStrokeToCanvas(Canvas canvas, Geometry geo, MediaColor color, string groupId)
-    {
-        var markerColor = MediaColor.FromArgb(Math.Min(color.A, (byte)0xE6), color.R, color.G, color.B);
-        var brush = new SolidColorBrush(markerColor);
-        brush.Freeze();
-
-        var path = new Path
-        {
-            Data = geo,
-            Fill = brush,
-            Tag = new CustomStrokeTag(groupId)
-        };
-
-        canvas.Children.Add(path);
+        ClearShapePreview();
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -804,69 +602,44 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var snapshot = _history.Pop();
-        InkLayer.Strokes.Clear();
-        InkLayer.Strokes.Add(snapshot.Strokes);
-        ShapeCanvas.Children.Clear();
-        RestoreShapes(snapshot.Shapes);
-
-        // 恢复自定义笔画数据
-        _customStrokes.Clear();
-        foreach (var stroke in snapshot.CustomStrokes)
-        {
-            // 深拷贝笔画点数据
-            var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
-            foreach (var point in stroke.Points)
-            {
-                pointsCopy.Add(new StrokePointData(point.Position, point.Width));
-            }
-            var strokeCopy = new CustomStrokeData(
-                stroke.GroupId,
-                pointsCopy,
-                stroke.Style,
-                stroke.Color,
-                stroke.BaseSize,
-                stroke.RendererId
-            );
-            _customStrokes.Add(strokeCopy);
-        }
+        var snapshot = _history[^1];
+        _history.RemoveAt(_history.Count - 1);
+        RestoreSnapshot(snapshot);
     }
 
     public void SetBrushOpacity(byte opacity)
     {
-        var current = InkLayer.DefaultDrawingAttributes;
-        var color = current.Color;
-        color.A = opacity;
-        current.Color = color;
-        InkLayer.DefaultDrawingAttributes = current;
+        _brushOpacity = opacity;
     }
 
     public void SetBrushStyle(PaintBrushStyle style)
     {
         _brushStyle = style;
-
-        if (_brushStyle == PaintBrushStyle.Calligraphy)
-        {
-            if (_activeRenderer is not VariableWidthBrushRenderer)
-            {
-                _activeRenderer = new VariableWidthBrushRenderer();
-            }
-        }
-        else
-        {
-            if (_activeRenderer is not MarkerBrushRenderer)
-            {
-                _activeRenderer = new MarkerBrushRenderer();
-            }
-        }
+        EnsureActiveRenderer(force: true);
         
         // Refresh mode to apply correct input handling
         SetMode(_mode);
     }
 
-    private bool UseCustomBrushRenderer()
+    private void EnsureActiveRenderer(bool force = false)
     {
-        return _brushStyle == PaintBrushStyle.Calligraphy || _brushStyle == PaintBrushStyle.Standard;
+        if (_brushStyle == PaintBrushStyle.Calligraphy)
+        {
+            if (force || _activeRenderer is not VariableWidthBrushRenderer)
+            {
+                _activeRenderer = new VariableWidthBrushRenderer();
+            }
+            return;
+        }
+        if (force || _activeRenderer is not MarkerBrushRenderer)
+        {
+            _activeRenderer = new MarkerBrushRenderer();
+        }
+    }
+
+    private MediaColor EffectiveBrushColor()
+    {
+        return MediaColor.FromArgb(_brushOpacity, _brushColor.R, _brushColor.G, _brushColor.B);
     }
 
     public void SetBoardOpacity(byte opacity)
@@ -1499,77 +1272,29 @@ public partial class PaintOverlayWindow : Window
         return _boardOpacity > 0 && _boardColor.A > 0;
     }
 
-    private void OnStrokeCollected(object? sender, InkCanvasStrokeCollectedEventArgs e)
+    private void OnStylusDown(object sender, System.Windows.Input.StylusDownEventArgs e)
     {
-        if (_mode == PaintToolMode.Brush)
-        {
-            if (!_inkStrokeInProgress)
-            {
-                var strokes = new StrokeCollection(InkLayer.Strokes);
-                strokes.Remove(e.Stroke);
-                var shapes = CaptureShapes();
-                // 深拷贝 _customStrokes
-                var customStrokes = new List<CustomStrokeData>(_customStrokes.Count);
-                foreach (var stroke in _customStrokes)
-                {
-                    var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
-                    foreach (var point in stroke.Points)
-                    {
-                        pointsCopy.Add(new StrokePointData(point.Position, point.Width));
-                    }
-                    var strokeCopy = new CustomStrokeData(
-                        stroke.GroupId,
-                        pointsCopy,
-                        stroke.Style,
-                        stroke.Color,
-                        stroke.BaseSize,
-                        stroke.RendererId
-                    );
-                    customStrokes.Add(strokeCopy);
-                }
-                _history.Push(new PaintSnapshot(strokes, shapes, customStrokes));
-            }
-        }
-        _inkStrokeInProgress = false;
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerDown(position);
+        e.Handled = true;
     }
 
-    private void OnStrokeErasing(object? sender, InkCanvasStrokeErasingEventArgs e)
+    private void OnStylusMove(object sender, System.Windows.Input.StylusEventArgs e)
     {
-        if (_erasing)
+        if (e.InAir)
         {
             return;
         }
-        _erasing = true;
-        PushHistory();
-    }
-
-    private void OnStylusDown(object sender, System.Windows.Input.StylusDownEventArgs e)
-    {
-        if (_mode == PaintToolMode.Brush)
-        {
-            EnsureInkHistory();
-        }
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerMove(position);
+        e.Handled = true;
     }
 
     private void OnStylusUp(object sender, System.Windows.Input.StylusEventArgs e)
     {
-        if (_mode == PaintToolMode.Brush)
-        {
-            _inkStrokeInProgress = false;
-        }
-    }
-
-    private static DrawingAttributes BuildDrawingAttributes(MediaColor color, double size, byte opacity)
-    {
-        var drawing = new DrawingAttributes
-        {
-            Color = MediaColor.FromArgb(opacity, color.R, color.G, color.B),
-            Width = size,
-            Height = size,
-            FitToCurve = true,
-            IgnorePressure = true
-        };
-        return drawing;
+        var position = e.GetPosition(OverlayRoot);
+        HandlePointerUp(position);
+        e.Handled = true;
     }
 
     private Shape? CreateShape(PaintShapeType type)
@@ -1589,20 +1314,19 @@ public partial class PaintOverlayWindow : Window
 
     private void ApplyShapeStyle(Shape shape)
     {
-        var attributes = InkLayer.DefaultDrawingAttributes;
-        var stroke = new SolidColorBrush(attributes.Color);
+        var stroke = new SolidColorBrush(EffectiveBrushColor());
+        stroke.Freeze();
         shape.Stroke = stroke;
-        shape.StrokeThickness = Math.Max(1, attributes.Width);
+        shape.StrokeThickness = Math.Max(1, _brushSize);
+        shape.StrokeStartLineCap = PenLineCap.Round;
+        shape.StrokeEndLineCap = PenLineCap.Round;
+        shape.StrokeLineJoin = PenLineJoin.Round;
         if (_shapeType == PaintShapeType.DashedLine)
         {
             shape.StrokeDashArray = new DoubleCollection { 6, 4 };
         }
-        if (_shapeType == PaintShapeType.RectangleFill)
-        {
-            var fillColor = attributes.Color;
-            fillColor.A = 60;
-            shape.Fill = new SolidColorBrush(fillColor);
-        }
+        shape.Fill = null;
+        shape.IsHitTestVisible = false;
     }
 
     private static void UpdateShape(Shape shape, WpfPoint start, WpfPoint end)
@@ -1627,716 +1351,111 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private void RemoveShapeAt(WpfPoint point)
+    private void ClearShapePreview()
     {
-        var hit = VisualTreeHelper.HitTest(ShapeCanvas, point);
-        if (hit?.VisualHit is Shape shape)
+        if (_activeShape != null)
         {
-            // 检查是否是自定义笔画（有 CalligraphyLayerTag）
-            if (shape.Tag is CalligraphyLayerTag)
-            {
-                // 自定义笔画不在这里删除，而是在鼠标抬起时使用 ProcessEraserPathPartialErase 进行部分删除
-                return;
-            }
-
-            // 其他形状（矩形、椭圆、线条等）立即删除
-            if (!_erasing)
-            {
-                _erasing = true;
-                PushHistory();
-            }
-
-            ShapeCanvas.Children.Remove(shape);
+            PreviewCanvas.Children.Remove(_activeShape);
+            _activeShape = null;
         }
+        _isDrawingShape = false;
     }
 
-    private void EraseRegion(Rect region)
+    private Geometry? BuildShapeGeometry(PaintShapeType type, WpfPoint start, WpfPoint end)
     {
-        PushHistory();
-
-        // 1. 处理 InkCanvas 的内置笔画
-        if (InkLayer.Strokes.Count > 0)
+        var rect = new Rect(start, end);
+        return type switch
         {
-            InkLayer.Strokes.Erase(region);
-        }
-
-        // 2. 处理自定义笔画（部分删除）
-        ProcessCustomStrokesPartialErase(region);
-
-        // 3. 处理其他形状（完全删除）
-        // 注意：不处理 CalligraphyLayerTag 的形状，因为它们已经被步骤2处理过了
-        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
-        foreach (var shape in shapes)
-        {
-            if (shape == _regionRect)
-            {
-                continue;
-            }
-
-            // 跳过自定义笔画（有 CalligraphyLayerTag 或 CustomStrokeTag），它们已经被 ProcessCustomStrokesPartialErase 处理
-            if (shape.Tag is CalligraphyLayerTag || shape.Tag is CustomStrokeTag)
-            {
-                continue;
-            }
-
-            if (IsShapeHit(region, shape))
-            {
-                ShapeCanvas.Children.Remove(shape);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 对自定义笔画进行部分删除
-    /// </summary>
-    private void ProcessCustomStrokesPartialErase(Rect eraseRegion)
-    {
-        if (_customStrokes.Count == 0) return;
-
-        // 需要删除的笔画索引（倒序遍历以安全删除）
-        for (int i = _customStrokes.Count - 1; i >= 0; i--)
-        {
-            var stroke = _customStrokes[i];
-            if (!IsStrokeIntersectRegion(stroke, eraseRegion)) continue;
-
-            // 分割笔画：找出在删除区域外的段落
-            var segments = SplitStrokeOutsideRegion(stroke, eraseRegion);
-
-            // 移除原笔画
-            _customStrokes.RemoveAt(i);
-            RemoveCalligraphyGroupById(stroke.GroupId);
-
-            // 重新绘制未删除的段落
-            foreach (var segment in segments)
-            {
-                RedrawStrokeSegment(segment, stroke.Style, stroke.Color, stroke.BaseSize);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 判断笔画是否与删除区域相交
-    /// </summary>
-    private bool IsStrokeIntersectRegion(CustomStrokeData stroke, Rect region)
-    {
-        foreach (var point in stroke.Points)
-        {
-            if (region.Contains(point.Position))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 将笔画分割成多个段落，只保留删除区域外的部分
-    /// </summary>
-    private List<List<StrokePointData>> SplitStrokeOutsideRegion(CustomStrokeData stroke, Rect eraseRegion)
-    {
-        var segments = new List<List<StrokePointData>>();
-        var currentSegment = new List<StrokePointData>();
-        bool isInEraseRegion = false;
-
-        foreach (var point in stroke.Points)
-        {
-            bool pointInRegion = eraseRegion.Contains(point.Position);
-
-            if (pointInRegion != isInEraseRegion)
-            {
-                // 状态改变：进入/离开删除区域
-                if (currentSegment.Count > 0)
-                {
-                    // 保存当前段落
-                    if (!isInEraseRegion) // 只保留删除区域外的段落
-                    {
-                        segments.Add(new List<StrokePointData>(currentSegment));
-                    }
-                    currentSegment.Clear();
-                }
-
-                isInEraseRegion = pointInRegion;
-            }
-
-            if (!isInEraseRegion)
-            {
-                currentSegment.Add(point);
-            }
-        }
-
-        // 添加最后一个段落
-        if (currentSegment.Count > 0)
-        {
-            segments.Add(currentSegment);
-        }
-
-        return segments;
-    }
-
-    /// <summary>
-    /// 重新绘制笔画段落
-    /// </summary>
-    private void RedrawStrokeSegment(List<StrokePointData> segment, PaintBrushStyle style, MediaColor color, double baseSize)
-    {
-        if (segment.Count < 2) return;
-
-        // 创建临时渲染器
-        IBrushRenderer renderer = CreateRendererForStroke(style);
-        renderer.Initialize(color, baseSize, 1.0);
-
-        // 重建笔画点数据
-        renderer.OnDown(segment[0].Position);
-        for (int i = 1; i < segment.Count; i++)
-        {
-            renderer.OnMove(segment[i].Position);
-        }
-        renderer.OnUp(segment.Last().Position);
-
-        // 获取几何并绘制
-        var geometry = renderer.GetLastStrokeGeometry();
-        if (geometry != null)
-        {
-            var groupId = Guid.NewGuid().ToString("N");
-
-            if (style == PaintBrushStyle.Calligraphy)
-            {
-                DrawStrokeToCanvas(ShapeCanvas, geometry, baseSize, groupId);
-            }
-            else
-            {
-                DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, color, groupId);
-            }
-
-            // 保存新的笔画数据
-            var newStrokeData = new CustomStrokeData(
-                groupId,
-                segment,
-                style,
-                color,
-                baseSize,
-                Guid.NewGuid()
-            );
-            _customStrokes.Add(newStrokeData);
-        }
-    }
-
-    /// <summary>
-    /// 创建临时渲染器用于重绘笔画段落
-    /// </summary>
-    private IBrushRenderer CreateRendererForStroke(PaintBrushStyle style)
-    {
-        if (style == PaintBrushStyle.Calligraphy)
-        {
-            return new VariableWidthBrushRenderer();
-        }
-        return new MarkerBrushRenderer();
-    }
-
-    /// <summary>
-    /// 根据GroupId删除笔画
-    /// </summary>
-    private void RemoveCalligraphyGroupById(string groupId)
-    {
-        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
-        foreach (var shape in shapes)
-        {
-            if (shape.Tag is CalligraphyLayerTag tag && tag.GroupId == groupId)
-            {
-                ShapeCanvas.Children.Remove(shape);
-                continue;
-            }
-
-            if (shape.Tag is CustomStrokeTag customTag && customTag.GroupId == groupId)
-            {
-                ShapeCanvas.Children.Remove(shape);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 沿橡皮擦路径擦除 InkCanvas 的内置笔画
-    /// </summary>
-    private void EraseInkStrokesAlongPath()
-    {
-        if (InkLayer.Strokes.Count == 0 || _eraserPath.Count == 0) return;
-
-        var toRemove = new List<Stroke>();
-        var toAdd = new List<Stroke>();
-
-        foreach (var stroke in InkLayer.Strokes)
-        {
-            if (!IsInkStrokeNearEraserPath(stroke))
-            {
-                continue;
-            }
-
-            var segments = SplitInkStrokeOutsideEraserPath(stroke);
-            toRemove.Add(stroke);
-
-            foreach (var segment in segments)
-            {
-                if (segment.Count < 2)
-                {
-                    continue;
-                }
-                var attrs = stroke.DrawingAttributes.Clone();
-                toAdd.Add(new Stroke(segment, attrs));
-            }
-        }
-
-        foreach (var stroke in toRemove)
-        {
-            InkLayer.Strokes.Remove(stroke);
-        }
-        if (toAdd.Count > 0)
-        {
-            InkLayer.Strokes.Add(new StrokeCollection(toAdd));
-        }
-    }
-
-    private void EraseShapesAlongPath()
-    {
-        if (_eraserPath.Count == 0) return;
-
-        var eraserGeometry = BuildEraserGeometry();
-        if (eraserGeometry == null) return;
-
-        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
-        foreach (var shape in shapes)
-        {
-            if (shape == _regionRect)
-            {
-                continue;
-            }
-
-            if (shape.Tag is CalligraphyLayerTag || shape.Tag is CustomStrokeTag)
-            {
-                continue;
-            }
-
-            if (!TryGetShapeGeometry(shape, out var geometry))
-            {
-                continue;
-            }
-
-            var strokeBrush = shape.Stroke;
-            var fillBrush = shape.Fill;
-            bool hasStroke = strokeBrush != null && shape.StrokeThickness > 0.1;
-            bool hasFill = IsBrushVisible(fillBrush);
-
-            Geometry? fillRemaining = null;
-            Geometry? strokeRemaining = null;
-
-            if (hasFill)
-            {
-                fillRemaining = Geometry.Combine(geometry, eraserGeometry, GeometryCombineMode.Exclude, null);
-            }
-
-            if (hasStroke)
-            {
-                var pen = CreateShapePen(shape, strokeBrush!);
-                var strokeGeometry = geometry.GetWidenedPathGeometry(pen);
-                strokeRemaining = Geometry.Combine(strokeGeometry, eraserGeometry, GeometryCombineMode.Exclude, null);
-            }
-
-            int index = ShapeCanvas.Children.IndexOf(shape);
-            ShapeCanvas.Children.Remove(shape);
-
-            bool added = false;
-            int insertIndex = Math.Max(0, index);
-
-            if (hasFill && fillRemaining != null && IsGeometryVisible(fillRemaining))
-            {
-                ShapeCanvas.Children.Insert(insertIndex++, CreateFillPath(fillRemaining, fillBrush!));
-                added = true;
-            }
-
-            if (hasStroke && strokeRemaining != null && IsGeometryVisible(strokeRemaining))
-            {
-                ShapeCanvas.Children.Insert(insertIndex++, CreateFillPath(strokeRemaining, strokeBrush!));
-                added = true;
-            }
-
-            if (!added)
-            {
-                continue;
-            }
-        }
-    }
-
-    private Geometry? BuildEraserGeometry()
-    {
-        if (_eraserPath.Count == 0) return null;
-
-        if (_eraserPath.Count == 1)
-        {
-            double radius = Math.Max(_eraserSize * 0.5, 0.1);
-            return new EllipseGeometry(_eraserPath[0], radius, radius);
-        }
-
-        var pathGeometry = new StreamGeometry
-        {
-            FillRule = FillRule.Nonzero
+            PaintShapeType.Line => new LineGeometry(start, end),
+            PaintShapeType.DashedLine => new LineGeometry(start, end),
+            PaintShapeType.Rectangle => new RectangleGeometry(rect),
+            PaintShapeType.RectangleFill => new RectangleGeometry(rect),
+            PaintShapeType.Ellipse => new EllipseGeometry(rect),
+            _ => null
         };
-
-        using (var ctx = pathGeometry.Open())
-        {
-            ctx.BeginFigure(_eraserPath[0], isFilled: false, isClosed: false);
-            for (int i = 1; i < _eraserPath.Count; i++)
-            {
-                ctx.LineTo(_eraserPath[i], isStroked: true, isSmoothJoin: true);
-            }
-        }
-
-        var pen = new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, Math.Max(1, _eraserSize))
-        {
-            StartLineCap = System.Windows.Media.PenLineCap.Round,
-            EndLineCap = System.Windows.Media.PenLineCap.Round,
-            LineJoin = System.Windows.Media.PenLineJoin.Round
-        };
-        return pathGeometry.GetWidenedPathGeometry(pen);
     }
 
-    private static bool TryGetShapeGeometry(Shape shape, out Geometry geometry)
+    private Pen BuildShapePen()
     {
-        geometry = Geometry.Empty;
-
-        if (shape is Line line)
+        var brush = new SolidColorBrush(EffectiveBrushColor());
+        brush.Freeze();
+        var pen = new Pen(brush, Math.Max(1.0, _brushSize))
         {
-            geometry = new LineGeometry(new WpfPoint(line.X1, line.Y1), new WpfPoint(line.X2, line.Y2));
-            return true;
-        }
-
-        if (shape is System.Windows.Shapes.Rectangle rect)
-        {
-            var left = System.Windows.Controls.Canvas.GetLeft(rect);
-            var top = System.Windows.Controls.Canvas.GetTop(rect);
-            geometry = new RectangleGeometry(new Rect(left, top, rect.Width, rect.Height));
-            return true;
-        }
-
-        if (shape is Ellipse ellipse)
-        {
-            var left = System.Windows.Controls.Canvas.GetLeft(ellipse);
-            var top = System.Windows.Controls.Canvas.GetTop(ellipse);
-            geometry = new EllipseGeometry(new Rect(left, top, ellipse.Width, ellipse.Height));
-            return true;
-        }
-
-        if (shape is Path path && path.Data != null)
-        {
-            geometry = path.Data;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static System.Windows.Media.Pen CreateShapePen(Shape shape, System.Windows.Media.Brush stroke)
-    {
-        var pen = new System.Windows.Media.Pen(stroke, Math.Max(1, shape.StrokeThickness))
-        {
-            StartLineCap = shape.StrokeStartLineCap,
-            EndLineCap = shape.StrokeEndLineCap,
-            LineJoin = shape.StrokeLineJoin,
-            MiterLimit = shape.StrokeMiterLimit
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
         };
-
-        if (shape.StrokeDashArray != null && shape.StrokeDashArray.Count > 0)
+        if (_shapeType == PaintShapeType.DashedLine)
         {
-            pen.DashStyle = new DashStyle(shape.StrokeDashArray, 0);
+            pen.DashStyle = new DashStyle(new double[] { 6, 4 }, 0);
+            pen.DashCap = PenLineCap.Round;
         }
-
+        pen.Freeze();
         return pen;
     }
 
-    private static Path CreateFillPath(Geometry geometry, System.Windows.Media.Brush fill)
+    private Geometry? BuildEraserGeometry(WpfPoint start, WpfPoint end)
     {
-        return new Path
+        var radius = Math.Max(2.0, _eraserSize * 0.5);
+        var delta = end - start;
+        if (delta.Length < 0.5)
         {
-            Data = geometry,
-            Fill = fill,
-            StrokeThickness = 0
+            return new EllipseGeometry(start, radius, radius);
+        }
+        var path = new StreamGeometry();
+        using (var ctx = path.Open())
+        {
+            ctx.BeginFigure(start, isFilled: false, isClosed: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
+        }
+        var pen = new Pen(Brushes.Black, Math.Max(1.0, _eraserSize))
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
         };
+        return path.GetWidenedPathGeometry(pen);
     }
 
-    private static bool IsBrushVisible(System.Windows.Media.Brush? brush)
+    private void ApplyEraserAt(WpfPoint position)
     {
-        if (brush == null)
-        {
-            return false;
-        }
-
-        if (brush is SolidColorBrush solid)
-        {
-            return solid.Color.A > 0;
-        }
-
-        return true;
+        var radius = Math.Max(2.0, _eraserSize * 0.5);
+        var geometry = new EllipseGeometry(position, radius, radius);
+        EraseGeometry(geometry);
     }
 
-    private static bool IsGeometryVisible(Geometry geometry)
+    private void EraseRect(Rect region)
     {
-        var bounds = geometry.Bounds;
-        if (bounds.IsEmpty)
+        EnsureRasterSurface();
+        if (_rasterSurface == null)
         {
-            return false;
-        }
-        return bounds.Width > 0.1 || bounds.Height > 0.1;
-    }
-
-    /// <summary>
-    /// 基于橡皮擦路径的部分擦除
-    /// </summary>
-    private void ProcessEraserPathPartialErase()
-    {
-        if (_customStrokes.Count == 0 || _eraserPath.Count == 0) return;
-
-        // 需要删除的笔画索引（倒序遍历以安全删除）
-        for (int i = _customStrokes.Count - 1; i >= 0; i--)
-        {
-            var stroke = _customStrokes[i];
-            if (!IsStrokeNearEraserPath(stroke)) continue;
-
-            // 分割笔画：找出不在橡皮擦路径附近的段落
-            var segments = SplitStrokeOutsideEraserPath(stroke);
-
-            // 移除原笔画
-            _customStrokes.RemoveAt(i);
-            RemoveCalligraphyGroupById(stroke.GroupId);
-
-            // 重新绘制未删除的段落
-            foreach (var segment in segments)
-            {
-                RedrawStrokeSegment(segment, stroke.Style, stroke.Color, stroke.BaseSize);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 判断笔画是否靠近橡皮擦路径
-    /// </summary>
-    private bool IsStrokeNearEraserPath(CustomStrokeData stroke)
-    {
-        foreach (var point in stroke.Points)
-        {
-            if (IsPointNearEraserPath(point.Position))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 判断点是否靠近橡皮擦路径
-    /// </summary>
-    private bool IsPointNearEraserPath(WpfPoint point)
-    {
-        double eraserRadius = _eraserSize * 0.5;
-
-        for (int i = 0; i < _eraserPath.Count; i++)
-        {
-            var eraserPoint = _eraserPath[i];
-
-            // 检查点是否在橡皮擦点的圆形范围内
-            double distance = (point - eraserPoint).Length;
-            if (distance <= eraserRadius)
-            {
-                return true;
-            }
-
-            // 检查点是否在橡皮擦路径段的附近
-            if (i < _eraserPath.Count - 1)
-            {
-                var nextEraserPoint = _eraserPath[i + 1];
-                if (IsPointNearLineSegment(point, eraserPoint, nextEraserPoint, eraserRadius))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private bool IsInkStrokeNearEraserPath(Stroke stroke)
-    {
-        foreach (var point in stroke.StylusPoints)
-        {
-            if (IsPointNearEraserPath(new WpfPoint(point.X, point.Y)))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private List<StylusPointCollection> SplitInkStrokeOutsideEraserPath(Stroke stroke)
-    {
-        var segments = new List<StylusPointCollection>();
-        var current = new StylusPointCollection();
-        bool isNearEraser = false;
-
-        foreach (var point in stroke.StylusPoints)
-        {
-            bool pointNearEraser = IsPointNearEraserPath(new WpfPoint(point.X, point.Y));
-
-            if (pointNearEraser != isNearEraser)
-            {
-                if (current.Count > 0 && !isNearEraser)
-                {
-                    segments.Add(current);
-                }
-                current = new StylusPointCollection();
-                isNearEraser = pointNearEraser;
-            }
-
-            if (!isNearEraser)
-            {
-                current.Add(point);
-            }
-        }
-
-        if (current.Count > 0 && !isNearEraser)
-        {
-            segments.Add(current);
-        }
-
-        return segments;
-    }
-
-    /// <summary>
-    /// 判断点是否靠近线段
-    /// </summary>
-    private static bool IsPointNearLineSegment(WpfPoint point, WpfPoint lineStart, WpfPoint lineEnd, double threshold)
-    {
-        var lineVec = lineEnd - lineStart;
-        var pointVec = point - lineStart;
-
-        double lineLength = lineVec.Length;
-        if (lineLength < 0.001) return false;
-
-        lineVec.Normalize();
-
-        // 计算投影
-        double projection = pointVec.X * lineVec.X + pointVec.Y * lineVec.Y;
-
-        // 找到线段上最近的点
-        WpfPoint closestPoint;
-        if (projection <= 0)
-        {
-            closestPoint = lineStart;
-        }
-        else if (projection >= lineLength)
-        {
-            closestPoint = lineEnd;
-        }
-        else
-        {
-            closestPoint = lineStart + lineVec * projection;
-        }
-
-        // 计算距离
-        double distance = (point - closestPoint).Length;
-        return distance <= threshold;
-    }
-
-    /// <summary>
-    /// 将笔画分割成多个段落，只保留不在橡皮擦路径附近的部分
-    /// </summary>
-    private List<List<StrokePointData>> SplitStrokeOutsideEraserPath(CustomStrokeData stroke)
-    {
-        var segments = new List<List<StrokePointData>>();
-        var currentSegment = new List<StrokePointData>();
-        bool isNearEraser = false;
-
-        foreach (var point in stroke.Points)
-        {
-            bool pointNearEraser = IsPointNearEraserPath(point.Position);
-
-            if (pointNearEraser != isNearEraser)
-            {
-                // 状态改变：进入/离开橡皮擦影响范围
-                if (currentSegment.Count > 0)
-                {
-                    // 保存当前段落
-                    if (!isNearEraser) // 只保留不在橡皮擦范围内的段落
-                    {
-                        segments.Add(new List<StrokePointData>(currentSegment));
-                    }
-                    currentSegment.Clear();
-                }
-
-                isNearEraser = pointNearEraser;
-            }
-
-            if (!isNearEraser)
-            {
-                currentSegment.Add(point);
-            }
-        }
-
-        // 添加最后一个段落
-        if (currentSegment.Count > 0)
-        {
-            segments.Add(currentSegment);
-        }
-
-        return segments;
-    }
-
-    private void RemoveCalligraphyGroup(Shape shape)
-    {
-        if (shape.Tag is CalligraphyLayerTag tag)
-        {
-            RemoveCalligraphyGroups(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { tag.GroupId });
             return;
         }
-
-        ShapeCanvas.Children.Remove(shape);
-    }
-
-    private void RemoveCalligraphyGroups(HashSet<string> groupIds)
-    {
-        var toRemove = ShapeCanvas.Children
-            .OfType<Shape>()
-            .Where(s => s.Tag is CalligraphyLayerTag tag && groupIds.Contains(tag.GroupId))
-            .ToList();
-
-        foreach (var shape in toRemove)
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var rect = new Int32Rect(
+            (int)Math.Floor(region.X * dpi.DpiScaleX),
+            (int)Math.Floor(region.Y * dpi.DpiScaleY),
+            (int)Math.Ceiling(region.Width * dpi.DpiScaleX),
+            (int)Math.Ceiling(region.Height * dpi.DpiScaleY));
+        rect = IntersectRects(rect, new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight));
+        if (rect.Width <= 0 || rect.Height <= 0)
         {
-            ShapeCanvas.Children.Remove(shape);
+            return;
         }
-    }
-
-    private static bool IsShapeHit(Rect region, Shape shape)
-    {
-        try
-        {
-            var bounds = shape.RenderedGeometry.Bounds;
-            var transform = shape.TransformToAncestor((Visual)shape.Parent);
-            var transformed = transform.TransformBounds(bounds);
-            return region.IntersectsWith(transformed);
-        }
-        catch
-        {
-            return false;
-        }
+        var stride = rect.Width * 4;
+        var clear = new byte[stride * rect.Height];
+        _rasterSurface.WritePixels(rect, clear, stride, 0);
+        _hasDrawing = true;
     }
 
     private void ClearRegionSelection()
     {
         if (_regionRect != null)
         {
-            ShapeCanvas.Children.Remove(_regionRect);
+            PreviewCanvas.Children.Remove(_regionRect);
             _regionRect = null;
         }
         _isRegionSelecting = false;
-        if (InkLayer.IsMouseCaptured)
-        {
-            InkLayer.ReleaseMouseCapture();
-        }
     }
 
     private static void UpdateSelectionRect(WpfRectangle rect, WpfPoint start, WpfPoint end)
@@ -2362,132 +1481,286 @@ public partial class PaintOverlayWindow : Window
 
     private void PushHistory()
     {
-        var strokes = new StrokeCollection(InkLayer.Strokes);
-        var shapes = CaptureShapes();
-        // 深拷贝 _customStrokes，避免后续修改影响快照
-        var customStrokes = new List<CustomStrokeData>(_customStrokes.Count);
-        foreach (var stroke in _customStrokes)
-        {
-            // 深拷贝笔画点数据
-            var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
-            foreach (var point in stroke.Points)
-            {
-                pointsCopy.Add(new StrokePointData(point.Position, point.Width));
-            }
-            var strokeCopy = new CustomStrokeData(
-                stroke.GroupId,
-                pointsCopy,
-                stroke.Style,
-                stroke.Color,
-                stroke.BaseSize,
-                stroke.RendererId
-            );
-            customStrokes.Add(strokeCopy);
-        }
-        _history.Push(new PaintSnapshot(strokes, shapes, customStrokes));
-    }
-
-    private void EnsureInkHistory()
-    {
-        if (_inkStrokeInProgress)
+        EnsureRasterSurface();
+        if (_rasterSurface == null)
         {
             return;
         }
-        _inkStrokeInProgress = true;
-        PushHistory();
-    }
-
-    private List<ShapeSnapshot> CaptureShapes()
-    {
-        var list = new List<ShapeSnapshot>();
-        foreach (var shape in ShapeCanvas.Children.OfType<Shape>())
+        var stride = _surfacePixelWidth * 4;
+        var pixels = new byte[stride * _surfacePixelHeight];
+        _rasterSurface.CopyPixels(pixels, stride, 0);
+        _history.Add(new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels));
+        if (_history.Count > HistoryLimit)
         {
-            if (ReferenceEquals(shape, _regionRect))
-            {
-                continue;
-            }
-            var snapshot = ShapeSnapshot.FromShape(shape);
-            if (snapshot != null)
-            {
-                list.Add(snapshot);
-            }
-        }
-        return list;
-    }
-
-    private void RestoreShapes(IEnumerable<ShapeSnapshot> shapes)
-    {
-        foreach (var snapshot in shapes)
-        {
-            var shape = CreateShape(snapshot.Type);
-            if (shape == null)
-            {
-                continue;
-            }
-            if (shape is Line line)
-            {
-                line.X1 = snapshot.Start.X;
-                line.Y1 = snapshot.Start.Y;
-                line.X2 = snapshot.End.X;
-                line.Y2 = snapshot.End.Y;
-            }
-            else if (shape is Path path && !string.IsNullOrEmpty(snapshot.PathData))
-            {
-                path.Data = Geometry.Parse(snapshot.PathData);
-                // For paths we treat StrokeColor as the fill
-                path.Fill = new SolidColorBrush(snapshot.StrokeColor); 
-            }
-            else
-            {
-                System.Windows.Controls.Canvas.SetLeft(shape, snapshot.Bounds.Left);
-                System.Windows.Controls.Canvas.SetTop(shape, snapshot.Bounds.Top);
-                shape.Width = Math.Max(1, snapshot.Bounds.Width);
-                shape.Height = Math.Max(1, snapshot.Bounds.Height);
-            }
-            shape.Stroke = new SolidColorBrush(snapshot.StrokeColor);
-            shape.StrokeThickness = Math.Max(1, snapshot.StrokeThickness);
-            if (snapshot.DashArray != null && snapshot.DashArray.Count > 0)
-            {
-                shape.StrokeDashArray = new DoubleCollection(snapshot.DashArray);
-            }
-            if (snapshot.FillColor.HasValue && snapshot.FillColor.Value.A > 0)
-            {
-                shape.Fill = new SolidColorBrush(snapshot.FillColor.Value);
-            }
-            if (shape is Path calligraphyPath && snapshot.CalligraphyGroupId != null && snapshot.CalligraphyRole.HasValue)
-            {
-                calligraphyPath.Tag = new CalligraphyLayerTag(snapshot.CalligraphyGroupId, snapshot.CalligraphyRole.Value);
-                ApplyCalligraphyLayerStyle(calligraphyPath, snapshot.CalligraphyRole.Value);
-            }
-            else if (shape is Path customStrokePath && snapshot.CustomStrokeGroupId != null)
-            {
-                customStrokePath.Tag = new CustomStrokeTag(snapshot.CustomStrokeGroupId);
-            }
-            ShapeCanvas.Children.Add(shape);
+            _history.RemoveAt(0);
         }
     }
 
-    private static void ApplyCalligraphyLayerStyle(Path path, CalligraphyLayerRole role)
+    private void RestoreSnapshot(RasterSnapshot snapshot)
     {
-        switch (role)
+        if (_rasterSurface == null
+            || snapshot.PixelWidth != _surfacePixelWidth
+            || snapshot.PixelHeight != _surfacePixelHeight)
         {
-            case CalligraphyLayerRole.Wash:
-                path.Fill = CalligraphyWashBrush;
-                path.Effect = CalligraphyWashEffect;
-                path.CacheMode = CalligraphyInkBleedCache;
-                path.IsHitTestVisible = false;
-                break;
-            case CalligraphyLayerRole.Bridge:
-                path.Fill = CalligraphyBridgeBrush;
-                path.Effect = CalligraphyBridgeEffect;
-                path.CacheMode = CalligraphyInkBleedCache;
-                path.IsHitTestVisible = false;
-                break;
-            case CalligraphyLayerRole.Core:
-                path.Fill = CalligraphyCoreBrush;
-                path.Effect = CalligraphyCoreEffect;
-                path.CacheMode = CalligraphyInkBleedCache;
-                break;
+            _rasterSurface = new WriteableBitmap(
+                snapshot.PixelWidth,
+                snapshot.PixelHeight,
+                snapshot.DpiX,
+                snapshot.DpiY,
+                PixelFormats.Pbgra32,
+                null);
+            _surfacePixelWidth = snapshot.PixelWidth;
+            _surfacePixelHeight = snapshot.PixelHeight;
+            _surfaceDpiX = snapshot.DpiX;
+            _surfaceDpiY = snapshot.DpiY;
+            RasterImage.Source = _rasterSurface;
         }
+        var rect = new Int32Rect(0, 0, snapshot.PixelWidth, snapshot.PixelHeight);
+        var stride = snapshot.PixelWidth * 4;
+        _rasterSurface.WritePixels(rect, snapshot.Pixels, stride, 0);
+        _hasDrawing = true;
+    }
+
+    private void EnsureRasterSurface()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var pixelWidth = Math.Max(1, (int)Math.Round(ActualWidth * dpi.DpiScaleX));
+        var pixelHeight = Math.Max(1, (int)Math.Round(ActualHeight * dpi.DpiScaleY));
+        if (_rasterSurface != null
+            && pixelWidth == _surfacePixelWidth
+            && pixelHeight == _surfacePixelHeight)
+        {
+            return;
+        }
+        var newSurface = new WriteableBitmap(
+            pixelWidth,
+            pixelHeight,
+            dpi.PixelsPerInchX,
+            dpi.PixelsPerInchY,
+            PixelFormats.Pbgra32,
+            null);
+        if (_rasterSurface != null)
+        {
+            CopyBitmapToSurface(_rasterSurface, newSurface);
+        }
+        _rasterSurface = newSurface;
+        _surfacePixelWidth = pixelWidth;
+        _surfacePixelHeight = pixelHeight;
+        _surfaceDpiX = dpi.PixelsPerInchX;
+        _surfaceDpiY = dpi.PixelsPerInchY;
+        RasterImage.Source = _rasterSurface;
+    }
+
+    private void ClearSurface()
+    {
+        EnsureRasterSurface();
+        if (_rasterSurface == null)
+        {
+            return;
+        }
+        var rect = new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
+        var stride = _surfacePixelWidth * 4;
+        var clear = new byte[stride * _surfacePixelHeight];
+        _rasterSurface.WritePixels(rect, clear, stride, 0);
+    }
+
+    private void CopyBitmapToSurface(BitmapSource source, WriteableBitmap target)
+    {
+        var stride = target.PixelWidth * 4;
+        if (source.PixelWidth == target.PixelWidth && source.PixelHeight == target.PixelHeight)
+        {
+            var pixels = new byte[stride * target.PixelHeight];
+            source.CopyPixels(pixels, stride, 0);
+            target.WritePixels(new Int32Rect(0, 0, target.PixelWidth, target.PixelHeight), pixels, stride, 0);
+            return;
+        }
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            var dipWidth = target.PixelWidth * 96.0 / target.DpiX;
+            var dipHeight = target.PixelHeight * 96.0 / target.DpiY;
+            dc.DrawImage(source, new Rect(0, 0, dipWidth, dipHeight));
+        }
+        var rtb = new RenderTargetBitmap(target.PixelWidth, target.PixelHeight, target.DpiX, target.DpiY, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        var pixelsOut = new byte[stride * target.PixelHeight];
+        rtb.CopyPixels(pixelsOut, stride, 0);
+        target.WritePixels(new Int32Rect(0, 0, target.PixelWidth, target.PixelHeight), pixelsOut, stride, 0);
+    }
+
+    private void CommitGeometryFill(Geometry geometry, MediaColor color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        RenderAndBlend(geometry, brush, null, erase: false);
+    }
+
+    private void CommitGeometryStroke(Geometry geometry, Pen pen)
+    {
+        RenderAndBlend(geometry, null, pen, erase: false);
+    }
+
+    private void EraseGeometry(Geometry geometry)
+    {
+        RenderAndBlend(geometry, Brushes.White, null, erase: true);
+    }
+
+    private void RenderAndBlend(Geometry geometry, Brush? fill, Pen? pen, bool erase)
+    {
+        EnsureRasterSurface();
+        if (_rasterSurface == null)
+        {
+            return;
+        }
+        if (!TryRenderGeometry(geometry, fill, pen, out var rect, out var pixels, out var stride))
+        {
+            return;
+        }
+        if (erase)
+        {
+            ApplyEraseMask(rect, pixels, stride);
+        }
+        else
+        {
+            BlendSourceOver(rect, pixels, stride);
+        }
+        _hasDrawing = true;
+    }
+
+    private bool TryRenderGeometry(
+        Geometry geometry,
+        Brush? fill,
+        Pen? pen,
+        out Int32Rect destRect,
+        out byte[] pixels,
+        out int stride)
+    {
+        destRect = new Int32Rect(0, 0, 0, 0);
+        pixels = Array.Empty<byte>();
+        stride = 0;
+        if (_rasterSurface == null || geometry == null)
+        {
+            return false;
+        }
+        if (geometry.Bounds.IsEmpty)
+        {
+            return false;
+        }
+        var bounds = pen != null ? geometry.GetRenderBounds(pen) : geometry.Bounds;
+        if (bounds.IsEmpty)
+        {
+            return false;
+        }
+        bounds.Inflate(2, 2);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var rawRect = new Int32Rect(
+            (int)Math.Floor(bounds.X * dpi.DpiScaleX),
+            (int)Math.Floor(bounds.Y * dpi.DpiScaleY),
+            (int)Math.Ceiling(bounds.Width * dpi.DpiScaleX),
+            (int)Math.Ceiling(bounds.Height * dpi.DpiScaleY));
+        var surfaceRect = new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
+        destRect = IntersectRects(rawRect, surfaceRect);
+        if (destRect.Width <= 0 || destRect.Height <= 0)
+        {
+            return false;
+        }
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            var offsetX = destRect.X / dpi.DpiScaleX;
+            var offsetY = destRect.Y / dpi.DpiScaleY;
+            dc.PushTransform(new TranslateTransform(-offsetX, -offsetY));
+            dc.DrawGeometry(fill, pen, geometry);
+            dc.Pop();
+        }
+        var rtb = new RenderTargetBitmap(destRect.Width, destRect.Height, _surfaceDpiX, _surfaceDpiY, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        stride = destRect.Width * 4;
+        pixels = new byte[stride * destRect.Height];
+        rtb.CopyPixels(pixels, stride, 0);
+        return true;
+    }
+
+    private void BlendSourceOver(Int32Rect rect, byte[] srcPixels, int srcStride)
+    {
+        if (_rasterSurface == null)
+        {
+            return;
+        }
+        var destStride = rect.Width * 4;
+        var destPixels = new byte[destStride * rect.Height];
+        _rasterSurface.CopyPixels(rect, destPixels, destStride, 0);
+        for (int y = 0; y < rect.Height; y++)
+        {
+            var srcRow = y * srcStride;
+            var destRow = y * destStride;
+            for (int x = 0; x < rect.Width; x++)
+            {
+                int i = srcRow + x * 4;
+                byte srcA = srcPixels[i + 3];
+                if (srcA == 0)
+                {
+                    continue;
+                }
+                int invA = 255 - srcA;
+                int d = destRow + x * 4;
+                destPixels[d] = (byte)(srcPixels[i] + destPixels[d] * invA / 255);
+                destPixels[d + 1] = (byte)(srcPixels[i + 1] + destPixels[d + 1] * invA / 255);
+                destPixels[d + 2] = (byte)(srcPixels[i + 2] + destPixels[d + 2] * invA / 255);
+                destPixels[d + 3] = (byte)(srcA + destPixels[d + 3] * invA / 255);
+            }
+        }
+        _rasterSurface.WritePixels(rect, destPixels, destStride, 0);
+    }
+
+    private void ApplyEraseMask(Int32Rect rect, byte[] maskPixels, int maskStride)
+    {
+        if (_rasterSurface == null)
+        {
+            return;
+        }
+        var destStride = rect.Width * 4;
+        var destPixels = new byte[destStride * rect.Height];
+        _rasterSurface.CopyPixels(rect, destPixels, destStride, 0);
+        for (int y = 0; y < rect.Height; y++)
+        {
+            var maskRow = y * maskStride;
+            var destRow = y * destStride;
+            for (int x = 0; x < rect.Width; x++)
+            {
+                int i = maskRow + x * 4;
+                byte maskA = maskPixels[i + 3];
+                if (maskA == 0)
+                {
+                    continue;
+                }
+                int invA = 255 - maskA;
+                int d = destRow + x * 4;
+                destPixels[d] = (byte)(destPixels[d] * invA / 255);
+                destPixels[d + 1] = (byte)(destPixels[d + 1] * invA / 255);
+                destPixels[d + 2] = (byte)(destPixels[d + 2] * invA / 255);
+                destPixels[d + 3] = (byte)(destPixels[d + 3] * invA / 255);
+            }
+        }
+        _rasterSurface.WritePixels(rect, destPixels, destStride, 0);
+    }
+
+    private static Int32Rect IntersectRects(Int32Rect a, Int32Rect b)
+    {
+        int x = Math.Max(a.X, b.X);
+        int y = Math.Max(a.Y, b.Y);
+        int right = Math.Min(a.X + a.Width, b.X + b.Width);
+        int bottom = Math.Min(a.Y + a.Height, b.Y + b.Height);
+        int width = right - x;
+        int height = bottom - y;
+        if (width <= 0 || height <= 0)
+        {
+            return new Int32Rect(0, 0, 0, 0);
+        }
+        return new Int32Rect(x, y, width, height);
     }
 }
