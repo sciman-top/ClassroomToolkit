@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
+using WpfPoint = System.Windows.Point;
+using WpfColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
@@ -10,11 +12,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 {
     private struct PointData
     {
-        public Point Point;
+        public WpfPoint Point;
         public long Timestamp;
         public double Width;
 
-        public PointData(Point point, long timestamp, double width)
+        public PointData(WpfPoint point, long timestamp, double width)
         {
             Point = point;
             Timestamp = timestamp;
@@ -23,7 +25,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     }
 
     private readonly List<PointData> _points = new();
-    private Color _color;
+    private WpfColor _color;
     private double _baseSize;
     private double _opacity;
     private bool _isActive;
@@ -37,14 +39,14 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     public bool IsActive => _isActive;
 
-    public void Initialize(Color color, double baseSize, double opacity)
+    public void Initialize(WpfColor color, double baseSize, double opacity)
     {
         _color = color;
         _baseSize = baseSize;
         _opacity = 1.0; // Use color's alpha channel directly
     }
 
-    public void OnDown(Point point)
+    public void OnDown(WpfPoint point)
     {
         _points.Clear();
         _isActive = true;
@@ -54,7 +56,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _points.Add(new PointData(point, _lastTimestamp, _baseSize * 0.5));
     }
 
-    public void OnMove(Point point)
+    public void OnMove(WpfPoint point)
     {
         if (!_isActive) return;
 
@@ -80,7 +82,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _lastTimestamp = now;
     }
 
-    public void OnUp(Point point)
+    public void OnUp(WpfPoint point)
     {
         if (!_isActive) return;
         
@@ -148,8 +150,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         var geometry = new StreamGeometry();
         using (var ctx = geometry.Open())
         {
-            var leftEdge = new List<Point>();
-            var rightEdge = new List<Point>();
+            var leftEdge = new List<WpfPoint>();
+            var rightEdge = new List<WpfPoint>();
 
             // We use the "Midpoint Quadratic Bezier" technique.
             // Curve passes through midpoints of segments, using the points as control points.
@@ -212,7 +214,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return geometry;
     }
 
-    private void TessellateBezier(Point start, Point control, Point end, double wStart, double wControl, double wEnd, List<Point> lefts, List<Point> rights)
+    private void TessellateBezier(WpfPoint start, WpfPoint control, WpfPoint end, double wStart, double wControl, double wEnd, List<WpfPoint> lefts, List<WpfPoint> rights)
     {
         // Number of steps depends on curvature/length, but fixed count is usually fine for handwriting strokes
         const int steps = 8; 
@@ -228,7 +230,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
             double x = uu * start.X + 2 * u * t * control.X + tt * end.X;
             double y = uu * start.Y + 2 * u * t * control.Y + tt * end.Y;
-            var pos = new Point(x, y);
+            var pos = new WpfPoint(x, y);
 
             // Derivative for Tangent: B'(t) = 2(1-t)(P1-P0) + 2t(P2-P1)
             double tx = 2 * u * (control.X - start.X) + 2 * t * (end.X - control.X);
@@ -247,7 +249,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         }
     }
 
-    private void AddRibbonPoints(Point center, Vector normal, double width, List<Point> lefts, List<Point> rights)
+    private void AddRibbonPoints(WpfPoint center, Vector normal, double width, List<WpfPoint> lefts, List<WpfPoint> rights)
     {
         var offset = normal * (width * 0.5);
         lefts.Add(center + offset);
@@ -264,21 +266,21 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             {
                 var p = _points[0];
                 var r = p.Width / 2.0;
-                ctx.BeginFigure(new Point(p.Point.X - r, p.Point.Y - r), true, true);
-                ctx.LineTo(new Point(p.Point.X + r, p.Point.Y - r), true, true);
-                ctx.LineTo(new Point(p.Point.X + r, p.Point.Y + r), true, true);
-                ctx.LineTo(new Point(p.Point.X - r, p.Point.Y + r), true, true);
+                ctx.BeginFigure(new WpfPoint(p.Point.X - r, p.Point.Y - r), true, true);
+                ctx.LineTo(new WpfPoint(p.Point.X + r, p.Point.Y - r), true, true);
+                ctx.LineTo(new WpfPoint(p.Point.X + r, p.Point.Y + r), true, true);
+                ctx.LineTo(new WpfPoint(p.Point.X - r, p.Point.Y + r), true, true);
             }
         }
         return geometry;
     }
 
-    private static Point Mid(Point a, Point b)
+    private static WpfPoint Mid(WpfPoint a, WpfPoint b)
     {
-        return new Point((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5);
+        return new WpfPoint((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5);
     }
 
-    private static Vector CalculateNormal(Point p1, Point p2)
+    private static Vector CalculateNormal(WpfPoint p1, WpfPoint p2)
     {
         var dir = p2 - p1;
         if (dir.LengthSquared < 0.000001) return new Vector(0, 1);
