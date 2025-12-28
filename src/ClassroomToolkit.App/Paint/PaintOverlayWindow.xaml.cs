@@ -47,14 +47,16 @@ public partial class PaintOverlayWindow : Window
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private sealed class PaintSnapshot
     {
-        public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes)
+        public PaintSnapshot(StrokeCollection strokes, List<ShapeSnapshot> shapes, List<CustomStrokeData> customStrokes)
         {
             Strokes = strokes;
             Shapes = shapes;
+            CustomStrokes = customStrokes;
         }
 
         public StrokeCollection Strokes { get; }
         public List<ShapeSnapshot> Shapes { get; }
+        public List<CustomStrokeData> CustomStrokes { get; }
     }
 
     private sealed class ShapeSnapshot
@@ -792,6 +794,27 @@ public partial class PaintOverlayWindow : Window
         InkLayer.Strokes.Add(snapshot.Strokes);
         ShapeCanvas.Children.Clear();
         RestoreShapes(snapshot.Shapes);
+
+        // 恢复自定义笔画数据
+        _customStrokes.Clear();
+        foreach (var stroke in snapshot.CustomStrokes)
+        {
+            // 深拷贝笔画点数据
+            var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
+            foreach (var point in stroke.Points)
+            {
+                pointsCopy.Add(new StrokePointData(point.Position, point.Width));
+            }
+            var strokeCopy = new CustomStrokeData(
+                stroke.GroupId,
+                pointsCopy,
+                stroke.Style,
+                stroke.Color,
+                stroke.BaseSize,
+                stroke.RendererId
+            );
+            _customStrokes.Add(strokeCopy);
+        }
     }
 
     public void SetBrushOpacity(byte opacity)
@@ -1470,7 +1493,26 @@ public partial class PaintOverlayWindow : Window
                 var strokes = new StrokeCollection(InkLayer.Strokes);
                 strokes.Remove(e.Stroke);
                 var shapes = CaptureShapes();
-                _history.Push(new PaintSnapshot(strokes, shapes));
+                // 深拷贝 _customStrokes
+                var customStrokes = new List<CustomStrokeData>(_customStrokes.Count);
+                foreach (var stroke in _customStrokes)
+                {
+                    var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
+                    foreach (var point in stroke.Points)
+                    {
+                        pointsCopy.Add(new StrokePointData(point.Position, point.Width));
+                    }
+                    var strokeCopy = new CustomStrokeData(
+                        stroke.GroupId,
+                        pointsCopy,
+                        stroke.Style,
+                        stroke.Color,
+                        stroke.BaseSize,
+                        stroke.RendererId
+                    );
+                    customStrokes.Add(strokeCopy);
+                }
+                _history.Push(new PaintSnapshot(strokes, shapes, customStrokes));
             }
         }
         _inkStrokeInProgress = false;
@@ -2110,7 +2152,27 @@ public partial class PaintOverlayWindow : Window
     {
         var strokes = new StrokeCollection(InkLayer.Strokes);
         var shapes = CaptureShapes();
-        _history.Push(new PaintSnapshot(strokes, shapes));
+        // 深拷贝 _customStrokes，避免后续修改影响快照
+        var customStrokes = new List<CustomStrokeData>(_customStrokes.Count);
+        foreach (var stroke in _customStrokes)
+        {
+            // 深拷贝笔画点数据
+            var pointsCopy = new List<StrokePointData>(stroke.Points.Count);
+            foreach (var point in stroke.Points)
+            {
+                pointsCopy.Add(new StrokePointData(point.Position, point.Width));
+            }
+            var strokeCopy = new CustomStrokeData(
+                stroke.GroupId,
+                pointsCopy,
+                stroke.Style,
+                stroke.Color,
+                stroke.BaseSize,
+                stroke.RendererId
+            );
+            customStrokes.Add(strokeCopy);
+        }
+        _history.Push(new PaintSnapshot(strokes, shapes, customStrokes));
     }
 
     private void EnsureInkHistory()
