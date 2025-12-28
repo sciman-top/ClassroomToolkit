@@ -889,10 +889,10 @@ public partial class RollCallWindow : Window
         var formatted = new FormattedText(
             content,
             CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
+            System.Windows.FlowDirection.LeftToRight,
             typeface,
             fontSize,
-            Brushes.Black,
+            System.Windows.Media.Brushes.Black,
             VisualTreeHelper.GetDpi(this).PixelsPerDip);
         return new WpfSize(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
     }

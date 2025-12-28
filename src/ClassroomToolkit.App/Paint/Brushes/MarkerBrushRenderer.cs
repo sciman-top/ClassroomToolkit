@@ -125,7 +125,7 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     private WpfColor GetMarkerColor()
     {
-        byte alpha = (byte)Math.Min(_color.A, 0xE6);
+        byte alpha = Math.Min(_color.A, (byte)0xE6);
         return WpfColor.FromArgb(alpha, _color.R, _color.G, _color.B);
     }
 

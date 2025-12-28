@@ -627,7 +627,7 @@ public partial class PaintOverlayWindow : Window
 
     private void DrawMarkerStrokeToCanvas(Canvas canvas, Geometry geo, MediaColor color)
     {
-        var markerColor = MediaColor.FromArgb((byte)Math.Min(color.A, 0xE6), color.R, color.G, color.B);
+        var markerColor = MediaColor.FromArgb(Math.Min(color.A, (byte)0xE6), color.R, color.G, color.B);
         var brush = new SolidColorBrush(markerColor);
         brush.Freeze();
 
