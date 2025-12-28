@@ -21,7 +21,6 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
-    private static readonly BlurEffect CalligraphyBaseEffect = CreateInkBleedEffect(0.8);
     private static readonly BlurEffect CalligraphyBleedEffect = CreateInkBleedEffect(2.6);
     private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
     private const int GwlStyle = -16;
@@ -539,10 +538,13 @@ public partial class PaintOverlayWindow : Window
 
     public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth)
     {
-        var bleedBrush = new SolidColorBrush(MediaColor.FromArgb(28, 0, 0, 0));
+        var bleedBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0, 0, 0))
+        {
+            Opacity = 0.42
+        };
         bleedBrush.Freeze();
 
-        var coreBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0x15, 0x15, 0x15));
+        var coreBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0, 0, 0));
         coreBrush.Freeze();
 
         var bleedGeometry = CreateBleedGeometry(geo, baseWidth);
@@ -558,7 +560,6 @@ public partial class PaintOverlayWindow : Window
         {
             Data = geo,
             Fill = coreBrush,
-            Effect = CalligraphyBaseEffect,
             CacheMode = CalligraphyInkBleedCache
         };
 
@@ -568,12 +569,22 @@ public partial class PaintOverlayWindow : Window
 
     private static Geometry CreateBleedGeometry(Geometry geo, double baseWidth)
     {
-        double expand = Math.Clamp(baseWidth * 0.12, 0.5, baseWidth * 0.25);
-        var pen = new Pen(Brushes.Black, expand * 2.0);
-        pen.Freeze();
-        var widened = geo.GetWidenedPathGeometry(pen);
-        widened.Freeze();
-        return widened;
+        var bounds = geo.Bounds;
+        if (bounds.IsEmpty) return geo;
+
+        double scale = Math.Clamp(1.0 + baseWidth * 0.004, 1.10, 1.16);
+        var center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5);
+
+        var group = new TransformGroup();
+        group.Children.Add(new TranslateTransform(-center.X, -center.Y));
+        group.Children.Add(new ScaleTransform(scale, scale));
+        group.Children.Add(new TranslateTransform(center.X, center.Y));
+        group.Freeze();
+
+        var transformed = geo.Clone();
+        transformed.Transform = group;
+        transformed.Freeze();
+        return transformed;
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
