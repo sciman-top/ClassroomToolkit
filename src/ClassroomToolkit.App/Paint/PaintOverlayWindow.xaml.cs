@@ -25,7 +25,6 @@ public partial class PaintOverlayWindow : Window
     private static readonly BlurEffect CalligraphyBridgeEffect = CreateInkBleedEffect(2.5);
     private static readonly BlurEffect CalligraphyCoreEffect = CreateInkBleedEffect(0.6);
     private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
-    private static readonly BlurEffect MarkerEdgeEffect = CreateInkBleedEffect(0.1);
     private static readonly SolidColorBrush CalligraphyCanvasBackground = CreateFrozenBrush(MediaColor.FromArgb(255, 0xF8, 0xF5, 0xEE));
     private static readonly SolidColorBrush CalligraphyWashBrush = CreateFrozenBrush(MediaColor.FromArgb(0x15, 0, 0, 0));
     private static readonly SolidColorBrush CalligraphyBridgeBrush = CreateFrozenBrush(MediaColor.FromArgb(0x40, 0x10, 0x10, 0x10));
@@ -635,7 +634,7 @@ public partial class PaintOverlayWindow : Window
         {
             Data = geo,
             Fill = brush,
-            Effect = MarkerEdgeEffect
+            FillRule = FillRule.Nonzero
         };
 
         canvas.Children.Add(path);
