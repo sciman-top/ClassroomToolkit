@@ -768,6 +768,30 @@ public partial class RollCallWindow : Window
         }
     }
 
+    private void RestoreGroupSelection()
+    {
+        var group = _settings.RollCallCurrentGroup;
+        if (string.IsNullOrWhiteSpace(group))
+        {
+            return;
+        }
+        if (_viewModel.Groups.Contains(group))
+        {
+            _viewModel.SetCurrentGroup(group);
+            UpdatePhotoDisplay(forceHide: true);
+        }
+    }
+
+    private void ScheduleRollStateSave()
+    {
+        _rollStateDirty = true;
+        if (_rollStateSaveTimer.IsEnabled)
+        {
+            _rollStateSaveTimer.Stop();
+        }
+        _rollStateSaveTimer.Start();
+    }
+
     private void ApplyWindowBounds(AppSettings settings)
     {
         if (settings.RollCallWindowWidth > 0)
