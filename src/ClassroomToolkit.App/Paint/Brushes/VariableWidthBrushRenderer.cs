@@ -28,13 +28,19 @@ public class BrushPhysicsConfig
     public double EndTaperLength { get; set; } = 0.12;  // 收笔占笔画长度的比例
     public int MinTaperPoints { get; set; } = 5;        // 笔锋最少点数
 
+    // 修复蝌蚪头：起笔阶段忽略速度
+    public int StartVelocityRampUpPoints { get; set; } = 10; // 起笔前N个点逐渐增加速度影响
+    public double MinVelocityClamp { get; set; } = 0.3;     // 最小速度限制，防止除零
+
+    // 数据验证参数
+    public double MaxPointJumpDistance { get; set; } = 100.0; // 最大允许点间距
+
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
     private const int UpsampleSteps = 8;
-    private const int PressureSmoothWindow = 7;
     private const double CornerAngleThreshold = 90.0;
     private const double CornerMinAngle = 5.0;
     private const int CornerArcSegments = 4;
@@ -52,12 +58,15 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     }
 
     private readonly List<StrokePoint> _points = new();
+    private readonly Queue<double> _velocityBuffer = new();
+    private readonly Queue<double> _widthBuffer = new();
     private WpfColor _color;
     private double _baseSize;
     private bool _isActive;
     private long _lastTimestamp;
-    
-    private double _smoothedWidth; 
+    private int _pointCount; // 跟踪笔画中的点数
+
+    private double _smoothedWidth;
     private WpfPoint _smoothedPos;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
@@ -68,25 +77,35 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         _color = color;
         _baseSize = baseSize;
-        _smoothedWidth = baseSize * 0.8;
+        _smoothedWidth = ClampWidth(baseSize * 0.8);
         _smoothedPos = new WpfPoint(0, 0); 
     }
 
     public void OnDown(WpfPoint point)
     {
         _points.Clear();
+        _velocityBuffer.Clear();
+        _widthBuffer.Clear();
         _isActive = true;
+        _pointCount = 0; // 重置点计数
         _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
-        _smoothedWidth = _baseSize * 0.5; 
-        _smoothedPos = point; 
-        
+        _smoothedWidth = ClampWidth(_baseSize * 0.5);
+        _smoothedPos = point;
+
         _points.Add(new StrokePoint(point, _smoothedWidth));
     }
 
     public void OnMove(WpfPoint point)
     {
         if (!_isActive) return;
+
+        // 数据验证：检查 NaN/Infinity
+        if (double.IsNaN(point.X) || double.IsNaN(point.Y) ||
+            double.IsInfinity(point.X) || double.IsInfinity(point.Y))
+        {
+            return; // 丢弃异常点
+        }
 
         // 坐标平滑 (EMA)
         double posAlpha = 0.7;
@@ -101,18 +120,35 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         // 去噪：忽略过小的移动
         if (dist < 2.0) return;
 
+        // 数据验证：检查异常跳变（飞线）
+        if (dist > _config.MaxPointJumpDistance)
+        {
+            return; // 丢弃异常跳变的点
+        }
+
         var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         var dt = now - _lastTimestamp;
         if (dt < 1) dt = 1;
 
         double velocity = dist / dt;
-        double targetWidth = CalculateTargetWidth(velocity);
+        double smoothVelocity = PushAndAverage(_velocityBuffer, _config.VelocitySmoothWindow, velocity);
+        double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount);
+        targetWidth = PushAndAverage(_widthBuffer, _config.PressureSmoothWindow, targetWidth);
+        targetWidth = ClampWidth(targetWidth);
 
         double widthAlpha = _config.WidthSmoothing;
         _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
+        _smoothedWidth = ClampWidth(_smoothedWidth);
+
+        // 数据验证：再次检查宽度是否有效
+        if (double.IsNaN(_smoothedWidth) || double.IsInfinity(_smoothedWidth) || _smoothedWidth <= 0)
+        {
+            return; // 丢弃无效宽度
+        }
 
         _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth));
         _lastTimestamp = now;
+        _pointCount++; // 增加点计数
     }
 
     public void OnUp(WpfPoint point)
@@ -134,7 +170,10 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     public void Reset()
     {
         _points.Clear();
+        _velocityBuffer.Clear();
+        _widthBuffer.Clear();
         _isActive = false;
+        _pointCount = 0;
     }
 
     public void Render(DrawingContext dc)
@@ -158,13 +197,46 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return geo;
     }
 
-    private double CalculateTargetWidth(double velocity)
+    private double CalculateTargetWidth(double velocity, int pointIndex)
     {
-        // 使用更强的非线性函数（三次方）来增强快慢对比
-        var t = Math.Min(velocity / _config.VelocityThreshold, 1.0);
-        var factor = 1.0 - Math.Pow(t, 3); // 三次函数，让高速时更细
+        // 修复蝌蚪头：起笔阶段逐渐增加速度影响
+        double velocityInfluence = 1.0;
+        if (pointIndex < _config.StartVelocityRampUpPoints)
+        {
+            // 前 N 个点：速度影响从 0% 线性增长到 100%
+            velocityInfluence = (double)pointIndex / _config.StartVelocityRampUpPoints;
+        }
+
+        // 限制最小速度，防止除零或过小速度导致的过宽
+        double clampedVelocity = Math.Max(velocity, _config.MinVelocityClamp);
+
+        // 软化速度曲线：从三次方改为二次方，更温和
+        var t = Math.Min(clampedVelocity / _config.VelocityThreshold, 1.0);
+        var factor = 1.0 - (t * t); // 二次函数，比三次方温和
+
+        // 起笔阶段：在固定宽度和速度影响宽度之间插值
+        var baseFactor = 0.8; // 起笔基础宽度因子
+        var finalFactor = baseFactor * (1.0 - velocityInfluence) + factor * velocityInfluence;
+
         var range = _config.MaxWidthFactor - _config.MinWidthFactor;
-        return _baseSize * (_config.MinWidthFactor + (range * factor));
+        var width = _baseSize * (_config.MinWidthFactor + (range * finalFactor));
+        return ClampWidth(width);
+    }
+
+    private double ClampWidth(double width)
+    {
+        double minWidth = _config.MinStrokeWidthPx;
+        double maxWidth = _baseSize * _config.MaxStrokeWidthMultiplier;
+        if (maxWidth < minWidth) maxWidth = minWidth;
+        return Math.Clamp(width, minWidth, maxWidth);
+    }
+
+    private static double PushAndAverage(Queue<double> buffer, int maxCount, double value)
+    {
+        int limit = Math.Max(1, maxCount);
+        buffer.Enqueue(value);
+        while (buffer.Count > limit) buffer.Dequeue();
+        return buffer.Average();
     }
 
     private Geometry? GenerateSmoothGeometry()
@@ -197,16 +269,18 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 // 左边缘
                 AddBezierPath(ctx, leftEdge);
 
-                // 收笔：直接连接右边缘最后一点，不使用圆头
-                // 如果收笔宽度接近零，两个边缘点应该已经非常接近，自然形成尖头
-                ctx.LineTo(rightEdge.Last(), true, true);
+                // 收笔圆头
+                var lastLeft = leftEdge.Last();
+                var lastRight = rightEdge.Last();
+                AddRoundCap(ctx, lastLeft, lastRight);
 
                 // 右边缘 (倒序)
                 var rightEdgeReversed = rightEdge.AsEnumerable().Reverse().ToList();
                 AddBezierPath(ctx, rightEdgeReversed);
 
-                // 起笔：直接闭合，不使用圆头
-                ctx.LineTo(leftEdge[0], true, true);
+                // 起笔圆头
+                var firstRight = rightEdge[0];
+                AddRoundCap(ctx, firstRight, leftEdge[0]);
             }
         }
         return geometry;
@@ -235,14 +309,76 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 double t = step / (double)UpsampleSteps;
                 var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
                 double width = CatmullRomValue(p0.Width, p1.Width, p2.Width, p3.Width, t);
-                width = Math.Max(width, 0.1);
+                width = ClampWidth(width);
                 samples.Add(new StrokePoint(pos, width));
             }
         }
 
         SmoothWidths(samples);
+        ApplyCapPressureOverride(samples);
         ApplyTaperingEffect(samples); // 应用笔锋效果
         return samples;
+    }
+
+    private void ApplyCapPressureOverride(List<StrokePoint> samples)
+    {
+        if (samples.Count < 3) return;
+
+        double ratio = _config.CapIgnoreVelocityRatio;
+        if (ratio <= 0) return;
+
+        int capCount = Math.Max(1, (int)Math.Round(samples.Count * ratio));
+        if (capCount * 2 >= samples.Count) return;
+
+        double pressureWidth = ClampWidth(CalculatePressureWidth(samples));
+        int capEnd = capCount - 1;
+
+        for (int i = 0; i < capCount; i++)
+        {
+            double t = capEnd > 0 ? i / (double)capEnd : 1.0;
+            double blended = Lerp(pressureWidth, samples[i].Width, t);
+            samples[i] = new StrokePoint(samples[i].Position, ClampWidth(blended));
+        }
+
+        int startIndex = samples.Count - capCount;
+        for (int i = startIndex; i < samples.Count; i++)
+        {
+            double t = capEnd > 0 ? (i - startIndex) / (double)capEnd : 1.0;
+            double blended = Lerp(samples[i].Width, pressureWidth, t);
+            samples[i] = new StrokePoint(samples[i].Position, ClampWidth(blended));
+        }
+    }
+
+    private static double Lerp(double a, double b, double t)
+    {
+        return a + (b - a) * t;
+    }
+
+    private static double SmoothStep(double t)
+    {
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    private static double CalculatePressureWidth(List<StrokePoint> samples)
+    {
+        int start = (int)(samples.Count * 0.2);
+        int end = (int)(samples.Count * 0.8);
+        if (end <= start)
+        {
+            start = 0;
+            end = samples.Count;
+        }
+
+        double sum = 0;
+        int count = 0;
+        for (int i = start; i < end; i++)
+        {
+            sum += samples[i].Width;
+            count++;
+        }
+
+        if (count == 0) return samples[0].Width;
+        return sum / count;
     }
 
     /// <summary>
@@ -270,10 +406,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             for (int i = 0; i < startCapPoints; i++)
             {
                 double t = (double)i / startCapPoints;
-                // 使用平滑的缓入函数：easeOutQuad
-                double factor = t * t;
-                double taperedWidth = startTargetWidth * (0.3 + 0.7 * factor);
-                samples[i] = new StrokePoint(samples[i].Position, Math.Max(taperedWidth, 0.5));
+                double factor = SmoothStep(t);
+                double taperedWidth = startTargetWidth * (0.35 + 0.65 * factor);
+                samples[i] = new StrokePoint(samples[i].Position, ClampWidth(taperedWidth));
             }
         }
 
@@ -288,9 +423,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             {
                 int idx = startIndex + i;
                 double t = (double)i / endTaperPoints;
-                // 线性缩减到零，形成尖锐笔锋
-                double taperedWidth = baseWidth * (1.0 - t);
-                samples[idx] = new StrokePoint(samples[idx].Position, Math.Max(taperedWidth, 0.0));
+                double factor = 1.0 - SmoothStep(t);
+                double taperedWidth = baseWidth * Math.Max(0.15, factor);
+                samples[idx] = new StrokePoint(samples[idx].Position, ClampWidth(taperedWidth));
             }
         }
     }
@@ -321,11 +456,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                       (-v0 + 3 * v1 - 3 * v2 + v3) * t3);
     }
 
-    private static void SmoothWidths(List<StrokePoint> samples)
+    private void SmoothWidths(List<StrokePoint> samples)
     {
         if (samples.Count < 3) return;
 
-        int window = PressureSmoothWindow;
+        int window = Math.Max(1, _config.PressureSmoothWindow);
         int half = window / 2;
         var smoothed = new double[samples.Count];
 
@@ -348,7 +483,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         for (int i = 0; i < samples.Count; i++)
         {
             var sample = samples[i];
-            samples[i] = new StrokePoint(sample.Position, smoothed[i]);
+            samples[i] = new StrokePoint(sample.Position, ClampWidth(smoothed[i]));
         }
     }
 
@@ -361,7 +496,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         for (int i = 0; i < samples.Count; i++)
         {
             var pos = samples[i].Position;
-            var width = Math.Max(samples[i].Width, 0.1);
+            var width = ClampWidth(samples[i].Width);
 
             Vector dir;
             if (i == 0) dir = samples[i + 1].Position - pos;
@@ -469,6 +604,18 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         dir.Normalize();
         return new Vector(-dir.Y, dir.X);
+    }
+
+    private static void AddRoundCap(StreamGeometryContext ctx, WpfPoint from, WpfPoint to)
+    {
+        double radius = (from - to).Length * 0.5;
+        if (radius < 0.1)
+        {
+            ctx.LineTo(to, true, true);
+            return;
+        }
+
+        ctx.ArcTo(to, new WpfSize(radius, radius), 0, false, SweepDirection.Clockwise, true, true);
     }
 
     private static void AddBezierPath(StreamGeometryContext ctx, List<WpfPoint> points)
