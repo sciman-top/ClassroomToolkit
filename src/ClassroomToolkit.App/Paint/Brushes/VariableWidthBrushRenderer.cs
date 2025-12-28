@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using WpfPoint = System.Windows.Point;
 using WpfSize = System.Windows.Size;
 using WpfColor = System.Windows.Media.Color;
@@ -57,6 +58,10 @@ public class BrushPhysicsConfig
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
+    private const double InkBleedBlurRadius = 0.8;
+    private const double DirectionNoiseAmplitude = 0.08;
+    private const double DirectionNoiseFrequency = 0.6;
+
     private const int UpsampleSteps = 8;
     private const double CornerAngleThreshold = 90.0;
     private const double CornerMinAngle = 5.0;
@@ -253,7 +258,21 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             var brush = new SolidColorBrush(_color);
             brush.Freeze();
-            dc.DrawGeometry(brush, null, geometry);
+            var drawing = new GeometryDrawing(brush, null, geometry);
+            drawing.Freeze();
+
+            var group = new DrawingGroup();
+            group.Children.Add(drawing);
+            group.Effect = new BlurEffect
+            {
+                Radius = InkBleedBlurRadius,
+                KernelType = KernelType.Gaussian,
+                RenderingBias = RenderingBias.Quality
+            };
+            group.CacheMode = new BitmapCache { RenderAtScale = 1.0 };
+            group.Freeze();
+
+            dc.DrawDrawing(group);
         }
     }
 
@@ -618,6 +637,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             var width = ClampWidth(samples[i].Width);
             var speed = samples[i].NormalizedSpeed;
             var progress = samples[i].Progress;
+
+            // 方向扰动宽度噪声：沿笔画方向变化，避免侧向锯齿
+            double directionNoise = Math.Sin(i * DirectionNoiseFrequency) * width * DirectionNoiseAmplitude;
+            directionNoise *= (1.0 - progress);
+            width = ClampWidth(width + directionNoise);
 
             // ===== v11: 计算切线和法线（确保噪声只在法线方向）=====
             Vector dir;
