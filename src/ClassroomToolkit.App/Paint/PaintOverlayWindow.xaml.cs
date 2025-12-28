@@ -519,7 +519,10 @@ public partial class PaintOverlayWindow : Window
         {
             var point = e.GetPosition(ShapeCanvas);
 
-            // 记录橡皮擦路径（记录移动过的点）
+            // 1. 即时擦除其他形状（矩形、椭圆、线条等）
+            RemoveShapeAt(point);
+
+            // 2. 记录橡皮擦路径（用于自定义笔画的部分擦除）
             if (_isErasing && _eraserPath.Count > 0)
             {
                 var lastPoint = _eraserPath.Last();
@@ -617,6 +620,10 @@ public partial class PaintOverlayWindow : Window
             // 执行橡皮擦路径的部分擦除
             if (_eraserPath.Count > 0)
             {
+                // 1. 擦除 InkCanvas 的内置笔画（使用路径上的矩形区域）
+                EraseInkStrokesAlongPath();
+
+                // 2. 处理自定义笔画的部分擦除
                 ProcessEraserPathPartialErase();
             }
 
@@ -1567,12 +1574,21 @@ public partial class PaintOverlayWindow : Window
         var hit = VisualTreeHelper.HitTest(ShapeCanvas, point);
         if (hit?.VisualHit is Shape shape)
         {
+            // 检查是否是自定义笔画（有 CalligraphyLayerTag）
+            if (shape.Tag is CalligraphyLayerTag)
+            {
+                // 自定义笔画不在这里删除，而是在鼠标抬起时使用 ProcessEraserPathPartialErase 进行部分删除
+                return;
+            }
+
+            // 其他形状（矩形、椭圆、线条等）立即删除
             if (!_erasing)
             {
                 _erasing = true;
                 PushHistory();
             }
-            RemoveCalligraphyGroup(shape);
+
+            ShapeCanvas.Children.Remove(shape);
         }
     }
 
@@ -1775,6 +1791,58 @@ public partial class PaintOverlayWindow : Window
             if (shape.Tag is CalligraphyLayerTag tag && tag.GroupId == groupId)
             {
                 ShapeCanvas.Children.Remove(shape);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 沿橡皮擦路径擦除 InkCanvas 的内置笔画
+    /// </summary>
+    private void EraseInkStrokesAlongPath()
+    {
+        if (InkLayer.Strokes.Count == 0 || _eraserPath.Count == 0) return;
+
+        double eraserRadius = _eraserSize * 0.5;
+
+        // 对橡皮擦路径上的每个点，创建矩形区域并擦除
+        foreach (var point in _eraserPath)
+        {
+            var eraseRect = new Rect(
+                point.X - eraserRadius,
+                point.Y - eraserRadius,
+                _eraserSize,
+                _eraserSize
+            );
+
+            InkLayer.Strokes.Erase(eraseRect);
+        }
+
+        // 如果路径上有多个点，还需要处理点之间的线段
+        for (int i = 0; i < _eraserPath.Count - 1; i++)
+        {
+            var start = _eraserPath[i];
+            var end = _eraserPath[i + 1];
+
+            // 计算线段上的多个采样点
+            var distance = (end - start).Length;
+            var steps = Math.Max(1, (int)(distance / (_eraserSize * 0.5)));
+
+            for (int j = 1; j < steps; j++)
+            {
+                var t = j / (double)steps;
+                var interpPoint = new WpfPoint(
+                    start.X + (end.X - start.X) * t,
+                    start.Y + (end.Y - start.Y) * t
+                );
+
+                var eraseRect = new Rect(
+                    interpPoint.X - eraserRadius,
+                    interpPoint.Y - eraserRadius,
+                    _eraserSize,
+                    _eraserSize
+                );
+
+                InkLayer.Strokes.Erase(eraseRect);
             }
         }
     }
