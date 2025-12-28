@@ -21,8 +21,15 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
-    private static readonly BlurEffect CalligraphyBleedEffect = CreateInkBleedEffect(2.6);
+    private static readonly BlurEffect CalligraphyWashEffect = CreateInkBleedEffect(8.0);
+    private static readonly BlurEffect CalligraphyBridgeEffect = CreateInkBleedEffect(2.5);
+    private static readonly BlurEffect CalligraphyCoreEffect = CreateInkBleedEffect(0.6);
     private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
+    private static readonly BlurEffect MarkerEdgeEffect = CreateInkBleedEffect(0.1);
+    private static readonly SolidColorBrush CalligraphyCanvasBackground = CreateFrozenBrush(MediaColor.FromArgb(255, 0xF8, 0xF5, 0xEE));
+    private static readonly SolidColorBrush CalligraphyWashBrush = CreateFrozenBrush(MediaColor.FromArgb(0x15, 0, 0, 0));
+    private static readonly SolidColorBrush CalligraphyBridgeBrush = CreateFrozenBrush(MediaColor.FromArgb(0x40, 0x10, 0x10, 0x10));
+    private static readonly SolidColorBrush CalligraphyCoreBrush = CreateFrozenBrush(MediaColor.FromArgb(0xFF, 0x15, 0x15, 0x15));
     private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
@@ -61,16 +68,21 @@ public partial class PaintOverlayWindow : Window
         public DoubleCollection? DashArray { get; init; }
         public MediaColor? FillColor { get; init; }
         public string? PathData { get; init; }
+        public string? CalligraphyGroupId { get; init; }
+        public CalligraphyLayerRole? CalligraphyRole { get; init; }
 
         public static ShapeSnapshot? FromShape(Shape shape)
         {
             if (shape is Path path)
             {
+                var tag = path.Tag as CalligraphyLayerTag;
                 return new ShapeSnapshot
                 {
                     Type = PaintShapeType.Path,
                     StrokeColor = ResolveColor(path.Fill), // Note: For our filled paths, the "stroke" is the fill
-                    PathData = path.Data.ToString()
+                    PathData = path.Data.ToString(),
+                    CalligraphyGroupId = tag?.GroupId,
+                    CalligraphyRole = tag?.Role
                 };
             }
 
@@ -136,6 +148,25 @@ public partial class PaintOverlayWindow : Window
             }
             return Colors.Transparent;
         }
+    }
+
+    private enum CalligraphyLayerRole
+    {
+        Wash,
+        Bridge,
+        Core
+    }
+
+    private sealed class CalligraphyLayerTag
+    {
+        public CalligraphyLayerTag(string groupId, CalligraphyLayerRole role)
+        {
+            GroupId = groupId;
+            Role = role;
+        }
+
+        public string GroupId { get; }
+        public CalligraphyLayerRole Role { get; }
     }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
@@ -298,9 +329,9 @@ public partial class PaintOverlayWindow : Window
         switch (mode)
         {
             case PaintToolMode.Brush:
-                if (_brushStyle == PaintBrushStyle.Calligraphy)
+                if (UseCustomBrushRenderer())
                 {
-                    // In Calligraphy mode, InkCanvas should NOT collect ink
+                    // Custom brush modes manage rendering manually
                     InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
                     InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
                 }
@@ -395,9 +426,8 @@ public partial class PaintOverlayWindow : Window
         }
         if (_mode == PaintToolMode.Brush)
         {
-            if (_brushStyle == PaintBrushStyle.Calligraphy)
+            if (UseCustomBrushRenderer())
             {
-                // Handle custom brush start
                 if (_activeRenderer != null)
                 {
                     var attr = InkLayer.DefaultDrawingAttributes;
@@ -436,7 +466,7 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_mode == PaintToolMode.Brush && _brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer != null && _activeRenderer.IsActive)
+        if (_mode == PaintToolMode.Brush && _activeRenderer != null && _activeRenderer.IsActive && UseCustomBrushRenderer())
         {
             _activeRenderer.OnMove(e.GetPosition(CustomDrawHost));
             _visualHost.UpdateVisual(_activeRenderer.Render);
@@ -466,18 +496,25 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (_mode == PaintToolMode.Brush && _brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer != null && _activeRenderer.IsActive)
+        if (_mode == PaintToolMode.Brush && _activeRenderer != null && _activeRenderer.IsActive && UseCustomBrushRenderer())
         {
             PushHistory(); // Save state before adding new shape
-            
+
             _activeRenderer.OnUp(e.GetPosition(CustomDrawHost));
             var geometry = _activeRenderer.GetLastStrokeGeometry();
             
             if (geometry != null)
             {
                 var attr = InkLayer.DefaultDrawingAttributes;
-                double baseWidth = Math.Max(attr.Width, attr.Height);
-                DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth);
+                if (_brushStyle == PaintBrushStyle.Calligraphy)
+                {
+                    double baseWidth = Math.Max(attr.Width, attr.Height);
+                    DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth);
+                }
+                else
+                {
+                    DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, attr.Color);
+                }
             }
 
             _activeRenderer.Reset();
@@ -529,6 +566,13 @@ public partial class PaintOverlayWindow : Window
         return effect;
     }
 
+    private static SolidColorBrush CreateFrozenBrush(MediaColor color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+
     private static BitmapCache CreateInkBleedCache()
     {
         var cache = new BitmapCache { RenderAtScale = 1.0 };
@@ -538,53 +582,63 @@ public partial class PaintOverlayWindow : Window
 
     public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth)
     {
-        var bleedBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0, 0, 0))
+        if (canvas.Background == null)
         {
-            Opacity = 0.42
-        };
-        bleedBrush.Freeze();
-
-        var coreBrush = new SolidColorBrush(MediaColor.FromArgb(255, 0, 0, 0));
-        coreBrush.Freeze();
-
-        var bleedGeometry = CreateBleedGeometry(geo, baseWidth);
-        var bleedPath = new Path
+            canvas.Background = CalligraphyCanvasBackground;
+        }
+        if (canvas.CacheMode == null)
         {
-            Data = bleedGeometry,
-            Fill = bleedBrush,
-            Effect = CalligraphyBleedEffect,
-            CacheMode = CalligraphyInkBleedCache
-        };
+            canvas.CacheMode = CalligraphyInkBleedCache;
+        }
 
-        var basePath = new Path
+        var groupId = Guid.NewGuid().ToString("N");
+
+        var washPath = new Path
         {
             Data = geo,
-            Fill = coreBrush,
-            CacheMode = CalligraphyInkBleedCache
+            Fill = CalligraphyWashBrush,
+            Effect = CalligraphyWashEffect,
+            CacheMode = CalligraphyInkBleedCache,
+            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Wash),
+            IsHitTestVisible = false
+        };
+        var bridgePath = new Path
+        {
+            Data = geo,
+            Fill = CalligraphyBridgeBrush,
+            Effect = CalligraphyBridgeEffect,
+            CacheMode = CalligraphyInkBleedCache,
+            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Bridge),
+            IsHitTestVisible = false
+        };
+        var corePath = new Path
+        {
+            Data = geo,
+            Fill = CalligraphyCoreBrush,
+            Effect = CalligraphyCoreEffect,
+            CacheMode = CalligraphyInkBleedCache,
+            Tag = new CalligraphyLayerTag(groupId, CalligraphyLayerRole.Core)
         };
 
-        canvas.Children.Add(bleedPath);
-        canvas.Children.Add(basePath);
+        canvas.Children.Add(washPath);
+        canvas.Children.Add(bridgePath);
+        canvas.Children.Add(corePath);
     }
 
-    private static Geometry CreateBleedGeometry(Geometry geo, double baseWidth)
+    private void DrawMarkerStrokeToCanvas(Canvas canvas, Geometry geo, MediaColor color)
     {
-        var bounds = geo.Bounds;
-        if (bounds.IsEmpty) return geo;
+        var markerColor = MediaColor.FromArgb((byte)Math.Min(color.A, 0xE6), color.R, color.G, color.B);
+        var brush = new SolidColorBrush(markerColor);
+        brush.Freeze();
 
-        double scale = Math.Clamp(1.0 + baseWidth * 0.004, 1.10, 1.16);
-        var center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5);
+        var path = new Path
+        {
+            Data = geo,
+            Fill = brush,
+            Effect = MarkerEdgeEffect
+        };
 
-        var group = new TransformGroup();
-        group.Children.Add(new TranslateTransform(-center.X, -center.Y));
-        group.Children.Add(new ScaleTransform(scale, scale));
-        group.Children.Add(new TranslateTransform(center.X, center.Y));
-        group.Freeze();
-
-        var transformed = geo.Clone();
-        transformed.Transform = group;
-        transformed.Freeze();
-        return transformed;
+        canvas.Children.Add(path);
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -664,18 +718,29 @@ public partial class PaintOverlayWindow : Window
     public void SetBrushStyle(PaintBrushStyle style)
     {
         _brushStyle = style;
-        
+
         if (_brushStyle == PaintBrushStyle.Calligraphy)
         {
-            // Switch to Calligraphy: create renderer if needed
-            if (_activeRenderer == null)
+            if (_activeRenderer is not VariableWidthBrushRenderer)
             {
                 _activeRenderer = new VariableWidthBrushRenderer();
+            }
+        }
+        else
+        {
+            if (_activeRenderer is not MarkerBrushRenderer)
+            {
+                _activeRenderer = new MarkerBrushRenderer();
             }
         }
         
         // Refresh mode to apply correct input handling
         SetMode(_mode);
+    }
+
+    private bool UseCustomBrushRenderer()
+    {
+        return _brushStyle == PaintBrushStyle.Calligraphy || _brushStyle == PaintBrushStyle.Standard;
     }
 
     public void SetBoardOpacity(byte opacity)
@@ -1427,7 +1492,7 @@ public partial class PaintOverlayWindow : Window
                 _erasing = true;
                 PushHistory();
             }
-            ShapeCanvas.Children.Remove(shape);
+            RemoveCalligraphyGroup(shape);
         }
     }
 
@@ -1440,6 +1505,7 @@ public partial class PaintOverlayWindow : Window
         }
 
         var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
+        var calligraphyGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var shape in shapes)
         {
             if (shape == _regionRect)
@@ -1448,8 +1514,45 @@ public partial class PaintOverlayWindow : Window
             }
             if (IsShapeHit(region, shape))
             {
-                ShapeCanvas.Children.Remove(shape);
+                var tag = shape.Tag as CalligraphyLayerTag;
+                if (tag != null)
+                {
+                    calligraphyGroups.Add(tag.GroupId);
+                }
+                else
+                {
+                    ShapeCanvas.Children.Remove(shape);
+                }
             }
+        }
+
+        if (calligraphyGroups.Count > 0)
+        {
+            RemoveCalligraphyGroups(calligraphyGroups);
+        }
+    }
+
+    private void RemoveCalligraphyGroup(Shape shape)
+    {
+        if (shape.Tag is CalligraphyLayerTag tag)
+        {
+            RemoveCalligraphyGroups(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { tag.GroupId });
+            return;
+        }
+
+        ShapeCanvas.Children.Remove(shape);
+    }
+
+    private void RemoveCalligraphyGroups(HashSet<string> groupIds)
+    {
+        var toRemove = ShapeCanvas.Children
+            .OfType<Shape>()
+            .Where(s => s.Tag is CalligraphyLayerTag tag && groupIds.Contains(tag.GroupId))
+            .ToList();
+
+        foreach (var shape in toRemove)
+        {
+            ShapeCanvas.Children.Remove(shape);
         }
     }
 
@@ -1577,7 +1680,36 @@ public partial class PaintOverlayWindow : Window
             {
                 shape.Fill = new SolidColorBrush(snapshot.FillColor.Value);
             }
+            if (shape is Path calligraphyPath && snapshot.CalligraphyGroupId != null && snapshot.CalligraphyRole.HasValue)
+            {
+                calligraphyPath.Tag = new CalligraphyLayerTag(snapshot.CalligraphyGroupId, snapshot.CalligraphyRole.Value);
+                ApplyCalligraphyLayerStyle(calligraphyPath, snapshot.CalligraphyRole.Value);
+            }
             ShapeCanvas.Children.Add(shape);
+        }
+    }
+
+    private static void ApplyCalligraphyLayerStyle(Path path, CalligraphyLayerRole role)
+    {
+        switch (role)
+        {
+            case CalligraphyLayerRole.Wash:
+                path.Fill = CalligraphyWashBrush;
+                path.Effect = CalligraphyWashEffect;
+                path.CacheMode = CalligraphyInkBleedCache;
+                path.IsHitTestVisible = false;
+                break;
+            case CalligraphyLayerRole.Bridge:
+                path.Fill = CalligraphyBridgeBrush;
+                path.Effect = CalligraphyBridgeEffect;
+                path.CacheMode = CalligraphyInkBleedCache;
+                path.IsHitTestVisible = false;
+                break;
+            case CalligraphyLayerRole.Core:
+                path.Fill = CalligraphyCoreBrush;
+                path.Effect = CalligraphyCoreEffect;
+                path.CacheMode = CalligraphyInkBleedCache;
+                break;
         }
     }
 }
