@@ -123,7 +123,8 @@
             <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                 <!-- 优化：VerticalAlignment="Center" 让卡片高度根据文字自适应，不再强制拉伸 -->
                 <Border Background="White" CornerRadius="12" 
-                        VerticalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Stretch"
                         Margin="40,10"
                         MouseLeftButtonUp="OnRollClick">
                     <!-- 卡片阴影 -->
@@ -154,7 +155,7 @@
                                        Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
                                        Foreground="#333" FontWeight="Bold"
                                        TextAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
+                                       TextTrimming="None"
                                        TextWrapping="NoWrap"
                                        TextOptions.TextFormattingMode="Display"
                                        TextOptions.TextRenderingMode="ClearType">

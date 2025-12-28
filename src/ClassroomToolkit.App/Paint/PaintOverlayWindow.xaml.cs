@@ -223,6 +223,11 @@ public partial class PaintOverlayWindow : Window
 
     private readonly List<CustomStrokeData> _customStrokes = new();
 
+    // 橡皮擦路径跟踪（用于部分擦除）
+    private readonly List<WpfPoint> _eraserPath = new();
+    private double _eraserSize = 24;
+    private bool _isErasing;
+
     private class DrawingVisualHost : FrameworkElement
     {
         private readonly VisualCollection _children;
@@ -395,6 +400,7 @@ public partial class PaintOverlayWindow : Window
     public void SetEraserSize(double size)
     {
         var value = Math.Max(4, size);
+        _eraserSize = value; // 保存橡皮擦大小（用于部分擦除）
         InkLayer.EraserShape = new RectangleStylusShape(value, value);
     }
 
@@ -465,7 +471,12 @@ public partial class PaintOverlayWindow : Window
         }
         if (_mode == PaintToolMode.Eraser)
         {
-            RemoveShapeAt(e.GetPosition(ShapeCanvas));
+            // 开始橡皮擦操作：记录路径起点
+            _eraserPath.Clear();
+            _eraserPath.Add(e.GetPosition(ShapeCanvas));
+            _isErasing = true;
+            PushHistory(); // 保存当前状态
+            ShapeCanvas.CaptureMouse();
         }
         if (_mode != PaintToolMode.Shape)
         {
@@ -507,7 +518,19 @@ public partial class PaintOverlayWindow : Window
         if (_mode == PaintToolMode.Eraser && e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
         {
             var point = e.GetPosition(ShapeCanvas);
-            RemoveShapeAt(point);
+
+            // 记录橡皮擦路径（记录移动过的点）
+            if (_isErasing && _eraserPath.Count > 0)
+            {
+                var lastPoint = _eraserPath.Last();
+                var distance = (point - lastPoint).Length;
+
+                // 只有移动距离超过一定阈值时才记录点（避免点过于密集）
+                if (distance > _eraserSize * 0.2)
+                {
+                    _eraserPath.Add(point);
+                }
+            }
         }
         if (!_isDrawingShape || _activeShape == null)
         {
@@ -577,6 +600,27 @@ public partial class PaintOverlayWindow : Window
             {
                 InkLayer.ReleaseMouseCapture();
             }
+            return;
+        }
+
+        // 橡皮擦部分擦除处理
+        if (_mode == PaintToolMode.Eraser && _isErasing)
+        {
+            e.Handled = true;
+            _isErasing = false;
+
+            if (ShapeCanvas.IsMouseCaptured)
+            {
+                ShapeCanvas.ReleaseMouseCapture();
+            }
+
+            // 执行橡皮擦路径的部分擦除
+            if (_eraserPath.Count > 0)
+            {
+                ProcessEraserPathPartialErase();
+            }
+
+            _eraserPath.Clear();
             return;
         }
         if (_mode == PaintToolMode.Brush)
@@ -1664,21 +1708,16 @@ public partial class PaintOverlayWindow : Window
     /// <summary>
     /// 重新绘制笔画段落
     /// </summary>
-    private void RedrawStrokeSegment(List<StrokePointData> segment)
+    private void RedrawStrokeSegment(List<StrokePointData> segment, PaintBrushStyle style, MediaColor color, double baseSize)
     {
         if (segment.Count < 2) return;
 
-        // 获取第一个点的属性
-        var firstPoint = segment[0];
-        var baseSize = firstPoint.Width * 2; // 粗略估计
-        var color = MediaColor.FromArgb(255, 0x15, 0x15, 0x15); // 默认黑色
-
         // 创建临时渲染器
-        IBrushRenderer renderer = CreateRendererForStroke();
+        IBrushRenderer renderer = CreateRendererForStroke(style);
         renderer.Initialize(color, baseSize, 1.0);
 
         // 重建笔画点数据
-        renderer.OnDown(firstPoint.Position);
+        renderer.OnDown(segment[0].Position);
         for (int i = 1; i < segment.Count; i++)
         {
             renderer.OnMove(segment[i].Position);
@@ -1691,7 +1730,7 @@ public partial class PaintOverlayWindow : Window
         {
             var groupId = Guid.NewGuid().ToString("N");
 
-            if (PaintBrushStyle.Calligraphy == true) // TODO: 需要保存笔画类型
+            if (style == PaintBrushStyle.Calligraphy)
             {
                 DrawStrokeToCanvas(ShapeCanvas, geometry, baseSize);
             }
@@ -1704,7 +1743,7 @@ public partial class PaintOverlayWindow : Window
             var newStrokeData = new CustomStrokeData(
                 groupId,
                 segment,
-                PaintBrushStyle.Marker, // TODO: 根据实际类型
+                style,
                 color,
                 baseSize,
                 Guid.NewGuid()
@@ -1736,6 +1775,161 @@ public partial class PaintOverlayWindow : Window
                 ShapeCanvas.Children.Remove(shape);
             }
         }
+    }
+
+    /// <summary>
+    /// 基于橡皮擦路径的部分擦除
+    /// </summary>
+    private void ProcessEraserPathPartialErase()
+    {
+        if (_customStrokes.Count == 0 || _eraserPath.Count == 0) return;
+
+        // 需要删除的笔画索引（倒序遍历以安全删除）
+        for (int i = _customStrokes.Count - 1; i >= 0; i--)
+        {
+            var stroke = _customStrokes[i];
+            if (!IsStrokeNearEraserPath(stroke)) continue;
+
+            // 分割笔画：找出不在橡皮擦路径附近的段落
+            var segments = SplitStrokeOutsideEraserPath(stroke);
+
+            // 移除原笔画
+            _customStrokes.RemoveAt(i);
+            RemoveCalligraphyGroupById(stroke.GroupId);
+
+            // 重新绘制未删除的段落
+            foreach (var segment in segments)
+            {
+                RedrawStrokeSegment(segment);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 判断笔画是否靠近橡皮擦路径
+    /// </summary>
+    private bool IsStrokeNearEraserPath(CustomStrokeData stroke)
+    {
+        foreach (var point in stroke.Points)
+        {
+            if (IsPointNearEraserPath(point.Position))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 判断点是否靠近橡皮擦路径
+    /// </summary>
+    private bool IsPointNearEraserPath(WpfPoint point)
+    {
+        double eraserRadius = _eraserSize * 0.5;
+
+        for (int i = 0; i < _eraserPath.Count; i++)
+        {
+            var eraserPoint = _eraserPath[i];
+
+            // 检查点是否在橡皮擦点的圆形范围内
+            double distance = (point - eraserPoint).Length;
+            if (distance <= eraserRadius)
+            {
+                return true;
+            }
+
+            // 检查点是否在橡皮擦路径段的附近
+            if (i < _eraserPath.Count - 1)
+            {
+                var nextEraserPoint = _eraserPath[i + 1];
+                if (IsPointNearLineSegment(point, eraserPoint, nextEraserPoint, eraserRadius))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 判断点是否靠近线段
+    /// </summary>
+    private static bool IsPointNearLineSegment(WpfPoint point, WpfPoint lineStart, WpfPoint lineEnd, double threshold)
+    {
+        var lineVec = lineEnd - lineStart;
+        var pointVec = point - lineStart;
+
+        double lineLength = lineVec.Length;
+        if (lineLength < 0.001) return false;
+
+        lineVec.Normalize();
+
+        // 计算投影
+        double projection = pointVec.X * lineVec.X + pointVec.Y * lineVec.Y;
+
+        // 找到线段上最近的点
+        WpfPoint closestPoint;
+        if (projection <= 0)
+        {
+            closestPoint = lineStart;
+        }
+        else if (projection >= lineLength)
+        {
+            closestPoint = lineEnd;
+        }
+        else
+        {
+            closestPoint = lineStart + lineVec * projection;
+        }
+
+        // 计算距离
+        double distance = (point - closestPoint).Length;
+        return distance <= threshold;
+    }
+
+    /// <summary>
+    /// 将笔画分割成多个段落，只保留不在橡皮擦路径附近的部分
+    /// </summary>
+    private List<List<StrokePointData>> SplitStrokeOutsideEraserPath(CustomStrokeData stroke)
+    {
+        var segments = new List<List<StrokePointData>>();
+        var currentSegment = new List<StrokePointData>();
+        bool isNearEraser = false;
+
+        foreach (var point in stroke.Points)
+        {
+            bool pointNearEraser = IsPointNearEraserPath(point.Position);
+
+            if (pointNearEraser != isNearEraser)
+            {
+                // 状态改变：进入/离开橡皮擦影响范围
+                if (currentSegment.Count > 0)
+                {
+                    // 保存当前段落
+                    if (!isNearEraser) // 只保留不在橡皮擦范围内的段落
+                    {
+                        segments.Add(new List<StrokePointData>(currentSegment));
+                    }
+                    currentSegment.Clear();
+                }
+
+                isNearEraser = pointNearEraser;
+            }
+
+            if (!isNearEraser)
+            {
+                currentSegment.Add(point);
+            }
+        }
+
+        // 添加最后一个段落
+        if (currentSegment.Count > 0)
+        {
+            segments.Add(currentSegment);
+        }
+
+        return segments;
     }
 
     private void RemoveCalligraphyGroup(Shape shape)

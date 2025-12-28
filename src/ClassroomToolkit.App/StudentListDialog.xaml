@@ -50,7 +50,7 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+            <Grid x:Name="TitleBarGrid" Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
                     <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"/>
                     <TextBlock Text="学生名单" FontWeight="Bold" Foreground="#333"/>
@@ -63,7 +63,7 @@
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
 
             <!-- 2. 名单区域 -->
-            <ScrollViewer Grid.Row="1" Margin="16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="ListScrollViewer" Grid.Row="1" Margin="16" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="StudentItems">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -123,7 +123,7 @@
             </ScrollViewer>
 
             <!-- 3. 底部 -->
-            <Grid Grid.Row="2" Margin="16,0,16,16">
+            <Grid x:Name="FooterGrid" Grid.Row="2" Margin="16,0,16,16">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="8" Height="8" Fill="{StaticResource Brush_Danger}" Margin="0,0,6,0"/>
                     <TextBlock Text="红点标记表示本轮未被点名" FontSize="12" Foreground="#888"/>

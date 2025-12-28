@@ -876,8 +876,8 @@ public partial class RollCallWindow : Window
         var scale = Math.Min(availableWidth / totalWidth, availableHeight / maxHeight);
         scale = Math.Max(0.1, scale) * paddingScale;
 
-        BigNameText.FontSize = Math.Max(18, baseNameFont * scale);
-        IdText.FontSize = Math.Max(12, baseNameFont * idScale * scale);
+        BigNameText.FontSize = Math.Max(12, baseNameFont * scale);
+        IdText.FontSize = Math.Max(10, baseNameFont * idScale * scale);
     }
 
     private WpfSize MeasureText(string text, TextBlock textBlock, double fontSize)
