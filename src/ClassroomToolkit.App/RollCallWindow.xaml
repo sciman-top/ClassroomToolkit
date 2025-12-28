@@ -54,68 +54,79 @@
         </Border.Effect>
 
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="56"/> <!-- Toolbar -->
-                <RowDefinition Height="*"/>  <!-- Main Content -->
-                <RowDefinition Height="Auto"/> <!-- Bottom Controls (Groups/TimerControls) -->
-            </Grid.RowDefinitions>
+            <!-- 顶部品牌色装饰条 -->
+            <Border Height="3" VerticalAlignment="Top" CornerRadius="3,3,0,0" ClipToBounds="True">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
 
-            <!-- 1. 顶部工具栏 - 现代升级版 -->
-            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
-                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                    <ColumnDefinition Width="Auto"/> <!-- Right: System -->
-                </Grid.ColumnDefinitions>
+            <Grid Margin="0,3,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="56"/> <!-- Toolbar -->
+                    <RowDefinition Height="*"/>  <!-- Main Content -->
+                    <RowDefinition Height="Auto"/> <!-- Bottom Controls (Groups/TimerControls) -->
+                </Grid.RowDefinitions>
 
-                <!-- 左侧功能区 -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0">
-                    <!-- 模式切换 -->
-                    <Button Style="{StaticResource Style_SecondaryButton}"
-                            Click="OnToggleModeClick" Padding="14,8" Margin="0,0,10,0" MinWidth="120">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Fill="{StaticResource Brush_Foreground}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0">
-                                <Path.Style>
-                                    <Style TargetType="Path">
-                                        <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
-                                                <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Path.Style>
-                            </Path>
-                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
+                <!-- 1. 顶部工具栏 - 现代升级版 -->
+                <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
+                        <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                        <ColumnDefinition Width="Auto"/> <!-- Right: System -->
+                    </Grid.ColumnDefinitions>
 
-                    <!-- 班级选择 (仅点名模式) -->
-                    <ComboBox Width="110" Height="36"
-                              ItemsSource="{Binding AvailableClasses}"
-                              SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
-                              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                              SelectionChanged="OnClassSelectionChanged"
-                              VerticalContentAlignment="Center"
-                              ToolTip="切换班级"/>
-                </StackPanel>
+                    <!-- 左侧功能区 -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0">
+                        <!-- 模式切换 -->
+                        <Button Style="{StaticResource Style_SecondaryButton}"
+                                Click="OnToggleModeClick" Padding="14,8" Margin="0,0,10,0" MinWidth="120">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Fill="{StaticResource Brush_Foreground}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0">
+                                    <Path.Style>
+                                        <Style TargetType="Path">
+                                            <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
+                                                    <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Path.Style>
+                                </Path>
+                                <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
 
-                <!-- 右侧：系统按钮 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
-                    </Button>
+                        <!-- 班级选择 (仅点名模式) -->
+                        <ComboBox Width="110" Height="36"
+                                  ItemsSource="{Binding AvailableClasses}"
+                                  SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
+                                  Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
+                                  SelectionChanged="OnClassSelectionChanged"
+                                  VerticalContentAlignment="Center"
+                                  ToolTip="切换班级"/>
+                    </StackPanel>
 
-                    <Rectangle Width="1" Height="22" Fill="{StaticResource Brush_Border}" Margin="8,0"/>
+                    <!-- 右侧：系统按钮 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
+                        <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
+                            <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
 
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
-                        <Rectangle Width="14" Height="2.5" Fill="{StaticResource Brush_Foreground}"/>
-                    </Button>
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭">
-                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="12" Height="12"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
+                        <Rectangle Width="1" Height="22" Fill="{StaticResource Brush_Border}" Margin="8,0"/>
+
+                        <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
+                            <Rectangle Width="14" Height="2.5" Fill="{StaticResource Brush_Foreground}"/>
+                        </Button>
+                        <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭">
+                            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="12" Height="12"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
 
             <!-- 2. 内容区 -->
 
@@ -271,6 +282,7 @@
                 </StackPanel>
             </Grid>
 
+            </Grid>
         </Grid>
     </Border>
 </Window>

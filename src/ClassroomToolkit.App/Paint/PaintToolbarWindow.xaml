@@ -80,7 +80,7 @@
         </Style>
     </Window.Resources>
 
-    <!-- 主容器：胶囊形状，玻璃态效果 -->
+    <!-- 主容器：胶囊形状，玻璃态效果 + 品牌装饰 -->
     <Border x:Name="ToolbarContainer"
             Background="{StaticResource Gradient_Glass}"
             BorderBrush="{StaticResource Brush_Border}"
@@ -92,7 +92,18 @@
             <DropShadowEffect Color="Black" Opacity="0.12" BlurRadius="15" ShadowDepth="3"/>
         </Border.Effect>
 
-        <Grid x:Name="ToolbarRoot" Background="Transparent">
+        <Grid>
+            <!-- 顶部品牌色装饰线 -->
+            <Border Height="2" VerticalAlignment="Top" CornerRadius="2,2,0,0" ClipToBounds="True" Margin="8,0,8,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Grid x:Name="ToolbarRoot" Background="Transparent" Margin="0,2,0,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
                 <!-- 0. 拖动把手 (Drag Handle) - 点状设计 -->
@@ -177,6 +188,7 @@
                 </Button>
 
             </StackPanel>
+        </Grid>
         </Grid>
     </Border>
 </Window>

@@ -221,16 +221,51 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         using (var ctx = geometry.Open())
         {
+            double targetSign = 0;
+            const double areaEpsilon = 1e-6;
+
             for (int i = 0; i < count - 1; i++)
             {
-                ctx.BeginFigure(leftEdge[i], isFilled: true, isClosed: true);
-                ctx.LineTo(leftEdge[i + 1], isStroked: false, isSmoothJoin: false);
-                ctx.LineTo(rightEdge[i + 1], isStroked: false, isSmoothJoin: false);
-                ctx.LineTo(rightEdge[i], isStroked: false, isSmoothJoin: false);
+                var l0 = leftEdge[i];
+                var l1 = leftEdge[i + 1];
+                var r1 = rightEdge[i + 1];
+                var r0 = rightEdge[i];
+
+                double area = QuadSignedArea(l0, l1, r1, r0);
+                if (targetSign == 0 && Math.Abs(area) > areaEpsilon)
+                {
+                    targetSign = Math.Sign(area);
+                }
+
+                bool flip = targetSign != 0 && area * targetSign < 0;
+
+                ctx.BeginFigure(l0, isFilled: true, isClosed: true);
+                if (flip)
+                {
+                    ctx.LineTo(r0, isStroked: false, isSmoothJoin: false);
+                    ctx.LineTo(r1, isStroked: false, isSmoothJoin: false);
+                    ctx.LineTo(l1, isStroked: false, isSmoothJoin: false);
+                }
+                else
+                {
+                    ctx.LineTo(l1, isStroked: false, isSmoothJoin: false);
+                    ctx.LineTo(r1, isStroked: false, isSmoothJoin: false);
+                    ctx.LineTo(r0, isStroked: false, isSmoothJoin: false);
+                }
             }
 
-            DrawCap(ctx, _points[0].Position, _points[0].Width * 0.5);
-            DrawCap(ctx, _points[count - 1].Position, _points[count - 1].Width * 0.5);
+            if (targetSign == 0)
+            {
+                targetSign = 1;
+            }
+
+            var startTangent = _points[1].Position - _points[0].Position;
+            var endTangent = _points[count - 1].Position - _points[count - 2].Position;
+            var startOutward = EnsureNormalized(-startTangent, new Vector(0, 1));
+            var endOutward = EnsureNormalized(endTangent, new Vector(0, 1));
+
+            DrawCap(ctx, leftEdge[0], rightEdge[0], _points[0].Position, startOutward, targetSign);
+            DrawCap(ctx, leftEdge[count - 1], rightEdge[count - 1], _points[count - 1].Position, endOutward, targetSign);
         }
 
         return geometry;
@@ -273,12 +308,118 @@ public class MarkerBrushRenderer : IBrushRenderer
         return pen;
     }
 
-    private static void DrawCap(StreamGeometryContext ctx, WpfPoint center, double radius)
+    private static void DrawCap(StreamGeometryContext ctx, WpfPoint start, WpfPoint end, WpfPoint center, Vector outward, double targetSign)
     {
+        double radius = (start - center).Length;
         if (radius < 0.1) return;
-        var start = new WpfPoint(center.X - radius, center.Y);
+
+        var sweep = ChooseCapSweep(center, start, end, outward);
+        var mid = CapMidPoint(center, radius, sweep, start, end);
+        double sign = TriangleSignedArea(start, mid, end);
+
+        if (sign * targetSign < 0)
+        {
+            var temp = start;
+            start = end;
+            end = temp;
+            sweep = ChooseCapSweep(center, start, end, outward);
+        }
+
         ctx.BeginFigure(start, isFilled: true, isClosed: true);
-        ctx.ArcTo(new WpfPoint(center.X + radius, center.Y), new WpfSize(radius, radius), 0, false, SweepDirection.Clockwise, isStroked: false, isSmoothJoin: true);
-        ctx.ArcTo(start, new WpfSize(radius, radius), 0, false, SweepDirection.Clockwise, isStroked: false, isSmoothJoin: true);
+        ctx.ArcTo(end, new WpfSize(radius, radius), 0, false, sweep, isStroked: false, isSmoothJoin: true);
+    }
+
+    private static Vector EnsureNormalized(Vector value, Vector fallback)
+    {
+        if (value.LengthSquared < 0.0001)
+        {
+            if (fallback.LengthSquared < 0.0001)
+            {
+                return new Vector(0, 1);
+            }
+            fallback.Normalize();
+            return fallback;
+        }
+        value.Normalize();
+        return value;
+    }
+
+    private static double QuadSignedArea(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3)
+    {
+        double area = 0;
+        area += (p0.X * p1.Y - p1.X * p0.Y);
+        area += (p1.X * p2.Y - p2.X * p1.Y);
+        area += (p2.X * p3.Y - p3.X * p2.Y);
+        area += (p3.X * p0.Y - p0.X * p3.Y);
+        return area * 0.5;
+    }
+
+    private static double TriangleSignedArea(WpfPoint p0, WpfPoint p1, WpfPoint p2)
+    {
+        return (p1.X - p0.X) * (p2.Y - p0.Y) - (p1.Y - p0.Y) * (p2.X - p0.X);
+    }
+
+    private static SweepDirection ChooseCapSweep(WpfPoint center, WpfPoint start, WpfPoint end, Vector outward)
+    {
+        var vStart = start - center;
+        var vEnd = end - center;
+        if (vStart.LengthSquared < 0.0001 || vEnd.LengthSquared < 0.0001)
+        {
+            return SweepDirection.Clockwise;
+        }
+
+        double angleStart = Math.Atan2(vStart.Y, vStart.X);
+        double angleEnd = Math.Atan2(vEnd.Y, vEnd.X);
+
+        double deltaClockwise = NormalizeAnglePositive(angleEnd - angleStart);
+        double deltaCounter = NormalizeAnglePositive(angleStart - angleEnd);
+
+        double midClockwise = angleStart + (deltaClockwise * 0.5);
+        double midCounter = angleStart - (deltaCounter * 0.5);
+
+        var midClockDir = new Vector(Math.Cos(midClockwise), Math.Sin(midClockwise));
+        var midCounterDir = new Vector(Math.Cos(midCounter), Math.Sin(midCounter));
+
+        var outwardNorm = EnsureNormalized(outward, midClockDir);
+        double dotClock = Vector.Multiply(midClockDir, outwardNorm);
+        double dotCounter = Vector.Multiply(midCounterDir, outwardNorm);
+
+        return dotClock >= dotCounter ? SweepDirection.Clockwise : SweepDirection.Counterclockwise;
+    }
+
+    private static double NormalizeAnglePositive(double angle)
+    {
+        const double twoPi = Math.PI * 2;
+        while (angle < 0)
+        {
+            angle += twoPi;
+        }
+        while (angle >= twoPi)
+        {
+            angle -= twoPi;
+        }
+        return angle;
+    }
+
+    private static WpfPoint CapMidPoint(WpfPoint center, double radius, SweepDirection sweep, WpfPoint start, WpfPoint end)
+    {
+        var vStart = start - center;
+        var vEnd = end - center;
+        if (vStart.LengthSquared < 0.0001 || vEnd.LengthSquared < 0.0001)
+        {
+            return new WpfPoint(center.X + radius, center.Y);
+        }
+
+        double angleStart = Math.Atan2(vStart.Y, vStart.X);
+        double angleEnd = Math.Atan2(vEnd.Y, vEnd.X);
+        double delta = sweep == SweepDirection.Clockwise
+            ? NormalizeAnglePositive(angleEnd - angleStart)
+            : NormalizeAnglePositive(angleStart - angleEnd);
+
+        double midAngle = sweep == SweepDirection.Clockwise
+            ? angleStart + (delta * 0.5)
+            : angleStart - (delta * 0.5);
+
+        return new WpfPoint(center.X + Math.Cos(midAngle) * radius, center.Y + Math.Sin(midAngle) * radius);
     }
 }

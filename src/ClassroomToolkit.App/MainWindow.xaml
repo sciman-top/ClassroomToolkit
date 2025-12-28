@@ -88,32 +88,9 @@
             <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="5" Opacity="0.1"/>
         </Border.Effect>
 
-        <Grid Margin="14">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <!-- 1. 核心功能区 -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="PaintButton" Content="屏幕画笔"
-                        Style="{StaticResource Style_TileButton}"
-                        Tag="{StaticResource Icon_Pen}"
-                        Click="OnPaintClick"
-                        ToolTip="开启画笔 (长按设置)"
-                        behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}" />
-
-                <Button x:Name="RollCallButton" Content="点名/计时"
-                        Style="{StaticResource Style_TileButton}"
-                        Tag="{StaticResource Icon_RollCall}"
-                        Click="OnRollCallClick"
-                        ToolTip="开启点名器 (长按设置)"
-                        behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}" />
-            </StackPanel>
-
-            <!-- 品牌色分割线 -->
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="8,12,8,8"
-                    Height="2" CornerRadius="1">
+        <Grid>
+            <!-- 顶部品牌色装饰条 -->
+            <Border Height="3" VerticalAlignment="Top" CornerRadius="3,3,0,0" ClipToBounds="True">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                         <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
@@ -122,41 +99,76 @@
                 </Border.Background>
             </Border>
 
-            <!-- 2. 底部工具栏 -->
-            <Grid Grid.Row="1" Margin="0,6,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <Grid Margin="14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <!-- 左侧：最小化 -->
-                <Button x:Name="MinimizeButton" Grid.Column="0"
-                        Style="{StaticResource Style_IconButton}"
-                        Click="OnMinimizeClick" ToolTip="最小化">
-                     <Path Data="M2,11 L14,11 L14,13 L2,13 Z" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
-                </Button>
+                <!-- 1. 核心功能区 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="PaintButton" Content="屏幕画笔"
+                            Style="{StaticResource Style_TileButton}"
+                            Tag="{StaticResource Icon_Pen}"
+                            Click="OnPaintClick"
+                            ToolTip="开启画笔 (长按设置)"
+                            behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}" />
 
-                <!-- 右侧：辅助功能 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button x:Name="SettingsButton"
-                            Style="{StaticResource Style_IconButton}"
-                            Click="OnLauncherSettingsClick" ToolTip="全局设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
-                    </Button>
-
-                    <Button x:Name="AboutButton"
-                            Style="{StaticResource Style_IconButton}"
-                            Click="OnAboutClick" ToolTip="关于软件">
-                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
-                    </Button>
-
-                    <Button x:Name="ExitButton"
-                            Style="{StaticResource Style_IconButton}"
-                            Click="OnExitClick" ToolTip="退出程序">
-                        <Path Data="{StaticResource Icon_Power}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="18" Height="18"/>
-                    </Button>
+                    <Button x:Name="RollCallButton" Content="点名/计时"
+                            Style="{StaticResource Style_TileButton}"
+                            Tag="{StaticResource Icon_RollCall}"
+                            Click="OnRollCallClick"
+                            ToolTip="开启点名器 (长按设置)"
+                            behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}" />
                 </StackPanel>
+
+                <!-- 品牌色分割线 -->
+                <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="8,12,8,8"
+                        Height="2" CornerRadius="1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                            <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <!-- 2. 底部工具栏 -->
+                <Grid Grid.Row="1" Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 左侧：最小化 -->
+                    <Button x:Name="MinimizeButton" Grid.Column="0"
+                            Style="{StaticResource Style_IconButton}"
+                            Click="OnMinimizeClick" ToolTip="最小化">
+                         <Path Data="M2,11 L14,11 L14,13 L2,13 Z" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
+                    </Button>
+
+                    <!-- 右侧：辅助功能 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="SettingsButton"
+                                Style="{StaticResource Style_IconButton}"
+                                Click="OnLauncherSettingsClick" ToolTip="全局设置">
+                            <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+
+                        <Button x:Name="AboutButton"
+                                Style="{StaticResource Style_IconButton}"
+                                Click="OnAboutClick" ToolTip="关于软件">
+                            <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+
+                        <Button x:Name="ExitButton"
+                                Style="{StaticResource Style_IconButton}"
+                                Click="OnExitClick" ToolTip="退出程序">
+                            <Path Data="{StaticResource Icon_Power}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
     </Border>
