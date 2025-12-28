@@ -41,9 +41,10 @@
                 <TextBox x:Name="MinutesBox" Padding="8" BorderThickness="1" BorderBrush="#DDD" VerticalContentAlignment="Center"/>
                 
                 <Button x:Name="DiagnosticButton" Content="运行系统兼容性诊断" 
-                        Style="{StaticResource Style_SecondaryButton}"
+                        Style="{StaticResource Style_PrimaryButton}"
                         Click="OnDiagnosticClick"
-                        HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                        Height="36"
+                        Margin="0,20,0,0"/>
             </StackPanel>
 
             <!-- 3. 按钮 -->
