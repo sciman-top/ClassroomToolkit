@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
 using MediaColor = System.Windows.Media.Color;
+using MediaBrush = System.Windows.Media.Brush;
+using MediaPen = System.Windows.Media.Pen;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
 using System.Windows.Interop;
@@ -1375,11 +1377,11 @@ public partial class PaintOverlayWindow : Window
         };
     }
 
-    private Pen BuildShapePen()
+    private MediaPen BuildShapePen()
     {
         var brush = new SolidColorBrush(EffectiveBrushColor());
         brush.Freeze();
-        var pen = new Pen(brush, Math.Max(1.0, _brushSize))
+        var pen = new MediaPen(brush, Math.Max(1.0, _brushSize))
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
@@ -1408,7 +1410,7 @@ public partial class PaintOverlayWindow : Window
             ctx.BeginFigure(start, isFilled: false, isClosed: false);
             ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
         }
-        var pen = new Pen(Brushes.Black, Math.Max(1.0, _eraserSize))
+        var pen = new MediaPen(Brushes.Black, Math.Max(1.0, _eraserSize))
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
@@ -1599,7 +1601,7 @@ public partial class PaintOverlayWindow : Window
         RenderAndBlend(geometry, brush, null, erase: false);
     }
 
-    private void CommitGeometryStroke(Geometry geometry, Pen pen)
+    private void CommitGeometryStroke(Geometry geometry, MediaPen pen)
     {
         RenderAndBlend(geometry, null, pen, erase: false);
     }
@@ -1609,7 +1611,7 @@ public partial class PaintOverlayWindow : Window
         RenderAndBlend(geometry, Brushes.White, null, erase: true);
     }
 
-    private void RenderAndBlend(Geometry geometry, Brush? fill, Pen? pen, bool erase)
+    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase)
     {
         EnsureRasterSurface();
         if (_rasterSurface == null)
@@ -1633,8 +1635,8 @@ public partial class PaintOverlayWindow : Window
 
     private bool TryRenderGeometry(
         Geometry geometry,
-        Brush? fill,
-        Pen? pen,
+        MediaBrush? fill,
+        MediaPen? pen,
         out Int32Rect destRect,
         out byte[] pixels,
         out int stride)
