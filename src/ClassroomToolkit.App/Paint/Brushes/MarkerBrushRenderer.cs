@@ -15,6 +15,10 @@ public class MarkerBrushRenderer : IBrushRenderer
     private const double MinWidthFactor = 0.7;
     private const double PositionSmoothing = 0.6;
     private const double MinMoveDistance = 0.8;
+    private const bool DebugDrawEdges = false;
+
+    private static readonly Pen DebugLeftPen = CreateFrozenPen(Colors.Red, 1);
+    private static readonly Pen DebugRightPen = CreateFrozenPen(Colors.DodgerBlue, 1);
 
     private struct MarkerPoint
     {
@@ -36,6 +40,8 @@ public class MarkerBrushRenderer : IBrushRenderer
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
     private double _maxVelocity;
+    private List<WpfPoint>? _debugLeftEdge;
+    private List<WpfPoint>? _debugRightEdge;
 
     public bool IsActive => _isActive;
 
@@ -108,6 +114,19 @@ public class MarkerBrushRenderer : IBrushRenderer
         var brush = new SolidColorBrush(GetMarkerColor());
         brush.Freeze();
         dc.DrawGeometry(brush, null, geometry);
+
+        if (DebugDrawEdges && _debugLeftEdge != null && _debugRightEdge != null)
+        {
+            for (int i = 1; i < _debugLeftEdge.Count; i++)
+            {
+                dc.DrawLine(DebugLeftPen, _debugLeftEdge[i - 1], _debugLeftEdge[i]);
+            }
+
+            for (int i = 1; i < _debugRightEdge.Count; i++)
+            {
+                dc.DrawLine(DebugRightPen, _debugRightEdge[i - 1], _debugRightEdge[i]);
+            }
+        }
     }
 
     public Geometry? GetLastStrokeGeometry()
@@ -150,7 +169,6 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         var leftEdge = new List<WpfPoint>(_points.Count);
         var rightEdge = new List<WpfPoint>(_points.Count);
-
         Vector lastNormal = new Vector(0, 1);
 
         for (int i = 0; i < _points.Count; i++)
@@ -175,9 +193,15 @@ public class MarkerBrushRenderer : IBrushRenderer
             var normal = GetNormalFromVector(dir, lastNormal);
             lastNormal = normal;
 
-            var half = width * 0.5;
+            var half = Math.Max(width * 0.5, 0.1);
             leftEdge.Add(pos + normal * half);
             rightEdge.Add(pos - normal * half);
+        }
+
+        if (DebugDrawEdges)
+        {
+            _debugLeftEdge = leftEdge;
+            _debugRightEdge = rightEdge;
         }
 
         var geometry = new StreamGeometry
@@ -187,51 +211,13 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         using (var ctx = geometry.Open())
         {
-            // ===== 修复绕向问题：绘制单一连续轮廓，保持顺时针方向 =====
-            // 1. 从左边缘起点开始
-            ctx.BeginFigure(leftEdge[0], isFilled: true, isClosed: true);
-
-            // 2. 绘制左边缘（向前）
-            for (int i = 1; i < leftEdge.Count; i++)
+            for (int i = 0; i < leftEdge.Count - 1; i++)
             {
-                ctx.LineTo(leftEdge[i], isStroked: true, isSmoothJoin: true);
-            }
-
-            // 3. 末端圆弧：从左边缘末尾到右边缘末尾（保持顺时针）
-            var lastLeft = leftEdge[^1];
-            var lastRight = rightEdge[^1];
-            double endRadius = Math.Max(_points[^1].Width * 0.5, 0.1);
-
-            // 计算末端圆弧的控制点
-            var endMidPoint = new WpfPoint((lastLeft.X + lastRight.X) * 0.5, (lastLeft.Y + lastRight.Y) * 0.5);
-            var endDir = lastRight - lastLeft;
-            if (endDir.LengthSquared > 0.0001) endDir.Normalize();
-            var endNormal = new Vector(-endDir.Y, endDir.X);
-            var endControlPoint = endMidPoint + endNormal * (endRadius * 0.5);
-
-            // 使用二次贝塞尔曲线模拟圆弧（避免 ArcTo 的绕向问题）
-            ctx.QuadraticBezierTo(endControlPoint, lastRight, isStroked: true, isSmoothJoin: true);
-
-            // 4. 绘制右边缘（向后，从末尾到起点）
-            for (int i = rightEdge.Count - 2; i >= 0; i--)
-            {
+                ctx.BeginFigure(leftEdge[i], isFilled: true, isClosed: true);
+                ctx.LineTo(leftEdge[i + 1], isStroked: true, isSmoothJoin: true);
+                ctx.LineTo(rightEdge[i + 1], isStroked: true, isSmoothJoin: true);
                 ctx.LineTo(rightEdge[i], isStroked: true, isSmoothJoin: true);
             }
-
-            // 5. 起始圆弧：从右边缘起点回到左边缘起点（保持顺时针）
-            var firstRight = rightEdge[0];
-            var firstLeft = leftEdge[0];
-            double startRadius = Math.Max(_points[0].Width * 0.5, 0.1);
-
-            // 计算起始圆弧的控制点
-            var startMidPoint = new WpfPoint((firstRight.X + firstLeft.X) * 0.5, (firstRight.Y + firstLeft.Y) * 0.5);
-            var startDir = firstLeft - firstRight;
-            if (startDir.LengthSquared > 0.0001) startDir.Normalize();
-            var startNormal = new Vector(-startDir.Y, startDir.X);
-            var startControlPoint = startMidPoint + startNormal * (startRadius * 0.5);
-
-            // 使用二次贝塞尔曲线模拟圆弧
-            ctx.QuadraticBezierTo(startControlPoint, firstLeft, isStroked: true, isSmoothJoin: true);
         }
 
         return geometry;
@@ -242,10 +228,28 @@ public class MarkerBrushRenderer : IBrushRenderer
         if (dir.LengthSquared < 0.0001)
         {
             if (fallback.LengthSquared < 0.0001) return new Vector(0, 1);
+            fallback.Normalize();
             return fallback;
         }
 
         dir.Normalize();
-        return new Vector(-dir.Y, dir.X);
+        var normal = new Vector(-dir.Y, dir.X);
+        if (fallback.LengthSquared > 0.0001)
+        {
+            var lastNormal = fallback;
+            lastNormal.Normalize();
+            if (Vector.Multiply(normal, lastNormal) < -0.01)
+            {
+                normal = -normal;
+            }
+        }
+        return normal;
+    }
+
+    private static Pen CreateFrozenPen(WpfColor color, double thickness)
+    {
+        var pen = new Pen(new SolidColorBrush(color), thickness);
+        pen.Freeze();
+        return pen;
     }
 }
