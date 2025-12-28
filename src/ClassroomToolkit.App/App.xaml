@@ -9,6 +9,15 @@
                 <ResourceDictionary Source="Assets/Styles/Icons.xaml"/>
                 <ResourceDictionary Source="Assets/Styles/WidgetStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- 全局样式：优化字体渲染 -->
+            <Style TargetType="Window">
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
