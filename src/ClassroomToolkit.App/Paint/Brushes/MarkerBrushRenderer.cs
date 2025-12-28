@@ -5,6 +5,7 @@ using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
 using WpfColor = System.Windows.Media.Color;
 using WpfBrush = System.Windows.Media.Brush;
+using WpfBrushes = System.Windows.Media.Brushes;
 using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
@@ -239,7 +240,7 @@ public class MarkerBrushRenderer : IBrushRenderer
             if (!penCache.TryGetValue(key, out var cached))
             {
                 double actual = key * PenThicknessQuantization;
-                var pen = new WpfPen(Brushes.Black, actual)
+                var pen = new WpfPen(WpfBrushes.Black, actual)
                 {
                     StartLineCap = PenLineCap.Round,
                     EndLineCap = PenLineCap.Round,
