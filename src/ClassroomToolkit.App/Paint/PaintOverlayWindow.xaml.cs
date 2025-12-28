@@ -72,19 +72,22 @@ public partial class PaintOverlayWindow : Window
         public string? PathData { get; init; }
         public string? CalligraphyGroupId { get; init; }
         public CalligraphyLayerRole? CalligraphyRole { get; init; }
+        public string? CustomStrokeGroupId { get; init; }
 
         public static ShapeSnapshot? FromShape(Shape shape)
         {
             if (shape is Path path)
             {
                 var tag = path.Tag as CalligraphyLayerTag;
+                var customTag = path.Tag as CustomStrokeTag;
                 return new ShapeSnapshot
                 {
                     Type = PaintShapeType.Path,
                     StrokeColor = ResolveColor(path.Fill), // Note: For our filled paths, the "stroke" is the fill
                     PathData = path.Data.ToString(),
                     CalligraphyGroupId = tag?.GroupId,
-                    CalligraphyRole = tag?.Role
+                    CalligraphyRole = tag?.Role,
+                    CustomStrokeGroupId = customTag?.GroupId
                 };
             }
 
@@ -489,7 +492,8 @@ public partial class PaintOverlayWindow : Window
             _eraserPath.Add(e.GetPosition(ShapeCanvas));
             _isErasing = true;
             PushHistory(); // 保存当前状态
-            ShapeCanvas.CaptureMouse();
+            InkLayer.CaptureMouse();
+            e.Handled = true;
         }
         if (_mode != PaintToolMode.Shape)
         {
@@ -582,11 +586,11 @@ public partial class PaintOverlayWindow : Window
 
                 if (_brushStyle == PaintBrushStyle.Calligraphy)
                 {
-                    DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth);
+                    DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth, groupId);
                 }
                 else
                 {
-                    DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, attr.Color);
+                    DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, attr.Color, groupId);
                 }
             }
 
@@ -622,9 +626,9 @@ public partial class PaintOverlayWindow : Window
             e.Handled = true;
             _isErasing = false;
 
-            if (ShapeCanvas.IsMouseCaptured)
+            if (InkLayer.IsMouseCaptured)
             {
-                ShapeCanvas.ReleaseMouseCapture();
+                InkLayer.ReleaseMouseCapture();
             }
 
             // 执行橡皮擦路径的部分擦除
@@ -681,7 +685,7 @@ public partial class PaintOverlayWindow : Window
         return cache;
     }
 
-    public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth)
+    public void DrawStrokeToCanvas(Canvas canvas, Geometry geo, double baseWidth, string groupId)
     {
         if (canvas.Background == null)
         {
@@ -691,8 +695,6 @@ public partial class PaintOverlayWindow : Window
         {
             canvas.CacheMode = CalligraphyInkBleedCache;
         }
-
-        var groupId = Guid.NewGuid().ToString("N");
 
         var washPath = new Path
         {
@@ -726,7 +728,7 @@ public partial class PaintOverlayWindow : Window
         canvas.Children.Add(corePath);
     }
 
-    private void DrawMarkerStrokeToCanvas(Canvas canvas, Geometry geo, MediaColor color)
+    private void DrawMarkerStrokeToCanvas(Canvas canvas, Geometry geo, MediaColor color, string groupId)
     {
         var markerColor = MediaColor.FromArgb(Math.Min(color.A, (byte)0xE6), color.R, color.G, color.B);
         var brush = new SolidColorBrush(markerColor);
@@ -735,7 +737,8 @@ public partial class PaintOverlayWindow : Window
         var path = new Path
         {
             Data = geo,
-            Fill = brush
+            Fill = brush,
+            Tag = new CustomStrokeTag(groupId)
         };
 
         canvas.Children.Add(path);
@@ -1668,8 +1671,8 @@ public partial class PaintOverlayWindow : Window
                 continue;
             }
 
-            // 跳过自定义笔画（有 CalligraphyLayerTag），它们已经被 ProcessCustomStrokesPartialErase 处理
-            if (shape.Tag is CalligraphyLayerTag)
+            // 跳过自定义笔画（有 CalligraphyLayerTag 或 CustomStrokeTag），它们已经被 ProcessCustomStrokesPartialErase 处理
+            if (shape.Tag is CalligraphyLayerTag || shape.Tag is CustomStrokeTag)
             {
                 continue;
             }
@@ -1795,11 +1798,11 @@ public partial class PaintOverlayWindow : Window
 
             if (style == PaintBrushStyle.Calligraphy)
             {
-                DrawStrokeToCanvas(ShapeCanvas, geometry, baseSize);
+                DrawStrokeToCanvas(ShapeCanvas, geometry, baseSize, groupId);
             }
             else
             {
-                DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, color);
+                DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, color, groupId);
             }
 
             // 保存新的笔画数据
@@ -2453,6 +2456,10 @@ public partial class PaintOverlayWindow : Window
             {
                 calligraphyPath.Tag = new CalligraphyLayerTag(snapshot.CalligraphyGroupId, snapshot.CalligraphyRole.Value);
                 ApplyCalligraphyLayerStyle(calligraphyPath, snapshot.CalligraphyRole.Value);
+            }
+            else if (shape is Path customStrokePath && snapshot.CustomStrokeGroupId != null)
+            {
+                customStrokePath.Tag = new CustomStrokeTag(snapshot.CustomStrokeGroupId);
             }
             ShapeCanvas.Children.Add(shape);
         }
