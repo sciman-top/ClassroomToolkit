@@ -142,51 +142,52 @@
                         BorderBrush="#D0E3F5"
                         BorderThickness="1.5"
                         MouseLeftButtonUp="OnRollClick">
-                    <!-- 卡片阴影 - 品牌色光晕 -->
                     <Border.Effect>
                         <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="35" ShadowDepth="0" Opacity="0.25"/>
                     </Border.Effect>
 
-                    <!-- 顶部光泽装饰 -->
-                    <Border CornerRadius="16,16,0,0" Height="1" VerticalAlignment="Top" ClipToBounds="True">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                                <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
+                    <Grid>
+                        <!-- 顶部光泽装饰 -->
+                        <Border CornerRadius="16,16,0,0" Height="1" VerticalAlignment="Top" ClipToBounds="True">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                                    <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
 
-                    <!-- 核心名字展示 -->
-                    <Grid x:Name="NameCardBody" Margin="36,18"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          SnapsToDevicePixels="True" UseLayoutRounding="True"
-                          SizeChanged="OnNameCardSizeChanged">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                    x:Name="NameContainer" RenderTransformOrigin="0.5,0.5">
-                            <StackPanel.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </StackPanel.RenderTransform>
+                        <!-- 核心名字展示 -->
+                        <Grid x:Name="NameCardBody" Margin="36,18"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                              SnapsToDevicePixels="True" UseLayoutRounding="True"
+                              SizeChanged="OnNameCardSizeChanged">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        x:Name="NameContainer" RenderTransformOrigin="0.5,0.5">
+                                <StackPanel.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </StackPanel.RenderTransform>
 
-                            <!-- 学号 (可选显示) -->
-                            <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}"
-                                       Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                       Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,24,0" FontWeight="Light"
-                                       TextOptions.TextFormattingMode="Display"
-                                       TextOptions.TextRenderingMode="ClearType"/>
+                                <!-- 学号 (可选显示) -->
+                                <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}"
+                                           Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
+                                           Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,24,0" FontWeight="Light"
+                                           TextOptions.TextFormattingMode="Display"
+                                           TextOptions.TextRenderingMode="ClearType"/>
 
-                            <!-- 姓名 -->
-                            <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}"
-                                       Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                       Foreground="{StaticResource Brush_Foreground}" FontWeight="Bold"
-                                       TextAlignment="Center"
-                                       TextTrimming="None"
-                                       TextWrapping="NoWrap"
-                                       TextOptions.TextFormattingMode="Display"
-                                       TextOptions.TextRenderingMode="ClearType">
-                                <!-- 这里的 Effect 会在代码中动态控制 (Blur) -->
-                            </TextBlock>
-                        </StackPanel>
+                                <!-- 姓名 -->
+                                <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}"
+                                           Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
+                                           Foreground="{StaticResource Brush_Foreground}" FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextTrimming="None"
+                                           TextWrapping="NoWrap"
+                                           TextOptions.TextFormattingMode="Display"
+                                           TextOptions.TextRenderingMode="ClearType">
+                                    <!-- 这里的 Effect 会在代码中动态控制 (Blur) -->
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
@@ -197,25 +198,27 @@
                     <Border.Effect>
                         <DropShadowEffect Color="#00FFAA" BlurRadius="25" ShadowDepth="0" Opacity="0.25"/>
                     </Border.Effect>
-                    <!-- 顶部发光装饰线 -->
-                    <Border CornerRadius="16,16,0,0" Height="2" VerticalAlignment="Top" ClipToBounds="True">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#00FFAA" Offset="0"/>
-                                <GradientStop Color="#00C896" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-                     <Viewbox Stretch="Uniform" Margin="20">
-                        <TextBlock Text="{Binding TimeDisplay}"
-                                   Foreground="#00FFAA"
-                                   FontFamily="Consolas"
-                                   FontWeight="Bold">
-                             <TextBlock.Effect>
-                                 <DropShadowEffect Color="#00FFAA" BlurRadius="30" ShadowDepth="0" Opacity="0.7"/>
-                             </TextBlock.Effect>
-                        </TextBlock>
-                    </Viewbox>
+                    <Grid>
+                        <!-- 顶部发光装饰线 -->
+                        <Border CornerRadius="16,16,0,0" Height="2" VerticalAlignment="Top" ClipToBounds="True">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#00FFAA" Offset="0"/>
+                                    <GradientStop Color="#00C896" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Viewbox Stretch="Uniform" Margin="20">
+                            <TextBlock Text="{Binding TimeDisplay}"
+                                       Foreground="#00FFAA"
+                                       FontFamily="Consolas"
+                                       FontWeight="Bold">
+                                 <TextBlock.Effect>
+                                     <DropShadowEffect Color="#00FFAA" BlurRadius="30" ShadowDepth="0" Opacity="0.7"/>
+                                 </TextBlock.Effect>
+                            </TextBlock>
+                        </Viewbox>
+                    </Grid>
                 </Border>
             </Grid>
 
