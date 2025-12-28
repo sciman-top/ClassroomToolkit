@@ -264,24 +264,59 @@ public partial class RollCallSettingsDialog : Window
         try
         {
             using var synth = new SpeechSynthesizer();
-            foreach (var voice in synth.GetInstalledVoices())
+            var allVoices = synth.GetInstalledVoices().ToList();
+
+            // 按语言分组，优先显示中文，然后其他语言
+            var chineseVoices = new List<InstalledVoice>();
+            var otherVoices = new List<InstalledVoice>();
+
+            foreach (var voice in allVoices)
             {
                 if (!voice.Enabled)
                 {
                     continue;
                 }
-                var name = voice.VoiceInfo.Name;
-                if (SilentVoices.Contains(name))
+
+                var info = voice.VoiceInfo;
+
+                // 过滤掉已知的"静音"发音人
+                if (SilentVoices.Contains(info.Name))
                 {
                     continue;
                 }
-                voices.Add(new ComboOption(name, name));
+
+                // 根据语言分组
+                if (info.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+                {
+                    chineseVoices.Add(voice);
+                }
+                else
+                {
+                    otherVoices.Add(voice);
+                }
+            }
+
+            // 添加中文发音人
+            foreach (var voice in chineseVoices)
+            {
+                var info = voice.VoiceInfo;
+                var label = FormatVoiceLabel(info, true);
+                voices.Add(new ComboOption(info.Name, label));
+            }
+
+            // 添加其他语言发音人
+            foreach (var voice in otherVoices)
+            {
+                var info = voice.VoiceInfo;
+                var label = FormatVoiceLabel(info, false);
+                voices.Add(new ComboOption(info.Name, label));
             }
         }
         catch
         {
             voices.Clear();
         }
+
         if (voices.Count == 0)
         {
             voices.Add(new ComboOption(string.Empty, "暂无可选发音人"));
@@ -291,9 +326,11 @@ public partial class RollCallSettingsDialog : Window
         {
             SpeechVoiceCombo.IsEnabled = true;
         }
+
         SpeechVoiceCombo.ItemsSource = voices;
         SpeechVoiceCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechVoiceCombo.SelectedValuePath = nameof(ComboOption.Value);
+
         if (voices.Count == 0)
         {
             SpeechVoiceCombo.SelectedValue = string.Empty;
@@ -307,6 +344,62 @@ public partial class RollCallSettingsDialog : Window
             }
             SpeechVoiceCombo.SelectedValue = target;
         }
+    }
+
+    /// <summary>
+    /// 格式化发音人标签，显示名称、语言和性别信息
+    /// </summary>
+    private static string FormatVoiceLabel(System.Speech.Synthesis.VoiceInfo info, bool isChinese)
+    {
+        var languageName = GetLanguageDisplayName(info.Culture.Name);
+        var gender = GetGenderDisplayName(info);
+
+        // 中文发音人优先，在标签前加"【推荐】"
+        var prefix = isChinese ? "【推荐】" : "";
+
+        // 格式：名称（语言，性别）
+        return $"{prefix}{info.Name}（{languageName}，{gender}）";
+    }
+
+    /// <summary>
+    /// 获取语言的显示名称
+    /// </summary>
+    private static string GetLanguageDisplayName(string cultureName)
+    {
+        try
+        {
+            var culture = new System.Globalization.CultureInfo(cultureName);
+            var nativeName = culture.NativeName; // 本地语言名称
+            var englishName = culture.EnglishName; // 英文名称
+
+            // 如果本地名称和英文名称不同，显示两个
+            if (nativeName != englishName && !string.IsNullOrWhiteSpace(nativeName))
+            {
+                // 提取本地名称的第一部分（避免显示过于冗长）
+                var nativeShort = nativeName.Split('(')[0].Trim();
+                return $"{englishName}·{nativeShort}";
+            }
+
+            return englishName;
+        }
+        catch
+        {
+            return cultureName.ToUpperInvariant();
+        }
+    }
+
+    /// <summary>
+    /// 获取性别的显示名称
+    /// </summary>
+    private static string GetGenderDisplayName(System.Speech.Synthesis.VoiceInfo info)
+    {
+        return info.Gender switch
+        {
+            System.Speech.Synthesis.VoiceGender.Male => "男",
+            System.Speech.Synthesis.VoiceGender.Female => "女",
+            System.Speech.Synthesis.VoiceGender.Neutral => "中性",
+            _ => "未知"
+        };
     }
 
     private void BuildOutputCombo(string? engine, string? current)
