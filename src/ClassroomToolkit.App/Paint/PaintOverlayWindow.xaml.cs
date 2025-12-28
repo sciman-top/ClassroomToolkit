@@ -1641,7 +1641,7 @@ public partial class PaintOverlayWindow : Window
             // 重新绘制未删除的段落
             foreach (var segment in segments)
             {
-                RedrawStrokeSegment(segment);
+                RedrawStrokeSegment(segment, stroke.Style, stroke.Color, stroke.BaseSize);
             }
         }
     }
@@ -1755,10 +1755,12 @@ public partial class PaintOverlayWindow : Window
     /// <summary>
     /// 创建临时渲染器用于重绘笔画段落
     /// </summary>
-    private IBrushRenderer CreateRendererForStroke()
+    private IBrushRenderer CreateRendererForStroke(PaintBrushStyle style)
     {
-        // 简化：总是使用 MarkerBrushRenderer
-        // TODO: 根据笔画类型选择合适的渲染器
+        if (style == PaintBrushStyle.Calligraphy)
+        {
+            return new VariableWidthBrushRenderer();
+        }
         return new MarkerBrushRenderer();
     }
 
@@ -1800,7 +1802,7 @@ public partial class PaintOverlayWindow : Window
             // 重新绘制未删除的段落
             foreach (var segment in segments)
             {
-                RedrawStrokeSegment(segment);
+                RedrawStrokeSegment(segment, stroke.Style, stroke.Color, stroke.BaseSize);
             }
         }
     }
