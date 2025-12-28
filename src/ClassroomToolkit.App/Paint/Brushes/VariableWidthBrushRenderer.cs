@@ -248,7 +248,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (_points.Count < 2) return;
 
-        var geometry = GenerateSmoothGeometryV10();
+        var geometry = GenerateGeometry();
         if (geometry != null)
         {
             var brush = new SolidColorBrush(_color);
@@ -260,7 +260,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var geo = GenerateSmoothGeometryV10();
+        var geo = GenerateGeometry();
         if (geo != null) geo.Freeze();
         return geo;
     }
@@ -268,6 +268,37 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     // ========================================
     // v10 算法核心实现
     // ========================================
+
+    /// <summary>
+    /// v13: 生产级笔画几何生成（主体保持稳定，端帽自然）
+    /// </summary>
+    private Geometry? GenerateGeometry()
+    {
+        if (_points.Count < 2) return null;
+
+        var geometry = new StreamGeometry();
+        geometry.FillRule = FillRule.Nonzero;
+
+        using (var ctx = geometry.Open())
+        {
+            var samples = BuildCenterlineSamplesFinal();
+            if (samples.Count < 2) return null;
+
+            var leftEdge = new List<WpfPoint>();
+            var rightEdge = new List<WpfPoint>();
+            BuildRibbonEdgesV10(samples, leftEdge, rightEdge);
+
+            FilterLoops(leftEdge);
+            FilterLoops(rightEdge);
+
+            if (leftEdge.Count > 1 && rightEdge.Count > 1)
+            {
+                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples);
+            }
+        }
+
+        return geometry;
+    }
 
     private double CalculateTargetWidth(double velocity, int pointIndex)
     {
@@ -339,11 +370,91 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             // 阶段4: 构建最终路径（使用改进的尖端）
             if (leftEdge.Count > 1 && rightEdge.Count > 1)
             {
-                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples.First().Width, samples.Last().Width);
+                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples);
             }
         }
 
         return geometry;
+    }
+
+    /// <summary>
+    /// v13: 最终采样与宽度计算（严格按速度映射 + 骨头修复 + 平滑）
+    /// </summary>
+    private List<StrokePoint> BuildCenterlineSamplesFinal()
+    {
+        var samples = new List<StrokePoint>();
+        if (_points.Count == 0) return samples;
+        if (_points.Count == 1)
+        {
+            var p = _points[0];
+            samples.Add(new StrokePoint(p.Position, ClampWidth(p.Width), 0, 0, p.AccumulatedWidth));
+            return samples;
+        }
+
+        double totalLength = 0;
+        for (int i = 1; i < _points.Count; i++)
+        {
+            totalLength += (_points[i].Position - _points[i - 1].Position).Length;
+        }
+
+        double maxSpeed = Math.Max(_maxVelocity, 0.001);
+        double accumulatedLength = 0;
+
+        for (int i = 0; i < _points.Count - 1; i++)
+        {
+            var p0 = _points[Math.Max(i - 1, 0)];
+            var p1 = _points[i];
+            var p2 = _points[i + 1];
+            var p3 = _points[Math.Min(i + 2, _points.Count - 1)];
+
+            int startStep = (i == 0) ? 0 : 1;
+            for (int step = startStep; step <= UpsampleSteps; step++)
+            {
+                double t = step / (double)UpsampleSteps;
+                var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
+
+                double speed = CatmullRomValue(p0.NormalizedSpeed, p1.NormalizedSpeed, p2.NormalizedSpeed, p3.NormalizedSpeed, t);
+                double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
+
+                if (i > 0 || step > 0)
+                {
+                    double segmentLength = (pos - (samples.Count > 0 ? samples.Last().Position : p1.Position)).Length;
+                    accumulatedLength += segmentLength;
+                }
+
+                double progress = totalLength > 0 ? accumulatedLength / totalLength : 0;
+                double normSpeed = Math.Clamp(speed / maxSpeed, 0, 1);
+
+                double velocityFactor = 1.0 - (0.65 * normSpeed);
+
+                double taperZone = 0;
+                if (progress > 0.85)
+                {
+                    taperZone = Math.Clamp((progress - 0.85) / 0.15, 0, 1);
+                    velocityFactor = Lerp(velocityFactor, 1.0, taperZone);
+                }
+
+                double pressure = 1.0 + (accumulatedWidth / Math.Max(_baseSize, 0.001));
+                double targetWidth = _baseSize * pressure * velocityFactor;
+
+                double currentWidth = targetWidth;
+                if (samples.Count > 0)
+                {
+                    currentWidth = samples[^1].Width * 0.6 + targetWidth * 0.4;
+                }
+
+                if (progress > 0.85)
+                {
+                    double taperFactor = 1.0 - (taperZone * taperZone);
+                    currentWidth *= taperFactor;
+                }
+
+                currentWidth = ClampWidth(currentWidth);
+                samples.Add(new StrokePoint(pos, currentWidth, normSpeed, progress, accumulatedWidth));
+            }
+        }
+
+        return samples;
     }
 
     /// <summary>
@@ -587,12 +698,14 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                         if (cross > 0.0001)
                         {
+                            AddCornerReinforcement(leftEdge, pos, normalPrev, normalNext, width);
                             AddCornerArc(leftEdge, pos, normalPrev, normalNext, halfWidth, false);
                             rightEdge.Add(rightPoint);
                             handledCorner = true;
                         }
                         else if (cross < -0.0001)
                         {
+                            AddCornerReinforcement(rightEdge, pos, -normalPrev, -normalNext, width);
                             AddCornerArc(rightEdge, pos, -normalPrev, -normalNext, halfWidth, true);
                             leftEdge.Add(leftPoint);
                             handledCorner = true;
@@ -610,68 +723,153 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     }
 
     /// <summary>
-    /// v10: 构建笔画路径，使用改进的尖端构造（贝塞尔曲线代替简单圆弧）
-    /// v11 改进: 根据宽度自适应使用圆弧或尖点
+    /// v13: 自然笔锋尖端（起笔/收笔）处理
     /// </summary>
-    private void BuildStrokePathV10(StreamGeometryContext ctx, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, double startWidth, double endWidth)
+    private void BuildStrokePathV10(StreamGeometryContext ctx, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, List<StrokePoint> samples)
     {
         ctx.BeginFigure(leftEdge[0], true, true);
 
         // 左边缘
         AddBezierPath(ctx, leftEdge);
 
-        // 收笔尖端 - v11: 根据宽度选择圆弧或尖点
-        var lastLeft = leftEdge.Last();
-        var lastRight = rightEdge.Last();
-        AddAdaptiveCapV11(ctx, lastLeft, lastRight, endWidth, true);
+        var endCap = BuildCapData(samples, true);
+        AddCapV13(ctx, leftEdge.Last(), rightEdge.Last(), endCap);
 
         // 右边缘 (倒序)
         var rightEdgeReversed = rightEdge.AsEnumerable().Reverse().ToList();
         AddBezierPath(ctx, rightEdgeReversed);
 
-        // 起笔尖端
-        var firstRight = rightEdge[0];
-        AddAdaptiveCapV11(ctx, firstRight, leftEdge[0], startWidth, false);
+        var startCap = BuildCapData(samples, false);
+        AddCapV13(ctx, rightEdge[0], leftEdge[0], startCap);
     }
 
-    /// <summary>
-    /// v11: 自适应尖端构造 - 根据宽度选择圆弧或尖点
-    /// </summary>
-    private void AddAdaptiveCapV11(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, double width, bool isEnd)
+    private struct CapData
     {
-        double capWidth = (from - to).Length;
-        double threshold = _baseSize * _config.CapRoundThreshold;
+        public WpfPoint TipPoint;
+        public double Width;
+        public double PressureDropRate;
 
-        if (capWidth < threshold)
+        public CapData(WpfPoint tipPoint, double width, double pressureDropRate)
         {
-            // ===== 尖端较窄：折叠到尖点 =====
-            // 计算中点作为尖点
-            var midPoint = new WpfPoint((from.X + to.X) * 0.5, (from.Y + to.Y) * 0.5);
+            TipPoint = tipPoint;
+            Width = width;
+            PressureDropRate = pressureDropRate;
+        }
+    }
 
-            // 左边缘点 -> 尖点 -> 右边缘点
-            // 形成尖锐的笔锋
-            ctx.LineTo(midPoint, true, true);
-            ctx.LineTo(to, true, true);
+    private CapData BuildCapData(List<StrokePoint> samples, bool isEnd)
+    {
+        int count = samples.Count;
+        if (count < 2)
+        {
+            return new CapData(samples[0].Position, ClampWidth(samples[0].Width), 0);
+        }
+
+        int lastIndex = count - 1;
+        int prevIndex = Math.Max(0, lastIndex - 1);
+
+        WpfPoint basePoint = isEnd ? samples[lastIndex].Position : samples[0].Position;
+        WpfPoint refPoint = isEnd ? samples[prevIndex].Position : samples[1].Position;
+
+        var dir = isEnd ? (basePoint - refPoint) : (refPoint - basePoint);
+        if (dir.LengthSquared < 0.0001)
+        {
+            dir = new Vector(1, 0);
         }
         else
         {
-            // ===== 尖端较宽：使用圆滑弧线 =====
-            // 计算弧线参数
-            var dir = to - from;
-            if (dir.LengthSquared > 0.0001)
-                dir.Normalize();
-
-            var normal = new Vector(-dir.Y, dir.X);
-            var midPoint = new WpfPoint((from.X + to.X) * 0.5, (from.Y + to.Y) * 0.5);
-            var arcRadius = capWidth * 0.5;
-
-            // 控制点偏移（使弧线稍微向外凸起，形成圆滑笔锋）
-            var controlPoint = midPoint + normal * (arcRadius * 0.3);
-
-            // 使用 ArcSegment 创建半圆
-            // rotationAngle = 0, isLargeArc = false, sweepDirection = Clockwise
-            ctx.ArcTo(to, new WpfSize(arcRadius, arcRadius), 0, false, SweepDirection.Clockwise, true, true);
+            dir.Normalize();
         }
+
+        double width = ClampWidth(isEnd ? samples[lastIndex].Width : samples[0].Width);
+        double baseForTip = isEnd ? width : _baseSize;
+
+        // TipPoint 示例: tip = basePoint +/- dir * tipLen
+        double tipLen = ClampTipLength(baseForTip);
+        var tipPoint = isEnd ? basePoint + dir * tipLen : basePoint - dir * tipLen;
+
+        double dropRate = ComputePressureDropRate(samples, isEnd);
+        return new CapData(tipPoint, width, dropRate);
+    }
+
+    private static double ClampTipLength(double width)
+    {
+        double minLen = width * 0.5;
+        double maxLen = width * 2.0;
+        double desired = width * 1.5;
+        return Math.Clamp(desired, minLen, maxLen);
+    }
+
+    private double ComputePressureDropRate(List<StrokePoint> samples, bool isEnd)
+    {
+        int count = samples.Count;
+        if (count < 3) return 0;
+
+        int window = Math.Max(2, count / 10);
+
+        if (isEnd)
+        {
+            int prevIndex = Math.Max(0, count - 1 - window);
+            double dp = Math.Max(samples[^1].Progress - samples[prevIndex].Progress, 0.001);
+            double drop = Math.Max(0, samples[prevIndex].Width - samples[^1].Width);
+            return drop / dp;
+        }
+
+        int nextIndex = Math.Min(count - 1, window);
+        double dpStart = Math.Max(samples[nextIndex].Progress - samples[0].Progress, 0.001);
+        double dropStart = Math.Max(0, samples[0].Width - samples[nextIndex].Width);
+        return dropStart / dpStart;
+    }
+
+    private void AddCapV13(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, CapData cap)
+    {
+        double sharpThreshold = _baseSize * 0.5;
+        double dropThreshold = 1.2;
+
+        double normalizedDrop = cap.PressureDropRate / Math.Max(_baseSize, 0.001);
+        bool useSharp = cap.Width < sharpThreshold || normalizedDrop > dropThreshold;
+
+        if (useSharp)
+        {
+            ctx.LineTo(cap.TipPoint, true, true);
+            ctx.LineTo(to, true, true);
+            return;
+        }
+
+        AddRoundedCapArc(ctx, from, to, cap.TipPoint);
+    }
+
+    private static void AddRoundedCapArc(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, WpfPoint tip)
+    {
+        double chord = (to - from).Length;
+        if (chord < 0.1)
+        {
+            ctx.LineTo(to, true, true);
+            return;
+        }
+
+        var mid = new WpfPoint((from.X + to.X) * 0.5, (from.Y + to.Y) * 0.5);
+        var chordVec = to - from;
+        var normal = new Vector(-chordVec.Y, chordVec.X);
+        if (normal.LengthSquared < 0.0001)
+        {
+            ctx.LineTo(to, true, true);
+            return;
+        }
+
+        normal.Normalize();
+        var tipVec = tip - mid;
+        double h = Math.Abs(Vector.Multiply(tipVec, normal));
+        h = Math.Max(h, chord * 0.15);
+
+        double radius = (h / 2.0) + (chord * chord / (8.0 * h));
+        radius = Math.Max(radius, chord * 0.5);
+        radius = Math.Min(radius, chord * 3.0);
+
+        double side = Vector.Multiply(tipVec, normal);
+        var sweep = side >= 0 ? SweepDirection.Counterclockwise : SweepDirection.Clockwise;
+
+        ctx.ArcTo(to, new WpfSize(radius, radius), 0, false, sweep, true, true);
     }
 
     // ========================================
@@ -707,6 +905,36 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private static double Lerp(double a, double b, double t)
     {
         return a + (b - a) * t;
+    }
+
+    private void AddCornerReinforcement(List<WpfPoint> edge, WpfPoint center, Vector normalPrev, Vector normalNext, double width)
+    {
+        var bisector = normalPrev + normalNext;
+        if (bisector.LengthSquared < 0.0001)
+        {
+            bisector = normalPrev;
+        }
+
+        if (bisector.LengthSquared < 0.0001)
+        {
+            return;
+        }
+
+        bisector.Normalize();
+
+        double baseOffset = _baseSize * 0.15;
+        double minOffset = _baseSize * 0.05;
+        double maxOffset = _baseSize * 0.35;
+        double offset = Math.Clamp(baseOffset, minOffset, maxOffset);
+        offset = Math.Min(offset, width * 0.45);
+
+        if (offset < 0.1) return;
+
+        var point = center + bisector * offset;
+        if (edge.Count == 0 || (edge.Last() - point).Length > 0.1)
+        {
+            edge.Add(point);
+        }
     }
 
     private static void AddCornerArc(List<WpfPoint> edge, WpfPoint center, Vector startNormal, Vector endNormal, double radius, bool clockwise)
