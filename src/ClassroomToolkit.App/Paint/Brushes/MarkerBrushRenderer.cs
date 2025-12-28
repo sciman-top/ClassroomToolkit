@@ -187,7 +187,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         }
 
         var group = new GeometryGroup { FillRule = FillRule.Nonzero };
-        var pen = new WpfPen(Brushes.Black, 1)
+        var pen = new WpfPen(System.Windows.Media.Brushes.Black, 1)
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
