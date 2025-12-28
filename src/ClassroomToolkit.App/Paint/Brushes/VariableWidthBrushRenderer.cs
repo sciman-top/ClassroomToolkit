@@ -258,21 +258,16 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             var brush = new SolidColorBrush(_color);
             brush.Freeze();
-            var drawing = new GeometryDrawing(brush, null, geometry);
-            drawing.Freeze();
-
-            var group = new DrawingGroup();
-            group.Children.Add(drawing);
-            group.Effect = new BlurEffect
+            var blur = new BlurEffect
             {
                 Radius = InkBleedBlurRadius,
                 KernelType = KernelType.Gaussian,
                 RenderingBias = RenderingBias.Quality
             };
-            group.CacheMode = new BitmapCache { RenderAtScale = 1.0 };
-            group.Freeze();
 
-            dc.DrawDrawing(group);
+            dc.PushEffect(blur, null);
+            dc.DrawGeometry(brush, null, geometry);
+            dc.Pop();
         }
     }
 
