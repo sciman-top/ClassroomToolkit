@@ -61,7 +61,7 @@
                     <RowDefinition Height="Auto"/> <!-- Bottom Controls (Groups/TimerControls) -->
                 </Grid.RowDefinitions>
 
-                <!-- 1. 顶部工具栏 - 紧凑精致版 -->
+                <!-- 1. 顶部工具栏 - 精致版 -->
                 <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
@@ -71,11 +71,11 @@
 
                     <!-- 左侧功能区 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0">
-                        <!-- 模式切换 -->
+                        <!-- 模式切换 - 渐变按钮 -->
                         <Button Style="{StaticResource Style_SecondaryButton}"
                                 Click="OnToggleModeClick" Padding="12,6" Margin="0,0,8,0" MinWidth="110">
                             <StackPanel Orientation="Horizontal">
-                                <Path Fill="{StaticResource Brush_Foreground}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0">
+                                <Path Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0">
                                     <Path.Style>
                                         <Style TargetType="Path">
                                             <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
@@ -108,7 +108,7 @@
                             <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
                         </Button>
 
-                        <Rectangle Width="1" Height="20" Fill="{StaticResource Brush_Border}" Margin="6,0"/>
+                        <Rectangle Width="1" Height="20" Fill="#E0E8F5" Margin="6,0"/>
 
                         <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
                             <Rectangle Width="12" Height="2" Fill="{StaticResource Brush_Foreground}"/>
@@ -119,21 +119,43 @@
                     </StackPanel>
                 </Grid>
 
+            <!-- 工具栏底部品牌色分割线 -->
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="12,0,12,0"
+                    Height="1.5" CornerRadius="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="0.5"/>
+                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
             <!-- 2. 内容区 -->
 
-            <!-- A. 点名展示 - 浅蓝色背景版 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                <Border Background="#F0F7FF" CornerRadius="14"
+            <!-- A. 点名展示 - 精美卡片版 -->
+            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}">
+                <Border Background="#F0F7FF" CornerRadius="16"
                         VerticalAlignment="Stretch"
                         HorizontalAlignment="Stretch"
                         Margin="28,12"
                         BorderBrush="#D0E3F5"
-                        BorderThickness="1"
+                        BorderThickness="1.5"
                         MouseLeftButtonUp="OnRollClick">
                     <!-- 卡片阴影 - 品牌色光晕 -->
                     <Border.Effect>
-                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="30" ShadowDepth="0" Opacity="0.2"/>
+                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="35" ShadowDepth="0" Opacity="0.25"/>
                     </Border.Effect>
+
+                    <!-- 顶部光泽装饰 -->
+                    <Border CornerRadius="16,16,0,0" Height="1" VerticalAlignment="Top" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                                <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
 
                     <!-- 核心名字展示 -->
                     <Grid x:Name="NameCardBody" Margin="36,18"
@@ -169,19 +191,28 @@
                 </Border>
             </Grid>
 
-            <!-- B. 计时展示 - 紧凑精致版 -->
+            <!-- B. 计时展示 - 精美发光版 -->
             <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}" Margin="20,0,20,12">
-                <Border Background="#1A1F2C" CornerRadius="14">
+                <Border Background="#1A1F2C" CornerRadius="16">
                     <Border.Effect>
-                        <DropShadowEffect Color="#00C896" BlurRadius="20" ShadowDepth="0" Opacity="0.18"/>
+                        <DropShadowEffect Color="#00FFAA" BlurRadius="25" ShadowDepth="0" Opacity="0.25"/>
                     </Border.Effect>
+                    <!-- 顶部发光装饰线 -->
+                    <Border CornerRadius="16,16,0,0" Height="2" VerticalAlignment="Top" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#00FFAA" Offset="0"/>
+                                <GradientStop Color="#00C896" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
                      <Viewbox Stretch="Uniform" Margin="20">
                         <TextBlock Text="{Binding TimeDisplay}"
                                    Foreground="#00FFAA"
                                    FontFamily="Consolas"
                                    FontWeight="Bold">
                              <TextBlock.Effect>
-                                 <DropShadowEffect Color="#00FFAA" BlurRadius="25" ShadowDepth="0" Opacity="0.6"/>
+                                 <DropShadowEffect Color="#00FFAA" BlurRadius="30" ShadowDepth="0" Opacity="0.7"/>
                              </TextBlock.Effect>
                         </TextBlock>
                     </Viewbox>
