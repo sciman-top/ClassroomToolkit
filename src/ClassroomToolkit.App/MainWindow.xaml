@@ -12,7 +12,7 @@
         WindowStartupLocation="Manual">
 
     <Window.Resources>
-        <!-- 大磁贴按钮样式 - 紧凑精致版 -->
+        <!-- 大磁贴按钮样式 - 精美渐变版 -->
         <Style x:Key="Style_TileButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
@@ -24,9 +24,35 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="10">
+                        <Grid>
+                            <!-- 背景卡片 -->
+                            <Border x:Name="border"
+                                    Background="#F8FAFC"
+                                    CornerRadius="10">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="2" Opacity="0.08"/>
+                                </Border.Effect>
+                            </Border>
+
+                            <!-- 悬停时的渐变背景 -->
+                            <Border x:Name="hoverBorder"
+                                    Background="{StaticResource Gradient_Accent}"
+                                    CornerRadius="10"
+                                    Opacity="0"/>
+
+                            <!-- 光泽效果 -->
+                            <Border x:Name="glossBorder"
+                                    CornerRadius="10"
+                                    Opacity="0">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="White" Offset="0" StopColor="White"/>
+                                        <GradientStop Color="Transparent" Offset="0.5"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+
+                            <!-- 内容 -->
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <Path x:Name="icon"
                                       Data="{TemplateBinding Tag}"
@@ -34,15 +60,25 @@
                                       Stretch="Uniform"
                                       Width="32" Height="32"
                                       Margin="0,0,0,6"/>
-                                <ContentPresenter TextElement.FontWeight="SemiBold" TextElement.FontSize="13"/>
+                                <ContentPresenter x:Name="text"
+                                                TextElement.FontWeight="SemiBold"
+                                                TextElement.FontSize="13"/>
                             </StackPanel>
-                        </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                <Setter TargetName="hoverBorder" Property="Opacity" Value="0.1"/>
+                                <Setter TargetName="glossBorder" Property="Opacity" Value="0.3"/>
+                                <Setter TargetName="icon" Property="Fill" Value="{StaticResource Brush_Primary}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
+                                <Setter TargetName="hoverBorder" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="glossBorder" Property="Opacity" Value="0.5"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="Black" BlurRadius="6" ShadowDepth="1" Opacity="0.12"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -53,12 +89,12 @@
 
     <Border x:Name="LauncherContainer"
             CornerRadius="14"
-            Background="{StaticResource Gradient_Glass}"
-            BorderBrush="{StaticResource Brush_Border}"
+            Background="#F5F7FA"
+            BorderBrush="#E8EEF8"
             BorderThickness="1"
             MouseLeftButtonDown="OnDragAreaMouseDown">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="5" Opacity="0.1"/>
+            <DropShadowEffect Color="#4A90E2" BlurRadius="30" ShadowDepth="6" Opacity="0.15"/>
         </Border.Effect>
 
         <Grid>
