@@ -42,7 +42,7 @@
     </Style>
 
     <!-- 激活状态的按钮（例如当前选中的画笔工具） -->
-    <Style x:Key="Style_IconButton_Active" TargetType="RadioButton">
+    <Style x:Key="Style_IconButton_Active" TargetType="ToggleButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
@@ -54,7 +54,7 @@
         <Setter Property="Height" Value="36"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
+                <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="border" 
                             Background="{TemplateBinding Background}" 
                             BorderBrush="{TemplateBinding BorderBrush}" 
