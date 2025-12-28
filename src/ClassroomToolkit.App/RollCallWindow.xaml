@@ -134,7 +134,7 @@
             <!-- 2. 内容区 -->
 
             <!-- A. 点名展示 - 精美卡片版 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}">
+            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                 <Border Background="#F0F7FF" CornerRadius="16"
                         VerticalAlignment="Stretch"
                         HorizontalAlignment="Stretch"
