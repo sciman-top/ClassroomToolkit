@@ -344,4 +344,12 @@ public partial class RollCallSettingsDialog : Window
     }
 
     private sealed record ComboOption(string Value, string Label);
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
 }

@@ -3,112 +3,162 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         Title="工具条"
-        Height="104" Width="244"
+        Height="Auto" Width="Auto"
+        SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual"
         Topmost="True"
         ShowActivated="False"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
-        WindowStyle="None">
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}">
+
     <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="IsTabStop" Value="False" />
-        </Style>
-        <Style TargetType="ToggleButton">
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="IsTabStop" Value="False" />
-        </Style>
-        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Margin" Value="3" />
-            <Setter Property="Padding" Value="5,0" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Background" Value="#FDFDFD" />
-            <Setter Property="BorderBrush" Value="#D0D6DC" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style x:Key="ToolbarToggleButtonStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Margin" Value="3" />
-            <Setter Property="Padding" Value="5,0" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Background" Value="#FDFDFD" />
-            <Setter Property="BorderBrush" Value="#D0D6DC" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style x:Key="QuickColorButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource ToolbarToggleButtonStyle}">
-            <Setter Property="BorderBrush" Value="#66000000" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="0" />
+        <!-- 颜色选择按钮样式 (圆形) -->
+        <Style x:Key="Style_ColorButton" TargetType="ToggleButton">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="ColorBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        <Grid>
+                            <!-- 选中时的外圈光环 -->
+                            <Ellipse x:Name="Ring" Stroke="{TemplateBinding Background}" StrokeThickness="2" 
+                                     Width="32" Height="32" Opacity="0">
+                                <Ellipse.Effect>
+                                    <BlurEffect Radius="2"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            
+                            <!-- 颜色主体 -->
+                            <Border x:Name="ColorDot" Width="20" Height="20" CornerRadius="10" 
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="#30000000" BorderThickness="1">
+                                <Border.RenderTransform>
+                                    <ScaleTransform CenterX="10" CenterY="10" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ColorBorder" Property="BorderBrush" Value="#FF5AA1FF" />
-                            </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ColorBorder" Property="BorderBrush" Value="#FF5AA1FF" />
-                                <Setter TargetName="ColorBorder" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="Ring" Property="Opacity" Value="1"/>
+                                <Setter TargetName="ColorDot" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform CenterX="10" CenterY="10" ScaleX="1.2" ScaleY="1.2"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter TargetName="ColorDot" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform CenterX="10" CenterY="10" ScaleX="1.1" ScaleY="1.1"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 分割线样式 -->
+        <Style x:Key="Style_Separator" TargetType="Rectangle">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Fill" Value="#E0E0E0"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </Window.Resources>
-    <Border x:Name="ToolbarContainer" Background="#F4F6F8" BorderBrush="#CBD2D9" BorderThickness="1"
-            CornerRadius="9" Padding="6">
-        <Grid x:Name="ToolbarRoot" Background="Transparent" MouseLeftButtonDown="OnToolbarDrag">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,3">
-                <ToggleButton x:Name="CursorButton" Content="光标" Style="{StaticResource ToolbarToggleButtonStyle}"
-                              Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                              ToolTip="光标" />
-                <ToggleButton x:Name="QuickColor1Button" Content="黑" Click="OnColorClick" Tag="0"
-                              Style="{StaticResource QuickColorButtonStyle}"
-                              ToolTip="长按更换颜色"
-                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}" />
-                <ToggleButton x:Name="QuickColor2Button" Content="红" Click="OnColorClick" Tag="1"
-                              Style="{StaticResource QuickColorButtonStyle}"
-                              ToolTip="长按更换颜色"
-                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}" />
-                <ToggleButton x:Name="QuickColor3Button" Content="蓝" Click="OnColorClick" Tag="2"
-                              Style="{StaticResource QuickColorButtonStyle}"
-                              ToolTip="长按更换颜色"
-                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}" />
-                <Button x:Name="SettingsButton" Content="设置" Style="{StaticResource ToolbarButtonStyle}" Click="OnSettingsClick"
-                        ToolTip="画笔设置" />
-            </StackPanel>
+    <!-- 主容器：胶囊形状，带阴影 -->
+    <Border x:Name="ToolbarContainer" 
+            Background="{StaticResource Brush_Background_Translucent}" 
+            BorderBrush="{StaticResource Brush_Border}" 
+            BorderThickness="1"
+            CornerRadius="8" 
+            Padding="6,4">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="10" ShadowDepth="2"/>
+        </Border.Effect>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="UndoButton" Content="撤销" Style="{StaticResource ToolbarButtonStyle}" Click="OnUndoClick"
-                        ToolTip="撤销" />
-                <ToggleButton x:Name="EraserButton" Content="橡皮" Style="{StaticResource ToolbarToggleButtonStyle}"
+        <Grid x:Name="ToolbarRoot" MouseLeftButtonDown="OnToolbarDrag">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                
+                <!-- 1. 鼠标/选择 -->
+                <ToggleButton x:Name="CursorButton" 
+                              Style="{StaticResource Style_IconButton_Active}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                              ToolTip="橡皮擦" />
-                <ToggleButton x:Name="RegionEraseButton" Content="框删" Style="{StaticResource ToolbarToggleButtonStyle}"
+                              ToolTip="鼠标模式 (选择)">
+                    <Path Data="{StaticResource Icon_Cursor}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </ToggleButton>
+
+                <Rectangle Style="{StaticResource Style_Separator}"/>
+
+                <!-- 2. 颜色/画笔区 -->
+                <!-- 注意：颜色不仅是颜色，也是画笔模式的触发器 -->
+                <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
+                              Style="{StaticResource Style_ColorButton}"
+                              Click="OnColorClick"
+                              ToolTip="黑色笔 (长按换色)"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}"/>
+                
+                <ToggleButton x:Name="QuickColor2Button" Background="#FF3B30" Tag="1"
+                              Style="{StaticResource Style_ColorButton}"
+                              Click="OnColorClick"
+                              ToolTip="红色笔 (长按换色)"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}"/>
+                
+                <ToggleButton x:Name="QuickColor3Button" Background="#007ACC" Tag="2"
+                              Style="{StaticResource Style_ColorButton}"
+                              Click="OnColorClick"
+                              ToolTip="蓝色笔 (长按换色)"
+                              behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}"/>
+
+                <Rectangle Style="{StaticResource Style_Separator}"/>
+
+                <!-- 3. 擦除工具 -->
+                <ToggleButton x:Name="EraserButton" 
+                              Style="{StaticResource Style_IconButton_Active}"
                               Checked="OnModeChecked" Unchecked="OnModeUnchecked"
-                              ToolTip="框选删除" />
-                <Button x:Name="ClearButton" Content="清空" Style="{StaticResource ToolbarButtonStyle}" Click="OnClearClick"
-                        ToolTip="一键清屏" />
-                <ToggleButton x:Name="BoardButton" Content="白板" Style="{StaticResource ToolbarToggleButtonStyle}" Click="OnBoardClick"
-                              ToolTip="白板（单击开关 / 长按换色）"
-                              behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" />
+                              ToolTip="橡皮擦">
+                    <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </ToggleButton>
+
+                <ToggleButton x:Name="RegionEraseButton" 
+                              Style="{StaticResource Style_IconButton_Active}"
+                              Checked="OnModeChecked" Unchecked="OnModeUnchecked"
+                              ToolTip="区域删除 (框选)">
+                    <Path Data="{StaticResource Icon_RegionErase}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </ToggleButton>
+
+                <Rectangle Style="{StaticResource Style_Separator}"/>
+
+                <!-- 4. 操作与设置 -->
+                <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
+                    <Path Data="{StaticResource Icon_Undo}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </Button>
+
+                <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="一键清屏">
+                    <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="18" Height="18"/>
+                </Button>
+
+                <ToggleButton x:Name="BoardButton" 
+                              Style="{StaticResource Style_IconButton_Active}"
+                              Click="OnBoardClick"
+                              ToolTip="白板 (单击开关 / 长按换色)"
+                              behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}">
+                     <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </ToggleButton>
+
+                <Button x:Name="SettingsButton" Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="画笔设置">
+                    <Path Data="{StaticResource Icon_Settings}" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
+                </Button>
+
             </StackPanel>
         </Grid>
     </Border>

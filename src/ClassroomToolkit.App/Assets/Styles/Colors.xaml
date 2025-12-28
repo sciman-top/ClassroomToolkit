@@ -1,0 +1,36 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- 主色调：深海蓝 (专业、冷静) -->
+    <Color x:Key="Color_Primary">#007ACC</Color>
+    <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary}"/>
+    
+    <!-- 强调色/悬停：浅蓝 -->
+    <Color x:Key="Color_Accent">#E6F7FF</Color>
+    <SolidColorBrush x:Key="Brush_Accent" Color="{StaticResource Color_Accent}"/>
+    
+    <!-- 按下状态 -->
+    <Color x:Key="Color_Pressed">#CCE8FF</Color>
+    <SolidColorBrush x:Key="Brush_Pressed" Color="{StaticResource Color_Pressed}"/>
+
+    <!-- 警示/退出：柔和红 -->
+    <Color x:Key="Color_Danger">#E81123</Color>
+    <SolidColorBrush x:Key="Brush_Danger" Color="{StaticResource Color_Danger}"/>
+
+    <!-- 文本/图标色：深灰 (比纯黑更柔和) -->
+    <Color x:Key="Color_Foreground">#333333</Color>
+    <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Foreground}"/>
+    
+    <!-- 禁用色 -->
+    <Color x:Key="Color_Disabled">#A0A0A0</Color>
+    <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Disabled}"/>
+
+    <!-- 背景色：极简白，带一点点透明度用于工具条 -->
+    <Color x:Key="Color_Background">#FFFFFF</Color>
+    <SolidColorBrush x:Key="Brush_Background" Color="{StaticResource Color_Background}"/>
+    <SolidColorBrush x:Key="Brush_Background_Translucent" Color="#F2FFFFFF"/>
+    
+    <!-- 边框色 -->
+    <SolidColorBrush x:Key="Brush_Border" Color="#DDDDDD"/>
+
+</ResourceDictionary>

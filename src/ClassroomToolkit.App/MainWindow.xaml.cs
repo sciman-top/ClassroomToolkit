@@ -56,7 +56,6 @@ public partial class MainWindow : Window
     {
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
-        UpdateButtonMetrics();
         ScheduleAutoExitTimer();
         if (_settings.LauncherMinimized)
         {
@@ -504,58 +503,6 @@ public partial class MainWindow : Window
         {
             Top = area.Bottom - Height;
         }
-    }
-
-    private void UpdateButtonMetrics()
-    {
-        UpdateLayout();
-        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var paintWidth = MeasureTextWidth("画笔", PaintButton, dpi);
-        paintWidth = Math.Max(paintWidth, MeasureTextWidth("隐藏画笔", PaintButton, dpi));
-        var rollWidth = MeasureTextWidth("点名/计时", RollCallButton, dpi);
-        rollWidth = Math.Max(rollWidth, MeasureTextWidth("显示点名", RollCallButton, dpi));
-        rollWidth = Math.Max(rollWidth, MeasureTextWidth("隐藏点名", RollCallButton, dpi));
-        var unifiedWidth = Math.Max(paintWidth, rollWidth) + 28;
-        PaintButton.Width = unifiedWidth;
-        RollCallButton.Width = unifiedWidth;
-
-        var minWidth = Math.Max(52, MeasureTextWidth("缩小", MinimizeButton, dpi) + 24);
-        MinimizeButton.Width = minWidth;
-
-        var infoWidth = Math.Max(52, new[]
-        {
-            MeasureTextWidth("关于", AboutButton, dpi),
-            MeasureTextWidth("设置", SettingsButton, dpi),
-            MeasureTextWidth("退出", ExitButton, dpi)
-        }.Max() + 24);
-        AboutButton.Width = infoWidth;
-        SettingsButton.Width = infoWidth;
-        ExitButton.Width = infoWidth;
-
-        var buttons = new[] { PaintButton, RollCallButton, MinimizeButton, AboutButton, SettingsButton, ExitButton };
-        var maxHeight = buttons.Max(button => button.ActualHeight);
-        if (maxHeight <= 0)
-        {
-            return;
-        }
-        foreach (var button in buttons)
-        {
-            button.Height = maxHeight;
-        }
-    }
-
-    private static double MeasureTextWidth(string text, System.Windows.Controls.Button button, double pixelsPerDip)
-    {
-        var typeface = new Typeface(button.FontFamily, button.FontStyle, button.FontWeight, button.FontStretch);
-        var formatted = new FormattedText(
-            text,
-            CultureInfo.CurrentUICulture,
-            System.Windows.FlowDirection.LeftToRight,
-            typeface,
-            button.FontSize,
-            System.Windows.Media.Brushes.Black,
-            pixelsPerDip);
-        return formatted.Width;
     }
 
     private void EnsureBubbleWindow()
