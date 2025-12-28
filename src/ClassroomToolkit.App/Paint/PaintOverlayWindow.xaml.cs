@@ -1802,48 +1802,37 @@ public partial class PaintOverlayWindow : Window
     {
         if (InkLayer.Strokes.Count == 0 || _eraserPath.Count == 0) return;
 
-        double eraserRadius = _eraserSize * 0.5;
+        var toRemove = new List<Stroke>();
+        var toAdd = new List<Stroke>();
 
-        // 对橡皮擦路径上的每个点，创建矩形区域并擦除
-        foreach (var point in _eraserPath)
+        foreach (var stroke in InkLayer.Strokes)
         {
-            var eraseRect = new Rect(
-                point.X - eraserRadius,
-                point.Y - eraserRadius,
-                _eraserSize,
-                _eraserSize
-            );
+            if (!IsInkStrokeNearEraserPath(stroke))
+            {
+                continue;
+            }
 
-            InkLayer.Strokes.Erase(eraseRect);
+            var segments = SplitInkStrokeOutsideEraserPath(stroke);
+            toRemove.Add(stroke);
+
+            foreach (var segment in segments)
+            {
+                if (segment.Count < 2)
+                {
+                    continue;
+                }
+                var attrs = stroke.DrawingAttributes.Clone();
+                toAdd.Add(new Stroke(segment, attrs));
+            }
         }
 
-        // 如果路径上有多个点，还需要处理点之间的线段
-        for (int i = 0; i < _eraserPath.Count - 1; i++)
+        foreach (var stroke in toRemove)
         {
-            var start = _eraserPath[i];
-            var end = _eraserPath[i + 1];
-
-            // 计算线段上的多个采样点
-            var distance = (end - start).Length;
-            var steps = Math.Max(1, (int)(distance / (_eraserSize * 0.5)));
-
-            for (int j = 1; j < steps; j++)
-            {
-                var t = j / (double)steps;
-                var interpPoint = new WpfPoint(
-                    start.X + (end.X - start.X) * t,
-                    start.Y + (end.Y - start.Y) * t
-                );
-
-                var eraseRect = new Rect(
-                    interpPoint.X - eraserRadius,
-                    interpPoint.Y - eraserRadius,
-                    _eraserSize,
-                    _eraserSize
-                );
-
-                InkLayer.Strokes.Erase(eraseRect);
-            }
+            InkLayer.Strokes.Remove(stroke);
+        }
+        if (toAdd.Count > 0)
+        {
+            InkLayer.Strokes.Add(new StrokeCollection(toAdd));
         }
     }
 
@@ -1920,6 +1909,52 @@ public partial class PaintOverlayWindow : Window
         }
 
         return false;
+    }
+
+    private bool IsInkStrokeNearEraserPath(Stroke stroke)
+    {
+        foreach (var point in stroke.StylusPoints)
+        {
+            if (IsPointNearEraserPath(new WpfPoint(point.X, point.Y)))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<StylusPointCollection> SplitInkStrokeOutsideEraserPath(Stroke stroke)
+    {
+        var segments = new List<StylusPointCollection>();
+        var current = new StylusPointCollection();
+        bool isNearEraser = false;
+
+        foreach (var point in stroke.StylusPoints)
+        {
+            bool pointNearEraser = IsPointNearEraserPath(new WpfPoint(point.X, point.Y));
+
+            if (pointNearEraser != isNearEraser)
+            {
+                if (current.Count > 0 && !isNearEraser)
+                {
+                    segments.Add(current);
+                }
+                current = new StylusPointCollection();
+                isNearEraser = pointNearEraser;
+            }
+
+            if (!isNearEraser)
+            {
+                current.Add(point);
+            }
+        }
+
+        if (current.Count > 0 && !isNearEraser)
+        {
+            segments.Add(current);
+        }
+
+        return segments;
     }
 
     /// <summary>
