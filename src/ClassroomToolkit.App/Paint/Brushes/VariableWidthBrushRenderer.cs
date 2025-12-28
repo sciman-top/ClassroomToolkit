@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 using WpfPoint = System.Windows.Point;
 using WpfSize = System.Windows.Size;
 using WpfColor = System.Windows.Media.Color;
@@ -58,7 +57,6 @@ public class BrushPhysicsConfig
 
 public class VariableWidthBrushRenderer : IBrushRenderer
 {
-    private const double InkBleedBlurRadius = 0.8;
     private const double DirectionNoiseAmplitude = 0.08;
     private const double DirectionNoiseFrequency = 0.6;
 
@@ -258,16 +256,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             var brush = new SolidColorBrush(_color);
             brush.Freeze();
-            var blur = new BlurEffect
-            {
-                Radius = InkBleedBlurRadius,
-                KernelType = KernelType.Gaussian,
-                RenderingBias = RenderingBias.Quality
-            };
-
-            dc.PushEffect(blur, null);
             dc.DrawGeometry(brush, null, geometry);
-            dc.Pop();
         }
     }
 

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,9 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow : Window
 {
     private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
+    private static readonly BlurEffect CalligraphyBaseEffect = CreateInkBleedEffect(0.8);
+    private static readonly BlurEffect CalligraphyBleedEffect = CreateInkBleedEffect(5.0);
+    private static readonly BitmapCache CalligraphyInkBleedCache = CreateInkBleedCache();
     private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
@@ -473,12 +477,8 @@ public partial class PaintOverlayWindow : Window
             if (geometry != null)
             {
                 var attr = InkLayer.DefaultDrawingAttributes;
-                var path = new Path
-                {
-                    Data = geometry,
-                    Fill = new SolidColorBrush(attr.Color) // Color already contains Alpha
-                };
-                ShapeCanvas.Children.Add(path);
+                double baseWidth = Math.Max(attr.Width, attr.Height);
+                DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth);
             }
 
             _activeRenderer.Reset();
@@ -516,6 +516,53 @@ public partial class PaintOverlayWindow : Window
             _activeShape = null;
         }
         _erasing = false;
+    }
+
+    private static BlurEffect CreateInkBleedEffect(double radius)
+    {
+        var effect = new BlurEffect
+        {
+            Radius = radius,
+            KernelType = KernelType.Gaussian,
+            RenderingBias = RenderingBias.Quality
+        };
+        effect.Freeze();
+        return effect;
+    }
+
+    private static BitmapCache CreateInkBleedCache()
+    {
+        var cache = new BitmapCache { RenderAtScale = 1.0 };
+        cache.Freeze();
+        return cache;
+    }
+
+    public void DrawStrokeToCanvas(Canvas canvas, StreamGeometry geo, double baseWidth)
+    {
+        var bleedBrush = new SolidColorBrush(Color.FromArgb(32, 0, 0, 0));
+        bleedBrush.Freeze();
+
+        var coreBrush = new SolidColorBrush(Color.FromArgb(255, 0x15, 0x15, 0x15));
+        coreBrush.Freeze();
+
+        var bleedPath = new Path
+        {
+            Data = geo,
+            Fill = bleedBrush,
+            Effect = CalligraphyBleedEffect,
+            CacheMode = CalligraphyInkBleedCache
+        };
+
+        var basePath = new Path
+        {
+            Data = geo,
+            Fill = coreBrush,
+            Effect = CalligraphyBaseEffect,
+            CacheMode = CalligraphyInkBleedCache
+        };
+
+        canvas.Children.Add(bleedPath);
+        canvas.Children.Add(basePath);
     }
 
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
