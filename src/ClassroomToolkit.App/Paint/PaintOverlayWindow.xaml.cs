@@ -2011,9 +2011,9 @@ public partial class PaintOverlayWindow : Window
         return false;
     }
 
-    private static Pen CreateShapePen(Shape shape, Brush stroke)
+    private static System.Windows.Media.Pen CreateShapePen(Shape shape, System.Windows.Media.Brush stroke)
     {
-        var pen = new Pen(stroke, Math.Max(1, shape.StrokeThickness))
+        var pen = new System.Windows.Media.Pen(stroke, Math.Max(1, shape.StrokeThickness))
         {
             StartLineCap = shape.StrokeStartLineCap,
             EndLineCap = shape.StrokeEndLineCap,
@@ -2029,7 +2029,7 @@ public partial class PaintOverlayWindow : Window
         return pen;
     }
 
-    private static Path CreateFillPath(Geometry geometry, Brush fill)
+    private static Path CreateFillPath(Geometry geometry, System.Windows.Media.Brush fill)
     {
         return new Path
         {
@@ -2039,7 +2039,7 @@ public partial class PaintOverlayWindow : Window
         };
     }
 
-    private static bool IsBrushVisible(Brush? brush)
+    private static bool IsBrushVisible(System.Windows.Media.Brush? brush)
     {
         if (brush == null)
         {
