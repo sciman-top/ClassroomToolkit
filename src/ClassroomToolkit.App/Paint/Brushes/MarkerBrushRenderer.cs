@@ -16,7 +16,7 @@ public class MarkerBrushRenderer : IBrushRenderer
     private const double MinWidthFactor = 0.7;
     private const double PositionSmoothing = 0.6;
     private const double MinMoveDistance = 0.8;
-    private const bool DebugDrawEdges = true;
+    private const bool DebugDrawEdges = false;
 
     private static readonly WpfPen DebugLeftPen = CreateFrozenPen(Colors.Red, 1);
     private static readonly WpfPen DebugRightPen = CreateFrozenPen(Colors.DodgerBlue, 1);
@@ -167,31 +167,36 @@ public class MarkerBrushRenderer : IBrushRenderer
     private Geometry? GenerateMarkerGeometry()
     {
         if (_points.Count < 2) return null;
+        int count = _points.Count;
 
-        var leftEdge = new List<WpfPoint>(_points.Count);
-        var rightEdge = new List<WpfPoint>(_points.Count);
+        var leftEdge = new List<WpfPoint>(count);
+        var rightEdge = new List<WpfPoint>(count);
         Vector lastNormal = new Vector(0, 1);
 
-        for (int i = 0; i < _points.Count; i++)
+        for (int i = 0; i < count; i++)
         {
             var pos = _points[i].Position;
             var width = _points[i].Width;
 
-            Vector dir;
+            Vector tangent;
             if (i == 0)
             {
-                dir = _points[i + 1].Position - pos;
+                tangent = _points[i + 1].Position - pos;
             }
-            else if (i == _points.Count - 1)
+            else if (i == count - 1)
             {
-                dir = pos - _points[i - 1].Position;
+                tangent = pos - _points[i - 1].Position;
             }
             else
             {
-                dir = _points[i + 1].Position - _points[i - 1].Position;
+                var dirPrev = pos - _points[i - 1].Position;
+                var dirNext = _points[i + 1].Position - pos;
+                if (dirPrev.LengthSquared > 0.0001) dirPrev.Normalize();
+                if (dirNext.LengthSquared > 0.0001) dirNext.Normalize();
+                tangent = dirPrev + dirNext;
             }
 
-            var normal = GetNormalFromVector(dir, lastNormal);
+            var normal = GetNormalFromVector(tangent, lastNormal);
             lastNormal = normal;
 
             var half = Math.Max(width * 0.5, 0.1);
@@ -212,13 +217,16 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         using (var ctx = geometry.Open())
         {
-            for (int i = 0; i < leftEdge.Count - 1; i++)
+            for (int i = 0; i < count - 1; i++)
             {
                 ctx.BeginFigure(leftEdge[i], isFilled: true, isClosed: true);
-                ctx.LineTo(leftEdge[i + 1], isStroked: true, isSmoothJoin: true);
-                ctx.LineTo(rightEdge[i + 1], isStroked: true, isSmoothJoin: true);
-                ctx.LineTo(rightEdge[i], isStroked: true, isSmoothJoin: true);
+                ctx.LineTo(leftEdge[i + 1], isStroked: false, isSmoothJoin: false);
+                ctx.LineTo(rightEdge[i + 1], isStroked: false, isSmoothJoin: false);
+                ctx.LineTo(rightEdge[i], isStroked: false, isSmoothJoin: false);
             }
+
+            DrawCap(ctx, _points[0].Position, _points[0].Width * 0.5);
+            DrawCap(ctx, _points[count - 1].Position, _points[count - 1].Width * 0.5);
         }
 
         return geometry;
@@ -235,14 +243,21 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         dir.Normalize();
         var normal = new Vector(-dir.Y, dir.X);
-        if (fallback.LengthSquared > 0.0001)
+        if (fallback.LengthSquared < 0.0001)
         {
-            var lastNormal = fallback;
-            lastNormal.Normalize();
-            if (Vector.Multiply(normal, lastNormal) < -0.01)
-            {
-                normal = -normal;
-            }
+            return normal;
+        }
+
+        var lastNormal = fallback;
+        lastNormal.Normalize();
+        double dot = Vector.Multiply(normal, lastNormal);
+        if (dot < -0.01)
+        {
+            normal = -normal;
+        }
+        else if (dot > -0.01 && dot < 0.01)
+        {
+            normal = lastNormal;
         }
         return normal;
     }
@@ -252,5 +267,14 @@ public class MarkerBrushRenderer : IBrushRenderer
         var pen = new WpfPen(new SolidColorBrush(color), thickness);
         pen.Freeze();
         return pen;
+    }
+
+    private static void DrawCap(StreamGeometryContext ctx, WpfPoint center, double radius)
+    {
+        if (radius < 0.1) return;
+        var start = new WpfPoint(center.X - radius, center.Y);
+        ctx.BeginFigure(start, isFilled: true, isClosed: true);
+        ctx.ArcTo(new WpfPoint(center.X + radius, center.Y), new WpfSize(radius, radius), 0, false, SweepDirection.Clockwise, isStroked: false, isSmoothJoin: true);
+        ctx.ArcTo(start, new WpfSize(radius, radius), 0, false, SweepDirection.Clockwise, isStroked: false, isSmoothJoin: true);
     }
 }

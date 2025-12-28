@@ -373,8 +373,8 @@ public partial class PaintOverlayWindow : Window
                 }
                 break;
             case PaintToolMode.Eraser:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
-                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
+                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
+                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
                 break;
             case PaintToolMode.Shape:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
@@ -522,10 +522,7 @@ public partial class PaintOverlayWindow : Window
         {
             var point = e.GetPosition(ShapeCanvas);
 
-            // 1. 即时擦除其他形状（矩形、椭圆、线条等）
-            RemoveShapeAt(point);
-
-            // 2. 记录橡皮擦路径（用于自定义笔画的部分擦除）
+            // 记录橡皮擦路径（用于部分擦除）
             if (_isErasing && _eraserPath.Count > 0)
             {
                 var lastPoint = _eraserPath.Last();
@@ -628,6 +625,9 @@ public partial class PaintOverlayWindow : Window
 
                 // 2. 处理自定义笔画的部分擦除
                 ProcessEraserPathPartialErase();
+
+                // 3. 处理图形工具绘制的形状（线/矩形/椭圆等）
+                EraseShapesAlongPath();
             }
 
             _eraserPath.Clear();
@@ -1871,6 +1871,197 @@ public partial class PaintOverlayWindow : Window
         {
             InkLayer.Strokes.Add(new StrokeCollection(toAdd));
         }
+    }
+
+    private void EraseShapesAlongPath()
+    {
+        if (_eraserPath.Count == 0) return;
+
+        var eraserGeometry = BuildEraserGeometry();
+        if (eraserGeometry == null) return;
+
+        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
+        foreach (var shape in shapes)
+        {
+            if (shape == _regionRect)
+            {
+                continue;
+            }
+
+            if (shape.Tag is CalligraphyLayerTag || shape.Tag is CustomStrokeTag)
+            {
+                continue;
+            }
+
+            if (!TryGetShapeGeometry(shape, out var geometry))
+            {
+                continue;
+            }
+
+            var strokeBrush = shape.Stroke;
+            var fillBrush = shape.Fill;
+            bool hasStroke = strokeBrush != null && shape.StrokeThickness > 0.1;
+            bool hasFill = IsBrushVisible(fillBrush);
+
+            Geometry? fillRemaining = null;
+            Geometry? strokeRemaining = null;
+
+            if (hasFill)
+            {
+                fillRemaining = Geometry.Combine(geometry, eraserGeometry, GeometryCombineMode.Exclude, null);
+            }
+
+            if (hasStroke)
+            {
+                var pen = CreateShapePen(shape, strokeBrush!);
+                var strokeGeometry = geometry.GetWidenedPathGeometry(pen);
+                strokeRemaining = Geometry.Combine(strokeGeometry, eraserGeometry, GeometryCombineMode.Exclude, null);
+            }
+
+            int index = ShapeCanvas.Children.IndexOf(shape);
+            ShapeCanvas.Children.Remove(shape);
+
+            bool added = false;
+            int insertIndex = Math.Max(0, index);
+
+            if (hasFill && fillRemaining != null && IsGeometryVisible(fillRemaining))
+            {
+                ShapeCanvas.Children.Insert(insertIndex++, CreateFillPath(fillRemaining, fillBrush!));
+                added = true;
+            }
+
+            if (hasStroke && strokeRemaining != null && IsGeometryVisible(strokeRemaining))
+            {
+                ShapeCanvas.Children.Insert(insertIndex++, CreateFillPath(strokeRemaining, strokeBrush!));
+                added = true;
+            }
+
+            if (!added)
+            {
+                continue;
+            }
+        }
+    }
+
+    private Geometry? BuildEraserGeometry()
+    {
+        if (_eraserPath.Count == 0) return null;
+
+        if (_eraserPath.Count == 1)
+        {
+            double radius = Math.Max(_eraserSize * 0.5, 0.1);
+            return new EllipseGeometry(_eraserPath[0], radius, radius);
+        }
+
+        var pathGeometry = new StreamGeometry
+        {
+            FillRule = FillRule.Nonzero
+        };
+
+        using (var ctx = pathGeometry.Open())
+        {
+            ctx.BeginFigure(_eraserPath[0], isFilled: false, isClosed: false);
+            for (int i = 1; i < _eraserPath.Count; i++)
+            {
+                ctx.LineTo(_eraserPath[i], isStroked: true, isSmoothJoin: true);
+            }
+        }
+
+        var pen = new Pen(Brushes.Black, Math.Max(1, _eraserSize))
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
+        return pathGeometry.GetWidenedPathGeometry(pen);
+    }
+
+    private static bool TryGetShapeGeometry(Shape shape, out Geometry geometry)
+    {
+        geometry = Geometry.Empty;
+
+        if (shape is Line line)
+        {
+            geometry = new LineGeometry(new WpfPoint(line.X1, line.Y1), new WpfPoint(line.X2, line.Y2));
+            return true;
+        }
+
+        if (shape is System.Windows.Shapes.Rectangle rect)
+        {
+            var left = System.Windows.Controls.Canvas.GetLeft(rect);
+            var top = System.Windows.Controls.Canvas.GetTop(rect);
+            geometry = new RectangleGeometry(new Rect(left, top, rect.Width, rect.Height));
+            return true;
+        }
+
+        if (shape is Ellipse ellipse)
+        {
+            var left = System.Windows.Controls.Canvas.GetLeft(ellipse);
+            var top = System.Windows.Controls.Canvas.GetTop(ellipse);
+            geometry = new EllipseGeometry(new Rect(left, top, ellipse.Width, ellipse.Height));
+            return true;
+        }
+
+        if (shape is Path path && path.Data != null)
+        {
+            geometry = path.Data;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static Pen CreateShapePen(Shape shape, Brush stroke)
+    {
+        var pen = new Pen(stroke, Math.Max(1, shape.StrokeThickness))
+        {
+            StartLineCap = shape.StrokeStartLineCap,
+            EndLineCap = shape.StrokeEndLineCap,
+            LineJoin = shape.StrokeLineJoin,
+            MiterLimit = shape.StrokeMiterLimit
+        };
+
+        if (shape.StrokeDashArray != null && shape.StrokeDashArray.Count > 0)
+        {
+            pen.DashStyle = new DashStyle(shape.StrokeDashArray, 0);
+        }
+
+        return pen;
+    }
+
+    private static Path CreateFillPath(Geometry geometry, Brush fill)
+    {
+        return new Path
+        {
+            Data = geometry,
+            Fill = fill,
+            StrokeThickness = 0
+        };
+    }
+
+    private static bool IsBrushVisible(Brush? brush)
+    {
+        if (brush == null)
+        {
+            return false;
+        }
+
+        if (brush is SolidColorBrush solid)
+        {
+            return solid.Color.A > 0;
+        }
+
+        return true;
+    }
+
+    private static bool IsGeometryVisible(Geometry geometry)
+    {
+        var bounds = geometry.Bounds;
+        if (bounds.IsEmpty)
+        {
+            return false;
+        }
+        return bounds.Width > 0.1 || bounds.Height > 0.1;
     }
 
     /// <summary>

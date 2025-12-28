@@ -67,6 +67,7 @@
     <Color x:Key="Color_Text_Disabled">#CBD5E1</Color>     <!-- 禁用灰 -->
 
     <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Tertiary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Text_Disabled}" PresentationOptions:Freeze="true"/>
