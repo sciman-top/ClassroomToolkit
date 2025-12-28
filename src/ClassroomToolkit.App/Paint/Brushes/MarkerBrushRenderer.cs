@@ -336,6 +336,8 @@ public class MarkerBrushRenderer : IBrushRenderer
         if (geometry.CanFreeze) geometry.Freeze();
         return geometry;
     }
+
+    private static double Lerp(double start, double end, double t)
     {
         return start + ((end - start) * t);
     }
