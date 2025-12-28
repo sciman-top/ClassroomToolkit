@@ -229,16 +229,21 @@ public partial class RollCallSettingsDialog : Window
             new ComboOption("up", "方向键↑"),
             new ComboOption("down", "方向键↓"),
             new ComboOption("f5", "F5键"),
+            new ComboOption("shift+f5", "Shift+F5键（从当前页放映）"),
+            new ComboOption("esc", "Esc键（退出放映）"),
+            new ComboOption("b", "B键（黑屏）"),
+            new ComboOption("w", "W键（白屏）"),
             new ComboOption("shift+b", "Shift+B键（黑屏）")
         };
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
-        RemoteKeyCombo.SelectedValue = current ?? "tab";
-        if (!string.IsNullOrWhiteSpace(current) && !items.Any(item => item.Value.Equals(current, StringComparison.OrdinalIgnoreCase)))
+        var selected = string.IsNullOrWhiteSpace(current) ? "tab" : current;
+        if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
         {
-            RemoteKeyCombo.Text = current;
+            selected = "tab";
         }
+        RemoteKeyCombo.SelectedValue = selected;
     }
 
     private void BuildSpeechEngineCombo(string? current)
@@ -268,12 +273,6 @@ public partial class RollCallSettingsDialog : Window
 
             foreach (var voice in allVoices)
             {
-                // 只跳过未启用的发音人，显示所有已启用的发音人
-                if (!voice.Enabled)
-                {
-                    continue;
-                }
-
                 var info = voice.VoiceInfo;
 
                 // 根据语言分组
@@ -288,18 +287,18 @@ public partial class RollCallSettingsDialog : Window
             }
 
             // 添加中文发音人
-            foreach (var voice in chineseVoices)
+            foreach (var voice in chineseVoices.OrderByDescending(item => item.Enabled).ThenBy(item => item.VoiceInfo.Name))
             {
                 var info = voice.VoiceInfo;
-                var label = FormatVoiceLabel(info, true);
+                var label = FormatVoiceLabel(info, true, voice.Enabled);
                 voices.Add(new ComboOption(info.Name, label));
             }
 
             // 添加其他语言发音人
-            foreach (var voice in otherVoices)
+            foreach (var voice in otherVoices.OrderByDescending(item => item.Enabled).ThenBy(item => item.VoiceInfo.Name))
             {
                 var info = voice.VoiceInfo;
-                var label = FormatVoiceLabel(info, false);
+                var label = FormatVoiceLabel(info, false, voice.Enabled);
                 voices.Add(new ComboOption(info.Name, label));
             }
         }
@@ -340,16 +339,17 @@ public partial class RollCallSettingsDialog : Window
     /// <summary>
     /// 格式化发音人标签，显示名称、语言和性别信息
     /// </summary>
-    private static string FormatVoiceLabel(System.Speech.Synthesis.VoiceInfo info, bool isChinese)
+    private static string FormatVoiceLabel(System.Speech.Synthesis.VoiceInfo info, bool isChinese, bool isEnabled)
     {
         var languageName = GetLanguageDisplayName(info.Culture.Name);
         var gender = GetGenderDisplayName(info);
 
         // 中文发音人优先，在标签前加"【推荐】"
         var prefix = isChinese ? "【推荐】" : "";
+        var suffix = isEnabled ? string.Empty : "（未启用）";
 
         // 格式：名称（语言，性别）
-        return $"{prefix}{info.Name}（{languageName}，{gender}）";
+        return $"{prefix}{info.Name}（{languageName}，{gender}）{suffix}";
     }
 
     /// <summary>

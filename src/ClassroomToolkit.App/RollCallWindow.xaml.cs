@@ -859,28 +859,25 @@ public partial class RollCallWindow : Window
         var nameText = showName ? _viewModel.CurrentStudentName : string.Empty;
         var idText = showId ? _viewModel.CurrentStudentId : string.Empty;
 
-        // 增加字体大小系数，让姓名充满窗口空间（从 0.6/0.75 → 0.75/0.85）
-        var maxNameFont = Math.Max(28, availableHeight * (showId ? 0.75 : 0.85));
-        var maxIdFont = Math.Max(14, maxNameFont * 0.4);
+        const double baseNameFont = 100d;
+        const double idScale = 0.4d;
+        const double paddingScale = 0.96d;
 
-        var nameSize = MeasureText(nameText, BigNameText, maxNameFont);
-        var idSize = showId ? MeasureText(idText, IdText, maxIdFont) : new WpfSize(0, 0);
-        var gap = showId ? IdText.Margin.Left + IdText.Margin.Right : 0;
-        var totalWidth = nameSize.Width + (showId ? idSize.Width + gap : 0);
+        var nameSize = showName ? MeasureText(nameText, BigNameText, baseNameFont) : new WpfSize(0, 0);
+        var idSize = showId ? MeasureText(idText, IdText, baseNameFont * idScale) : new WpfSize(0, 0);
+        var gap = showId && showName ? IdText.Margin.Left + IdText.Margin.Right : 0;
+        var totalWidth = nameSize.Width + idSize.Width + gap;
         var maxHeight = Math.Max(nameSize.Height, idSize.Height);
-
-        var scale = 1.0;
-        if (totalWidth > availableWidth)
+        if (totalWidth <= 0 || maxHeight <= 0)
         {
-            scale = Math.Min(scale, availableWidth / totalWidth);
-        }
-        if (maxHeight > availableHeight)
-        {
-            scale = Math.Min(scale, availableHeight / maxHeight);
+            return;
         }
 
-        BigNameText.FontSize = Math.Max(18, maxNameFont * scale);
-        IdText.FontSize = Math.Max(12, maxIdFont * scale);
+        var scale = Math.Min(availableWidth / totalWidth, availableHeight / maxHeight);
+        scale = Math.Max(0.1, scale) * paddingScale;
+
+        BigNameText.FontSize = Math.Max(18, baseNameFont * scale);
+        IdText.FontSize = Math.Max(12, baseNameFont * idScale * scale);
     }
 
     private WpfSize MeasureText(string text, TextBlock textBlock, double fontSize)

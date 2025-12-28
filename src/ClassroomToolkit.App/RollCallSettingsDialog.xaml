@@ -129,7 +129,7 @@
                                   Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="翻页笔按键:" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="#666"/>
-                        <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="True" Height="28"/>
+                        <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="False" Height="28"/>
                     </Grid>
                 </TabItem>
 

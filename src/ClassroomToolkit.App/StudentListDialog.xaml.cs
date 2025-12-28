@@ -33,8 +33,6 @@ public partial class StudentListDialog : Window
     /// </summary>
     private void AdjustWindowSize()
     {
-        if (_students.Count == 0) return;
-
         // 计算需要的卡片布局
         const double itemWidth = 120;  // WrapPanel ItemWidth
         const double itemHeight = 48;  // WrapPanel ItemHeight
@@ -42,20 +40,22 @@ public partial class StudentListDialog : Window
         const double scrollMargin = 32; // ScrollViewer Margin (16 * 2)
         const double headerHeight = 40;  // 标题栏高度
         const double footerHeight = 60;  // 底部高度
-        const double minContentHeight = 300;  // 最小内容高度
-        const double maxContentHeight = 700;  // 最大内容高度
 
         // 计算可用宽度（减去边距）
-        var availableWidth = Width - scrollMargin;
+        var rawWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var availableWidth = Math.Max(itemWidth, rawWidth - scrollMargin);
 
         // 计算每行可以放多少个卡片
         var columns = Math.Max(1, (int)(availableWidth / (itemWidth + itemMargin)));
 
         // 计算需要多少行
-        var rows = (int)Math.Ceiling(_students.Count / (double)columns);
+        var rows = Math.Max(1, (int)Math.Ceiling(_students.Count / (double)columns));
 
         // 计算内容高度
         var contentHeight = rows * (itemHeight + itemMargin);
+        var minContentHeight = itemHeight + itemMargin;
+        var maxWindowHeight = Math.Max(320, SystemParameters.WorkArea.Height - 40);
+        var maxContentHeight = Math.Max(minContentHeight, maxWindowHeight - headerHeight - footerHeight - scrollMargin);
         contentHeight = Math.Clamp(contentHeight, minContentHeight, maxContentHeight);
 
         // 计算总高度

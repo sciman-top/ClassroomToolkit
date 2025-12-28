@@ -268,6 +268,21 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return geo;
     }
 
+    /// <summary>
+    /// 获取最后一笔的原始点数据（用于部分删除）
+    /// </summary>
+    public List<StrokePointData>? GetLastStrokePoints()
+    {
+        if (_points.Count < 2) return null;
+
+        var result = new List<StrokePointData>(_points.Count);
+        foreach (var point in _points)
+        {
+            result.Add(new StrokePointData(point.Position, point.Width));
+        }
+        return result;
+    }
+
     // ========================================
     // v10 算法核心实现
     // ========================================

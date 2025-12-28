@@ -194,10 +194,34 @@ public partial class PaintOverlayWindow : Window
     private readonly Stack<PaintSnapshot> _history = new();
     private bool _erasing;
     private bool _inkStrokeInProgress;
-    
+
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
     private IBrushRenderer? _activeRenderer;
     private DrawingVisualHost _visualHost;
+
+    // 笔画数据存储（用于部分删除）
+    private sealed class CustomStrokeData
+    {
+        public string GroupId { get; }
+        public List<StrokePointData> Points { get; }
+        public PaintBrushStyle Style { get; }
+        public MediaColor Color { get; }
+        public double BaseSize { get; }
+        public Guid RendererId { get; }
+
+        public CustomStrokeData(string groupId, List<StrokePointData> points, PaintBrushStyle style,
+            MediaColor color, double baseSize, Guid rendererId)
+        {
+            GroupId = groupId;
+            Points = points;
+            Style = style;
+            Color = color;
+            BaseSize = baseSize;
+            RendererId = rendererId;
+        }
+    }
+
+    private readonly List<CustomStrokeData> _customStrokes = new();
 
     private class DrawingVisualHost : FrameworkElement
     {
@@ -501,13 +525,27 @@ public partial class PaintOverlayWindow : Window
 
             _activeRenderer.OnUp(e.GetPosition(CustomDrawHost));
             var geometry = _activeRenderer.GetLastStrokeGeometry();
-            
-            if (geometry != null)
+            var points = _activeRenderer.GetLastStrokePoints();
+
+            if (geometry != null && points != null)
             {
                 var attr = InkLayer.DefaultDrawingAttributes;
+                var groupId = Guid.NewGuid().ToString("N");
+                var baseWidth = Math.Max(attr.Width, attr.Height);
+
+                // 保存笔画数据（用于部分删除）
+                var strokeData = new CustomStrokeData(
+                    groupId,
+                    points,
+                    _brushStyle,
+                    attr.Color,
+                    baseWidth,
+                    Guid.NewGuid() // 唯一标识此笔画
+                );
+                _customStrokes.Add(strokeData);
+
                 if (_brushStyle == PaintBrushStyle.Calligraphy)
                 {
-                    double baseWidth = Math.Max(attr.Width, attr.Height);
                     DrawStrokeToCanvas(ShapeCanvas, geometry, baseWidth);
                 }
                 else
@@ -1497,11 +1535,17 @@ public partial class PaintOverlayWindow : Window
     private void EraseRegion(Rect region)
     {
         PushHistory();
+
+        // 1. 处理 InkCanvas 的内置笔画
         if (InkLayer.Strokes.Count > 0)
         {
             InkLayer.Strokes.Erase(region);
         }
 
+        // 2. 处理自定义笔画（部分删除）
+        ProcessCustomStrokesPartialErase(region);
+
+        // 3. 处理其他形状（完全删除）
         var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
         var calligraphyGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var shape in shapes)
@@ -1527,6 +1571,170 @@ public partial class PaintOverlayWindow : Window
         if (calligraphyGroups.Count > 0)
         {
             RemoveCalligraphyGroups(calligraphyGroups);
+        }
+    }
+
+    /// <summary>
+    /// 对自定义笔画进行部分删除
+    /// </summary>
+    private void ProcessCustomStrokesPartialErase(Rect eraseRegion)
+    {
+        if (_customStrokes.Count == 0) return;
+
+        // 需要删除的笔画索引（倒序遍历以安全删除）
+        for (int i = _customStrokes.Count - 1; i >= 0; i--)
+        {
+            var stroke = _customStrokes[i];
+            if (!IsStrokeIntersectRegion(stroke, eraseRegion)) continue;
+
+            // 分割笔画：找出在删除区域外的段落
+            var segments = SplitStrokeOutsideRegion(stroke, eraseRegion);
+
+            // 移除原笔画
+            _customStrokes.RemoveAt(i);
+            RemoveCalligraphyGroupById(stroke.GroupId);
+
+            // 重新绘制未删除的段落
+            foreach (var segment in segments)
+            {
+                RedrawStrokeSegment(segment);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 判断笔画是否与删除区域相交
+    /// </summary>
+    private bool IsStrokeIntersectRegion(CustomStrokeData stroke, Rect region)
+    {
+        foreach (var point in stroke.Points)
+        {
+            if (region.Contains(point.Position))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 将笔画分割成多个段落，只保留删除区域外的部分
+    /// </summary>
+    private List<List<StrokePointData>> SplitStrokeOutsideRegion(CustomStrokeData stroke, Rect eraseRegion)
+    {
+        var segments = new List<List<StrokePointData>>();
+        var currentSegment = new List<StrokePointData>();
+        bool isInEraseRegion = false;
+
+        foreach (var point in stroke.Points)
+        {
+            bool pointInRegion = eraseRegion.Contains(point.Position);
+
+            if (pointInRegion != isInEraseRegion)
+            {
+                // 状态改变：进入/离开删除区域
+                if (currentSegment.Count > 0)
+                {
+                    // 保存当前段落
+                    if (!isInEraseRegion) // 只保留删除区域外的段落
+                    {
+                        segments.Add(new List<StrokePointData>(currentSegment));
+                    }
+                    currentSegment.Clear();
+                }
+
+                isInEraseRegion = pointInRegion;
+            }
+
+            if (!isInEraseRegion)
+            {
+                currentSegment.Add(point);
+            }
+        }
+
+        // 添加最后一个段落
+        if (currentSegment.Count > 0)
+        {
+            segments.Add(currentSegment);
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// 重新绘制笔画段落
+    /// </summary>
+    private void RedrawStrokeSegment(List<StrokePointData> segment)
+    {
+        if (segment.Count < 2) return;
+
+        // 获取第一个点的属性
+        var firstPoint = segment[0];
+        var baseSize = firstPoint.Width * 2; // 粗略估计
+        var color = MediaColor.FromArgb(255, 0x15, 0x15, 0x15); // 默认黑色
+
+        // 创建临时渲染器
+        IBrushRenderer renderer = CreateRendererForStroke();
+        renderer.Initialize(color, baseSize, 1.0);
+
+        // 重建笔画点数据
+        renderer.OnDown(firstPoint.Position);
+        for (int i = 1; i < segment.Count; i++)
+        {
+            renderer.OnMove(segment[i].Position);
+        }
+        renderer.OnUp(segment.Last().Position);
+
+        // 获取几何并绘制
+        var geometry = renderer.GetLastStrokeGeometry();
+        if (geometry != null)
+        {
+            var groupId = Guid.NewGuid().ToString("N");
+
+            if (PaintBrushStyle.Calligraphy == true) // TODO: 需要保存笔画类型
+            {
+                DrawStrokeToCanvas(ShapeCanvas, geometry, baseSize);
+            }
+            else
+            {
+                DrawMarkerStrokeToCanvas(ShapeCanvas, geometry, color);
+            }
+
+            // 保存新的笔画数据
+            var newStrokeData = new CustomStrokeData(
+                groupId,
+                segment,
+                PaintBrushStyle.Marker, // TODO: 根据实际类型
+                color,
+                baseSize,
+                Guid.NewGuid()
+            );
+            _customStrokes.Add(newStrokeData);
+        }
+    }
+
+    /// <summary>
+    /// 创建临时渲染器用于重绘笔画段落
+    /// </summary>
+    private IBrushRenderer CreateRendererForStroke()
+    {
+        // 简化：总是使用 MarkerBrushRenderer
+        // TODO: 根据笔画类型选择合适的渲染器
+        return new MarkerBrushRenderer();
+    }
+
+    /// <summary>
+    /// 根据GroupId删除笔画
+    /// </summary>
+    private void RemoveCalligraphyGroupById(string groupId)
+    {
+        var shapes = ShapeCanvas.Children.OfType<Shape>().ToList();
+        foreach (var shape in shapes)
+        {
+            if (shape.Tag is CalligraphyLayerTag tag && tag.GroupId == groupId)
+            {
+                ShapeCanvas.Children.Remove(shape);
+            }
         }
     }
 
