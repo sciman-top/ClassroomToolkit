@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Media;
+using WpfSize = System.Windows.Size;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
@@ -862,7 +863,7 @@ public partial class RollCallWindow : Window
         var maxIdFont = Math.Max(14, maxNameFont * 0.4);
 
         var nameSize = MeasureText(nameText, BigNameText, maxNameFont);
-        var idSize = showId ? MeasureText(idText, IdText, maxIdFont) : new Size(0, 0);
+        var idSize = showId ? MeasureText(idText, IdText, maxIdFont) : new WpfSize(0, 0);
         var gap = showId ? IdText.Margin.Left + IdText.Margin.Right : 0;
         var totalWidth = nameSize.Width + (showId ? idSize.Width + gap : 0);
         var maxHeight = Math.Max(nameSize.Height, idSize.Height);
@@ -881,7 +882,7 @@ public partial class RollCallWindow : Window
         IdText.FontSize = Math.Max(12, maxIdFont * scale);
     }
 
-    private Size MeasureText(string text, TextBlock textBlock, double fontSize)
+    private WpfSize MeasureText(string text, TextBlock textBlock, double fontSize)
     {
         var content = string.IsNullOrWhiteSpace(text) ? " " : text;
         var typeface = new Typeface(textBlock.FontFamily, textBlock.FontStyle, textBlock.FontWeight, textBlock.FontStretch);
@@ -893,6 +894,6 @@ public partial class RollCallWindow : Window
             fontSize,
             Brushes.Black,
             VisualTreeHelper.GetDpi(this).PixelsPerDip);
-        return new Size(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
+        return new WpfSize(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
     }
 }
