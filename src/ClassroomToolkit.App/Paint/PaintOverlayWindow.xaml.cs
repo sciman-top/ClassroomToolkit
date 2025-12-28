@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
 using MediaColor = System.Windows.Media.Color;
+using MediaBrushes = System.Windows.Media.Brushes;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaPen = System.Windows.Media.Pen;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
@@ -1410,7 +1411,7 @@ public partial class PaintOverlayWindow : Window
             ctx.BeginFigure(start, isFilled: false, isClosed: false);
             ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
         }
-        var pen = new MediaPen(Brushes.Black, Math.Max(1.0, _eraserSize))
+        var pen = new MediaPen(MediaBrushes.Black, Math.Max(1.0, _eraserSize))
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
@@ -1608,7 +1609,7 @@ public partial class PaintOverlayWindow : Window
 
     private void EraseGeometry(Geometry geometry)
     {
-        RenderAndBlend(geometry, Brushes.White, null, erase: true);
+        RenderAndBlend(geometry, MediaBrushes.White, null, erase: true);
     }
 
     private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase)
