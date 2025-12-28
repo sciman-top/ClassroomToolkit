@@ -172,24 +172,51 @@ public class MarkerBrushRenderer : IBrushRenderer
 
         using (var ctx = geometry.Open())
         {
-            ctx.BeginFigure(leftEdge[0], true, true);
+            // ===== 修复绕向问题：绘制单一连续轮廓，保持顺时针方向 =====
+            // 1. 从左边缘起点开始
+            ctx.BeginFigure(leftEdge[0], isFilled: true, isClosed: true);
+
+            // 2. 绘制左边缘（向前）
             for (int i = 1; i < leftEdge.Count; i++)
             {
-                ctx.LineTo(leftEdge[i], true, true);
+                ctx.LineTo(leftEdge[i], isStroked: true, isSmoothJoin: true);
             }
 
+            // 3. 末端圆弧：从左边缘末尾到右边缘末尾（保持顺时针）
             var lastLeft = leftEdge[^1];
             var lastRight = rightEdge[^1];
             double endRadius = Math.Max(_points[^1].Width * 0.5, 0.1);
-            ctx.ArcTo(lastRight, new WpfSize(endRadius, endRadius), 0, false, SweepDirection.Clockwise, true, true);
 
+            // 计算末端圆弧的控制点
+            var endMidPoint = new WpfPoint((lastLeft.X + lastRight.X) * 0.5, (lastLeft.Y + lastRight.Y) * 0.5);
+            var endDir = lastRight - lastLeft;
+            if (endDir.LengthSquared > 0.0001) endDir.Normalize();
+            var endNormal = new Vector(-endDir.Y, endDir.X);
+            var endControlPoint = endMidPoint + endNormal * (endRadius * 0.5);
+
+            // 使用二次贝塞尔曲线模拟圆弧（避免 ArcTo 的绕向问题）
+            ctx.QuadraticBezierTo(endControlPoint, lastRight, isStroked: true, isSmoothJoin: true);
+
+            // 4. 绘制右边缘（向后，从末尾到起点）
             for (int i = rightEdge.Count - 2; i >= 0; i--)
             {
-                ctx.LineTo(rightEdge[i], true, true);
+                ctx.LineTo(rightEdge[i], isStroked: true, isSmoothJoin: true);
             }
 
+            // 5. 起始圆弧：从右边缘起点回到左边缘起点（保持顺时针）
+            var firstRight = rightEdge[0];
+            var firstLeft = leftEdge[0];
             double startRadius = Math.Max(_points[0].Width * 0.5, 0.1);
-            ctx.ArcTo(leftEdge[0], new WpfSize(startRadius, startRadius), 0, false, SweepDirection.Clockwise, true, true);
+
+            // 计算起始圆弧的控制点
+            var startMidPoint = new WpfPoint((firstRight.X + firstLeft.X) * 0.5, (firstRight.Y + firstLeft.Y) * 0.5);
+            var startDir = firstLeft - firstRight;
+            if (startDir.LengthSquared > 0.0001) startDir.Normalize();
+            var startNormal = new Vector(-startDir.Y, startDir.X);
+            var startControlPoint = startMidPoint + startNormal * (startRadius * 0.5);
+
+            // 使用二次贝塞尔曲线模拟圆弧
+            ctx.QuadraticBezierTo(startControlPoint, firstLeft, isStroked: true, isSmoothJoin: true);
         }
 
         return geometry;
