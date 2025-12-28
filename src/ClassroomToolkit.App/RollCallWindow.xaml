@@ -63,52 +63,41 @@
             <!-- 1. 顶部工具栏 -->
             <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- Left: Mode -->
-                    <ColumnDefinition Width="*"/>    <!-- Center: Class/List/Reset Control -->
+                    <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
+                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
                     <ColumnDefinition Width="Auto"/> <!-- Right: System -->
                 </Grid.ColumnDefinitions>
 
-                <!-- 左侧：模式切换 -->
-                <Button Grid.Column="0" Margin="12,0,0,0" Style="{StaticResource Style_SecondaryButton}" 
-                        Click="OnToggleModeClick" Padding="12,6">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Fill="#555" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
-                            <Path.Style>
-                                <Style TargetType="Path">
-                                    <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
-                                            <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Path.Style>
-                        </Path>
-                        <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold"/>
-                    </StackPanel>
-                </Button>
+                <!-- 左侧功能区 -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0">
+                    <!-- 模式切换 -->
+                    <Button Style="{StaticResource Style_SecondaryButton}" 
+                            Click="OnToggleModeClick" Padding="12,6" Margin="0,0,8,0" MinWidth="120">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Fill="#555" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
+                                                <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- 中间：核心控制 (仅点名模式) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
-                            Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                    
-                    <!-- 班级选择 -->
-                    <ComboBox Width="140" Height="32" Margin="0,0,8,0"
+                    <!-- 班级选择 (仅点名模式) -->
+                    <ComboBox Width="100" Height="32"
                               ItemsSource="{Binding AvailableClasses}"
                               SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
+                              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
                               SelectionChanged="OnClassSelectionChanged"
                               VerticalContentAlignment="Center"
                               ToolTip="切换班级"/>
-                    
-                    <!-- 名单管理 -->
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnListClick" ToolTip="查看名单" Margin="0,0,4,0">
-                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
-                    </Button>
-
-                    <!-- 重置状态 -->
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="0,0,4,0">
-                        <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
-                    </Button>
                 </StackPanel>
 
                 <!-- 右侧：系统按钮 -->
@@ -180,40 +169,52 @@
 
             <!-- 3. 底部控件 -->
             <Grid Grid.Row="2" Margin="0,0,0,16">
-                <!-- 分组按钮 (点名模式) -->
-                <!-- 移除了 IsReset=True 的按钮逻辑，因为我们在顶部加了专门的重置按钮。但为了兼容旧习惯，保留也无妨，或者可以在 ViewModel 里处理 -->
-                <ItemsControl ItemsSource="{Binding GroupButtons}" 
-                              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                              HorizontalAlignment="Center">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <!-- 只有非重置类型的按钮才显示，因为重置已经上移了？ 
-                                 或者我们依然显示所有分组，让用户自己选。
-                                 为了界面整洁，这里只显示“分组切换”按钮。重置按钮已独立。
-                                 我们可以通过 Style Trigger 隐藏 IsReset 的项。
-                            -->
-                            <Button Content="{Binding Label}" 
-                                    Margin="4" 
-                                    Style="{StaticResource Style_SecondaryButton}"
-                                    Click="OnGroupEntryClick">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsReset}" Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- 点名模式下的底部栏 -->
+                <WrapPanel Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                    
+                    <!-- 分组按钮列表 -->
+                    <ItemsControl ItemsSource="{Binding GroupButtons}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Label}" 
+                                        Margin="4" 
+                                        Click="OnGroupEntryClick">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsReset}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 重置按钮 (改为与分组按钮同风格) -->
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="4" Padding="10,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_Reset}" Fill="#333" Stretch="Uniform" Width="14" Height="14" Margin="0,0,6,0"/>
+                            <TextBlock Text="重置"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 名单管理按钮 (改为与分组按钮同风格) -->
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" ToolTip="查看名单" Margin="4" Padding="10,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_List}" Fill="#333" Stretch="Uniform" Width="14" Height="14" Margin="0,0,6,0"/>
+                            <TextBlock Text="名单"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
 
                 <!-- 计时控制 (计时模式) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" 
