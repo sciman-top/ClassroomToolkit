@@ -15,7 +15,7 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <!-- 颜色选择按钮样式 (圆形) - 紧凑精致版 -->
+        <!-- 颜色选择按钮样式 (圆形) - 精美光泽版 -->
         <Style x:Key="Style_ColorButton" TargetType="ToggleButton">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -26,34 +26,49 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Grid>
-                            <!-- 选中时的外圈光环 -->
-                            <Ellipse x:Name="Ring" Stroke="{StaticResource Brush_Primary}" StrokeThickness="2"
-                                     Width="28" Height="28" Opacity="0">
+                            <!-- 选中时的外圈双层光环 -->
+                            <Ellipse x:Name="RingOuter" Stroke="{StaticResource Brush_Primary}" StrokeThickness="1.5"
+                                     Width="30" Height="30" Opacity="0">
                                 <Ellipse.Effect>
-                                    <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="6" ShadowDepth="0" Opacity="0.4"/>
+                                    <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
                                 </Ellipse.Effect>
                             </Ellipse>
+                            <Ellipse x:Name="RingInner" Stroke="{StaticResource Brush_Primary}" StrokeThickness="2.5"
+                                     Width="26" Height="26" Opacity="0"/>
 
                             <!-- 颜色主体 -->
                             <Border x:Name="ColorDot" Width="20" Height="20" CornerRadius="10"
                                     Background="{TemplateBinding Background}"
-                                    BorderBrush="#30FFFFFF" BorderThickness="1">
+                                    BorderBrush="#40FFFFFF" BorderThickness="1">
                                 <Border.RenderTransform>
                                     <ScaleTransform CenterX="10" CenterY="10" ScaleX="1" ScaleY="1"/>
                                 </Border.RenderTransform>
                                 <Border.Effect>
-                                    <DropShadowEffect Color="Black" BlurRadius="3" ShadowDepth="0.5" Opacity="0.15"/>
+                                    <DropShadowEffect Color="Black" BlurRadius="4" ShadowDepth="1" Opacity="0.2"/>
                                 </Border.Effect>
                             </Border>
+
+                            <!-- 高光效果 -->
+                            <Ellipse x:Name="Gloss" Width="8" Height="6" VerticalAlignment="Top" HorizontalAlignment="Left"
+                                     Margin="5,3,0,0" Opacity="0.4">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush>
+                                        <GradientStop Color="White" Offset="0"/>
+                                        <GradientStop Color="Transparent" Offset="1"/>
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Ring" Property="Opacity" Value="1"/>
+                                <Setter TargetName="RingOuter" Property="Opacity" Value="1"/>
+                                <Setter TargetName="RingInner" Property="Opacity" Value="1"/>
                                 <Setter TargetName="ColorDot" Property="RenderTransform">
                                     <Setter.Value>
-                                        <ScaleTransform CenterX="10" CenterY="10" ScaleX="1.1" ScaleY="1.1"/>
+                                        <ScaleTransform CenterX="10" CenterY="10" ScaleX="1.12" ScaleY="1.12"/>
                                     </Setter.Value>
                                 </Setter>
+                                <Setter TargetName="Gloss" Property="Opacity" Value="0.5"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ColorDot" Property="RenderTransform">
@@ -61,6 +76,7 @@
                                         <ScaleTransform CenterX="10" CenterY="10" ScaleX="1.08" ScaleY="1.08"/>
                                     </Setter.Value>
                                 </Setter>
+                                <Setter TargetName="Gloss" Property="Opacity" Value="0.5"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -68,43 +84,43 @@
             </Setter>
         </Style>
 
-        <!-- 分割线样式 - 紧凑精致版 -->
+        <!-- 分割线样式 - 渐变精致版 -->
         <Style x:Key="Style_Separator" TargetType="Rectangle">
             <Setter Property="Width" Value="1"/>
-            <Setter Property="Height" Value="22"/>
-            <Setter Property="Fill" Value="{StaticResource Brush_Border}"/>
-            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="5,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="RadiusX" Value="0.5"/>
             <Setter Property="RadiusY" Value="0.5"/>
+            <Setter Property="Opacity" Value="0.3"/>
         </Style>
     </Window.Resources>
 
-    <!-- 主容器：胶囊形状，玻璃态效果 + 品牌装饰 -->
+    <!-- 主容器：精致玻璃态效果 + 品牌渐变装饰 -->
     <Border x:Name="ToolbarContainer"
-            Background="{StaticResource Gradient_Glass}"
-            BorderBrush="{StaticResource Brush_Border}"
+            Background="#F8FAFC"
+            BorderBrush="#E8EEF8"
             BorderThickness="1"
             CornerRadius="10"
             Padding="6,5"
             MouseLeftButtonDown="OnToolbarDrag">
         <Border.Effect>
-            <DropShadowEffect Color="Black" Opacity="0.12" BlurRadius="15" ShadowDepth="3"/>
+            <DropShadowEffect Color="#4A90E2" Opacity="0.15" BlurRadius="20" ShadowDepth="4"/>
         </Border.Effect>
 
         <Grid>
             <Grid x:Name="ToolbarRoot" Background="Transparent" Margin="0,0,0,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                <!-- 0. 拖动把手 (Drag Handle) - 紧凑点状设计 -->
+                <!-- 0. 拖动把手 (Drag Handle) - 渐变点状设计 -->
                 <Grid x:Name="DragHandle" Width="28" Background="Transparent"
-                      Margin="2,0,4,0" Cursor="SizeAll"
+                      Margin="2,0,5,0" Cursor="SizeAll"
                       MouseLeftButtonDown="OnToolbarDrag"
                       ToolTip="按住此处拖动">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <Ellipse Width="2.5" Height="2.5" Fill="{StaticResource Brush_Text_Tertiary}" Margin="0,0.5"/>
-                        <Ellipse Width="2.5" Height="2.5" Fill="{StaticResource Brush_Text_Tertiary}" Margin="0,0.5"/>
-                        <Ellipse Width="2.5" Height="2.5" Fill="{StaticResource Brush_Text_Tertiary}" Margin="0,0.5"/>
+                        <Ellipse Width="2.5" Height="2.5" Fill="#A0B0C8" Margin="0,0.5"/>
+                        <Ellipse Width="2.5" Height="2.5" Fill="#A0B0C8" Margin="0,0.5"/>
+                        <Ellipse Width="2.5" Height="2.5" Fill="#A0B0C8" Margin="0,0.5"/>
                     </StackPanel>
                 </Grid>
 
@@ -116,7 +132,7 @@
                     <Path Data="{StaticResource Icon_Cursor}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                 </ToggleButton>
 
-                <Rectangle Style="{StaticResource Style_Separator}"/>
+                <Rectangle Style="{StaticResource Style_Separator}" Fill="#E0E8F5"/>
 
                 <!-- 2. 颜色/画笔区 -->
                 <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
@@ -137,7 +153,7 @@
                               ToolTip="蓝色笔 (长按换色)"
                               behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}"/>
 
-                <Rectangle Style="{StaticResource Style_Separator}"/>
+                <Rectangle Style="{StaticResource Style_Separator}" Fill="#E0E8F5"/>
 
                 <!-- 3. 擦除工具 -->
                 <ToggleButton x:Name="EraserButton"
@@ -154,7 +170,7 @@
                     <Path Data="{StaticResource Icon_RegionErase}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                 </ToggleButton>
 
-                <Rectangle Style="{StaticResource Style_Separator}"/>
+                <Rectangle Style="{StaticResource Style_Separator}" Fill="#E0E8F5"/>
 
                 <!-- 4. 操作与设置 -->
                 <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="一键清屏">
