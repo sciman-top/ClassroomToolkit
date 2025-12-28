@@ -48,19 +48,19 @@
         </Storyboard>
     </Window.Resources>
 
-    <Border Background="White" CornerRadius="8" BorderBrush="#DDDDDD" BorderThickness="1">
+    <Border Background="White" CornerRadius="12" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.15"/>
+            <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="6" Opacity="0.1"/>
         </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="50"/> <!-- Toolbar -->
+                <RowDefinition Height="56"/> <!-- Toolbar -->
                 <RowDefinition Height="*"/>  <!-- Main Content -->
                 <RowDefinition Height="Auto"/> <!-- Bottom Controls (Groups/TimerControls) -->
             </Grid.RowDefinitions>
 
-            <!-- 1. 顶部工具栏 -->
+            <!-- 1. 顶部工具栏 - 现代升级版 -->
             <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
@@ -69,12 +69,12 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 左侧功能区 -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0">
                     <!-- 模式切换 -->
-                    <Button Style="{StaticResource Style_SecondaryButton}" 
-                            Click="OnToggleModeClick" Padding="12,6" Margin="0,0,8,0" MinWidth="120">
+                    <Button Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnToggleModeClick" Padding="14,8" Margin="0,0,10,0" MinWidth="120">
                         <StackPanel Orientation="Horizontal">
-                            <Path Fill="#555" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
+                            <Path Fill="{StaticResource Brush_Foreground}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0">
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
@@ -91,7 +91,7 @@
                     </Button>
 
                     <!-- 班级选择 (仅点名模式) -->
-                    <ComboBox Width="100" Height="32"
+                    <ComboBox Width="110" Height="36"
                               ItemsSource="{Binding AvailableClasses}"
                               SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
                               Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
@@ -101,39 +101,40 @@
                 </StackPanel>
 
                 <!-- 右侧：系统按钮 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
                     <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                     </Button>
-                    
-                    <Rectangle Width="1" Height="20" Fill="#EEE" Margin="6,0"/>
-                    
+
+                    <Rectangle Width="1" Height="22" Fill="{StaticResource Brush_Border}" Margin="8,0"/>
+
                     <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
-                        <Rectangle Width="12" Height="2" Fill="{StaticResource Brush_Foreground}"/>
+                        <Rectangle Width="14" Height="2.5" Fill="{StaticResource Brush_Foreground}"/>
                     </Button>
                     <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭">
-                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="10" Height="10"/>
+                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="12" Height="12"/>
                     </Button>
                 </StackPanel>
             </Grid>
 
             <!-- 2. 内容区 -->
-            
-            <!-- A. 点名展示 -->
+
+            <!-- A. 点名展示 - 现代升级版 -->
             <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                <!-- 优化：VerticalAlignment="Center" 让卡片高度根据文字自适应，不再强制拉伸 -->
-                <Border Background="White" CornerRadius="12" 
+                <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="16"
                         VerticalAlignment="Stretch"
                         HorizontalAlignment="Stretch"
-                        Margin="40,10"
+                        Margin="40,16"
+                        BorderBrush="{StaticResource Brush_Border}"
+                        BorderThickness="1"
                         MouseLeftButtonUp="OnRollClick">
-                    <!-- 卡片阴影 -->
+                    <!-- 卡片阴影 - 品牌色光晕 -->
                     <Border.Effect>
-                        <DropShadowEffect Color="#007ACC" BlurRadius="30" ShadowDepth="0" Opacity="0.15"/>
+                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="35" ShadowDepth="0" Opacity="0.18"/>
                     </Border.Effect>
-                    
+
                     <!-- 核心名字展示 -->
-                    <Grid x:Name="NameCardBody" Margin="40,20"
+                    <Grid x:Name="NameCardBody" Margin="48,24"
                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                           SnapsToDevicePixels="True" UseLayoutRounding="True"
                           SizeChanged="OnNameCardSizeChanged">
@@ -144,16 +145,16 @@
                             </StackPanel.RenderTransform>
 
                             <!-- 学号 (可选显示) -->
-                            <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}" 
+                            <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}"
                                        Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                       Foreground="#888" Margin="0,0,20,0" FontWeight="Light"
+                                       Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,24,0" FontWeight="Light"
                                        TextOptions.TextFormattingMode="Display"
                                        TextOptions.TextRenderingMode="ClearType"/>
-                            
+
                             <!-- 姓名 -->
                             <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}"
                                        Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                       Foreground="#333" FontWeight="Bold"
+                                       Foreground="{StaticResource Brush_Text_Primary}" FontWeight="Bold"
                                        TextAlignment="Center"
                                        TextTrimming="None"
                                        TextWrapping="NoWrap"
@@ -166,28 +167,31 @@
                 </Border>
             </Grid>
 
-            <!-- B. 计时展示 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}" Margin="20,0,20,10">
-                <Border Background="#2B2B2B" CornerRadius="12">
-                     <Viewbox Stretch="Uniform" Margin="20">
-                        <TextBlock Text="{Binding TimeDisplay}" 
-                                   Foreground="#00FF99" 
-                                   FontFamily="Consolas" 
+            <!-- B. 计时展示 - 现代升级版 -->
+            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}" Margin="24,0,24,16">
+                <Border Background="#1A1F2C" CornerRadius="16">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#00C896" BlurRadius="25" ShadowDepth="0" Opacity="0.2"/>
+                    </Border.Effect>
+                     <Viewbox Stretch="Uniform" Margin="24">
+                        <TextBlock Text="{Binding TimeDisplay}"
+                                   Foreground="#00FFAA"
+                                   FontFamily="Consolas"
                                    FontWeight="Bold">
                              <TextBlock.Effect>
-                                 <DropShadowEffect Color="#00FF99" BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
+                                 <DropShadowEffect Color="#00FFAA" BlurRadius="25" ShadowDepth="0" Opacity="0.6"/>
                              </TextBlock.Effect>
                         </TextBlock>
                     </Viewbox>
                 </Border>
             </Grid>
 
-            <!-- 3. 底部控件 -->
-            <Grid Grid.Row="2" Margin="0,0,0,16">
+            <!-- 3. 底部控件 - 现代升级版 -->
+            <Grid Grid.Row="2" Margin="0,0,0,20">
                 <!-- 点名模式下的底部栏 -->
                 <WrapPanel Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
                            HorizontalAlignment="Center" VerticalAlignment="Center">
-                    
+
                     <!-- 分组按钮列表 -->
                     <ItemsControl ItemsSource="{Binding GroupButtons}">
                         <ItemsControl.ItemsPanel>
@@ -197,8 +201,8 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding Label}" 
-                                        Margin="4" 
+                                <Button Content="{Binding Label}"
+                                        Margin="5"
                                         Click="OnGroupEntryClick">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
@@ -214,33 +218,33 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- 重置按钮 (改为与分组按钮同风格) -->
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="4" Padding="10,6">
+                    <!-- 重置按钮 -->
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="5" Padding="12,8">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="#333" Stretch="Uniform" Width="14" Height="14" Margin="0,0,6,0"/>
+                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16" Margin="0,0,6,0"/>
                             <TextBlock Text="重置"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- 名单管理按钮 (改为与分组按钮同风格) -->
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" ToolTip="查看名单" Margin="4" Padding="10,6">
+                    <!-- 名单管理按钮 -->
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" ToolTip="查看名单" Margin="5" Padding="12,8">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_List}" Fill="#333" Stretch="Uniform" Width="14" Height="14" Margin="0,0,6,0"/>
+                            <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16" Margin="0,0,6,0"/>
                             <TextBlock Text="名单"/>
                         </StackPanel>
                     </Button>
                 </WrapPanel>
 
                 <!-- 计时控制 (计时模式) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" 
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-                    
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6" Click="OnTimerModeClick">
+
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="8" Click="OnTimerModeClick" Padding="14,8">
                          <TextBlock Text="{Binding TimerModeLabel}"/>
                     </Button>
-                    
-                    <Button Style="{StaticResource Style_PrimaryButton}" Margin="6" Width="64" Height="48" Click="OnTimerStartPauseClick">
-                        <Path Fill="White" Width="16" Height="16" Stretch="Uniform">
+
+                    <Button Style="{StaticResource Style_PrimaryButton}" Margin="8" Width="68" Height="52" Click="OnTimerStartPauseClick">
+                        <Path Fill="White" Width="18" Height="18" Stretch="Uniform">
                             <Path.Style>
                                 <Style TargetType="Path">
                                     <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
@@ -253,12 +257,12 @@
                             </Path.Style>
                         </Path>
                     </Button>
-                    
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6" Click="OnTimerResetClick" ToolTip="重置">
-                        <Path Data="{StaticResource Icon_Reset}" Fill="#333" Width="16" Height="16" Stretch="Uniform"/>
+
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="8" Click="OnTimerResetClick" ToolTip="重置" Padding="12,8">
+                        <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Width="18" Height="18" Stretch="Uniform"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6" Click="OnTimerSetClick" Content="设定"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="8" Click="OnTimerSetClick" Content="设定" Padding="14,8"/>
                 </StackPanel>
             </Grid>
 

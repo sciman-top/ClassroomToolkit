@@ -1,7 +1,26 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- 图标大小规范：默认 viewBox 为 0 0 24 24 -->
+    <!-- ========================================
+         现代化图标系统 - Modern Icon System
+         Material Design 风格几何图标
+         ======================================== -->
+
+    <!-- 图标使用规范：
+         1. 所有图标统一 viewBox 为 0 0 24 24
+         2. 小图标：16x16 或 18x18（用于按钮内部）
+         3. 中图标：20x20（用于标准按钮）
+         4. 大图标：24x24 或 32x32（用于功能展示）
+         5. 巨图标：36x36（用于主功能磁贴）
+
+         填充规范：
+         - 主功能图标：Brush_Primary（品牌色）
+         - 危险操作：Brush_Danger（红色）
+         - 常规图标：Brush_Foreground（文本色）
+         - 禁用状态：Brush_Disabled（灰色）
+    -->
+
+    <!-- ========== 工具类图标 ========== -->
 
     <!-- 画笔 (Pen) -->
     <Geometry x:Key="Icon_Pen">M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z</Geometry>

@@ -15,7 +15,7 @@ public class MarkerBrushRenderer : IBrushRenderer
     private const double MinWidthFactor = 0.7;
     private const double PositionSmoothing = 0.6;
     private const double MinMoveDistance = 0.8;
-    private const bool DebugDrawEdges = false;
+    private const bool DebugDrawEdges = true;
 
     private static readonly Pen DebugLeftPen = CreateFrozenPen(Colors.Red, 1);
     private static readonly Pen DebugRightPen = CreateFrozenPen(Colors.DodgerBlue, 1);

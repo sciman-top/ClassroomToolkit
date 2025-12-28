@@ -10,39 +10,47 @@
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    
+
     <Window.Resources>
-        <!-- 大磁贴按钮样式 -->
+        <!-- 大磁贴按钮样式 - 现代升级版 -->
         <Style x:Key="Style_TileButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="80"/>
-            <Setter Property="Height" Value="80"/>
+            <Setter Property="Width" Value="88"/>
+            <Setter Property="Height" Value="88"/>
             <Setter Property="Margin" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="8">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="12"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path x:Name="icon" 
-                                      Data="{TemplateBinding Tag}" 
-                                      Fill="{StaticResource Brush_Primary}" 
-                                      Stretch="Uniform" 
-                                      Width="32" Height="32" 
+                                <Path x:Name="icon"
+                                      Data="{TemplateBinding Tag}"
+                                      Fill="{StaticResource Brush_Primary}"
+                                      Stretch="Uniform"
+                                      Width="36" Height="36"
                                       Margin="0,0,0,8"/>
-                                <ContentPresenter TextElement.FontWeight="Bold"/>
+                                <ContentPresenter TextElement.FontWeight="SemiBold" TextElement.FontSize="14"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Accent}"/>
-                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.05"/>
+                                <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.05"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Pressed}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
+                                <Setter TargetName="scaleTransform" Property="ScaleX" Value="0.98"/>
+                                <Setter TargetName="scaleTransform" Property="ScaleY" Value="0.98"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -52,14 +60,16 @@
     </Window.Resources>
 
     <Border x:Name="LauncherContainer"
-            CornerRadius="12"
-            Background="White"
+            CornerRadius="14"
+            Background="{StaticResource Gradient_Glass}"
+            BorderBrush="{StaticResource Brush_Border}"
+            BorderThickness="1"
             MouseLeftButtonDown="OnDragAreaMouseDown">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="4" Opacity="0.15"/>
+            <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="5" Opacity="0.1"/>
         </Border.Effect>
-        
-        <Grid Margin="12">
+
+        <Grid Margin="14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -73,7 +83,7 @@
                         Click="OnPaintClick"
                         ToolTip="开启画笔 (长按设置)"
                         behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}" />
-                
+
                 <Button x:Name="RollCallButton" Content="点名/计时"
                         Style="{StaticResource Style_TileButton}"
                         Tag="{StaticResource Icon_RollCall}"
@@ -82,41 +92,50 @@
                         behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}" />
             </StackPanel>
 
-            <Separator Grid.Row="0" VerticalAlignment="Bottom" Margin="4,8,4,4" Background="#EEE"/>
+            <!-- 品牌色分割线 -->
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="8,12,8,8"
+                    Height="2" CornerRadius="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
 
             <!-- 2. 底部工具栏 -->
-            <Grid Grid.Row="1" Margin="0,4,0,0">
+            <Grid Grid.Row="1" Margin="0,6,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                
+
                 <!-- 左侧：最小化 -->
-                <Button x:Name="MinimizeButton" Grid.Column="0" 
+                <Button x:Name="MinimizeButton" Grid.Column="0"
                         Style="{StaticResource Style_IconButton}"
                         Click="OnMinimizeClick" ToolTip="最小化">
-                     <Path Data="M2,11 L14,11 L14,13 L2,13 Z" Fill="#999" Stretch="Uniform" Width="12" Height="12"/>
+                     <Path Data="M2,11 L14,11 L14,13 L2,13 Z" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
                 </Button>
 
                 <!-- 右侧：辅助功能 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button x:Name="SettingsButton" 
+                    <Button x:Name="SettingsButton"
                             Style="{StaticResource Style_IconButton}"
                             Click="OnLauncherSettingsClick" ToolTip="全局设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                     </Button>
-                    
-                    <Button x:Name="AboutButton" 
+
+                    <Button x:Name="AboutButton"
                             Style="{StaticResource Style_IconButton}"
                             Click="OnAboutClick" ToolTip="关于软件">
-                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
+                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="18" Height="18"/>
                     </Button>
-                    
-                    <Button x:Name="ExitButton" 
+
+                    <Button x:Name="ExitButton"
                             Style="{StaticResource Style_IconButton}"
                             Click="OnExitClick" ToolTip="退出程序">
-                        <Path Data="{StaticResource Icon_Power}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="16" Height="16"/>
+                        <Path Data="{StaticResource Icon_Power}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="18" Height="18"/>
                     </Button>
                 </StackPanel>
             </Grid>

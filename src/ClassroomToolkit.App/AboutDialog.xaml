@@ -12,9 +12,9 @@
         ShowInTaskbar="False"
         Topmost="True">
     
-    <Border Background="White" CornerRadius="8" Margin="10">
+    <Border Background="White" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.2"/>
+            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.12"/>
         </Border.Effect>
 
         <Grid>
@@ -24,51 +24,67 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="关于" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="#333"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,8,0">
-                    <Path Data="{StaticResource Icon_Close}" Fill="#888" Stretch="Uniform" Width="10" Height="10"/>
+            <!-- 1. 标题栏 - 现代升级版 -->
+            <Grid Grid.Row="0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <!-- 品牌色顶部条 -->
+                <Border Height="3" VerticalAlignment="Top" CornerRadius="2,2,0,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                            <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <TextBlock Text="关于" FontWeight="SemiBold" Margin="18,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="15"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,10,0">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
-            <!-- 2. 内容 -->
-            <StackPanel Grid.Row="1" Margin="24">
+            <!-- 2. 内容 - 现代升级版 -->
+            <StackPanel Grid.Row="1" Margin="28">
                 <!-- App Header -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Path Data="{StaticResource Icon_Apps}" Fill="{StaticResource Brush_Primary}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,16,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                    <Border Width="48" Height="48" CornerRadius="10" Background="{StaticResource Gradient_Accent}" Margin="0,0,18,0">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="12" ShadowDepth="0" Opacity="0.25"/>
+                        </Border.Effect>
+                        <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="26" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="Bold" Foreground="#333"/>
-                        <TextBlock Text="Version 6.0" FontSize="12" Foreground="#888"/>
+                        <TextBlock Text="课堂工具箱" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}"/>
+                        <TextBlock Text="Version 6.0" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </StackPanel>
-                
-                <TextBlock Margin="0,0,0,8" Foreground="#555">作者：广州番禺王耀强</TextBlock>
-                <TextBlock Margin="0,0,0,8" Foreground="#555">公众号：sciman逸居</TextBlock>
-                <TextBlock Margin="0,0,0,8" Foreground="#555">“初中物理教研”Q群：323728546</TextBlock>
 
-                <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="知乎主页：" Foreground="#555"/>
+                <TextBlock Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13">作者：广州番禺王耀强</TextBlock>
+                <TextBlock Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13">公众号：sciman逸居</TextBlock>
+                <TextBlock Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13">"初中物理教研"Q群：323728546</TextBlock>
+
+                <WrapPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                     <TextBlock>
                         <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate">sciman</Hyperlink>
                     </TextBlock>
                 </WrapPanel>
 
-                <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="GitHub：" Foreground="#555"/>
+                <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                     <TextBlock>
                         <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate">sciman-top/ClassroomTools</Hyperlink>
                     </TextBlock>
                 </WrapPanel>
             </StackPanel>
 
-            <!-- 3. 底部 -->
-            <Button Grid.Row="2" Content="关闭" 
-                    Style="{StaticResource Style_PrimaryButton}" 
-                    HorizontalAlignment="Right" 
-                    Margin="0,0,16,16" 
-                    Width="80" 
+            <!-- 3. 底部按钮 - 现代升级版 -->
+            <Button Grid.Row="2" Content="关闭"
+                    Style="{StaticResource Style_PrimaryButton}"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,20,20"
+                    Width="90"
+                    Padding="18,10"
                     Click="OnCloseClick"/>
         </Grid>
     </Border>
