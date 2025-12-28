@@ -121,18 +121,18 @@
 
             <!-- 2. 内容区 -->
 
-            <!-- A. 点名展示 - 紧凑精致版 -->
+            <!-- A. 点名展示 - 浅蓝色背景版 -->
             <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="14"
+                <Border Background="#F0F7FF" CornerRadius="14"
                         VerticalAlignment="Stretch"
                         HorizontalAlignment="Stretch"
                         Margin="28,12"
-                        BorderBrush="{StaticResource Brush_Border}"
+                        BorderBrush="#D0E3F5"
                         BorderThickness="1"
                         MouseLeftButtonUp="OnRollClick">
                     <!-- 卡片阴影 - 品牌色光晕 -->
                     <Border.Effect>
-                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="30" ShadowDepth="0" Opacity="0.15"/>
+                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="30" ShadowDepth="0" Opacity="0.2"/>
                     </Border.Effect>
 
                     <!-- 核心名字展示 -->

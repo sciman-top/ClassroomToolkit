@@ -15,10 +15,10 @@
     <Window.Resources>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
 
-        <!-- 学生卡片样式 -->
+        <!-- 学生卡片样式 - 浅蓝色背景版 -->
         <Style x:Key="Style_StudentCard" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#EEE"/>
+            <Setter Property="Background" Value="#FAFBFF"/>
+            <Setter Property="BorderBrush" Value="#E8EEF8"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Margin" Value="4"/>
@@ -28,7 +28,7 @@
             <Style.Triggers>
                 <!-- 鼠标悬停 -->
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#F0F8FF"/>
+                    <Setter Property="Background" Value="#E8F4FD"/>
                     <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                 </Trigger>
                 <!-- 已点名状态 (Called=True) -->
@@ -76,19 +76,20 @@
                                 <Border.Style>
                                     <Style TargetType="Border" BasedOn="{StaticResource Style_StudentCard}">
                                         <Style.Triggers>
-                                            <!-- 已点名：灰色背景 -->
+                                            <!-- 已点名：浅灰背景 -->
                                             <DataTrigger Binding="{Binding Called}" Value="True">
-                                                <Setter Property="Background" Value="#F5F5F5"/>
-                                                <Setter Property="Opacity" Value="0.6"/>
+                                                <Setter Property="Background" Value="#F0F0F5"/>
+                                                <Setter Property="BorderBrush" Value="#E0E0E8"/>
+                                                <Setter Property="Opacity" Value="0.7"/>
                                             </DataTrigger>
-                                            <!-- 未点名：白色背景 -->
+                                            <!-- 未点名：浅蓝背景 -->
                                             <DataTrigger Binding="{Binding Called}" Value="False">
-                                                <Setter Property="Background" Value="White"/>
-                                                <Setter Property="BorderBrush" Value="#DDD"/>
+                                                <Setter Property="Background" Value="#FAFBFF"/>
+                                                <Setter Property="BorderBrush" Value="#D8E8F8"/>
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="Opacity" Value="1.0"/>
-                                                <Setter Property="Background" Value="{StaticResource Brush_Accent}"/>
+                                                <Setter Property="Background" Value="#D0E8FF"/>
                                                 <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                                             </Trigger>
                                         </Style.Triggers>
