@@ -46,7 +46,7 @@
                                     Opacity="0">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="White" Offset="0" StopColor="White"/>
+                                        <GradientStop Color="White" Offset="0"/>
                                         <GradientStop Color="Transparent" Offset="0.5"/>
                                     </LinearGradientBrush>
                                 </Border.Background>

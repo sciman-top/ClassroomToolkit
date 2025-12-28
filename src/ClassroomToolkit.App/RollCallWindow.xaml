@@ -117,19 +117,19 @@
                             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="11" Height="11"/>
                         </Button>
                     </StackPanel>
-                </Grid>
 
-            <!-- 工具栏底部品牌色分割线 -->
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="12,0,12,0"
-                    Height="1.5" CornerRadius="1">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="0.5"/>
-                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+                    <!-- 工具栏底部品牌色分割线 -->
+                    <Border Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Margin="12,0,12,0"
+                            Height="1.5" CornerRadius="1">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
+                                <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="0.5"/>
+                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                </Grid>
 
             <!-- 2. 内容区 -->
 

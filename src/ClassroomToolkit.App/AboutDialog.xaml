@@ -35,37 +35,39 @@
 
             <!-- 2. 内容 - 浅蓝背景点缀版 -->
             <Border Grid.Row="1" Margin="22" Background="#FAFBFF" CornerRadius="8" Padding="20,16">
-                <!-- App Header -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Accent}" Margin="0,0,14,0">
-                        <Border.Effect>
-                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.22"/>
-                        </Border.Effect>
-                        <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}"/>
-                        <TextBlock Text="Version 6.0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,3,0,0"/>
+                <StackPanel>
+                    <!-- App Header -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Accent}" Margin="0,0,14,0">
+                            <Border.Effect>
+                                <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.22"/>
+                            </Border.Effect>
+                            <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}"/>
+                            <TextBlock Text="Version 6.0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,3,0,0"/>
+                        </StackPanel>
                     </StackPanel>
+
+                    <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">作者：广州番禺王耀强</TextBlock>
+                    <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">公众号：sciman逸居</TextBlock>
+                    <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">"初中物理教研"Q群：323728546</TextBlock>
+
+                    <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                        <TextBlock>
+                            <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate">sciman</Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
+
+                    <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                        <TextBlock>
+                            <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate">sciman-top/ClassroomTools</Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
                 </StackPanel>
-
-                <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">作者：广州番禺王耀强</TextBlock>
-                <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">公众号：sciman逸居</TextBlock>
-                <TextBlock Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">"初中物理教研"Q群：323728546</TextBlock>
-
-                <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <TextBlock>
-                        <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate">sciman</Hyperlink>
-                    </TextBlock>
-                </WrapPanel>
-
-                <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <TextBlock>
-                        <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate">sciman-top/ClassroomTools</Hyperlink>
-                    </TextBlock>
-                </WrapPanel>
             </Border>
 
             <!-- 3. 底部按钮 - 紧凑精致版 -->
