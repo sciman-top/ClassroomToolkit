@@ -93,17 +93,7 @@
         </Border.Effect>
 
         <Grid>
-            <!-- 顶部品牌色装饰线 -->
-            <Border Height="2" VerticalAlignment="Top" CornerRadius="2,2,0,0" ClipToBounds="True" Margin="6,0,6,0">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
-
-            <Grid x:Name="ToolbarRoot" Background="Transparent" Margin="0,1,0,0">
+            <Grid x:Name="ToolbarRoot" Background="Transparent" Margin="0,0,0,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
                 <!-- 0. 拖动把手 (Drag Handle) - 紧凑点状设计 -->

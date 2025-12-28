@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
             Title="学生名单"
-            Width="1150"
-            MinWidth="1050"
+            Width="1200"
+            MinWidth="1100"
             WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         WindowStyle="None"
@@ -20,10 +20,10 @@
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#EEE"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Margin" Value="6"/>
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="MinHeight" Value="32"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <!-- 鼠标悬停 -->
@@ -67,7 +67,7 @@
                 <ItemsControl x:Name="StudentItems">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel ItemWidth="120" ItemHeight="48" />
+                            <WrapPanel ItemWidth="108" ItemHeight="44" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -101,9 +101,9 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- 名字: 微调字号，确保 10 列排版不拥挤 -->
+                                    <!-- 名字: 一行10人，紧凑布局 -->
                                     <TextBlock Text="{Binding DisplayText}"
-                                               FontSize="14"
+                                               FontSize="13"
                                                FontWeight="Bold"
                                                Foreground="#333"
                                                HorizontalAlignment="Center"
@@ -111,10 +111,10 @@
                                                TextTrimming="CharacterEllipsis"/>
 
                                     <!-- 未点名标记 (红点): 垂直居中 -->
-                                    <Ellipse Grid.Column="1" Width="6" Height="6" Fill="{StaticResource Brush_Danger}"
+                                    <Ellipse Grid.Column="1" Width="5" Height="5" Fill="{StaticResource Brush_Danger}"
                                              Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}"
                                              VerticalAlignment="Center" HorizontalAlignment="Right"
-                                             Margin="4,0,0,0"/>
+                                             Margin="3,0,0,0"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>

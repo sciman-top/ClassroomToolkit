@@ -26,16 +26,6 @@
 
             <!-- 1. 标题栏 - 紧凑精致版 -->
             <Grid Grid.Row="0" Height="42" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <!-- 品牌色顶部条 -->
-                <Border Height="2" VerticalAlignment="Top" CornerRadius="2,2,0,0">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                            <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
-
                 <TextBlock Text="关于" FontWeight="SemiBold" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="14"/>
                 <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,8,0">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="11" Height="11"/>

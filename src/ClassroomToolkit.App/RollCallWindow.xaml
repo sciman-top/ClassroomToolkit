@@ -54,17 +54,7 @@
         </Border.Effect>
 
         <Grid>
-            <!-- 顶部品牌色装饰条 -->
-            <Border Height="3" VerticalAlignment="Top" CornerRadius="3,3,0,0" ClipToBounds="True">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                        <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
-
-            <Grid Margin="0,2,0,0">
+            <Grid Margin="0,0,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="48"/> <!-- Toolbar -->
                     <RowDefinition Height="*"/>  <!-- Main Content -->
