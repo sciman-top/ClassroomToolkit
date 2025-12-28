@@ -12,29 +12,29 @@
         WindowStartupLocation="Manual">
 
     <Window.Resources>
-        <!-- 大磁贴按钮样式 - 现代升级版 -->
+        <!-- 大磁贴按钮样式 - 紧凑精致版 -->
         <Style x:Key="Style_TileButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="88"/>
-            <Setter Property="Height" Value="88"/>
-            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Width" Value="76"/>
+            <Setter Property="Height" Value="76"/>
+            <Setter Property="Margin" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="12">
+                                CornerRadius="10">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <Path x:Name="icon"
                                       Data="{TemplateBinding Tag}"
                                       Fill="{StaticResource Brush_Primary}"
                                       Stretch="Uniform"
-                                      Width="36" Height="36"
-                                      Margin="0,0,0,8"/>
-                                <ContentPresenter TextElement.FontWeight="SemiBold" TextElement.FontSize="14"/>
+                                      Width="32" Height="32"
+                                      Margin="0,0,0,6"/>
+                                <ContentPresenter TextElement.FontWeight="SemiBold" TextElement.FontSize="13"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -72,7 +72,7 @@
                 </Border.Background>
             </Border>
 
-            <Grid Margin="14">
+            <Grid Margin="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -96,7 +96,7 @@
                 </StackPanel>
 
                 <!-- 品牌色分割线 -->
-                <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="8,12,8,8"
+                <Border Grid.Row="0" VerticalAlignment="Bottom" Margin="6,8,6,6"
                         Height="2" CornerRadius="1">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -107,7 +107,7 @@
                 </Border>
 
                 <!-- 2. 底部工具栏 -->
-                <Grid Grid.Row="1" Margin="0,6,0,0">
+                <Grid Grid.Row="1" Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />

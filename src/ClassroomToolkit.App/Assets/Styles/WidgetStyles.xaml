@@ -8,18 +8,17 @@
 
     <!-- ========== 图标按钮样式 ========== -->
 
-    <!-- 扁平化图标按钮 - 升级版 -->
-    <!-- 特点：更大点击区域，微妙悬停效果 -->
+    <!-- 扁平化图标按钮 - 紧凑精致版 -->
     <Style x:Key="Style_IconButton" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="8"/>
-        <Setter Property="Margin" Value="1"/>
-        <Setter Property="Width" Value="40"/>
-        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -49,17 +48,17 @@
         </Setter>
     </Style>
 
-    <!-- 激活状态的按钮（例如当前选中的画笔工具） - 升级版 -->
+    <!-- 激活状态的按钮（例如当前选中的画笔工具） - 紧凑精致版 -->
     <Style x:Key="Style_IconButton_Active" TargetType="ToggleButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="8"/>
-        <Setter Property="Margin" Value="1"/>
-        <Setter Property="Width" Value="40"/>
-        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -92,13 +91,13 @@
 
     <!-- ========== 主要按钮和次要按钮 ========== -->
 
-    <!-- 主要按钮 - 渐变升级版 -->
+    <!-- 主要按钮 - 紧凑精致版 -->
     <Style x:Key="Style_PrimaryButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="18,8"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="16,7"/>
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -129,14 +128,14 @@
         </Setter>
     </Style>
 
-    <!-- 次要按钮 - 现代升级版 -->
+    <!-- 次要按钮 - 紧凑精致版 -->
     <Style x:Key="Style_SecondaryButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Foreground}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
-        <Setter Property="Padding" Value="18,8"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
