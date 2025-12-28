@@ -21,6 +21,12 @@
         <Setter Property="Width" Value="40"/>
         <Setter Property="Height" Value="40"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -28,24 +34,32 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
+                            CornerRadius="6">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.05"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.05"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.05" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.05" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="0.95"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="0.95"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{StaticResource Brush_Disabled}"/>
@@ -69,6 +83,12 @@
         <Setter Property="Width" Value="40"/>
         <Setter Property="Height" Value="40"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
@@ -76,11 +96,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
+                            CornerRadius="6">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
@@ -91,17 +107,23 @@
                             <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.05"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.05"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.05" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.05" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True"/>
-                                <Condition Property="IsMouseOver" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.05"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.05"/>
-                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
                         </Trigger>
@@ -123,16 +145,18 @@
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="6"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
+                            CornerRadius="6">
                         <Border.Effect>
                             <DropShadowEffect Color="#667eea" BlurRadius="8" ShadowDepth="0" Opacity="0.25"/>
                         </Border.Effect>
@@ -140,12 +164,29 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.02"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.02"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="0.98"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="0.98"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
@@ -166,6 +207,12 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -173,24 +220,37 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
+                            CornerRadius="6">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Medium}"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.02"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.02"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L4}"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="0.98"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="0.98"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
@@ -329,16 +389,18 @@
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="6"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
+                            CornerRadius="6">
                         <Border.Effect>
                             <DropShadowEffect Color="#EF4444" BlurRadius="8" ShadowDepth="0" Opacity="0.25"/>
                         </Border.Effect>
@@ -346,12 +408,29 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="1.02"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="1.02"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.02" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleX"/>
+                                        <DoubleAnimation Duration="0:0:0.15" To="1.0" Storyboard.TargetProperty="RenderTransform.ScaleY"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="scaleTransform" Property="ScaleX" Value="0.98"/>
-                            <Setter TargetName="scaleTransform" Property="ScaleY" Value="0.98"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
