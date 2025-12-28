@@ -11,5 +11,6 @@
     <Grid x:Name="OverlayRoot" Background="Transparent">
         <Canvas x:Name="ShapeCanvas" />
         <InkCanvas x:Name="InkLayer" Background="Transparent" />
+        <Border x:Name="CustomDrawHost" Background="Transparent" IsHitTestVisible="False" />
     </Grid>
 </Window>

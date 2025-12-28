@@ -24,6 +24,11 @@ public partial class PaintSettingsDialog : Window
         ("矩形（实心）", PaintShapeType.RectangleFill),
         ("圆形", PaintShapeType.Ellipse)
     };
+    private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
+    {
+        ("经典 (标准)", PaintBrushStyle.Standard),
+        ("拟真 (钢笔)", PaintBrushStyle.Calligraphy)
+    };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
         ("自动判断（推荐）", "auto"),
@@ -39,6 +44,7 @@ public partial class PaintSettingsDialog : Window
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
+    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
@@ -55,6 +61,13 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
+
+        foreach (var (label, style) in BrushStyleChoices)
+        {
+            var item = new WpfComboBoxItem { Content = label, Tag = style };
+            BrushStyleCombo.Items.Add(item);
+        }
+        SelectBrushStyle(settings.BrushStyle);
 
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
@@ -92,6 +105,7 @@ public partial class PaintSettingsDialog : Window
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
+        BrushStyle = ResolveBrushStyle();
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         DialogResult = true;
@@ -309,6 +323,28 @@ public partial class PaintSettingsDialog : Window
             }
         }
         combo.SelectedIndex = 0;
+    }
+
+    private void SelectBrushStyle(PaintBrushStyle style)
+    {
+        foreach (var item in BrushStyleCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is PaintBrushStyle tagged && tagged == style)
+            {
+                BrushStyleCombo.SelectedItem = item;
+                return;
+            }
+        }
+        BrushStyleCombo.SelectedIndex = 0;
+    }
+
+    private PaintBrushStyle ResolveBrushStyle()
+    {
+        if (BrushStyleCombo.SelectedItem is WpfComboBoxItem item && item.Tag is PaintBrushStyle style)
+        {
+            return style;
+        }
+        return PaintBrushStyle.Standard;
     }
 
     private static double FindNearestScale(double value)

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Paint.Brushes;
 using MediaColor = System.Windows.Media.Color;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
@@ -56,9 +57,20 @@ public partial class PaintOverlayWindow : Window
         public double StrokeThickness { get; init; }
         public DoubleCollection? DashArray { get; init; }
         public MediaColor? FillColor { get; init; }
+        public string? PathData { get; init; }
 
         public static ShapeSnapshot? FromShape(Shape shape)
         {
+            if (shape is Path path)
+            {
+                return new ShapeSnapshot
+                {
+                    Type = PaintShapeType.Path,
+                    StrokeColor = ResolveColor(path.Fill), // Note: For our filled paths, the "stroke" is the fill
+                    PathData = path.Data.ToString()
+                };
+            }
+
             if (shape is Line line)
             {
                 return new ShapeSnapshot
@@ -149,10 +161,67 @@ public partial class PaintOverlayWindow : Window
     private readonly Stack<PaintSnapshot> _history = new();
     private bool _erasing;
     private bool _inkStrokeInProgress;
+    
+    private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
+    private IBrushRenderer? _activeRenderer;
+    private DrawingVisualHost _visualHost;
+
+    private class DrawingVisualHost : FrameworkElement
+    {
+        private readonly VisualCollection _children;
+
+        public DrawingVisualHost()
+        {
+            _children = new VisualCollection(this);
+        }
+
+        public void AddVisual(Visual visual)
+        {
+            _children.Add(visual);
+        }
+        
+        public void RemoveVisual(Visual visual)
+        {
+            _children.Remove(visual);
+        }
+
+        public void Clear()
+        {
+            _children.Clear();
+        }
+
+        public void UpdateVisual(Action<DrawingContext> renderAction)
+        {
+            if (_children.Count == 0)
+            {
+                _children.Add(new DrawingVisual());
+            }
+
+            var visual = (DrawingVisual)_children[0];
+            using (var dc = visual.RenderOpen())
+            {
+                renderAction(dc);
+            }
+        }
+
+        protected override int VisualChildrenCount => _children.Count;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            if (index < 0 || index >= _children.Count)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+            return _children[index];
+        }
+    }
 
     public PaintOverlayWindow()
     {
         InitializeComponent();
+        _visualHost = new DrawingVisualHost();
+        CustomDrawHost.Child = _visualHost;
+        
         WindowState = WindowState.Maximized;
         _presentationFocusMonitor = new DispatcherTimer
         {
@@ -226,8 +295,17 @@ public partial class PaintOverlayWindow : Window
         switch (mode)
         {
             case PaintToolMode.Brush:
-                InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
-                InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.Ink;
+                if (_brushStyle == PaintBrushStyle.Calligraphy)
+                {
+                    // In Calligraphy mode, InkCanvas should NOT collect ink
+                    InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.None;
+                    InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.None;
+                }
+                else
+                {
+                    InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.Ink;
+                    InkLayer.EditingModeInverted = System.Windows.Controls.InkCanvasEditingMode.Ink;
+                }
                 break;
             case PaintToolMode.Eraser:
                 InkLayer.EditingMode = System.Windows.Controls.InkCanvasEditingMode.EraseByPoint;
@@ -282,6 +360,11 @@ public partial class PaintOverlayWindow : Window
         }
         InkLayer.Strokes.Clear();
         ShapeCanvas.Children.Clear();
+        _visualHost.Clear();
+        if (_activeRenderer != null)
+        {
+            _activeRenderer.Reset();
+        }
     }
 
     public MediaColor CurrentBrushColor => InkLayer.DefaultDrawingAttributes.Color;
@@ -309,6 +392,19 @@ public partial class PaintOverlayWindow : Window
         }
         if (_mode == PaintToolMode.Brush)
         {
+            if (_brushStyle == PaintBrushStyle.Calligraphy)
+            {
+                // Handle custom brush start
+                if (_activeRenderer != null)
+                {
+                    var attr = InkLayer.DefaultDrawingAttributes;
+                    _activeRenderer.Initialize(attr.Color, attr.Width, attr.Color.A);
+                    _activeRenderer.OnDown(e.GetPosition(CustomDrawHost));
+                    InkLayer.CaptureMouse(); // Capture on InkLayer because we are hooking its events
+                    e.Handled = true;
+                }
+                return;
+            }
             EnsureInkHistory();
         }
         if (_mode == PaintToolMode.Eraser)
@@ -337,6 +433,14 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (_mode == PaintToolMode.Brush && _brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer != null && _activeRenderer.IsActive)
+        {
+            _activeRenderer.OnMove(e.GetPosition(CustomDrawHost));
+            _visualHost.UpdateVisual(_activeRenderer.Render);
+            e.Handled = true;
+            return;
+        }
+
         if (_mode == PaintToolMode.RegionErase && _isRegionSelecting && _regionRect != null)
         {
             e.Handled = true;
@@ -359,6 +463,32 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_mode == PaintToolMode.Brush && _brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer != null && _activeRenderer.IsActive)
+        {
+            PushHistory(); // Save state before adding new shape
+            
+            _activeRenderer.OnUp(e.GetPosition(CustomDrawHost));
+            var geometry = _activeRenderer.GetLastStrokeGeometry();
+            
+            if (geometry != null)
+            {
+                var attr = InkLayer.DefaultDrawingAttributes;
+                var path = new Path
+                {
+                    Data = geometry,
+                    Fill = new SolidColorBrush(attr.Color), // Use Fill because the geometry IS the stroke body
+                    Opacity = attr.Color.A / 255.0
+                };
+                ShapeCanvas.Children.Add(path);
+            }
+
+            _activeRenderer.Reset();
+            _visualHost.Clear();
+            InkLayer.ReleaseMouseCapture();
+            e.Handled = true;
+            return;
+        }
+
         if (_mode == PaintToolMode.RegionErase && _isRegionSelecting)
         {
             e.Handled = true;
@@ -461,6 +591,23 @@ public partial class PaintOverlayWindow : Window
         color.A = opacity;
         current.Color = color;
         InkLayer.DefaultDrawingAttributes = current;
+    }
+
+    public void SetBrushStyle(PaintBrushStyle style)
+    {
+        _brushStyle = style;
+        
+        if (_brushStyle == PaintBrushStyle.Calligraphy)
+        {
+            // Switch to Calligraphy: create renderer if needed
+            if (_activeRenderer == null)
+            {
+                _activeRenderer = new VariableWidthBrushRenderer();
+            }
+        }
+        
+        // Refresh mode to apply correct input handling
+        SetMode(_mode);
     }
 
     public void SetBoardOpacity(byte opacity)
@@ -1157,6 +1304,7 @@ public partial class PaintOverlayWindow : Window
             PaintShapeType.Rectangle => new System.Windows.Shapes.Rectangle(),
             PaintShapeType.RectangleFill => new System.Windows.Shapes.Rectangle(),
             PaintShapeType.Ellipse => new Ellipse(),
+            PaintShapeType.Path => new Path(),
             _ => null
         };
     }
@@ -1337,6 +1485,12 @@ public partial class PaintOverlayWindow : Window
                 line.Y1 = snapshot.Start.Y;
                 line.X2 = snapshot.End.X;
                 line.Y2 = snapshot.End.Y;
+            }
+            else if (shape is Path path && !string.IsNullOrEmpty(snapshot.PathData))
+            {
+                path.Data = Geometry.Parse(snapshot.PathData);
+                // For paths we treat StrokeColor as the fill
+                path.Fill = new SolidColorBrush(snapshot.StrokeColor); 
             }
             else
             {

@@ -7,5 +7,6 @@ public enum PaintShapeType
     DashedLine,
     Rectangle,
     RectangleFill,
-    Ellipse
+    Ellipse,
+    Path
 }

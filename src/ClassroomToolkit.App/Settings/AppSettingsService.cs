@@ -63,6 +63,7 @@ public sealed class AppSettingsService
             settings.BrushSize = GetDouble(paint, "brush_base_size", settings.BrushSize);
             settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
             settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
+            settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
             settings.BoardOpacity = 255;
             settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
             settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
@@ -138,6 +139,7 @@ public sealed class AppSettingsService
 
         var paint = GetOrCreate(data, "Paint");
         paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
+        paint["brush_style"] = settings.BrushStyle.ToString();
         paint["eraser_size"] = settings.EraserSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_opacity"] = settings.BrushOpacity.ToString(CultureInfo.InvariantCulture);
         paint["board_opacity"] = settings.BoardOpacity.ToString(CultureInfo.InvariantCulture);
@@ -227,6 +229,15 @@ public sealed class AppSettingsService
             return parsed;
         }
         return PaintShapeType.None;
+    }
+
+    private static PaintBrushStyle GetBrushStyle(string raw)
+    {
+        if (Enum.TryParse<PaintBrushStyle>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+        return PaintBrushStyle.Standard;
     }
 
     private static bool HasGeometry(AppSettings settings)

@@ -212,6 +212,7 @@ public partial class MainWindow : Window
 
         _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+        _overlayWindow.SetBrushStyle(_settings.BrushStyle);
         _overlayWindow.SetEraserSize(_settings.EraserSize);
         _overlayWindow.SetShapeType(_settings.ShapeType);
         if (_toolbarWindow.BoardActive)
@@ -349,6 +350,7 @@ public partial class MainWindow : Window
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
+            _settings.BrushStyle = dialog.BrushStyle;
             _settings.EraserSize = dialog.EraserSize;
             _settings.BoardOpacity = 255;
             _settings.ShapeType = dialog.ShapeType;
@@ -363,6 +365,7 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+                _overlayWindow.SetBrushStyle(_settings.BrushStyle);
                 _overlayWindow.SetEraserSize(_settings.EraserSize);
                 _overlayWindow.SetShapeType(_settings.ShapeType);
                 _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
