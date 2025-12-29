@@ -46,6 +46,8 @@ public partial class PaintSettingsDialog : Window
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
     public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
+    public bool CalligraphyInkBloomEnabled { get; private set; }
+    public bool CalligraphySealEnabled { get; private set; }
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
@@ -69,6 +71,9 @@ public partial class PaintSettingsDialog : Window
             BrushStyleCombo.Items.Add(item);
         }
         SelectBrushStyle(settings.BrushStyle);
+        CalligraphyInkBloomCheck.IsChecked = settings.CalligraphyInkBloomEnabled;
+        CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
+        UpdateCalligraphyOptionState();
 
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
@@ -107,6 +112,8 @@ public partial class PaintSettingsDialog : Window
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BrushStyle = ResolveBrushStyle();
+        CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
+        CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         DialogResult = true;
@@ -130,6 +137,11 @@ public partial class PaintSettingsDialog : Window
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateEraserSizeLabel();
+    }
+
+    private void OnBrushStyleChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        UpdateCalligraphyOptionState();
     }
 
 
@@ -158,6 +170,13 @@ public partial class PaintSettingsDialog : Window
             return;
         }
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
+    }
+
+    private void UpdateCalligraphyOptionState()
+    {
+        bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
+        CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
+        CalligraphySealCheck.IsEnabled = isCalligraphy;
     }
 
 

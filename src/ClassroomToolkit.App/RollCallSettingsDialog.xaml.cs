@@ -11,8 +11,8 @@ public partial class RollCallSettingsDialog : Window
 {
     private static readonly HashSet<string> SilentVoices = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Microsoft Zira Desktop",
-        "Microsoft David Desktop"
+        // 完全清空过滤列表，确保显示所有语音
+        // 如果需要过滤，请基于实际的语音名称进行过滤
     };
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
@@ -103,6 +103,8 @@ public partial class RollCallSettingsDialog : Window
     private void OnSpeechEngineChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         UpdateSpeechControls();
+        // 重新构建语音列表，因为不同引擎可能有不同的语音
+        BuildVoiceCombo(_initialVoiceId);
     }
 
     private void UpdateRemoteKeyEnabled()
@@ -259,47 +261,53 @@ public partial class RollCallSettingsDialog : Window
         SpeechEngineCombo.SelectedValue = string.IsNullOrWhiteSpace(current) ? "pyttsx3" : current;
     }
 
+    private void BuildSapiVoices(List<ComboOption> voices)
+    {
+        using var synth = new SpeechSynthesizer();
+        var allVoices = synth.GetInstalledVoices().ToList();
+
+        // 暂时显示所有语音，不做任何过滤或分类
+        System.Diagnostics.Debug.WriteLine($"=== 语音检测报告 ===");
+        System.Diagnostics.Debug.WriteLine($"总共检测到 {allVoices.Count} 个语音");
+        
+        foreach (var voice in allVoices)
+        {
+            var info = voice.VoiceInfo;
+            System.Diagnostics.Debug.WriteLine($"语音 {allVoices.IndexOf(voice) + 1}:");
+            System.Diagnostics.Debug.WriteLine($"  名称: {info.Name}");
+            System.Diagnostics.Debug.WriteLine($"  文化: {info.Culture.Name}");
+            System.Diagnostics.Debug.WriteLine($"  性别: {info.Gender}");
+            System.Diagnostics.Debug.WriteLine($"  启用: {voice.Enabled}");
+            System.Diagnostics.Debug.WriteLine($"  ID: {info.Id}");
+            
+            // 直接添加到列表，不做任何过滤
+            var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
+            voices.Add(new ComboOption(info.Name, label));
+            System.Diagnostics.Debug.WriteLine($"  -> 已添加到下拉框");
+            System.Diagnostics.Debug.WriteLine();
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"=== 最终结果 ===");
+        System.Diagnostics.Debug.WriteLine($"下拉框中将显示 {voices.Count} 个语音选项");
+    }
+
     private void BuildVoiceCombo(string? current)
     {
         var voices = new List<ComboOption>();
+        var engine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
+        
         try
         {
-            using var synth = new SpeechSynthesizer();
-            var allVoices = synth.GetInstalledVoices().ToList();
-
-            // 按语言分组，优先显示中文，然后其他语言
-            var chineseVoices = new List<InstalledVoice>();
-            var otherVoices = new List<InstalledVoice>();
-
-            foreach (var voice in allVoices)
+            if (engine == "pyttsx3")
             {
-                var info = voice.VoiceInfo;
-
-                // 根据语言分组
-                if (info.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-                {
-                    chineseVoices.Add(voice);
-                }
-                else
-                {
-                    otherVoices.Add(voice);
-                }
+                // 对于 pyttsx3，我们需要通过 Python 获取语音列表
+                // 这里先使用 SAPI 作为后备，显示所有可用的语音
+                BuildSapiVoices(voices);
             }
-
-            // 添加中文发音人
-            foreach (var voice in chineseVoices.OrderByDescending(item => item.Enabled).ThenBy(item => item.VoiceInfo.Name))
+            else
             {
-                var info = voice.VoiceInfo;
-                var label = FormatVoiceLabel(info, true, voice.Enabled);
-                voices.Add(new ComboOption(info.Name, label));
-            }
-
-            // 添加其他语言发音人
-            foreach (var voice in otherVoices.OrderByDescending(item => item.Enabled).ThenBy(item => item.VoiceInfo.Name))
-            {
-                var info = voice.VoiceInfo;
-                var label = FormatVoiceLabel(info, false, voice.Enabled);
-                voices.Add(new ComboOption(info.Name, label));
+                // 对于 SAPI，直接使用 SpeechSynthesizer
+                BuildSapiVoices(voices);
             }
         }
         catch

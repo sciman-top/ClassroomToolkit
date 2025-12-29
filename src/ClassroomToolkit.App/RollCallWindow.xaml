@@ -98,10 +98,10 @@
                 <!-- A. 点名视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                     <!-- 卡片容器 -->
-                    <Border Background="{StaticResource Brush_Background_L2}" 
-                            CornerRadius="24" 
-                            BorderBrush="{StaticResource Brush_Border_Subtle}" 
-                            BorderThickness="1" 
+                    <Border Background="{StaticResource Gradient_RollCall_Card}"
+                            CornerRadius="24"
+                            BorderBrush="{StaticResource Brush_Border_Subtle}"
+                            BorderThickness="1"
                             MouseLeftButtonUp="OnRollClick"
                             Cursor="Hand">
                         <Border.Effect>
@@ -139,10 +139,10 @@
                             </StackPanel>
                             
                             <!-- 照片展示 (带边框和阴影) -->
-                            <Border Grid.Column="1" Width="180" Height="240" Margin="30,0,0,0" 
-                                    CornerRadius="16" 
-                                    Background="White" 
-                                    BorderThickness="4" 
+                            <Border Grid.Column="1" Width="180" Height="240" Margin="30,0,0,0"
+                                    CornerRadius="16"
+                                    Background="{StaticResource Brush_Surface_Tint}"
+                                    BorderThickness="4"
                                     BorderBrush="White"
                                     Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
                                 <Border.Effect>

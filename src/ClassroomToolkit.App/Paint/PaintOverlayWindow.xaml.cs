@@ -30,6 +30,7 @@ public partial class PaintOverlayWindow : Window
     private const uint MonitorDefaultToNearest = 2;
     private const int PresentationFocusMonitorIntervalMs = 500;
     private const int PresentationFocusCooldownMs = 1200;
+    private const double CalligraphySealStrokeWidthFactor = 0.08;
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
@@ -38,6 +39,8 @@ public partial class PaintOverlayWindow : Window
     private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private const int HistoryLimit = 30;
+    private bool _calligraphyInkBloomEnabled = true;
+    private bool _calligraphySealEnabled = true;
 
     private sealed class RasterSnapshot
     {
@@ -616,6 +619,12 @@ public partial class PaintOverlayWindow : Window
     public void SetBrushOpacity(byte opacity)
     {
         _brushOpacity = opacity;
+    }
+
+    public void SetCalligraphyOptions(bool inkBloomEnabled, bool sealEnabled)
+    {
+        _calligraphyInkBloomEnabled = inkBloomEnabled;
+        _calligraphySealEnabled = sealEnabled;
     }
 
     public void SetBrushStyle(PaintBrushStyle style)
@@ -1630,31 +1639,34 @@ public partial class PaintOverlayWindow : Window
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
                 strokeDirection = calligraphyRenderer.LastStrokeDirection;
-                var unionGeometry = calligraphyRenderer.GetUnionGeometry();
-                var outerRing = calligraphyRenderer.GetOuterRingGeometry();
-                if (unionGeometry != null)
+                var coreGeometry = calligraphyRenderer.GetLastCoreGeometry();
+                if (coreGeometry != null)
                 {
-                    var blooms = calligraphyRenderer.GetInkBloomGeometries();
-                    if (blooms != null)
+                    if (_calligraphyInkBloomEnabled)
                     {
-                        foreach (var bloom in blooms)
+                        var blooms = calligraphyRenderer.GetInkBloomGeometries();
+                        if (blooms != null)
                         {
-                            var bloomBrush = new SolidColorBrush(color)
+                            foreach (var bloom in blooms)
                             {
-                                Opacity = bloom.Opacity
-                            };
-                            bloomBrush.Freeze();
-                            RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null);
+                                var bloomBrush = new SolidColorBrush(color)
+                                {
+                                    Opacity = bloom.Opacity
+                                };
+                                bloomBrush.Freeze();
+                                RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null, coreGeometry);
+                            }
                         }
                     }
-                    RenderInkLayers(unionGeometry, outerRing, color, inkFlow, strokeDirection);
+                    RenderInkEdge(coreGeometry, color, inkFlow, strokeDirection);
+                    RenderInkCore(coreGeometry, color);
                     return;
                 }
             }
         }
         if (isCalligraphy)
         {
-            RenderInkLayers(geometry, null, color, inkFlow, strokeDirection);
+            RenderInkLayers(geometry, color, inkFlow, 1.0, strokeDirection);
             return;
         }
         RenderAndBlend(geometry, brush, null, erase: false, null);
@@ -1670,45 +1682,63 @@ public partial class PaintOverlayWindow : Window
         RenderAndBlend(geometry, MediaBrushes.White, null, erase: true, null);
     }
 
-    private void RenderInkLayers(Geometry coreGeometry, Geometry? ringGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
+    private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
     {
         var solidBrush = new SolidColorBrush(color)
         {
-            Opacity = 1.0
+            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
         };
         solidBrush.Freeze();
-        RenderAndBlend(coreGeometry, solidBrush, null, erase: false, null);
-
-        if (ringGeometry == null)
-        {
-            return;
-        }
-
-        double ringOpacity = Lerp(0.02, 0.08, inkFlow);
-        if (ringOpacity <= 0.01 || ringGeometry.Bounds.IsEmpty)
-        {
-            return;
-        }
-
-        var ringBrush = new SolidColorBrush(color)
-        {
-            Opacity = Math.Clamp(ringOpacity, 0.02, 0.2)
-        };
-        ringBrush.Freeze();
-        var mask = BuildInkOpacityMask(ringGeometry.Bounds, inkFlow, strokeDirection);
-        RenderAndBlend(ringGeometry, ringBrush, null, erase: false, mask);
+        var mask = IsInkMaskEligible(geometry)
+            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection)
+            : null;
+        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
     }
 
+    private void RenderInkCore(Geometry geometry, MediaColor color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        RenderAndBlend(geometry, brush, null, erase: false, null);
+        if (!_calligraphySealEnabled)
+        {
+            return;
+        }
+        double sealWidth = Math.Max(_brushSize * CalligraphySealStrokeWidthFactor, 0.6);
+        if (sealWidth <= 0)
+        {
+            return;
+        }
+        var pen = new MediaPen(brush, sealWidth);
+        pen.Freeze();
+        RenderAndBlend(geometry, null, pen, erase: false, null);
+    }
+
+    private void RenderInkEdge(Geometry coreGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
+    {
+        return;
+    }
+    
+    private bool IsInkMaskEligible(Geometry geometry)
+    {
+        if (geometry.Bounds.IsEmpty)
+        {
+            return false;
+        }
+        var bounds = geometry.Bounds;
+        double minSize = Math.Max(_brushSize * 1.0, 14.0);
+        return bounds.Width >= minSize && bounds.Height >= minSize;
+    }
     
 
-    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask)
+    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask, Geometry? clipGeometry = null)
     {
         EnsureRasterSurface();
         if (_rasterSurface == null)
         {
             return;
         }
-        if (!TryRenderGeometry(geometry, fill, pen, opacityMask, out var rect, out var pixels, out var stride))
+        if (!TryRenderGeometry(geometry, fill, pen, opacityMask, clipGeometry, out var rect, out var pixels, out var stride))
         {
             return;
         }
@@ -1728,6 +1758,7 @@ public partial class PaintOverlayWindow : Window
         MediaBrush? fill,
         MediaPen? pen,
         MediaBrush? opacityMask,
+        Geometry? clipGeometry,
         out Int32Rect destRect,
         out byte[] pixels,
         out int stride)
@@ -1767,12 +1798,20 @@ public partial class PaintOverlayWindow : Window
             var offsetX = destRect.X / dpi.DpiScaleX;
             var offsetY = destRect.Y / dpi.DpiScaleY;
             dc.PushTransform(new TranslateTransform(-offsetX, -offsetY));
+            if (clipGeometry != null)
+            {
+                dc.PushClip(clipGeometry);
+            }
             if (opacityMask != null)
             {
                 dc.PushOpacityMask(opacityMask);
             }
             dc.DrawGeometry(fill, pen, geometry);
             if (opacityMask != null)
+            {
+                dc.Pop();
+            }
+            if (clipGeometry != null)
             {
                 dc.Pop();
             }

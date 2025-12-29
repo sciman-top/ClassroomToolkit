@@ -12,9 +12,9 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 
 public class BrushPhysicsConfig
 {
-    public double MinWidthFactor { get; set; } = 0.15;
-    public double MaxWidthFactor { get; set; } = 1.5;
-    public double MinStrokeWidthPx { get; set; } = 2.0;
+    public double MinWidthFactor { get; set; } = 0.22;
+    public double MaxWidthFactor { get; set; } = 1.8;
+    public double MinStrokeWidthPx { get; set; } = 2.4;
     public double MaxStrokeWidthMultiplier { get; set; } = 2.5;
     public double WidthSmoothing { get; set; } = 0.91;
     public bool SimulateStartCap { get; set; } = true;
@@ -73,8 +73,6 @@ public class BrushPhysicsConfig
     public double InkBloomMinSpacingFactor { get; set; } = 0.35;
     public int InkBloomMaxCount { get; set; } = 12;
 
-    // 外圈纹理参数
-    public double OuterRingThicknessFactor { get; set; } = 0.24;
 
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
@@ -134,9 +132,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private Vector _lastStrokeDirection = new Vector(1, 0);
     private bool _cacheDirty = true;
     private List<RibbonGeometry>? _cachedRibbons;
+    private Geometry? _cachedCoreGeometry;
     private List<InkBloomGeometry>? _cachedBlooms;
-    private Geometry? _cachedUnion;
-    private Geometry? _cachedOuterRing;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
 
@@ -316,23 +313,25 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (_points.Count < 2) return;
 
-        var union = GetUnionGeometry();
-        if (union == null) return;
-
+        var core = GetLastCoreGeometry();
+        if (core == null)
+        {
+            return;
+        }
         var brush = new SolidColorBrush(_color);
         brush.Freeze();
-        dc.DrawGeometry(brush, null, union);
+        dc.DrawGeometry(brush, null, core);
     }
 
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var union = GetUnionGeometry();
-        if (union != null)
+        var geometry = GenerateGeometry();
+        if (geometry != null)
         {
-            return union;
+            geometry.Freeze();
         }
-        return null;
+        return geometry;
     }
 
     /// <summary>
@@ -414,22 +413,20 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return _cachedRibbons == null || _cachedRibbons.Count == 0 ? null : _cachedRibbons;
     }
 
-    public Geometry? GetUnionGeometry()
+    public Geometry? GetLastCoreGeometry()
     {
         EnsureGeometryCache();
-        return _cachedUnion;
-    }
-
-    public Geometry? GetOuterRingGeometry()
-    {
-        EnsureGeometryCache();
-        return _cachedOuterRing;
+        return _cachedCoreGeometry;
     }
 
     public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
     {
         EnsureGeometryCache();
-        return _cachedBlooms == null || _cachedBlooms.Count == 0 ? null : _cachedBlooms;
+        if (_cachedBlooms == null)
+        {
+            _cachedBlooms = BuildInkBloomGeometries();
+        }
+        return _cachedBlooms.Count == 0 ? null : _cachedBlooms;
     }
 
     public double GetRibbonOpacity(double ribbonT)
@@ -528,9 +525,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         _cacheDirty = false;
         _cachedRibbons = null;
+        _cachedCoreGeometry = null;
         _cachedBlooms = null;
-        _cachedUnion = null;
-        _cachedOuterRing = null;
 
         if (_points.Count < 2)
         {
@@ -544,12 +540,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         _cachedRibbons = BuildRibbonGeometries(samples);
-        if (_config.InkBloomEnabled)
-        {
-            _cachedBlooms = BuildInkBloomGeometries();
-        }
-
-        if (_cachedRibbons.Count > 0)
+        if (_cachedRibbons != null && _cachedRibbons.Count > 0)
         {
             var group = new GeometryGroup
             {
@@ -560,30 +551,17 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 group.Children.Add(ribbon.Geometry);
             }
             group.Freeze();
-            _cachedUnion = group;
+            _cachedCoreGeometry = group;
         }
 
-        if (_cachedUnion != null)
-        {
-            double ringThickness = Math.Max(_baseSize * _config.OuterRingThicknessFactor, 0.5);
-            var widened = _cachedUnion.GetWidenedPathGeometry(new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, ringThickness));
-            var ring = Geometry.Combine(widened, _cachedUnion, GeometryCombineMode.Exclude, null);
-            ring.FillRule = FillRule.Nonzero;
-            if (ring.CanFreeze)
-            {
-                ring.Freeze();
-            }
-            _cachedOuterRing = ring;
-        }
     }
 
     private void MarkGeometryDirty()
     {
         _cacheDirty = true;
         _cachedRibbons = null;
+        _cachedCoreGeometry = null;
         _cachedBlooms = null;
-        _cachedUnion = null;
-        _cachedOuterRing = null;
     }
 
     private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
@@ -1436,6 +1414,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         dir.Normalize();
         return new Vector(-dir.Y, dir.X);
     }
+
 
     private static void AddBezierPath(StreamGeometryContext ctx, List<WpfPoint> points)
     {

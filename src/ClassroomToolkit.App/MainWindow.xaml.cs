@@ -213,6 +213,9 @@ public partial class MainWindow : Window
         _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
         _overlayWindow.SetBrushStyle(_settings.BrushStyle);
+        _overlayWindow.SetCalligraphyOptions(
+            _settings.CalligraphyInkBloomEnabled,
+            _settings.CalligraphySealEnabled);
         _overlayWindow.SetEraserSize(_settings.EraserSize);
         _overlayWindow.SetShapeType(_settings.ShapeType);
         if (_toolbarWindow.BoardActive)
@@ -351,6 +354,8 @@ public partial class MainWindow : Window
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
             _settings.BrushStyle = dialog.BrushStyle;
+            _settings.CalligraphyInkBloomEnabled = dialog.CalligraphyInkBloomEnabled;
+            _settings.CalligraphySealEnabled = dialog.CalligraphySealEnabled;
             _settings.EraserSize = dialog.EraserSize;
             _settings.BoardOpacity = 255;
             _settings.ShapeType = dialog.ShapeType;
@@ -366,6 +371,9 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
                 _overlayWindow.SetBrushStyle(_settings.BrushStyle);
+                _overlayWindow.SetCalligraphyOptions(
+                    _settings.CalligraphyInkBloomEnabled,
+                    _settings.CalligraphySealEnabled);
                 _overlayWindow.SetEraserSize(_settings.EraserSize);
                 _overlayWindow.SetShapeType(_settings.ShapeType);
                 _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None

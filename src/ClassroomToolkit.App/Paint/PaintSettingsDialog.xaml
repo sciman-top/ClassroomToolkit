@@ -79,7 +79,19 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="笔触风格" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="34"/>
+                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="34" SelectionChanged="OnBrushStyleChanged"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="毛笔质感" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,4,0,0"/>
+                    <StackPanel Grid.Column="1">
+                        <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚，仅毛笔生效）" Margin="0,0,0,6"/>
+                        <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点，仅毛笔生效）"/>
+                    </StackPanel>
                 </Grid>
 
                 <Grid Margin="0,0,0,12">
@@ -140,7 +152,7 @@
                     <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="34"/>
                 </Grid>
 
-                <Grid Margin="0,0,0,12">
+                <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
@@ -149,13 +161,14 @@
                     <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="34"/>
                 </Grid>
 
-                <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Margin="0,6,0,16"/>
-
-                <!-- WPS -->
+                <!-- 演示文稿兼容性 -->
                 <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,4,0,0" Background="White">
                     <StackPanel>
-                        <TextBlock Text="WPS 兼容性" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
-                        <Grid Margin="0,0,0,10">
+                        <TextBlock Text="演示文稿兼容性" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+
+                        <!-- WPS 兼容策略 -->
+                        <TextBlock Text="WPS 演示" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="80"/>
                                 <ColumnDefinition Width="*"/>
@@ -163,7 +176,10 @@
                             <TextBlock Text="兼容策略" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                             <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="30" FontSize="12"/>
                         </Grid>
-                        <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                        <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,0,12"/>
+
+                        <!-- 自动置顶 -->
+                        <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

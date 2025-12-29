@@ -62,6 +62,8 @@ public sealed class AppSettings
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 255;
     public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
+    public bool CalligraphyInkBloomEnabled { get; set; } = true;
+    public bool CalligraphySealEnabled { get; set; } = true;
     public MediaColor BrushColor { get; set; } = MediaColors.Red;
     public MediaColor BoardColor { get; set; } = MediaColors.White;
     public MediaColor QuickColor1 { get; set; } = MediaColors.Black;
