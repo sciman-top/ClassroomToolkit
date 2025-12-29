@@ -45,7 +45,10 @@ public static class CustomCursors
     {
         get
         {
-            _eraserCursor ??= System.Windows.Input.Cursors.ScrollAll;
+            if (_eraserCursor == null)
+            {
+                _eraserCursor = CreateEraserCursor();
+            }
             return _eraserCursor;
         }
     }
@@ -57,7 +60,10 @@ public static class CustomCursors
     {
         get
         {
-            _regionEraseCursor ??= System.Windows.Input.Cursors.UpArrow;
+            if (_regionEraseCursor == null)
+            {
+                _regionEraseCursor = CreateRegionEraseCursor();
+            }
             return _regionEraseCursor;
         }
     }
@@ -114,22 +120,8 @@ public static class CustomCursors
             context.DrawGeometry(null, blackPen, outerCircle);
         }
 
-        // 渲染到位图
-        var renderBitmap = new RenderTargetBitmap(
-            cursorSize, cursorSize, 96, 96, PixelFormats.Pbgra32);
-        renderBitmap.Render(drawingVisual);
-
-        // 创建临时 .cur 文件
-        var cursorPath = IOPath.Combine(
-            IOPath.GetTempPath(),
-            $"brush_cursor_{color.R}_{color.G}_{color.B}.cur");
-
-        CreateCursorFile(renderBitmap, centerX, centerY, cursorPath);
-
-        // 加载光标
-        var cursor = new WpfCursor(cursorPath);
-
-        return cursor;
+        return CreateCursorFromVisual(drawingVisual, cursorSize, centerX, centerY,
+            $"brush_{color.R}_{color.G}_{color.B}");
     }
 
     /// <summary>
@@ -208,6 +200,144 @@ public static class CustomCursors
         {
             writer.Write(andMask, y * andStride, andStride);
         }
+    }
+
+    /// <summary>
+    /// 创建橡皮擦光标 - 方形设计，带斜线纹理
+    /// </summary>
+    private static WpfCursor CreateEraserCursor()
+    {
+        const int cursorSize = 32;
+        const int boxSize = 20;
+        const int offset = (cursorSize - boxSize) / 2;
+
+        var drawingVisual = new DrawingVisual();
+        using (var context = drawingVisual.RenderOpen())
+        {
+            // 白色背景方块
+            var whiteBrush = new SolidColorBrush(Colors.White);
+            whiteBrush.Freeze();
+
+            // 方形边框
+            var blackPen = new WpfPen(System.Windows.Media.Brushes.Black, 2);
+            blackPen.Freeze();
+
+            var rect = new Rect(offset, offset, boxSize, boxSize);
+            var rectGeom = new RectangleGeometry(rect);
+            context.DrawGeometry(whiteBrush, blackPen, rectGeom);
+
+            // 绘制斜线纹理（表示擦除）
+            var dashPen = new WpfPen(new SolidColorBrush(MediaColor.FromRgb(150, 150, 150)), 1.5);
+            dashPen.Freeze();
+
+            // 斜线从左上到右下
+            for (int i = 0; i < boxSize; i += 4)
+            {
+                context.DrawLine(dashPen,
+                    new WpfPoint(offset + i, offset + boxSize),
+                    new WpfPoint(offset + boxSize, offset + i));
+            }
+
+            // 中心点
+            var centerBrush = new SolidColorBrush(MediaColor.FromRgb(100, 100, 100));
+            centerBrush.Freeze();
+            var centerRect = new Rect(new WpfPoint(cursorSize / 2 - 1, cursorSize / 2 - 1), new WpfSize(2, 2));
+            context.DrawRectangle(centerBrush, null, centerRect);
+        }
+
+        return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "eraser");
+    }
+
+    /// <summary>
+    /// 创建框选擦除光标 - 虚线矩形框设计
+    /// </summary>
+    private static WpfCursor CreateRegionEraseCursor()
+    {
+        const int cursorSize = 32;
+        const int boxSize = 24;
+        const int offset = (cursorSize - boxSize) / 2;
+
+        var drawingVisual = new DrawingVisual();
+        using (var context = drawingVisual.RenderOpen())
+        {
+            // 外框虚线矩形
+            var dashedPen = new WpfPen(System.Windows.Media.Brushes.Black, 2);
+            dashedPen.DashStyle = DashStyles.Dash;
+            dashedPen.Freeze();
+
+            var rect = new Rect(offset, offset, boxSize, boxSize);
+            context.DrawRectangle(null, dashedPen, rect);
+
+            // 四个角的实线强调
+            var solidPen = new WpfPen(System.Windows.Media.Brushes.Black, 2.5);
+            solidPen.Freeze();
+
+            const int cornerSize = 6;
+            // 左上角
+            context.DrawLine(solidPen,
+                new WpfPoint(offset, offset + cornerSize),
+                new WpfPoint(offset, offset));
+            context.DrawLine(solidPen,
+                new WpfPoint(offset, offset),
+                new WpfPoint(offset + cornerSize, offset));
+
+            // 右上角
+            context.DrawLine(solidPen,
+                new WpfPoint(offset + boxSize - cornerSize, offset),
+                new WpfPoint(offset + boxSize, offset));
+            context.DrawLine(solidPen,
+                new WpfPoint(offset + boxSize, offset),
+                new WpfPoint(offset + boxSize, offset + cornerSize));
+
+            // 左下角
+            context.DrawLine(solidPen,
+                new WpfPoint(offset, offset + boxSize - cornerSize),
+                new WpfPoint(offset, offset + boxSize));
+            context.DrawLine(solidPen,
+                new WpfPoint(offset, offset + boxSize),
+                new WpfPoint(offset + cornerSize, offset + boxSize));
+
+            // 右下角
+            context.DrawLine(solidPen,
+                new WpfPoint(offset + boxSize - cornerSize, offset + boxSize),
+                new WpfPoint(offset + boxSize, offset + boxSize));
+            context.DrawLine(solidPen,
+                new WpfPoint(offset + boxSize, offset + boxSize),
+                new WpfPoint(offset + boxSize, offset + boxSize - cornerSize));
+
+            // 中心十字
+            var crossPen = new WpfPen(System.Windows.Media.Brushes.Red, 2);
+            crossPen.Freeze();
+
+            context.DrawLine(crossPen,
+                new WpfPoint(cursorSize / 2 - 4, cursorSize / 2),
+                new WpfPoint(cursorSize / 2 + 4, cursorSize / 2));
+            context.DrawLine(crossPen,
+                new WpfPoint(cursorSize / 2, cursorSize / 2 - 4),
+                new WpfPoint(cursorSize / 2, cursorSize / 2 + 4));
+        }
+
+        return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "region_erase");
+    }
+
+    /// <summary>
+    /// 从 DrawingVisual 创建光标
+    /// </summary>
+    private static WpfCursor CreateCursorFromVisual(DrawingVisual visual, int size, int hotSpotX, int hotSpotY, string name)
+    {
+        // 渲染到位图
+        var renderBitmap = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        renderBitmap.Render(visual);
+
+        // 创建临时 .cur 文件
+        var cursorPath = IOPath.Combine(
+            IOPath.GetTempPath(),
+            $"{name}_{Guid.NewGuid():N}.cur");
+
+        CreateCursorFile(renderBitmap, hotSpotX, hotSpotY, cursorPath);
+
+        // 加载光标
+        return new WpfCursor(cursorPath);
     }
 
     /// <summary>

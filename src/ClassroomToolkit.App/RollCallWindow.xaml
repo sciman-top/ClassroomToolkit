@@ -43,7 +43,8 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 装饰性渐变条 -->
-                <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0" Grid.ColumnSpan="3">
+                <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0" Grid.ColumnSpan="3"
+                        IsHitTestVisible="False">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                             <GradientStop Color="#4A90E2" Offset="0"/>
