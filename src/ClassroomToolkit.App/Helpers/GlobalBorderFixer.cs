@@ -26,12 +26,16 @@ namespace ClassroomToolkit.App.Helpers
                 }
                 
                 // 修复所有已打开的窗口
-                foreach (Window window in System.Windows.Application.Current.Windows)
+                var windows = System.Windows.Application.Current.Windows;
+                if (windows != null)
                 {
-                    if (window != null && window != mainWindow)
+                    foreach (Window window in windows)
                     {
-                        FixAllBordersRecursive(window);
-                        System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 修复窗口 {window.GetType().Name} 完成");
+                        if (window != null && window != mainWindow)
+                        {
+                            FixAllBordersRecursive(window);
+                            System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 修复窗口 {window.GetType().Name} 完成");
+                        }
                     }
                 }
             }
