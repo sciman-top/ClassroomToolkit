@@ -197,86 +197,88 @@
             </Grid>
 
             <!-- 4. 底部操作栏 - 添加装饰背景 -->
-            <Border Grid.Row="2" Padding="16,8,16,18" Background="{StaticResource Brush_Background_L2}">
+            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}">
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="10" ShadowDepth="-2" Opacity="0.03"/>
                 </Border.Effect>
 
-                <!-- 点名操作 -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl ItemsSource="{Binding GroupButtons}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding Label}"
-                                        Margin="2,0" Padding="8,4" MinWidth="50"
-                                        Click="OnGroupEntryClick">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsReset}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <Grid Margin="16,8,16,18">
+                    <!-- 点名操作 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding GroupButtons}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}"
+                                            Margin="2,0" Padding="8,4" MinWidth="50"
+                                            Click="OnGroupEntryClick">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsReset}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                    <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="6,0" Opacity="0.5"/>
+                        <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="6,0" Opacity="0.5"/>
 
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" Margin="2,0" Padding="8,4" MinWidth="56">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
-                            <TextBlock Text="重置" FontWeight="SemiBold" FontSize="13"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" Margin="2,0" Padding="8,4" MinWidth="56">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
-                            <TextBlock Text="名单" FontWeight="SemiBold" FontSize="13"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                        <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" Margin="2,0" Padding="8,4" MinWidth="56">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
+                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" Margin="2,0" Padding="8,4" MinWidth="56">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
+                                <TextBlock Text="名单" FontWeight="SemiBold" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
 
-                <!-- 计时操作 -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerModeClick" Padding="8,5" MinWidth="70">
-                         <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="13"/>
-                    </Button>
+                    <!-- 计时操作 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
+                        <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerModeClick" Padding="8,5" MinWidth="70">
+                             <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="13"/>
+                        </Button>
 
-                    <!-- 播放/暂停按钮：主色调 -->
-                    <Button Style="{StaticResource Style_PrimaryButton}" Margin="3,0" Width="64" Height="38" Click="OnTimerStartPauseClick">
-                        <Path Fill="White" Width="18" Height="18" Stretch="Uniform">
-                            <Path.Style>
-                                <Style TargetType="Path">
-                                    <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding TimerRunning}" Value="True">
-                                            <Setter Property="Data" Value="{StaticResource Icon_Pause}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Path.Style>
-                        </Path>
-                    </Button>
+                        <!-- 播放/暂停按钮：主色调 -->
+                        <Button Style="{StaticResource Style_PrimaryButton}" Margin="3,0" Width="64" Height="38" Click="OnTimerStartPauseClick">
+                            <Path Fill="White" Width="18" Height="18" Stretch="Uniform">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TimerRunning}" Value="True">
+                                                <Setter Property="Data" Value="{StaticResource Icon_Pause}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                        </Button>
 
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerResetClick" Padding="8,5" MinWidth="70">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
-                            <TextBlock Text="重置" FontWeight="SemiBold" FontSize="13"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerSetClick" Padding="8,5" MinWidth="70">
-                        <TextBlock Text="设定" FontWeight="SemiBold" FontSize="13"/>
-                    </Button>
-                </StackPanel>
+                        <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerResetClick" Padding="8,5" MinWidth="70">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="13" Height="13" Margin="0,0,3,0" Stretch="Uniform"/>
+                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource Style_SecondaryButton}" Margin="2,0" Click="OnTimerSetClick" Padding="8,5" MinWidth="70">
+                            <TextBlock Text="设定" FontWeight="SemiBold" FontSize="13"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
     </Border>
