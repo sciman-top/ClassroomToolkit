@@ -46,11 +46,43 @@ public partial class AutoExitDialog : Window
         var studentPath = StudentResourceLocator.ResolveStudentWorkbookPath();
         var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
         var result = SystemDiagnostics.CollectSystemDiagnostics(_settings, settingsPath, studentPath, photoRoot);
+        
+        // 先修复当前窗口
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("AutoExitDialog: 修复当前窗口完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"AutoExitDialog 修复失败: {ex.Message}");
+        }
+        
         var dialog = new DiagnosticsDialog(result)
         {
             Owner = this
         };
-        dialog.ShowDialog();
+        
+        // 立即修复新创建的对话框
+        try
+        {
+            BorderFixHelper.FixAllBorders(dialog);
+            System.Diagnostics.Debug.WriteLine("AutoExitDialog: 修复对话框完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"AutoExitDialog 修复对话框失败: {ex.Message}");
+        }
+        
+        try
+        {
+            dialog.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"对话框显示失败: {ex.Message}");
+            throw;
+        }
     }
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
