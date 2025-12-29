@@ -98,6 +98,7 @@ public partial class PaintOverlayWindow : Window
     private bool _strokeInProgress;
     private WpfPoint? _lastEraserPoint;
     private bool _hasDrawing;
+    private readonly Random _inkRandom = new Random();
 
     private class DrawingVisualHost : FrameworkElement
     {
@@ -1607,27 +1608,37 @@ public partial class PaintOverlayWindow : Window
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
-        RenderAndBlend(geometry, brush, null, erase: false);
+        MediaBrush? opacityMask = null;
+        if (_brushStyle == PaintBrushStyle.Calligraphy)
+        {
+            double inkFlow = 1.0;
+            if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
+            {
+                inkFlow = calligraphyRenderer.LastInkFlow;
+            }
+            opacityMask = BuildInkOpacityMask(geometry.Bounds, inkFlow);
+        }
+        RenderAndBlend(geometry, brush, null, erase: false, opacityMask);
     }
 
     private void CommitGeometryStroke(Geometry geometry, MediaPen pen)
     {
-        RenderAndBlend(geometry, null, pen, erase: false);
+        RenderAndBlend(geometry, null, pen, erase: false, null);
     }
 
     private void EraseGeometry(Geometry geometry)
     {
-        RenderAndBlend(geometry, MediaBrushes.White, null, erase: true);
+        RenderAndBlend(geometry, MediaBrushes.White, null, erase: true, null);
     }
 
-    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase)
+    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask)
     {
         EnsureRasterSurface();
         if (_rasterSurface == null)
         {
             return;
         }
-        if (!TryRenderGeometry(geometry, fill, pen, out var rect, out var pixels, out var stride))
+        if (!TryRenderGeometry(geometry, fill, pen, opacityMask, out var rect, out var pixels, out var stride))
         {
             return;
         }
@@ -1646,6 +1657,7 @@ public partial class PaintOverlayWindow : Window
         Geometry geometry,
         MediaBrush? fill,
         MediaPen? pen,
+        MediaBrush? opacityMask,
         out Int32Rect destRect,
         out byte[] pixels,
         out int stride)
@@ -1685,7 +1697,15 @@ public partial class PaintOverlayWindow : Window
             var offsetX = destRect.X / dpi.DpiScaleX;
             var offsetY = destRect.Y / dpi.DpiScaleY;
             dc.PushTransform(new TranslateTransform(-offsetX, -offsetY));
+            if (opacityMask != null)
+            {
+                dc.PushOpacityMask(opacityMask);
+            }
             dc.DrawGeometry(fill, pen, geometry);
+            if (opacityMask != null)
+            {
+                dc.Pop();
+            }
             dc.Pop();
         }
         var rtb = new RenderTargetBitmap(destRect.Width, destRect.Height, _surfaceDpiX, _surfaceDpiY, PixelFormats.Pbgra32);
@@ -1694,6 +1714,97 @@ public partial class PaintOverlayWindow : Window
         pixels = new byte[stride * destRect.Height];
         rtb.CopyPixels(pixels, stride, 0);
         return true;
+    }
+
+    private MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow)
+    {
+        if (bounds.IsEmpty)
+        {
+            return null;
+        }
+
+        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 1.6, 12, 64));
+        double baseAlpha = Lerp(0.55, 0.95, inkFlow);
+        double variation = Lerp(0.12, 0.45, 1.0 - inkFlow);
+        var tile = CreateInkNoiseTile(tileSize, baseAlpha, variation, _inkRandom.Next());
+
+        var brush = new ImageBrush(tile)
+        {
+            TileMode = TileMode.Tile,
+            Viewport = new Rect(bounds.X, bounds.Y, tileSize, tileSize),
+            ViewportUnits = BrushMappingMode.Absolute,
+            Stretch = Stretch.None,
+            Opacity = Math.Clamp(0.85 + (inkFlow * 0.15), 0.7, 1.0)
+        };
+        brush.Freeze();
+        return brush;
+    }
+
+    private static BitmapSource CreateInkNoiseTile(int size, double baseAlpha, double variation, int seed)
+    {
+        var rng = new Random(seed);
+        int grid = 8;
+        var gridValues = new double[grid + 1, grid + 1];
+
+        for (int y = 0; y <= grid; y++)
+        {
+            for (int x = 0; x <= grid; x++)
+            {
+                double jitter = (rng.NextDouble() * 2.0 - 1.0) * variation;
+                gridValues[x, y] = Math.Clamp(baseAlpha + jitter, 0.0, 1.0);
+            }
+        }
+
+        double angle = rng.NextDouble() * Math.PI;
+        double fx = Math.Cos(angle);
+        double fy = Math.Sin(angle);
+        double fiberFreq = 1.8 + rng.NextDouble() * 1.6;
+        double fiberPhase = rng.NextDouble() * Math.PI * 2.0;
+        double fiberAmp = variation * 0.35;
+
+        int stride = size * 4;
+        var pixels = new byte[stride * size];
+        double scale = grid / (double)(size - 1);
+
+        for (int y = 0; y < size; y++)
+        {
+            double gy = y * scale;
+            int y0 = (int)Math.Floor(gy);
+            int y1 = Math.Min(y0 + 1, grid);
+            double ty = gy - y0;
+
+            for (int x = 0; x < size; x++)
+            {
+                double gx = x * scale;
+                int x0 = (int)Math.Floor(gx);
+                int x1 = Math.Min(x0 + 1, grid);
+                double tx = gx - x0;
+
+                double n0 = Lerp(gridValues[x0, y0], gridValues[x1, y0], tx);
+                double n1 = Lerp(gridValues[x0, y1], gridValues[x1, y1], tx);
+                double noise = Lerp(n0, n1, ty);
+
+                double fiber = Math.Sin(((x * fx + y * fy) / size) * (Math.PI * 2.0 * fiberFreq) + fiberPhase) * fiberAmp;
+                double value = Math.Clamp(noise + fiber, 0.0, 1.0);
+                byte alpha = (byte)Math.Round(value * 255);
+
+                int idx = (y * size + x) * 4;
+                pixels[idx] = alpha;
+                pixels[idx + 1] = alpha;
+                pixels[idx + 2] = alpha;
+                pixels[idx + 3] = alpha;
+            }
+        }
+
+        var bitmap = new WriteableBitmap(size, size, 96, 96, PixelFormats.Pbgra32, null);
+        bitmap.WritePixels(new Int32Rect(0, 0, size, size), pixels, stride, 0);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    private static double Lerp(double a, double b, double t)
+    {
+        return a + (b - a) * t;
     }
 
     private void BlendSourceOver(Int32Rect rect, byte[] srcPixels, int srcStride)
