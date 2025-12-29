@@ -246,14 +246,14 @@ public partial class PaintOverlayWindow : Window
 
     private void UpdateCursor(PaintToolMode mode)
     {
-        Cursor cursor = mode switch
+        System.Windows.Input.Cursor cursor = mode switch
         {
-            PaintToolMode.Cursor => Cursors.Arrow,
-            PaintToolMode.Brush => Cursors.Cross,
-            PaintToolMode.Eraser => Cursors.No,
-            PaintToolMode.Shape => Cursors.Cross,
-            PaintToolMode.RegionErase => Cursors.Cross,
-            _ => Cursors.Arrow
+            PaintToolMode.Cursor => System.Windows.Input.Cursors.Arrow,
+            PaintToolMode.Brush => System.Windows.Input.Cursors.Cross,
+            PaintToolMode.Eraser => System.Windows.Input.Cursors.No,
+            PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,
+            PaintToolMode.RegionErase => System.Windows.Input.Cursors.Cross,
+            _ => System.Windows.Input.Cursors.Arrow
         };
         
         this.Cursor = cursor;
