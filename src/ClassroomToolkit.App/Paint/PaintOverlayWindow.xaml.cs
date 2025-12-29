@@ -99,6 +99,7 @@ public partial class PaintOverlayWindow : Window
     private WpfPoint? _lastEraserPoint;
     private bool _hasDrawing;
     private readonly Random _inkRandom = new Random();
+    private bool _presentationFocusRestoreEnabled;
 
     private class DrawingVisualHost : FrameworkElement
     {
@@ -884,8 +885,10 @@ public partial class PaintOverlayWindow : Window
 
     private void MonitorPresentationFocus()
     {
-        // 暂时禁用焦点恢复功能，因为它会干扰工具栏窗口的用户交互
-        return;
+        if (!_presentationFocusRestoreEnabled)
+        {
+            return;
+        }
 
         if (DateTime.UtcNow < _nextPresentationFocusAttempt)
         {
@@ -1618,7 +1621,6 @@ public partial class PaintOverlayWindow : Window
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
-        MediaBrush? opacityMask = null;
         bool isCalligraphy = _brushStyle == PaintBrushStyle.Calligraphy;
         double inkFlow = 1.0;
         Vector? strokeDirection = null;

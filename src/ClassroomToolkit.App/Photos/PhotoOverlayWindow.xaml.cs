@@ -113,7 +113,7 @@ public partial class PhotoOverlayWindow : Window
         // 使用透明画刷替换当前图片，避免闪现上一个学生的照片
         PhotoImage.Source = new DrawingBrush {
             Drawing = new GeometryDrawing {
-                Brush = Brushes.Transparent,
+                Brush = System.Windows.Media.Brushes.Transparent,
                 Geometry = new RectangleGeometry(new Rect(0, 0, 1, 1))
             }
         };

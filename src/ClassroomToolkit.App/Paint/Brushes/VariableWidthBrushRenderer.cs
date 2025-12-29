@@ -318,7 +318,6 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             double ribbonOpacity = GetRibbonOpacity(item.RibbonT);
             double seepOpacity = Lerp(0.02, 0.045, _lastInkFlow) * ribbonOpacity;
-            double seepScale = 1.0;
 
             if (_lastInkFlow > 0.65 && seepOpacity > 0.01 && IsSeepGeometryEligible(item.Geometry))
             {
