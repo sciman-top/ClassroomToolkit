@@ -566,7 +566,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         if (_cachedUnion != null)
         {
             double ringThickness = Math.Max(_baseSize * _config.OuterRingThicknessFactor, 0.5);
-            var widened = _cachedUnion.GetWidenedPathGeometry(new Pen(Brushes.Black, ringThickness));
+            var widened = _cachedUnion.GetWidenedPathGeometry(new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, ringThickness));
             var ring = Geometry.Combine(widened, _cachedUnion, GeometryCombineMode.Exclude, null);
             ring.FillRule = FillRule.Nonzero;
             if (ring.CanFreeze)
