@@ -1,4 +1,5 @@
 using WpfApplication = System.Windows.Application;
+using System.Windows;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
