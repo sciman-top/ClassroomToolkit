@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -74,15 +75,17 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         public WpfPoint Position;
         public double Width;
+        public double Speed;            // 原始速度（px/ms）
         public double NormalizedSpeed;  // [0, 1] 归一化速度
         public double Progress;         // [0, 1] 沿笔画进度
         public double AccumulatedWidth; // v11: 墨水累积宽度（顿笔效果）
 
-        public StrokePoint(WpfPoint pos, double width, double speed = 0, double progress = 0, double accumulated = 0)
+        public StrokePoint(WpfPoint pos, double width, double speed = 0, double normalizedSpeed = 0, double progress = 0, double accumulated = 0)
         {
             Position = pos;
             Width = width;
-            NormalizedSpeed = speed;
+            Speed = speed;
+            NormalizedSpeed = normalizedSpeed;
             Progress = progress;
             AccumulatedWidth = accumulated;
         }
@@ -96,6 +99,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private bool _isActive;
     private long _lastTimestamp;
     private int _pointCount;
+    private double _noiseSeed;
 
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
@@ -130,12 +134,13 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _minVelocity = double.MaxValue;
         _maxVelocity = double.MinValue;
         _accumulatedWidth = 0; // v11: 重置累积宽度
-        _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+        _noiseSeed = _random.NextDouble() * 1000.0;
+        _lastTimestamp = Stopwatch.GetTimestamp();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
         _smoothedPos = point;
 
-        _points.Add(new StrokePoint(point, _smoothedWidth, 0, 0, 0));
+        _points.Add(new StrokePoint(point, _smoothedWidth, 0, 0, 0, 0));
     }
 
     public void OnMove(WpfPoint point)
@@ -159,8 +164,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         var lastPt = _points.Last();
         var dist = (_smoothedPos - lastPt.Position).Length;
 
-        // 去噪：忽略过小的移动
-        if (dist < 2.0) return;
+        // 去噪：忽略过小的移动（阈值随当前宽度调整）
+        double minDist = Math.Clamp(_smoothedWidth * 0.15, 0.4, 2.0);
+        if (dist < minDist) return;
 
         // 数据验证：检查异常跳变
         if (dist > _config.MaxPointJumpDistance)
@@ -168,11 +174,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             return;
         }
 
-        var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-        var dt = now - _lastTimestamp;
-        if (dt < 1) dt = 1;
+        var now = Stopwatch.GetTimestamp();
+        double dtMs = (now - _lastTimestamp) * 1000.0 / Stopwatch.Frequency;
+        if (dtMs < 1) dtMs = 1;
 
-        double velocity = dist / dt;
+        double velocity = dist / dtMs;
 
         // v10: 跟踪速度范围用于归一化
         _minVelocity = Math.Min(_minVelocity, velocity);
@@ -232,7 +238,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             return;
         }
 
-        _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, smoothVelocity, 0, _accumulatedWidth));
+        _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, smoothVelocity, 0, 0, _accumulatedWidth));
         _lastTimestamp = now;
         _pointCount++;
     }
@@ -250,7 +256,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         var endPos = point + dir * extension;
 
         var minWidth = ClampWidth(_baseSize * _config.TaperMinWidthFactor);
-        _points.Add(new StrokePoint(endPos, minWidth, 0, 1));
+        _points.Add(new StrokePoint(endPos, minWidth, 0, 0, 1));
         _isActive = false;
     }
 
@@ -424,7 +430,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         if (_points.Count == 1)
         {
             var p = _points[0];
-            samples.Add(new StrokePoint(p.Position, ClampWidth(p.Width), 0, 0, p.AccumulatedWidth));
+            samples.Add(new StrokePoint(p.Position, ClampWidth(p.Width), 0, 0, 0, p.AccumulatedWidth));
             return samples;
         }
 
@@ -450,7 +456,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 double t = step / (double)UpsampleSteps;
                 var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
 
-                double speed = CatmullRomValue(p0.NormalizedSpeed, p1.NormalizedSpeed, p2.NormalizedSpeed, p3.NormalizedSpeed, t);
+                double speed = CatmullRomValue(p0.Speed, p1.Speed, p2.Speed, p3.Speed, t);
                 double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
 
                 if (i > 0 || step > 0)
@@ -460,6 +466,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 }
 
                 double progress = totalLength > 0 ? accumulatedLength / totalLength : 0;
+                progress = Math.Clamp(progress, 0, 1);
                 double normSpeed = Math.Clamp(speed / maxSpeed, 0, 1);
 
                 double velocityFactor = 1.0 - (0.65 * normSpeed);
@@ -487,7 +494,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 }
 
                 currentWidth = ClampWidth(currentWidth);
-                samples.Add(new StrokePoint(pos, currentWidth, normSpeed, progress, accumulatedWidth));
+                samples.Add(new StrokePoint(pos, currentWidth, speed, normSpeed, progress, accumulatedWidth));
             }
         }
 
@@ -535,7 +542,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
 
                 // 插值速度、进度和累积宽度
-                double speed = CatmullRomValue(p0.NormalizedSpeed, p1.NormalizedSpeed, p2.NormalizedSpeed, p3.NormalizedSpeed, t);
+                double speed = CatmullRomValue(p0.Speed, p1.Speed, p2.Speed, p3.Speed, t);
                 double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
 
                 // 更新进度
@@ -545,12 +552,13 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                     accumulatedLength += segmentLength;
                 }
                 double progress = totalLength > 0 ? accumulatedLength / totalLength : 0;
+                progress = Math.Clamp(progress, 0, 1);
 
                 // v10 核心算法: 应用增强的动力学
                 double normalizedSpeed = Math.Clamp((speed - _minVelocity) / velocityRange, 0, 1);
                 double width = CalculateWidthV10(p1.Width, normalizedSpeed, progress);
 
-                samples.Add(new StrokePoint(pos, width, normalizedSpeed, progress, accumulatedWidth));
+                samples.Add(new StrokePoint(pos, width, speed, normalizedSpeed, progress, accumulatedWidth));
             }
         }
 
@@ -632,6 +640,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             samples[i] = new StrokePoint(
                 samples[i].Position,
                 ClampWidth(smoothed),
+                samples[i].Speed,
                 samples[i].NormalizedSpeed,
                 samples[i].Progress,
                 samples[i].AccumulatedWidth // v11: 保留累积宽度
@@ -675,7 +684,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
             // ===== v11 修复: 使用平滑噪声函数代替随机噪声 =====
             double edgeNoise = 0;
-            double phase = i * 0.45 + (progress * 3.2) + ((pos.X + pos.Y) * 0.01);
+            double phase = _noiseSeed + i * 0.45 + (progress * 3.2) + ((pos.X + pos.Y) * 0.01);
 
             if (speed > _config.FlyingWhiteThreshold && progress < _config.FlyingWhiteNoiseReductionProgress)
             {

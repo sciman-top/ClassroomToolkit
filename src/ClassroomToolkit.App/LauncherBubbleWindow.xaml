@@ -14,13 +14,8 @@
         <Border Width="48" Height="48" 
                 CornerRadius="100"
                 BorderThickness="1.5"
-                BorderBrush="#80FFFFFF">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#4FACFE" Offset="0"/>
-                    <GradientStop Color="#00F2FE" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
+                BorderBrush="{StaticResource Brush_White_Translucent}"
+                Background="{StaticResource Gradient_Launcher}">
             <Border.Effect>
                 <!-- 阴影让它浮起来 -->
                 <DropShadowEffect Color="#204FACFE" BlurRadius="16" ShadowDepth="4" Opacity="0.6"/>

@@ -6,24 +6,25 @@
         Background="{x:Null}"
         ShowInTaskbar="False"
         Topmost="True"
+        WindowState="Maximized"
         ResizeMode="NoResize">
     
     <Window.Resources>
-        <!-- 圆形半透明关闭按钮 -->
-        <Style x:Key="Style_PhotoCloseButton" TargetType="Button">
-            <Setter Property="Width" Value="48"/>
-            <Setter Property="Height" Value="48"/>
-            <Setter Property="Background" Value="#80000000"/>
+        <!-- 现代悬浮关闭按钮 -->
+        <Style x:Key="Style_ModernCloseButton" TargetType="Button">
+            <Setter Property="Width" Value="56"/>
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="Background" Value="#40000000"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="24" Background="{TemplateBinding Background}">
-                            <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="16" Height="16" 
+                        <Border x:Name="bd" CornerRadius="28" Background="{TemplateBinding Background}" BorderBrush="#20FFFFFF" BorderThickness="1">
+                            <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="20" Height="20" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#A0000000"/>
+                                <Setter TargetName="bd" Property="Background" Value="#80000000"/>
                                 <Setter Property="Cursor" Value="Hand"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -34,48 +35,63 @@
     </Window.Resources>
 
     <Grid>
-        <Border x:Name="PhotoBorder" Background="Black">
-            <Grid>
-                <!-- 照片 -->
-                <Image x:Name="PhotoImage" Stretch="Uniform" />
-                
-                <!-- 姓名 (带描边阴影) -->
-                <TextBlock x:Name="NameText"
-                           Foreground="White"
-                           FontSize="64"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Top"
-                           Margin="0,40,0,0">
-                    <TextBlock.Effect>
-                        <!-- 强烈的黑色阴影模拟描边，确保在亮色背景下也清晰可见 -->
-                        <DropShadowEffect Color="Black" BlurRadius="4" ShadowDepth="0" Opacity="1.0" Direction="0"/>
-                    </TextBlock.Effect>
-                </TextBlock>
+        <!-- 背景遮罩 (磨砂黑) -->
+        <Border Background="#F2000000" MouseLeftButtonDown="OnCloseClick"/>
 
-                <!-- 底部关闭按钮区域 -->
-                <Grid VerticalAlignment="Bottom" Margin="30">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+        <Grid Margin="40">
+            <!-- 照片主体 (带阴影和圆角) -->
+            <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Image x:Name="PhotoImage" Stretch="Uniform" />
                     
-                    <Button x:Name="CloseButtonLeft"
-                            Grid.Column="0"
-                            Style="{StaticResource Style_PhotoCloseButton}"
-                            Click="OnCloseClick" 
-                            ToolTip="关闭展示"/>
-                    
-                    <Button x:Name="CloseButtonRight"
-                            Grid.Column="2"
-                            Style="{StaticResource Style_PhotoCloseButton}"
-                            Click="OnCloseClick"
-                            ToolTip="关闭展示"/>
+                    <!-- 底部渐变背景 (用于文字清晰度) -->
+                    <Border VerticalAlignment="Bottom" Height="240">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="Transparent" Offset="0"/>
+                                <GradientStop Color="#CC000000" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+
+                    <!-- 学生姓名 (超大字号) -->
+                    <TextBlock x:Name="NameText"
+                               Foreground="White"
+                               FontSize="120"
+                               FontWeight="Black"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,60">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+
+            <!-- 右上角关闭按钮 -->
+            <Button Style="{StaticResource Style_ModernCloseButton}"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,20,20,0"
+                    Click="OnCloseClick" 
+                    ToolTip="退出查看"/>
+
+            <!-- 底部两角关闭辅助按钮 (方便触摸) -->
+            <Button Style="{StaticResource Style_ModernCloseButton}"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Margin="20,0,0,20"
+                    Click="OnCloseClick" 
+                    Opacity="0.3"/>
+
+             <Button Style="{StaticResource Style_ModernCloseButton}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,20,20"
+                    Click="OnCloseClick" 
+                    Opacity="0.3"/>
+        </Grid>
     </Grid>
 </Window>

@@ -58,6 +58,11 @@
     <!-- 半透明背景 -->
     <SolidColorBrush x:Key="Brush_Background_Translucent" Color="#F8FFFFFF" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Background_Glass" Color="#F0FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
+
+    <!-- 特殊背景 -->
+    <SolidColorBrush x:Key="Brush_Background_Dark" Color="#1A1F2C" PresentationOptions:Freeze="true"/>
 
     <!-- ========== 文本层次系统 ========== -->
 
@@ -104,6 +109,22 @@
         <GradientStop Color="#F8FAFC" Offset="0"/>
         <GradientStop Color="#F1F5F9" Offset="1"/>
     </LinearGradientBrush>
+
+    <!-- 启动球渐变 -->
+    <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#4FACFE" Offset="0"/>
+        <GradientStop Color="#00F2FE" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 计时器霓虹色 -->
+    <Color x:Key="Color_Timer_Neon">#00FFAA</Color>
+    <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
+    
+    <!-- 画笔预设色 -->
+    <Color x:Key="Color_Pen_Red">#FF3B30</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Red" Color="{StaticResource Color_Pen_Red}" PresentationOptions:Freeze="true"/>
+    <Color x:Key="Color_Pen_Blue">#007ACC</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Blue" Color="{StaticResource Color_Pen_Blue}" PresentationOptions:Freeze="true"/>
 
     <!-- 玻璃态背景 -->
     <LinearGradientBrush x:Key="Gradient_Glass" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">

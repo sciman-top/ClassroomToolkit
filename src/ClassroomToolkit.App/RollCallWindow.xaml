@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
         x:Name="NameWindow"
         Title="Classroom Toolkit"
-        Height="400" Width="600"
+        Height="420" Width="640"
         MinWidth="400" MinHeight="300"
         WindowStartupLocation="Manual"
         Topmost="True"
@@ -17,230 +17,156 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
         
-        <!-- 动画资源 -->
-        <Storyboard x:Key="Anim_PopIn">
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)">
-                <EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="0.8"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="1.1">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="1.0">
-                     <EasingDoubleKeyFrame.EasingFunction>
-                        <ElasticEase EasingMode="EaseOut" Oscillations="1" Springiness="5"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)">
-                <EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="0.8"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="1.1">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="1.0">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <ElasticEase EasingMode="EaseOut" Oscillations="1" Springiness="5"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-        </Storyboard>
+        <!-- 图片路径转ImageSource的简单转换 (如果ViewModel只给路径) -->
+        <!-- 这里假设直接绑定路径即可，WPF会自动处理 -->
     </Window.Resources>
 
-    <Border Background="White" CornerRadius="12" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
+    <Border Background="White" CornerRadius="16" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="6" Opacity="0.1"/>
+            <DropShadowEffect Color="Black" BlurRadius="30" ShadowDepth="8" Opacity="0.12"/>
         </Border.Effect>
 
         <Grid>
-            <Grid Margin="0,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="48"/> <!-- Toolbar -->
-                    <RowDefinition Height="*"/>  <!-- Main Content -->
-                    <RowDefinition Height="Auto"/> <!-- Bottom Controls (Groups/TimerControls) -->
-                </Grid.RowDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="54"/> <!-- 标题栏 -->
+                <RowDefinition Height="*"/>  <!-- 内容区 -->
+                <RowDefinition Height="Auto"/> <!-- 底部控制栏 -->
+            </Grid.RowDefinitions>
 
-                <!-- 1. 顶部工具栏 - 精致版 -->
-                <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/> <!-- Left: Controls -->
-                        <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                        <ColumnDefinition Width="Auto"/> <!-- Right: System -->
-                    </Grid.ColumnDefinitions>
+            <!-- 1. 顶部工具栏 -->
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                    <!-- 左侧功能区 -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0">
-                        <!-- 模式切换 - 渐变按钮 -->
-                        <Button Style="{StaticResource Style_SecondaryButton}"
-                                Click="OnToggleModeClick" Padding="12,6" Margin="0,0,8,0" MinWidth="110">
-                            <StackPanel Orientation="Horizontal">
-                                <Path Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0">
-                                    <Path.Style>
-                                        <Style TargetType="Path">
-                                            <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
-                                                    <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Path.Style>
-                                </Path>
-                                <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0">
+                    <Button Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnToggleModeClick" Padding="14,6" Margin="0,0,10,0" Height="34" MinWidth="120">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRollCallMode}" Value="False">
+                                                <Setter Property="Data" Value="{StaticResource Icon_Clock}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <ComboBox Width="120" Height="34"
+                              ItemsSource="{Binding AvailableClasses}"
+                              SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
+                              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
+                              SelectionChanged="OnClassSelectionChanged"
+                              VerticalContentAlignment="Center"
+                              FontSize="13"
+                              ToolTip="选择班级"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="18" Height="18"/>
+                    </Button>
+                    <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="8,0"/>
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
+                        <Rectangle Width="14" Height="2" Fill="{StaticResource Brush_Text_Secondary}"/>
+                    </Button>
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭">
+                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
+                    </Button>
+                </StackPanel>
+                
+                <Border Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}" Margin="16,0"/>
+            </Grid>
+
+            <!-- 2. 内容区 -->
+            <Grid Grid.Row="1" Margin="20,10">
+                
+                <!-- A. 点名视图 -->
+                <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                    <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="20" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+                            MouseLeftButtonUp="OnRollClick">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="20" ShadowDepth="0" Opacity="0.08"/>
+                        </Border.Effect>
+                        
+                        <Grid Margin="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/> <!-- 用于展示照片 -->
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 姓名与学号 -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding CurrentStudentId}" 
+                                           Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
+                                           FontSize="24" Foreground="{StaticResource Brush_Text_Secondary}" 
+                                           FontWeight="Light" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}" 
+                                           FontSize="82" FontWeight="Black" Foreground="{StaticResource Brush_Text_Primary}" 
+                                           HorizontalAlignment="Center" TextAlignment="Center"/>
                             </StackPanel>
-                        </Button>
 
-                        <!-- 班级选择 (仅点名模式) -->
-                        <ComboBox Width="100" Height="32"
-                                  ItemsSource="{Binding AvailableClasses}"
-                                  SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
-                                  Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                                  SelectionChanged="OnClassSelectionChanged"
-                                  VerticalContentAlignment="Center"
-                                  FontSize="12"
-                                  ToolTip="切换班级"/>
-                    </StackPanel>
-
-                    <!-- 右侧：系统按钮 -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,10,0">
-                        <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置">
-                            <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="16" Height="16"/>
-                        </Button>
-
-                        <Rectangle Width="1" Height="20" Fill="#E0E8F5" Margin="6,0"/>
-
-                        <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化">
-                            <Rectangle Width="12" Height="2" Fill="{StaticResource Brush_Foreground}"/>
-                        </Button>
-                        <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭">
-                            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="11" Height="11"/>
-                        </Button>
-                    </StackPanel>
-
-                    <!-- 工具栏底部品牌色分割线 -->
-                    <Border Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Margin="12,0,12,0"
-                            Height="1.5" CornerRadius="1">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                                <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="0.5"/>
-                                <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                            <!-- 学生照片 (如果有) -->
+                            <Border Grid.Column="1" Width="180" Height="240" Margin="20,0,0,0" 
+                                    CornerRadius="12" Background="White" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}"
+                                    Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.1"/>
+                                </Border.Effect>
+                                <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill" Margin="2" />
+                            </Border>
+                        </Grid>
                     </Border>
                 </Grid>
 
-            <!-- 2. 内容区 -->
-
-            <!-- A. 点名展示 - 精美卡片版 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                <Border Background="#F0F7FF" CornerRadius="16"
-                        VerticalAlignment="Stretch"
-                        HorizontalAlignment="Stretch"
-                        Margin="28,12"
-                        BorderBrush="#D0E3F5"
-                        BorderThickness="1.5"
-                        MouseLeftButtonUp="OnRollClick">
-                    <Border.Effect>
-                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="35" ShadowDepth="0" Opacity="0.25"/>
-                    </Border.Effect>
-
-                    <Grid>
-                        <!-- 顶部光泽装饰 -->
-                        <Border CornerRadius="16,16,0,0" Height="1" VerticalAlignment="Top" ClipToBounds="True">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="{StaticResource Color_Primary_Light}" Offset="0"/>
-                                    <GradientStop Color="{StaticResource Color_Primary_Main}" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-
-                        <!-- 核心名字展示 -->
-                        <Grid x:Name="NameCardBody" Margin="36,18"
-                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                              SnapsToDevicePixels="True" UseLayoutRounding="True"
-                              SizeChanged="OnNameCardSizeChanged">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                        x:Name="NameContainer" RenderTransformOrigin="0.5,0.5">
-                                <StackPanel.RenderTransform>
-                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                </StackPanel.RenderTransform>
-
-                                <!-- 学号 (可选显示) -->
-                                <TextBlock x:Name="IdText" Text="{Binding CurrentStudentId}"
-                                           Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,24,0" FontWeight="Light"
-                                           TextOptions.TextFormattingMode="Display"
-                                           TextOptions.TextRenderingMode="ClearType"/>
-
-                                <!-- 姓名 -->
-                                <TextBlock x:Name="BigNameText" Text="{Binding CurrentStudentName}"
-                                           Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                           Foreground="{StaticResource Brush_Foreground}" FontWeight="Bold"
-                                           TextAlignment="Center"
-                                           TextTrimming="None"
-                                           TextWrapping="NoWrap"
-                                           TextOptions.TextFormattingMode="Display"
-                                           TextOptions.TextRenderingMode="ClearType">
-                                    <!-- 这里的 Effect 会在代码中动态控制 (Blur) -->
-                                </TextBlock>
+                <!-- B. 计时视图 -->
+                <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
+                    <Border Background="{StaticResource Brush_Background_Dark}" CornerRadius="20">
+                         <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="40" ShadowDepth="0" Opacity="0.15"/>
+                        </Border.Effect>
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding TimerModeLabel}" HorizontalAlignment="Center" Margin="0,0,0,10"
+                                           Foreground="{StaticResource Brush_Timer_Neon}" Opacity="0.7" FontSize="16" FontWeight="SemiBold"/>
+                                <Viewbox Height="160">
+                                    <TextBlock Text="{Binding TimeDisplay}"
+                                               Foreground="{StaticResource Brush_Timer_Neon}"
+                                               FontFamily="Consolas" FontWeight="Bold">
+                                         <TextBlock.Effect>
+                                             <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="30" ShadowDepth="0" Opacity="0.8"/>
+                                         </TextBlock.Effect>
+                                    </TextBlock>
+                                </Viewbox>
                             </StackPanel>
                         </Grid>
-                    </Grid>
-                </Border>
+                    </Border>
+                </Grid>
             </Grid>
 
-            <!-- B. 计时展示 - 精美发光版 -->
-            <Grid Grid.Row="1" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}" Margin="20,0,20,12">
-                <Border Background="#1A1F2C" CornerRadius="16">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#00FFAA" BlurRadius="25" ShadowDepth="0" Opacity="0.25"/>
-                    </Border.Effect>
-                    <Grid>
-                        <!-- 顶部发光装饰线 -->
-                        <Border CornerRadius="16,16,0,0" Height="2" VerticalAlignment="Top" ClipToBounds="True">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#00FFAA" Offset="0"/>
-                                    <GradientStop Color="#00C896" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <Viewbox Stretch="Uniform" Margin="20">
-                            <TextBlock Text="{Binding TimeDisplay}"
-                                       Foreground="#00FFAA"
-                                       FontFamily="Consolas"
-                                       FontWeight="Bold">
-                                 <TextBlock.Effect>
-                                     <DropShadowEffect Color="#00FFAA" BlurRadius="30" ShadowDepth="0" Opacity="0.7"/>
-                                 </TextBlock.Effect>
-                            </TextBlock>
-                        </Viewbox>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- 3. 底部控件 - 紧凑精致版 -->
-            <Grid Grid.Row="2" Margin="0,0,0,14">
-                <!-- 点名模式下的底部栏 - 紧凑精致版 -->
-                <WrapPanel Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center">
-
-                    <!-- 分组按钮列表 -->
+            <!-- 3. 底部操作栏 -->
+            <Grid Grid.Row="2" Margin="16,0,16,20">
+                <!-- 点名模式底部 -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" 
+                            Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                     <ItemsControl ItemsSource="{Binding GroupButtons}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
+                                <StackPanel Orientation="Horizontal"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding Label}"
-                                        Margin="4"
-                                        Padding="12,6"
-                                        MinWidth="60"
+                                <Button Content="{Binding Label}" Margin="4,0" Padding="14,8" MinWidth="70"
                                         Click="OnGroupEntryClick">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
@@ -256,33 +182,31 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- 重置按钮 -->
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" ToolTip="重置当前分组" Margin="4" Padding="12,6" MinWidth="65">
-                        <StackPanel Orientation="Horizontal" Margin="5,0">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="15" Height="15" Margin="0,0,5,0"/>
-                            <TextBlock Text="重置" FontWeight="Medium" FontSize="13"/>
+                    <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="10,0"/>
+
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" Margin="4,0" Padding="14,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="14" Height="14" Margin="0,0,6,0" Stretch="Uniform"/>
+                            <TextBlock Text="重置" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
-
-                    <!-- 名单管理按钮 -->
-                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" ToolTip="查看名单" Margin="4" Padding="12,6" MinWidth="65">
-                        <StackPanel Orientation="Horizontal" Margin="5,0">
-                            <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Foreground}" Stretch="Uniform" Width="15" Height="15" Margin="0,0,5,0"/>
-                            <TextBlock Text="名单" FontWeight="Medium" FontSize="13"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" Margin="4,0" Padding="14,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Primary}" Width="14" Height="14" Margin="0,0,6,0" Stretch="Uniform"/>
+                            <TextBlock Text="名单" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
-                </WrapPanel>
+                </StackPanel>
 
-                <!-- 计时控制 (计时模式) - 紧凑精致版 -->
+                <!-- 计时模式底部 -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="5" Click="OnTimerModeClick" Padding="12,6" MinWidth="70">
-                         <TextBlock Text="{Binding TimerModeLabel}" FontWeight="Medium" FontSize="13"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6,0" Click="OnTimerModeClick" Padding="16,10" MinWidth="90">
+                         <TextBlock Text="{Binding TimerModeLabel}" FontWeight="Bold"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_PrimaryButton}" Margin="5" Width="60" Height="48" Click="OnTimerStartPauseClick">
-                        <Path Fill="White" Width="18" Height="18" Stretch="Uniform">
+                    <Button Style="{StaticResource Style_PrimaryButton}" Margin="6,0" Width="80" Height="48" Click="OnTimerStartPauseClick">
+                        <Path Fill="White" Width="20" Height="20" Stretch="Uniform">
                             <Path.Style>
                                 <Style TargetType="Path">
                                     <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
@@ -296,17 +220,17 @@
                         </Path>
                     </Button>
 
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="5" Click="OnTimerResetClick" ToolTip="重置" Padding="12,6" MinWidth="60">
-                        <StackPanel Orientation="Horizontal" Margin="5,0">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Foreground}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,5,0"/>
-                            <TextBlock Text="重置" FontWeight="Medium" FontSize="13"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6,0" Click="OnTimerResetClick" Padding="16,10" MinWidth="90">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Primary}" Width="14" Height="14" Margin="0,0,6,0" Stretch="Uniform"/>
+                            <TextBlock Text="重置" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="5" Click="OnTimerSetClick" Content="设定" Padding="12,6" MinWidth="60" FontWeight="Medium" FontSize="13"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}" Margin="6,0" Click="OnTimerSetClick" Padding="16,10" MinWidth="90">
+                        <TextBlock Text="设定时间" FontWeight="Bold"/>
+                    </Button>
                 </StackPanel>
-            </Grid>
-
             </Grid>
         </Grid>
     </Border>
