@@ -266,7 +266,7 @@ public partial class PaintOverlayWindow : Window
         _brushOpacity = opacity;
 
         // 如果当前是画笔模式，更新光标以显示新颜色
-        if (_currentMode == PaintToolMode.Brush)
+        if (_mode == PaintToolMode.Brush)
         {
             UpdateCursor(PaintToolMode.Brush);
         }

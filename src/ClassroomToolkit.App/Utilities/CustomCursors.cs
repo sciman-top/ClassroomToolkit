@@ -5,8 +5,12 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Media.Animation;
 using MediaColor = System.Windows.Media.Color;
 using WpfCursor = System.Windows.Input.Cursor;
+using WpfPoint = System.Windows.Point;
+using WpfPen = System.Windows.Media.Pen;
+using IOPath = System.IO.Path;
 
 namespace ClassroomToolkit.App.Utilities;
 
@@ -70,30 +74,30 @@ public static class CustomCursors
         using (var context = drawingVisual.RenderOpen())
         {
             // 笔杆（深灰色）
-            var shaftBrush = new SolidColorBrush(Color.FromRgb(100, 100, 100));
+            var shaftBrush = new SolidColorBrush(MediaColor.FromRgb(100, 100, 100));
             shaftBrush.Freeze();
 
-            // 绘制笔杆 - 倾斜的矩形
+            // 绘制笔杆 - 矩形
             var shaftRect = new Rect(2, 0, 8, 12);
             var shaftGeom = new RectangleGeometry(shaftRect);
             context.DrawGeometry(shaftBrush, null, shaftGeom);
 
             // 笔尖（彩色）- 三角形
-            var tipColor = Color.FromRgb(color.R, color.G, color.B);
+            var tipColor = MediaColor.FromRgb(color.R, color.G, color.B);
             var tipBrush = new SolidColorBrush(tipColor);
             tipBrush.Freeze();
 
             var tipFigure = new PathFigure();
-            tipFigure.StartPoint = new Point(3, 12);
-            tipFigure.Segments.Add(new LineSegment(new Point(9, 12), true));
-            tipFigure.Segments.Add(new LineSegment(new Point(6, 30), true));
+            tipFigure.StartPoint = new WpfPoint(3, 12);
+            tipFigure.Segments.Add(new LineSegment(new WpfPoint(9, 12), true));
+            tipFigure.Segments.Add(new LineSegment(new WpfPoint(6, 30), true));
             tipFigure.IsClosed = true;
 
             var tipGeom = new PathGeometry();
             tipGeom.Figures.Add(tipFigure);
 
             // 笔尖边框
-            var tipPen = new Pen(Brushes.Black, 1);
+            var tipPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
             tipPen.Freeze();
 
             context.DrawGeometry(tipBrush, tipPen, tipGeom);
@@ -105,8 +109,8 @@ public static class CustomCursors
         renderBitmap.Render(drawingVisual);
 
         // 创建临时 .cur 文件
-        var cursorPath = Path.Combine(
-            Path.GetTempPath(),
+        var cursorPath = IOPath.Combine(
+            IOPath.GetTempPath(),
             $"brush_cursor_{color.R}_{color.G}_{color.B}.cur");
 
         CreateCursorFile(renderBitmap, 0, 31, cursorPath);
