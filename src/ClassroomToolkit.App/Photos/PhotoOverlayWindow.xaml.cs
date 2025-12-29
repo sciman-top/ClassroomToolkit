@@ -46,6 +46,10 @@ public partial class PhotoOverlayWindow : Window
             Hide();
             return;
         }
+        
+        // 先清除之前的视觉内容，避免闪现上一个学生的照片
+        ClearVisualContent();
+        
         _currentPhotoPath = path;
         _currentStudentId = studentId?.Trim();
         NameText.Text = studentName ?? string.Empty;
@@ -95,6 +99,16 @@ public partial class PhotoOverlayWindow : Window
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         CloseOverlay();
+    }
+
+    private void ClearVisualContent()
+    {
+        // 只清除视觉内容，不触发 PhotoClosed 事件
+        PhotoImage.Source = null;
+        PhotoImage.Width = double.NaN;
+        PhotoImage.Height = double.NaN;
+        NameText.Text = string.Empty;
+        NameText.Visibility = Visibility.Collapsed;
     }
 
     private void ClearPhotoCache()

@@ -317,24 +317,17 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         foreach (var item in geometries)
         {
             double ribbonOpacity = GetRibbonOpacity(item.RibbonT);
-            double seepOpacity = Lerp(0.05, 0.14, _lastInkFlow) * ribbonOpacity;
-            double seepScale = Lerp(1.02, 1.08, _lastInkFlow);
+            double seepOpacity = Lerp(0.02, 0.045, _lastInkFlow) * ribbonOpacity;
+            double seepScale = 1.0;
 
-            if (_lastInkFlow > 0.35 && seepOpacity > 0.01 && !item.Geometry.Bounds.IsEmpty)
+            if (_lastInkFlow > 0.65 && seepOpacity > 0.01 && IsSeepGeometryEligible(item.Geometry))
             {
                 var seepBrush = new SolidColorBrush(_color)
                 {
                     Opacity = Math.Clamp(seepOpacity, 0.02, 0.25)
                 };
                 seepBrush.Freeze();
-                var bounds = item.Geometry.Bounds;
-                dc.PushTransform(new ScaleTransform(
-                    seepScale,
-                    seepScale,
-                    bounds.X + (bounds.Width * 0.5),
-                    bounds.Y + (bounds.Height * 0.5)));
                 dc.DrawGeometry(seepBrush, null, item.Geometry);
-                dc.Pop();
             }
 
             var brush = new SolidColorBrush(_color)
@@ -1489,6 +1482,17 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         int n = (x << 13) ^ x;
         int nn = (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
         return nn / 2147483648.0;
+    }
+
+    private bool IsSeepGeometryEligible(Geometry geometry)
+    {
+        if (geometry.Bounds.IsEmpty)
+        {
+            return false;
+        }
+        var bounds = geometry.Bounds;
+        double minSize = Math.Max(_baseSize * 0.8, 12.0);
+        return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
     /// <summary>

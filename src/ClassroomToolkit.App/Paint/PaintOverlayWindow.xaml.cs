@@ -233,6 +233,7 @@ public partial class PaintOverlayWindow : Window
         UpdateInputPassthrough();
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
+        RestorePresentationFocusIfNeeded(requireFullscreen: false);
     }
 
     public void SetBrush(MediaColor color, double size, byte opacity)
@@ -996,7 +997,7 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         MarkWpsHookInput();
-        if (IsBoardActive() || _mode == PaintToolMode.Cursor || direction == 0)
+        if (IsBoardActive() || direction == 0)
         {
             return;
         }
@@ -1031,7 +1032,7 @@ public partial class PaintOverlayWindow : Window
         {
             return false;
         }
-        if (IsBoardActive() || _mode == PaintToolMode.Cursor)
+        if (IsBoardActive())
         {
             return false;
         }
@@ -1087,7 +1088,7 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         _wpsForceMessageFallback = false;
-        var shouldEnable = _presentationOptions.AllowWps && !IsBoardActive() && _mode != PaintToolMode.Cursor && IsVisible;
+        var shouldEnable = _presentationOptions.AllowWps && !IsBoardActive() && IsVisible;
         var blockOnly = false;
         var interceptKeyboard = true;
         var interceptWheel = true;
@@ -1112,10 +1113,16 @@ public partial class PaintOverlayWindow : Window
             blockOnly = true;
             if (IsTargetForeground(target))
             {
-                interceptKeyboard = false;
+                if (_mode != PaintToolMode.Cursor)
+                {
+                    interceptKeyboard = false;
+                }
                 if (!wheelForward)
                 {
-                    interceptWheel = false;
+                    if (_mode != PaintToolMode.Cursor)
+                    {
+                        interceptWheel = false;
+                    }
                     blockOnly = false;
                     emitWheelOnBlock = false;
                 }
@@ -1666,10 +1673,10 @@ public partial class PaintOverlayWindow : Window
 
     private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
     {
-        double seepOpacity = Lerp(0.05, 0.16, inkFlow) * ribbonOpacity;
-        double seepScale = Lerp(1.02, 1.08, inkFlow);
+        double seepOpacity = Lerp(0.02, 0.05, inkFlow) * ribbonOpacity;
+        double seepScale = 1.0;
 
-        if (inkFlow > 0.35 && seepOpacity > 0.01)
+        if (inkFlow > 0.65 && seepOpacity > 0.01 && IsSeepGeometryEligible(geometry))
         {
             var seepBrush = new SolidColorBrush(color)
             {
@@ -1687,6 +1694,22 @@ public partial class PaintOverlayWindow : Window
         solidBrush.Freeze();
         var mask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection);
         RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
+
+        if (inkFlow > 0.45 && ribbonOpacity > 0.2 && IsInnerEdgeEligible(geometry))
+        {
+            double edgeOpacity = Lerp(0.03, 0.09, inkFlow) * ribbonOpacity;
+            double thickness = Math.Max(_brushSize * 0.12, 1.0);
+            var edgeGeometry = BuildInnerEdgeGeometry(geometry, thickness);
+            if (edgeGeometry != null && edgeOpacity > 0.01)
+            {
+                var edgeBrush = new SolidColorBrush(color)
+                {
+                    Opacity = Math.Clamp(edgeOpacity, 0.02, 0.2)
+                };
+                edgeBrush.Freeze();
+                RenderAndBlend(edgeGeometry, edgeBrush, null, erase: false, null);
+            }
+        }
     }
 
     private static Geometry CreateScaledGeometry(Geometry geometry, double scale)
@@ -1705,6 +1728,43 @@ public partial class PaintOverlayWindow : Window
             bounds.Y + (bounds.Height * 0.5));
         clone.Freeze();
         return clone;
+    }
+
+    private bool IsSeepGeometryEligible(Geometry geometry)
+    {
+        if (geometry.Bounds.IsEmpty)
+        {
+            return false;
+        }
+        var bounds = geometry.Bounds;
+        double minSize = Math.Max(_brushSize * 0.8, 12.0);
+        return bounds.Width >= minSize && bounds.Height >= minSize;
+    }
+
+    private bool IsInnerEdgeEligible(Geometry geometry)
+    {
+        if (geometry.Bounds.IsEmpty)
+        {
+            return false;
+        }
+        var bounds = geometry.Bounds;
+        double minSize = Math.Max(_brushSize * 0.7, 10.0);
+        return bounds.Width >= minSize && bounds.Height >= minSize;
+    }
+
+    private static Geometry? BuildInnerEdgeGeometry(Geometry geometry, double thickness)
+    {
+        if (geometry.Bounds.IsEmpty || thickness <= 0.1)
+        {
+            return null;
+        }
+        var outline = geometry.GetWidenedPathGeometry(new MediaPen(MediaBrushes.Black, thickness));
+        var inner = Geometry.Combine(geometry, outline, GeometryCombineMode.Intersect, null);
+        if (inner.CanFreeze)
+        {
+            inner.Freeze();
+        }
+        return inner;
     }
 
     private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask)
