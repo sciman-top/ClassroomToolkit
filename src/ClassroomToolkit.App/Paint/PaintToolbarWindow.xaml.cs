@@ -77,6 +77,7 @@ public partial class PaintToolbarWindow : Window
             // 不再应用 WS_EX_NOACTIVATE，以允许工具栏窗口正常获得焦点和用户交互
             // ApplyNoActivate();
         };
+        PreviewKeyDown += OnPreviewKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
         {
@@ -479,6 +480,30 @@ public partial class PaintToolbarWindow : Window
             parent = element.Parent as DependencyObject;
         }
         return parent ?? LogicalTreeHelper.GetParent(obj);
+    }
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        // 只在光标模式下转发键盘事件到演示文稿
+        if (_currentMode != PaintToolMode.Cursor)
+        {
+            return;
+        }
+        // 只转发演示文稿导航键
+        var key = e.Key;
+        bool isNavigationKey = key == Key.Left || key == Key.Right ||
+                               key == Key.Up || key == Key.Down ||
+                               key == Key.PageUp || key == Key.PageDown ||
+                               key == Key.Space || key == Key.Enter ||
+                               key == Key.Home || key == Key.End;
+
+        if (!isNavigationKey)
+        {
+            return;
+        }
+        // 通知覆盖窗口转发到演示文稿
+        _overlay?.ForwardKeyboardToPresentation(key);
+        e.Handled = true;
     }
 
     private void ApplyNoActivate()

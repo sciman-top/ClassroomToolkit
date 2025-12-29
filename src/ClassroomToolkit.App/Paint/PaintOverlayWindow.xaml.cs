@@ -868,11 +868,42 @@ public partial class PaintOverlayWindow : Window
         {
             return false;
         }
-        if (ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle))
+        return PresentationWindowFocus.EnsureForeground(target.Handle);
+    }
+
+    public void ForwardKeyboardToPresentation(Key key)
+    {
+        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
         {
-            return false;
+            return;
         }
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+        // 将键盘按键转换为演示文稿命令
+        ClassroomToolkit.Services.Presentation.PresentationCommand? command = null;
+        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
+        {
+            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Next;
+        }
+        else if (key == Key.Left || key == Key.Up || key == Key.PageUp)
+        {
+            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
+        }
+        if (command == null)
+        {
+            return;
+        }
+        // 优先尝试 WPS，然后尝试 Office
+        if (_presentationOptions.AllowWps)
+        {
+            var wpsTarget = ResolveWpsTarget();
+            if (wpsTarget.IsValid && TrySendWpsNavigation(command.Value))
+            {
+                return;
+            }
+        }
+        if (_presentationOptions.AllowOffice)
+        {
+            _presentationService.TrySendForeground(command.Value, _presentationOptions);
+        }
     }
 
     private void UpdatePresentationFocusMonitor()
