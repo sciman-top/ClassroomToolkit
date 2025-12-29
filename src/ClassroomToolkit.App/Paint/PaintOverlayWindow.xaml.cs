@@ -868,7 +868,7 @@ public partial class PaintOverlayWindow : Window
         {
             return false;
         }
-        return PresentationWindowFocus.EnsureForeground(target.Handle);
+        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
     }
 
     public void ForwardKeyboardToPresentation(Key key)
