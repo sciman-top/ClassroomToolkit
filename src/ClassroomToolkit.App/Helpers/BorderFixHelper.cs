@@ -51,15 +51,35 @@ namespace ClassroomToolkit.App.Helpers
             {
                 var borderBrush = border.BorderBrush;
                 
+                // 检查是否为 DependencyProperty.UnsetValue 或 null
                 if (borderBrush == null || borderBrush == DependencyProperty.UnsetValue)
                 {
-                    // 设置透明边框
-                    border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                    
-                    // 记录修复
-                    var name = border.Name ?? "(未命名)";
-                    var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
-                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border '{name}' (父元素: {parentName})");
+                    try
+                    {
+                        // 设置透明边框
+                        border.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                        
+                        // 记录修复
+                        var name = border.Name ?? "(未命名)";
+                        var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
+                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border '{name}' (父元素: {parentName})");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border 失败 - {ex.Message}");
+                        
+                        // 尝试其他方法：清除并重新设置
+                        try
+                        {
+                            border.ClearValue(Border.BorderBrushProperty);
+                            border.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                            System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 使用 ClearValue 方法修复 Border '{border.Name}'");
+                        }
+                        catch (Exception ex2)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"BorderFixHelper: ClearValue 方法也失败 - {ex2.Message}");
+                        }
+                    }
                 }
             }
         }
