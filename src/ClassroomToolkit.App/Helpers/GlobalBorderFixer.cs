@@ -26,10 +26,10 @@ namespace ClassroomToolkit.App.Helpers
                 }
                 
                 // 修复所有已打开的窗口
-                var windows = System.Windows.Application.Current.Windows;
-                if (windows != null)
+                var currentApp = System.Windows.Application.Current;
+                if (currentApp?.Windows != null)
                 {
-                    foreach (Window window in windows)
+                    foreach (Window window in currentApp.Windows)
                     {
                         if (window != null && window != mainWindow)
                         {
