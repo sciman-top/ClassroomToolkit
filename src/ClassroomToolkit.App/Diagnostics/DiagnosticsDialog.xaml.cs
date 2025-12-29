@@ -56,8 +56,17 @@ public partial class DiagnosticsDialog : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
-        DialogResult = true;
-        Close();
+        try
+        {
+            DialogResult = true;
+            Close();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // 如果对话框还没有显示，直接关闭
+            System.Diagnostics.Debug.WriteLine($"DialogResult 设置失败，直接关闭: {ex.Message}");
+            Close();
+        }
     }
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
