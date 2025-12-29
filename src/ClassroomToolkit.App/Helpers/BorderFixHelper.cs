@@ -69,34 +69,11 @@ namespace ClassroomToolkit.App.Helpers
         /// </summary>
         public static void RegisterGlobalFix()
         {
-            // 监听窗口 SourceInitialized 事件，比 Loaded 更早
-            EventManager.RegisterClassHandler(
-                typeof(Window),
-                Window.SourceInitializedEvent,
-                new EventHandler(OnWindowSourceInitialized));
-            
-            // 同时监听 Loaded 事件，确保动态创建的控件也被处理
+            // 监听窗口 Loaded 事件
             EventManager.RegisterClassHandler(
                 typeof(Window),
                 Window.LoadedEvent,
                 new RoutedEventHandler(OnWindowLoaded));
-        }
-
-        private static void OnWindowSourceInitialized(object? sender, EventArgs e)
-        {
-            if (sender is Window window)
-            {
-                try
-                {
-                    // 在窗口源初始化时立即修复
-                    FixAllBorders(window);
-                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 源初始化时修复完成");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 源初始化修复失败: {ex.Message}");
-                }
-            }
         }
 
         private static void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -107,10 +84,11 @@ namespace ClassroomToolkit.App.Helpers
                 try
                 {
                     FixAllBorders(window);
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 加载时修复完成");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 立即修复失败: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 加载修复失败: {ex.Message}");
                 }
                 
                 // 延迟再次执行，确保动态创建的控件也被修复
@@ -119,6 +97,7 @@ namespace ClassroomToolkit.App.Helpers
                     try
                     {
                         FixAllBorders(window);
+                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 延迟修复完成");
                     }
                     catch (Exception ex)
                     {
