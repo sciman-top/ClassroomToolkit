@@ -249,10 +249,10 @@ public partial class PaintOverlayWindow : Window
         System.Windows.Input.Cursor cursor = mode switch
         {
             PaintToolMode.Cursor => System.Windows.Input.Cursors.Arrow,
-            PaintToolMode.Brush => System.Windows.Input.Cursors.Pen,      // 画笔样式
-            PaintToolMode.Eraser => System.Windows.Input.Cursors.ScrollAll,  // 全方位箭头，像橡皮擦
+            PaintToolMode.Brush => Utilities.CustomCursors.GetBrushCursor(_brushColor),  // 带颜色的画笔样式
+            PaintToolMode.Eraser => Utilities.CustomCursors.Eraser,  // 橡皮擦样式
             PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,     // 十字准星，精确绘制
-            PaintToolMode.RegionErase => System.Windows.Input.Cursors.UpArrow, // 向上箭头，表示框选
+            PaintToolMode.RegionErase => Utilities.CustomCursors.RegionErase, // 框选样式
             _ => System.Windows.Input.Cursors.Arrow
         };
 
@@ -264,6 +264,12 @@ public partial class PaintOverlayWindow : Window
         _brushColor = color;
         _brushSize = Math.Max(1.0, size);
         _brushOpacity = opacity;
+
+        // 如果当前是画笔模式，更新光标以显示新颜色
+        if (_currentMode == PaintToolMode.Brush)
+        {
+            UpdateCursor(PaintToolMode.Brush);
+        }
     }
 
     public void SetEraserSize(double size)

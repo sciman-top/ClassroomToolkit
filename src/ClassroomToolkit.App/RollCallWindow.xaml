@@ -116,27 +116,38 @@
                             </Grid.ColumnDefinitions>
                             
                             <!-- 名字展示 -->
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding CurrentStudentId}" 
-                                           Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="28" 
-                                           Foreground="{StaticResource Brush_Text_Tertiary}" 
-                                           FontWeight="Light" 
-                                           HorizontalAlignment="Center" 
-                                           Margin="0,0,0,12"/>
-                                
-                                <TextBlock x:Name="BigNameText" 
-                                           Text="{Binding CurrentStudentName}" 
-                                           FontSize="88" 
-                                           FontWeight="Heavy" 
-                                           Foreground="{StaticResource Brush_Text_Primary}" 
-                                           HorizontalAlignment="Center" 
-                                           TextAlignment="Center">
-                                    <TextBlock.Effect>
-                                        <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.1"/>
-                                    </TextBlock.Effect>
-                                </TextBlock>
-                            </StackPanel>
+                            <Border Grid.Column="0"
+                                    Background="{StaticResource Gradient_RollCall_Name}"
+                                    CornerRadius="20"
+                                    Padding="40,30"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    MinWidth="280">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#FFB6C1" BlurRadius="15" ShadowDepth="2" Opacity="0.15"/>
+                                </Border.Effect>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentStudentId}"
+                                               Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
+                                               FontSize="28"
+                                               Foreground="{StaticResource Brush_Text_Secondary}"
+                                               FontWeight="Medium"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,12"/>
+
+                                    <TextBlock x:Name="BigNameText"
+                                               Text="{Binding CurrentStudentName}"
+                                               FontSize="88"
+                                               FontWeight="Heavy"
+                                               Foreground="{StaticResource Brush_Text_Primary}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center">
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect Color="#A8796E" BlurRadius="3" ShadowDepth="1" Opacity="0.2"/>
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                             
                             <!-- 照片展示 (带边框和阴影) -->
                             <Border Grid.Column="1" Width="180" Height="240" Margin="30,0,0,0"
