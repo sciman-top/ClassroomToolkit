@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ClassroomToolkit.App.Diagnostics
 {
@@ -36,7 +37,7 @@ namespace ClassroomToolkit.App.Diagnostics
                         // 尝试修复
                         try
                         {
-                            border.BorderBrush = Brushes.Transparent;
+                            border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                             Console.WriteLine($"{indent}✅ 已修复: 设置 BorderBrush=Transparent");
                         }
                         catch (Exception ex)

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ClassroomToolkit.App.Controls
 {
@@ -10,8 +11,7 @@ namespace ClassroomToolkit.App.Controls
     {
         public SafeBorder()
         {
-            // 如果 CornerRadius 有值但 BorderBrush 未设置，自动设置为透明
-            this.CornerRadiusChanged += (s, e) => EnsureBorderBrush();
+            // 在加载时检查 BorderBrush
             this.Loaded += (s, e) => EnsureBorderBrush();
         }
 
@@ -20,7 +20,7 @@ namespace ClassroomToolkit.App.Controls
             // 如果有圆角但没有边框，自动设置透明边框
             if (CornerRadius != new CornerRadius(0) && BorderBrush == null)
             {
-                BorderBrush = Brushes.Transparent;
+                BorderBrush = System.Windows.Media.Brushes.Transparent;
             }
         }
     }

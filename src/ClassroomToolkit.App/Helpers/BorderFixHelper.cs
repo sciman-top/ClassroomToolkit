@@ -54,7 +54,7 @@ namespace ClassroomToolkit.App.Helpers
                 if (borderBrush == null || borderBrush == DependencyProperty.UnsetValue)
                 {
                     // 设置透明边框
-                    border.BorderBrush = Brushes.Transparent;
+                    border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                     
                     // 记录修复
                     var name = border.Name ?? "(未命名)";
