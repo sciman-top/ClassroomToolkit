@@ -31,12 +31,16 @@ public partial class AutoExitDialog : Window
             return;
         }
         Minutes = minutes;
-        DialogResult = true;
+        // 不设置 DialogResult，直接关闭窗口
+        // 调用方会通过 SafeShowDialog 的返回值知道结果
+        Close();
     }
 
     private void OnCancel(object sender, RoutedEventArgs e)
     {
-        DialogResult = false;
+        // 不设置 DialogResult，直接关闭窗口
+        // 调用方会通过 SafeShowDialog 的返回值知道结果
+        Close();
     }
 
     private void OnDiagnosticClick(object sender, RoutedEventArgs e)

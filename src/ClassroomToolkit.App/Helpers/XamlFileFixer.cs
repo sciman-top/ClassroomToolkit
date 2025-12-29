@@ -26,18 +26,12 @@ namespace ClassroomToolkit.App.Helpers
         {
             try
             {
-                var xamlDirectory = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "src", "ClassroomToolkit.App");
-                var fixedCount = 0;
-
-                foreach (var file in Directory.GetFiles(xamlDirectory, "*.xaml", SearchOption.AllDirectories))
-                {
-                    if (FixXamlFile(file))
-                    {
-                        fixedCount++;
-                    }
-                }
-
-                System.Diagnostics.Debug.WriteLine($"XamlFileFixer: 修复了 {fixedCount} 个 XAML 文件");
+                // 在运行时，我们无法修改源文件，所以这个方法暂时禁用
+                // 实际的修复应该通过 BorderFixHelper 在运行时完成
+                System.Diagnostics.Debug.WriteLine("XamlFileFixer: 运行时修复已禁用，使用 BorderFixHelper 进行运行时修复");
+                
+                // 如果需要修复源文件，请在开发时手动运行修复工具
+                // 或者通过预构建脚本来完成
             }
             catch (Exception ex)
             {

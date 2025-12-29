@@ -10,14 +10,14 @@ public partial class App : WpfApplication
     {
         base.OnStartup(e);
         
-        // 在启动时修复所有 XAML 文件中的 BorderBrush 问题
+        // 在启动时立即修复所有 BorderBrush 问题
         try
         {
-            XamlFileFixer.FixAllXamlFiles();
+            GlobalBorderFixer.FixAllBordersImmediately();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"XAML 文件修复失败: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"全局 Border 修复失败: {ex.Message}");
         }
         
         // 注册全局 Border 修复

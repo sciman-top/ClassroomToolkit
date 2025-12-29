@@ -94,6 +94,21 @@ namespace ClassroomToolkit.App.Helpers
                 typeof(Window),
                 Window.LoadedEvent,
                 new RoutedEventHandler(OnWindowLoaded));
+            
+            // 立即修复当前已存在的窗口
+            try
+            {
+                var currentWindow = Application.Current?.MainWindow;
+                if (currentWindow != null)
+                {
+                    FixAllBorders(currentWindow);
+                    System.Diagnostics.Debug.WriteLine("BorderFixHelper: 修复主窗口完成");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复主窗口失败: {ex.Message}");
+            }
         }
 
         private static void OnWindowLoaded(object sender, RoutedEventArgs e)
