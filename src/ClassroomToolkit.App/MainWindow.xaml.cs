@@ -411,7 +411,42 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        if (dialog.ShowDialog() != true)
+        
+        // 先修复当前窗口
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
+        }
+        
+        // 立即修复新创建的对话框
+        try
+        {
+            BorderFixHelper.FixAllBorders(dialog);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复对话框完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复对话框失败: {ex.Message}");
+        }
+        
+        // 使用安全显示方法
+        bool? result = null;
+        try
+        {
+            result = dialog.SafeShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"对话框显示失败: {ex.Message}");
+            throw;
+        }
+        
+        if (result != true)
         {
             return;
         }
