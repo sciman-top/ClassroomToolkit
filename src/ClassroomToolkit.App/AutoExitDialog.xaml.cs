@@ -74,11 +74,11 @@ public partial class AutoExitDialog : Window
             System.Diagnostics.Debug.WriteLine($"AutoExitDialog 修复对话框失败: {ex.Message}");
         }
         
-        bool? result = null;
+        bool? dialogResult = null;
         try
         {
-            result = dialog.SafeShowDialog();
-            if (result == true)
+            dialogResult = dialog.SafeShowDialog();
+            if (dialogResult == true)
             {
                 DialogResult = true;
             }
