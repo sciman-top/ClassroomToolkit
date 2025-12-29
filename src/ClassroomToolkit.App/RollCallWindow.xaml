@@ -36,8 +36,14 @@
 
             <!-- 2. 顶部标题栏 - 渐变装饰 -->
             <Grid Grid.Row="0" MouseLeftButtonDown="OnTitleBarDrag">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
                 <!-- 装饰性渐变条 -->
-                <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0">
+                <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0" Grid.ColumnSpan="3">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                             <GradientStop Color="#4A90E2" Offset="0"/>
@@ -46,12 +52,6 @@
                         </LinearGradientBrush>
                     </Border.Background>
                 </Border>
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
 
                 <!-- 左侧：模式切换与班级 -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="20,0,0,0">
