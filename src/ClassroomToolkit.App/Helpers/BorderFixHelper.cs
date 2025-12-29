@@ -69,21 +69,61 @@ namespace ClassroomToolkit.App.Helpers
         /// </summary>
         public static void RegisterGlobalFix()
         {
-            // 监听窗口加载事件
+            // 监听窗口初始化事件，比 Loaded 更早
+            EventManager.RegisterClassHandler(
+                typeof(Window),
+                Window.InitializedEvent,
+                new EventHandler(OnWindowInitialized));
+            
+            // 同时监听 Loaded 事件，确保动态创建的控件也被处理
             EventManager.RegisterClassHandler(
                 typeof(Window),
                 Window.LoadedEvent,
                 new RoutedEventHandler(OnWindowLoaded));
         }
 
+        private static void OnWindowInitialized(object sender, EventArgs e)
+        {
+            if (sender is Window window)
+            {
+                try
+                {
+                    // 在窗口初始化时立即修复
+                    FixAllBorders(window);
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 初始化时修复完成");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 初始化修复失败: {ex.Message}");
+                }
+            }
+        }
+
         private static void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
             if (sender is Window window)
             {
-                // 延迟执行，确保布局完成
-                window.Dispatcher.BeginInvoke(new Action(() =>
+                // 立即修复，不等待布局完成
+                try
                 {
                     FixAllBorders(window);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 立即修复失败: {ex.Message}");
+                }
+                
+                // 延迟再次执行，确保动态创建的控件也被修复
+                window.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        FixAllBorders(window);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟修复失败: {ex.Message}");
+                    }
                 }), System.Windows.Threading.DispatcherPriority.Loaded);
             }
         }

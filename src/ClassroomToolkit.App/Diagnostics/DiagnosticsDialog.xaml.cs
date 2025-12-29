@@ -15,11 +15,23 @@ public partial class DiagnosticsDialog : Window
         SummaryText.Text = result.Summary;
         DetailBox.Text = result.Detail;
         SuggestionBox.Text = string.IsNullOrWhiteSpace(result.Suggestion) ? "暂无建议。" : result.Suggestion;
+        
+        // 在构造函数中立即修复 BorderBrush 问题
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("DiagnosticsDialog: 构造函数中修复完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DiagnosticsDialog 构造函数修复失败: {ex.Message}");
+        }
+        
         Loaded += (_, _) => 
         {
             WindowPlacementHelper.EnsureVisible(this);
             
-            // 诊断 BorderBrush 问题
+            // 再次诊断 BorderBrush 问题
             try
             {
                 BorderBrushDiagnostic.CheckAllBorders(this);
