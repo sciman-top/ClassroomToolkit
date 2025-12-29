@@ -84,7 +84,6 @@ public partial class RollCallWindow : Window
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
         _viewModel.ReminderTriggered += OnReminderTriggered;
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     public IReadOnlyList<string> AvailableClasses => _viewModel.AvailableClasses;
@@ -99,7 +98,6 @@ public partial class RollCallWindow : Window
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
-        UpdateNameTextLayout();
     }
 
     // --- Window Control ---
@@ -187,7 +185,6 @@ public partial class RollCallWindow : Window
         var prompt = group == ClassroomToolkit.Domain.Utilities.IdentityUtils.AllGroupName
             ? "确定要重置所有分组的点名状态并重新开始吗？"
             : $"确定要重置“{group}”分组的点名状态并重新开始吗？";
-        // Use standard MessageBox for now, or replace with custom dialog later if needed
         var result = System.Windows.MessageBox.Show(prompt, "提示", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (result != MessageBoxResult.OK)
         {
@@ -203,26 +200,6 @@ public partial class RollCallWindow : Window
         _viewModel.ToggleMode();
         UpdateRemoteHookState();
         UpdatePhotoDisplay(forceHide: true);
-    }
-
-    private void OnClassClick(object sender, RoutedEventArgs e)
-    {
-        // Replaced by ComboBox in new UI, but kept logic just in case
-        if (!_viewModel.IsRollCallMode) return;
-        
-        var dialog = new ClassSelectDialog(_viewModel.AvailableClasses, _viewModel.ActiveClassName)
-        {
-            Owner = this
-        };
-        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.SelectedClass))
-        {
-            if (_viewModel.SwitchClass(dialog.SelectedClass))
-            {
-                UpdatePhotoDisplay(forceHide: true);
-                PersistSettings();
-                _viewModel.SaveState();
-            }
-        }
     }
 
     private void OnClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -434,27 +411,6 @@ public partial class RollCallWindow : Window
         var elapsed = _stopwatch.Elapsed;
         _stopwatch.Restart();
         _viewModel.TickTimer(elapsed);
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e == null) return;
-
-        if (e.PropertyName == nameof(RollCallViewModel.CurrentStudentName))
-        {
-            // Trigger Pop Animation on the container
-            if (FindResource("Anim_PopIn") is Storyboard sb)
-            {
-                sb.Begin(NameContainer);
-            }
-        }
-        if (e.PropertyName == nameof(RollCallViewModel.CurrentStudentName)
-            || e.PropertyName == nameof(RollCallViewModel.CurrentStudentId)
-            || e.PropertyName == nameof(RollCallViewModel.ShowId)
-            || e.PropertyName == nameof(RollCallViewModel.ShowName))
-        {
-            UpdateNameTextLayout();
-        }
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -750,9 +706,6 @@ public partial class RollCallWindow : Window
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
         _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
-        // Font sizes are handled by Viewbox, so we don't persist exact font size anymore or we just keep old values
-        // _settings.RollCallIdFontSize ...
-        // _settings.RollCallNameFontSize ...
         _settingsService.Save(_settings);
     }
 
@@ -834,64 +787,5 @@ public partial class RollCallWindow : Window
         _settings.RollCallWindowHeight = (int)Math.Round(height);
         _settings.RollCallWindowX = (int)Math.Round(Left);
         _settings.RollCallWindowY = (int)Math.Round(Top);
-    }
-
-    private void OnNameCardSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        UpdateNameTextLayout();
-    }
-
-    private void UpdateNameTextLayout()
-    {
-        if (NameCardBody == null || BigNameText == null || IdText == null)
-        {
-            return;
-        }
-        var availableWidth = NameCardBody.ActualWidth;
-        var availableHeight = NameCardBody.ActualHeight;
-        if (availableWidth <= 0 || availableHeight <= 0)
-        {
-            return;
-        }
-
-        var showName = _viewModel.ShowName && !string.IsNullOrWhiteSpace(_viewModel.CurrentStudentName);
-        var showId = _viewModel.ShowId && !string.IsNullOrWhiteSpace(_viewModel.CurrentStudentId);
-        var nameText = showName ? _viewModel.CurrentStudentName : string.Empty;
-        var idText = showId ? _viewModel.CurrentStudentId : string.Empty;
-
-        const double baseNameFont = 100d;
-        const double idScale = 0.4d;
-        const double paddingScale = 0.96d;
-
-        var nameSize = showName ? MeasureText(nameText, BigNameText, baseNameFont) : new WpfSize(0, 0);
-        var idSize = showId ? MeasureText(idText, IdText, baseNameFont * idScale) : new WpfSize(0, 0);
-        var gap = showId && showName ? IdText.Margin.Left + IdText.Margin.Right : 0;
-        var totalWidth = nameSize.Width + idSize.Width + gap;
-        var maxHeight = Math.Max(nameSize.Height, idSize.Height);
-        if (totalWidth <= 0 || maxHeight <= 0)
-        {
-            return;
-        }
-
-        var scale = Math.Min(availableWidth / totalWidth, availableHeight / maxHeight);
-        scale = Math.Max(0.1, scale) * paddingScale;
-
-        BigNameText.FontSize = Math.Max(12, baseNameFont * scale);
-        IdText.FontSize = Math.Max(10, baseNameFont * idScale * scale);
-    }
-
-    private WpfSize MeasureText(string text, TextBlock textBlock, double fontSize)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text;
-        var typeface = new Typeface(textBlock.FontFamily, textBlock.FontStyle, textBlock.FontWeight, textBlock.FontStretch);
-        var formatted = new FormattedText(
-            content,
-            CultureInfo.CurrentUICulture,
-            System.Windows.FlowDirection.LeftToRight,
-            typeface,
-            fontSize,
-            System.Windows.Media.Brushes.Black,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-        return new WpfSize(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
     }
 }
