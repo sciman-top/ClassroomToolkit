@@ -76,7 +76,11 @@ public partial class AutoExitDialog : Window
         
         try
         {
-            dialog.ShowDialog();
+            var result = dialog.SafeShowDialog();
+            if (result == true)
+            {
+                DialogResult = true;
+            }
         }
         catch (Exception ex)
         {
