@@ -191,10 +191,9 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Content="{Binding Label}" 
-                                        Style="{StaticResource Style_SecondaryButton}"
                                         Margin="6,0" Padding="16,10" MinWidth="80" 
                                         Click="OnGroupEntryClick">
-                                    <!-- 触发器隐藏Reset按钮 (如果需要) -->
+                                    <!-- 修复：通过 BasedOn 继承样式，避免重复设置 Style 属性 -->
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
                                             <Style.Triggers>

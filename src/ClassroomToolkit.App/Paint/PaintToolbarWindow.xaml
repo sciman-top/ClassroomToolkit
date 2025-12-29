@@ -16,6 +16,46 @@
     <Window.Resources>
         <!-- 覆盖默认样式，使用更紧凑的图标按钮 -->
         <!-- 本地资源可以直接引用全局资源 -->
+        
+        <!-- 必须保留 Style_ColorBubble，因为它不在全局样式中 -->
+        <Style x:Key="Style_ColorBubble" TargetType="ToggleButton">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <!-- 选中时的外圈 -->
+                            <Ellipse x:Name="Ring" Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" 
+                                     StrokeThickness="2" Width="30" Height="30" Opacity="0"/>
+                            <!-- 颜色圆点 -->
+                            <Border x:Name="Dot" Width="22" Height="22" CornerRadius="11"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="#20000000" BorderThickness="1">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.1"/>
+                                </Border.Effect>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="Dot" Property="Width" Value="24"/>
+                                <Setter TargetName="Dot" Property="Height" Value="24"/>
+                                <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Dot" Property="Width" Value="24"/>
+                                <Setter TargetName="Dot" Property="Height" Value="24"/>
+                                <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- 容器：白色胶囊状，带阴影 -->
@@ -74,10 +114,6 @@
                 </StackPanel>
             </Border>
             
-            <!-- 圆形色块样式定义在本地(如果全局没有的话)，或者用PaintToolbarWindow原有的本地资源 -->
-            <!-- 这里我们需要重新定义 Style_ColorBubble 因为它可能不在全局 WidgetStyles 中 -->
-            <!-- 检查: 我之前没有在 WidgetStyles.xaml 中加入 Style_ColorBubble。所以我需要在 PaintToolbarWindow 的 Resources 中保留它。 -->
-            
             <Rectangle Width="8" Fill="Transparent"/>
 
             <!-- 4. 擦除组 -->
@@ -111,46 +147,4 @@
             </Button>
         </StackPanel>
     </Border>
-
-    <Window.Resources>
-        <!-- 必须保留 Style_ColorBubble，因为它不在全局样式中 -->
-        <Style x:Key="Style_ColorBubble" TargetType="ToggleButton">
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <!-- 选中时的外圈 -->
-                            <Ellipse x:Name="Ring" Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" 
-                                     StrokeThickness="2" Width="30" Height="30" Opacity="0"/>
-                            <!-- 颜色圆点 -->
-                            <Border x:Name="Dot" Width="22" Height="22" CornerRadius="11"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="#20000000" BorderThickness="1">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.1"/>
-                                </Border.Effect>
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Ring" Property="Opacity" Value="0.4"/>
-                                <Setter TargetName="Dot" Property="Width" Value="24"/>
-                                <Setter TargetName="Dot" Property="Height" Value="24"/>
-                                <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Dot" Property="Width" Value="24"/>
-                                <Setter TargetName="Dot" Property="Height" Value="24"/>
-                                <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
 </Window>
