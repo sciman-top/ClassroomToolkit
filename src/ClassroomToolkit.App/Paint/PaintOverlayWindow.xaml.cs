@@ -226,6 +226,10 @@ public partial class PaintOverlayWindow : Window
     {
         _mode = mode;
         OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
+        
+        // 根据工具模式设置不同的鼠标样式
+        UpdateCursor(mode);
+        
         if (mode != PaintToolMode.RegionErase)
         {
             ClearRegionSelection();
@@ -238,6 +242,21 @@ public partial class PaintOverlayWindow : Window
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
         RestorePresentationFocusIfNeeded(requireFullscreen: false);
+    }
+
+    private void UpdateCursor(PaintToolMode mode)
+    {
+        Cursor cursor = mode switch
+        {
+            PaintToolMode.Cursor => Cursors.Arrow,
+            PaintToolMode.Brush => Cursors.Cross,
+            PaintToolMode.Eraser => Cursors.No,
+            PaintToolMode.Shape => Cursors.Cross,
+            PaintToolMode.RegionErase => Cursors.Cross,
+            _ => Cursors.Arrow
+        };
+        
+        this.Cursor = cursor;
     }
 
     public void SetBrush(MediaColor color, double size, byte opacity)
