@@ -119,11 +119,11 @@
         <GradientStop Color="#38ef7d" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 点名卡片姓名区域渐变 (温馨柔和) -->
+    <!-- 点名卡片姓名区域渐变 (天蓝色) -->
     <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#FFF5E6" Offset="0"/>      <!-- 淡蜜桃 -->
-        <GradientStop Color="#FFE8F0" Offset="0.5"/>     <!-- 淡粉紫 -->
-        <GradientStop Color="#FFEFF5" Offset="1"/>       <!-- 淡粉红 -->
+        <GradientStop Color="#E0F2FE" Offset="0"/>      <!-- 淡天蓝 -->
+        <GradientStop Color="#BAE6FD" Offset="0.5"/>     <!-- 天蓝 -->
+        <GradientStop Color="#7DD3FC" Offset="1"/>       <!-- 深天蓝 -->
     </LinearGradientBrush>
 
     <!-- 点名卡片背景渐变 (清新淡雅 - 增强版) -->

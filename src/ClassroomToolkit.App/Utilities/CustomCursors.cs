@@ -63,44 +63,55 @@ public static class CustomCursors
     }
 
     /// <summary>
-    /// 创建带颜色的画笔光标
+    /// 创建带颜色的画笔光标 - 圆形设计，直观显示颜色
     /// </summary>
     private static WpfCursor CreateColoredBrushCursor(MediaColor color)
     {
         const int cursorSize = 32;
+        const int centerX = 16;
+        const int centerY = 16;
+        const int outerRadius = 12;
+        const int innerRadius = 8;
 
         // 创建画笔形状的 DrawingVisual
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
-            // 笔杆（深灰色）
-            var shaftBrush = new SolidColorBrush(MediaColor.FromRgb(100, 100, 100));
-            shaftBrush.Freeze();
+            // 外圈白色描边（增强对比度）
+            var whiteBrush = new SolidColorBrush(Colors.White);
+            whiteBrush.Freeze();
+            var whitePen = new WpfPen(whiteBrush, 3);
+            whitePen.Freeze();
 
-            // 绘制笔杆 - 矩形
-            var shaftRect = new Rect(2, 0, 8, 12);
-            var shaftGeom = new RectangleGeometry(shaftRect);
-            context.DrawGeometry(shaftBrush, null, shaftGeom);
+            // 外圈（带白色描边）
+            var outerCircle = new EllipseGeometry(new WpfPoint(centerX, centerY), outerRadius, outerRadius);
+            context.DrawGeometry(whiteBrush, whitePen, outerCircle);
 
-            // 笔尖（彩色）- 三角形
-            var tipColor = MediaColor.FromRgb(color.R, color.G, color.B);
-            var tipBrush = new SolidColorBrush(tipColor);
-            tipBrush.Freeze();
+            // 内圈彩色圆（实际画笔颜色）
+            var brushColor = MediaColor.FromRgb(color.R, color.G, color.B);
+            var colorBrush = new SolidColorBrush(brushColor);
+            colorBrush.Freeze();
 
-            var tipFigure = new PathFigure();
-            tipFigure.StartPoint = new WpfPoint(3, 12);
-            tipFigure.Segments.Add(new LineSegment(new WpfPoint(9, 12), true));
-            tipFigure.Segments.Add(new LineSegment(new WpfPoint(6, 30), true));
-            tipFigure.IsClosed = true;
+            var innerCircle = new EllipseGeometry(new WpfPoint(centerX, centerY), innerRadius, innerRadius);
+            context.DrawGeometry(colorBrush, null, innerCircle);
 
-            var tipGeom = new PathGeometry();
-            tipGeom.Figures.Add(tipFigure);
+            // 中心十字准星（黑色细线）
+            var crosshairPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
+            crosshairPen.Freeze();
 
-            // 笔尖边框
-            var tipPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
-            tipPen.Freeze();
+            // 横线
+            context.DrawLine(crosshairPen,
+                new WpfPoint(centerX - 3, centerY),
+                new WpfPoint(centerX + 3, centerY));
+            // 竖线
+            context.DrawLine(crosshairPen,
+                new WpfPoint(centerX, centerY - 3),
+                new WpfPoint(centerX, centerY + 3));
 
-            context.DrawGeometry(tipBrush, tipPen, tipGeom);
+            // 外圈黑色描边（最外层）
+            var blackPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
+            blackPen.Freeze();
+            context.DrawGeometry(null, blackPen, outerCircle);
         }
 
         // 渲染到位图
@@ -113,7 +124,7 @@ public static class CustomCursors
             IOPath.GetTempPath(),
             $"brush_cursor_{color.R}_{color.G}_{color.B}.cur");
 
-        CreateCursorFile(renderBitmap, 0, 31, cursorPath);
+        CreateCursorFile(renderBitmap, centerX, centerY, cursorPath);
 
         // 加载光标
         var cursor = new WpfCursor(cursorPath);
