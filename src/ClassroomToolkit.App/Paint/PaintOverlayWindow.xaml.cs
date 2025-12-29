@@ -99,7 +99,7 @@ public partial class PaintOverlayWindow : Window
     private WpfPoint? _lastEraserPoint;
     private bool _hasDrawing;
     private readonly Random _inkRandom = new Random();
-    private bool _presentationFocusRestoreEnabled;
+    private bool _presentationFocusRestoreEnabled = false;
 
     private class DrawingVisualHost : FrameworkElement
     {
