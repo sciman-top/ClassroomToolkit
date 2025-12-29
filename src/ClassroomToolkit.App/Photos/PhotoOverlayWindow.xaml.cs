@@ -178,18 +178,8 @@ public partial class PhotoOverlayWindow : Window
         }
         try
         {
-            // 强制清除 WPF 图像缓存
             var uri = new Uri(path, UriKind.Absolute);
-            
-            // 清除可能的内存缓存
-            if (BitmapImage.CreateOptions == BitmapCreateOptions.None)
-            {
-                // 强制垃圾回收以释放可能的图像缓存
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-            }
-            
+
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
