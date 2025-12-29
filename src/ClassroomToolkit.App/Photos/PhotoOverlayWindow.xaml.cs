@@ -48,16 +48,17 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
-        // 如果窗口已经可见，立即隐藏窗口，完全避免闪现
-        if (IsVisible)
-        {
-            Hide();
-            // 强制处理窗口消息，确保窗口完全隐藏
-            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
-        }
-
-        // 强制清除 Image 控件的内部缓存
-        ClearImageCache();
+        // 强制清除所有可能的缓存和状态
+        PhotoImage.Source = null;
+        NameText.Text = string.Empty;
+        PhotoImage.Visibility = Visibility.Collapsed;
+        PhotoFrame.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = Visibility.Collapsed;
+        
+        // 强制垃圾回收，清除内存中的图像缓存
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
 
         _currentPhotoPath = path;
         _currentStudentId = studentId?.Trim();
@@ -78,17 +79,10 @@ public partial class PhotoOverlayWindow : Window
         Top = screen.Y + (screen.Height - targetHeight) / 2;
         WindowPlacementHelper.EnsureVisible(this);
 
-        // 完全重置照片控件状态
-        PhotoImage.Source = null;
-        PhotoImage.Visibility = Visibility.Collapsed;
+        // 重置图像控件尺寸
         PhotoImage.Width = double.NaN;
         PhotoImage.Height = double.NaN;
-        PhotoFrame.Visibility = Visibility.Collapsed;
-        LoadingMask.Visibility = Visibility.Collapsed;
 
-        // 强制 UI 更新，确保重置生效
-        UpdateLayout();
-        
         // 原子性地设置新照片
         PhotoImage.Source = bitmap;
         PhotoImage.Width = targetWidth;

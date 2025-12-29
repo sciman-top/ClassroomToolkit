@@ -322,10 +322,17 @@ public partial class RollCallWindow : Window
             _lastPhotoStudentId = null;
             return;
         }
-        if (_lastPhotoStudentId == studentId && _photoOverlay?.IsVisible == true)
+        
+        // 参考 Python 版本的策略：当学生ID变化时，先隐藏上一张照片
+        if (_lastPhotoStudentId != studentId)
         {
-            return;
+            // 完全关闭并销毁照片覆盖窗口，确保没有任何残留
+            ClosePhotoOverlay();
+            _photoOverlay = null;
+            // 强制等待，确保窗口完全关闭
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
         }
+        
         _lastPhotoStudentId = studentId;
         var resolver = EnsurePhotoResolver();
         var className = ResolvePhotoClassName();
