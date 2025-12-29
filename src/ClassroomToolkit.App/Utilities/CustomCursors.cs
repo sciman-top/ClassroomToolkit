@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using MediaColor = System.Windows.Media.Color;
 using WpfCursor = System.Windows.Input.Cursor;
 
 namespace ClassroomToolkit.App.Utilities;
