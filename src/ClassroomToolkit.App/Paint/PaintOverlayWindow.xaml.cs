@@ -1612,10 +1612,11 @@ public partial class PaintOverlayWindow : Window
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         MediaBrush? opacityMask = null;
-        if (_brushStyle == PaintBrushStyle.Calligraphy)
+        bool isCalligraphy = _brushStyle == PaintBrushStyle.Calligraphy;
+        double inkFlow = 1.0;
+        Vector? strokeDirection = null;
+        if (isCalligraphy)
         {
-            double inkFlow = 1.0;
-            Vector? strokeDirection = null;
             if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
@@ -1625,13 +1626,8 @@ public partial class PaintOverlayWindow : Window
                 {
                     foreach (var ribbon in ribbonGeometries)
                     {
-                        var ribbonBrush = new SolidColorBrush(color)
-                        {
-                            Opacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT)
-                        };
-                        ribbonBrush.Freeze();
-                        var ribbonMask = BuildInkOpacityMask(ribbon.Geometry.Bounds, inkFlow, strokeDirection);
-                        RenderAndBlend(ribbon.Geometry, ribbonBrush, null, erase: false, ribbonMask);
+                        double ribbonOpacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT);
+                        RenderInkLayers(ribbon.Geometry, color, inkFlow, ribbonOpacity, strokeDirection);
                     }
                     var blooms = calligraphyRenderer.GetInkBloomGeometries();
                     if (blooms != null)
@@ -1649,9 +1645,13 @@ public partial class PaintOverlayWindow : Window
                     return;
                 }
             }
-            opacityMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection);
         }
-        RenderAndBlend(geometry, brush, null, erase: false, opacityMask);
+        if (isCalligraphy)
+        {
+            RenderInkLayers(geometry, color, inkFlow, 1.0, strokeDirection);
+            return;
+        }
+        RenderAndBlend(geometry, brush, null, erase: false, null);
     }
 
     private void CommitGeometryStroke(Geometry geometry, MediaPen pen)
@@ -1662,6 +1662,49 @@ public partial class PaintOverlayWindow : Window
     private void EraseGeometry(Geometry geometry)
     {
         RenderAndBlend(geometry, MediaBrushes.White, null, erase: true, null);
+    }
+
+    private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
+    {
+        double seepOpacity = Lerp(0.05, 0.16, inkFlow) * ribbonOpacity;
+        double seepScale = Lerp(1.02, 1.08, inkFlow);
+
+        if (inkFlow > 0.35 && seepOpacity > 0.01)
+        {
+            var seepBrush = new SolidColorBrush(color)
+            {
+                Opacity = Math.Clamp(seepOpacity, 0.02, 0.3)
+            };
+            seepBrush.Freeze();
+            var seepGeometry = CreateScaledGeometry(geometry, seepScale);
+            RenderAndBlend(seepGeometry, seepBrush, null, erase: false, null);
+        }
+
+        var solidBrush = new SolidColorBrush(color)
+        {
+            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
+        };
+        solidBrush.Freeze();
+        var mask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection);
+        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
+    }
+
+    private static Geometry CreateScaledGeometry(Geometry geometry, double scale)
+    {
+        if (scale <= 1.001 || geometry.Bounds.IsEmpty)
+        {
+            return geometry;
+        }
+
+        var bounds = geometry.Bounds;
+        var clone = geometry.Clone();
+        clone.Transform = new ScaleTransform(
+            scale,
+            scale,
+            bounds.X + (bounds.Width * 0.5),
+            bounds.Y + (bounds.Height * 0.5));
+        clone.Freeze();
+        return clone;
     }
 
     private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask)

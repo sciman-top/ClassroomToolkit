@@ -65,6 +65,14 @@ public class BrushPhysicsConfig
     public double MultiRibbonWidthJitter { get; set; } = 0.06;
     public double MultiRibbonWidthFalloff { get; set; } = 0.2;
 
+    // 顿笔墨团参数
+    public bool InkBloomEnabled { get; set; } = true;
+    public double InkBloomOpacity { get; set; } = 0.24;
+    public double InkBloomRadiusFactor { get; set; } = 0.7;
+    public double InkBloomTangentFactor { get; set; } = 0.55;
+    public double InkBloomMinSpacingFactor { get; set; } = 0.35;
+    public int InkBloomMaxCount { get; set; } = 12;
+
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
@@ -120,11 +128,16 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     // v11: 顿笔墨水累积状态
     private double _accumulatedWidth;
     private double _lastInkFlow = 1.0;
+    private Vector _lastStrokeDirection = new Vector(1, 0);
+    private bool _cacheDirty = true;
+    private List<RibbonGeometry>? _cachedRibbons;
+    private List<InkBloomGeometry>? _cachedBlooms;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
 
     public bool IsActive => _isActive;
     public double LastInkFlow => _lastInkFlow;
+    public Vector LastStrokeDirection => _lastStrokeDirection;
 
     public void Initialize(WpfColor color, double baseSize, double opacity)
     {
@@ -148,6 +161,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _noiseSeed = _random.NextDouble() * 1000.0;
         _lastTimestamp = Stopwatch.GetTimestamp();
         _lastInkFlow = 1.0;
+        _lastStrokeDirection = new Vector(1, 0);
+        MarkGeometryDirty();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
         _smoothedPos = point;
@@ -250,8 +265,10 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             return;
         }
 
+        UpdateStrokeDirection(lastPt.Position, _smoothedPos);
         _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, smoothVelocity, 0, 0, _accumulatedWidth));
         UpdateInkFlow();
+        MarkGeometryDirty();
         _lastTimestamp = now;
         _pointCount++;
     }
@@ -267,10 +284,12 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         var extension = _baseSize * 0.2;
         var endPos = point + dir * extension;
+        UpdateStrokeDirection(last.Position, endPos);
 
         var minWidth = ClampWidth(_baseSize * _config.TaperMinWidthFactor);
         _points.Add(new StrokePoint(endPos, minWidth, 0, 0, 1));
         UpdateInkFlow();
+        MarkGeometryDirty();
         _isActive = false;
     }
 
@@ -285,6 +304,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _maxVelocity = double.MinValue;
         _accumulatedWidth = 0; // v11: 重置累积宽度
         _lastInkFlow = 1.0;
+        MarkGeometryDirty();
     }
 
     public void Render(DrawingContext dc)
@@ -296,9 +316,30 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
         foreach (var item in geometries)
         {
+            double ribbonOpacity = GetRibbonOpacity(item.RibbonT);
+            double seepOpacity = Lerp(0.05, 0.14, _lastInkFlow) * ribbonOpacity;
+            double seepScale = Lerp(1.02, 1.08, _lastInkFlow);
+
+            if (_lastInkFlow > 0.35 && seepOpacity > 0.01 && !item.Geometry.Bounds.IsEmpty)
+            {
+                var seepBrush = new SolidColorBrush(_color)
+                {
+                    Opacity = Math.Clamp(seepOpacity, 0.02, 0.25)
+                };
+                seepBrush.Freeze();
+                var bounds = item.Geometry.Bounds;
+                dc.PushTransform(new ScaleTransform(
+                    seepScale,
+                    seepScale,
+                    bounds.X + (bounds.Width * 0.5),
+                    bounds.Y + (bounds.Height * 0.5)));
+                dc.DrawGeometry(seepBrush, null, item.Geometry);
+                dc.Pop();
+            }
+
             var brush = new SolidColorBrush(_color)
             {
-                Opacity = GetRibbonOpacity(item.RibbonT)
+                Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
             };
             brush.Freeze();
             dc.DrawGeometry(brush, null, item.Geometry);
@@ -390,20 +431,35 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         public double RibbonT { get; }
     }
 
+    public sealed class InkBloomGeometry
+    {
+        public InkBloomGeometry(Geometry geometry, double opacity)
+        {
+            Geometry = geometry;
+            Opacity = opacity;
+        }
+
+        public Geometry Geometry { get; }
+        public double Opacity { get; }
+    }
+
     public IReadOnlyList<RibbonGeometry>? GetLastRibbonGeometries()
     {
-        if (_points.Count < 2) return null;
-        var samples = BuildCenterlineSamplesFinal();
-        if (samples.Count < 2) return null;
-        var geometries = BuildRibbonGeometries(samples);
-        return geometries.Count == 0 ? null : geometries;
+        EnsureGeometryCache();
+        return _cachedRibbons == null || _cachedRibbons.Count == 0 ? null : _cachedRibbons;
+    }
+
+    public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
+    {
+        EnsureGeometryCache();
+        return _cachedBlooms == null || _cachedBlooms.Count == 0 ? null : _cachedBlooms;
     }
 
     public double GetRibbonOpacity(double ribbonT)
     {
-        double baseOpacity = Lerp(1.0, 0.45, ribbonT);
-        double inkOpacity = Lerp(0.65, 1.0, _lastInkFlow);
-        return Math.Clamp(baseOpacity * inkOpacity, 0.2, 1.0);
+        double baseOpacity = Lerp(1.0, 0.38, ribbonT);
+        double inkOpacity = Lerp(0.55, 1.0, _lastInkFlow);
+        return Math.Clamp(baseOpacity * inkOpacity, 0.18, 1.0);
     }
 
     private List<RibbonGeometry> BuildRibbonGeometries(List<StrokePoint> samples)
@@ -430,6 +486,96 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         return result;
+    }
+
+    private List<InkBloomGeometry> BuildInkBloomGeometries()
+    {
+        var result = new List<InkBloomGeometry>();
+        if (!_config.InkBloomEnabled || _points.Count < 2)
+        {
+            return result;
+        }
+
+        double maxSpeed = Math.Max(_maxVelocity, 0.001);
+        double minSpacing = Math.Max(_baseSize * _config.InkBloomMinSpacingFactor, 1.5);
+        WpfPoint? lastPos = null;
+
+        for (int i = 0; i < _points.Count; i++)
+        {
+            var point = _points[i];
+            double normSpeed = Math.Clamp(point.Speed / maxSpeed, 0, 1);
+            if (normSpeed > _config.DunBiSpeedThreshold)
+            {
+                continue;
+            }
+
+            if (lastPos.HasValue && (point.Position - lastPos.Value).Length < minSpacing)
+            {
+                continue;
+            }
+
+            var direction = ResolvePointDirection(i);
+            var normal = new Vector(-direction.Y, direction.X);
+            double normalRadius = Math.Max(point.Width * _config.InkBloomRadiusFactor, _baseSize * 0.25);
+            double tangentRadius = normalRadius * _config.InkBloomTangentFactor;
+            double accumulation = Math.Clamp(point.AccumulatedWidth / Math.Max(_baseSize, 0.001), 0, 1);
+            double spread = 1.0 + (accumulation * 0.35);
+
+            var ellipse = new EllipseGeometry(point.Position, normalRadius * spread, tangentRadius * spread);
+            double angle = Math.Atan2(normal.Y, normal.X) * 180.0 / Math.PI;
+            ellipse.Transform = new RotateTransform(angle, point.Position.X, point.Position.Y);
+            ellipse.Freeze();
+
+            double strength = 1.0 - Math.Clamp(normSpeed / Math.Max(_config.DunBiSpeedThreshold, 0.001), 0, 1);
+            double opacity = _config.InkBloomOpacity * strength * Math.Clamp(_lastInkFlow + 0.15, 0.4, 1.0);
+            opacity = Math.Clamp(opacity, 0.05, 0.6);
+
+            result.Add(new InkBloomGeometry(ellipse, opacity));
+            lastPos = point.Position;
+
+            if (result.Count >= _config.InkBloomMaxCount)
+            {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private void EnsureGeometryCache()
+    {
+        if (!_cacheDirty)
+        {
+            return;
+        }
+
+        _cacheDirty = false;
+        _cachedRibbons = null;
+        _cachedBlooms = null;
+
+        if (_points.Count < 2)
+        {
+            return;
+        }
+
+        var samples = BuildCenterlineSamplesFinal();
+        if (samples.Count < 2)
+        {
+            return;
+        }
+
+        _cachedRibbons = BuildRibbonGeometries(samples);
+        if (_config.InkBloomEnabled)
+        {
+            _cachedBlooms = BuildInkBloomGeometries();
+        }
+    }
+
+    private void MarkGeometryDirty()
+    {
+        _cacheDirty = true;
+        _cachedRibbons = null;
+        _cachedBlooms = null;
     }
 
     private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
@@ -526,6 +672,43 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         double flow = 1.0 - avgSpeed;
         flow += Math.Clamp(avgAccumulation * 0.35, 0, 0.4);
         _lastInkFlow = Math.Clamp(flow, 0.25, 1.0);
+    }
+
+    private void UpdateStrokeDirection(WpfPoint from, WpfPoint to)
+    {
+        var dir = to - from;
+        if (dir.LengthSquared < 0.0001)
+        {
+            return;
+        }
+        dir.Normalize();
+        _lastStrokeDirection = dir;
+    }
+
+    private Vector ResolvePointDirection(int index)
+    {
+        if (_points.Count == 0)
+        {
+            return new Vector(1, 0);
+        }
+
+        var current = _points[index].Position;
+        var prev = index > 0 ? _points[index - 1].Position : current;
+        var next = index < _points.Count - 1 ? _points[index + 1].Position : current;
+        var dir = next - prev;
+
+        if (dir.LengthSquared < 0.0001)
+        {
+            dir = _lastStrokeDirection;
+        }
+
+        if (dir.LengthSquared < 0.0001)
+        {
+            return new Vector(1, 0);
+        }
+
+        dir.Normalize();
+        return dir;
     }
 
     private double CalculateTargetWidth(double velocity, int pointIndex)
@@ -643,6 +826,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                 double speed = CatmullRomValue(p0.Speed, p1.Speed, p2.Speed, p3.Speed, t);
                 double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
+                double width = CatmullRomValue(p0.Width, p1.Width, p2.Width, p3.Width, t);
 
                 if (i > 0 || step > 0)
                 {
@@ -654,27 +838,20 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 progress = Math.Clamp(progress, 0, 1);
                 double normSpeed = Math.Clamp(speed / maxSpeed, 0, 1);
 
-                double velocityFactor = 1.0 - (0.65 * normSpeed);
-
-                double taperZone = 0;
-                if (progress > 0.85)
-                {
-                    taperZone = Math.Clamp((progress - 0.85) / 0.15, 0, 1);
-                    velocityFactor = Lerp(velocityFactor, 1.0, taperZone);
-                }
-
-                double pressure = 1.0 + (accumulatedWidth / Math.Max(_baseSize, 0.001));
-                double targetWidth = _baseSize * pressure * velocityFactor;
-
+                double targetWidth = ClampWidth(width);
                 double currentWidth = targetWidth;
                 if (samples.Count > 0)
                 {
                     currentWidth = samples[^1].Width * 0.6 + targetWidth * 0.4;
                 }
 
-                if (progress > 0.85)
+                if (_config.SimulateEndTaper && progress > _config.EndTaperStartProgress)
                 {
-                    double taperFactor = 1.0 - (taperZone * taperZone);
+                    double taperProgress = Math.Clamp(
+                        (progress - _config.EndTaperStartProgress) / (1.0 - _config.EndTaperStartProgress),
+                        0.0, 1.0);
+                    double taperCurve = 1.0 - (taperProgress * taperProgress);
+                    double taperFactor = _config.TaperMinWidthFactor + (1.0 - _config.TaperMinWidthFactor) * taperCurve;
                     currentWidth *= taperFactor;
                 }
 
@@ -842,9 +1019,11 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         if (samples.Count < 2) return;
 
         Vector lastNormal = new Vector(0, 1);
-        double edgeNoiseScale = Lerp(0.4, 1.0, ribbonT);
-        double fiberNoiseScale = Lerp(0.5, 1.0, ribbonT);
-        double flyingWhiteThreshold = Math.Clamp(_config.FlyingWhiteThreshold - ((1.0 - _lastInkFlow) * 0.12), 0.6, 0.95);
+        double dryFactor = Math.Clamp(1.0 - _lastInkFlow, 0, 1);
+        double edgeNoiseScale = Lerp(0.35, 1.0, ribbonT) * Lerp(0.75, 1.35, dryFactor);
+        double fiberNoiseScale = Lerp(0.45, 1.0, ribbonT) * Lerp(0.85, 1.2, dryFactor);
+        double flyingWhiteThreshold = Math.Clamp(_config.FlyingWhiteThreshold - (dryFactor * 0.16), 0.55, 0.95);
+        double flyingWhiteIntensity = _config.FlyingWhiteNoiseIntensity * Lerp(0.8, 1.6, dryFactor);
 
         for (int i = 0; i < samples.Count; i++)
         {
@@ -880,8 +1059,8 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 double smoothNoise = FractalNoise(phase, frequency);
 
                 // 噪声振幅
-                double inkDryBoost = Lerp(1.0, 1.35, 1.0 - _lastInkFlow);
-                double noiseAmplitude = _baseSize * _config.FlyingWhiteNoiseIntensity * speed * inkDryBoost * edgeNoiseScale;
+                double inkDryBoost = Lerp(1.0, 1.4, dryFactor);
+                double noiseAmplitude = _baseSize * flyingWhiteIntensity * speed * inkDryBoost * edgeNoiseScale;
 
                 // v11: 在收笔区域减少噪声（防止毛发状边缘）
                 double noiseReduction = 1.0;
@@ -897,7 +1076,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                 // ===== v11 安全约束: 防止左右轮廓交叉 =====
                 // 确保噪声不超过宽度的一半
-                double maxNoise = width * 0.09; // 最大为 9% 半宽
+                double maxNoise = width * Lerp(0.05, 0.11, dryFactor); // 半宽上限随干湿变化
                 edgeNoise = Math.Clamp(edgeNoise, -maxNoise, maxNoise);
             }
 
@@ -1028,12 +1207,23 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             dir.Normalize();
         }
 
+        var normal = new Vector(-dir.Y, dir.X);
+        double brushAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
+        var brushDir = new Vector(Math.Cos(brushAngle), Math.Sin(brushAngle));
+        double dot = Math.Clamp(Vector.Multiply(dir, brushDir), -1.0, 1.0);
+        double angleDiff = Math.Acos(dot);
+        double skewSign = Math.Sign((dir.X * brushDir.Y) - (dir.Y * brushDir.X));
+        double skew = Math.Sin(angleDiff) * ClampWidth(samples[isEnd ? lastIndex : 0].Width) * 0.32 * skewSign;
+
         double width = ClampWidth(isEnd ? samples[lastIndex].Width : samples[0].Width);
         double baseForTip = isEnd ? width : _baseSize;
 
         // TipPoint 示例: tip = basePoint +/- dir * tipLen
         double tipLen = ClampTipLength(baseForTip);
+        double dryFactor = Math.Clamp(1.0 - _lastInkFlow, 0, 1);
+        tipLen *= Lerp(0.9, 1.25, dryFactor);
         var tipPoint = isEnd ? basePoint + dir * tipLen : basePoint - dir * tipLen;
+        tipPoint += normal * skew;
 
         double dropRate = ComputePressureDropRate(samples, isEnd);
         return new CapData(tipPoint, width, dropRate);
@@ -1071,7 +1261,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private void AddCapV13(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, CapData cap)
     {
         double sharpThreshold = _baseSize * 0.2;
-        double dropThreshold = 3.2;
+        double dropThreshold = Lerp(2.4, 3.2, _lastInkFlow);
 
         double normalizedDrop = cap.PressureDropRate / Math.Max(_baseSize, 0.001);
         bool useSharp = cap.Width < sharpThreshold && normalizedDrop > dropThreshold;
