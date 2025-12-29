@@ -10,7 +10,6 @@
         ResizeMode="NoResize">
     
     <Window.Resources>
-        <!-- 现代悬浮关闭按钮 -->
         <Style x:Key="Style_ModernCloseButton" TargetType="Button">
             <Setter Property="Width" Value="56"/>
             <Setter Property="Height" Value="56"/>
@@ -35,11 +34,9 @@
     </Window.Resources>
 
     <Grid>
-        <!-- 背景遮罩 (磨砂黑) -->
         <Border Background="#F2000000" MouseLeftButtonDown="OnCloseClick"/>
 
         <Grid Margin="40">
-            <!-- 照片主体 (带阴影和圆角) -->
             <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True">
                 <Border.Effect>
                     <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
@@ -47,25 +44,20 @@
                 <Grid>
                     <Image x:Name="PhotoImage" Stretch="Uniform" />
                     
-                    <!-- 底部渐变背景 (用于文字清晰度) -->
-                    <Border VerticalAlignment="Bottom" Height="240">
+                    <!-- 顶部渐变背景 (用于文字清晰度) -->
+                    <Border VerticalAlignment="Top" Height="240">
                         <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
                                 <GradientStop Color="Transparent" Offset="0"/>
                                 <GradientStop Color="#CC000000" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
 
-                    <!-- 学生姓名 (超大字号) -->
-                    <TextBlock x:Name="NameText"
-                               Foreground="White"
-                               FontSize="120"
-                               FontWeight="Black"
-                               TextAlignment="Center"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Bottom"
-                               Margin="0,0,0,60">
+                    <!-- 学生姓名 (移动到顶部) -->
+                    <TextBlock x:Name="NameText" Foreground="White" FontSize="120" FontWeight="Black"
+                               TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top"
+                               Margin="0,60,0,0">
                         <TextBlock.Effect>
                             <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
                         </TextBlock.Effect>
@@ -73,25 +65,9 @@
                 </Grid>
             </Border>
 
-            <!-- 右上角关闭按钮 -->
-            <Button Style="{StaticResource Style_ModernCloseButton}"
-                    HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Margin="0,20,20,0"
-                    Click="OnCloseClick" 
-                    ToolTip="退出查看"/>
-
-            <!-- 底部两角关闭辅助按钮 (方便触摸) -->
-            <Button Style="{StaticResource Style_ModernCloseButton}"
-                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                    Margin="20,0,0,20"
-                    Click="OnCloseClick" 
-                    Opacity="0.3"/>
-
-             <Button Style="{StaticResource Style_ModernCloseButton}"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                    Margin="0,0,20,20"
-                    Click="OnCloseClick" 
-                    Opacity="0.3"/>
+            <!-- 仅保留底部关闭辅助按钮 -->
+            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="20,0,0,20" Click="OnCloseClick" Opacity="0.3"/>
+            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Click="OnCloseClick" Opacity="0.3"/>
         </Grid>
     </Grid>
 </Window>

@@ -87,6 +87,7 @@
     <Color x:Key="Color_Border_Subtle">#E2E8F0</Color>     <!-- 微妙边框 -->
     <Color x:Key="Color_Border_Medium">#CBD5E1</Color>     <!-- 中等边框 -->
 
+    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Medium" Color="{StaticResource Color_Border_Medium}" PresentationOptions:Freeze="true"/>
 

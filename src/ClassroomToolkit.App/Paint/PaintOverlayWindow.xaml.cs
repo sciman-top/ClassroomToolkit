@@ -1615,6 +1615,21 @@ public partial class PaintOverlayWindow : Window
             if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
+                var ribbonGeometries = calligraphyRenderer.GetLastRibbonGeometries();
+                if (ribbonGeometries != null && ribbonGeometries.Count > 0)
+                {
+                    foreach (var ribbon in ribbonGeometries)
+                    {
+                        var ribbonBrush = new SolidColorBrush(color)
+                        {
+                            Opacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT)
+                        };
+                        ribbonBrush.Freeze();
+                        var ribbonMask = BuildInkOpacityMask(ribbon.Geometry.Bounds, inkFlow);
+                        RenderAndBlend(ribbon.Geometry, ribbonBrush, null, erase: false, ribbonMask);
+                    }
+                    return;
+                }
             }
             opacityMask = BuildInkOpacityMask(geometry.Bounds, inkFlow);
         }
@@ -1723,27 +1738,47 @@ public partial class PaintOverlayWindow : Window
             return null;
         }
 
-        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 1.6, 12, 64));
-        double baseAlpha = Lerp(0.55, 0.95, inkFlow);
-        double variation = Lerp(0.12, 0.45, 1.0 - inkFlow);
+        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 2.4, 18, 90));
+        double baseAlpha = Lerp(0.65, 0.95, inkFlow);
+        double variation = Lerp(0.06, 0.18, 1.0 - inkFlow);
         var tile = CreateInkNoiseTile(tileSize, baseAlpha, variation, _inkRandom.Next());
 
-        var brush = new ImageBrush(tile)
+        var texture = new ImageBrush(tile)
         {
             TileMode = TileMode.Tile,
             Viewport = new Rect(bounds.X, bounds.Y, tileSize, tileSize),
             ViewportUnits = BrushMappingMode.Absolute,
             Stretch = Stretch.None,
-            Opacity = Math.Clamp(0.85 + (inkFlow * 0.15), 0.7, 1.0)
+            Opacity = Math.Clamp(0.9 + (inkFlow * 0.1), 0.8, 1.0)
         };
-        brush.Freeze();
-        return brush;
+        texture.Freeze();
+
+        var centerOpacity = Math.Clamp(0.95 + (inkFlow * 0.05), 0.85, 1.0);
+        var edgeOpacity = Math.Clamp(0.72 + (inkFlow * 0.08), 0.6, 0.9);
+        var radial = new RadialGradientBrush
+        {
+            MappingMode = BrushMappingMode.Absolute,
+            Center = new Point(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
+            GradientOrigin = new Point(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
+            RadiusX = bounds.Width * 0.55,
+            RadiusY = bounds.Height * 0.55
+        };
+        radial.GradientStops.Add(new GradientStop(Color.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
+        radial.GradientStops.Add(new GradientStop(Color.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
+        radial.Freeze();
+
+        var group = new DrawingGroup();
+        group.Children.Add(new GeometryDrawing(Brushes.White, null, new RectangleGeometry(bounds)));
+        group.Children.Add(new GeometryDrawing(radial, null, new RectangleGeometry(bounds)));
+        group.Children.Add(new GeometryDrawing(texture, null, new RectangleGeometry(bounds)));
+        group.Freeze();
+        return new DrawingBrush(group) { Stretch = Stretch.None };
     }
 
     private static BitmapSource CreateInkNoiseTile(int size, double baseAlpha, double variation, int seed)
     {
         var rng = new Random(seed);
-        int grid = 8;
+        int grid = 14;
         var gridValues = new double[grid + 1, grid + 1];
 
         for (int y = 0; y <= grid; y++)
@@ -1758,9 +1793,9 @@ public partial class PaintOverlayWindow : Window
         double angle = rng.NextDouble() * Math.PI;
         double fx = Math.Cos(angle);
         double fy = Math.Sin(angle);
-        double fiberFreq = 1.8 + rng.NextDouble() * 1.6;
+        double fiberFreq = 2.6 + rng.NextDouble() * 2.2;
         double fiberPhase = rng.NextDouble() * Math.PI * 2.0;
-        double fiberAmp = variation * 0.35;
+        double fiberAmp = variation * 0.2;
 
         int stride = size * 4;
         var pixels = new byte[stride * size];

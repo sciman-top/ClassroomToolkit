@@ -41,7 +41,7 @@ public class BrushPhysicsConfig
     public double EndTaperStartProgress { get; set; } = 0.75;  // 收笔开始位置
     public double EndVelocityDecoupleStart { get; set; } = 0.85;  // 速度解耦开始位置
     public double FlyingWhiteThreshold { get; set; } = 0.86;  // 飞白速度阈值
-    public double FlyingWhiteNoiseIntensity { get; set; } = 0.026;  // 飞白噪声强度
+    public double FlyingWhiteNoiseIntensity { get; set; } = 0.02;  // 飞白噪声强度
 
     // v11 新增参数
     public double DunBiSpeedThreshold { get; set; } = 0.4;  // 顿笔速度阈值
@@ -52,17 +52,17 @@ public class BrushPhysicsConfig
     public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.78;  // 噪声减少起点
     public double CapRoundThreshold { get; set; } = 0.72;   // 圆笔锋阈值（相对于 baseSize）
     public double TaperMinWidthFactor { get; set; } = 0.6; // 笔锋最小宽度因子
-    public double FiberNoiseIntensity { get; set; } = 0.005; // 纸张纤维噪声强度
+    public double FiberNoiseIntensity { get; set; } = 0.003; // 纸张纤维噪声强度
     public double FiberNoiseFrequency { get; set; } = 0.35; // 纸张纤维噪声频率
     public double AnisotropyStrength { get; set; } = 0.05; // 笔锋方向性强度
     public double BrushAngleDegrees { get; set; } = -45.0; // 笔锋默认角度
 
     // 多毫叠加参数
     public bool EnableMultiRibbon { get; set; } = true;
-    public int MultiRibbonCount { get; set; } = 5;
-    public double MultiRibbonOffsetFactor { get; set; } = 0.18;
-    public double MultiRibbonOffsetJitter { get; set; } = 0.06;
-    public double MultiRibbonWidthJitter { get; set; } = 0.1;
+    public int MultiRibbonCount { get; set; } = 3;
+    public double MultiRibbonOffsetFactor { get; set; } = 0.12;
+    public double MultiRibbonOffsetJitter { get; set; } = 0.03;
+    public double MultiRibbonWidthJitter { get; set; } = 0.06;
     public double MultiRibbonWidthFalloff { get; set; } = 0.2;
 
     public static BrushPhysicsConfig DefaultSmooth => new();
@@ -251,6 +251,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, smoothVelocity, 0, 0, _accumulatedWidth));
+        UpdateInkFlow();
         _lastTimestamp = now;
         _pointCount++;
     }
@@ -290,21 +291,42 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (_points.Count < 2) return;
 
-        var geometry = GenerateGeometry();
-        if (geometry != null)
+        var geometries = GetLastRibbonGeometries();
+        if (geometries == null || geometries.Count == 0) return;
+
+        foreach (var item in geometries)
         {
-            var brush = new SolidColorBrush(_color);
+            var brush = new SolidColorBrush(_color)
+            {
+                Opacity = GetRibbonOpacity(item.RibbonT)
+            };
             brush.Freeze();
-            dc.DrawGeometry(brush, null, geometry);
+            dc.DrawGeometry(brush, null, item.Geometry);
         }
     }
 
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var geo = GenerateGeometry();
-        if (geo != null) geo.Freeze();
-        return geo;
+        var geometries = GetLastRibbonGeometries();
+        if (geometries == null || geometries.Count == 0) return null;
+        if (geometries.Count == 1)
+        {
+            var single = geometries[0].Geometry;
+            if (single != null) single.Freeze();
+            return single;
+        }
+
+        var group = new GeometryGroup
+        {
+            FillRule = FillRule.Nonzero
+        };
+        foreach (var item in geometries)
+        {
+            group.Children.Add(item.Geometry);
+        }
+        group.Freeze();
+        return group;
     }
 
     /// <summary>
@@ -335,28 +357,18 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         var samples = BuildCenterlineSamplesFinal();
         if (samples.Count < 2) return null;
 
-        int ribbonCount = ResolveRibbonCount();
-        if (ribbonCount <= 1)
-        {
-            return BuildRibbonGeometry(samples, 0, 1);
-        }
+        var geometries = BuildRibbonGeometries(samples);
+        if (geometries.Count == 0) return null;
+        if (geometries.Count == 1) return geometries[0].Geometry;
 
         var group = new GeometryGroup
         {
             FillRule = FillRule.Nonzero
         };
-
-        for (int i = 0; i < ribbonCount; i++)
+        foreach (var item in geometries)
         {
-            var ribbonSamples = BuildRibbonSamples(samples, i, ribbonCount);
-            var ribbonGeometry = BuildRibbonGeometry(ribbonSamples, i, ribbonCount);
-            if (ribbonGeometry != null)
-            {
-                group.Children.Add(ribbonGeometry);
-            }
+            group.Children.Add(item.Geometry);
         }
-
-        if (group.Children.Count == 0) return null;
         return group;
     }
 
@@ -366,7 +378,61 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return Math.Clamp(_config.MultiRibbonCount, 1, 7);
     }
 
-    private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, int ribbonIndex, int ribbonCount)
+    public sealed class RibbonGeometry
+    {
+        public RibbonGeometry(Geometry geometry, double ribbonT)
+        {
+            Geometry = geometry;
+            RibbonT = ribbonT;
+        }
+
+        public Geometry Geometry { get; }
+        public double RibbonT { get; }
+    }
+
+    public IReadOnlyList<RibbonGeometry>? GetLastRibbonGeometries()
+    {
+        if (_points.Count < 2) return null;
+        var samples = BuildCenterlineSamplesFinal();
+        if (samples.Count < 2) return null;
+        var geometries = BuildRibbonGeometries(samples);
+        return geometries.Count == 0 ? null : geometries;
+    }
+
+    public double GetRibbonOpacity(double ribbonT)
+    {
+        double baseOpacity = Lerp(1.0, 0.45, ribbonT);
+        double inkOpacity = Lerp(0.65, 1.0, _lastInkFlow);
+        return Math.Clamp(baseOpacity * inkOpacity, 0.2, 1.0);
+    }
+
+    private List<RibbonGeometry> BuildRibbonGeometries(List<StrokePoint> samples)
+    {
+        var result = new List<RibbonGeometry>();
+        int ribbonCount = ResolveRibbonCount();
+        if (ribbonCount <= 1)
+        {
+            var single = BuildRibbonGeometry(samples, 0, 0);
+            if (single != null) result.Add(new RibbonGeometry(single, 0));
+            return result;
+        }
+
+        double centerIndex = (ribbonCount - 1) * 0.5;
+        for (int i = 0; i < ribbonCount; i++)
+        {
+            double ribbonT = centerIndex > 0 ? Math.Abs(i - centerIndex) / centerIndex : 0;
+            var ribbonSamples = BuildRibbonSamples(samples, i, ribbonCount);
+            var ribbonGeometry = BuildRibbonGeometry(ribbonSamples, ribbonT, i * 17.7);
+            if (ribbonGeometry != null)
+            {
+                result.Add(new RibbonGeometry(ribbonGeometry, ribbonT));
+            }
+        }
+
+        return result;
+    }
+
+    private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
     {
         if (samples.Count < 2) return null;
 
@@ -379,8 +445,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             var leftEdge = new List<WpfPoint>();
             var rightEdge = new List<WpfPoint>();
-            double noiseSeedOffset = ribbonIndex * 17.7;
-            BuildRibbonEdgesV10(samples, leftEdge, rightEdge, noiseSeedOffset);
+            BuildRibbonEdgesV10(samples, leftEdge, rightEdge, noiseSeedOffset, ribbonT);
 
             FilterLoops(leftEdge);
             FilterLoops(rightEdge);
@@ -524,7 +589,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             // 阶段2: 生成左右边缘
             var leftEdge = new List<WpfPoint>();
             var rightEdge = new List<WpfPoint>();
-            BuildRibbonEdgesV10(samples, leftEdge, rightEdge, 0);
+            BuildRibbonEdgesV10(samples, leftEdge, rightEdge, 0, 0);
 
             // 阶段3: 过滤倒刺
             FilterLoops(leftEdge);
@@ -772,11 +837,14 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     /// v10: 生成左右边缘，添加飞白效果（边缘噪声）
     /// v11 修复: 使用平滑噪声函数，防止白裂纹和交叉
     /// </summary>
-    private void BuildRibbonEdgesV10(List<StrokePoint> samples, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, double noiseSeedOffset)
+    private void BuildRibbonEdgesV10(List<StrokePoint> samples, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, double noiseSeedOffset, double ribbonT)
     {
         if (samples.Count < 2) return;
 
         Vector lastNormal = new Vector(0, 1);
+        double edgeNoiseScale = Lerp(0.4, 1.0, ribbonT);
+        double fiberNoiseScale = Lerp(0.5, 1.0, ribbonT);
+        double flyingWhiteThreshold = Math.Clamp(_config.FlyingWhiteThreshold - ((1.0 - _lastInkFlow) * 0.12), 0.6, 0.95);
 
         for (int i = 0; i < samples.Count; i++)
         {
@@ -806,14 +874,14 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             double edgeNoise = 0;
             double phase = _noiseSeed + noiseSeedOffset + i * 0.45 + (progress * 3.2) + ((pos.X + pos.Y) * 0.01);
 
-            if (speed > _config.FlyingWhiteThreshold && progress < _config.FlyingWhiteNoiseReductionProgress)
+            if (speed > flyingWhiteThreshold && progress < _config.FlyingWhiteNoiseReductionProgress)
             {
-                // v11: 使用正弦波代替 Random()，产生平滑有机的波动
                 double frequency = _config.FlyingWhiteNoiseFrequency;
                 double smoothNoise = FractalNoise(phase, frequency);
 
                 // 噪声振幅
-                double noiseAmplitude = _baseSize * _config.FlyingWhiteNoiseIntensity * speed;
+                double inkDryBoost = Lerp(1.0, 1.35, 1.0 - _lastInkFlow);
+                double noiseAmplitude = _baseSize * _config.FlyingWhiteNoiseIntensity * speed * inkDryBoost * edgeNoiseScale;
 
                 // v11: 在收笔区域减少噪声（防止毛发状边缘）
                 double noiseReduction = 1.0;
@@ -829,7 +897,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
                 // ===== v11 安全约束: 防止左右轮廓交叉 =====
                 // 确保噪声不超过宽度的一半
-                double maxNoise = width * 0.14; // 最大为 14% 半宽
+                double maxNoise = width * 0.09; // 最大为 9% 半宽
                 edgeNoise = Math.Clamp(edgeNoise, -maxNoise, maxNoise);
             }
 
@@ -838,7 +906,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             double fiberFactor = 0.2 + (speed * 0.8);
             double accumulation = Math.Clamp(samples[i].AccumulatedWidth / (_baseSize * 0.8), 0, 1);
             double fiberAttenuation = 1.0 - (accumulation * 0.6);
-            double fiberAmplitude = width * _config.FiberNoiseIntensity * fiberFactor * fiberAttenuation;
+            double fiberAmplitude = width * _config.FiberNoiseIntensity * fiberFactor * fiberAttenuation * fiberNoiseScale;
             edgeNoise += fiberNoise * fiberAmplitude;
 
             // 应用噪声（只在法线方向）
@@ -1209,10 +1277,28 @@ public class VariableWidthBrushRenderer : IBrushRenderer
 
     private static double FractalNoise(double phase, double frequency)
     {
-        double n1 = Math.Sin(phase * frequency);
-        double n2 = Math.Sin((phase * frequency * 2.13) + 1.7);
-        double n3 = Math.Sin((phase * frequency * 4.27) + 2.9);
+        double n1 = ValueNoise(phase * frequency);
+        double n2 = ValueNoise((phase * frequency * 2.07) + 13.7);
+        double n3 = ValueNoise((phase * frequency * 4.11) + 37.9);
         return (n1 * 0.6) + (n2 * 0.3) + (n3 * 0.1);
+    }
+
+    private static double ValueNoise(double x)
+    {
+        int x0 = (int)Math.Floor(x);
+        int x1 = x0 + 1;
+        double t = x - x0;
+        double v0 = HashToUnit(x0);
+        double v1 = HashToUnit(x1);
+        t = t * t * (3 - 2 * t);
+        return Lerp(v0, v1, t) * 2.0 - 1.0;
+    }
+
+    private static double HashToUnit(int x)
+    {
+        int n = (x << 13) ^ x;
+        int nn = (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
+        return nn / 2147483648.0;
     }
 
     /// <summary>
