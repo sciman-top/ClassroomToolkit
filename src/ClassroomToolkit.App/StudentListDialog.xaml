@@ -13,6 +13,7 @@
         SizeToContent="Manual">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <!-- 学生卡片样式 -->
         <Style x:Key="Style_StudentCard_Modern" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>

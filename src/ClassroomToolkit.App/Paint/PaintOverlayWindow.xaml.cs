@@ -1748,7 +1748,7 @@ public partial class PaintOverlayWindow : Window
             return false;
         }
         var bounds = geometry.Bounds;
-        double minSize = Math.Max(_brushSize * 0.7, 10.0);
+        double minSize = Math.Max(_brushSize * 0.9, 12.0);
         return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
