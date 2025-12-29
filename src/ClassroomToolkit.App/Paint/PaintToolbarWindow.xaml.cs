@@ -124,9 +124,9 @@ public partial class PaintToolbarWindow : Window
     private void ApplyUiScale(double scale)
     {
         _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
-        if (ToolbarRoot != null)
+        if (ToolbarContainer != null)
         {
-            ToolbarRoot.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
+            ToolbarContainer.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
         }
         WindowPlacementHelper.EnsureVisible(this);
     }

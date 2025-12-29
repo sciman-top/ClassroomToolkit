@@ -221,7 +221,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             // 低速时累积宽度（墨水扩散）
             double accumulationRate = _config.DunBiSpreadRate / Math.Max(velocity, 0.1);
-            double deltaTime = dt / 1000.0; // 转换为秒
+            double deltaTime = dtMs / 1000.0; // 转换为秒
             _accumulatedWidth += accumulationRate * deltaTime;
 
             // 限制最大累积
