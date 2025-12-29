@@ -98,7 +98,7 @@ namespace ClassroomToolkit.App.Helpers
             // 立即修复当前已存在的窗口
             try
             {
-                var currentWindow = Application.Current?.MainWindow;
+                var currentWindow = System.Windows.Application.Current?.MainWindow;
                 if (currentWindow != null)
                 {
                     FixAllBorders(currentWindow);

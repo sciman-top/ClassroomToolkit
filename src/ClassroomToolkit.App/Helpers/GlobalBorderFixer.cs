@@ -18,7 +18,7 @@ namespace ClassroomToolkit.App.Helpers
             try
             {
                 // 修复主窗口
-                var mainWindow = Application.Current?.MainWindow;
+                var mainWindow = System.Windows.Application.Current?.MainWindow;
                 if (mainWindow != null)
                 {
                     FixAllBordersRecursive(mainWindow);
@@ -26,7 +26,7 @@ namespace ClassroomToolkit.App.Helpers
                 }
                 
                 // 修复所有已打开的窗口
-                foreach (Window window in Application.Current.Windows)
+                foreach (Window window in System.Windows.Application.Current.Windows)
                 {
                     if (window != null && window != mainWindow)
                     {
@@ -87,7 +87,7 @@ namespace ClassroomToolkit.App.Helpers
                         try
                         {
                             // 设置透明边框
-                            border.BorderBrush = Brushes.Transparent;
+                            border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                             
                             var name = border.Name ?? "(未命名)";
                             var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
@@ -101,7 +101,7 @@ namespace ClassroomToolkit.App.Helpers
                             try
                             {
                                 border.ClearValue(Border.BorderBrushProperty);
-                                border.BorderBrush = Brushes.Transparent;
+                                border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                                 System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 使用 ClearValue 方法修复 Border '{border.Name}'");
                             }
                             catch (Exception ex2)
