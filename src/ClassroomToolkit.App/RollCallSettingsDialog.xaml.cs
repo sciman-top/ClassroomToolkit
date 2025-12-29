@@ -284,7 +284,7 @@ public partial class RollCallSettingsDialog : Window
             var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
             voices.Add(new ComboOption(info.Name, label));
             System.Diagnostics.Debug.WriteLine($"  -> 已添加到下拉框");
-            System.Diagnostics.Debug.WriteLine();
+            System.Diagnostics.Debug.WriteLine("");
         }
         
         System.Diagnostics.Debug.WriteLine($"=== 最终结果 ===");
