@@ -249,13 +249,13 @@ public partial class PaintOverlayWindow : Window
         System.Windows.Input.Cursor cursor = mode switch
         {
             PaintToolMode.Cursor => System.Windows.Input.Cursors.Arrow,
-            PaintToolMode.Brush => System.Windows.Input.Cursors.Cross,
-            PaintToolMode.Eraser => System.Windows.Input.Cursors.No,
-            PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,
-            PaintToolMode.RegionErase => System.Windows.Input.Cursors.Cross,
+            PaintToolMode.Brush => System.Windows.Input.Cursors.Pen,      // 画笔样式
+            PaintToolMode.Eraser => System.Windows.Input.Cursors.ScrollAll,  // 全方位箭头，像橡皮擦
+            PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,     // 十字准星，精确绘制
+            PaintToolMode.RegionErase => System.Windows.Input.Cursors.UpArrow, // 向上箭头，表示框选
             _ => System.Windows.Input.Cursors.Arrow
         };
-        
+
         this.Cursor = cursor;
     }
 

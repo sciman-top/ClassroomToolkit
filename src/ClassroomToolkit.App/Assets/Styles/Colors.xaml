@@ -119,11 +119,12 @@
         <GradientStop Color="#38ef7d" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 点名卡片背景渐变 (清新淡雅) -->
+    <!-- 点名卡片背景渐变 (清新淡雅 - 增强版) -->
     <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#F8F9FF" Offset="0"/>
-        <GradientStop Color="#F0F4FF" Offset="0.5"/>
-        <GradientStop Color="#E8F0FF" Offset="1"/>
+        <GradientStop Color="#FFFAF5" Offset="0"/>      <!-- 淡暖白 -->
+        <GradientStop Color="#F5F3FF" Offset="0.3"/>      <!-- 淡紫白 -->
+        <GradientStop Color="#F0F8FF" Offset="0.6"/>      <!-- 淡蓝白 -->
+        <GradientStop Color="#EDF5FF" Offset="1"/>       <!-- 淡青蓝 -->
     </LinearGradientBrush>
 
     <!-- 计时器霓虹色 -->
