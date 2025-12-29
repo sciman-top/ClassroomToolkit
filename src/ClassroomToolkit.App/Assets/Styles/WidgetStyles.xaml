@@ -22,7 +22,7 @@
                 <ControlTemplate TargetType="TextBox">
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderBrush="{TemplateBinding BorderBrush, FallbackValue={StaticResource Brush_Border}}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="6">
                         <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
@@ -41,6 +41,7 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Disabled}"/>
                             <Setter Property="Foreground" Value="{StaticResource Brush_Disabled}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -140,7 +141,7 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderBrush="{TemplateBinding BorderBrush, FallbackValue={StaticResource Brush_Border_Medium}}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="8">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>

@@ -10,6 +10,16 @@
         AllowsTransparency="True"
         Background="{x:Null}"
         Topmost="True">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Icons.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/WidgetStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     
     <Border Background="White" CornerRadius="8" Margin="10">
         <Border.Effect>
@@ -66,11 +76,11 @@
                                  IsReadOnly="True"
                                  TextWrapping="Wrap"
                                  VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto" 
+                                 HorizontalScrollBarVisibility="Auto"
                                  Padding="8"
-                                 BorderThickness="0"
                                  Background="#F8F9FA"
                                  FontFamily="Consolas"
+                                 FontSize="12"
                                  Margin="0,8,0,0"/>
                     </TabItem>
                     <TabItem Header="建议">
@@ -80,8 +90,9 @@
                                  VerticalScrollBarVisibility="Auto"
                                  HorizontalScrollBarVisibility="Auto"
                                  Padding="8"
-                                 BorderThickness="0"
                                  Background="#F8F9FA"
+                                 FontFamily="Consolas"
+                                 FontSize="12"
                                  Margin="0,8,0,0"/>
                     </TabItem>
                 </TabControl>
