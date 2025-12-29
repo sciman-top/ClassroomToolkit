@@ -3,15 +3,19 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Photos;
 
 public partial class PhotoOverlayWindow : Window
 {
+    private const int GwlExstyle = -20;
+    private const int WsExNoActivate = 0x08000000;
     private readonly DispatcherTimer _autoCloseTimer;
     private string? _currentStudentId;
     private string? _currentPhotoPath;
+    private IntPtr _hwnd;
 
     public event Action<string?>? PhotoClosed;
 
@@ -25,6 +29,13 @@ public partial class PhotoOverlayWindow : Window
             Interval = TimeSpan.FromSeconds(1)
         };
         _autoCloseTimer.Tick += OnAutoCloseTick;
+        
+        SourceInitialized += (_, _) =>
+        {
+            _hwnd = new WindowInteropHelper(this).Handle;
+            // 不应用 WS_EX_NOACTIVATE 以确保窗口能够正常获得焦点和用户交互
+            // ApplyNoActivate();
+        };
     }
 
     public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
@@ -136,4 +147,20 @@ public partial class PhotoOverlayWindow : Window
         }
         return System.Windows.Forms.Screen.PrimaryScreen?.WorkingArea ?? new System.Drawing.Rectangle(0, 0, 1280, 720);
     }
+    
+    private void ApplyNoActivate()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

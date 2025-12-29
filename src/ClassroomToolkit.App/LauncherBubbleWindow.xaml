@@ -7,7 +7,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
-        ShowActivated="False">
+        ShowActivated="True">
     
     <Grid>
         <!-- 悬浮球主体 -->

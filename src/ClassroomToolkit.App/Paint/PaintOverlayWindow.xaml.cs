@@ -81,7 +81,6 @@ public partial class PaintOverlayWindow : Window
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = DateTime.MinValue;
     private readonly List<RasterSnapshot> _history = new();
-    private PaintToolbarWindow? _toolbarWindow;
 
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
     private IBrushRenderer? _activeRenderer;
@@ -257,11 +256,6 @@ public partial class PaintOverlayWindow : Window
     {
         _boardColor = color;
         UpdateBoardBackground();
-    }
-
-    public void SetToolbar(PaintToolbarWindow? toolbar)
-    {
-        _toolbarWindow = toolbar;
     }
 
     public void ClearAll()
@@ -889,6 +883,9 @@ public partial class PaintOverlayWindow : Window
 
     private void MonitorPresentationFocus()
     {
+        // 暂时禁用焦点恢复功能，因为它会干扰工具栏窗口的用户交互
+        return;
+
         if (DateTime.UtcNow < _nextPresentationFocusAttempt)
         {
             return;
@@ -897,31 +894,11 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        // 如果工具栏窗口正在活动，不恢复焦点到演示窗口
-        if (IsToolbarWindowActive())
-        {
-            return;
-        }
         var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
         if (restored)
         {
             _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
         }
-    }
-
-    private bool IsToolbarWindowActive()
-    {
-        if (_toolbarWindow == null || !_toolbarWindow.IsVisible)
-        {
-            return false;
-        }
-        var foreground = GetForegroundWindow();
-        if (foreground == IntPtr.Zero)
-        {
-            return false;
-        }
-        var toolbarHwnd = new WindowInteropHelper(_toolbarWindow).Handle;
-        return foreground == toolbarHwnd;
     }
 
     private bool IsForegroundOwnedByCurrentProcess()
@@ -1638,9 +1615,11 @@ public partial class PaintOverlayWindow : Window
         if (_brushStyle == PaintBrushStyle.Calligraphy)
         {
             double inkFlow = 1.0;
+            Vector? strokeDirection = null;
             if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
+                strokeDirection = calligraphyRenderer.LastStrokeDirection;
                 var ribbonGeometries = calligraphyRenderer.GetLastRibbonGeometries();
                 if (ribbonGeometries != null && ribbonGeometries.Count > 0)
                 {
@@ -1651,13 +1630,26 @@ public partial class PaintOverlayWindow : Window
                             Opacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT)
                         };
                         ribbonBrush.Freeze();
-                        var ribbonMask = BuildInkOpacityMask(ribbon.Geometry.Bounds, inkFlow);
+                        var ribbonMask = BuildInkOpacityMask(ribbon.Geometry.Bounds, inkFlow, strokeDirection);
                         RenderAndBlend(ribbon.Geometry, ribbonBrush, null, erase: false, ribbonMask);
+                    }
+                    var blooms = calligraphyRenderer.GetInkBloomGeometries();
+                    if (blooms != null)
+                    {
+                        foreach (var bloom in blooms)
+                        {
+                            var bloomBrush = new SolidColorBrush(color)
+                            {
+                                Opacity = bloom.Opacity
+                            };
+                            bloomBrush.Freeze();
+                            RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null);
+                        }
                     }
                     return;
                 }
             }
-            opacityMask = BuildInkOpacityMask(geometry.Bounds, inkFlow);
+            opacityMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection);
         }
         RenderAndBlend(geometry, brush, null, erase: false, opacityMask);
     }
@@ -1757,16 +1749,17 @@ public partial class PaintOverlayWindow : Window
         return true;
     }
 
-    private MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow)
+    private MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection)
     {
         if (bounds.IsEmpty)
         {
             return null;
         }
 
-        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 2.4, 18, 90));
-        double baseAlpha = Lerp(0.65, 0.95, inkFlow);
-        double variation = Lerp(0.06, 0.18, 1.0 - inkFlow);
+        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 2.2, 18, 90));
+        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
+        double baseAlpha = Lerp(0.68, 0.96, inkFlow);
+        double variation = Lerp(0.08, 0.24, dryFactor);
         var tile = CreateInkNoiseTile(tileSize, baseAlpha, variation, _inkRandom.Next());
 
         var texture = new ImageBrush(tile)
@@ -1775,8 +1768,9 @@ public partial class PaintOverlayWindow : Window
             Viewport = new Rect(bounds.X, bounds.Y, tileSize, tileSize),
             ViewportUnits = BrushMappingMode.Absolute,
             Stretch = Stretch.None,
-            Opacity = Math.Clamp(0.9 + (inkFlow * 0.1), 0.8, 1.0)
+            Opacity = Math.Clamp(0.72 + (inkFlow * 0.28), 0.6, 1.0)
         };
+        ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor);
         texture.Freeze();
 
         var centerOpacity = Math.Clamp(0.95 + (inkFlow * 0.05), 0.85, 1.0);
@@ -1799,6 +1793,30 @@ public partial class PaintOverlayWindow : Window
         group.Children.Add(new GeometryDrawing(texture, null, new RectangleGeometry(bounds)));
         group.Freeze();
         return new DrawingBrush(group) { Stretch = Stretch.None };
+    }
+
+    private static void ApplyInkTextureTransform(ImageBrush brush, Rect bounds, Vector? strokeDirection, double dryFactor)
+    {
+        var dir = strokeDirection ?? new Vector(1, 0);
+        if (dir.LengthSquared < 0.0001)
+        {
+            dir = new Vector(1, 0);
+        }
+        else
+        {
+            dir.Normalize();
+        }
+
+        double angle = Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI;
+        double centerX = bounds.X + bounds.Width * 0.5;
+        double centerY = bounds.Y + bounds.Height * 0.5;
+        double stretch = Lerp(1.3, 1.8, dryFactor);
+        double squash = Lerp(0.85, 0.6, dryFactor);
+
+        var transforms = new TransformGroup();
+        transforms.Children.Add(new ScaleTransform(stretch, squash, centerX, centerY));
+        transforms.Children.Add(new RotateTransform(angle, centerX, centerY));
+        brush.Transform = transforms;
     }
 
     private static BitmapSource CreateInkNoiseTile(int size, double baseAlpha, double variation, int seed)

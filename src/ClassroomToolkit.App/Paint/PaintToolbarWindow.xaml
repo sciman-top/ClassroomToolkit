@@ -7,7 +7,6 @@
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual"
         Topmost="True"
-        ShowActivated="False"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         WindowStyle="None"

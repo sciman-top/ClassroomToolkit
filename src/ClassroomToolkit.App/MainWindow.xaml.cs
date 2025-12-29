@@ -124,7 +124,6 @@ public partial class MainWindow : Window
         _overlayWindow = new Paint.PaintOverlayWindow();
         _toolbarWindow = new Paint.PaintToolbarWindow();
         _toolbarWindow.AttachOverlay(_overlayWindow);
-        _overlayWindow.SetToolbar(_toolbarWindow);
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
