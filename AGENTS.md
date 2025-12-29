@@ -19,41 +19,34 @@
 3. 若 reasoning 被展示，无需翻译，保持英文
 
 ## Project Structure & Module Organization
-This repository is a single-file PyQt desktop app with supporting assets.
-
-- `ClassroomToolkit.py`: main application entry point and all logic.
-- `students.xlsx`: default student data template (auto-created/used by the app).
-- `student_photos/`: student photo assets referenced by the UI.
-- `icon.ico`: application icon.
-- `classroom_toolkit.log`: runtime log file (created on first run).
+- `src/`: 主体代码，WPF 桌面应用与各层项目。
+  - `src/ClassroomToolkit.App/`: WPF UI、XAML、画笔与窗口逻辑。
+  - `src/ClassroomToolkit.Domain/`: 领域模型与核心业务逻辑。
+  - `src/ClassroomToolkit.Services/`: 应用服务层。
+  - `src/ClassroomToolkit.Infra/`: 持久化与配置读取。
+  - `src/ClassroomToolkit.Interop/`: Win32/WPS 交互等互操作代码。
+- `tests/`: 单元测试项目（xUnit）。
+- `student_photos/`、`students.xlsx`、`icon.ico`: 运行时资源与示例数据。
 
 ## Build, Test, and Development Commands
-This project runs directly from source without a build step.
-
-- `python ClassroomToolkit.py`: start the app.
-- `python -m pip install PyQt6`: required GUI dependency.
-- Optional features:
-  - `python -m pip install pandas openpyxl`: enables roll-call workbook support.
-  - `python -m pip install numpy sounddevice`: enables timer alert sounds.
-  - `python -m pip install pyttsx3 comtypes pywin32`: enables TTS on Windows.
+- `dotnet build ClassroomToolkit.sln`：构建全部项目。
+- `dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`：启动桌面应用。
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`：运行单元测试。
 
 ## Coding Style & Naming Conventions
-- Indentation: 4 spaces (PEP 8 style).
-- Naming: classes in `CamelCase`, functions/variables in `snake_case`, constants in `UPPER_SNAKE_CASE`.
-- No formatter or linter is configured in this repo; keep edits consistent with existing style.
+- 缩进 4 空格；保持现有 C# 风格。
+- 命名：类/方法 `PascalCase`，字段/局部变量 `camelCase`，常量 `UPPER_SNAKE_CASE`。
+- 当前未配置格式化工具或 lint；改动需与现有代码风格一致。
 
 ## Testing Guidelines
-There are no automated tests in this repository.
-
-- If you add tests, document the framework and the command to run them in this file.
-- Prefer deterministic, self-contained tests that do not require GUI interaction.
+- 测试框架：xUnit + FluentAssertions（可选 coverlet 收集覆盖率）。
+- 测试位置：`tests/ClassroomToolkit.Tests/`。
+- 运行：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`。
 
 ## Commit & Pull Request Guidelines
-No Git history is available in this directory, so no commit message convention can be inferred.
-
-- Use clear, imperative commit messages (e.g., "Fix roll call save path").
-- PRs should include a brief description, reproduction steps (if fixing a bug), and screenshots/GIFs for UI changes.
+- 当前仓库无既定提交规范，建议使用清晰的祈使式动词，例如：`Fix ink flow calculation`。
+- PR 说明需包含：改动目的、复现/验证步骤；涉及 UI 变更请提供截图或 GIF。
 
 ## Configuration & Data Notes
-- User data persists to `students.xlsx` and `student_photos/`; avoid destructive changes to these paths.
-- Set `CTOOL_NO_STARTUP_DIAG=1` to skip startup diagnostics when debugging launch issues.
+- `students.xlsx` 和 `student_photos/` 为持久数据路径，避免破坏性修改。
+- 如需诊断启动问题，可关注运行日志与相关设置项。
