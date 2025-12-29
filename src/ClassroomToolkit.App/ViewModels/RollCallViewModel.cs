@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
