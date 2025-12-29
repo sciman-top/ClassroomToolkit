@@ -482,7 +482,7 @@ public partial class PaintToolbarWindow : Window
         return parent ?? LogicalTreeHelper.GetParent(obj);
     }
 
-    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         // 只在光标模式下转发键盘事件到演示文稿
         if (_currentMode != PaintToolMode.Cursor)
@@ -491,11 +491,16 @@ public partial class PaintToolbarWindow : Window
         }
         // 只转发演示文稿导航键
         var key = e.Key;
-        bool isNavigationKey = key == Key.Left || key == Key.Right ||
-                               key == Key.Up || key == Key.Down ||
-                               key == Key.PageUp || key == Key.PageDown ||
-                               key == Key.Space || key == Key.Enter ||
-                               key == Key.Home || key == Key.End;
+        bool isNavigationKey = key == System.Windows.Input.Key.Left ||
+                               key == System.Windows.Input.Key.Right ||
+                               key == System.Windows.Input.Key.Up ||
+                               key == System.Windows.Input.Key.Down ||
+                               key == System.Windows.Input.Key.PageUp ||
+                               key == System.Windows.Input.Key.PageDown ||
+                               key == System.Windows.Input.Key.Space ||
+                               key == System.Windows.Input.Key.Enter ||
+                               key == System.Windows.Input.Key.Home ||
+                               key == System.Windows.Input.Key.End;
 
         if (!isNavigationKey)
         {
