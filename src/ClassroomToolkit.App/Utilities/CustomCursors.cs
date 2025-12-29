@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using WpfCursor = System.Windows.Input.Cursor;
 
 namespace ClassroomToolkit.App.Utilities;
 
@@ -13,14 +13,14 @@ namespace ClassroomToolkit.App.Utilities;
 /// </summary>
 public static class CustomCursors
 {
-    private static Cursor? _brushCursor;
-    private static Cursor? _eraserCursor;
-    private static Cursor? _regionEraseCursor;
+    private static WpfCursor? _brushCursor;
+    private static WpfCursor? _eraserCursor;
+    private static WpfCursor? _regionEraseCursor;
 
     /// <summary>
     /// 画笔光标 - 圆形光标，带中心点
     /// </summary>
-    public static Cursor Brush
+    public static WpfCursor Brush
     {
         get
         {
@@ -35,7 +35,7 @@ public static class CustomCursors
     /// <summary>
     /// 橡皮擦光标 - 方形光标，带虚线边框
     /// </summary>
-    public static Cursor Eraser
+    public static WpfCursor Eraser
     {
         get
         {
@@ -50,7 +50,7 @@ public static class CustomCursors
     /// <summary>
     /// 框选擦除光标 - 虚线矩形框光标
     /// </summary>
-    public static Cursor RegionErase
+    public static WpfCursor RegionErase
     {
         get
         {
@@ -62,32 +62,21 @@ public static class CustomCursors
         }
     }
 
-    private static Cursor CreateBrushCursor()
+    private static WpfCursor CreateBrushCursor()
     {
-        // 使用系统光标 Cross 并加上视觉效果
-        return Cursors.Cross;
+        // 使用系统光标 Pen
+        return System.Windows.Input.Cursors.Pen;
     }
 
-    private static Cursor CreateEraserCursor()
+    private static WpfCursor CreateEraserCursor()
     {
-        // 使用自定义的方形光标
-        return CreateCursorFromResource("Eraser");
+        // 使用 ScrollAll 光标
+        return System.Windows.Input.Cursors.ScrollAll;
     }
 
-    private static Cursor CreateRegionEraseCursor()
+    private static WpfCursor CreateRegionEraseCursor()
     {
-        return CreateCursorFromResource("RegionErase");
-    }
-
-    private static Cursor CreateCursorFromResource(string name)
-    {
-        // 由于创建 .cur 文件比较复杂，暂时返回系统光标
-        // 未来可以通过嵌入 .cur 文件资源来实现
-        return name switch
-        {
-            "Eraser" => Cursors.Hand,
-            "RegionErase" => Cursors.UpArrow,
-            _ => Cursors.Arrow
-        };
+        // 使用 UpArrow 光标
+        return System.Windows.Input.Cursors.UpArrow;
     }
 }
