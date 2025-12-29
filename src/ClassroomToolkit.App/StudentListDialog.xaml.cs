@@ -32,9 +32,6 @@ public partial class StudentListDialog : Window
     /// </summary>
     private void AdjustWindowSize()
     {
-        // 固定宽度以支持一行 10 人 (105 * 10 + 边距)
-        Width = 1120;
-
         if (_students.Count == 0) return;
 
         const double itemHeight = 56;  // 对应 XAML 中的 ItemHeight
@@ -57,7 +54,13 @@ public partial class StudentListDialog : Window
         var screenWidth = SystemParameters.WorkArea.Width;
         var maxHeight = screenHeight * 0.85;
 
+        // 设置初始窗口大小，但允许用户调整
+        Width = 1120;
         Height = Math.Min(idealHeight, maxHeight);
+
+        // 设置最小尺寸以确保内容可见
+        MinWidth = 600;
+        MinHeight = Math.Min(400, maxHeight);
 
         // 居中显示
         Left = (screenWidth - Width) / 2;
