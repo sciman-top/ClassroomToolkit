@@ -17,7 +17,7 @@ namespace ClassroomToolkit.App.Tools
         );
 
         private static readonly Regex BorderBrushRegex = new Regex(
-            @"BorderBrush\s*=\s*[""'][^"']*[""']",
+            @"BorderBrush\s*=\s*[""'][^""']*[""']",
             RegexOptions.IgnoreCase
         );
 
