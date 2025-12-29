@@ -47,8 +47,9 @@ public partial class PhotoOverlayWindow : Window
             Hide();
             return;
         }
-        
-        // 先隐藏 Image 控件，避免闪现上一个学生的照片
+
+        // 先隐藏展示区域，避免闪现上一个学生的照片
+        PhotoFrame.Opacity = 0;
         PhotoImage.Visibility = Visibility.Collapsed;
         PhotoImage.Source = null;
         
@@ -76,7 +77,8 @@ public partial class PhotoOverlayWindow : Window
         WindowPlacementHelper.EnsureVisible(this);
 
         Show();
-        
+
+        PhotoFrame.Opacity = 1;
         // 确保新图片加载完成后再显示 Image 控件
         PhotoImage.Visibility = Visibility.Visible;
         

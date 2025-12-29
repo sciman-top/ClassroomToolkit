@@ -132,6 +132,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private bool _cacheDirty = true;
     private List<RibbonGeometry>? _cachedRibbons;
     private List<InkBloomGeometry>? _cachedBlooms;
+    private Geometry? _cachedUnion;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
 
@@ -311,55 +312,23 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         if (_points.Count < 2) return;
 
-        var geometries = GetLastRibbonGeometries();
-        if (geometries == null || geometries.Count == 0) return;
+        var union = GetUnionGeometry();
+        if (union == null) return;
 
-        foreach (var item in geometries)
-        {
-            double ribbonOpacity = GetRibbonOpacity(item.RibbonT);
-            double seepOpacity = Lerp(0.02, 0.045, _lastInkFlow) * ribbonOpacity;
-
-            if (_lastInkFlow > 0.65 && seepOpacity > 0.01 && IsSeepGeometryEligible(item.Geometry))
-            {
-                var seepBrush = new SolidColorBrush(_color)
-                {
-                    Opacity = Math.Clamp(seepOpacity, 0.02, 0.25)
-                };
-                seepBrush.Freeze();
-                dc.DrawGeometry(seepBrush, null, item.Geometry);
-            }
-
-            var brush = new SolidColorBrush(_color)
-            {
-                Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
-            };
-            brush.Freeze();
-            dc.DrawGeometry(brush, null, item.Geometry);
-        }
+        var brush = new SolidColorBrush(_color);
+        brush.Freeze();
+        dc.DrawGeometry(brush, null, union);
     }
 
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var geometries = GetLastRibbonGeometries();
-        if (geometries == null || geometries.Count == 0) return null;
-        if (geometries.Count == 1)
+        var union = GetUnionGeometry();
+        if (union != null)
         {
-            var single = geometries[0].Geometry;
-            if (single != null) single.Freeze();
-            return single;
+            return union;
         }
-
-        var group = new GeometryGroup
-        {
-            FillRule = FillRule.Nonzero
-        };
-        foreach (var item in geometries)
-        {
-            group.Children.Add(item.Geometry);
-        }
-        group.Freeze();
-        return group;
+        return null;
     }
 
     /// <summary>
@@ -439,6 +408,12 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     {
         EnsureGeometryCache();
         return _cachedRibbons == null || _cachedRibbons.Count == 0 ? null : _cachedRibbons;
+    }
+
+    public Geometry? GetUnionGeometry()
+    {
+        EnsureGeometryCache();
+        return _cachedUnion;
     }
 
     public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
@@ -544,6 +519,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _cacheDirty = false;
         _cachedRibbons = null;
         _cachedBlooms = null;
+        _cachedUnion = null;
 
         if (_points.Count < 2)
         {
@@ -561,6 +537,20 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         {
             _cachedBlooms = BuildInkBloomGeometries();
         }
+
+        if (_cachedRibbons.Count > 0)
+        {
+            var group = new GeometryGroup
+            {
+                FillRule = FillRule.Nonzero
+            };
+            foreach (var ribbon in _cachedRibbons)
+            {
+                group.Children.Add(ribbon.Geometry);
+            }
+            group.Freeze();
+            _cachedUnion = group;
+        }
     }
 
     private void MarkGeometryDirty()
@@ -568,6 +558,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _cacheDirty = true;
         _cachedRibbons = null;
         _cachedBlooms = null;
+        _cachedUnion = null;
     }
 
     private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)

@@ -2,37 +2,72 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="设置倒计时"
+        Height="Auto" Width="380"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        SizeToContent="WidthAndHeight">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}">
 
-        <TextBlock Grid.Row="0" Text="分钟 (0-150，滑块 0-25):" Margin="0,0,0,4" />
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBox x:Name="MinutesBox" Width="60" TextChanged="OnMinutesTextChanged" />
-        </StackPanel>
-        <Slider Grid.Row="2" x:Name="MinutesSlider" Minimum="0" Maximum="25"
-                ValueChanged="OnMinutesSliderChanged" Margin="0,0,0,8" />
+    <Border Background="White" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="8" Opacity="0.2"/>
+        </Border.Effect>
 
-        <TextBlock Grid.Row="3" Text="秒 (0-59):" Margin="0,0,0,4" />
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBox x:Name="SecondsBox" Width="60" TextChanged="OnSecondsTextChanged" />
-        </StackPanel>
-        <Slider Grid.Row="5" x:Name="SecondsSlider" Minimum="0" Maximum="59"
-                ValueChanged="OnSecondsSliderChanged" Margin="0,0,0,8" />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title -->
+                <RowDefinition Height="Auto"/> <!-- Mins -->
+                <RowDefinition Height="Auto"/> <!-- Secs -->
+                <RowDefinition Height="Auto"/> <!-- Buttons -->
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="确定" Width="80" Height="32" Margin="0,8,8,0" Click="OnConfirm" />
-            <Button Content="取消" Width="80" Height="32" Margin="0,8,0,0" Click="OnCancel" />
-        </StackPanel>
-    </Grid>
+            <!-- 1. 标题 -->
+            <Grid Grid.Row="0" Margin="0,0,0,0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="设定时间" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="24,0,0,0"/>
+            </Grid>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}"/>
+
+            <!-- 2. 分钟设置 -->
+            <Grid Grid.Row="1" Margin="24,20,24,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="分钟" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                    <TextBox x:Name="MinutesBox" Width="60" HorizontalAlignment="Right" TextAlignment="Center" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}" TextChanged="OnMinutesTextChanged"/>
+                </Grid>
+                
+                <Slider Grid.Row="1" x:Name="MinutesSlider" Minimum="0" Maximum="25"
+                        ValueChanged="OnMinutesSliderChanged" 
+                        IsSnapToTickEnabled="True" TickFrequency="1"/>
+            </Grid>
+
+            <!-- 3. 秒钟设置 -->
+            <Grid Grid.Row="2" Margin="24,10,24,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="秒钟" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                    <TextBox x:Name="SecondsBox" Width="60" HorizontalAlignment="Right" TextAlignment="Center" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}" TextChanged="OnSecondsTextChanged"/>
+                </Grid>
+
+                <Slider Grid.Row="1" x:Name="SecondsSlider" Minimum="0" Maximum="59"
+                        ValueChanged="OnSecondsSliderChanged"
+                        IsSnapToTickEnabled="True" TickFrequency="5"/>
+            </Grid>
+
+            <!-- 4. 按钮 -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,0,24,24">
+                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,12,0" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>

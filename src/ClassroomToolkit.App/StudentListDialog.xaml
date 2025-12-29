@@ -3,24 +3,27 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:ClassroomToolkit.App.Models"
         Title="学生名单"
-        Width="1100"
+        Width="1080"
+        Height="640"
         MinWidth="800"
+        MinHeight="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="{x:Null}"
-        SizeToContent="Manual">
+        Background="{x:Null}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <!-- 学生卡片样式 -->
+        
+        <!-- 本地专用：学生卡片 -->
         <Style x:Key="Style_StudentCard_Modern" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
             <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Margin" Value="6"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -28,16 +31,30 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
+                                CornerRadius="10">
                             <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                <Setter TargetName="bd" Property="Background" Value="White"/>
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                                 <Setter TargetName="bd" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="8" ShadowDepth="0" Opacity="0.2"/>
+                                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="12" ShadowDepth="4" Opacity="0.15"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <!-- 微上浮 -->
+                                <Setter TargetName="bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="-1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                <Setter TargetName="bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
@@ -48,95 +65,93 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Brush_Background}" CornerRadius="12" Margin="15">
+    <!-- 主窗口容器 -->
+    <Border Background="#FAFAFA" CornerRadius="16" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Margin="10">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.15"/>
+            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="10" Opacity="0.25"/>
         </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="50"/>   <!-- Title -->
+                <RowDefinition Height="56"/>   <!-- Title -->
                 <RowDefinition Height="*"/>    <!-- List -->
-                <RowDefinition Height="Auto"/> <!-- Footer -->
+                <RowDefinition Height="50"/>   <!-- Footer -->
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Background="{StaticResource Brush_Background_L2}">
-                <Border CornerRadius="12,12,0,0" Background="{StaticResource Brush_Background_L2}"/>
+            <Grid Grid.Row="0" Background="White" MouseLeftButtonDown="OnTitleBarDrag">
+                <Border CornerRadius="16,16,0,0" Background="White"/>
                 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
-                    <TextBlock Text="学生名单" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
+                    <Border Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="6">
+                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="班级名单" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="12,0,0,0"/>
+                    <TextBlock Text="(点击名字切换状态)" FontSize="13" Foreground="{StaticResource Brush_Text_Tertiary}" VerticalAlignment="Center" Margin="8,2,0,0"/>
                 </StackPanel>
                 
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,10,0" Width="40" Height="40">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,16,0">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
                 </Button>
                 
-                <Border VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+                <Border VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border_Subtle}"/>
             </Grid>
 
-            <!-- 2. 名单区域 -->
-            <ScrollViewer x:Name="ListScrollViewer" Grid.Row="1" Margin="10" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <!-- 2. 名单滚动区 -->
+            <ScrollViewer x:Name="ListScrollViewer" Grid.Row="1" Margin="16" 
+                          HorizontalScrollBarVisibility="Disabled" 
+                          VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="StudentItems">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <!-- 增加宽度至 150，防止名字被截断 -->
-                            <WrapPanel ItemWidth="150" ItemHeight="60" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                            <!-- 稍微加宽卡片，提升容纳力 -->
+                            <WrapPanel ItemWidth="160" ItemHeight="64" Orientation="Horizontal" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:StudentListItem}">
                             <Button Style="{StaticResource Style_StudentCard_Modern}" Click="OnStudentClick" ToolTip="{Binding DisplayText}">
-                                <Grid Margin="10,6">
+                                <Grid Margin="12,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/> <!-- 图标 -->
                                         <ColumnDefinition Width="*"/>    <!-- 文本 -->
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- 状态图标 -->
-                                    <Grid Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
-                                        <!-- 已点名：灰色打勾 -->
-                                        <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Disabled}" 
-                                              Width="20" Height="20" Stretch="Uniform"
-                                              Visibility="{Binding Called, Converter={StaticResource BoolToVis}}"/>
+                                    <!-- 状态指示器 -->
+                                    <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <!-- 已点名 (Called=True)：灰色圆圈 -->
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource Brush_Background_L3}"
+                                                Visibility="{Binding Called, Converter={StaticResource BoolToVis}}">
+                                            <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Disabled}" 
+                                                  Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
                                         
-                                        <!-- 未点名：高亮用户图标 -->
-                                        <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Primary}" 
-                                              Width="20" Height="20" Stretch="Uniform">
-                                            <Path.Style>
-                                                <Style TargetType="Path">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Called}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Path.Style>
-                                        </Path>
+                                        <!-- 未点名 (Called=False)：彩色圆圈 -->
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource Brush_Surface_Tint}"
+                                                Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}">
+                                            <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Primary}" 
+                                                  Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
                                     </Grid>
 
-                                    <!-- 文本信息 -->
+                                    <!-- 信息文本 -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <!-- 姓名：加粗，防止过长截断 -->
                                         <TextBlock Text="{Binding StudentName}" 
-                                                   FontSize="14" FontWeight="SemiBold" 
+                                                   FontSize="15" FontWeight="SemiBold" 
                                                    Foreground="{StaticResource Brush_Text_Primary}"
                                                    TextTrimming="CharacterEllipsis"/>
                                         
-                                        <!-- 学号：小字体，灰色 -->
                                         <TextBlock Text="{Binding StudentId}" 
-                                                   FontSize="11" 
+                                                   FontSize="12" 
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    Margin="0,2,0,0"/>
                                         
-                                        <!-- 已点名时的样式覆盖 -->
+                                        <!-- 整体变灰 (如果已点名) -->
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Called}" Value="True">
-                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                        <Setter Property="Opacity" Value="0.6"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -149,18 +164,22 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- 3. 底部 -->
-            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" CornerRadius="0,0,12,12" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Brush_Border}">
+            <!-- 3. 底部统计与操作 -->
+            <Border Grid.Row="2" Background="White" CornerRadius="0,0,16,16" Padding="24,0" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Brush_Border_Subtle}">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Primary}" Width="12" Height="12" Margin="0,0,6,0"/>
-                        <TextBlock Text="蓝色图标表示本轮未被点名" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Primary}" Margin="0,0,8,0"/>
+                        <TextBlock Text="亮色表示待点名" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
+                        
+                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Disabled}" Margin="0,0,8,0"/>
+                        <TextBlock Text="灰色表示已完成" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     </StackPanel>
                     
-                    <Button Content="关闭" 
+                    <Button Content="关闭窗口" 
                             Style="{StaticResource Style_SecondaryButton}" 
                             HorizontalAlignment="Right" 
-                            Width="80" Height="32"
+                            Padding="20,6"
+                            Height="36"
                             Click="OnCloseClick"/>
                 </Grid>
             </Border>

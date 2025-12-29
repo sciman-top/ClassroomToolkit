@@ -1630,14 +1630,9 @@ public partial class PaintOverlayWindow : Window
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
                 strokeDirection = calligraphyRenderer.LastStrokeDirection;
-                var ribbonGeometries = calligraphyRenderer.GetLastRibbonGeometries();
-                if (ribbonGeometries != null && ribbonGeometries.Count > 0)
+                var unionGeometry = calligraphyRenderer.GetUnionGeometry();
+                if (unionGeometry != null)
                 {
-                    foreach (var ribbon in ribbonGeometries)
-                    {
-                        double ribbonOpacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT);
-                        RenderInkLayers(ribbon.Geometry, color, inkFlow, ribbonOpacity, strokeDirection);
-                    }
                     var blooms = calligraphyRenderer.GetInkBloomGeometries();
                     if (blooms != null)
                     {
@@ -1651,6 +1646,7 @@ public partial class PaintOverlayWindow : Window
                             RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null);
                         }
                     }
+                    RenderInkLayers(unionGeometry, color, inkFlow, 1.0, strokeDirection);
                     return;
                 }
             }
