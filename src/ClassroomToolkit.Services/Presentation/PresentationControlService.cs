@@ -164,6 +164,11 @@ public sealed class PresentationControlService
             var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
             if (!isForeground)
             {
+                PresentationWindowFocus.EnsureForeground(target.Handle);
+                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
+            }
+            if (!isForeground)
+            {
                 plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
             }
         }

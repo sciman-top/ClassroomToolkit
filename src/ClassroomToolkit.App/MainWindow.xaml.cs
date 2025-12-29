@@ -343,7 +343,42 @@ public partial class MainWindow : Window
         {
             Owner = _toolbarWindow != null ? (Window)_toolbarWindow : this
         };
-        var applied = dialog.ShowDialog() == true;
+        
+        // 先修复当前窗口
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
+        }
+        
+        // 立即修复新创建的对话框
+        try
+        {
+            BorderFixHelper.FixAllBorders(dialog);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复 PaintSettingsDialog 完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复 PaintSettingsDialog 失败: {ex.Message}");
+        }
+        
+        // 使用安全显示方法
+        bool? result = null;
+        try
+        {
+            result = dialog.SafeShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 显示失败: {ex.Message}");
+            throw;
+        }
+        
+        var applied = result == true;
         if (applied)
         {
             _settings.ControlMsPpt = dialog.ControlMsPpt;

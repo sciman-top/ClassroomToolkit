@@ -42,8 +42,11 @@
                     <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
                 </Border.Effect>
                 <Grid>
+                    <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
+                    <Border x:Name="LoadingMask" Background="#111" Visibility="Collapsed" Panel.ZIndex="100"/>
+
                     <Image x:Name="PhotoImage" Stretch="Uniform" />
-                    
+
                     <!-- 顶部渐变背景 (用于文字清晰度) -->
                     <Border VerticalAlignment="Top" Height="240">
                         <Border.Background>

@@ -48,16 +48,17 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
-        // 先隐藏展示区域，避免闪现上一个学生的照片
-        var wasVisible = IsVisible;
-        PhotoFrame.Visibility = Visibility.Collapsed;
-        PhotoImage.Visibility = Visibility.Collapsed;
-        PhotoImage.Source = null;
-        if (wasVisible)
+        // 如果窗口已经可见，立即隐藏窗口，完全避免闪现
+        if (IsVisible)
         {
-            Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+            Hide();
+            // 强制处理窗口消息，确保窗口完全隐藏
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
         }
-        
+
+        // 强制清除 Image 控件的内部缓存
+        ClearImageCache();
+
         _currentPhotoPath = path;
         _currentStudentId = studentId?.Trim();
         NameText.Text = studentName ?? string.Empty;
@@ -70,25 +71,34 @@ public partial class PhotoOverlayWindow : Window
         var targetWidth = Math.Max(1, bitmap.PixelWidth * scale);
         var targetHeight = Math.Max(1, bitmap.PixelHeight * scale);
 
-        // 设置新的照片内容
-        PhotoImage.Source = bitmap;
-        PhotoImage.Width = targetWidth;
-        PhotoImage.Height = targetHeight;
-
+        // 设置窗口尺寸和位置
         Width = targetWidth;
         Height = targetHeight;
         Left = screen.X + (screen.Width - targetWidth) / 2;
         Top = screen.Y + (screen.Height - targetHeight) / 2;
         WindowPlacementHelper.EnsureVisible(this);
 
-        if (!IsVisible)
-        {
-            Show();
-        }
+        // 完全重置照片控件状态
+        PhotoImage.Source = null;
+        PhotoImage.Visibility = Visibility.Collapsed;
+        PhotoImage.Width = double.NaN;
+        PhotoImage.Height = double.NaN;
+        PhotoFrame.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = Visibility.Collapsed;
 
+        // 强制 UI 更新，确保重置生效
+        UpdateLayout();
+        
+        // 原子性地设置新照片
+        PhotoImage.Source = bitmap;
+        PhotoImage.Width = targetWidth;
+        PhotoImage.Height = targetHeight;
+
+        // 显示窗口和新照片
+        Show();
         PhotoFrame.Visibility = Visibility.Visible;
         PhotoImage.Visibility = Visibility.Visible;
-        
+
         if (durationSeconds > 0)
         {
             _autoCloseTimer.Interval = TimeSpan.FromSeconds(durationSeconds);
@@ -97,6 +107,19 @@ public partial class PhotoOverlayWindow : Window
         else
         {
             _autoCloseTimer.Stop();
+        }
+    }
+
+    private void ClearImageCache()
+    {
+        // 强制清除 Image 控件的内部缓存
+        if (PhotoImage.Source != null)
+        {
+            PhotoImage.Source = null;
+            // 强制垃圾回收
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
     }
 
@@ -155,8 +178,17 @@ public partial class PhotoOverlayWindow : Window
         }
         try
         {
-            // 强制清除可能的缓存
+            // 强制清除 WPF 图像缓存
             var uri = new Uri(path, UriKind.Absolute);
+            
+            // 清除可能的内存缓存
+            if (BitmapImage.CreateOptions == BitmapCreateOptions.None)
+            {
+                // 强制垃圾回收以释放可能的图像缓存
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
             
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
@@ -166,6 +198,10 @@ public partial class PhotoOverlayWindow : Window
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             bitmap.EndInit();
             bitmap.Freeze();
+            
+            // 再次清理，确保没有残留缓存
+            GC.Collect();
+            
             return bitmap;
         }
         catch

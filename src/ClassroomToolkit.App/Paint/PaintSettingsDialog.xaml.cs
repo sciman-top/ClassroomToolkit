@@ -56,6 +56,18 @@ public partial class PaintSettingsDialog : Window
     public PaintSettingsDialog(AppSettings settings)
     {
         InitializeComponent();
+        
+        // 在构造函数中立即修复 BorderBrush 问题
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("PaintSettingsDialog: 构造函数中修复完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}");
+        }
+        
         BrushColor = settings.BrushColor;
         foreach (var (label, value) in WpsModeChoices)
         {
