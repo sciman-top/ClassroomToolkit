@@ -32,44 +32,36 @@ public partial class StudentListDialog : Window
     /// </summary>
     private void AdjustWindowSize()
     {
-        // 计算需要的卡片布局 - 已更新为美化后的尺寸
-        const double itemWidth = 150;  // WrapPanel ItemWidth
-        const double itemHeight = 60;  // WrapPanel ItemHeight
-        // 注意：WrapPanel 内部是流式布局，Margin 是在 ItemTemplate 里的 Button 上设置的，
-        // 但 WrapPanel 计算时只看 ItemWidth/Height。
-        // 不过由于我们设置了 WrapPanel 的 ItemWidth/Height 属性，它会强制每个 item 占用这个空间。
-        
-        var scrollMargin = (ListScrollViewer?.Margin.Top ?? 10) + (ListScrollViewer?.Margin.Bottom ?? 10);
-        // 标题栏高度 50，底部高度约 52 (Padding 10*2 + Content 32)
-        const double headerHeight = 50; 
-        const double footerHeight = 54; 
-        const double windowBorderMargin = 30; // 窗口阴影外边距 (15*2)
+        // 固定宽度以支持一行 10 人 (105 * 10 + 边距)
+        Width = 1120;
 
-        // 计算可用宽度（减去边距）
-        var rawWidth = ActualWidth > 0 ? ActualWidth : Width;
-        var listAvailableWidth = rawWidth - windowBorderMargin - 20; // 20 is ScrollViewer margin left+right
-        
-        // 计算每行可以放多少个卡片
-        var columns = Math.Max(1, (int)(listAvailableWidth / itemWidth));
+        if (_students.Count == 0) return;
 
-        // 计算需要多少行
-        var rows = Math.Max(1, (int)Math.Ceiling(_students.Count / (double)columns));
+        const double itemHeight = 56;  // 对应 XAML 中的 ItemHeight
+        const double headerHeight = 56;
+        const double footerHeight = 50;
+        const double windowBorderMargin = 20;
 
-        // 计算内容高度
+        // 一行 10 人
+        const int columns = 10;
+        var rows = (int)Math.Ceiling(_students.Count / (double)columns);
+
+        // 计算所需内容高度
         var contentHeight = rows * itemHeight;
-        var minContentHeight = itemHeight;
-        
-        // 限制最大高度
-        var maxWindowHeight = Math.Max(400, SystemParameters.WorkArea.Height - 100);
-        var maxContentHeight = Math.Max(minContentHeight, maxWindowHeight - headerHeight - footerHeight - windowBorderMargin - scrollMargin);
-        
-        contentHeight = Math.Clamp(contentHeight, minContentHeight, maxContentHeight);
 
-        // 计算总高度
-        var totalHeight = headerHeight + contentHeight + footerHeight + windowBorderMargin + scrollMargin;
+        // 计算理想的总高度
+        var idealHeight = headerHeight + contentHeight + footerHeight + windowBorderMargin + 20;
 
-        // 调整窗口高度
-        Height = totalHeight;
+        // 限制最大高度为屏幕高度的 85%
+        var screenHeight = SystemParameters.WorkArea.Height;
+        var screenWidth = SystemParameters.WorkArea.Width;
+        var maxHeight = screenHeight * 0.85;
+
+        Height = Math.Min(idealHeight, maxHeight);
+
+        // 居中显示
+        Left = (screenWidth - Width) / 2;
+        Top = (screenHeight - Height) / 2;
     }
 
     public int? SelectedIndex { get; private set; }

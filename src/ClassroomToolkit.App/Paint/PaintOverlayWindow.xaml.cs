@@ -1631,6 +1631,7 @@ public partial class PaintOverlayWindow : Window
                 inkFlow = calligraphyRenderer.LastInkFlow;
                 strokeDirection = calligraphyRenderer.LastStrokeDirection;
                 var unionGeometry = calligraphyRenderer.GetUnionGeometry();
+                var outerRing = calligraphyRenderer.GetOuterRingGeometry();
                 if (unionGeometry != null)
                 {
                     var blooms = calligraphyRenderer.GetInkBloomGeometries();
@@ -1646,14 +1647,14 @@ public partial class PaintOverlayWindow : Window
                             RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null);
                         }
                     }
-                    RenderInkLayers(unionGeometry, color, inkFlow, 1.0, strokeDirection);
+                    RenderInkLayers(unionGeometry, outerRing, color, inkFlow, strokeDirection);
                     return;
                 }
             }
         }
         if (isCalligraphy)
         {
-            RenderInkLayers(geometry, color, inkFlow, 1.0, strokeDirection);
+            RenderInkLayers(geometry, null, color, inkFlow, strokeDirection);
             return;
         }
         RenderAndBlend(geometry, brush, null, erase: false, null);
@@ -1669,101 +1670,36 @@ public partial class PaintOverlayWindow : Window
         RenderAndBlend(geometry, MediaBrushes.White, null, erase: true, null);
     }
 
-    private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
+    private void RenderInkLayers(Geometry coreGeometry, Geometry? ringGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
     {
-        double seepOpacity = Lerp(0.02, 0.05, inkFlow) * ribbonOpacity;
-        double seepScale = 1.0;
-
-        if (inkFlow > 0.65 && seepOpacity > 0.01 && IsSeepGeometryEligible(geometry))
-        {
-            var seepBrush = new SolidColorBrush(color)
-            {
-                Opacity = Math.Clamp(seepOpacity, 0.02, 0.3)
-            };
-            seepBrush.Freeze();
-            var seepGeometry = CreateScaledGeometry(geometry, seepScale);
-            RenderAndBlend(seepGeometry, seepBrush, null, erase: false, null);
-        }
-
         var solidBrush = new SolidColorBrush(color)
         {
-            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
+            Opacity = 1.0
         };
         solidBrush.Freeze();
-        var mask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection);
-        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
+        RenderAndBlend(coreGeometry, solidBrush, null, erase: false, null);
 
-        if (inkFlow > 0.45 && ribbonOpacity > 0.2 && IsInnerEdgeEligible(geometry))
+        if (ringGeometry == null)
         {
-            double edgeOpacity = Lerp(0.03, 0.09, inkFlow) * ribbonOpacity;
-            double thickness = Math.Max(_brushSize * 0.12, 1.0);
-            var edgeGeometry = BuildInnerEdgeGeometry(geometry, thickness);
-            if (edgeGeometry != null && edgeOpacity > 0.01)
-            {
-                var edgeBrush = new SolidColorBrush(color)
-                {
-                    Opacity = Math.Clamp(edgeOpacity, 0.02, 0.2)
-                };
-                edgeBrush.Freeze();
-                RenderAndBlend(edgeGeometry, edgeBrush, null, erase: false, null);
-            }
+            return;
         }
+
+        double ringOpacity = Lerp(0.02, 0.08, inkFlow);
+        if (ringOpacity <= 0.01 || ringGeometry.Bounds.IsEmpty)
+        {
+            return;
+        }
+
+        var ringBrush = new SolidColorBrush(color)
+        {
+            Opacity = Math.Clamp(ringOpacity, 0.02, 0.2)
+        };
+        ringBrush.Freeze();
+        var mask = BuildInkOpacityMask(ringGeometry.Bounds, inkFlow, strokeDirection);
+        RenderAndBlend(ringGeometry, ringBrush, null, erase: false, mask);
     }
 
-    private static Geometry CreateScaledGeometry(Geometry geometry, double scale)
-    {
-        if (scale <= 1.001 || geometry.Bounds.IsEmpty)
-        {
-            return geometry;
-        }
-
-        var bounds = geometry.Bounds;
-        var clone = geometry.Clone();
-        clone.Transform = new ScaleTransform(
-            scale,
-            scale,
-            bounds.X + (bounds.Width * 0.5),
-            bounds.Y + (bounds.Height * 0.5));
-        clone.Freeze();
-        return clone;
-    }
-
-    private bool IsSeepGeometryEligible(Geometry geometry)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(_brushSize * 0.8, 12.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
-    }
-
-    private bool IsInnerEdgeEligible(Geometry geometry)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(_brushSize * 1.1, 14.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
-    }
-
-    private static Geometry? BuildInnerEdgeGeometry(Geometry geometry, double thickness)
-    {
-        if (geometry.Bounds.IsEmpty || thickness <= 0.1)
-        {
-            return null;
-        }
-        var outline = geometry.GetWidenedPathGeometry(new MediaPen(MediaBrushes.Black, thickness));
-        var inner = Geometry.Combine(geometry, outline, GeometryCombineMode.Intersect, null);
-        if (inner.CanFreeze)
-        {
-            inner.Freeze();
-        }
-        return inner;
-    }
+    
 
     private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask)
     {

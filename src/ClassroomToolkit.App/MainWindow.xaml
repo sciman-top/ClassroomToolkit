@@ -19,9 +19,9 @@
     <Window.Resources>
         <!-- 主功能磁贴样式 -->
         <Style x:Key="Style_HeroTile" TargetType="Button">
-            <Setter Property="Width" Value="110"/>
-            <Setter Property="Height" Value="110"/>
-            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Width" Value="86"/>
+            <Setter Property="Height" Value="86"/>
+            <Setter Property="Margin" Value="6"/>
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -30,35 +30,35 @@
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <!-- 阴影层 -->
-                            <Border x:Name="shadow" CornerRadius="24" Background="White" Margin="4">
+                            <Border x:Name="shadow" CornerRadius="18" Background="White" Margin="3">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#B0C4DE" BlurRadius="15" ShadowDepth="5" Opacity="0.2"/>
+                                    <DropShadowEffect Color="#B0C4DE" BlurRadius="12" ShadowDepth="4" Opacity="0.18"/>
                                 </Border.Effect>
                             </Border>
 
                             <!-- 主体卡片 -->
                             <Border x:Name="border" 
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="20"
+                                    CornerRadius="16"
                                     BorderBrush="{StaticResource Brush_Border_Subtle}"
                                     BorderThickness="1"
-                                    Margin="4">
+                                    Margin="3">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="16"/>
+                                        <RowDefinition Height="12"/>
                                     </Grid.RowDefinitions>
 
                                     <!-- 图标区域 -->
                                     <Border Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                            Width="56" Height="56" CornerRadius="28"
+                                            Width="42" Height="42" CornerRadius="21"
                                             Background="{StaticResource Brush_Surface_Tint}">
                                         <Path x:Name="icon" 
                                               Data="{TemplateBinding Tag}" 
                                               Fill="{StaticResource Brush_Primary}" 
                                               Stretch="Uniform" 
-                                              Width="28" Height="28"
+                                              Width="20" Height="20"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 
@@ -67,7 +67,7 @@
                                                Text="{TemplateBinding Content}" 
                                                HorizontalAlignment="Center"
                                                FontFamily="Microsoft YaHei UI"
-                                               FontSize="14"
+                                               FontSize="13"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource Brush_Text_Primary}"/>
                                 </Grid>
@@ -79,24 +79,24 @@
                                 <!-- 悬停：卡片上浮，图标变色 -->
                                 <Setter TargetName="border" Property="RenderTransform">
                                     <Setter.Value>
-                                        <TranslateTransform Y="-4"/>
+                                        <TranslateTransform Y="-3"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="shadow" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="25" ShadowDepth="10" Opacity="0.3"/>
+                                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="20" ShadowDepth="8" Opacity="0.25"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                                 <!-- 图标反白高亮 -->
                                 <Setter TargetName="icon" Property="Fill" Value="White"/>
-                                <Setter TargetName="icon" Property="Width" Value="32"/> <!-- 微缩放 -->
-                                <Setter TargetName="icon" Property="Height" Value="32"/>
+                                <Setter TargetName="icon" Property="Width" Value="24"/> <!-- 微缩放 -->
+                                <Setter TargetName="icon" Property="Height" Value="24"/>
                                 <!-- 图标背景变渐变 -->
                                 <Setter TargetName="icon" Property="Fill" Value="White"/>
                                 <Setter TargetName="icon" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="White" BlurRadius="10" Opacity="0.5"/>
+                                        <DropShadowEffect Color="White" BlurRadius="8" Opacity="0.5"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
@@ -189,7 +189,7 @@
 
     <!-- 主布局容器 -->
     <Border x:Name="MainContainer"
-            CornerRadius="28"
+            CornerRadius="22"
             Background="#FDFDFD"
             BorderThickness="1"
             BorderBrush="{StaticResource Brush_White_Translucent_Low}"
@@ -197,10 +197,10 @@
         
         <Border.Effect>
             <!-- 全局环境光阴影 -->
-            <DropShadowEffect Color="#8899AA" BlurRadius="40" ShadowDepth="15" Opacity="0.3"/>
+            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="10" Opacity="0.25"/>
         </Border.Effect>
 
-        <Grid Margin="6">
+        <Grid Margin="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- 拖拽条 -->
                 <RowDefinition Height="Auto"/> <!-- 功能区 -->
@@ -208,15 +208,15 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 顶部装饰 (拖拽把手) -->
-            <Grid Grid.Row="0" Height="16" Background="Transparent" VerticalAlignment="Top">
-                <Rectangle Width="36" Height="4" RadiusX="2" RadiusY="2" 
+            <Grid Grid.Row="0" Height="12" Background="Transparent" VerticalAlignment="Top">
+                <Rectangle Width="32" Height="3" RadiusX="1.5" RadiusY="1.5" 
                            Fill="{StaticResource Brush_Border}" 
-                           Opacity="0.8" 
+                           Opacity="0.6" 
                            VerticalAlignment="Center" HorizontalAlignment="Center"/>
             </Grid>
 
             <!-- 2. 核心功能区 -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="6,0,6,8">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,4,6">
                 <!-- 屏幕画笔 -->
                 <Button x:Name="PaintButton" 
                         Style="{StaticResource Style_HeroTile}"
@@ -239,9 +239,9 @@
             <!-- 3. 底部工具栏 -->
             <Border Grid.Row="2" 
                     Background="{StaticResource Brush_Surface_Tint}" 
-                    CornerRadius="14" 
-                    Padding="6,4" 
-                    Margin="12,0,12,8">
+                    CornerRadius="12" 
+                    Padding="4,2" 
+                    Margin="8,0,8,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

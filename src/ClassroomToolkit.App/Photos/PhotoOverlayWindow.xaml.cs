@@ -49,9 +49,14 @@ public partial class PhotoOverlayWindow : Window
         }
 
         // 先隐藏展示区域，避免闪现上一个学生的照片
-        PhotoFrame.Opacity = 0;
+        var wasVisible = IsVisible;
+        PhotoFrame.Visibility = Visibility.Collapsed;
         PhotoImage.Visibility = Visibility.Collapsed;
         PhotoImage.Source = null;
+        if (wasVisible)
+        {
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+        }
         
         _currentPhotoPath = path;
         _currentStudentId = studentId?.Trim();
@@ -76,10 +81,12 @@ public partial class PhotoOverlayWindow : Window
         Top = screen.Y + (screen.Height - targetHeight) / 2;
         WindowPlacementHelper.EnsureVisible(this);
 
-        Show();
+        if (!IsVisible)
+        {
+            Show();
+        }
 
-        PhotoFrame.Opacity = 1;
-        // 确保新图片加载完成后再显示 Image 控件
+        PhotoFrame.Visibility = Visibility.Visible;
         PhotoImage.Visibility = Visibility.Visible;
         
         if (durationSeconds > 0)

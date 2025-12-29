@@ -73,6 +73,9 @@ public class BrushPhysicsConfig
     public double InkBloomMinSpacingFactor { get; set; } = 0.35;
     public int InkBloomMaxCount { get; set; } = 12;
 
+    // 外圈纹理参数
+    public double OuterRingThicknessFactor { get; set; } = 0.24;
+
     public static BrushPhysicsConfig DefaultSmooth => new();
 }
 
@@ -133,6 +136,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private List<RibbonGeometry>? _cachedRibbons;
     private List<InkBloomGeometry>? _cachedBlooms;
     private Geometry? _cachedUnion;
+    private Geometry? _cachedOuterRing;
 
     private readonly BrushPhysicsConfig _config = BrushPhysicsConfig.DefaultSmooth;
 
@@ -416,6 +420,12 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         return _cachedUnion;
     }
 
+    public Geometry? GetOuterRingGeometry()
+    {
+        EnsureGeometryCache();
+        return _cachedOuterRing;
+    }
+
     public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
     {
         EnsureGeometryCache();
@@ -520,6 +530,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _cachedRibbons = null;
         _cachedBlooms = null;
         _cachedUnion = null;
+        _cachedOuterRing = null;
 
         if (_points.Count < 2)
         {
@@ -551,6 +562,19 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             group.Freeze();
             _cachedUnion = group;
         }
+
+        if (_cachedUnion != null)
+        {
+            double ringThickness = Math.Max(_baseSize * _config.OuterRingThicknessFactor, 0.5);
+            var widened = _cachedUnion.GetWidenedPathGeometry(new Pen(Brushes.Black, ringThickness));
+            var ring = Geometry.Combine(widened, _cachedUnion, GeometryCombineMode.Exclude, null);
+            ring.FillRule = FillRule.Nonzero;
+            if (ring.CanFreeze)
+            {
+                ring.Freeze();
+            }
+            _cachedOuterRing = ring;
+        }
     }
 
     private void MarkGeometryDirty()
@@ -559,6 +583,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         _cachedRibbons = null;
         _cachedBlooms = null;
         _cachedUnion = null;
+        _cachedOuterRing = null;
     }
 
     private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
