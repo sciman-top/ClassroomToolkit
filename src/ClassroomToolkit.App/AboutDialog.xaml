@@ -34,15 +34,16 @@
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 - 浅蓝背景点缀版 -->
-            <Border Grid.Row="1" Margin="22" Background="#FAFBFF" CornerRadius="8" Padding="20,16">
+            <Border Grid.Row="1" Margin="22" Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="20,16">
                 <StackPanel>
                     <!-- App Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Accent}" Margin="0,0,14,0">
+                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Primary}" Margin="0,0,14,0">
                             <Border.Effect>
                                 <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.22"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- 使用 Icon_RollCall 代替 Icon_Apps，因为更符合主视觉 -->
+                            <Path Data="{StaticResource Icon_RollCall}" Fill="White" Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}"/>

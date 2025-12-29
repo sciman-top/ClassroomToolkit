@@ -6,6 +6,20 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        SizeToContent="WidthAndHeight">
-    <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" Margin="10" />
+        SizeToContent="WidthAndHeight"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}">
+
+    <Border Background="White" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
+            MouseLeftButtonDown="OnTitleBarDrag">
+        <Border.Effect>
+            <DropShadowEffect Color="#8899AA" BlurRadius="20" ShadowDepth="5" Opacity="0.2"/>
+        </Border.Effect>
+
+        <StackPanel Margin="16">
+            <TextBlock Text="选择画板颜色" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12"/>
+            <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
+        </StackPanel>
+    </Border>
 </Window>

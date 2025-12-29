@@ -59,6 +59,9 @@
     <Color x:Key="Color_Background_L3">#DFE4EA</Color>
     <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Background_L3}" PresentationOptions:Freeze="true"/>
 
+    <!-- 极深背景 (用于计时器黑屏等) -->
+    <SolidColorBrush x:Key="Brush_Background_Dark" Color="#1A1F2C" PresentationOptions:Freeze="true"/>
+
     <!-- 悬停/高亮背景 (极浅的品牌色) -->
     <Color x:Key="Color_Surface_Tint">#F0F8FF</Color>
     <SolidColorBrush x:Key="Brush_Surface_Tint" Color="{StaticResource Color_Surface_Tint}" PresentationOptions:Freeze="true"/>
@@ -90,6 +93,11 @@
     <Color x:Key="Color_Border">#E1E5EB</Color>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Medium" Color="#D1D8E0" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#F1F2F6" PresentationOptions:Freeze="true"/>
+
+    <!-- 半透明白色画笔 -->
+    <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
 
     <!-- ========== 特效画笔 (Gradients & Effects) ========== -->
 
@@ -110,6 +118,16 @@
         <GradientStop Color="#11998e" Offset="0"/>
         <GradientStop Color="#38ef7d" Offset="1"/>
     </LinearGradientBrush>
+
+    <!-- 计时器霓虹色 -->
+    <Color x:Key="Color_Timer_Neon">#00FFAA</Color>
+    <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
+
+    <!-- 画笔预设色 -->
+    <Color x:Key="Color_Pen_Red">#FF3B30</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Red" Color="{StaticResource Color_Pen_Red}" PresentationOptions:Freeze="true"/>
+    <Color x:Key="Color_Pen_Blue">#007ACC</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Blue" Color="{StaticResource Color_Pen_Blue}" PresentationOptions:Freeze="true"/>
 
     <!-- 白色玻璃态背景 -->
     <SolidColorBrush x:Key="Brush_Glass_White" Color="#F2FFFFFF" PresentationOptions:Freeze="true"/>

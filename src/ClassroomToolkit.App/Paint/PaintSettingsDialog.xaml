@@ -46,9 +46,9 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#FAFBFF" CornerRadius="10" Margin="8" BorderBrush="#E8EEF8" BorderThickness="1">
+    <Border Background="White" CornerRadius="12" Margin="8" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="#4A90E2" BlurRadius="25" ShadowDepth="4" Opacity="0.15"/>
+            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="10" Opacity="0.2"/>
         </Border.Effect>
 
         <Grid>
@@ -58,69 +58,69 @@
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
-            <!-- 1. 标题栏 - 精致版 -->
-            <Grid Grid.Row="0" Height="44" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="画笔设置" FontWeight="SemiBold" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="15"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,8,0">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="11" Height="11"/>
+            <!-- 1. 标题栏 -->
+            <Grid Grid.Row="0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="画笔设置" FontWeight="SemiBold" Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="16"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,12,0" Width="32" Height="32">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#E8EEF8" Margin="0,0,0,0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}"/>
 
-            <!-- 2. 内容 - 精美版 -->
-            <StackPanel Grid.Row="1" Margin="16,12,16,12">
+            <!-- 2. 内容 -->
+            <StackPanel Grid.Row="1" Margin="20,16">
 
                 <!-- 基础画笔参数 -->
-                <TextBlock Text="笔画设置" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                <TextBlock Text="笔画设置" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,14" FontSize="14"/>
 
-                <Grid Margin="0,0,0,10">
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="笔触风格" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="30" FontSize="12"/>
-                </Grid>
-
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="笔画粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <Slider Grid.Column="1" x:Name="BrushSizeSlider" Minimum="1" Maximum="50" ValueChanged="OnBrushSizeChanged"/>
-                    <TextBlock Grid.Column="2" x:Name="BrushSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                </Grid>
-
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="不透明度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <Slider Grid.Column="1" x:Name="BrushOpacitySlider" Minimum="0" Maximum="100" ValueChanged="OnBrushOpacityChanged"/>
-                    <TextBlock Grid.Column="2" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                    <TextBlock Text="笔触风格" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="34"/>
                 </Grid>
 
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="40"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="橡皮粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                    <TextBlock Text="笔画粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <Slider Grid.Column="1" x:Name="BrushSizeSlider" Minimum="1" Maximum="50" ValueChanged="OnBrushSizeChanged"/>
+                    <TextBlock Grid.Column="2" x:Name="BrushSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="不透明度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <Slider Grid.Column="1" x:Name="BrushOpacitySlider" Minimum="0" Maximum="100" ValueChanged="OnBrushOpacityChanged"/>
+                    <TextBlock Grid.Column="2" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="橡皮粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     <Slider Grid.Column="1" x:Name="EraserSizeSlider" Minimum="6" Maximum="60" ValueChanged="OnEraserSizeChanged"/>
-                    <TextBlock Grid.Column="2" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                    <TextBlock Grid.Column="2" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                 <!-- 临时颜色 -->
-                <TextBlock Text="临时换色" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,10" FontSize="13"/>
-                <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="临时换色" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,4,0,12" FontSize="14"/>
+                <WrapPanel Orientation="Horizontal" Margin="0,0,0,16">
                     <Button Tag="#000000" Background="#000000" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="黑"/>
-                    <Button Tag="#FF0000" Background="#FF0000" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="红"/>
-                    <Button Tag="#1E90FF" Background="#1E90FF" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="蓝"/>
+                    <Button Tag="#FF3B30" Background="#FF3B30" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="红"/>
+                    <Button Tag="#007ACC" Background="#007ACC" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="蓝"/>
                     <Button Tag="#24B47E" Background="#24B47E" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="绿"/>
                     <Button Tag="#FFFF00" Background="#FFFF00" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="黄"/>
                     <Button Tag="#FFA500" Background="#FFA500" Style="{StaticResource Style_TempColorButton}" Click="OnTempColorClick" ToolTip="橙"/>
@@ -129,33 +129,33 @@
                 </WrapPanel>
 
                 <!-- 其他设置 -->
-                <TextBlock Text="界面与功能" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,10" FontSize="13"/>
+                <TextBlock Text="界面与功能" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,4,0,12" FontSize="14"/>
 
-                <Grid Margin="0,0,0,10">
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="30" FontSize="12"/>
+                    <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="34"/>
                 </Grid>
 
-                <Grid Margin="0,0,0,10">
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                    <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="30" FontSize="12"/>
+                    <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="34"/>
                 </Grid>
 
-                <CheckBox x:Name="ForceForegroundCheck" Content="检测到全屏放映时自动切到前台" Margin="0,4,0,10" FontSize="12"/>
+                <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Margin="0,6,0,16"/>
 
                 <!-- WPS -->
-                <Border BorderThickness="1" BorderBrush="#E8EEF8" CornerRadius="8" Padding="12" Margin="0,4,0,0" Background="White">
+                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,4,0,0" Background="White">
                     <StackPanel>
-                        <TextBlock Text="WPS 兼容性" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8" FontSize="13"/>
-                        <Grid Margin="0,0,0,8">
+                        <TextBlock Text="WPS 兼容性" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                        <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="80"/>
                                 <ColumnDefinition Width="*"/>
@@ -163,15 +163,15 @@
                             <TextBlock Text="兼容策略" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                             <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="30" FontSize="12"/>
                         </Grid>
-                        <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键（解决无动画问题）" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                        <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
 
             <!-- 3. 按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="80" Margin="0,0,10,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="80" Click="OnConfirm"/>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,0,20,20">
+                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,12,0" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>
