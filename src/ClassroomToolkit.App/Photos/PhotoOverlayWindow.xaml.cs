@@ -18,7 +18,7 @@ public partial class PhotoOverlayWindow : Window
     public PhotoOverlayWindow()
     {
         InitializeComponent();
-        ShowActivated = false;
+        ShowActivated = true;
         Focusable = false;
         _autoCloseTimer = new DispatcherTimer
         {

@@ -81,6 +81,7 @@ public partial class PaintOverlayWindow : Window
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = DateTime.MinValue;
     private readonly List<RasterSnapshot> _history = new();
+    private PaintToolbarWindow? _toolbarWindow;
 
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
     private IBrushRenderer? _activeRenderer;
@@ -256,6 +257,11 @@ public partial class PaintOverlayWindow : Window
     {
         _boardColor = color;
         UpdateBoardBackground();
+    }
+
+    public void SetToolbar(PaintToolbarWindow? toolbar)
+    {
+        _toolbarWindow = toolbar;
     }
 
     public void ClearAll()
@@ -891,11 +897,31 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        // 如果工具栏窗口正在活动，不恢复焦点到演示窗口
+        if (IsToolbarWindowActive())
+        {
+            return;
+        }
         var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
         if (restored)
         {
             _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
         }
+    }
+
+    private bool IsToolbarWindowActive()
+    {
+        if (_toolbarWindow == null || !_toolbarWindow.IsVisible)
+        {
+            return false;
+        }
+        var foreground = GetForegroundWindow();
+        if (foreground == IntPtr.Zero)
+        {
+            return false;
+        }
+        var toolbarHwnd = new WindowInteropHelper(_toolbarWindow).Handle;
+        return foreground == toolbarHwnd;
     }
 
     private bool IsForegroundOwnedByCurrentProcess()
@@ -1758,17 +1784,17 @@ public partial class PaintOverlayWindow : Window
         var radial = new RadialGradientBrush
         {
             MappingMode = BrushMappingMode.Absolute,
-            Center = new Point(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
-            GradientOrigin = new Point(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
+            Center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
+            GradientOrigin = new WpfPoint(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
             RadiusX = bounds.Width * 0.55,
             RadiusY = bounds.Height * 0.55
         };
-        radial.GradientStops.Add(new GradientStop(Color.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
-        radial.GradientStops.Add(new GradientStop(Color.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
+        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
+        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
         radial.Freeze();
 
         var group = new DrawingGroup();
-        group.Children.Add(new GeometryDrawing(Brushes.White, null, new RectangleGeometry(bounds)));
+        group.Children.Add(new GeometryDrawing(MediaBrushes.White, null, new RectangleGeometry(bounds)));
         group.Children.Add(new GeometryDrawing(radial, null, new RectangleGeometry(bounds)));
         group.Children.Add(new GeometryDrawing(texture, null, new RectangleGeometry(bounds)));
         group.Freeze();
