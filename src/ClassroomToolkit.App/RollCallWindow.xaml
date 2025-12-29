@@ -148,7 +148,7 @@
                                 <Border.Effect>
                                     <DropShadowEffect Color="#8899AA" BlurRadius="20" ShadowDepth="8" Opacity="0.2"/>
                                 </Border.Effect>
-                                <Border CornerRadius="12" ClipToBounds="True">
+                                <Border CornerRadius="12" ClipToBounds="True" BorderBrush="Transparent">
                                     <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill"/>
                                 </Border>
                             </Border>
@@ -158,7 +158,7 @@
 
                 <!-- B. 计时视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-                    <Border Background="{StaticResource Brush_Background_Dark}" CornerRadius="24">
+                    <Border Background="{StaticResource Brush_Background_Dark}" CornerRadius="24" BorderBrush="Transparent">
                          <Border.Effect>
                             <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="50" ShadowDepth="0" Opacity="0.2"/>
                         </Border.Effect>

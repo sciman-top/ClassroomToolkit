@@ -34,11 +34,11 @@
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 - 浅蓝背景点缀版 -->
-            <Border Grid.Row="1" Margin="22" Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="20,16">
+            <Border Grid.Row="1" Margin="22" Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="20,16" BorderBrush="Transparent">
                 <StackPanel>
                     <!-- App Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Primary}" Margin="0,0,14,0">
+                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Primary}" Margin="0,0,14,0" BorderBrush="Transparent">
                             <Border.Effect>
                                 <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.22"/>
                             </Border.Effect>

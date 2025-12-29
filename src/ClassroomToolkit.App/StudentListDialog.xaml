@@ -82,10 +82,10 @@
 
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Background="White" MouseLeftButtonDown="OnTitleBarDrag">
-                <Border CornerRadius="16,16,0,0" Background="White"/>
+                <Border CornerRadius="16,16,0,0" Background="White" BorderBrush="Transparent"/>
                 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
-                    <Border Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="6">
+                    <Border Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="6" BorderBrush="Transparent">
                         <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="班级名单" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="12,0,0,0"/>
@@ -121,13 +121,13 @@
                                     <!-- 状态指示器 - 缩小尺寸 -->
                                     <Grid Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center">
                                         <Border Width="24" Height="24" CornerRadius="12" Background="{StaticResource Brush_Background_L3}"
-                                                Visibility="{Binding Called, Converter={StaticResource BoolToVis}}">
+                                                Visibility="{Binding Called, Converter={StaticResource BoolToVis}}" BorderBrush="Transparent">
                                             <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Disabled}" 
                                                   Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         
                                         <Border Width="24" Height="24" CornerRadius="12" Background="{StaticResource Brush_Surface_Tint}"
-                                                Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}">
+                                                Visibility="{Binding Called, Converter={StaticResource InverseBoolToVis}}" BorderBrush="Transparent">
                                             <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Primary}" 
                                                   Width="12" Height="12" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
@@ -167,10 +167,10 @@
             <Border Grid.Row="2" Background="White" CornerRadius="0,0,16,16" Padding="24,0" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Brush_Border_Subtle}">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Primary}" Margin="0,0,8,0"/>
+                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Primary}" Margin="0,0,8,0" BorderBrush="Transparent"/>
                         <TextBlock Text="亮色表示待点名" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
                         
-                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Disabled}" Margin="0,0,8,0"/>
+                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Disabled}" Margin="0,0,8,0" BorderBrush="Transparent"/>
                         <TextBlock Text="灰色表示已完成" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     </StackPanel>
                     

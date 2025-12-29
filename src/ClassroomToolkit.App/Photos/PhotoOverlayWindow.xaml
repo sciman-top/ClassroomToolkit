@@ -37,7 +37,7 @@
         <Border Background="#F2000000" MouseLeftButtonDown="OnCloseClick"/>
 
         <Grid Margin="40">
-            <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True">
+            <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True" BorderBrush="Transparent">
                 <Border.Effect>
                     <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
                 </Border.Effect>

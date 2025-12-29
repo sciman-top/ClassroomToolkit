@@ -21,8 +21,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border x:Name="border"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush, FallbackValue={StaticResource Brush_Border}}"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=White}"
+                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue={StaticResource Brush_Border}}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="6">
                         <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
@@ -86,6 +86,7 @@
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
                             CornerRadius="8"
+                            BorderBrush="Transparent"
                             SnapsToDevicePixels="True">
                         <Border.Effect>
                             <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="4" Opacity="0.3"/>
@@ -140,8 +141,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush, FallbackValue={StaticResource Brush_Border_Medium}}"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=White}"
+                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue={StaticResource Brush_Border_Medium}}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="8">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
@@ -171,7 +172,7 @@
         <Setter Property="Template">
              <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent">
                         <Border.Effect>
                             <DropShadowEffect Color="{StaticResource Color_Danger}" BlurRadius="10" ShadowDepth="4" Opacity="0.3"/>
                         </Border.Effect>
@@ -200,7 +201,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="Transparent">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -229,7 +230,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" BorderBrush="Transparent">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>

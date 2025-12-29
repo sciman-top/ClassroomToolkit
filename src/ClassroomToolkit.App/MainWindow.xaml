@@ -30,7 +30,7 @@
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <!-- 阴影层 -->
-                            <Border x:Name="shadow" CornerRadius="18" Background="White" Margin="3">
+                            <Border x:Name="shadow" CornerRadius="18" Background="White" Margin="3" BorderBrush="Transparent">
                                 <Border.Effect>
                                     <DropShadowEffect Color="#B0C4DE" BlurRadius="12" ShadowDepth="4" Opacity="0.18"/>
                                 </Border.Effect>
@@ -146,7 +146,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}">
+                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="Transparent">
                             <Path x:Name="ico" Data="{TemplateBinding Tag}" Fill="{StaticResource Brush_Text_Secondary}" 
                                   Stretch="Uniform" Width="18" Height="18" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -169,7 +169,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}">
+                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="Transparent">
                             <Path x:Name="ico" Data="{TemplateBinding Tag}" Fill="{StaticResource Brush_Text_Secondary}" 
                                   Stretch="Uniform" Width="18" Height="18" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>

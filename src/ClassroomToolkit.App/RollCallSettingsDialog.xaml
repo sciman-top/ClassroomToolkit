@@ -44,7 +44,7 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TabItem">
-                                    <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                    <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" BorderBrush="Transparent">
                                         <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>

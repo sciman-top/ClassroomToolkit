@@ -21,7 +21,7 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Border Background="White" CornerRadius="8" Margin="10">
+    <Border Background="White" BorderBrush="#E0E0E0" CornerRadius="8" Margin="10">
         <Border.Effect>
             <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.2"/>
         </Border.Effect>

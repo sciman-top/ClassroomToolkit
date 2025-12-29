@@ -95,7 +95,7 @@
             <Rectangle Width="8" Fill="Transparent"/>
 
             <!-- 3. 颜色组 -->
-            <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="18" Padding="6,4">
+            <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="18" Padding="6,4" BorderBrush="Transparent">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0" 
                                   Style="{StaticResource Style_ColorBubble}" 
@@ -117,7 +117,7 @@
             <Rectangle Width="8" Fill="Transparent"/>
 
             <!-- 4. 擦除组 -->
-            <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="18" Padding="6,4">
+            <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="18" Padding="6,4" BorderBrush="Transparent">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_IconButton_Active}" Checked="OnModeChecked" Unchecked="OnModeUnchecked" ToolTip="橡皮擦">
                         <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="20" Height="20"/>

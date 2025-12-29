@@ -15,7 +15,20 @@ public partial class DiagnosticsDialog : Window
         SummaryText.Text = result.Summary;
         DetailBox.Text = result.Detail;
         SuggestionBox.Text = string.IsNullOrWhiteSpace(result.Suggestion) ? "暂无建议。" : result.Suggestion;
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += (_, _) => 
+        {
+            WindowPlacementHelper.EnsureVisible(this);
+            
+            // 诊断 BorderBrush 问题
+            try
+            {
+                BorderBrushDiagnostic.CheckAllBorders(this);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BorderBrush 诊断失败: {ex.Message}");
+            }
+        };
     }
 
     private void OnCopyClick(object sender, RoutedEventArgs e)
