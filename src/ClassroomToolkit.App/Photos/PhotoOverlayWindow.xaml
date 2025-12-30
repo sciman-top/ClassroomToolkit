@@ -3,43 +3,74 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent"
+        Background="{x:Null}"
         ShowInTaskbar="False"
         Topmost="True"
+        WindowState="Maximized"
         ResizeMode="NoResize">
+    
+    <Window.Resources>
+        <Style x:Key="Style_ModernCloseButton" TargetType="Button">
+            <Setter Property="Width" Value="56"/>
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="Background" Value="#40000000"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="28" Background="{TemplateBinding Background}" BorderBrush="#20FFFFFF" BorderThickness="1">
+                            <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="20" Height="20" 
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#80000000"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
-        <Border x:Name="PhotoBorder" Background="Transparent">
-            <Grid>
-                <Image x:Name="PhotoImage" Stretch="Uniform" />
-                <TextBlock x:Name="NameText"
-                           Foreground="#F0F2F5"
-                           FontSize="48"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Top"
-                           Margin="20,24,20,0" />
-                <Grid VerticalAlignment="Bottom" Margin="20,0,20,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="CloseButtonLeft"
-                            Grid.Column="0"
-                            Content="关闭"
-                            Width="60"
-                            Height="26"
-                            Click="OnCloseClick" />
-                    <Button x:Name="CloseButtonRight"
-                            Grid.Column="2"
-                            Content="关闭"
-                            Width="60"
-                            Height="26"
-                            Click="OnCloseClick" />
+        <Border Background="#F2000000" MouseLeftButtonDown="OnCloseClick"/>
+
+        <Grid Margin="40">
+            <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True" BorderBrush="Transparent">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
+                    <Border x:Name="LoadingMask" Background="#111" Visibility="Collapsed" Panel.ZIndex="100"/>
+
+                    <Image x:Name="PhotoImage" Stretch="Uniform" />
+
+                    <!-- 顶部渐变背景 (用于文字清晰度) -->
+                    <Border VerticalAlignment="Top" Height="240">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                                <GradientStop Color="Transparent" Offset="0"/>
+                                <GradientStop Color="#CC000000" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+
+                    <!-- 学生姓名 (移动到顶部) -->
+                    <TextBlock x:Name="NameText" Foreground="White" FontSize="120" FontWeight="Black"
+                               TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top"
+                               Margin="0,60,0,0">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+
+            <!-- 仅保留底部关闭辅助按钮 -->
+            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="20,0,0,20" Click="OnCloseClick" Opacity="0.3"/>
+            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Click="OnCloseClick" Opacity="0.3"/>
+        </Grid>
     </Grid>
 </Window>

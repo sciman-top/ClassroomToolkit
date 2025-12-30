@@ -56,7 +56,6 @@ public partial class MainWindow : Window
     {
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
-        UpdateButtonMetrics();
         ScheduleAutoExitTimer();
         if (_settings.LauncherMinimized)
         {
@@ -213,6 +212,10 @@ public partial class MainWindow : Window
 
         _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+        _overlayWindow.SetBrushStyle(_settings.BrushStyle);
+        _overlayWindow.SetCalligraphyOptions(
+            _settings.CalligraphyInkBloomEnabled,
+            _settings.CalligraphySealEnabled);
         _overlayWindow.SetEraserSize(_settings.EraserSize);
         _overlayWindow.SetShapeType(_settings.ShapeType);
         if (_toolbarWindow.BoardActive)
@@ -340,7 +343,42 @@ public partial class MainWindow : Window
         {
             Owner = _toolbarWindow != null ? (Window)_toolbarWindow : this
         };
-        var applied = dialog.ShowDialog() == true;
+        
+        // 先修复当前窗口
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
+        }
+        
+        // 立即修复新创建的对话框
+        try
+        {
+            BorderFixHelper.FixAllBorders(dialog);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复 PaintSettingsDialog 完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复 PaintSettingsDialog 失败: {ex.Message}");
+        }
+        
+        // 使用安全显示方法
+        bool? result = null;
+        try
+        {
+            result = dialog.SafeShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 显示失败: {ex.Message}");
+            throw;
+        }
+        
+        var applied = result == true;
         if (applied)
         {
             _settings.ControlMsPpt = dialog.ControlMsPpt;
@@ -350,6 +388,9 @@ public partial class MainWindow : Window
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
+            _settings.BrushStyle = dialog.BrushStyle;
+            _settings.CalligraphyInkBloomEnabled = dialog.CalligraphyInkBloomEnabled;
+            _settings.CalligraphySealEnabled = dialog.CalligraphySealEnabled;
             _settings.EraserSize = dialog.EraserSize;
             _settings.BoardOpacity = 255;
             _settings.ShapeType = dialog.ShapeType;
@@ -364,6 +405,10 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
+                _overlayWindow.SetBrushStyle(_settings.BrushStyle);
+                _overlayWindow.SetCalligraphyOptions(
+                    _settings.CalligraphyInkBloomEnabled,
+                    _settings.CalligraphySealEnabled);
                 _overlayWindow.SetEraserSize(_settings.EraserSize);
                 _overlayWindow.SetShapeType(_settings.ShapeType);
                 _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
@@ -401,7 +446,42 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        if (dialog.ShowDialog() != true)
+        
+        // 先修复当前窗口
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
+        }
+        
+        // 立即修复新创建的对话框
+        try
+        {
+            BorderFixHelper.FixAllBorders(dialog);
+            System.Diagnostics.Debug.WriteLine("MainWindow: 修复对话框完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainWindow 修复对话框失败: {ex.Message}");
+        }
+        
+        // 使用安全显示方法
+        bool? result = null;
+        try
+        {
+            result = dialog.SafeShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"对话框显示失败: {ex.Message}");
+            throw;
+        }
+        
+        if (result != true)
         {
             return;
         }
@@ -504,58 +584,6 @@ public partial class MainWindow : Window
         {
             Top = area.Bottom - Height;
         }
-    }
-
-    private void UpdateButtonMetrics()
-    {
-        UpdateLayout();
-        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var paintWidth = MeasureTextWidth("画笔", PaintButton, dpi);
-        paintWidth = Math.Max(paintWidth, MeasureTextWidth("隐藏画笔", PaintButton, dpi));
-        var rollWidth = MeasureTextWidth("点名/计时", RollCallButton, dpi);
-        rollWidth = Math.Max(rollWidth, MeasureTextWidth("显示点名", RollCallButton, dpi));
-        rollWidth = Math.Max(rollWidth, MeasureTextWidth("隐藏点名", RollCallButton, dpi));
-        var unifiedWidth = Math.Max(paintWidth, rollWidth) + 28;
-        PaintButton.Width = unifiedWidth;
-        RollCallButton.Width = unifiedWidth;
-
-        var minWidth = Math.Max(52, MeasureTextWidth("缩小", MinimizeButton, dpi) + 24);
-        MinimizeButton.Width = minWidth;
-
-        var infoWidth = Math.Max(52, new[]
-        {
-            MeasureTextWidth("关于", AboutButton, dpi),
-            MeasureTextWidth("设置", SettingsButton, dpi),
-            MeasureTextWidth("退出", ExitButton, dpi)
-        }.Max() + 24);
-        AboutButton.Width = infoWidth;
-        SettingsButton.Width = infoWidth;
-        ExitButton.Width = infoWidth;
-
-        var buttons = new[] { PaintButton, RollCallButton, MinimizeButton, AboutButton, SettingsButton, ExitButton };
-        var maxHeight = buttons.Max(button => button.ActualHeight);
-        if (maxHeight <= 0)
-        {
-            return;
-        }
-        foreach (var button in buttons)
-        {
-            button.Height = maxHeight;
-        }
-    }
-
-    private static double MeasureTextWidth(string text, System.Windows.Controls.Button button, double pixelsPerDip)
-    {
-        var typeface = new Typeface(button.FontFamily, button.FontStyle, button.FontWeight, button.FontStretch);
-        var formatted = new FormattedText(
-            text,
-            CultureInfo.CurrentUICulture,
-            System.Windows.FlowDirection.LeftToRight,
-            typeface,
-            button.FontSize,
-            System.Windows.Media.Brushes.Black,
-            pixelsPerDip);
-        return formatted.Width;
     }
 
     private void EnsureBubbleWindow()

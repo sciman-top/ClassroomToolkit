@@ -1,0 +1,306 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ========================================
+         现代化组件样式库
+         基于 Colors.xaml 和 Icons.xaml
+         ======================================== -->
+
+    <!-- ========== 1. 基础控件优化 ========== -->
+
+    <!-- 文本框 (TextBox) -->
+    <Style TargetType="TextBox">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=White}"
+                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue={StaticResource Brush_Border}}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Primary_Main}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Primary_Light}"/>
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="{StaticResource Color_Primary_Main}" ShadowDepth="0" BlurRadius="5" Opacity="0.4"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Disabled}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Disabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 下拉框 (ComboBox) -->
+    <Style TargetType="ComboBox">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- 简化模板，实际项目中可展开为完整模板 -->
+    </Style>
+
+    <!-- 复选框 (CheckBox) -->
+    <Style TargetType="CheckBox">
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="6,0,0,0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <!-- 默认使用系统样式，可通过配色调整 -->
+    </Style>
+
+    <!-- ========== 2. 按钮样式 (重点美化) ========== -->
+
+    <!-- [主要操作] 渐变主按钮 -->
+    <Style x:Key="Style_PrimaryButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8"
+                            BorderBrush="Transparent"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="4" Opacity="0.3"/>
+                        </Border.Effect>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="15" ShadowDepth="6" Opacity="0.4"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="border" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="1"/>
+                            <Setter TargetName="border" Property="Effect" Value="{x:Null}"/>
+                            <Setter TargetName="border" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="1"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource Brush_Disabled}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter TargetName="border" Property="Effect" Value="{x:Null}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- [次要操作] 轮廓按钮 -->
+    <Style x:Key="Style_SecondaryButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Medium}"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=White}"
+                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue={StaticResource Brush_Border_Medium}}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Disabled}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Disabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- [危险操作] 红色按钮 -->
+    <Style x:Key="Style_DangerButton" TargetType="Button" BasedOn="{StaticResource Style_PrimaryButton}">
+        <Setter Property="Background" Value="{StaticResource Brush_Danger}"/>
+        <Setter Property="Template">
+             <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Color_Danger}" BlurRadius="10" ShadowDepth="4" Opacity="0.3"/>
+                        </Border.Effect>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                        </Trigger>
+                         <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+             </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- [图标按钮] 仅图标，无背景 -->
+    <Style x:Key="Style_IconButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Border}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.3"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- [激活式图标按钮] (用于画笔切换等，有选中状态) -->
+    <Style x:Key="Style_IconButton_Active" TargetType="ToggleButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" BorderBrush="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 选中 -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Primary}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                        <!-- 悬停 (未选中) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                        </MultiTrigger>
+                        <!-- 悬停 (选中) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ========== 3. 容器与列表 ========== -->
+
+    <!-- [干净列表] 去除默认边框，增加圆角 -->
+    <Style x:Key="Style_CleanListBox" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ItemContainerStyle">
+            <Setter.Value>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Margin" Value="0,2"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="bd" 
+                                        Background="{TemplateBinding Background}" 
+                                        BorderBrush="{StaticResource Brush_Primary}" 
+                                        BorderThickness="0"
+                                        CornerRadius="6" 
+                                        Padding="8">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                        <Setter TargetName="bd" Property="BorderThickness" Value="1"/>
+                                        <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

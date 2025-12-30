@@ -28,4 +28,17 @@ public partial class AboutDialog : Window
         }
         e.Handled = true;
     }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
 }

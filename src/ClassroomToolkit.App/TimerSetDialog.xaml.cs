@@ -105,4 +105,12 @@ public partial class TimerSetDialog : Window
     {
         DialogResult = false;
     }
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
 }

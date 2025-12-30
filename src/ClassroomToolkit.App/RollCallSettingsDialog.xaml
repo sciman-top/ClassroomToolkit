@@ -2,146 +2,198 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="点名设置"
-        Width="400"
-        MinWidth="360"
-        MaxWidth="460"
+        Height="Auto" Width="460"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}"
         Topmost="True">
-    <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
-        <TabControl x:Name="SettingsTabs" Grid.Row="0">
-            <TabItem Header="显示/照片">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+    <Border Background="White" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="8" Opacity="0.2"/>
+        </Border.Effect>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="学生信息:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                        <CheckBox x:Name="ShowIdCheck" Content="学号" Margin="0,0,12,0" />
-                        <CheckBox x:Name="ShowNameCheck" Content="姓名" />
-                    </StackPanel>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title -->
+                <RowDefinition Height="Auto"/> <!-- Content -->
+                <RowDefinition Height="Auto"/> <!-- Buttons -->
+            </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="照片显示:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <CheckBox x:Name="ShowPhotoCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8"
-                              Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
+            <!-- 1. 标题栏 -->
+            <Grid Grid.Row="0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="点名设置" FontWeight="SemiBold" Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="16"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,12,0" Width="32" Height="32">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
+                </Button>
+            </Grid>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}" Margin="0"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="照片显示时间:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                        <Slider x:Name="PhotoDurationSlider" Width="180" Minimum="0" Maximum="10"
-                                ValueChanged="OnPhotoDurationChanged" />
-                        <TextBlock x:Name="PhotoDurationLabel" Margin="8,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
+            <!-- 2. 内容 (TabControl) -->
+            <TabControl x:Name="SettingsTabs" Grid.Row="1" Margin="20,16,20,16" BorderThickness="0" Background="Transparent">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Padding" Value="16,8"/>
+                        <Setter Property="Margin" Value="0,0,4,0"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" BorderBrush="Transparent">
+                                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Resources>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="照片文件夹" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" />
-                </Grid>
-            </TabItem>
+                <!-- 标签页 1: 显示/照片 -->
+                <TabItem Header="显示">
+                    <Grid Margin="4,16,4,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-            <TabItem Header="语音播报">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="学生信息:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,16">
+                            <CheckBox x:Name="ShowIdCheck" Content="显示学号" Margin="0,0,24,0"/>
+                            <CheckBox x:Name="ShowNameCheck" Content="显示姓名"/>
+                        </StackPanel>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="启用语音播报:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="照片显示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <CheckBox x:Name="ShowPhotoCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Content="启用照片展示"
+                                  Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="语音引擎:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <ComboBox x:Name="SpeechEngineCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8"
-                              SelectionChanged="OnSpeechEngineChanged" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="照片时长:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,16">
+                            <Slider x:Name="PhotoDurationSlider" Width="160" Minimum="0" Maximum="10"
+                                    ValueChanged="OnPhotoDurationChanged" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="PhotoDurationLabel" Margin="12,0,0,0" VerticalAlignment="Center" Width="30" Foreground="{StaticResource Brush_Text_Primary}"/>
+                        </StackPanel>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="发音人:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <ComboBox x:Name="SpeechVoiceCombo" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="照片目录:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="34"/>
+                    </Grid>
+                </TabItem>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="输出设备:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" />
-                </Grid>
-            </TabItem>
+                <!-- 标签页 2: 语音播报 -->
+                <TabItem Header="语音">
+                    <Grid Margin="4,16,4,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-            <TabItem Header="遥控点名">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="语音播报:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名时朗读姓名"/>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="启用翻页笔遥控点名:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"
-                              Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="语音引擎:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="SpeechEngineCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="34"
+                                  SelectionChanged="OnSpeechEngineChanged" />
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="翻页笔按键:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="True" />
-                </Grid>
-            </TabItem>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="发音人:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="SpeechVoiceCombo" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
 
-            <TabItem Header="倒计时提示">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="输出设备:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" Height="34"/>
+                    </Grid>
+                </TabItem>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="启用结束提示音:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <CheckBox x:Name="TimerSoundCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"
-                              Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
+                <!-- 标签页 3: 遥控点名 -->
+                <TabItem Header="遥控">
+                    <Grid Margin="4,16,4,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="结束提示音样式:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <ComboBox x:Name="TimerSoundCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="遥控模式:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔控制"
+                                  Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="启用中途提示音:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8"
-                              Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="触发按键:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="False" Height="34"/>
+                    </Grid>
+                </TabItem>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="中途提示音样式:" Margin="0,0,8,8" VerticalAlignment="Center" />
-                    <ComboBox x:Name="ReminderSoundCombo" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
+                <!-- 标签页 4: 倒计时提示 -->
+                <TabItem Header="倒计时">
+                    <Grid Margin="4,16,4,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="中途提示间隔:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
-                        <Slider x:Name="ReminderIntervalSlider" Width="180" Minimum="1" Maximum="20"
-                                ValueChanged="OnReminderIntervalChanged" />
-                        <TextBlock x:Name="ReminderIntervalLabel" Margin="8,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Grid>
-            </TabItem>
-        </TabControl>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="结束提示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <CheckBox x:Name="TimerSoundCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="计时结束播放音效"
+                                  Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
-        <Grid Grid.Row="1" Margin="0,10,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="确定" Width="80" Height="32" Margin="0,0,8,0" Click="OnConfirm" />
-                <Button Content="取消" Width="80" Height="32" Click="OnCancel" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="选择音效:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="TimerSoundCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="中途提示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="每隔一段时间提示"
+                                  Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="提示音效:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="ReminderSoundCombo" Grid.Row="3" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="提示间隔:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                            <Slider x:Name="ReminderIntervalSlider" Width="160" Minimum="1" Maximum="20"
+                                    ValueChanged="OnReminderIntervalChanged" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ReminderIntervalLabel" Margin="12,0,0,0" VerticalAlignment="Center" Width="30" Foreground="{StaticResource Brush_Text_Primary}"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <!-- 3. 底部按钮 -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,0,20,20">
+                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,12,0" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

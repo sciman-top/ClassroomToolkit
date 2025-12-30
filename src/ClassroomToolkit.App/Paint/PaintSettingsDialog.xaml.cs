@@ -24,6 +24,12 @@ public partial class PaintSettingsDialog : Window
         ("矩形（实心）", PaintShapeType.RectangleFill),
         ("圆形", PaintShapeType.Ellipse)
     };
+    private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
+    {
+        ("白板笔（兼容）", PaintBrushStyle.Standard),
+        ("白板笔", PaintBrushStyle.StandardRibbon),
+        ("毛笔", PaintBrushStyle.Calligraphy)
+    };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
         ("自动判断（推荐）", "auto"),
@@ -39,6 +45,9 @@ public partial class PaintSettingsDialog : Window
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
+    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
+    public bool CalligraphyInkBloomEnabled { get; private set; }
+    public bool CalligraphySealEnabled { get; private set; }
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
@@ -47,6 +56,18 @@ public partial class PaintSettingsDialog : Window
     public PaintSettingsDialog(AppSettings settings)
     {
         InitializeComponent();
+        
+        // 在构造函数中立即修复 BorderBrush 问题
+        try
+        {
+            BorderFixHelper.FixAllBorders(this);
+            System.Diagnostics.Debug.WriteLine("PaintSettingsDialog: 构造函数中修复完成");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}");
+        }
+        
         BrushColor = settings.BrushColor;
         foreach (var (label, value) in WpsModeChoices)
         {
@@ -55,6 +76,16 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
+
+        foreach (var (label, style) in BrushStyleChoices)
+        {
+            var item = new WpfComboBoxItem { Content = label, Tag = style };
+            BrushStyleCombo.Items.Add(item);
+        }
+        SelectBrushStyle(settings.BrushStyle);
+        CalligraphyInkBloomCheck.IsChecked = settings.CalligraphyInkBloomEnabled;
+        CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
+        UpdateCalligraphyOptionState();
 
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
@@ -92,6 +123,9 @@ public partial class PaintSettingsDialog : Window
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
+        BrushStyle = ResolveBrushStyle();
+        CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
+        CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         DialogResult = true;
@@ -115,6 +149,11 @@ public partial class PaintSettingsDialog : Window
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateEraserSizeLabel();
+    }
+
+    private void OnBrushStyleChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        UpdateCalligraphyOptionState();
     }
 
 
@@ -143,6 +182,13 @@ public partial class PaintSettingsDialog : Window
             return;
         }
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
+    }
+
+    private void UpdateCalligraphyOptionState()
+    {
+        bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
+        CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
+        CalligraphySealCheck.IsEnabled = isCalligraphy;
     }
 
 
@@ -175,7 +221,7 @@ public partial class PaintSettingsDialog : Window
         foreach (var child in parent.Children.OfType<WpfButton>())
         {
             child.BorderThickness = new Thickness(1);
-            child.BorderBrush = MediaBrushes.Transparent;
+            child.BorderBrush = new SolidColorBrush(MediaColor.FromArgb(0x20, 0, 0, 0));
         }
         selected.BorderThickness = new Thickness(2);
         selected.BorderBrush = MediaBrushes.DeepSkyBlue;
@@ -219,6 +265,14 @@ public partial class PaintSettingsDialog : Window
             {
                 yield return nested;
             }
+        }
+    }
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
         }
     }
 
@@ -301,6 +355,28 @@ public partial class PaintSettingsDialog : Window
             }
         }
         combo.SelectedIndex = 0;
+    }
+
+    private void SelectBrushStyle(PaintBrushStyle style)
+    {
+        foreach (var item in BrushStyleCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is PaintBrushStyle tagged && tagged == style)
+            {
+                BrushStyleCombo.SelectedItem = item;
+                return;
+            }
+        }
+        BrushStyleCombo.SelectedIndex = 0;
+    }
+
+    private PaintBrushStyle ResolveBrushStyle()
+    {
+        if (BrushStyleCombo.SelectedItem is WpfComboBoxItem item && item.Tag is PaintBrushStyle style)
+        {
+            return style;
+        }
+        return PaintBrushStyle.Standard;
     }
 
     private static double FindNearestScale(double value)

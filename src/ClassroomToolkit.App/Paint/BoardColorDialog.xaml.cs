@@ -32,13 +32,17 @@ public partial class BoardColorDialog : Window
             var button = new WpfButton
             {
                 Content = option.Name,
-                Width = 72,
-                Height = 28,
-                Margin = new Thickness(0, 0, 6, 0),
+                Width = 80,
+                Height = 40,
+                Margin = new Thickness(0, 0, 8, 0),
                 Background = new SolidColorBrush(option.Color),
                 Foreground = new SolidColorBrush(GetContrastingColor(option.Color)),
-                BorderBrush = new SolidColorBrush(MediaColor.FromArgb(120, 0, 0, 0)),
-                BorderThickness = new Thickness(1)
+                BorderBrush = new SolidColorBrush(MediaColor.FromArgb(40, 0, 0, 0)),
+                BorderThickness = new Thickness(1),
+                FontWeight = FontWeights.SemiBold,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                // 为了简单，我们直接设置圆角
+                Template = CreateButtonTemplate(option.Color)
             };
             button.Click += (_, _) => SelectColor(option.Color);
             OptionsPanel.Children.Add(button);
@@ -50,10 +54,36 @@ public partial class BoardColorDialog : Window
         }
     }
 
+    private ControlTemplate CreateButtonTemplate(MediaColor color)
+    {
+        var template = new ControlTemplate(typeof(WpfButton));
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(WpfButton.BackgroundProperty));
+        border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(WpfButton.BorderBrushProperty));
+        border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(WpfButton.BorderThicknessProperty));
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+        
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
+        presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
+        border.AppendChild(presenter);
+        
+        template.VisualTree = border;
+        return template;
+    }
+
     private void SelectColor(MediaColor color)
     {
         SelectedColor = color;
         DialogResult = true;
+    }
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
     }
 
     private static MediaColor GetContrastingColor(MediaColor color)

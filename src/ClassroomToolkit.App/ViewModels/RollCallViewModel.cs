@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ClassroomToolkit.App.Models;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Services;
@@ -44,9 +45,13 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
 
+    private readonly StudentPhotoResolver _photoResolver;
+    private string? _currentStudentPhotoPath;
+
     public RollCallViewModel(string dataPath)
     {
         _dataPath = dataPath;
+        _photoResolver = new StudentPhotoResolver("student_photos");
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
@@ -79,6 +84,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         get => _currentStudentName;
         private set => SetField(ref _currentStudentName, value);
+    }
+
+    public string? CurrentStudentPhotoPath
+    {
+        get => _currentStudentPhotoPath;
+        private set => SetField(ref _currentStudentPhotoPath, value);
     }
 
     public bool IsRollCallMode
@@ -666,12 +677,17 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         var student = _engine.Roster.Students[_engine.CurrentStudentIndex.Value];
         CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
         CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
+        
+        // Resolve photo
+        var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
+        CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
     }
 
     private void SetPlaceholderStudent()
     {
         CurrentStudentId = ShowId ? "学号" : string.Empty;
         CurrentStudentName = ShowName ? "学生" : string.Empty;
+        CurrentStudentPhotoPath = null;
     }
 
     private void UpdateTimeDisplay()

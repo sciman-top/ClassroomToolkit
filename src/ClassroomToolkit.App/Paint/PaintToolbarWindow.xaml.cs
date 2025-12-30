@@ -17,8 +17,6 @@ public partial class PaintToolbarWindow : Window
 {
     private const int GwlExstyle = -20;
     private const int WsExNoActivate = 0x08000000;
-    private const double BaseWidth = 244;
-    private const double BaseHeight = 104;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
@@ -76,8 +74,10 @@ public partial class PaintToolbarWindow : Window
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
-            ApplyNoActivate();
+            // 不再应用 WS_EX_NOACTIVATE，以允许工具栏窗口正常获得焦点和用户交互
+            // ApplyNoActivate();
         };
+        PreviewKeyDown += OnPreviewKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
         {
@@ -125,12 +125,10 @@ public partial class PaintToolbarWindow : Window
     private void ApplyUiScale(double scale)
     {
         _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
-        if (ToolbarRoot != null)
+        if (ToolbarContainer != null)
         {
-            ToolbarRoot.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
+            ToolbarContainer.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
         }
-        Width = BaseWidth * _uiScale;
-        Height = BaseHeight * _uiScale;
         WindowPlacementHelper.EnsureVisible(this);
     }
 
@@ -184,24 +182,38 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        var shouldResetShape = _shapeType != PaintShapeType.None;
+        
         var index = ResolveQuickColorIndex(button.Tag);
         if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
         {
             return;
         }
-        UpdateQuickColorSelection(_quickColors[index.Value]);
+        
+        var shouldResetShape = _shapeType != PaintShapeType.None;
+        var selectedColor = _quickColors[index.Value];
+        
+        // 更新颜色选择状态
+        UpdateQuickColorSelection(selectedColor);
+        
+        // 如果当前不是画笔模式，切换到画笔模式
+        if (_currentMode != PaintToolMode.Brush)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+        }
+        
+        // 重置形状类型（如果需要）
         if (shouldResetShape)
         {
             ResetShapeType();
         }
-        UpdateToolButtons(PaintToolMode.Brush);
+        
+        // 应用画笔设置
         if (_overlay != null)
         {
-            _overlay.SetMode(PaintToolMode.Brush);
-            _overlay.SetBrush(_quickColors[index.Value], _brushSize, _brushOpacity);
+            _overlay.SetBrush(selectedColor, _brushSize, _brushOpacity);
         }
-        BrushColorChanged?.Invoke(_quickColors[index.Value]);
+        
+        BrushColorChanged?.Invoke(selectedColor);
     }
 
     private void OnClearClick(object sender, RoutedEventArgs e)
@@ -253,9 +265,31 @@ public partial class PaintToolbarWindow : Window
         try
         {
             _currentMode = mode;
-            CursorButton.IsChecked = mode == PaintToolMode.Cursor;
-            EraserButton.IsChecked = mode == PaintToolMode.Eraser;
-            RegionEraseButton.IsChecked = mode == PaintToolMode.RegionErase;
+            
+            // 首先重置所有工具按钮状态
+            CursorButton.IsChecked = false;
+            EraserButton.IsChecked = false;
+            RegionEraseButton.IsChecked = false;
+            
+            // 然后设置当前模式的按钮状态
+            switch (mode)
+            {
+                case PaintToolMode.Cursor:
+                    CursorButton.IsChecked = true;
+                    break;
+                case PaintToolMode.Eraser:
+                    EraserButton.IsChecked = true;
+                    break;
+                case PaintToolMode.RegionErase:
+                    RegionEraseButton.IsChecked = true;
+                    break;
+                case PaintToolMode.Brush:
+                case PaintToolMode.Shape:
+                    // 画笔和形状模式不选中任何工具按钮，但保持颜色按钮状态
+                    break;
+            }
+            
+            // 只有在非画笔/形状模式时才清除颜色按钮选择
             if (mode != PaintToolMode.Brush && mode != PaintToolMode.Shape)
             {
                 QuickColor1Button.IsChecked = false;
@@ -271,10 +305,6 @@ public partial class PaintToolbarWindow : Window
         if (_overlay != null)
         {
             _overlay.SetMode(mode);
-            if (mode == PaintToolMode.Cursor)
-            {
-                _overlay.RestorePresentationFocusIfNeeded(requireFullscreen: true);
-            }
         }
     }
 
@@ -323,17 +353,28 @@ public partial class PaintToolbarWindow : Window
         var color = picker.SelectedColor.Value;
         SetQuickColorSlot(index, color);
         QuickColorSlotChanged?.Invoke(index, color);
+        
+        // 如果当前是形状模式，重置形状类型
         if (_currentMode == PaintToolMode.Shape)
         {
             ResetShapeType();
         }
-        UpdateToolButtons(PaintToolMode.Brush);
+        
+        // 如果当前不是画笔模式，切换到画笔模式
+        if (_currentMode != PaintToolMode.Brush)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+        }
+        
+        // 更新颜色选择状态
         UpdateQuickColorSelection(color);
+        
+        // 应用画笔设置
         if (_overlay != null)
         {
-            _overlay.SetMode(PaintToolMode.Brush);
             _overlay.SetBrush(color, _brushSize, _brushOpacity);
         }
+        
         BrushColorChanged?.Invoke(color);
     }
 
@@ -443,21 +484,16 @@ public partial class PaintToolbarWindow : Window
 
     private void OnToolbarDrag(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left)
+        if (e.ChangedButton == MouseButton.Left)
         {
-            return;
-        }
-        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
-        {
-            return;
-        }
-        try
-        {
-            DragMove();
-        }
-        catch
-        {
-            // 忽略拖拽异常。
+            try
+            {
+                DragMove();
+            }
+            catch
+            {
+                // 忽略异常
+            }
         }
     }
 
@@ -491,6 +527,35 @@ public partial class PaintToolbarWindow : Window
             parent = element.Parent as DependencyObject;
         }
         return parent ?? LogicalTreeHelper.GetParent(obj);
+    }
+
+    private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        // 只在光标模式下转发键盘事件到演示文稿
+        if (_currentMode != PaintToolMode.Cursor)
+        {
+            return;
+        }
+        // 只转发演示文稿导航键
+        var key = e.Key;
+        bool isNavigationKey = key == System.Windows.Input.Key.Left ||
+                               key == System.Windows.Input.Key.Right ||
+                               key == System.Windows.Input.Key.Up ||
+                               key == System.Windows.Input.Key.Down ||
+                               key == System.Windows.Input.Key.PageUp ||
+                               key == System.Windows.Input.Key.PageDown ||
+                               key == System.Windows.Input.Key.Space ||
+                               key == System.Windows.Input.Key.Enter ||
+                               key == System.Windows.Input.Key.Home ||
+                               key == System.Windows.Input.Key.End;
+
+        if (!isNavigationKey)
+        {
+            return;
+        }
+        // 通知覆盖窗口转发到演示文稿
+        _overlay?.ForwardKeyboardToPresentation(key);
+        e.Handled = true;
     }
 
     private void ApplyNoActivate()

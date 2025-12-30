@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.Globalization;
 using System.Media;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using System.Windows.Media;
+using WpfSize = System.Windows.Size;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
@@ -16,15 +18,11 @@ using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Interop.Presentation;
-using MediaFontFamily = System.Windows.Media.FontFamily;
 
 namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow : Window
 {
-    private const int MinFontSize = 5;
-    private const int MaxFontSize = 220;
-
     private readonly RollCallViewModel _viewModel;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
@@ -44,12 +42,8 @@ public partial class RollCallWindow : Window
     private bool _rollStateDirty;
     private bool _speechUnavailableNotified;
     private bool _remoteHookUnavailableNotified;
-    private double _lastIdFontSize;
-    private double _lastNameFontSize;
-    private double _lastTimerFontSize;
-    private MediaFontFamily _nameFontFamily = new("Microsoft YaHei UI");
-    private bool _fontUpdatePending;
     private bool _classSelectionReady;
+    
     public ICommand OpenRemoteKeyCommand { get; }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
@@ -59,15 +53,11 @@ public partial class RollCallWindow : Window
         _settingsService = settingsService;
         _settings = settings;
         ApplyWindowBounds(settings);
-        _lastIdFontSize = ClampFontSize(settings.RollCallIdFontSize, 48);
-        _lastNameFontSize = ClampFontSize(settings.RollCallNameFontSize, 60);
-        _lastTimerFontSize = ClampFontSize(settings.RollCallTimerFontSize, 56);
+        
         _viewModel = new RollCallViewModel(dataPath);
         DataContext = _viewModel;
-        ApplyFontFamilies();
-        ApplyFontSizes();
+        
         Loaded += OnLoaded;
-        SizeChanged += (_, _) => ScheduleFontUpdate();
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible)
@@ -94,7 +84,6 @@ public partial class RollCallWindow : Window
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
         _viewModel.ReminderTriggered += OnReminderTriggered;
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     public IReadOnlyList<string> AvailableClasses => _viewModel.AvailableClasses;
@@ -109,9 +98,24 @@ public partial class RollCallWindow : Window
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
-        UpdateTimerButtons();
-        ScheduleFontUpdate();
     }
+
+    // --- Window Control ---
+
+    private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    // ----------------------
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
@@ -191,32 +195,6 @@ public partial class RollCallWindow : Window
         _viewModel.ToggleMode();
         UpdateRemoteHookState();
         UpdatePhotoDisplay(forceHide: true);
-    }
-
-    private void OnClassClick(object sender, RoutedEventArgs e)
-    {
-        if (!_viewModel.IsRollCallMode)
-        {
-            return;
-        }
-        if (!_viewModel.HasStudentData || _viewModel.AvailableClasses.Count == 0)
-        {
-            ShowRollCallMessage("暂无学生数据，无法选择班级。");
-            return;
-        }
-        var dialog = new ClassSelectDialog(_viewModel.AvailableClasses, _viewModel.ActiveClassName)
-        {
-            Owner = this
-        };
-        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.SelectedClass))
-        {
-            if (_viewModel.SwitchClass(dialog.SelectedClass))
-            {
-                UpdatePhotoDisplay(forceHide: true);
-                PersistSettings();
-                _viewModel.SaveState();
-            }
-        }
     }
 
     private void OnClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -300,7 +278,6 @@ public partial class RollCallWindow : Window
     private void OnTimerModeClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ToggleTimerMode();
-        UpdateTimerButtons();
     }
 
     private void OnTimerStartPauseClick(object sender, RoutedEventArgs e)
@@ -340,10 +317,17 @@ public partial class RollCallWindow : Window
             _lastPhotoStudentId = null;
             return;
         }
-        if (_lastPhotoStudentId == studentId && _photoOverlay?.IsVisible == true)
+        
+        // 参考 Python 版本的策略：当学生ID变化时，先隐藏上一张照片
+        if (_lastPhotoStudentId != studentId)
         {
-            return;
+            // 完全关闭并销毁照片覆盖窗口，确保没有任何残留
+            ClosePhotoOverlay();
+            _photoOverlay = null;
+            // 强制等待，确保窗口完全关闭
+            Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
         }
+        
         _lastPhotoStudentId = studentId;
         var resolver = EnsurePhotoResolver();
         var className = ResolvePhotoClassName();
@@ -429,23 +413,6 @@ public partial class RollCallWindow : Window
         var elapsed = _stopwatch.Elapsed;
         _stopwatch.Restart();
         _viewModel.TickTimer(elapsed);
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e == null)
-        {
-            return;
-        }
-        if (e.PropertyName is nameof(RollCallViewModel.CurrentStudentId)
-            or nameof(RollCallViewModel.CurrentStudentName)
-            or nameof(RollCallViewModel.ShowId)
-            or nameof(RollCallViewModel.ShowName)
-            or nameof(RollCallViewModel.TimeDisplay)
-            or nameof(RollCallViewModel.IsRollCallMode))
-        {
-            ScheduleFontUpdate();
-        }
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -694,17 +661,12 @@ public partial class RollCallWindow : Window
                 settings.RollCallTimerRunning);
             _timerStateApplied = true;
         }
-        _lastIdFontSize = ClampFontSize(settings.RollCallIdFontSize, 48);
-        _lastNameFontSize = ClampFontSize(settings.RollCallNameFontSize, 60);
-        _lastTimerFontSize = ClampFontSize(settings.RollCallTimerFontSize, 56);
-        ApplyFontSizes();
-        ScheduleFontUpdate();
+        
         UpdateRemoteHookState();
         if (updatePhoto)
         {
             UpdatePhotoDisplay();
         }
-        UpdateTimerButtons();
     }
 
     public void RequestClose()
@@ -746,9 +708,6 @@ public partial class RollCallWindow : Window
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
         _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
-        _settings.RollCallIdFontSize = (int)Math.Round(_lastIdFontSize);
-        _settings.RollCallNameFontSize = (int)Math.Round(_lastNameFontSize);
-        _settings.RollCallTimerFontSize = (int)Math.Round(_lastTimerFontSize);
         _settingsService.Save(_settings);
     }
 
@@ -772,198 +731,6 @@ public partial class RollCallWindow : Window
         else
         {
             StopKeyboardHook();
-        }
-    }
-
-    private void UpdateTimerButtons()
-    {
-        if (TimerStartPauseButton == null || TimerResetButton == null || TimerSetButton == null)
-        {
-            return;
-        }
-        switch (_viewModel.CurrentTimerMode)
-        {
-            case TimerMode.Countdown:
-                TimerStartPauseButton.IsEnabled = true;
-                TimerResetButton.IsEnabled = true;
-                TimerSetButton.IsEnabled = true;
-                break;
-            case TimerMode.Stopwatch:
-                TimerStartPauseButton.IsEnabled = true;
-                TimerResetButton.IsEnabled = true;
-                TimerSetButton.IsEnabled = false;
-                break;
-            default:
-                TimerStartPauseButton.IsEnabled = false;
-                TimerResetButton.IsEnabled = false;
-                TimerSetButton.IsEnabled = false;
-                break;
-        }
-    }
-
-    private void ScheduleFontUpdate()
-    {
-        if (_fontUpdatePending)
-        {
-            return;
-        }
-        _fontUpdatePending = true;
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _fontUpdatePending = false;
-            UpdateDynamicFonts();
-        }), DispatcherPriority.Background);
-    }
-
-    private void UpdateDynamicFonts()
-    {
-        if (IdTextBlock == null || NameTextBlock == null || TimerTextBlock == null)
-        {
-            return;
-        }
-        if (_viewModel.IsRollCallMode)
-        {
-            double? idSize = null;
-            double? nameSize = null;
-            if (_viewModel.ShowId && IdBorder != null)
-            {
-                var width = Math.Max(40d, IdBorder.ActualWidth);
-                var height = Math.Max(40d, IdBorder.ActualHeight);
-                var text = IdTextBlock.Text ?? string.Empty;
-                var size = CalculateFontSize(width, height, text, monospace: false);
-                idSize = size;
-            }
-            if (_viewModel.ShowName && NameBorder != null)
-            {
-                var width = Math.Max(40d, NameBorder.ActualWidth);
-                var height = Math.Max(40d, NameBorder.ActualHeight);
-                var text = NameTextBlock.Text ?? string.Empty;
-                var size = CalculateFontSize(width, height, text, monospace: false);
-                nameSize = size;
-            }
-            if (idSize.HasValue && nameSize.HasValue)
-            {
-                var unified = Math.Min(idSize.Value, nameSize.Value);
-                _lastIdFontSize = unified;
-                _lastNameFontSize = unified;
-                IdTextBlock.FontSize = unified;
-                NameTextBlock.FontSize = unified;
-            }
-            else if (idSize.HasValue)
-            {
-                _lastIdFontSize = idSize.Value;
-                IdTextBlock.FontSize = idSize.Value;
-            }
-            else if (nameSize.HasValue)
-            {
-                _lastNameFontSize = nameSize.Value;
-                NameTextBlock.FontSize = nameSize.Value;
-            }
-        }
-        if (!_viewModel.IsRollCallMode && TimerDisplayBorder != null)
-        {
-            var width = Math.Max(60d, TimerDisplayBorder.ActualWidth);
-            var height = Math.Max(60d, TimerDisplayBorder.ActualHeight);
-            var text = TimerTextBlock.Text ?? string.Empty;
-            var size = CalculateFontSize(width, height, text, monospace: true);
-            _lastTimerFontSize = size;
-            TimerTextBlock.FontSize = size;
-        }
-    }
-
-    private static double CalculateFontSize(double width, double height, string text, bool monospace)
-    {
-        if (string.IsNullOrWhiteSpace(text) || width < 20 || height < 20)
-        {
-            return MinFontSize;
-        }
-        var wEff = Math.Max(1d, width - 16d);
-        var hEff = Math.Max(1d, height - 16d);
-        var isCjk = false;
-        foreach (var ch in text)
-        {
-            if (ch >= '\u4e00' && ch <= '\u9fff')
-            {
-                isCjk = true;
-                break;
-            }
-        }
-        var length = Math.Max(1, text.Length);
-        var widthCharFactor = isCjk ? 1.0 : (monospace ? 0.58 : 0.6);
-        var sizeByWidth = wEff / (length * widthCharFactor);
-        var sizeByHeight = hEff * 0.70;
-        var finalSize = Math.Floor(Math.Min(sizeByWidth, sizeByHeight));
-        return ClampFontSize(finalSize, MinFontSize);
-    }
-
-    private static double ClampFontSize(double value, double fallback)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
-        {
-            value = fallback;
-        }
-        return Math.Max(MinFontSize, Math.Min(MaxFontSize, value));
-    }
-
-    private void ApplyFontFamilies()
-    {
-        var idFont = FindFontFamily("Microsoft YaHei UI")
-            ?? FindFontFamily("Microsoft YaHei")
-            ?? new MediaFontFamily("Segoe UI");
-        _nameFontFamily = FindFontFamily("楷体")
-            ?? FindFontFamily("KaiTi")
-            ?? idFont;
-        var timerFont = FindFontFamily("Consolas")
-            ?? FindFontFamily("Courier New")
-            ?? idFont;
-        if (IdTextBlock != null)
-        {
-            IdTextBlock.FontFamily = _nameFontFamily;
-            IdTextBlock.FontWeight = _nameFontFamily.Source.Contains("Kai", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(_nameFontFamily.Source, "楷体", StringComparison.OrdinalIgnoreCase)
-                ? FontWeights.Normal
-                : FontWeights.Bold;
-        }
-        if (NameTextBlock != null)
-        {
-            NameTextBlock.FontFamily = _nameFontFamily;
-            NameTextBlock.FontWeight = _nameFontFamily.Source.Contains("Kai", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(_nameFontFamily.Source, "楷体", StringComparison.OrdinalIgnoreCase)
-                ? FontWeights.Normal
-                : FontWeights.Bold;
-        }
-        if (TimerTextBlock != null)
-        {
-            TimerTextBlock.FontFamily = timerFont;
-            TimerTextBlock.FontWeight = FontWeights.Bold;
-        }
-    }
-
-    private static MediaFontFamily? FindFontFamily(string name)
-    {
-        foreach (var family in Fonts.SystemFontFamilies)
-        {
-            if (string.Equals(family.Source, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return family;
-            }
-        }
-        return null;
-    }
-
-    private void ApplyFontSizes()
-    {
-        if (IdTextBlock != null)
-        {
-            IdTextBlock.FontSize = _lastIdFontSize;
-        }
-        if (NameTextBlock != null)
-        {
-            NameTextBlock.FontSize = _lastNameFontSize;
-        }
-        if (TimerTextBlock != null)
-        {
-            TimerTextBlock.FontSize = _lastTimerFontSize;
         }
     }
 

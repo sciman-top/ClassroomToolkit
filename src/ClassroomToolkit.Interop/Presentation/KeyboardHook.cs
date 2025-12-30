@@ -12,9 +12,12 @@ public sealed class KeyboardHook : IDisposable
 
     private readonly HookProc _hookProc;
     private IntPtr _hookId;
-    private bool _shiftDown;
-    private bool _ctrlDown;
-    private bool _altDown;
+    private bool _leftShiftDown;
+    private bool _rightShiftDown;
+    private bool _leftCtrlDown;
+    private bool _rightCtrlDown;
+    private bool _leftAltDown;
+    private bool _rightAltDown;
 
     public bool IsActive => _hookId != IntPtr.Zero;
 
@@ -105,13 +108,34 @@ public sealed class KeyboardHook : IDisposable
         switch (key)
         {
             case VirtualKey.Shift:
-                _shiftDown = isDown;
+                _leftShiftDown = isDown;
+                _rightShiftDown = isDown;
+                break;
+            case VirtualKey.LeftShift:
+                _leftShiftDown = isDown;
+                break;
+            case VirtualKey.RightShift:
+                _rightShiftDown = isDown;
                 break;
             case VirtualKey.Control:
-                _ctrlDown = isDown;
+                _leftCtrlDown = isDown;
+                _rightCtrlDown = isDown;
+                break;
+            case VirtualKey.LeftControl:
+                _leftCtrlDown = isDown;
+                break;
+            case VirtualKey.RightControl:
+                _rightCtrlDown = isDown;
                 break;
             case VirtualKey.Alt:
-                _altDown = isDown;
+                _leftAltDown = isDown;
+                _rightAltDown = isDown;
+                break;
+            case VirtualKey.LeftAlt:
+                _leftAltDown = isDown;
+                break;
+            case VirtualKey.RightAlt:
+                _rightAltDown = isDown;
                 break;
         }
     }
@@ -119,15 +143,15 @@ public sealed class KeyboardHook : IDisposable
     private KeyModifiers CurrentModifiers()
     {
         var modifiers = KeyModifiers.None;
-        if (_shiftDown)
+        if (_leftShiftDown || _rightShiftDown)
         {
             modifiers |= KeyModifiers.Shift;
         }
-        if (_ctrlDown)
+        if (_leftCtrlDown || _rightCtrlDown)
         {
             modifiers |= KeyModifiers.Control;
         }
-        if (_altDown)
+        if (_leftAltDown || _rightAltDown)
         {
             modifiers |= KeyModifiers.Alt;
         }
@@ -136,7 +160,10 @@ public sealed class KeyboardHook : IDisposable
 
     private static VirtualKey? MapKey(VirtualKey key)
     {
-        if (key is VirtualKey.Shift or VirtualKey.Control or VirtualKey.Alt)
+        if (key is VirtualKey.Shift or VirtualKey.Control or VirtualKey.Alt
+            or VirtualKey.LeftShift or VirtualKey.RightShift
+            or VirtualKey.LeftControl or VirtualKey.RightControl
+            or VirtualKey.LeftAlt or VirtualKey.RightAlt)
         {
             return null;
         }

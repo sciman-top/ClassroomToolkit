@@ -1,0 +1,161 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+
+    <!-- ========================================
+         现代化色彩系统 - Modern Color Palette
+         风格：清爽、现代、科技感、活力
+         ======================================== -->
+
+    <!-- ========== 核心主色调 (Brand Colors) ========== -->
+    
+    <!-- 主色 (Primary) - 科技蓝: 用于主按钮、强调文字、选中状态 -->
+    <Color x:Key="Color_Primary_Light">#6C5CE7</Color>
+    <Color x:Key="Color_Primary_Main">#4A90E2</Color>
+    <Color x:Key="Color_Primary_Dark">#2E5BFF</Color>
+
+    <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary_Main}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Light" Color="{StaticResource Color_Primary_Light}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{StaticResource Color_Primary_Dark}" PresentationOptions:Freeze="true"/>
+
+    <!-- 辅助色 (Accent) - 活力绿: 用于成功状态、次要强调 -->
+    <Color x:Key="Color_Accent_Light">#00E5AA</Color>
+    <Color x:Key="Color_Accent_Main">#00C896</Color>
+    <Color x:Key="Color_Accent_Dark">#00A67D</Color>
+
+    <SolidColorBrush x:Key="Brush_Accent" Color="{StaticResource Color_Accent_Main}" PresentationOptions:Freeze="true"/>
+
+    <!-- ========== 功能色 (Functional Colors) ========== -->
+
+    <!-- 危险/错误 (Danger) - 柔和红 -->
+    <Color x:Key="Color_Danger">#FF4757</Color>
+    <SolidColorBrush x:Key="Brush_Danger" Color="{StaticResource Color_Danger}" PresentationOptions:Freeze="true"/>
+    <!-- 危险色背景浅色版 (用于Hover) -->
+    <SolidColorBrush x:Key="Brush_Danger_Light" Color="#FF6B81" PresentationOptions:Freeze="true"/>
+
+    <!-- 警告 (Warning) - 活力橙 -->
+    <Color x:Key="Color_Warning">#FFA502</Color>
+    <SolidColorBrush x:Key="Brush_Warning" Color="{StaticResource Color_Warning}" PresentationOptions:Freeze="true"/>
+
+    <!-- 成功 (Success) - 翡翠绿 -->
+    <Color x:Key="Color_Success">#2ED573</Color>
+    <SolidColorBrush x:Key="Brush_Success" Color="{StaticResource Color_Success}" PresentationOptions:Freeze="true"/>
+
+    <!-- 信息 (Info) - 天空蓝 -->
+    <Color x:Key="Color_Info">#1E90FF</Color>
+    <SolidColorBrush x:Key="Brush_Info" Color="{StaticResource Color_Info}" PresentationOptions:Freeze="true"/>
+
+    <!-- ========== 背景与表面 (Backgrounds & Surfaces) ========== -->
+
+    <!-- 纯白背景 -->
+    <Color x:Key="Color_Background_L1">#FFFFFF</Color>
+    <SolidColorBrush x:Key="Brush_Background" Color="{StaticResource Color_Background_L1}" PresentationOptions:Freeze="true"/>
+
+    <!-- 浅灰背景 (用于窗口底色、次要区域) -->
+    <Color x:Key="Color_Background_L2">#F1F2F6</Color>
+    <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Background_L2}" PresentationOptions:Freeze="true"/>
+
+    <!-- 更深一点的灰色 (用于按下状态或分割块) -->
+    <Color x:Key="Color_Background_L3">#DFE4EA</Color>
+    <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Background_L3}" PresentationOptions:Freeze="true"/>
+
+    <!-- 极深背景 (用于计时器黑屏等) -->
+    <SolidColorBrush x:Key="Brush_Background_Dark" Color="#1A1F2C" PresentationOptions:Freeze="true"/>
+
+    <!-- 悬停/高亮背景 (极浅的品牌色) -->
+    <Color x:Key="Color_Surface_Tint">#F0F8FF</Color>
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="{StaticResource Color_Surface_Tint}" PresentationOptions:Freeze="true"/>
+
+    <!-- 半透明遮罩 -->
+    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#80000000" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Overlay_Light" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
+
+    <!-- ========== 文本与边框 (Text & Borders) ========== -->
+
+    <!-- 主要文本 (深灰，非纯黑) -->
+    <Color x:Key="Color_Text_Primary">#2F3542</Color>
+    <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
+
+    <!-- 次要文本 (中灰) -->
+    <Color x:Key="Color_Text_Secondary">#747D8C</Color>
+    <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
+
+    <!-- 极浅文本/占位符 -->
+    <Color x:Key="Color_Text_Tertiary">#A4B0BE</Color>
+    <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Tertiary}" PresentationOptions:Freeze="true"/>
+
+    <!-- 禁用状态 -->
+    <Color x:Key="Color_Disabled">#CED6E0</Color>
+    <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Disabled}" PresentationOptions:Freeze="true"/>
+
+    <!-- 边框颜色 -->
+    <Color x:Key="Color_Border">#E1E5EB</Color>
+    <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Medium" Color="#D1D8E0" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#F1F2F6" PresentationOptions:Freeze="true"/>
+
+    <!-- 半透明白色画笔 -->
+    <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
+
+    <!-- ========== 特效画笔 (Gradients & Effects) ========== -->
+
+    <!-- 主品牌渐变 (蓝紫向) -->
+    <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#4A90E2" Offset="0"/>
+        <GradientStop Color="#6C5CE7" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 启动球渐变 (清爽蓝) -->
+    <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#00C6FF" Offset="0"/>
+        <GradientStop Color="#0072FF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 计时器/活跃状态渐变 -->
+    <LinearGradientBrush x:Key="Gradient_Active" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
+        <GradientStop Color="#11998e" Offset="0"/>
+        <GradientStop Color="#38ef7d" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 点名卡片姓名区域渐变 (天蓝色) -->
+    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#E0F2FE" Offset="0"/>      <!-- 淡天蓝 -->
+        <GradientStop Color="#BAE6FD" Offset="0.5"/>     <!-- 天蓝 -->
+        <GradientStop Color="#7DD3FC" Offset="1"/>       <!-- 深天蓝 -->
+    </LinearGradientBrush>
+
+    <!-- 点名卡片背景渐变 (清新淡雅 - 增强版) -->
+    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#FFFAF5" Offset="0"/>      <!-- 淡暖白 -->
+        <GradientStop Color="#F5F3FF" Offset="0.3"/>      <!-- 淡紫白 -->
+        <GradientStop Color="#F0F8FF" Offset="0.6"/>      <!-- 淡蓝白 -->
+        <GradientStop Color="#EDF5FF" Offset="1"/>       <!-- 淡青蓝 -->
+    </LinearGradientBrush>
+
+    <!-- 计时器霓虹色 -->
+    <Color x:Key="Color_Timer_Neon">#00FFAA</Color>
+    <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
+
+    <!-- 画笔预设色 -->
+    <Color x:Key="Color_Pen_Red">#FF3B30</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Red" Color="{StaticResource Color_Pen_Red}" PresentationOptions:Freeze="true"/>
+    <Color x:Key="Color_Pen_Blue">#007ACC</Color>
+    <SolidColorBrush x:Key="Brush_Pen_Blue" Color="{StaticResource Color_Pen_Blue}" PresentationOptions:Freeze="true"/>
+
+    <!-- 白色玻璃态背景 -->
+    <SolidColorBrush x:Key="Brush_Glass_White" Color="#F2FFFFFF" PresentationOptions:Freeze="true"/>
+
+    <!-- ========== 阴影效果 (Shadows) ========== -->
+
+    <!-- 浮层阴影 (柔和深邃) -->
+    <DropShadowEffect x:Key="Shadow_Floating" Color="#A4B0BE" BlurRadius="20" ShadowDepth="5" Opacity="0.3" RenderingBias="Quality"/>
+    
+    <!-- 卡片阴影 (轻微) -->
+    <DropShadowEffect x:Key="Shadow_Card" Color="#CED6E0" BlurRadius="10" ShadowDepth="2" Opacity="0.4" RenderingBias="Quality"/>
+
+    <!-- 内部凹陷效果 -->
+    <DropShadowEffect x:Key="Shadow_Inset" Color="#000000" BlurRadius="5" ShadowDepth="-1" Opacity="0.1" RenderingBias="Quality"/>
+
+</ResourceDictionary>

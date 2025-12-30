@@ -58,4 +58,12 @@ public partial class ClassSelectDialog : Window
             OnConfirm(sender ?? this, new RoutedEventArgs());
         }
     }
+
+    private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
 }

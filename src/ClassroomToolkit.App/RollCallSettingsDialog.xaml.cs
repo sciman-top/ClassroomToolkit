@@ -9,6 +9,11 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
+    private static readonly HashSet<string> SilentVoices = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // 完全清空过滤列表，确保显示所有语音
+        // 如果需要过滤，请基于实际的语音名称进行过滤
+    };
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
 
@@ -98,6 +103,8 @@ public partial class RollCallSettingsDialog : Window
     private void OnSpeechEngineChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         UpdateSpeechControls();
+        // 重新构建语音列表，因为不同引擎可能有不同的语音
+        BuildVoiceCombo(_initialVoiceId);
     }
 
     private void UpdateRemoteKeyEnabled()
@@ -215,16 +222,30 @@ public partial class RollCallSettingsDialog : Window
         var items = new[]
         {
             new ComboOption("tab", "Tab键（切换超链接）"),
+            new ComboOption("enter", "Enter键"),
+            new ComboOption("space", "Space键"),
+            new ComboOption("pageup", "PageUp键"),
+            new ComboOption("pagedown", "PageDown键"),
+            new ComboOption("left", "方向键←"),
+            new ComboOption("right", "方向键→"),
+            new ComboOption("up", "方向键↑"),
+            new ComboOption("down", "方向键↓"),
+            new ComboOption("f5", "F5键"),
+            new ComboOption("shift+f5", "Shift+F5键（从当前页放映）"),
+            new ComboOption("esc", "Esc键（退出放映）"),
+            new ComboOption("b", "B键（黑屏）"),
+            new ComboOption("w", "W键（白屏）"),
             new ComboOption("shift+b", "Shift+B键（黑屏）")
         };
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
-        RemoteKeyCombo.SelectedValue = current ?? "tab";
-        if (!string.IsNullOrWhiteSpace(current) && !items.Any(item => item.Value.Equals(current, StringComparison.OrdinalIgnoreCase)))
+        var selected = string.IsNullOrWhiteSpace(current) ? "tab" : current;
+        if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
         {
-            RemoteKeyCombo.Text = current;
+            selected = "tab";
         }
+        RemoteKeyCombo.SelectedValue = selected;
     }
 
     private void BuildSpeechEngineCombo(string? current)
@@ -240,22 +261,60 @@ public partial class RollCallSettingsDialog : Window
         SpeechEngineCombo.SelectedValue = string.IsNullOrWhiteSpace(current) ? "pyttsx3" : current;
     }
 
+    private void BuildSapiVoices(List<ComboOption> voices)
+    {
+        using var synth = new SpeechSynthesizer();
+        var allVoices = synth.GetInstalledVoices().ToList();
+
+        // 暂时显示所有语音，不做任何过滤或分类
+        System.Diagnostics.Debug.WriteLine($"=== 语音检测报告 ===");
+        System.Diagnostics.Debug.WriteLine($"总共检测到 {allVoices.Count} 个语音");
+        
+        foreach (var voice in allVoices)
+        {
+            var info = voice.VoiceInfo;
+            System.Diagnostics.Debug.WriteLine($"语音 {allVoices.IndexOf(voice) + 1}:");
+            System.Diagnostics.Debug.WriteLine($"  名称: {info.Name}");
+            System.Diagnostics.Debug.WriteLine($"  文化: {info.Culture.Name}");
+            System.Diagnostics.Debug.WriteLine($"  性别: {info.Gender}");
+            System.Diagnostics.Debug.WriteLine($"  启用: {voice.Enabled}");
+            System.Diagnostics.Debug.WriteLine($"  ID: {info.Id}");
+            
+            // 直接添加到列表，不做任何过滤
+            var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
+            voices.Add(new ComboOption(info.Name, label));
+            System.Diagnostics.Debug.WriteLine($"  -> 已添加到下拉框");
+            System.Diagnostics.Debug.WriteLine("");
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"=== 最终结果 ===");
+        System.Diagnostics.Debug.WriteLine($"下拉框中将显示 {voices.Count} 个语音选项");
+    }
+
     private void BuildVoiceCombo(string? current)
     {
         var voices = new List<ComboOption>();
+        var engine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
+        
         try
         {
-            using var synth = new SpeechSynthesizer();
-            foreach (var voice in synth.GetInstalledVoices())
+            if (engine == "pyttsx3")
             {
-                var name = voice.VoiceInfo.Name;
-                voices.Add(new ComboOption(name, name));
+                // 对于 pyttsx3，我们需要通过 Python 获取语音列表
+                // 这里先使用 SAPI 作为后备，显示所有可用的语音
+                BuildSapiVoices(voices);
+            }
+            else
+            {
+                // 对于 SAPI，直接使用 SpeechSynthesizer
+                BuildSapiVoices(voices);
             }
         }
         catch
         {
             voices.Clear();
         }
+
         if (voices.Count == 0)
         {
             voices.Add(new ComboOption(string.Empty, "暂无可选发音人"));
@@ -265,10 +324,81 @@ public partial class RollCallSettingsDialog : Window
         {
             SpeechVoiceCombo.IsEnabled = true;
         }
+
         SpeechVoiceCombo.ItemsSource = voices;
         SpeechVoiceCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechVoiceCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechVoiceCombo.SelectedValue = string.IsNullOrWhiteSpace(current) ? _initialVoiceId : current;
+
+        if (voices.Count == 0)
+        {
+            SpeechVoiceCombo.SelectedValue = string.Empty;
+        }
+        else
+        {
+            var target = string.IsNullOrWhiteSpace(current) ? _initialVoiceId : current;
+            if (!voices.Any(option => option.Value.Equals(target, StringComparison.OrdinalIgnoreCase)))
+            {
+                target = voices[0].Value;
+            }
+            SpeechVoiceCombo.SelectedValue = target;
+        }
+    }
+
+    /// <summary>
+    /// 格式化发音人标签，显示名称、语言和性别信息
+    /// </summary>
+    private static string FormatVoiceLabel(System.Speech.Synthesis.VoiceInfo info, bool isChinese, bool isEnabled)
+    {
+        var languageName = GetLanguageDisplayName(info.Culture.Name);
+        var gender = GetGenderDisplayName(info);
+
+        // 中文发音人优先，在标签前加"【推荐】"
+        var prefix = isChinese ? "【推荐】" : "";
+        var suffix = isEnabled ? string.Empty : "（未启用）";
+
+        // 格式：名称（语言，性别）
+        return $"{prefix}{info.Name}（{languageName}，{gender}）{suffix}";
+    }
+
+    /// <summary>
+    /// 获取语言的显示名称
+    /// </summary>
+    private static string GetLanguageDisplayName(string cultureName)
+    {
+        try
+        {
+            var culture = new System.Globalization.CultureInfo(cultureName);
+            var nativeName = culture.NativeName; // 本地语言名称
+            var englishName = culture.EnglishName; // 英文名称
+
+            // 如果本地名称和英文名称不同，显示两个
+            if (nativeName != englishName && !string.IsNullOrWhiteSpace(nativeName))
+            {
+                // 提取本地名称的第一部分（避免显示过于冗长）
+                var nativeShort = nativeName.Split('(')[0].Trim();
+                return $"{englishName}·{nativeShort}";
+            }
+
+            return englishName;
+        }
+        catch
+        {
+            return cultureName.ToUpperInvariant();
+        }
+    }
+
+    /// <summary>
+    /// 获取性别的显示名称
+    /// </summary>
+    private static string GetGenderDisplayName(System.Speech.Synthesis.VoiceInfo info)
+    {
+        return info.Gender switch
+        {
+            System.Speech.Synthesis.VoiceGender.Male => "男",
+            System.Speech.Synthesis.VoiceGender.Female => "女",
+            System.Speech.Synthesis.VoiceGender.Neutral => "中性",
+            _ => "未知"
+        };
     }
 
     private void BuildOutputCombo(string? engine, string? current)
@@ -344,4 +474,12 @@ public partial class RollCallSettingsDialog : Window
     }
 
     private sealed record ComboOption(string Value, string Label);
+
+    private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
 }
