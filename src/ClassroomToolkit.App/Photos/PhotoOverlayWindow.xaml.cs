@@ -1,11 +1,15 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Windows.Input;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using ClassroomToolkit.App.Helpers;
+using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -34,8 +38,6 @@ public partial class PhotoOverlayWindow : Window
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
-            // 不应用 WS_EX_NOACTIVATE 以确保窗口能够正常获得焦点和用户交互
-            // ApplyNoActivate();
         };
     }
 
@@ -48,14 +50,12 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
-        // 强制清除所有可能的缓存和状态
+        // 清除缓存
         PhotoImage.Source = null;
         NameText.Text = string.Empty;
         PhotoImage.Visibility = Visibility.Collapsed;
-        PhotoFrame.Visibility = Visibility.Collapsed;
         LoadingMask.Visibility = Visibility.Collapsed;
         
-        // 强制垃圾回收，清除内存中的图像缓存
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -65,33 +65,15 @@ public partial class PhotoOverlayWindow : Window
         NameText.Text = studentName ?? string.Empty;
         NameText.Visibility = string.IsNullOrWhiteSpace(NameText.Text) ? Visibility.Collapsed : Visibility.Visible;
 
-        var screen = ResolveScreen(owner);
-        var maxWidth = screen.Width * 0.8;
-        var maxHeight = screen.Height * 0.8;
-        var scale = Math.Min(1.0, Math.Min(maxWidth / bitmap.PixelWidth, maxHeight / bitmap.PixelHeight));
-        var targetWidth = Math.Max(1, bitmap.PixelWidth * scale);
-        var targetHeight = Math.Max(1, bitmap.PixelHeight * scale);
-
-        // 设置窗口尺寸和位置
-        Width = targetWidth;
-        Height = targetHeight;
-        Left = screen.X + (screen.Width - targetWidth) / 2;
-        Top = screen.Y + (screen.Height - targetHeight) / 2;
-        WindowPlacementHelper.EnsureVisible(this);
-
-        // 重置图像控件尺寸
-        PhotoImage.Width = double.NaN;
-        PhotoImage.Height = double.NaN;
-
-        // 原子性地设置新照片
+        // 设置照片源
         PhotoImage.Source = bitmap;
-        PhotoImage.Width = targetWidth;
-        PhotoImage.Height = targetHeight;
 
-        // 显示窗口和新照片
+        // 显示窗口
         Show();
-        PhotoFrame.Visibility = Visibility.Visible;
         PhotoImage.Visibility = Visibility.Visible;
+
+        // 强制更新布局以触发 SizeChanged
+        UpdateLayout();
 
         if (durationSeconds > 0)
         {
@@ -104,17 +86,64 @@ public partial class PhotoOverlayWindow : Window
         }
     }
 
-    private void ClearImageCache()
+    private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // 强制清除 Image 控件的内部缓存
-        if (PhotoImage.Source != null)
+        // 更新背景矩形大小
+        BackgroundRect.Width = e.NewSize.Width;
+        BackgroundRect.Height = e.NewSize.Height;
+        
+        // 更新遮挡层大小
+        LoadingMask.Width = e.NewSize.Width;
+        LoadingMask.Height = e.NewSize.Height;
+        
+        // 重新计算布局
+        UpdateOverlayPositions();
+    }
+
+    private void OnPhotoSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // 照片大小改变时重新计算位置
+        UpdateOverlayPositions();
+    }
+
+    private void UpdateOverlayPositions()
+    {
+        if (PhotoImage.Source == null || PhotoImage.ActualWidth == 0 || PhotoImage.ActualHeight == 0)
         {
-            PhotoImage.Source = null;
-            // 强制垃圾回收
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
+            return;
         }
+
+        var windowWidth = RootCanvas.ActualWidth;
+        var windowHeight = RootCanvas.ActualHeight;
+        var photoWidth = PhotoImage.ActualWidth;
+        var photoHeight = PhotoImage.ActualHeight;
+
+        // 照片居中显示
+        var photoLeft = (windowWidth - photoWidth) / 2;
+        var photoTop = (windowHeight - photoHeight) / 2;
+
+        Canvas.SetLeft(PhotoImage, photoLeft);
+        Canvas.SetTop(PhotoImage, photoTop);
+
+        // 定位姓名：在照片顶部居中，左右各留 30px
+        if (NameText.Visibility == Visibility.Visible)
+        {
+            NameText.MaxWidth = Math.Max(100, photoWidth - 60);
+            NameText.Measure(new WpfSize(NameText.MaxWidth, double.PositiveInfinity));
+            var nameWidth = NameText.DesiredSize.Width;
+            Canvas.SetLeft(NameText, photoLeft + (photoWidth - nameWidth) / 2);
+            Canvas.SetTop(NameText, photoTop + 30);
+        }
+
+        // 定位关闭按钮：在照片底部左右角
+        var buttonMargin = 30.0;
+        var buttonSize = 56.0;
+        
+        Canvas.SetLeft(CloseButtonLeft, photoLeft + buttonMargin);
+        Canvas.SetTop(CloseButtonLeft, photoTop + photoHeight - buttonMargin - buttonSize);
+
+        Canvas.SetLeft(CloseButtonRight, photoLeft + photoWidth - buttonMargin - buttonSize);
+        Canvas.SetTop(CloseButtonRight, photoTop + photoHeight - buttonMargin - buttonSize);
     }
 
     public void CloseOverlay()
@@ -134,25 +163,9 @@ public partial class PhotoOverlayWindow : Window
         CloseOverlay();
     }
 
-    private void ClearVisualContent()
-    {
-        // 使用透明画刷替换当前图片，避免闪现上一个学生的照片
-        PhotoImage.Source = new DrawingImage(new GeometryDrawing(
-            System.Windows.Media.Brushes.Transparent,
-            null,
-            new RectangleGeometry(new Rect(0, 0, 1, 1))));
-        
-        PhotoImage.Width = double.NaN;
-        PhotoImage.Height = double.NaN;
-        NameText.Text = string.Empty;
-        NameText.Visibility = Visibility.Collapsed;
-    }
-
     private void ClearPhotoCache()
     {
         PhotoImage.Source = null;
-        PhotoImage.Width = double.NaN;
-        PhotoImage.Height = double.NaN;
         NameText.Text = string.Empty;
         NameText.Visibility = Visibility.Collapsed;
         var studentId = _currentStudentId;
@@ -173,17 +186,14 @@ public partial class PhotoOverlayWindow : Window
         try
         {
             var uri = new Uri(path, UriKind.Absolute);
-
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.UriSource = uri;
-            // 强制重新加载，忽略任何缓存
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             bitmap.EndInit();
             bitmap.Freeze();
             
-            // 再次清理，确保没有残留缓存
             GC.Collect();
             
             return bitmap;
@@ -192,29 +202,6 @@ public partial class PhotoOverlayWindow : Window
         {
             return null;
         }
-    }
-
-    private static System.Drawing.Rectangle ResolveScreen(Window? owner)
-    {
-        if (owner != null)
-        {
-            var handle = new WindowInteropHelper(owner).Handle;
-            if (handle != IntPtr.Zero)
-            {
-                return System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
-            }
-        }
-        return System.Windows.Forms.Screen.PrimaryScreen?.WorkingArea ?? new System.Drawing.Rectangle(0, 0, 1280, 720);
-    }
-    
-    private void ApplyNoActivate()
-    {
-        if (_hwnd == IntPtr.Zero)
-        {
-            return;
-        }
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
-        SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate);
     }
 
     [DllImport("user32.dll")]

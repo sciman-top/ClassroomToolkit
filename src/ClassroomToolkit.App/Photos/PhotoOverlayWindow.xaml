@@ -33,44 +33,41 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Border Background="#F2000000" MouseLeftButtonDown="OnCloseClick"/>
+    <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
+        <!-- 透明背景，点击关闭 -->
+        <Rectangle x:Name="BackgroundRect" Fill="Transparent" MouseLeftButtonDown="OnCloseClick"/>
 
-        <Grid Margin="40">
-            <Border x:Name="PhotoFrame" CornerRadius="20" Background="#111" ClipToBounds="True" BorderBrush="Transparent">
-                <Border.Effect>
-                    <DropShadowEffect Color="Black" BlurRadius="60" ShadowDepth="0" Opacity="0.5"/>
-                </Border.Effect>
-                <Grid>
-                    <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
-                    <Border x:Name="LoadingMask" Background="#111" Visibility="Collapsed" Panel.ZIndex="100"/>
+        <!-- 照片：只缩小不放大，居中显示 -->
+        <Image x:Name="PhotoImage" 
+               Stretch="Uniform" 
+               StretchDirection="DownOnly"
+               SizeChanged="OnPhotoSizeChanged"/>
 
-                    <Image x:Name="PhotoImage" Stretch="Uniform" />
+        <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
+        <Border x:Name="LoadingMask" Background="Transparent" Visibility="Collapsed" Panel.ZIndex="100"/>
 
-                    <!-- 顶部渐变背景 (用于文字清晰度) -->
-                    <Border VerticalAlignment="Top" Height="240">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
-                                <GradientStop Color="Transparent" Offset="0"/>
-                                <GradientStop Color="#CC000000" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
+        <!-- 学生姓名：动态定位到照片顶部 -->
+        <TextBlock x:Name="NameText" 
+                   Foreground="White" 
+                   FontSize="56" 
+                   FontWeight="Black"
+                   TextAlignment="Center"
+                   TextWrapping="NoWrap"
+                   TextTrimming="CharacterEllipsis"
+                   Panel.ZIndex="10">
+            <TextBlock.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.7"/>
+            </TextBlock.Effect>
+        </TextBlock>
 
-                    <!-- 学生姓名 (移动到顶部) -->
-                    <TextBlock x:Name="NameText" Foreground="White" FontSize="120" FontWeight="Black"
-                               TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Top"
-                               Margin="0,60,0,0">
-                        <TextBlock.Effect>
-                            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                </Grid>
-            </Border>
-
-            <!-- 仅保留底部关闭辅助按钮 -->
-            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="20,0,0,20" Click="OnCloseClick" Opacity="0.3"/>
-            <Button Style="{StaticResource Style_ModernCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Click="OnCloseClick" Opacity="0.3"/>
-        </Grid>
-    </Grid>
+        <!-- 底部关闭按钮 -->
+        <Button x:Name="CloseButtonLeft" 
+                Style="{StaticResource Style_ModernCloseButton}" 
+                Click="OnCloseClick" 
+                Opacity="0.3"/>
+        <Button x:Name="CloseButtonRight" 
+                Style="{StaticResource Style_ModernCloseButton}" 
+                Click="OnCloseClick" 
+                Opacity="0.3"/>
+    </Canvas>
 </Window>
