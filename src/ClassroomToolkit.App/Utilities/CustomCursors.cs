@@ -10,6 +10,7 @@ using MediaColor = System.Windows.Media.Color;
 using WpfCursor = System.Windows.Input.Cursor;
 using WpfPoint = System.Windows.Point;
 using WpfPen = System.Windows.Media.Pen;
+using WpfSize = System.Windows.Size;
 using IOPath = System.IO.Path;
 
 namespace ClassroomToolkit.App.Utilities;
@@ -203,118 +204,169 @@ public static class CustomCursors
     }
 
     /// <summary>
-    /// 创建橡皮擦光标 - 方形设计，带斜线纹理
+    /// 创建橡皮擦光标 - 立体橡皮擦设计，带擦除效果
     /// </summary>
     private static WpfCursor CreateEraserCursor()
     {
         const int cursorSize = 32;
-        const int boxSize = 20;
-        const int offset = (cursorSize - boxSize) / 2;
+        const int eraserWidth = 18;
+        const int eraserHeight = 22;
+        const int offsetX = (cursorSize - eraserWidth) / 2;
+        const int offsetY = (cursorSize - eraserHeight) / 2;
 
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
-            // 白色背景方块
-            var whiteBrush = new SolidColorBrush(Colors.White);
-            whiteBrush.Freeze();
+            // 橡皮擦主体 - 粉红色渐变
+            var eraserBrush = new LinearGradientBrush(
+                MediaColor.FromRgb(255, 182, 193), // 浅粉色
+                MediaColor.FromRgb(255, 105, 180), // 深粉色
+                new System.Windows.Point(0, 0),
+                new System.Windows.Point(1, 1));
+            eraserBrush.Freeze();
 
-            // 方形边框
-            var blackPen = new WpfPen(System.Windows.Media.Brushes.Black, 2);
-            blackPen.Freeze();
+            // 金属夹子 - 银色渐变
+            var clipBrush = new LinearGradientBrush(
+                MediaColor.FromRgb(192, 192, 192), // 浅银色
+                MediaColor.FromRgb(128, 128, 128), // 深银色
+                new System.Windows.Point(0, 0),
+                new System.Windows.Point(0, 1));
+            clipBrush.Freeze();
 
-            var rect = new Rect(offset, offset, boxSize, boxSize);
-            var rectGeom = new RectangleGeometry(rect);
-            context.DrawGeometry(whiteBrush, blackPen, rectGeom);
+            // 橡皮擦主体形状（圆角矩形）
+            var eraserRect = new Rect(offsetX, offsetY + 4, eraserWidth, eraserHeight - 4);
+            var eraserGeom = new RectangleGeometry(eraserRect, 3, 3);
+            context.DrawGeometry(eraserBrush, new WpfPen(System.Windows.Media.Brushes.Gray, 1), eraserGeom);
 
-            // 绘制斜线纹理（表示擦除）
-            var dashPen = new WpfPen(new SolidColorBrush(MediaColor.FromRgb(150, 150, 150)), 1.5);
-            dashPen.Freeze();
+            // 金属夹子
+            var clipRect = new Rect(offsetX + 2, offsetY - 2, eraserWidth - 4, 8);
+            var clipGeom = new RectangleGeometry(clipRect, 2, 2);
+            context.DrawGeometry(clipBrush, new WpfPen(System.Windows.Media.Brushes.DarkGray, 1), clipGeom);
 
-            // 斜线从左上到右下
-            for (int i = 0; i < boxSize; i += 4)
-            {
-                context.DrawLine(dashPen,
-                    new WpfPoint(offset + i, offset + boxSize),
-                    new WpfPoint(offset + boxSize, offset + i));
-            }
+            // 擦除痕迹效果（半透明白色）
+            var eraseEffectBrush = new SolidColorBrush(MediaColor.FromArgb(100, 255, 255, 255));
+            eraseEffectBrush.Freeze();
+            
+            // 擦除线条
+            var erasePen = new WpfPen(eraseEffectBrush, 2);
+            erasePen.Freeze();
+            
+            // 模拟擦除的轨迹
+            context.DrawLine(erasePen,
+                new WpfPoint(offsetX - 2, offsetY + eraserHeight - 2),
+                new WpfPoint(offsetX + eraserWidth + 2, offsetY + eraserHeight + 4));
+            
+            context.DrawLine(erasePen,
+                new WpfPoint(offsetX - 1, offsetY + eraserHeight),
+                new WpfPoint(offsetX + eraserWidth + 1, offsetY + eraserHeight + 2));
 
-            // 中心点
-            var centerBrush = new SolidColorBrush(MediaColor.FromRgb(100, 100, 100));
-            centerBrush.Freeze();
-            var centerRect = new Rect(new WpfPoint(cursorSize / 2 - 1, cursorSize / 2 - 1), new WpfSize(2, 2));
-            context.DrawRectangle(centerBrush, null, centerRect);
+            // 中心十字准星（精确定位）
+            var crossPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
+            crossPen.Freeze();
+            
+            int centerX = cursorSize / 2;
+            int centerY = cursorSize / 2;
+            
+            context.DrawLine(crossPen,
+                new WpfPoint(centerX - 3, centerY),
+                new WpfPoint(centerX + 3, centerY));
+            context.DrawLine(crossPen,
+                new WpfPoint(centerX, centerY - 3),
+                new WpfPoint(centerX, centerY + 3));
         }
 
         return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "eraser");
     }
 
     /// <summary>
-    /// 创建框选擦除光标 - 虚线矩形框设计
+    /// 创建框选擦除光标 - 现代化选择框设计，带动态效果
     /// </summary>
     private static WpfCursor CreateRegionEraseCursor()
     {
         const int cursorSize = 32;
-        const int boxSize = 24;
-        const int offset = (cursorSize - boxSize) / 2;
+        const int selectionSize = 26;
+        const int offset = (cursorSize - selectionSize) / 2;
 
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
-            // 外框虚线矩形
-            var dashedPen = new WpfPen(System.Windows.Media.Brushes.Black, 2);
-            dashedPen.DashStyle = DashStyles.Dash;
-            dashedPen.Freeze();
+            // 选择框主体 - 蓝色渐变边框
+            var borderBrush = new LinearGradientBrush(
+                MediaColor.FromRgb(70, 130, 255),   // 亮蓝色
+                MediaColor.FromRgb(0, 90, 200),     // 深蓝色
+                new System.Windows.Point(0, 0),
+                new System.Windows.Point(1, 1));
+            borderBrush.Freeze();
 
-            var rect = new Rect(offset, offset, boxSize, boxSize);
-            context.DrawRectangle(null, dashedPen, rect);
+            // 填充背景 - 半透明蓝色
+            var fillBrush = new SolidColorBrush(MediaColor.FromArgb(30, 70, 130, 255));
+            fillBrush.Freeze();
 
-            // 四个角的实线强调
-            var solidPen = new WpfPen(System.Windows.Media.Brushes.Black, 2.5);
-            solidPen.Freeze();
+            // 主选择框
+            var mainRect = new Rect(offset, offset, selectionSize, selectionSize);
+            var mainGeom = new RectangleGeometry(mainRect);
+            context.DrawGeometry(fillBrush, new WpfPen(borderBrush, 2), mainGeom);
 
-            const int cornerSize = 6;
+            // 四个角的抓取点 - 更明显的白色方块
+            var grabBrush = new SolidColorBrush(Colors.White);
+            grabBrush.Freeze();
+            var grabPen = new WpfPen(System.Windows.Media.Brushes.DarkBlue, 1.5);
+            grabPen.Freeze();
+
+            const int grabSize = 4;
             // 左上角
-            context.DrawLine(solidPen,
-                new WpfPoint(offset, offset + cornerSize),
-                new WpfPoint(offset, offset));
-            context.DrawLine(solidPen,
-                new WpfPoint(offset, offset),
-                new WpfPoint(offset + cornerSize, offset));
+            var tlGrab = new Rect(offset - 1, offset - 1, grabSize, grabSize);
+            context.DrawRectangle(grabBrush, grabPen, tlGrab);
 
             // 右上角
-            context.DrawLine(solidPen,
-                new WpfPoint(offset + boxSize - cornerSize, offset),
-                new WpfPoint(offset + boxSize, offset));
-            context.DrawLine(solidPen,
-                new WpfPoint(offset + boxSize, offset),
-                new WpfPoint(offset + boxSize, offset + cornerSize));
+            var trGrab = new Rect(offset + selectionSize - grabSize + 1, offset - 1, grabSize, grabSize);
+            context.DrawRectangle(grabBrush, grabPen, trGrab);
 
             // 左下角
-            context.DrawLine(solidPen,
-                new WpfPoint(offset, offset + boxSize - cornerSize),
-                new WpfPoint(offset, offset + boxSize));
-            context.DrawLine(solidPen,
-                new WpfPoint(offset, offset + boxSize),
-                new WpfPoint(offset + cornerSize, offset + boxSize));
+            var blGrab = new Rect(offset - 1, offset + selectionSize - grabSize + 1, grabSize, grabSize);
+            context.DrawRectangle(grabBrush, grabPen, blGrab);
 
             // 右下角
-            context.DrawLine(solidPen,
-                new WpfPoint(offset + boxSize - cornerSize, offset + boxSize),
-                new WpfPoint(offset + boxSize, offset + boxSize));
-            context.DrawLine(solidPen,
-                new WpfPoint(offset + boxSize, offset + boxSize),
-                new WpfPoint(offset + boxSize, offset + boxSize - cornerSize));
+            var brGrab = new Rect(offset + selectionSize - grabSize + 1, offset + selectionSize - grabSize + 1, grabSize, grabSize);
+            context.DrawRectangle(grabBrush, grabPen, brGrab);
 
-            // 中心十字
-            var crossPen = new WpfPen(System.Windows.Media.Brushes.Red, 2);
+            // 中心删除图标 - 红色X标记
+            var deletePen = new WpfPen(System.Windows.Media.Brushes.Red, 3);
+            deletePen.Freeze();
+            deletePen.StartLineCap = PenLineCap.Round;
+            deletePen.EndLineCap = PenLineCap.Round;
+
+            int centerX = cursorSize / 2;
+            int centerY = cursorSize / 2;
+            int xSize = 6;
+
+            // X标记的斜线
+            context.DrawLine(deletePen,
+                new WpfPoint(centerX - xSize, centerY - xSize),
+                new WpfPoint(centerX + xSize, centerY + xSize));
+            context.DrawLine(deletePen,
+                new WpfPoint(centerX - xSize, centerY + xSize),
+                new WpfPoint(centerX + xSize, centerY - xSize));
+
+            // 中心十字准星（精确定位）
+            var crossPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
             crossPen.Freeze();
+            
+            context.DrawLine(crossPen,
+                new WpfPoint(centerX - 2, centerY),
+                new WpfPoint(centerX + 2, centerY));
+            context.DrawLine(crossPen,
+                new WpfPoint(centerX, centerY - 2),
+                new WpfPoint(centerX, centerY + 2));
 
-            context.DrawLine(crossPen,
-                new WpfPoint(cursorSize / 2 - 4, cursorSize / 2),
-                new WpfPoint(cursorSize / 2 + 4, cursorSize / 2));
-            context.DrawLine(crossPen,
-                new WpfPoint(cursorSize / 2, cursorSize / 2 - 4),
-                new WpfPoint(cursorSize / 2, cursorSize / 2 + 4));
+            // 添加选择效果线条（虚线）
+            var dashPen = new WpfPen(System.Windows.Media.Brushes.LightBlue, 1);
+            dashPen.DashStyle = DashStyles.Dot;
+            dashPen.Freeze();
+
+            // 内部虚线框
+            var innerRect = new Rect(offset + 4, offset + 4, selectionSize - 8, selectionSize - 8);
+            context.DrawRectangle(null, dashPen, innerRect);
         }
 
         return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "region_erase");

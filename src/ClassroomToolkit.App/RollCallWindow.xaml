@@ -42,6 +42,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- 透明拖动区域 - 覆盖整个标题栏 -->
+                <Rectangle Fill="Transparent" Grid.ColumnSpan="3"/>
+
                 <!-- 装饰性渐变条 -->
                 <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0" Grid.ColumnSpan="3"
                         IsHitTestVisible="False">
@@ -95,10 +98,7 @@
                     </Button>
 
                     <Rectangle Width="1" Height="18" Fill="{StaticResource Brush_Border_Medium}" Margin="6,0" Opacity="0.5"/>
-
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化" Width="34" Height="34">
-                        <Rectangle Width="12" Height="2" Fill="{StaticResource Brush_Text_Secondary}" RadiusX="1" RadiusY="1"/>
-                    </Button>
+                    
                     <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭" Width="34" Height="34">
                         <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
                     </Button>
@@ -109,70 +109,76 @@
             <Grid Grid.Row="1" Margin="20,6">
                 <!-- A. 点名视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                    <!-- 卡片容器 -->
-                    <Border Background="{StaticResource Gradient_RollCall_Name}"
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 左侧：名字卡片 -->
+                    <Border Grid.Column="0" Background="{StaticResource Gradient_RollCall_Name}"
                             CornerRadius="24"
                             BorderBrush="{StaticResource Brush_Border_Subtle}"
                             BorderThickness="1"
                             MouseLeftButtonUp="OnRollClick"
-                            Cursor="Hand">
+                            Cursor="Hand"
+                            Margin="0,0,14,0">
                         <Border.Effect>
                             <DropShadowEffect Color="#0EA5E9" BlurRadius="30" ShadowDepth="0" Opacity="0.15"/>
                         </Border.Effect>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                        <!-- 名字展示 - 充满空间 -->
+                        <Viewbox Stretch="Fill" Margin="6">
+                            <Grid>
+                                <TextBlock x:Name="BigNameText"
+                                           Text="{Binding CurrentStudentName}"
+                                           FontSize="100"
+                                           FontWeight="Heavy"
+                                           Foreground="{StaticResource Brush_Text_Primary}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Margin="20">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect Color="#0284C7" BlurRadius="5" ShadowDepth="2" Opacity="0.2"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
 
-                            <!-- 名字展示 - 充满空间 -->
-                            <Viewbox Grid.Column="0" Stretch="Fill" Margin="6">
-                                <Grid>
-                                    <TextBlock x:Name="BigNameText"
-                                               Text="{Binding CurrentStudentName}"
-                                               FontSize="100"
-                                               FontWeight="Heavy"
-                                               Foreground="{StaticResource Brush_Text_Primary}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               TextAlignment="Center"
-                                               TextWrapping="Wrap"
-                                               Margin="20">
-                                        <TextBlock.Effect>
-                                            <DropShadowEffect Color="#0284C7" BlurRadius="5" ShadowDepth="2" Opacity="0.2"/>
-                                        </TextBlock.Effect>
-                                    </TextBlock>
-
-                                    <TextBlock Text="{Binding CurrentStudentId}"
-                                               Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                               FontSize="30"
-                                               Foreground="{StaticResource Brush_Text_Primary}"
-                                               FontWeight="Medium"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Bottom"
-                                               Margin="0,0,0,20"
-                                               Opacity="0.7"/>
-                                </Grid>
-                            </Viewbox>
-
-                            <!-- 照片展示 (精致卡片) -->
-                            <Border Grid.Column="1" Width="195" Height="255" Margin="0,0,14,0"
-                                    CornerRadius="18"
-                                    Background="White"
-                                    BorderThickness="3"
-                                    BorderBrush="{StaticResource Brush_Border_Subtle}"
-                                    VerticalAlignment="Center"
-                                    Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="#0EA5E9" BlurRadius="25" ShadowDepth="6" Opacity="0.15"/>
-                                </Border.Effect>
-                                <Border CornerRadius="14" ClipToBounds="True" BorderBrush="Transparent">
-                                    <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill"/>
-                                </Border>
-                            </Border>
-                        </Grid>
+                                <TextBlock Text="{Binding CurrentStudentId}"
+                                           Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
+                                           FontSize="30"
+                                           Foreground="{StaticResource Brush_Text_Primary}"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Bottom"
+                                           Margin="0,0,0,20"
+                                           Opacity="0.7"/>
+                            </Grid>
+                        </Viewbox>
                     </Border>
+
+                    <!-- 右侧：照片展示（无背景，姓名在照片内） -->
+                    <Grid Grid.Column="1" Width="195" Height="255"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                        <!-- 照片 -->
+                        <Border CornerRadius="14" ClipToBounds="True">
+                            <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill"/>
+                        </Border>
+                        
+                        <!-- 姓名覆盖在照片顶部 -->
+                        <TextBlock Text="{Binding CurrentStudentName}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Top"
+                                   Margin="0,12,0,0">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="2" Opacity="0.6"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                    </Grid>
                 </Grid>
 
                 <!-- B. 计时视图 -->
