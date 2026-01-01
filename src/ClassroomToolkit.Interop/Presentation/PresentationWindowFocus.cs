@@ -12,11 +12,8 @@ public static class PresentationWindowFocus
         {
             return false;
         }
-        var foreground = NativeMethods.GetForegroundWindow();
-        if (foreground == hwnd)
-        {
-            return true;
-        }
+        // 移除前台窗口检查，始终调用 SetForegroundWindow
+        // WPS 需要重新调用才能完全激活内部输入上下文
         return NativeMethods.SetForegroundWindow(hwnd);
     }
 
