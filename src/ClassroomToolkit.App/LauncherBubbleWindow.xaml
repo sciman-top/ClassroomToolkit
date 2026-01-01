@@ -7,9 +7,10 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
-        ShowActivated="True">
+        ShowActivated="False"
+        Focusable="False">
     
-    <Grid>
+    <Grid Background="Transparent">
         <!-- 悬浮球主体 -->
         <Border Width="48" Height="48" 
                 CornerRadius="100"

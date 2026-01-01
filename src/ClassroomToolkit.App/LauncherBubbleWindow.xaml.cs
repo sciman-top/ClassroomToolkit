@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
@@ -9,6 +11,16 @@ public partial class LauncherBubbleWindow : Window
     private bool _dragging;
     private bool _moved;
     private System.Windows.Point _dragOffset;
+    private System.Windows.Point _dragStartPosition;
+    private IntPtr _hwnd;
+    
+    // 拖动阈值：移动超过此距离才算拖动，否则算点击
+    private const double DragThreshold = 5.0;
+
+    // Windows API 常量
+    private const int GwlExstyle = -20;
+    private const int WsExNoActivate = 0x08000000;
+    private const int WsExToolWindow = 0x00000080;
 
     public LauncherBubbleWindow()
     {
@@ -17,7 +29,7 @@ public partial class LauncherBubbleWindow : Window
         MouseLeftButtonDown += OnMouseDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseUp;
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnWindowLoaded;
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible)
@@ -25,6 +37,22 @@ public partial class LauncherBubbleWindow : Window
                 WindowPlacementHelper.EnsureVisible(this);
             }
         };
+    }
+
+    private void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        // 设置窗口样式，避免获取焦点
+        SetWindowNoActivate();
+    }
+
+    private void SetWindowNoActivate()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+            SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate | WsExToolWindow);
+        }
     }
 
     public event Action? RestoreRequested;
@@ -88,6 +116,10 @@ public partial class LauncherBubbleWindow : Window
         _dragging = true;
         _moved = false;
         _dragOffset = e.GetPosition(this);
+        _dragStartPosition = new System.Windows.Point(Left, Top);
+        
+        // 捕获鼠标，防止拖动时失去鼠标事件
+        CaptureMouse();
     }
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -96,10 +128,38 @@ public partial class LauncherBubbleWindow : Window
         {
             return;
         }
-        var screen = PointToScreen(e.GetPosition(this));
-        Left = screen.X - _dragOffset.X;
-        Top = screen.Y - _dragOffset.Y;
-        _moved = true;
+        
+        try
+        {
+            var screen = PointToScreen(e.GetPosition(this));
+            var newX = screen.X - _dragOffset.X;
+            var newY = screen.Y - _dragOffset.Y;
+            
+            // 使用当前屏幕的工作区域进行边界检查
+            var screenPoint = new System.Drawing.Point((int)screen.X, (int)screen.Y);
+            var currentScreen = System.Windows.Forms.Screen.FromPoint(screenPoint);
+            var workingArea = currentScreen.WorkingArea;
+            
+            newX = Math.Max(workingArea.Left, Math.Min(newX, workingArea.Right - Width));
+            newY = Math.Max(workingArea.Top, Math.Min(newY, workingArea.Bottom - Height));
+            
+            // 计算移动距离，超过阈值才算拖动
+            var deltaX = Math.Abs(newX - _dragStartPosition.X);
+            var deltaY = Math.Abs(newY - _dragStartPosition.Y);
+            var distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            if (distance > DragThreshold)
+            {
+                _moved = true;
+            }
+            
+            Left = newX;
+            Top = newY;
+        }
+        catch
+        {
+            // 忽略拖动过程中的异常
+        }
     }
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -108,15 +168,40 @@ public partial class LauncherBubbleWindow : Window
         {
             return;
         }
+        
+        _dragging = false;
+        
+        // 释放鼠标捕获
+        ReleaseMouseCapture();
+        
         if (!_moved)
         {
+            // 点击事件：恢复主窗口
             RestoreRequested?.Invoke();
         }
         else
         {
-            var center = new System.Windows.Point(Left + Width / 2, Top + Height / 2);
-            PlaceNear(center);
+            // 拖动结束：延迟吸附到边缘，避免卡顿
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    var center = new System.Windows.Point(Left + Width / 2, Top + Height / 2);
+                    PlaceNear(center);
+                }
+                catch
+                {
+                    // 忽略吸附过程中的异常
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
-        _dragging = false;
+        
+        _moved = false;
     }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

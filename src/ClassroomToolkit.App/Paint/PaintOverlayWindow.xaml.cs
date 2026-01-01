@@ -227,6 +227,10 @@ public partial class PaintOverlayWindow : Window
         _mode = mode;
         OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
         
+        // 更新全局绘图模式状态
+        var isPaintMode = mode != PaintToolMode.Cursor;
+        PaintModeManager.Instance.IsPaintMode = isPaintMode;
+        
         // 根据工具模式设置不同的鼠标样式
         UpdateCursor(mode);
         
@@ -335,6 +339,9 @@ public partial class PaintOverlayWindow : Window
 
     private void HandlePointerDown(WpfPoint position)
     {
+        // 设置正在绘图状态
+        PaintModeManager.Instance.IsDrawing = true;
+        
         if (_mode == PaintToolMode.RegionErase)
         {
             BeginRegionSelection(position);
