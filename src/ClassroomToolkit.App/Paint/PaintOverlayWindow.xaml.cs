@@ -242,10 +242,22 @@ public partial class PaintOverlayWindow : Window
         {
             ClearShapePreview();
         }
+        
+        // 立即更新输入穿透状态（轻量级操作）
         UpdateInputPassthrough();
-        UpdateWpsNavHookState();
-        UpdateFocusAcceptance();
-        RestorePresentationFocusIfNeeded(requireFullscreen: false);
+        
+        // 延迟更新钩子和焦点状态，避免卡顿
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            UpdateWpsNavHookState();
+            UpdateFocusAcceptance();
+            
+            // 光标模式下恢复焦点
+            if (mode == PaintToolMode.Cursor)
+            {
+                RestorePresentationFocusIfNeeded(requireFullscreen: false);
+            }
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void UpdateCursor(PaintToolMode mode)
@@ -771,6 +783,13 @@ public partial class PaintOverlayWindow : Window
 
     private bool ShouldBlockFocus()
     {
+        // 光标模式下，不阻止焦点，让输入事件自由传递到演示文稿
+        // 这样可以确保键盘和滚轮事件正常工作
+        if (_mode == PaintToolMode.Cursor)
+        {
+            return false;
+        }
+        
         if (_inputPassthroughEnabled)
         {
             return true;
@@ -1183,26 +1202,26 @@ public partial class PaintOverlayWindow : Window
             interceptWheel = wheelForward;
             emitWheelOnBlock = wheelForward;
         }
-        if (shouldEnable && sendMode == ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
+        
+        // 光标模式下，直接禁用钩子拦截，让输入直接传递到 WPS
+        if (_mode == PaintToolMode.Cursor)
+        {
+            interceptKeyboard = false;
+            interceptWheel = false;
+        }
+        else if (shouldEnable && sendMode == ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
         {
             blockOnly = true;
             if (IsTargetForeground(target))
             {
-                if (_mode != PaintToolMode.Cursor)
-                {
-                    interceptKeyboard = false;
-                }
                 if (!wheelForward)
                 {
-                    if (_mode != PaintToolMode.Cursor)
-                    {
-                        interceptWheel = false;
-                    }
                     blockOnly = false;
                     emitWheelOnBlock = false;
                 }
             }
         }
+        
         if (shouldEnable)
         {
             _wpsNavHook.SetInterceptEnabled(true);
