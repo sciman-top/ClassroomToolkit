@@ -231,8 +231,19 @@ public partial class PaintOverlayWindow : Window
         var isPaintMode = mode != PaintToolMode.Cursor;
         PaintModeManager.Instance.IsPaintMode = isPaintMode;
         
-        // 根据工具模式设置不同的鼠标样式
-        UpdateCursor(mode);
+        // 立即设置光标（光标模式使用系统光标，无需创建文件）
+        if (mode == PaintToolMode.Cursor)
+        {
+            this.Cursor = System.Windows.Input.Cursors.Arrow;
+        }
+        else
+        {
+            // 其他模式的光标更新延迟执行，避免阻塞
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                UpdateCursor(mode);
+            }), System.Windows.Threading.DispatcherPriority.Normal);
+        }
         
         if (mode != PaintToolMode.RegionErase)
         {
