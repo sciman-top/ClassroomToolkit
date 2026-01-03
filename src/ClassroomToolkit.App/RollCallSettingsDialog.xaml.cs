@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Speech.Synthesis;
 using System.Windows;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
+using Microsoft.Win32;
 
 namespace ClassroomToolkit.App;
 
@@ -265,6 +267,7 @@ public partial class RollCallSettingsDialog : Window
     {
         using var synth = new SpeechSynthesizer();
         var allVoices = synth.GetInstalledVoices().ToList();
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // 暂时显示所有语音，不做任何过滤或分类
         System.Diagnostics.Debug.WriteLine($"=== 语音检测报告 ===");
@@ -273,6 +276,7 @@ public partial class RollCallSettingsDialog : Window
         foreach (var voice in allVoices)
         {
             var info = voice.VoiceInfo;
+            existing.Add(info.Name);
             System.Diagnostics.Debug.WriteLine($"语音 {allVoices.IndexOf(voice) + 1}:");
             System.Diagnostics.Debug.WriteLine($"  名称: {info.Name}");
             System.Diagnostics.Debug.WriteLine($"  文化: {info.Culture.Name}");
@@ -285,6 +289,19 @@ public partial class RollCallSettingsDialog : Window
             voices.Add(new ComboOption(info.Name, label));
             System.Diagnostics.Debug.WriteLine($"  -> 已添加到下拉框");
             System.Diagnostics.Debug.WriteLine("");
+        }
+
+        // Include registry voices to cover OneCore and disabled entries.
+        var registryVoices = ReadRegistryVoices();
+        foreach (var registryVoice in registryVoices)
+        {
+            if (!existing.Add(registryVoice.Name))
+            {
+                continue;
+            }
+            var label = FormatRegistryVoiceLabel(registryVoice);
+            voices.Add(new ComboOption(registryVoice.Name, label));
+            System.Diagnostics.Debug.WriteLine($"  -> 追加注册表语音: {registryVoice.Name}");
         }
         
         System.Diagnostics.Debug.WriteLine($"=== 最终结果 ===");
@@ -399,6 +416,123 @@ public partial class RollCallSettingsDialog : Window
             System.Speech.Synthesis.VoiceGender.Neutral => "中性",
             _ => "未知"
         };
+    }
+
+    private sealed record RegistryVoice(string Name, string CultureName, string Gender, bool Enabled);
+
+    private static IEnumerable<RegistryVoice> ReadRegistryVoices()
+    {
+        var results = new List<RegistryVoice>();
+        ReadRegistryVoices(results, RegistryHive.LocalMachine, RegistryView.Registry64);
+        ReadRegistryVoices(results, RegistryHive.LocalMachine, RegistryView.Registry32);
+        ReadRegistryVoices(results, RegistryHive.CurrentUser, RegistryView.Registry64);
+        ReadRegistryVoices(results, RegistryHive.CurrentUser, RegistryView.Registry32);
+        return results;
+    }
+
+    private static void ReadRegistryVoices(List<RegistryVoice> results, RegistryHive hive, RegistryView view)
+    {
+        ReadRegistryVoicePath(results, hive, view, @"SOFTWARE\Microsoft\Speech\Voices\Tokens");
+        ReadRegistryVoicePath(results, hive, view, @"SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens");
+    }
+
+    private static void ReadRegistryVoicePath(List<RegistryVoice> results, RegistryHive hive, RegistryView view, string path)
+    {
+        try
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+            using var root = baseKey.OpenSubKey(path);
+            if (root == null)
+            {
+                return;
+            }
+            foreach (var tokenName in root.GetSubKeyNames())
+            {
+                using var tokenKey = root.OpenSubKey(tokenName);
+                if (tokenKey == null)
+                {
+                    continue;
+                }
+                var name = ReadRegistryValue(tokenKey, "Name");
+                using var attributesKey = tokenKey.OpenSubKey("Attributes");
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = ReadRegistryValue(attributesKey, "Name");
+                }
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = tokenName;
+                }
+                var cultureName = ReadRegistryValue(tokenKey, "Language");
+                if (string.IsNullOrWhiteSpace(cultureName))
+                {
+                    cultureName = ReadRegistryValue(attributesKey, "Language");
+                }
+                cultureName = NormalizeCultureName(cultureName);
+                var gender = ReadRegistryValue(tokenKey, "Gender");
+                if (string.IsNullOrWhiteSpace(gender))
+                {
+                    gender = ReadRegistryValue(attributesKey, "Gender");
+                }
+                var enabled = true;
+                var enabledValue = ReadRegistryValue(tokenKey, "Enabled");
+                if (!string.IsNullOrWhiteSpace(enabledValue) && int.TryParse(enabledValue, out var enabledInt))
+                {
+                    enabled = enabledInt != 0;
+                }
+                results.Add(new RegistryVoice(name, cultureName, gender, enabled));
+            }
+        }
+        catch
+        {
+            // Ignore registry access errors to avoid breaking the settings dialog.
+        }
+    }
+
+    private static string ReadRegistryValue(RegistryKey? key, string name)
+    {
+        if (key == null)
+        {
+            return string.Empty;
+        }
+        var value = key.GetValue(name);
+        return value?.ToString() ?? string.Empty;
+    }
+
+    private static string NormalizeCultureName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+        var trimmed = value.Trim();
+        if (trimmed.Contains('-'))
+        {
+            return trimmed;
+        }
+        if (int.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var lcid) ||
+            int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out lcid))
+        {
+            try
+            {
+                return new CultureInfo(lcid).Name;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+        return string.Empty;
+    }
+
+    private static string FormatRegistryVoiceLabel(RegistryVoice voice)
+    {
+        var languageName = string.IsNullOrWhiteSpace(voice.CultureName)
+            ? "未知语言"
+            : GetLanguageDisplayName(voice.CultureName);
+        var gender = string.IsNullOrWhiteSpace(voice.Gender) ? "未知" : voice.Gender;
+        var suffix = voice.Enabled ? string.Empty : "（未启用）";
+        return $"{voice.Name}（{languageName}，{gender}）{suffix}";
     }
 
     private void BuildOutputCombo(string? engine, string? current)

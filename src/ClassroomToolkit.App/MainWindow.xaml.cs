@@ -83,6 +83,11 @@ public partial class MainWindow : Window
         {
             _rollCallWindow.Show();
             _rollCallWindow.Activate();
+            _rollCallWindow.SyncTopmost(true);
+            if (_overlayWindow != null && _overlayWindow.IsVisible)
+            {
+                _rollCallWindow.Owner = _overlayWindow;
+            }
         }
         UpdateToggleButtons();
     }
@@ -99,6 +104,11 @@ public partial class MainWindow : Window
             CapturePaintToolbarPosition(save: true);
             _overlayWindow.Hide();
             _toolbarWindow.Hide();
+            if (_rollCallWindow != null)
+            {
+                _rollCallWindow.Owner = null;
+                _rollCallWindow.SyncTopmost(true);
+            }
         }
         else
         {
@@ -111,6 +121,11 @@ public partial class MainWindow : Window
             WindowPlacementHelper.EnsureVisible(_toolbarWindow);
             _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
             _overlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+            {
+                _rollCallWindow.Owner = _overlayWindow;
+                _rollCallWindow.SyncTopmost(true);
+            }
         }
         UpdateToggleButtons();
     }
@@ -206,6 +221,11 @@ public partial class MainWindow : Window
                     _overlayWindow.SetBoardColor(Colors.Transparent);
                     _overlayWindow.SetBoardOpacity(0);
                 }
+            }
+            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+            {
+                _rollCallWindow.Owner = _overlayWindow;
+                _rollCallWindow.SyncTopmost(true);
             }
         };
         _toolbarWindow.SettingsRequested += OnOpenPaintSettings;

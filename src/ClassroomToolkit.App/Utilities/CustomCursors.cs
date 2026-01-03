@@ -331,10 +331,12 @@ public static class CustomCursors
             context.DrawRectangle(grabBrush, grabPen, brGrab);
 
             // 中心删除图标 - 红色X标记
-            var deletePen = new WpfPen(System.Windows.Media.Brushes.Red, 3);
+            var deletePen = new WpfPen(System.Windows.Media.Brushes.Red, 3)
+            {
+                StartLineCap = PenLineCap.Round,
+                EndLineCap = PenLineCap.Round
+            };
             deletePen.Freeze();
-            deletePen.StartLineCap = PenLineCap.Round;
-            deletePen.EndLineCap = PenLineCap.Round;
 
             int centerX = cursorSize / 2;
             int centerY = cursorSize / 2;

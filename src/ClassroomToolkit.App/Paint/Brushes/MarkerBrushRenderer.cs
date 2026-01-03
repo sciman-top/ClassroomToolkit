@@ -206,13 +206,6 @@ public class MarkerBrushRenderer : IBrushRenderer
         }
 
         var group = new GeometryGroup { FillRule = FillRule.Nonzero };
-        var pen = new WpfPen(System.Windows.Media.Brushes.Black, 1)
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-
         for (int i = 0; i < samples.Count - 1; i++)
         {
             var p0 = samples[i];
@@ -222,7 +215,12 @@ public class MarkerBrushRenderer : IBrushRenderer
                 continue;
             }
             double width = Math.Max(p0.Width, p1.Width);
-            pen.Thickness = Math.Max(width, 0.1);
+            var pen = new WpfPen(System.Windows.Media.Brushes.Black, Math.Max(width, 0.1))
+            {
+                StartLineCap = PenLineCap.Round,
+                EndLineCap = PenLineCap.Round,
+                LineJoin = PenLineJoin.Round
+            };
             var segment = new StreamGeometry();
             using (var ctx = segment.Open())
             {

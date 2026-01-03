@@ -306,7 +306,7 @@ public partial class PaintOverlayWindow : Window
 
     public void SetShapeType(PaintShapeType type)
     {
-        _shapeType = type;
+        _shapeType = type == PaintShapeType.RectangleFill ? PaintShapeType.Rectangle : type;
     }
 
     public void SetBoardColor(MediaColor color)

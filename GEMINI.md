@@ -1,87 +1,52 @@
-# ClassroomToolkit Project Context
+# GEMINI.md — ClassroomToolkit (Project-Level)
 
-# Output Language Policy
+## 0. 项目概览
+ClassroomToolkit 是 Windows WPF 教学辅助工具，支持：
+- 随机点名（分组、照片展示）
+- 计时器/秒表/时钟
+- 全屏画笔与形状绘制、白板模式
+- PowerPoint/WPS 翻页控制与输入策略
 
-## 用户可见输出语言
-- 所有最终输出、分析说明、代码解释、设计决策、文档、列表、任务进度更新**必须使用中文**
-- 技术术语保持英文原文（如 WPF, Grid, DependencyProperty），避免歧义
-- 允许在代码注释中使用中文
+## 1. 语言策略
+- 默认：尽量使用简体中文解释与沟通。
+- 保留英文原文：错误信息/日志、API/命令/配置键/标识符/路径等，避免翻译误差。
+- 代码注释：English。
 
-## 模型内部推理（不可见内容）
-- 模型的内部思考、推理链、规划语句（chain-of-thought / reasoning）无需翻译成中文
-- 若 reasoning 被展示，则无需更改英文形式
-- **模型在开始执行前必须用中文复述任务理解**（用于同步上下文）
+## 2. 技术栈与结构
+- .NET 8.0 + WPF（含 WinForms 互操作）
+- Win32/PInvoke
+- ClosedXML（Excel）
+- xUnit（可选 FluentAssertions）
+- 目录：
+  - `src/ClassroomToolkit.App/`
+  - `src/ClassroomToolkit.Domain/`
+  - `src/ClassroomToolkit.Services/`
+  - `src/ClassroomToolkit.Interop/`
+  - `src/ClassroomToolkit.Infra/`
 
-## 上下文连续性
-每次输出前执行以下步骤：
-1. 用中文总结当前任务理解
-2. 输出结果（中文）
-3. 若 reasoning 被展示，无需翻译，保持英文
+## 3. 必跑命令（完成改动后）
+- `dotnet restore`
+- `dotnet build ClassroomToolkit.sln`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`
+- `dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`
 
-## Project Overview
+## 4. 变更边界（严格）
+- 最小改动（minimal diff），不做无关重构与大范围格式化。
+- 不改变公共 API、数据格式、持久化结构与用户交互流程，除非明确要求。
+- 保护用户数据与资源：不要破坏/覆盖 `students.xlsx`、`student_photos/`；`settings.ini` 写入需避免半写损坏。
 
-**ClassroomToolkit** is a modern Windows Presentation Foundation (WPF) application designed to assist teachers in the classroom. It provides a suite of tools including a roll call system, timer/stopwatch, and screen painting utilities. The application is built using .NET 8.0 and follows a modular architecture.
+## 5. 错误处理与课堂降级
+- 外部边界（Excel、互操作、音频、Automation）使用局部 try/catch，避免崩溃。
+- 关键失败：MessageBox 提示 + 可执行建议（文件占用、未打开演示、权限不足等）。
+- 能降级就降级，优先不中断课堂。
 
-### Key Features
-*   **Roll Call System:** Random student selection, class management, and grouping support.
-*   **Timer & Stopwatch:** Countdown timer and stopwatch functionality with visual and audio alerts.
-*   **Screen Paint:** Overlay drawing tools for screen annotation.
-*   **Remote Control:** Integration with presentation clickers (remote presenters) for controlling the application.
-*   **Student Photos:** Display of student photos during roll call.
+## 6. 调试速查
+- 焦点/窗口：Spy++，核对 GetForegroundWindow()；检查 WS_EX_NOACTIVATE / WS_EX_TRANSPARENT。
+- 演示控制：启用诊断日志；核对 PresentationClassifier 分类与输入发送。
+- 性能：绘制优先 WriteableBitmap；高频事件避免重操作；Brush/Pen 可冻结则冻结。
 
-## Architecture
-
-The solution uses a Clean Architecture-inspired structure, separating concerns across multiple projects:
-
-*   **`src/ClassroomToolkit.App`**: The main WPF application entry point. Contains Views (XAML), ViewModels (MVVM pattern), and UI-specific logic.
-*   **`src/ClassroomToolkit.Domain`**: The core domain layer containing business entities, models, and interfaces. It has no dependencies on external frameworks.
-*   **`src/ClassroomToolkit.Infra`**: Infrastructure layer responsible for data persistence (e.g., loading student workbooks, saving settings) and external system integration.
-*   **`src/ClassroomToolkit.Services`**: Business logic services, such as the `RollCallEngine` and `TimerEngine`.
-*   **`src/ClassroomToolkit.Interop`**: Handles native Windows API interactions (e.g., global keyboard hooks for remote presenters).
-*   **`tests/ClassroomToolkit.Tests`**: Unit tests for the application.
-
-## Development Environment & Conventions
-
-### Prerequisites
-*   .NET 8.0 SDK
-*   Windows OS (due to WPF and Win32 interop dependencies)
-
-### Building and Running
-
-1.  **Restore Dependencies:**
-    ```bash
-    dotnet restore
-    ```
-
-2.  **Build the Solution:**
-    ```bash
-    dotnet build
-    ```
-
-3.  **Run the Application:**
-    Navigate to the project root and run:
-    ```bash
-    dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
-    ```
-
-4.  **Run Tests:**
-    ```bash
-    dotnet test
-    ```
-
-### Coding Conventions
-*   **Pattern:** The project strictly follows the **MVVM (Model-View-ViewModel)** pattern for the UI layer. Logic should reside in ViewModels, not Code-Behind, unless it's purely view-specific (e.g., window dragging).
-*   **Styling:** XAML resources (Colors, Styles, Icons) are centralized in `src/ClassroomToolkit.App/Assets/Styles/`. Always use these static resources instead of hardcoded values.
-*   **Dependency Injection:** Services and dependencies are manually instantiated or injected where needed (currently simple instantiation in `App.xaml.cs` or Window constructors).
-
-### Data Storage
-*   Student data is stored in Excel/Workbook files (e.g., `students.xlsx`).
-*   Photos are loaded from the `student_photos` directory.
-*   Application settings are persisted in JSON or similar formats within the user's profile or local directory.
-
-## Directory Structure Highlights
-
-*   `src/ClassroomToolkit.App/Assets/Styles/`: XAML resource dictionaries for theming (Colors.xaml, Icons.xaml, WidgetStyles.xaml).
-*   `src/ClassroomToolkit.App/ViewModels/`: ViewModel classes driving the UI logic.
-*   `src/ClassroomToolkit.App/Photos/`: Logic for resolving and caching student photo paths.
-*   `student_photos/`: Directory containing student images organized by class.
+## 7. 输出格式
+- Plan（checklist）
+- Changes（files + rationale）
+- Verification（commands + results）
+- Risks / follow-ups（必要时）

@@ -21,7 +21,6 @@ public partial class PaintSettingsDialog : Window
         ("直线", PaintShapeType.Line),
         ("虚线", PaintShapeType.DashedLine),
         ("矩形", PaintShapeType.Rectangle),
-        ("矩形（实心）", PaintShapeType.RectangleFill),
         ("圆形", PaintShapeType.Ellipse)
     };
     private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
@@ -294,6 +293,10 @@ public partial class PaintSettingsDialog : Window
 
     private void SelectShapeType(PaintShapeType type)
     {
+        if (type == PaintShapeType.RectangleFill)
+        {
+            type = PaintShapeType.Rectangle;
+        }
         foreach (var item in ShapeCombo.Items.OfType<WpfComboBoxItem>())
         {
             if (item.Tag is PaintShapeType tagged && tagged == type)

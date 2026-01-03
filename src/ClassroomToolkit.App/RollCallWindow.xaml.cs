@@ -18,11 +18,22 @@ using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Interop.Presentation;
+using System.Runtime.InteropServices;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow : Window
 {
+    private const int GwlExstyle = -20;
+    private const int WsExTransparent = 0x20;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpShowWindow = 0x0040;
+    private static readonly IntPtr HwndTopmost = new(-1);
+    private static readonly IntPtr HwndNoTopmost = new(-2);
+
     private readonly RollCallViewModel _viewModel;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
@@ -43,6 +54,9 @@ public partial class RollCallWindow : Window
     private bool _speechUnavailableNotified;
     private bool _remoteHookUnavailableNotified;
     private bool _classSelectionReady;
+    private bool _initialized;
+    private bool _hovering;
+    private IntPtr _hwnd;
     
     public ICommand OpenRemoteKeyCommand { get; }
 
@@ -58,11 +72,19 @@ public partial class RollCallWindow : Window
         DataContext = _viewModel;
         
         Loaded += OnLoaded;
+        SourceInitialized += (_, _) =>
+        {
+            _hwnd = new WindowInteropHelper(this).Handle;
+            UpdateWindowTransparency();
+        };
+        MouseEnter += OnWindowMouseEnter;
+        MouseLeave += OnWindowMouseLeave;
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible)
             {
                 WindowPlacementHelper.EnsureVisible(this);
+                UpdateWindowTransparency();
             }
         };
         Closing += OnClosing;
@@ -84,16 +106,36 @@ public partial class RollCallWindow : Window
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
         _viewModel.ReminderTriggered += OnReminderTriggered;
+
+        PaintModeManager.Instance.PaintModeChanged += _ => UpdateWindowTransparency();
+        PaintModeManager.Instance.IsDrawingChanged += _ => UpdateWindowTransparency();
     }
 
     public IReadOnlyList<string> AvailableClasses => _viewModel.AvailableClasses;
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    public void SyncTopmost(bool enabled)
     {
-        _viewModel.LoadData(_settings.RollCallCurrentClass);
-        ApplySettings(_settings);
+        Topmost = enabled;
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
+        SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_initialized)
+        {
+            return;
+        }
+        _initialized = true;
+        ApplySettings(_settings, updatePhoto: false);
+        await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
         RestoreGroupSelection();
         _classSelectionReady = true;
+        UpdatePhotoDisplay();
         WindowPlacementHelper.EnsureVisible(this);
         _stopwatch.Restart();
         _timer.Start();
@@ -140,6 +182,53 @@ public partial class RollCallWindow : Window
         PersistSettings();
         _viewModel.SaveState();
     }
+
+    private void OnWindowMouseEnter(object sender, MouseEventArgs e)
+    {
+        _hovering = true;
+        UpdateWindowTransparency();
+    }
+
+    private void OnWindowMouseLeave(object sender, MouseEventArgs e)
+    {
+        _hovering = false;
+        UpdateWindowTransparency();
+    }
+
+    private void UpdateWindowTransparency()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var allowTransparent = !_hovering && PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false);
+        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        if (allowTransparent)
+        {
+            exStyle |= WsExTransparent;
+        }
+        else
+        {
+            exStyle &= ~WsExTransparent;
+        }
+        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(
+        IntPtr hwnd,
+        IntPtr hwndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint flags);
 
     private void OnGroupEntryClick(object sender, RoutedEventArgs e)
     {

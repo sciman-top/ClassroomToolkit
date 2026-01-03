@@ -97,7 +97,9 @@ public partial class PaintToolbarWindow : Window
             _eraserSize = settings.EraserSize;
             _brushOpacity = settings.BrushOpacity;
             _boardOpacity = 255;
-            _shapeType = settings.ShapeType;
+            _shapeType = settings.ShapeType == PaintShapeType.RectangleFill
+                ? PaintShapeType.Rectangle
+                : settings.ShapeType;
             _boardColor = settings.BoardColor;
             SetQuickColorSlot(0, settings.QuickColor1);
             SetQuickColorSlot(1, settings.QuickColor2);
@@ -112,8 +114,17 @@ public partial class PaintToolbarWindow : Window
         }
         if (!_modeInitialized)
         {
-            UpdateToolButtons(PaintToolMode.Brush);
+            UpdateToolButtons(_shapeType == PaintShapeType.None ? PaintToolMode.Brush : PaintToolMode.Shape);
             _modeInitialized = true;
+            return;
+        }
+        if (_shapeType == PaintShapeType.None && _currentMode == PaintToolMode.Shape)
+        {
+            UpdateToolButtons(PaintToolMode.Brush);
+        }
+        else if (_shapeType != PaintShapeType.None && _currentMode == PaintToolMode.Brush)
+        {
+            UpdateToolButtons(PaintToolMode.Shape);
         }
     }
 

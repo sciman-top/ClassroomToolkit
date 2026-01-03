@@ -45,18 +45,6 @@
                 <!-- 透明拖动区域 - 覆盖整个标题栏 -->
                 <Rectangle Fill="Transparent" Grid.ColumnSpan="3"/>
 
-                <!-- 装饰性渐变条 -->
-                <Border Height="3" VerticalAlignment="Top" CornerRadius="24,24,0,0" Grid.ColumnSpan="3"
-                        IsHitTestVisible="False">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#4A90E2" Offset="0"/>
-                            <GradientStop Color="#6C5CE7" Offset="0.5"/>
-                            <GradientStop Color="#00C896" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
-
                 <!-- 左侧：模式切换与班级 -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="20,0,0,0">
                     <!-- 模式切换按钮 -->

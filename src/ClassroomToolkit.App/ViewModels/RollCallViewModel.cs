@@ -9,6 +9,8 @@ using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.Infra.Storage;
+using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -294,11 +296,36 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public void LoadData(string? preferredClass = null)
     {
+        var result = LoadDataCore();
+        ApplyLoadResult(result, preferredClass);
+    }
+
+    public async Task LoadDataAsync(string? preferredClass, Dispatcher dispatcher)
+    {
+        var result = await Task.Run(LoadDataCore).ConfigureAwait(false);
+        await dispatcher.InvokeAsync(() =>
+        {
+            ApplyLoadResult(result, preferredClass);
+        }, DispatcherPriority.Background);
+    }
+
+    private RollCallLoadResult LoadDataCore()
+    {
         var store = new StudentWorkbookStore();
         var result = store.LoadOrCreate(_dataPath);
+        var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+        {
+            states[pair.Key] = pair.Value;
+        }
+        return new RollCallLoadResult(result.Workbook, states);
+    }
+
+    private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
+    {
         _workbook = result.Workbook;
         _classStates.Clear();
-        foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+        foreach (var pair in result.ClassStates)
         {
             _classStates[pair.Key] = pair.Value;
         }
@@ -321,6 +348,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         CurrentGroup = _engine.CurrentGroup;
         UpdateCurrentStudent();
     }
+
+    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates);
 
     public bool SwitchClass(string className)
     {
