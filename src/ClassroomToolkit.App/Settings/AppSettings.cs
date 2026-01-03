@@ -62,8 +62,8 @@ public sealed class AppSettings
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 255;
     public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
-    public bool WhiteboardSmoothMode { get; set; } = true;
-    public bool CalligraphySharpMode { get; set; } = true;
+    public WhiteboardBrushPreset WhiteboardPreset { get; set; } = WhiteboardBrushPreset.Smooth;
+    public CalligraphyBrushPreset CalligraphyPreset { get; set; } = CalligraphyBrushPreset.Sharp;
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;
     public byte CalligraphyOverlayOpacityThreshold { get; set; } = 230;

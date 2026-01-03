@@ -44,8 +44,8 @@ public partial class PaintOverlayWindow : Window
     private bool _calligraphyInkBloomEnabled = true;
     private bool _calligraphySealEnabled = true;
     private byte _calligraphyOverlayOpacityThreshold = DefaultCalligraphyOverlayOpacityThreshold;
-    private bool _whiteboardSmoothMode = true;
-    private bool _calligraphySharpMode = true;
+    private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Smooth;
+    private CalligraphyBrushPreset _calligraphyPreset = CalligraphyBrushPreset.Sharp;
 
     private sealed class RasterSnapshot
     {
@@ -692,10 +692,10 @@ public partial class PaintOverlayWindow : Window
         _calligraphyOverlayOpacityThreshold = threshold;
     }
 
-    public void SetBrushTuning(bool whiteboardSmoothMode, bool calligraphySharpMode)
+    public void SetBrushTuning(WhiteboardBrushPreset whiteboardPreset, CalligraphyBrushPreset calligraphyPreset)
     {
-        _whiteboardSmoothMode = whiteboardSmoothMode;
-        _calligraphySharpMode = calligraphySharpMode;
+        _whiteboardPreset = whiteboardPreset;
+        _calligraphyPreset = calligraphyPreset;
         EnsureActiveRenderer(force: true);
     }
 
@@ -714,9 +714,12 @@ public partial class PaintOverlayWindow : Window
         {
             if (force || _activeRenderer is not VariableWidthBrushRenderer)
             {
-                var config = _calligraphySharpMode
-                    ? BrushPhysicsConfig.CreateCalligraphySharp()
-                    : BrushPhysicsConfig.CreateCalligraphySoft();
+                var config = _calligraphyPreset switch
+                {
+                    CalligraphyBrushPreset.Sharp => BrushPhysicsConfig.CreateCalligraphySharp(),
+                    CalligraphyBrushPreset.Soft => BrushPhysicsConfig.CreateCalligraphySoft(),
+                    _ => BrushPhysicsConfig.CreateCalligraphyBalanced()
+                };
                 _activeRenderer = new VariableWidthBrushRenderer(config);
             }
             return;
@@ -725,14 +728,24 @@ public partial class PaintOverlayWindow : Window
         {
             if (force || _activeRenderer is not MarkerBrushRenderer marker || marker.RenderMode != MarkerRenderMode.Ribbon)
             {
-                var config = _whiteboardSmoothMode ? MarkerBrushConfig.Smooth : MarkerBrushConfig.Legacy;
+                var config = _whiteboardPreset switch
+                {
+                    WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
+                    WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
+                    _ => MarkerBrushConfig.Smooth
+                };
                 _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon, config);
             }
             return;
         }
         if (force || _activeRenderer is not MarkerBrushRenderer)
         {
-            var config = _whiteboardSmoothMode ? MarkerBrushConfig.Smooth : MarkerBrushConfig.Legacy;
+            var config = _whiteboardPreset switch
+            {
+                WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
+                WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
+                _ => MarkerBrushConfig.Smooth
+            };
             _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.SegmentUnion, config);
         }
     }

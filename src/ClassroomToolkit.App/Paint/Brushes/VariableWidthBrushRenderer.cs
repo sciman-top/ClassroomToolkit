@@ -84,26 +84,27 @@ public class BrushPhysicsConfig
     public int InkBloomMaxCount { get; set; } = 12;
 
 
-    public static BrushPhysicsConfig DefaultSmooth => new();
+    public static BrushPhysicsConfig DefaultSmooth => CreateCalligraphyBalanced();
     public static BrushPhysicsConfig CreateCalligraphySharp()
     {
         return new BrushPhysicsConfig
         {
-            MinStrokeWidthPx = 2.2,
-            MaxStrokeWidthMultiplier = 2.6,
-            WidthSmoothing = 0.86,
-            VelocityThreshold = 1.3,
-            PositionSmoothingMinAlpha = 0.45,
+            StartCapLength = 0.1,
+            MinStrokeWidthPx = 2.1,
+            MaxStrokeWidthMultiplier = 2.7,
+            WidthSmoothing = 0.92,
+            VelocityThreshold = 1.25,
+            PositionSmoothingMinAlpha = 0.38,
             PositionSmoothingMaxAlpha = 0.9,
-            AdaptiveSamplingMinFactor = 0.1,
-            AdaptiveSamplingMaxFactor = 0.24,
-            RdpEpsilonFactor = 0.12,
+            AdaptiveSamplingMinFactor = 0.06,
+            AdaptiveSamplingMaxFactor = 0.15,
+            RdpEpsilonFactor = 0.07,
             StartVelocityRampUpPoints = 6,
-            VelocityWidthFactor = 0.82,
-            EndTaperStartProgress = 0.68,
-            EndVelocityDecoupleStart = 0.82,
-            TaperMinWidthFactor = 0.5,
-            AnisotropyStrength = 0.08
+            VelocityWidthFactor = 0.75,
+            EndTaperStartProgress = 0.64,
+            EndVelocityDecoupleStart = 0.8,
+            TaperMinWidthFactor = 0.45,
+            AnisotropyStrength = 0.045
         };
     }
 
@@ -111,21 +112,50 @@ public class BrushPhysicsConfig
     {
         return new BrushPhysicsConfig
         {
-            MinStrokeWidthPx = 2.4,
-            MaxStrokeWidthMultiplier = 2.5,
-            WidthSmoothing = 0.91,
-            VelocityThreshold = 1.5,
-            PositionSmoothingMinAlpha = 0.35,
-            PositionSmoothingMaxAlpha = 0.85,
-            AdaptiveSamplingMinFactor = 0.12,
-            AdaptiveSamplingMaxFactor = 0.28,
-            RdpEpsilonFactor = 0.16,
-            StartVelocityRampUpPoints = 10,
-            VelocityWidthFactor = 0.66,
-            EndTaperStartProgress = 0.75,
-            EndVelocityDecoupleStart = 0.85,
-            TaperMinWidthFactor = 0.6,
-            AnisotropyStrength = 0.05
+            StartCapLength = 0.08,
+            MinStrokeWidthPx = 2.5,
+            MaxStrokeWidthMultiplier = 2.45,
+            WidthSmoothing = 0.95,
+            VelocityThreshold = 1.6,
+            PositionSmoothingMinAlpha = 0.26,
+            PositionSmoothingMaxAlpha = 0.8,
+            AdaptiveSamplingMinFactor = 0.08,
+            AdaptiveSamplingMaxFactor = 0.2,
+            RdpEpsilonFactor = 0.085,
+            StartVelocityRampUpPoints = 13,
+            VelocityWidthFactor = 0.53,
+            EndTaperStartProgress = 0.78,
+            EndVelocityDecoupleStart = 0.86,
+            TaperMinWidthFactor = 0.68,
+            AnisotropyStrength = 0.035,
+            FlyingWhiteThreshold = 0.95,
+            FlyingWhiteNoiseIntensity = 0.008,
+            FiberNoiseIntensity = 0.0015,
+            MultiRibbonOffsetJitter = 0.006,
+            MultiRibbonWidthJitter = 0.012
+        };
+    }
+
+    public static BrushPhysicsConfig CreateCalligraphyBalanced()
+    {
+        return new BrushPhysicsConfig
+        {
+            StartCapLength = 0.2,
+            MinStrokeWidthPx = 2.3,
+            MaxStrokeWidthMultiplier = 2.55,
+            WidthSmoothing = 0.955,
+            VelocityThreshold = 1.4,
+            PositionSmoothingMinAlpha = 0.32,
+            PositionSmoothingMaxAlpha = 0.88,
+            AdaptiveSamplingMinFactor = 0.07,
+            AdaptiveSamplingMaxFactor = 0.18,
+            RdpEpsilonFactor = 0.075,
+            StartVelocityRampUpPoints = 15,
+            VelocityWidthFactor = 0.58,
+            EndTaperStartProgress = 0.71,
+            EndVelocityDecoupleStart = 0.83,
+            TaperMinWidthFactor = 0.52,
+            AnisotropyStrength = 0.045
         };
     }
 }
@@ -136,9 +166,9 @@ public class VariableWidthBrushRenderer : IBrushRenderer
     private const double DirectionNoiseFrequency = 0.4;
 
     private const int UpsampleSteps = 8;
-    private const double CornerAngleThreshold = 90.0;
-    private const double CornerMinAngle = 5.0;
-    private const int CornerArcSegments = 6;
+private const double CornerAngleThreshold = 90.0;
+private const double CornerMinAngle = 5.0;
+private const int CornerArcSegments = 6;
 
     // v10/v11: 扩展点结构以存储速度、进度和累积宽度信息
     private struct StrokePoint
@@ -1114,10 +1144,37 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             var width = ClampWidth(samples[i].Width);
             var speed = samples[i].NormalizedSpeed;
             var progress = samples[i].Progress;
+            double cornerSharpness = 0.0;
+            Vector cornerNormal = lastNormal;
+
+            if (i > 0 && i < samples.Count - 1)
+            {
+                var dirPrevCorner = pos - samples[i - 1].Position;
+                var dirNextCorner = samples[i + 1].Position - pos;
+                if (dirPrevCorner.LengthSquared > 0.0001 && dirNextCorner.LengthSquared > 0.0001)
+                {
+                    dirPrevCorner.Normalize();
+                    dirNextCorner.Normalize();
+                    double cornerAngle = Math.Abs(Vector.AngleBetween(dirPrevCorner, dirNextCorner));
+                    if (cornerAngle < CornerAngleThreshold && cornerAngle > CornerMinAngle)
+                    {
+                        cornerSharpness = Math.Clamp(
+                            (CornerAngleThreshold - cornerAngle) / (CornerAngleThreshold - CornerMinAngle),
+                            0.0, 1.0);
+                        var bisector = dirPrevCorner + dirNextCorner;
+                        if (bisector.LengthSquared > 0.0001)
+                        {
+                            bisector.Normalize();
+                            cornerNormal = new Vector(-bisector.Y, bisector.X);
+                        }
+                    }
+                }
+            }
+            double cornerAttenuation = 1.0 - (cornerSharpness * 0.6);
 
             // 方向扰动宽度噪声：沿笔画方向变化，避免侧向锯齿
             double directionNoise = Math.Sin(i * DirectionNoiseFrequency) * width * DirectionNoiseAmplitude;
-            directionNoise *= (1.0 - progress);
+            directionNoise *= (1.0 - progress) * cornerAttenuation;
             width = ClampWidth(width + directionNoise);
 
             // ===== v11: 计算切线和法线（确保噪声只在法线方向）=====
@@ -1130,6 +1187,22 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                 dir.Normalize();
 
             var normal = GetNormalFromVector(dir, lastNormal);
+            if (cornerSharpness > 0 && cornerNormal.LengthSquared > 0.0001)
+            {
+                double t = cornerSharpness * 0.6;
+                normal = new Vector(
+                    (normal.X * (1.0 - t)) + (cornerNormal.X * t),
+                    (normal.Y * (1.0 - t)) + (cornerNormal.Y * t)
+                );
+                if (normal.LengthSquared > 0.0001)
+                {
+                    normal.Normalize();
+                }
+                if (i > 0)
+                {
+                    width = ClampWidth(Lerp(width, samples[i - 1].Width, cornerSharpness * 0.35));
+                }
+            }
             lastNormal = normal;
 
             // ===== v11 修复: 使用平滑噪声函数代替随机噪声 =====
@@ -1155,7 +1228,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
                     noiseReduction = 1.0 - t; // 线性减少到 0
                 }
 
-                edgeNoise = smoothNoise * noiseAmplitude * noiseReduction;
+                edgeNoise = smoothNoise * noiseAmplitude * noiseReduction * cornerAttenuation;
 
                 // ===== v11 安全约束: 防止左右轮廓交叉 =====
                 // 确保噪声不超过宽度的一半
@@ -1169,7 +1242,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
             double accumulation = Math.Clamp(samples[i].AccumulatedWidth / (_baseSize * 0.8), 0, 1);
             double fiberAttenuation = 1.0 - (accumulation * 0.6);
             double fiberAmplitude = width * _config.FiberNoiseIntensity * fiberFactor * fiberAttenuation * fiberNoiseScale;
-            edgeNoise += fiberNoise * fiberAmplitude;
+            edgeNoise += fiberNoise * fiberAmplitude * cornerAttenuation;
 
             // 应用噪声（只在法线方向）
             var halfWidth = width * 0.5;
@@ -1299,12 +1372,20 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         double skew = Math.Sin(angleDiff) * ClampWidth(samples[isEnd ? lastIndex : 0].Width) * 0.32 * skewSign;
 
         double width = ClampWidth(isEnd ? samples[lastIndex].Width : samples[0].Width);
-        double baseForTip = isEnd ? width : _baseSize;
+        double baseForTip = isEnd ? width : Math.Min(_baseSize * 0.8, width * 0.95);
 
         // TipPoint 示例: tip = basePoint +/- dir * tipLen
         double tipLen = ClampTipLength(baseForTip);
         double dryFactor = Math.Clamp(1.0 - _lastInkFlow, 0, 1);
         tipLen *= Lerp(0.9, 1.25, dryFactor);
+        if (!isEnd)
+        {
+            double capShrink = Math.Clamp(1.0 - _config.StartCapLength, 0.6, 1.0);
+            tipLen *= 0.8 * capShrink;
+            double segmentLen = (refPoint - basePoint).Length;
+            double maxTip = Math.Max(baseForTip * 0.18, segmentLen * 0.5);
+            tipLen = Math.Min(tipLen, maxTip);
+        }
         var tipPoint = isEnd ? basePoint + dir * tipLen : basePoint - dir * tipLen;
         tipPoint += normal * skew;
 
@@ -1338,7 +1419,7 @@ public class VariableWidthBrushRenderer : IBrushRenderer
         int nextIndex = Math.Min(count - 1, window);
         double dpStart = Math.Max(samples[nextIndex].Progress - samples[0].Progress, 0.001);
         double dropStart = Math.Max(0, samples[0].Width - samples[nextIndex].Width);
-        return dropStart / dpStart;
+        return (dropStart / dpStart) * 0.45;
     }
 
     private void AddCapV13(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, CapData cap)

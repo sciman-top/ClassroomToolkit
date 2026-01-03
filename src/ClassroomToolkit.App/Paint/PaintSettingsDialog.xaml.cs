@@ -28,6 +28,18 @@ public partial class PaintSettingsDialog : Window
         ("白板笔", PaintBrushStyle.StandardRibbon),
         ("毛笔", PaintBrushStyle.Calligraphy)
     };
+    private static readonly (string Label, WhiteboardBrushPreset Preset)[] WhiteboardPresetChoices =
+    {
+        ("顺滑", WhiteboardBrushPreset.Smooth),
+        ("平衡", WhiteboardBrushPreset.Balanced),
+        ("锋利", WhiteboardBrushPreset.Sharp)
+    };
+    private static readonly (string Label, CalligraphyBrushPreset Preset)[] CalligraphyPresetChoices =
+    {
+        ("锋利", CalligraphyBrushPreset.Sharp),
+        ("平衡", CalligraphyBrushPreset.Balanced),
+        ("柔和", CalligraphyBrushPreset.Soft)
+    };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
         ("自动判断（推荐）", "auto"),
@@ -44,8 +56,8 @@ public partial class PaintSettingsDialog : Window
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
     public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.StandardRibbon;
-    public bool WhiteboardSmoothMode { get; private set; }
-    public bool CalligraphySharpMode { get; private set; }
+    public WhiteboardBrushPreset WhiteboardPreset { get; private set; } = WhiteboardBrushPreset.Smooth;
+    public CalligraphyBrushPreset CalligraphyPreset { get; private set; } = CalligraphyBrushPreset.Sharp;
     public bool CalligraphyInkBloomEnabled { get; private set; }
     public bool CalligraphySealEnabled { get; private set; }
     public byte CalligraphyOverlayOpacityThreshold { get; private set; }
@@ -84,8 +96,16 @@ public partial class PaintSettingsDialog : Window
             BrushStyleCombo.Items.Add(item);
         }
         SelectBrushStyle(settings.BrushStyle);
-        WhiteboardSmoothCheck.IsChecked = settings.WhiteboardSmoothMode;
-        CalligraphySharpCheck.IsChecked = settings.CalligraphySharpMode;
+        foreach (var (label, preset) in WhiteboardPresetChoices)
+        {
+            WhiteboardPresetCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = preset });
+        }
+        SelectWhiteboardPreset(settings.WhiteboardPreset);
+        foreach (var (label, preset) in CalligraphyPresetChoices)
+        {
+            CalligraphyPresetCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = preset });
+        }
+        SelectCalligraphyPreset(settings.CalligraphyPreset);
         CalligraphyInkBloomCheck.IsChecked = settings.CalligraphyInkBloomEnabled;
         CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
         UpdateCalligraphyOptionState();
@@ -129,8 +149,8 @@ public partial class PaintSettingsDialog : Window
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BrushStyle = ResolveBrushStyle();
-        WhiteboardSmoothMode = WhiteboardSmoothCheck.IsChecked == true;
-        CalligraphySharpMode = CalligraphySharpCheck.IsChecked == true;
+        WhiteboardPreset = ResolveWhiteboardPreset();
+        CalligraphyPreset = ResolveCalligraphyPreset();
         CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
         CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
         CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
@@ -209,7 +229,8 @@ public partial class PaintSettingsDialog : Window
     private void UpdateCalligraphyOptionState()
     {
         bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
-        CalligraphySharpCheck.IsEnabled = isCalligraphy;
+        CalligraphyPresetCombo.IsEnabled = isCalligraphy;
+        WhiteboardPresetCombo.IsEnabled = !isCalligraphy;
         CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
         CalligraphySealCheck.IsEnabled = isCalligraphy;
         CalligraphyOverlayThresholdLabel.IsEnabled = isCalligraphy;
@@ -407,6 +428,50 @@ public partial class PaintSettingsDialog : Window
             return style;
         }
         return PaintBrushStyle.StandardRibbon;
+    }
+
+    private void SelectWhiteboardPreset(WhiteboardBrushPreset preset)
+    {
+        foreach (var item in WhiteboardPresetCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is WhiteboardBrushPreset tagged && tagged == preset)
+            {
+                WhiteboardPresetCombo.SelectedItem = item;
+                return;
+            }
+        }
+        WhiteboardPresetCombo.SelectedIndex = 0;
+    }
+
+    private void SelectCalligraphyPreset(CalligraphyBrushPreset preset)
+    {
+        foreach (var item in CalligraphyPresetCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is CalligraphyBrushPreset tagged && tagged == preset)
+            {
+                CalligraphyPresetCombo.SelectedItem = item;
+                return;
+            }
+        }
+        CalligraphyPresetCombo.SelectedIndex = 0;
+    }
+
+    private WhiteboardBrushPreset ResolveWhiteboardPreset()
+    {
+        if (WhiteboardPresetCombo.SelectedItem is WpfComboBoxItem item && item.Tag is WhiteboardBrushPreset preset)
+        {
+            return preset;
+        }
+        return WhiteboardBrushPreset.Smooth;
+    }
+
+    private CalligraphyBrushPreset ResolveCalligraphyPreset()
+    {
+        if (CalligraphyPresetCombo.SelectedItem is WpfComboBoxItem item && item.Tag is CalligraphyBrushPreset preset)
+        {
+            return preset;
+        }
+        return CalligraphyBrushPreset.Sharp;
     }
 
     private static double FindNearestScale(double value)

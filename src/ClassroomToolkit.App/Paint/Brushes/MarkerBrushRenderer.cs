@@ -31,46 +31,68 @@ public sealed class MarkerBrushConfig
 
     public static MarkerBrushConfig Smooth => new MarkerBrushConfig
     {
-        SpeedWidthFactor = 0.05,
-        MinWidthFactor = 0.9,
-        PositionSmoothing = 0.82,
-        WidthSmoothing = 0.35,
-        MinMoveDistance = 0.6,
-        VelocityDecay = 0.99,
-        SplineTargetSpacing = 2.6,
-        MinSampleSpacing = 0.3,
-        StartTaperFactor = 0.85,
+        SpeedWidthFactor = 0.006,
+        MinWidthFactor = 0.99,
+        PositionSmoothing = 0.56,
+        WidthSmoothing = 0.16,
+        MinMoveDistance = 0.34,
+        VelocityDecay = 0.999,
+        SplineTargetSpacing = 1.3,
+        MinSampleSpacing = 0.09,
+        StartTaperFactor = 0.98,
+        EndTaperFactor = 0.94,
+        TaperLengthRatio = 0.03,
+        MaxTaperLengthFactor = 1.7,
+        RibbonEndCapScale = 1.05,
+        RibbonJoinScale = 1.02,
+        RibbonQuadOverlap = 1.07,
+        RibbonMiterLimit = 1.8,
+        RibbonNormalSmoothing = 0.45,
+        RibbonCapSegments = 20
+    };
+
+    public static MarkerBrushConfig Balanced => new MarkerBrushConfig
+    {
+        SpeedWidthFactor = 0.07,
+        MinWidthFactor = 0.86,
+        PositionSmoothing = 0.72,
+        WidthSmoothing = 0.32,
+        MinMoveDistance = 0.5,
+        VelocityDecay = 0.988,
+        SplineTargetSpacing = 2.2,
+        MinSampleSpacing = 0.22,
+        StartTaperFactor = 0.84,
         EndTaperFactor = 0.7,
-        TaperLengthRatio = 0.08,
-        MaxTaperLengthFactor = 2.6,
+        TaperLengthRatio = 0.09,
+        MaxTaperLengthFactor = 2.7,
         RibbonEndCapScale = 0.9,
         RibbonJoinScale = 0.9,
-        RibbonQuadOverlap = 1.02,
-        RibbonMiterLimit = 2.5,
-        RibbonNormalSmoothing = 0.8,
+        RibbonQuadOverlap = 1.01,
+        RibbonMiterLimit = 2.8,
+        RibbonNormalSmoothing = 0.78,
         RibbonCapSegments = 10
     };
 
-    public static MarkerBrushConfig Legacy => new MarkerBrushConfig
+    public static MarkerBrushConfig Sharp => new MarkerBrushConfig
     {
-        SpeedWidthFactor = 0.08,
-        MinWidthFactor = 0.85,
-        PositionSmoothing = 0.75,
-        WidthSmoothing = 0.45,
-        MinMoveDistance = 0.5,
-        VelocityDecay = 0.985,
-        SplineTargetSpacing = 2.0,
-        MinSampleSpacing = 0.2,
-        StartTaperFactor = 0.8,
-        EndTaperFactor = 0.6,
-        TaperLengthRatio = 0.1,
-        MaxTaperLengthFactor = 2.8,
-        RibbonEndCapScale = 0.9,
-        RibbonJoinScale = 0.9,
-        RibbonQuadOverlap = 1.02,
-        RibbonMiterLimit = 2.5,
-        RibbonNormalSmoothing = 0.8,
-        RibbonCapSegments = 10
+        SpeedWidthFactor = 0.14,
+        MinWidthFactor = 0.72,
+        PositionSmoothing = 0.92,
+        WidthSmoothing = 0.6,
+        MinMoveDistance = 0.8,
+        VelocityDecay = 0.97,
+        SplineTargetSpacing = 3.4,
+        MinSampleSpacing = 0.48,
+        StartTaperFactor = 0.6,
+        EndTaperFactor = 0.42,
+        TaperLengthRatio = 0.18,
+        MaxTaperLengthFactor = 3.6,
+        RibbonEndCapScale = 0.82,
+        RibbonJoinScale = 0.82,
+        RibbonQuadOverlap = 0.96,
+        RibbonMiterLimit = 4.2,
+        RibbonNormalSmoothing = 0.93,
+        RibbonCapSegments = 6
     };
 }
 
@@ -610,7 +632,7 @@ public class MarkerBrushRenderer : IBrushRenderer
             start.Y + ((end.Y - start.Y) * t));
     }
 
-    private static void AppendCircleFigure(StreamGeometryContext ctx, WpfPoint center, double radius, bool clockwise)
+    private void AppendCircleFigure(StreamGeometryContext ctx, WpfPoint center, double radius, bool clockwise)
     {
         int segments = Math.Max(6, _config.RibbonCapSegments * 2);
         double step = (Math.PI * 2.0 / segments) * (clockwise ? 1 : -1);

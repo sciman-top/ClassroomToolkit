@@ -64,14 +64,8 @@ public sealed class AppSettingsService
             settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
             settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
             settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
-            settings.WhiteboardSmoothMode = GetBool(
-                paint,
-                "whiteboard_smooth_mode",
-                settings.WhiteboardSmoothMode);
-            settings.CalligraphySharpMode = GetBool(
-                paint,
-                "calligraphy_sharp_mode",
-                settings.CalligraphySharpMode);
+            settings.WhiteboardPreset = ResolveWhiteboardPreset(paint, settings.WhiteboardPreset);
+            settings.CalligraphyPreset = ResolveCalligraphyPreset(paint, settings.CalligraphyPreset);
             settings.CalligraphyInkBloomEnabled = GetBool(
                 paint,
                 "calligraphy_ink_bloom_enabled",
@@ -160,8 +154,8 @@ public sealed class AppSettingsService
         var paint = GetOrCreate(data, "Paint");
         paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_style"] = settings.BrushStyle.ToString();
-        paint["whiteboard_smooth_mode"] = settings.WhiteboardSmoothMode ? "True" : "False";
-        paint["calligraphy_sharp_mode"] = settings.CalligraphySharpMode ? "True" : "False";
+        paint["whiteboard_preset"] = settings.WhiteboardPreset.ToString();
+        paint["calligraphy_preset"] = settings.CalligraphyPreset.ToString();
         paint["calligraphy_ink_bloom_enabled"] = settings.CalligraphyInkBloomEnabled ? "True" : "False";
         paint["calligraphy_seal_enabled"] = settings.CalligraphySealEnabled ? "True" : "False";
         paint["calligraphy_overlay_opacity_threshold"] =
@@ -272,6 +266,45 @@ public sealed class AppSettingsService
             return parsed;
         }
         return PaintBrushStyle.StandardRibbon;
+    }
+
+    private static WhiteboardBrushPreset ResolveWhiteboardPreset(Dictionary<string, string> section, WhiteboardBrushPreset fallback)
+    {
+        if (section.TryGetValue("whiteboard_preset", out var raw) &&
+            Enum.TryParse<WhiteboardBrushPreset>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+        if (section.TryGetValue("whiteboard_preset", out var legacyPreset) &&
+            legacyPreset.Trim().Equals("Compatibility", StringComparison.OrdinalIgnoreCase))
+        {
+            return WhiteboardBrushPreset.Sharp;
+        }
+
+        if (section.TryGetValue("whiteboard_smooth_mode", out var legacyRaw))
+        {
+            bool legacy = GetBool(section, "whiteboard_smooth_mode", true);
+            return legacy ? WhiteboardBrushPreset.Smooth : WhiteboardBrushPreset.Sharp;
+        }
+
+        return fallback;
+    }
+
+    private static CalligraphyBrushPreset ResolveCalligraphyPreset(Dictionary<string, string> section, CalligraphyBrushPreset fallback)
+    {
+        if (section.TryGetValue("calligraphy_preset", out var raw) &&
+            Enum.TryParse<CalligraphyBrushPreset>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (section.TryGetValue("calligraphy_sharp_mode", out var legacyRaw))
+        {
+            bool legacy = GetBool(section, "calligraphy_sharp_mode", true);
+            return legacy ? CalligraphyBrushPreset.Sharp : CalligraphyBrushPreset.Soft;
+        }
+
+        return fallback;
     }
 
     private static bool HasGeometry(AppSettings settings)
