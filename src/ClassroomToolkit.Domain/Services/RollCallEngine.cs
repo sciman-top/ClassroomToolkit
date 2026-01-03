@@ -585,7 +585,8 @@ public sealed class RollCallEngine
             }
             subgroupRemaining[group] = sanitized;
             subgroupRemainingUnion.UnionWith(sanitized);
-            drawnFromSubgroups.UnionWith(baseSet.Where(idx => !sanitized.Contains(idx)));
+            var poolSet = new HashSet<int>(sanitized);
+            drawnFromSubgroups.UnionWith(baseSet.Where(idx => !poolSet.Contains(idx)));
 
             if (!_groupInitialSequences.TryGetValue(group, out var initial) || initial.Count == 0)
             {
@@ -640,11 +641,13 @@ public sealed class RollCallEngine
             var cleanedAll = NormalizeIndices(orderHint, baseAllSet);
             orderHint = cleanedAll;
         }
+        var orderSet = new HashSet<int>(orderHint);
         foreach (var idx in baseAllList)
         {
-            if (!orderHint.Contains(idx))
+            if (!orderSet.Contains(idx))
             {
                 orderHint.Add(idx);
+                orderSet.Add(idx);
             }
         }
         _groupInitialSequences[IdentityUtils.AllGroupName] = new List<int>(orderHint);

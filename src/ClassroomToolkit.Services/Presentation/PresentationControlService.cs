@@ -127,6 +127,11 @@ public sealed class PresentationControlService
         InputStrategy strategy,
         out PresentationType targetType)
     {
+        if (target.Handle == IntPtr.Zero)
+        {
+            targetType = PresentationType.None;
+            return false;
+        }
         var effective = new PresentationControlOptions
         {
             Strategy = strategy,

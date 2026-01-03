@@ -61,19 +61,45 @@ public sealed class StudentWorkbookStore
 
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
-        using var xl = new XLWorkbook();
-        foreach (var pair in workbook.Classes)
+        var directory = System.IO.Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
         {
-            var sheet = xl.Worksheets.Add(pair.Key);
-            WriteWorksheet(sheet, pair.Value);
+            Directory.CreateDirectory(directory);
         }
-        if (!string.IsNullOrWhiteSpace(rollStateJson))
+        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
         {
-            var stateSheet = xl.Worksheets.Add(RollStateSheetName);
-            stateSheet.Cell(1, 1).Value = RollStateColumn;
-            stateSheet.Cell(2, 1).Value = rollStateJson;
+            using (var xl = new XLWorkbook())
+            {
+                foreach (var pair in workbook.Classes)
+                {
+                    var sheet = xl.Worksheets.Add(pair.Key);
+                    WriteWorksheet(sheet, pair.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(rollStateJson))
+                {
+                    var stateSheet = xl.Worksheets.Add(RollStateSheetName);
+                    stateSheet.Cell(1, 1).Value = RollStateColumn;
+                    stateSheet.Cell(2, 1).Value = rollStateJson;
+                }
+                xl.SaveAs(tempPath);
+            }
+            if (File.Exists(path))
+            {
+                File.Replace(tempPath, path, null);
+            }
+            else
+            {
+                File.Move(tempPath, path);
+            }
         }
-        xl.SaveAs(path);
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
     }
 
     private static StudentWorkbookLoadResult CreateTemplateWorkbook()
