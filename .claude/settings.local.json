@@ -5,7 +5,9 @@
       "Bash(git commit:*)",
       "Bash(dotnet build:*)",
       "Bash(git checkout:*)",
-      "mcp__zai-mcp-server__extract_text_from_screenshot"
+      "mcp__zai-mcp-server__extract_text_from_screenshot",
+      "WebSearch",
+      "mcp__zai-mcp-server__analyze_image"
     ]
   }
 }

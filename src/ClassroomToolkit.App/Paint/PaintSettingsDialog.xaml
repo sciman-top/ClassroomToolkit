@@ -90,7 +90,16 @@
                     <TextBlock Text="毛笔质感" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,4,0,0"/>
                     <StackPanel Grid.Column="1">
                         <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚，仅毛笔生效）" Margin="0,0,0,6"/>
-                        <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点，仅毛笔生效）"/>
+                        <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点，仅毛笔生效）" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度弱化阈值" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="40"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="CalligraphyOverlayThresholdSlider" Minimum="0" Maximum="100" ValueChanged="OnCalligraphyOverlayThresholdChanged"/>
+                            <TextBlock Grid.Column="1" x:Name="CalligraphyOverlayThresholdValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                        </Grid>
                     </StackPanel>
                 </Grid>
 

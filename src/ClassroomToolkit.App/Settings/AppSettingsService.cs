@@ -72,6 +72,10 @@ public sealed class AppSettingsService
                 paint,
                 "calligraphy_seal_enabled",
                 settings.CalligraphySealEnabled);
+            settings.CalligraphyOverlayOpacityThreshold = GetByte(
+                paint,
+                "calligraphy_overlay_opacity_threshold",
+                settings.CalligraphyOverlayOpacityThreshold);
             settings.BoardOpacity = 255;
             settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
             settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
@@ -150,6 +154,8 @@ public sealed class AppSettingsService
         paint["brush_style"] = settings.BrushStyle.ToString();
         paint["calligraphy_ink_bloom_enabled"] = settings.CalligraphyInkBloomEnabled ? "True" : "False";
         paint["calligraphy_seal_enabled"] = settings.CalligraphySealEnabled ? "True" : "False";
+        paint["calligraphy_overlay_opacity_threshold"] =
+            settings.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture);
         paint["eraser_size"] = settings.EraserSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_opacity"] = settings.BrushOpacity.ToString(CultureInfo.InvariantCulture);
         paint["board_opacity"] = settings.BoardOpacity.ToString(CultureInfo.InvariantCulture);

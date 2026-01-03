@@ -56,7 +56,6 @@ public partial class RollCallWindow : Window
     private bool _remoteHookUnavailableNotified;
     private bool _initialized;
     private bool _hovering;
-    private bool _suppressRollClick;
     private DateTime _suppressRollUntil = DateTime.MinValue;
     private IntPtr _hwnd;
     private readonly DispatcherTimer _hoverCheckTimer;
@@ -1035,10 +1034,6 @@ public partial class RollCallWindow : Window
 
     private bool ShouldSuppressRollClick()
     {
-        if (_suppressRollClick)
-        {
-            return true;
-        }
         if (_suppressRollUntil >= DateTime.UtcNow)
         {
             return true;

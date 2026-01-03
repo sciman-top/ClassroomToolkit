@@ -47,6 +47,7 @@ public partial class PaintSettingsDialog : Window
     public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
     public bool CalligraphyInkBloomEnabled { get; private set; }
     public bool CalligraphySealEnabled { get; private set; }
+    public byte CalligraphyOverlayOpacityThreshold { get; private set; }
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
@@ -89,6 +90,7 @@ public partial class PaintSettingsDialog : Window
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
         BrushOpacitySlider.Value = ToPercent(settings.BrushOpacity);
+        CalligraphyOverlayThresholdSlider.Value = ToPercent(settings.CalligraphyOverlayOpacityThreshold);
 
         foreach (var (label, type) in ShapeChoices)
         {
@@ -108,6 +110,7 @@ public partial class PaintSettingsDialog : Window
         UpdateBrushSizeLabel();
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
+        UpdateCalligraphyOverlayThresholdLabel();
         HighlightTempColorByValue(BrushColor);
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
@@ -125,6 +128,7 @@ public partial class PaintSettingsDialog : Window
         BrushStyle = ResolveBrushStyle();
         CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
         CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
+        CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         DialogResult = true;
@@ -143,6 +147,11 @@ public partial class PaintSettingsDialog : Window
     private void OnBrushOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateBrushOpacityLabel();
+    }
+
+    private void OnCalligraphyOverlayThresholdChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateCalligraphyOverlayThresholdLabel();
     }
 
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -183,11 +192,23 @@ public partial class PaintSettingsDialog : Window
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
     }
 
+    private void UpdateCalligraphyOverlayThresholdLabel()
+    {
+        if (CalligraphyOverlayThresholdValue == null)
+        {
+            return;
+        }
+        CalligraphyOverlayThresholdValue.Text = $"{Math.Round(CalligraphyOverlayThresholdSlider.Value)}%";
+    }
+
     private void UpdateCalligraphyOptionState()
     {
         bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
         CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
         CalligraphySealCheck.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdLabel.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdSlider.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdValue.IsEnabled = isCalligraphy;
     }
 
 

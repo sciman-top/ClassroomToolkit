@@ -31,6 +31,7 @@ public partial class PaintOverlayWindow : Window
     private const int PresentationFocusMonitorIntervalMs = 500;
     private const int PresentationFocusCooldownMs = 1200;
     private const double CalligraphySealStrokeWidthFactor = 0.08;
+    private const byte DefaultCalligraphyOverlayOpacityThreshold = 230;
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
@@ -41,6 +42,7 @@ public partial class PaintOverlayWindow : Window
     private const int HistoryLimit = 30;
     private bool _calligraphyInkBloomEnabled = true;
     private bool _calligraphySealEnabled = true;
+    private byte _calligraphyOverlayOpacityThreshold = DefaultCalligraphyOverlayOpacityThreshold;
 
     private sealed class RasterSnapshot
     {
@@ -680,6 +682,11 @@ public partial class PaintOverlayWindow : Window
     {
         _calligraphyInkBloomEnabled = inkBloomEnabled;
         _calligraphySealEnabled = sealEnabled;
+    }
+
+    public void SetCalligraphyOverlayOpacityThreshold(byte threshold)
+    {
+        _calligraphyOverlayOpacityThreshold = threshold;
     }
 
     public void SetBrushStyle(PaintBrushStyle style)
@@ -1724,6 +1731,7 @@ public partial class PaintOverlayWindow : Window
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         bool isCalligraphy = _brushStyle == PaintBrushStyle.Calligraphy;
+        bool suppressOverlays = ShouldSuppressCalligraphyOverlays();
         double inkFlow = 1.0;
         Vector? strokeDirection = null;
         if (isCalligraphy)
@@ -1737,6 +1745,12 @@ public partial class PaintOverlayWindow : Window
                 {
                     if (_calligraphyInkBloomEnabled)
                     {
+                        if (suppressOverlays)
+                        {
+                            RenderInkEdge(coreGeometry, color, inkFlow, strokeDirection);
+                            RenderInkCore(coreGeometry, color, enableSeal: false);
+                            return;
+                        }
                         var blooms = calligraphyRenderer.GetInkBloomGeometries();
                         if (blooms != null)
                         {
@@ -1752,7 +1766,7 @@ public partial class PaintOverlayWindow : Window
                         }
                     }
                     RenderInkEdge(coreGeometry, color, inkFlow, strokeDirection);
-                    RenderInkCore(coreGeometry, color);
+                    RenderInkCore(coreGeometry, color, enableSeal: !suppressOverlays);
                     return;
                 }
             }
@@ -1788,12 +1802,12 @@ public partial class PaintOverlayWindow : Window
         RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
     }
 
-    private void RenderInkCore(Geometry geometry, MediaColor color)
+    private void RenderInkCore(Geometry geometry, MediaColor color, bool enableSeal)
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         RenderAndBlend(geometry, brush, null, erase: false, null);
-        if (!_calligraphySealEnabled)
+        if (!enableSeal || !_calligraphySealEnabled)
         {
             return;
         }
@@ -1810,6 +1824,12 @@ public partial class PaintOverlayWindow : Window
     private void RenderInkEdge(Geometry coreGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
     {
         return;
+    }
+
+    private bool ShouldSuppressCalligraphyOverlays()
+    {
+        // Lower opacity amplifies edge overlap; suppress overlays for clarity.
+        return _brushOpacity < _calligraphyOverlayOpacityThreshold;
     }
     
     private bool IsInkMaskEligible(Geometry geometry)
