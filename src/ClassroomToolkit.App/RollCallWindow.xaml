@@ -77,14 +77,19 @@
                     </Button>
 
                     <!-- 班级选择 -->
-                    <ComboBox x:Name="ClassCombo" Width="110" Height="36"
-                              ItemsSource="{Binding AvailableClasses}"
-                              Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
-                              SelectionChanged="OnClassSelectionChanged"
-                              DropDownOpened="OnClassDropDownOpened"
-                              DropDownClosed="OnClassDropDownClosed"
-                              VerticalContentAlignment="Center" FontSize="13"
-                              Style="{StaticResource {x:Type ComboBox}}"/>
+                    <Button Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnClassSelectClick"
+                            Padding="12,6"
+                            Height="36"
+                            MinWidth="110"
+                            Background="White"
+                            BorderThickness="0"
+                            Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                        <Button.Effect>
+                            <DropShadowEffect Color="#B0BEC5" BlurRadius="8" ShadowDepth="2" Opacity="0.1"/>
+                        </Button.Effect>
+                        <TextBlock Text="{Binding ClassButtonLabel}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    </Button>
                 </StackPanel>
 
                 <!-- 右侧：窗口控制 -->

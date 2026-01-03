@@ -204,78 +204,68 @@ public static class CustomCursors
     }
 
     /// <summary>
-    /// 创建橡皮擦光标 - 立体橡皮擦设计，带擦除效果
+    /// 创建橡皮擦光标 - 现代化倾斜式橡皮擦设计 (深色专业版)
     /// </summary>
     private static WpfCursor CreateEraserCursor()
     {
         const int cursorSize = 32;
-        const int eraserWidth = 18;
-        const int eraserHeight = 22;
-        const int offsetX = (cursorSize - eraserWidth) / 2;
-        const int offsetY = (cursorSize - eraserHeight) / 2;
+        const int centerX = cursorSize / 2;
+        const int centerY = cursorSize / 2;
 
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
-            // 橡皮擦主体 - 粉红色渐变
-            var eraserBrush = new LinearGradientBrush(
-                MediaColor.FromRgb(255, 182, 193), // 浅粉色
-                MediaColor.FromRgb(255, 105, 180), // 深粉色
-                new System.Windows.Point(0, 0),
-                new System.Windows.Point(1, 1));
-            eraserBrush.Freeze();
+            // --- 1. 橡皮擦主体 (倾斜 45 度) ---
+            var rotateTransform = new RotateTransform(45, centerX, centerY);
+            context.PushTransform(rotateTransform);
 
-            // 金属夹子 - 银色渐变
-            var clipBrush = new LinearGradientBrush(
-                MediaColor.FromRgb(192, 192, 192), // 浅银色
-                MediaColor.FromRgb(128, 128, 128), // 深银色
-                new System.Windows.Point(0, 0),
-                new System.Windows.Point(0, 1));
-            clipBrush.Freeze();
+            // 橡皮擦主体 - 深炭灰到岩石灰渐变 (Professional Slate)
+            var bodyBrush = new LinearGradientBrush(
+                MediaColor.FromRgb(99, 110, 114), // Slate Grey
+                MediaColor.FromRgb(45, 52, 54),   // Charcoal
+                new WpfPoint(0, 0),
+                new WpfPoint(1, 1));
+            bodyBrush.Freeze();
 
-            // 橡皮擦主体形状（圆角矩形）
-            var eraserRect = new Rect(offsetX, offsetY + 4, eraserWidth, eraserHeight - 4);
-            var eraserGeom = new RectangleGeometry(eraserRect, 3, 3);
-            context.DrawGeometry(eraserBrush, new WpfPen(System.Windows.Media.Brushes.Gray, 1), eraserGeom);
+            // 绘制主体 (圆角矩形)
+            var bodyRect = new Rect(centerX - 10, centerY - 6, 20, 12);
+            context.DrawRoundedRectangle(bodyBrush, new WpfPen(System.Windows.Media.Brushes.Black, 0.8), bodyRect, 2, 2);
 
-            // 金属夹子
-            var clipRect = new Rect(offsetX + 2, offsetY - 2, eraserWidth - 4, 8);
-            var clipGeom = new RectangleGeometry(clipRect, 2, 2);
-            context.DrawGeometry(clipBrush, new WpfPen(System.Windows.Media.Brushes.DarkGray, 1), clipGeom);
+            // 品牌装饰带 (鸢尾紫)
+            var accentBrush = new SolidColorBrush(MediaColor.FromRgb(108, 92, 231)); 
+            accentBrush.Freeze();
+            var accentRect = new Rect(centerX + 3, centerY - 6, 4, 12);
+            context.DrawRectangle(accentBrush, null, accentRect);
 
-            // 擦除痕迹效果（半透明白色）
-            var eraseEffectBrush = new SolidColorBrush(MediaColor.FromArgb(100, 255, 255, 255));
-            eraseEffectBrush.Freeze();
-            
-            // 擦除线条
-            var erasePen = new WpfPen(eraseEffectBrush, 2);
-            erasePen.Freeze();
-            
-            // 模拟擦除的轨迹
-            context.DrawLine(erasePen,
-                new WpfPoint(offsetX - 2, offsetY + eraserHeight - 2),
-                new WpfPoint(offsetX + eraserWidth + 2, offsetY + eraserHeight + 4));
-            
-            context.DrawLine(erasePen,
-                new WpfPoint(offsetX - 1, offsetY + eraserHeight),
-                new WpfPoint(offsetX + eraserWidth + 1, offsetY + eraserHeight + 2));
+            context.Pop(); 
 
-            // 中心十字准星（精确定位）
-            var crossPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
-            crossPen.Freeze();
+            // --- 2. 动感弧线 (使用亮色增强对比) ---
+            var motionBrush = new SolidColorBrush(MediaColor.FromArgb(180, 0, 206, 201)); // Cyan Glow
+            motionBrush.Freeze();
+            var motionPen = new WpfPen(motionBrush, 1.2);
+            motionPen.StartLineCap = PenLineCap.Round;
+            motionPen.EndLineCap = PenLineCap.Round;
+            motionPen.Freeze();
+
+            var arc1 = new PathGeometry();
+            var fig1 = new PathFigure { StartPoint = new WpfPoint(centerX - 8, centerY + 5) };
+            fig1.Segments.Add(new QuadraticBezierSegment(new WpfPoint(centerX - 11, centerY + 1), new WpfPoint(centerX - 8, centerY - 3), true));
+            arc1.Figures.Add(fig1);
+            context.DrawGeometry(null, motionPen, arc1);
+
+            // --- 3. 准星 (高对比度) ---
+            // 使用亮青色准星，在深色橡皮擦和各种背景上都极度显眼
+            var crosshairPen = new WpfPen(System.Windows.Media.Brushes.Cyan, 1.2);
+            crosshairPen.Freeze();
             
-            int centerX = cursorSize / 2;
-            int centerY = cursorSize / 2;
+            context.DrawLine(crosshairPen, new WpfPoint(centerX - 4, centerY), new WpfPoint(centerX + 4, centerY));
+            context.DrawLine(crosshairPen, new WpfPoint(centerX, centerY - 4), new WpfPoint(centerX, centerY + 4));
             
-            context.DrawLine(crossPen,
-                new WpfPoint(centerX - 3, centerY),
-                new WpfPoint(centerX + 3, centerY));
-            context.DrawLine(crossPen,
-                new WpfPoint(centerX, centerY - 3),
-                new WpfPoint(centerX, centerY + 3));
+            // 准星中心点 (黑色，增加精确度)
+            context.DrawEllipse(System.Windows.Media.Brushes.Black, null, new WpfPoint(centerX, centerY), 0.8, 0.8);
         }
 
-        return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "eraser");
+        return CreateCursorFromVisual(drawingVisual, cursorSize, centerX, centerY, "pro_eraser");
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using System.Windows;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
+using System.Text;
 using ClassroomToolkit.App.Helpers;
 using Microsoft.Win32;
 
@@ -80,6 +81,104 @@ public partial class RollCallSettingsDialog : Window
     private void OnRemoteEnabledChanged(object sender, RoutedEventArgs e)
     {
         UpdateRemoteKeyEnabled();
+    }
+
+    private void OnSpeechDiagnosticsClick(object sender, RoutedEventArgs e)
+    {
+        var report = BuildSpeechDiagnosticsReport(out var summary);
+        try
+        {
+            Clipboard.SetText(report);
+        }
+        catch
+        {
+            // Ignore clipboard failures.
+        }
+        var message = $"{summary}\n\n详细报告已复制到剪贴板。";
+        System.Windows.MessageBox.Show(this, message, "语音诊断", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private string BuildSpeechDiagnosticsReport(out string summary)
+    {
+        var sb = new StringBuilder();
+        List<InstalledVoice> installed;
+        try
+        {
+            using var synth = new SpeechSynthesizer();
+            installed = synth.GetInstalledVoices().ToList();
+        }
+        catch (Exception ex)
+        {
+            summary = $"读取系统语音失败：{ex.Message}";
+            sb.AppendLine(summary);
+            return sb.ToString();
+        }
+
+        var sapiEnabled = installed.Where(voice => voice.Enabled).ToList();
+        var sapiDisabled = installed.Where(voice => !voice.Enabled).ToList();
+        var sapiNames = new HashSet<string>(installed.Select(voice => voice.VoiceInfo.Name), StringComparer.OrdinalIgnoreCase);
+        var registryVoices = ReadRegistryVoices().ToList();
+        var registryOnly = registryVoices.Where(voice => !sapiNames.Contains(voice.Name)).ToList();
+        var hasChineseSapi = sapiEnabled.Any(voice =>
+            voice.VoiceInfo.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+
+        summary = $"SAPI 语音：{sapiEnabled.Count} 可用，{sapiDisabled.Count} 禁用。注册表语音：{registryVoices.Count}（非 SAPI：{registryOnly.Count}）。";
+        if (!hasChineseSapi)
+        {
+            summary += "\n未检测到可用中文语音包。";
+        }
+
+        sb.AppendLine("=== 语音诊断 ===");
+        sb.AppendLine($"时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"SAPI 语音: {sapiEnabled.Count} 可用, {sapiDisabled.Count} 禁用");
+        sb.AppendLine($"注册表语音: {registryVoices.Count} (非 SAPI: {registryOnly.Count})");
+        sb.AppendLine();
+
+        sb.AppendLine("SAPI 语音(可用于播报):");
+        if (sapiEnabled.Count == 0)
+        {
+            sb.AppendLine("- (空)");
+        }
+        else
+        {
+            foreach (var voice in sapiEnabled)
+            {
+                var info = voice.VoiceInfo;
+                sb.AppendLine($"- {info.Name} | {info.Culture.Name} | {info.Gender}");
+            }
+        }
+
+        if (sapiDisabled.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("SAPI 语音(禁用):");
+            foreach (var voice in sapiDisabled)
+            {
+                var info = voice.VoiceInfo;
+                sb.AppendLine($"- {info.Name} | {info.Culture.Name} | {info.Gender}");
+            }
+        }
+
+        if (registryOnly.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("注册表语音(非 SAPI/可能无声):");
+            foreach (var voice in registryOnly)
+            {
+                var label = FormatRegistryVoiceLabel(voice);
+                var enabled = voice.Enabled ? "启用" : "禁用";
+                sb.AppendLine($"- {voice.Name} | {label} | {enabled}");
+            }
+        }
+
+        if (!hasChineseSapi)
+        {
+            sb.AppendLine();
+            sb.AppendLine("建议安装中文语音包:");
+            sb.AppendLine("设置 -> 时间和语言 -> 语言和区域 -> 中文(简体) -> 语言选项 -> 语音");
+        }
+
+        return sb.ToString();
     }
 
     private void OnShowPhotoChanged(object sender, RoutedEventArgs e)

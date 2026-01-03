@@ -72,6 +72,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -126,6 +127,11 @@
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="输出设备:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                         <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" Height="34"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="诊断:" Margin="0,12,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <Button Grid.Row="4" Grid.Column="1" Margin="0,12,0,0" Height="32" Width="120"
+                                Style="{StaticResource Style_SecondaryButton}"
+                                Click="OnSpeechDiagnosticsClick">语音诊断</Button>
                     </Grid>
                 </TabItem>
 

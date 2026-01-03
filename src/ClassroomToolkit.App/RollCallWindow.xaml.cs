@@ -54,12 +54,10 @@ public partial class RollCallWindow : Window
     private bool _rollStateDirty;
     private bool _speechUnavailableNotified;
     private bool _remoteHookUnavailableNotified;
-    private bool _classSelectionReady;
     private bool _initialized;
     private bool _hovering;
     private bool _suppressRollClick;
     private DateTime _suppressRollUntil = DateTime.MinValue;
-    private string? _classSelectionBefore;
     private IntPtr _hwnd;
     private readonly DispatcherTimer _hoverCheckTimer;
     
@@ -161,8 +159,6 @@ public partial class RollCallWindow : Window
         ApplySettings(_settings, updatePhoto: false);
         await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
         RestoreGroupSelection();
-        SyncClassSelection();
-        _classSelectionReady = true;
         UpdatePhotoDisplay();
         WindowPlacementHelper.EnsureVisible(this);
         _stopwatch.Restart();
@@ -176,6 +172,10 @@ public partial class RollCallWindow : Window
     {
         if (e.ChangedButton == MouseButton.Left)
         {
+            if (e.OriginalSource is DependencyObject source && IsInteractiveElement(source))
+            {
+                return;
+            }
             DragMove();
         }
     }
@@ -444,60 +444,13 @@ public partial class RollCallWindow : Window
         UpdatePhotoDisplay(forceHide: true);
     }
 
-    private void OnClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnClassSelectClick(object sender, RoutedEventArgs e)
     {
-        if (!_classSelectionReady || !_viewModel.IsRollCallMode)
+        if (!_viewModel.IsRollCallMode)
         {
             return;
         }
-        if (sender is not System.Windows.Controls.ComboBox combo)
-        {
-            return;
-        }
-        var selected = e.AddedItems.Count > 0 ? e.AddedItems[0] as string : combo.SelectedItem as string;
-        if (string.IsNullOrWhiteSpace(selected))
-        {
-            return;
-        }
-        TryApplyClassSelection(selected);
-    }
-
-    private void OnClassDropDownOpened(object sender, EventArgs e)
-    {
-        _suppressRollClick = true;
-        _classSelectionBefore = ClassCombo?.SelectedItem as string;
-        StopKeyboardHook();
-    }
-
-    private void OnClassDropDownClosed(object sender, EventArgs e)
-    {
-        _suppressRollClick = false;
-        SuppressRollClicks(TimeSpan.FromMilliseconds(250));
-        UpdateRemoteHookState();
-        if (!_classSelectionReady || !_viewModel.IsRollCallMode || ClassCombo == null)
-        {
-            return;
-        }
-        if (ClassCombo.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
-        {
-            if (!string.Equals(_viewModel.ActiveClassName, selected, StringComparison.OrdinalIgnoreCase))
-            {
-                TryApplyClassSelection(selected);
-                _classSelectionBefore = null;
-                return;
-            }
-        }
-        if (!string.IsNullOrWhiteSpace(_classSelectionBefore))
-        {
-            var classes = _viewModel.AvailableClasses?.Count > 0
-                ? string.Join("、", _viewModel.AvailableClasses)
-                : "（空）";
-            var current = _viewModel.ActiveClassName;
-            var selectedClass = ClassCombo.SelectedItem as string ?? string.Empty;
-            var message = $"班级选择未生效。\n打开前：{_classSelectionBefore}\n当前选中：{selectedClass}\n当前班级：{current}\n可用班级：{classes}\n名册路径：{_dataPath}";
-            ShowRollCallMessage(message);
-            _classSelectionBefore = null;
-        }
+        OpenClassSelectionDialog();
     }
 
     private void OnListClick(object sender, RoutedEventArgs e)
@@ -1033,35 +986,16 @@ public partial class RollCallWindow : Window
         }
     }
 
-    private void SyncClassSelection()
-    {
-        if (ClassCombo == null)
-        {
-            return;
-        }
-        var target = _viewModel.ActiveClassName;
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            return;
-        }
-        if (!string.Equals(ClassCombo.SelectedItem as string, target, StringComparison.OrdinalIgnoreCase))
-        {
-            ClassCombo.SelectedItem = target;
-        }
-    }
-
     private void TryApplyClassSelection(string selected)
     {
         if (_viewModel.SwitchClass(selected, updatePhoto: false))
         {
             UpdatePhotoDisplay(forceHide: true);
-            SyncClassSelection();
             PersistSettings();
             _viewModel.SaveState();
             SuppressRollClicks(TimeSpan.FromMilliseconds(250));
             return;
         }
-        SyncClassSelection();
         if (!string.Equals(_viewModel.ActiveClassName, selected, StringComparison.OrdinalIgnoreCase))
         {
             var classes = _viewModel.AvailableClasses?.Count > 0
@@ -1069,6 +1003,24 @@ public partial class RollCallWindow : Window
                 : "（空）";
             var message = $"切换班级失败：{selected}\n当前班级：{_viewModel.ActiveClassName}\n可用班级：{classes}\n名册路径：{_dataPath}";
             ShowRollCallMessage(message);
+        }
+    }
+
+    private void OpenClassSelectionDialog()
+    {
+        var classes = _viewModel.AvailableClasses;
+        if (classes == null || classes.Count == 0)
+        {
+            ShowRollCallMessage("暂无班级可供选择。");
+            return;
+        }
+        var dialog = new ClassSelectDialog(classes, _viewModel.ActiveClassName)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.SelectedClass))
+        {
+            TryApplyClassSelection(dialog.SelectedClass);
         }
     }
 
@@ -1088,10 +1040,6 @@ public partial class RollCallWindow : Window
             return true;
         }
         if (_suppressRollUntil >= DateTime.UtcNow)
-        {
-            return true;
-        }
-        if (ClassCombo != null && ClassCombo.IsDropDownOpen)
         {
             return true;
         }
