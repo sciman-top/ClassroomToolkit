@@ -709,6 +709,11 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RemotePresenterKey = string.IsNullOrWhiteSpace(value) ? "tab" : value.Trim().ToLowerInvariant();
     }
 
+    public void ResetCurrentStudentDisplay()
+    {
+        SetPlaceholderStudent();
+    }
+
     private void RefreshGroups()
     {
         Groups.Clear();

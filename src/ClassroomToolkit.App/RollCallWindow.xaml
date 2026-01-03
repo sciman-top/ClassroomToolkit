@@ -123,32 +123,31 @@
 
                         <!-- 名字展示 -->
                         <Viewbox Stretch="Uniform" Margin="10">
-                            <Grid>
-                                <!-- 主体字 -->
+                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- 主体字 (姓名) -->
                                 <TextBlock x:Name="BigNameText"
                                            Text="{Binding CurrentStudentName}"
+                                           Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
                                            FontSize="100"
                                            FontWeight="Heavy"
                                            Foreground="{StaticResource Brush_Text_Primary}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           Margin="10">
+                                           Margin="0,0,0,4">
                                     <TextBlock.Effect>
                                         <DropShadowEffect Color="#B0BEC5" BlurRadius="2" ShadowDepth="2" Opacity="0.3"/>
                                     </TextBlock.Effect>
                                 </TextBlock>
 
+                                <!-- 学号 -->
                                 <TextBlock Text="{Binding CurrentStudentId}"
                                            Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="28"
-                                           Foreground="{StaticResource Brush_Text_Tertiary}"
-                                           FontWeight="Medium"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Bottom"
-                                           Margin="0,0,0,10"/>
-                            </Grid>
+                                           FontSize="50"
+                                           Foreground="{StaticResource Brush_Text_Secondary}"
+                                           FontWeight="SemiBold"
+                                           TextAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
                         </Viewbox>
                     </Border>
 

@@ -9,7 +9,7 @@
     <!-- ========== 1. 输入控件 (Inputs) ========== -->
 
     <Style TargetType="TextBox">
-        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Padding" Value="10,5"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Background" Value="White"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
@@ -51,7 +51,7 @@
     </Style>
 
     <Style TargetType="ComboBox">
-        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Padding" Value="10,4"/>
         <Setter Property="Background" Value="White"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>

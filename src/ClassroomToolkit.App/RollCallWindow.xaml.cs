@@ -448,6 +448,7 @@ public partial class RollCallWindow : Window
         }
         if (_viewModel.SwitchClass(selected))
         {
+            _viewModel.ResetCurrentStudentDisplay();
             UpdatePhotoDisplay(forceHide: true);
             PersistSettings();
             _viewModel.SaveState();
