@@ -75,11 +75,18 @@
                                               Content="{TemplateBinding SelectionBoxItem}"
                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Foreground="{TemplateBinding Foreground}"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               IsHitTestVisible="False"/>
                             <Path Grid.Column="1" Data="M7,10L12,15L17,10H7Z" Fill="{StaticResource Brush_Text_Secondary}" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Uniform"/>
+                            <ToggleButton x:Name="PART_DropDownToggle"
+                                          Grid.ColumnSpan="2"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
                             <Popup x:Name="PART_Popup" AllowsTransparency="True" Grid.ColumnSpan="2" 
                                    Placement="Bottom" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                    PopupAnimation="Slide" VerticalOffset="4">

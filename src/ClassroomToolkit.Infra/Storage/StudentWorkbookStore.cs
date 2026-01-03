@@ -66,7 +66,15 @@ public sealed class StudentWorkbookStore
         {
             Directory.CreateDirectory(directory);
         }
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        var fileName = System.IO.Path.GetFileNameWithoutExtension(path);
+        var extension = System.IO.Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".xlsx";
+        }
+        var tempPath = System.IO.Path.Combine(
+            directory ?? string.Empty,
+            $"{fileName}.tmp.{Guid.NewGuid():N}{extension}");
         try
         {
             using (var xl = new XLWorkbook())
