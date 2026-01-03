@@ -226,9 +226,9 @@ public partial class RollCallWindow : Window
         {
             if (current is System.Windows.Controls.Primitives.ButtonBase
                 || current is System.Windows.Controls.ComboBox
-                || current is System.Windows.Controls.TextBoxBase
+                || current is System.Windows.Controls.Primitives.TextBoxBase
                 || current is System.Windows.Controls.Primitives.Selector
-                || current is System.Windows.Controls.MenuBase
+                || current is System.Windows.Controls.Primitives.MenuBase
                 || current is System.Windows.Controls.Primitives.ScrollBar
                 || current is System.Windows.Controls.Primitives.Thumb
                 || current is System.Windows.Controls.Primitives.ToggleButton)
