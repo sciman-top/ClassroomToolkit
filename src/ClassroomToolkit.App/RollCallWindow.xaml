@@ -77,11 +77,12 @@
                     </Button>
 
                     <!-- 班级选择 -->
-                    <ComboBox Width="110" Height="36"
+                    <ComboBox x:Name="ClassCombo" Width="110" Height="36"
                               ItemsSource="{Binding AvailableClasses}"
-                              SelectedItem="{Binding ActiveClassName, Mode=OneWay}"
                               Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}"
                               SelectionChanged="OnClassSelectionChanged"
+                              DropDownOpened="OnClassDropDownOpened"
+                              DropDownClosed="OnClassDropDownClosed"
                               VerticalContentAlignment="Center" FontSize="13"
                               Style="{StaticResource {x:Type ComboBox}}"/>
                 </StackPanel>
@@ -133,7 +134,7 @@
                                            Foreground="{StaticResource Brush_Text_Primary}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           Margin="0,0,0,4">
+                                           Margin="0">
                                     <TextBlock.Effect>
                                         <DropShadowEffect Color="#B0BEC5" BlurRadius="2" ShadowDepth="2" Opacity="0.3"/>
                                     </TextBlock.Effect>
@@ -142,11 +143,12 @@
                                 <!-- 学号 -->
                                 <TextBlock Text="{Binding CurrentStudentId}"
                                            Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="50"
-                                           Foreground="{StaticResource Brush_Text_Secondary}"
-                                           FontWeight="SemiBold"
+                                           FontSize="46"
+                                           Foreground="{StaticResource Brush_Text_Primary}"
+                                           FontWeight="Bold"
                                            TextAlignment="Center"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center"
+                                           Margin="0,-5,0,0"/> <!-- 微量负边距进一步拉近距离 -->
                             </StackPanel>
                         </Viewbox>
                     </Border>
@@ -230,13 +232,18 @@
                                     <Button Content="{Binding Label}"
                                             Margin="4,0" Padding="12,6" MinWidth="50"
                                             Click="OnGroupEntryClick">
-                                        <!-- 隐藏 Reset 按钮，因为有专门的重置 -->
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
                                                 <Setter Property="BorderThickness" Value="1"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsReset}" Value="True">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>

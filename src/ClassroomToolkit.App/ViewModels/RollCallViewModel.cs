@@ -75,7 +75,23 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     public string CurrentGroup
     {
         get => _currentGroup;
-        private set => SetField(ref _currentGroup, value);
+        private set
+        {
+            if (SetField(ref _currentGroup, value))
+            {
+                UpdateGroupSelection();
+            }
+        }
+    }
+
+    private void UpdateGroupSelection()
+    {
+        if (GroupButtons == null) return;
+        foreach (var btn in GroupButtons)
+        {
+            if (btn.IsReset) continue;
+            btn.IsSelected = string.Equals(btn.Label, _currentGroup, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     public string CurrentStudentId
@@ -372,7 +388,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         Dictionary<string, ClassRollState> ClassStates,
         string? ErrorMessage);
 
-    public bool SwitchClass(string className)
+    public bool SwitchClass(string className, bool updatePhoto = true)
     {
         if (_engine == null || _workbook == null)
         {
@@ -402,7 +418,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         RefreshGroups();
         CurrentGroup = _engine.CurrentGroup;
-        UpdateCurrentStudent();
+        UpdateCurrentStudent(updatePhoto);
         return true;
     }
 
@@ -728,9 +744,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             GroupButtons.Add(new GroupButtonItem(group, isReset: false));
         }
         GroupButtons.Add(new GroupButtonItem("重置", isReset: true));
+        UpdateGroupSelection();
     }
 
-    private void UpdateCurrentStudent()
+    private void UpdateCurrentStudent(bool updatePhoto = true)
     {
         if (_engine == null || !_engine.CurrentStudentIndex.HasValue)
         {
@@ -741,9 +758,15 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
         CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
         
-        // Resolve photo
-        var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
-        CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+        if (updatePhoto)
+        {
+            var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
+            CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+        }
+        else
+        {
+            CurrentStudentPhotoPath = null;
+        }
     }
 
     private void SetPlaceholderStudent()
