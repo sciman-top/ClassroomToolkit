@@ -183,13 +183,13 @@ public partial class RollCallWindow : Window
         _viewModel.SaveState();
     }
 
-    private void OnWindowMouseEnter(object sender, MouseEventArgs e)
+    private void OnWindowMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _hovering = true;
         UpdateWindowTransparency();
     }
 
-    private void OnWindowMouseLeave(object sender, MouseEventArgs e)
+    private void OnWindowMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _hovering = false;
         UpdateWindowTransparency();
