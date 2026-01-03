@@ -242,7 +242,6 @@
                                 <DataTemplate>
                                     <Button Content="{Binding Label}"
                                             Margin="4,0" Padding="12,6" MinWidth="50"
-                                            Style="{StaticResource Style_SecondaryButton}"
                                             Click="OnGroupEntryClick">
                                         <!-- 隐藏 Reset 按钮，因为有专门的重置 -->
                                         <Button.Style>
