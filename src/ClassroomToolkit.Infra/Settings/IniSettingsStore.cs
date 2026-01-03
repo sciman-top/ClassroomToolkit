@@ -87,7 +87,7 @@ public sealed class IniSettingsStore
             }
             builder.AppendLine();
         }
-        var directory = Path.GetDirectoryName(_path);
+        var directory = System.IO.Path.GetDirectoryName(_path);
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
