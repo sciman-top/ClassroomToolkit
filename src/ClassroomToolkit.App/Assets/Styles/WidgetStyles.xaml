@@ -75,7 +75,7 @@
                                               Content="{TemplateBinding SelectionBoxItem}"
                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                              Foreground="{TemplateBinding Foreground}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               IsHitTestVisible="False"/>
@@ -129,7 +129,8 @@
                                 BorderBrush="{StaticResource Brush_Border_Medium}" Background="White">
                             <Path x:Name="check" Data="M4,9L7.5,12.5L14,5" Stroke="White" StrokeThickness="2" Visibility="Collapsed" Margin="2"/>
                         </Border>
-                        <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
                     </StackPanel>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
