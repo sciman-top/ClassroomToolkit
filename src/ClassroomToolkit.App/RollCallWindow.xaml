@@ -27,7 +27,7 @@
             <DropShadowEffect Color="#4A90E2" BlurRadius="40" ShadowDepth="8" Opacity="0.15"/>
         </Border.Effect>
 
-        <Grid>
+        <Grid PreviewMouseLeftButtonDown="OnBackgroundDrag">
             <Grid.RowDefinitions>
                 <RowDefinition Height="60"/>
                 <RowDefinition Height="*"/>
@@ -103,7 +103,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- 左侧：名字卡片 -->
-                    <Border Grid.Column="0" Background="{StaticResource Gradient_RollCall_Name}"
+                    <Border x:Name="RollNameCard" Grid.Column="0" Background="{StaticResource Gradient_RollCall_Name}"
                             CornerRadius="24"
                             BorderBrush="{StaticResource Brush_Border_Subtle}"
                             BorderThickness="1"
@@ -171,7 +171,7 @@
 
                 <!-- B. 计时视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-                    <Border Background="{StaticResource Brush_Background_Dark}" CornerRadius="24" BorderBrush="Transparent">
+                    <Border x:Name="TimerCard" Background="{StaticResource Brush_Background_Dark}" CornerRadius="24" BorderBrush="Transparent">
                         <Border.Effect>
                             <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="50" ShadowDepth="0" Opacity="0.2"/>
                         </Border.Effect>

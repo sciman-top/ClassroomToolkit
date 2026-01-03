@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Media;
+using System.Windows.Interop;
 using WpfSize = System.Windows.Size;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
@@ -57,6 +58,7 @@ public partial class RollCallWindow : Window
     private bool _initialized;
     private bool _hovering;
     private IntPtr _hwnd;
+    private readonly DispatcherTimer _hoverCheckTimer;
     
     public ICommand OpenRemoteKeyCommand { get; }
 
@@ -102,6 +104,12 @@ public partial class RollCallWindow : Window
             Interval = TimeSpan.FromMilliseconds(1200)
         };
         _rollStateSaveTimer.Tick += OnRollStateSaveTick;
+        
+        _hoverCheckTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(120)
+        };
+        _hoverCheckTimer.Tick += (_, _) => UpdateHoverState();
 
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
@@ -152,6 +160,34 @@ public partial class RollCallWindow : Window
         }
     }
 
+    private void OnBackgroundDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+        if (e.OriginalSource is DependencyObject source)
+        {
+            if (IsInteractiveElement(source))
+            {
+                return;
+            }
+            if (IsDescendantOf(source, RollNameCard) || IsDescendantOf(source, TimerCard))
+            {
+                return;
+            }
+        }
+        try
+        {
+            DragMove();
+            e.Handled = true;
+        }
+        catch
+        {
+            // Ignore drag exceptions.
+        }
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Close();
@@ -183,6 +219,45 @@ public partial class RollCallWindow : Window
         _viewModel.SaveState();
     }
 
+    private static bool IsInteractiveElement(DependencyObject source)
+    {
+        var current = source;
+        while (current != null)
+        {
+            if (current is System.Windows.Controls.Primitives.ButtonBase
+                || current is System.Windows.Controls.ComboBox
+                || current is System.Windows.Controls.TextBoxBase
+                || current is System.Windows.Controls.Primitives.Selector
+                || current is System.Windows.Controls.MenuBase
+                || current is System.Windows.Controls.Primitives.ScrollBar
+                || current is System.Windows.Controls.Primitives.Thumb
+                || current is System.Windows.Controls.Primitives.ToggleButton)
+            {
+                return true;
+            }
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return false;
+    }
+
+    private static bool IsDescendantOf(DependencyObject source, DependencyObject? ancestor)
+    {
+        if (ancestor == null)
+        {
+            return false;
+        }
+        var current = source;
+        while (current != null)
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return false;
+    }
+
     private void OnWindowMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _hovering = true;
@@ -202,6 +277,7 @@ public partial class RollCallWindow : Window
             return;
         }
         var allowTransparent = !_hovering && PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false);
+        UpdateHoverTimer(allowTransparent);
         var exStyle = GetWindowLong(_hwnd, GwlExstyle);
         if (allowTransparent)
         {
@@ -212,6 +288,42 @@ public partial class RollCallWindow : Window
             exStyle &= ~WsExTransparent;
         }
         SetWindowLong(_hwnd, GwlExstyle, exStyle);
+    }
+
+    private void UpdateHoverTimer(bool transparentEnabled)
+    {
+        if (!transparentEnabled)
+        {
+            _hoverCheckTimer.Stop();
+            return;
+        }
+        if (!_hoverCheckTimer.IsEnabled)
+        {
+            _hoverCheckTimer.Start();
+        }
+    }
+
+    private void UpdateHoverState()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        if (!GetCursorPos(out var point))
+        {
+            return;
+        }
+        if (!GetWindowRect(_hwnd, out var rect))
+        {
+            return;
+        }
+        var inside = point.X >= rect.Left && point.X <= rect.Right && point.Y >= rect.Top && point.Y <= rect.Bottom;
+        if (inside == _hovering)
+        {
+            return;
+        }
+        _hovering = inside;
+        UpdateWindowTransparency();
     }
 
     [DllImport("user32.dll")]
@@ -229,6 +341,28 @@ public partial class RollCallWindow : Window
         int cx,
         int cy,
         uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
 
     private void OnGroupEntryClick(object sender, RoutedEventArgs e)
     {
