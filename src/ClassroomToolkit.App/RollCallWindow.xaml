@@ -282,7 +282,7 @@
                         </Button>
 
                         <!-- 播放/暂停按钮：主色调 -->
-                        <Button Style="{StaticResource Style_PrimaryButton}" Margin="12,0" Width="64" Height="40" Click="OnTimerStartPauseClick" CornerRadius="20">
+                        <Button Style="{StaticResource Style_PrimaryButton}" Margin="12,0" Width="64" Height="40" Click="OnTimerStartPauseClick">
                             <Path Fill="White" Width="20" Height="20" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">
