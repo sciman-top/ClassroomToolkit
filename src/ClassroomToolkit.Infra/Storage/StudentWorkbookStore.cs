@@ -146,19 +146,20 @@ public sealed class StudentWorkbookStore
         var students = new List<StudentRecord>();
         foreach (var row in sheet.RowsUsed().Where(r => r.RowNumber() > headerRow.RowNumber()))
         {
-            var studentId = GetCellValue(row, headerMap, "学号");
-            var name = GetCellValue(row, headerMap, "姓名");
+            var rowCache = new Dictionary<int, string>();
+            var studentId = GetCellValue(row, headerMap, "学号", rowCache);
+            var name = GetCellValue(row, headerMap, "姓名", rowCache);
             if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(name))
             {
                 continue;
             }
-            var className = GetCellValue(row, headerMap, "班级");
+            var className = GetCellValue(row, headerMap, "班级", rowCache);
             if (string.IsNullOrWhiteSpace(className))
             {
                 className = sheet.Name;
             }
-            var groupName = GetCellValue(row, headerMap, "分组");
-            var rowId = GetCellValue(row, headerMap, InternalRowIdColumn);
+            var groupName = GetCellValue(row, headerMap, "分组", rowCache);
+            var rowId = GetCellValue(row, headerMap, InternalRowIdColumn, rowCache);
             if (string.IsNullOrWhiteSpace(rowId))
             {
                 rowId = Guid.NewGuid().ToString("N");
@@ -171,7 +172,7 @@ public sealed class StudentWorkbookStore
                 {
                     continue;
                 }
-                var extraValue = GetCellValue(row, headerMap, column);
+                var extraValue = GetCellValue(row, headerMap, column, rowCache);
                 if (string.IsNullOrWhiteSpace(extraValue))
                 {
                     continue;
@@ -184,7 +185,11 @@ public sealed class StudentWorkbookStore
         return new ClassRoster(sheet.Name, students, columnOrder);
     }
 
-    private static string GetCellValue(IXLRow row, Dictionary<string, List<int>> map, string key)
+    private static string GetCellValue(
+        IXLRow row,
+        Dictionary<string, List<int>> map,
+        string key,
+        Dictionary<int, string>? cache = null)
     {
         if (!map.TryGetValue(key, out var cols))
         {
@@ -192,7 +197,16 @@ public sealed class StudentWorkbookStore
         }
         foreach (var col in cols)
         {
+            if (cache != null && cache.TryGetValue(col, out var cached))
+            {
+                if (!string.IsNullOrWhiteSpace(cached))
+                {
+                    return cached;
+                }
+                continue;
+            }
             var value = row.Cell(col).GetString().Trim();
+            cache?.TryAdd(col, value);
             if (!string.IsNullOrWhiteSpace(value))
             {
                 return value;

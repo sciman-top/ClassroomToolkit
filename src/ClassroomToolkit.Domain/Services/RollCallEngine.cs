@@ -476,6 +476,7 @@ public sealed class RollCallEngine
         }
 
         var baseIndices = CollectBaseIndices(baseList);
+        var baseSet = new HashSet<int>(baseIndices);
         var referenceDrawn = groupName.Equals(IdentityUtils.AllGroupName, StringComparison.OrdinalIgnoreCase)
             ? _globalDrawn
             : _groupDrawnHistory.GetValueOrDefault(groupName) ?? new HashSet<int>();
@@ -510,7 +511,7 @@ public sealed class RollCallEngine
         var seen = new HashSet<int>();
         foreach (var value in rawPool)
         {
-            if (!baseIndices.Contains(value) || seen.Contains(value) || referenceDrawn.Contains(value))
+            if (!baseSet.Contains(value) || seen.Contains(value) || referenceDrawn.Contains(value))
             {
                 continue;
             }
@@ -525,7 +526,7 @@ public sealed class RollCallEngine
         }
         foreach (var idx in sourceOrder)
         {
-            if (referenceDrawn.Contains(idx) || seen.Contains(idx) || !baseIndices.Contains(idx))
+            if (referenceDrawn.Contains(idx) || seen.Contains(idx) || !baseSet.Contains(idx))
             {
                 continue;
             }
