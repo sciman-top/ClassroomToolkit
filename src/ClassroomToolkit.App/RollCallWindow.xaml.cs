@@ -493,8 +493,8 @@ public partial class RollCallWindow : Window
                 ? string.Join("、", _viewModel.AvailableClasses)
                 : "（空）";
             var current = _viewModel.ActiveClassName;
-            var selected = ClassCombo.SelectedItem as string ?? string.Empty;
-            var message = $"班级选择未生效。\n打开前：{_classSelectionBefore}\n当前选中：{selected}\n当前班级：{current}\n可用班级：{classes}\n名册路径：{_dataPath}";
+            var selectedClass = ClassCombo.SelectedItem as string ?? string.Empty;
+            var message = $"班级选择未生效。\n打开前：{_classSelectionBefore}\n当前选中：{selectedClass}\n当前班级：{current}\n可用班级：{classes}\n名册路径：{_dataPath}";
             ShowRollCallMessage(message);
             _classSelectionBefore = null;
         }
