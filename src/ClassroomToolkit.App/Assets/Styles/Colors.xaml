@@ -76,8 +76,8 @@
     <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
 
-    <!-- 次要文本 (Slate) -->
-    <Color x:Key="Color_Text_Secondary">#636E72</Color>
+    <!-- 次要文本 (Slate) - 已加深以提高可读性 -->
+    <Color x:Key="Color_Text_Secondary">#4A5568</Color>
     <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
 
     <!-- 提示文本 -->

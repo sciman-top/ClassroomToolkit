@@ -25,7 +25,6 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
     {
-        ("白板笔（兼容）", PaintBrushStyle.Standard),
         ("白板笔", PaintBrushStyle.StandardRibbon),
         ("毛笔", PaintBrushStyle.Calligraphy)
     };
@@ -44,7 +43,9 @@ public partial class PaintSettingsDialog : Window
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
-    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
+    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.StandardRibbon;
+    public bool WhiteboardSmoothMode { get; private set; }
+    public bool CalligraphySharpMode { get; private set; }
     public bool CalligraphyInkBloomEnabled { get; private set; }
     public bool CalligraphySealEnabled { get; private set; }
     public byte CalligraphyOverlayOpacityThreshold { get; private set; }
@@ -83,6 +84,8 @@ public partial class PaintSettingsDialog : Window
             BrushStyleCombo.Items.Add(item);
         }
         SelectBrushStyle(settings.BrushStyle);
+        WhiteboardSmoothCheck.IsChecked = settings.WhiteboardSmoothMode;
+        CalligraphySharpCheck.IsChecked = settings.CalligraphySharpMode;
         CalligraphyInkBloomCheck.IsChecked = settings.CalligraphyInkBloomEnabled;
         CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
         UpdateCalligraphyOptionState();
@@ -126,6 +129,8 @@ public partial class PaintSettingsDialog : Window
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BrushStyle = ResolveBrushStyle();
+        WhiteboardSmoothMode = WhiteboardSmoothCheck.IsChecked == true;
+        CalligraphySharpMode = CalligraphySharpCheck.IsChecked == true;
         CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
         CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
         CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
@@ -204,6 +209,7 @@ public partial class PaintSettingsDialog : Window
     private void UpdateCalligraphyOptionState()
     {
         bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
+        CalligraphySharpCheck.IsEnabled = isCalligraphy;
         CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
         CalligraphySealCheck.IsEnabled = isCalligraphy;
         CalligraphyOverlayThresholdLabel.IsEnabled = isCalligraphy;
@@ -400,7 +406,7 @@ public partial class PaintSettingsDialog : Window
         {
             return style;
         }
-        return PaintBrushStyle.Standard;
+        return PaintBrushStyle.StandardRibbon;
     }
 
     private static double FindNearestScale(double value)

@@ -64,6 +64,14 @@ public sealed class AppSettingsService
             settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
             settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
             settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
+            settings.WhiteboardSmoothMode = GetBool(
+                paint,
+                "whiteboard_smooth_mode",
+                settings.WhiteboardSmoothMode);
+            settings.CalligraphySharpMode = GetBool(
+                paint,
+                "calligraphy_sharp_mode",
+                settings.CalligraphySharpMode);
             settings.CalligraphyInkBloomEnabled = GetBool(
                 paint,
                 "calligraphy_ink_bloom_enabled",
@@ -152,6 +160,8 @@ public sealed class AppSettingsService
         var paint = GetOrCreate(data, "Paint");
         paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_style"] = settings.BrushStyle.ToString();
+        paint["whiteboard_smooth_mode"] = settings.WhiteboardSmoothMode ? "True" : "False";
+        paint["calligraphy_sharp_mode"] = settings.CalligraphySharpMode ? "True" : "False";
         paint["calligraphy_ink_bloom_enabled"] = settings.CalligraphyInkBloomEnabled ? "True" : "False";
         paint["calligraphy_seal_enabled"] = settings.CalligraphySealEnabled ? "True" : "False";
         paint["calligraphy_overlay_opacity_threshold"] =
