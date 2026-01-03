@@ -53,6 +53,7 @@
     <Style TargetType="ComboBox">
         <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
         <Setter Property="BorderThickness" Value="1.5"/>
         <Setter Property="FontSize" Value="14"/>
@@ -70,8 +71,12 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="30"/>
                             </Grid.ColumnDefinitions>
-                            <ContentPresenter Margin="{TemplateBinding Padding}" 
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Foreground="{TemplateBinding Foreground}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               IsHitTestVisible="False"/>
                             <Path Grid.Column="1" Data="M7,10L12,15L17,10H7Z" Fill="{StaticResource Brush_Text_Secondary}" 
@@ -118,7 +123,8 @@
                                 BorderBrush="{StaticResource Brush_Border_Medium}" Background="White">
                             <Path x:Name="check" Data="M4,9L7.5,12.5L14,5" Stroke="White" StrokeThickness="2" Visibility="Collapsed" Margin="2"/>
                         </Border>
-                        <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          Foreground="{TemplateBinding Foreground}"/>
                     </StackPanel>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">

@@ -146,28 +146,9 @@ public sealed class PresentationControlService
             return false;
         }
         var keyDownOnly = plan.TargetType == PresentationType.Wps;
-        if (plan.TargetType == PresentationType.Wps && plan.Strategy == InputStrategy.Raw)
+        if (plan.Strategy == InputStrategy.Raw && RequiresForeground(plan.TargetType))
         {
-            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            if (!isForeground)
-            {
-                PresentationWindowFocus.EnsureForeground(target.Handle);
-                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            }
-            if (!isForeground)
-            {
-                plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
-            }
-        }
-        if (plan.TargetType == PresentationType.Office && plan.Strategy == InputStrategy.Raw)
-        {
-            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            if (!isForeground)
-            {
-                PresentationWindowFocus.EnsureForeground(target.Handle);
-                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            }
-            if (!isForeground)
+            if (!TryEnsureForeground(target.Handle))
             {
                 plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
             }
@@ -218,5 +199,21 @@ public sealed class PresentationControlService
         _lastWpsCommandAt = DateTime.UtcNow;
         _lastWpsCommandType = command;
         _lastWpsTarget = target;
+    }
+
+    private static bool RequiresForeground(PresentationType targetType)
+    {
+        return targetType == PresentationType.Wps || targetType == PresentationType.Office;
+    }
+
+    private static bool TryEnsureForeground(IntPtr target)
+    {
+        var isForeground = PresentationWindowFocus.IsForeground(target);
+        if (isForeground)
+        {
+            return true;
+        }
+        PresentationWindowFocus.EnsureForeground(target);
+        return PresentationWindowFocus.IsForeground(target);
     }
 }

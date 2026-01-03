@@ -109,7 +109,7 @@
 
                     <!-- 左侧：名字卡片 (重点展示) -->
                     <Border x:Name="RollNameCard" Grid.Column="0" 
-                            Background="White"
+                            Background="{StaticResource Gradient_RollCall_Name}"
                             CornerRadius="24"
                             BorderBrush="Transparent"
                             BorderThickness="0"
@@ -122,20 +122,8 @@
                         </Border.Effect>
 
                         <!-- 名字展示 -->
-                        <Viewbox Stretch="Fill" Margin="10">
+                        <Viewbox Stretch="Uniform" Margin="10">
                             <Grid>
-                                <!-- 装饰背景字 -->
-                                <TextBlock Text="{Binding CurrentStudentName}"
-                                           FontSize="100" FontWeight="Heavy"
-                                           Foreground="{StaticResource Brush_Primary_Light}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           TextAlignment="Center" Opacity="0.08"
-                                           RenderTransformOrigin="0.5,0.5">
-                                    <TextBlock.RenderTransform>
-                                        <ScaleTransform ScaleX="1.5" ScaleY="1.5"/>
-                                    </TextBlock.RenderTransform>
-                                </TextBlock>
-
                                 <!-- 主体字 -->
                                 <TextBlock x:Name="BigNameText"
                                            Text="{Binding CurrentStudentName}"
@@ -146,7 +134,7 @@
                                            VerticalAlignment="Center"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           Margin="30">
+                                           Margin="10">
                                     <TextBlock.Effect>
                                         <DropShadowEffect Color="#B0BEC5" BlurRadius="2" ShadowDepth="2" Opacity="0.3"/>
                                     </TextBlock.Effect>
@@ -159,7 +147,7 @@
                                            FontWeight="Medium"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Bottom"
-                                           Margin="0,0,0,24"/>
+                                           Margin="0,0,0,10"/>
                             </Grid>
                         </Viewbox>
                     </Border>
@@ -208,7 +196,7 @@
                             <!-- 装饰线条 -->
                             <Border BorderBrush="{StaticResource Brush_Timer_Neon}" BorderThickness="1" Margin="10" CornerRadius="16" Opacity="0.1"/>
                             
-                            <Viewbox Margin="50">
+                            <Viewbox Margin="15" Stretch="Uniform">
                                 <TextBlock Text="{Binding TimeDisplay}"
                                            Foreground="{StaticResource Brush_Timer_Neon}"
                                            FontFamily="Consolas, Courier New"

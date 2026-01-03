@@ -118,10 +118,10 @@
         <GradientStop Color="#00B894" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 点名卡片姓名区: 极淡紫 -->
+    <!-- 点名卡片姓名区: 极光微渐变 (Aurora) -->
     <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#F8F7FF" Offset="0"/>
-        <GradientStop Color="#ECEBFF" Offset="1"/>
+        <GradientStop Color="#E3FDF5" Offset="0"/>      <!-- 极淡薄荷 -->
+        <GradientStop Color="#FFE6FA" Offset="1"/>      <!-- 极淡紫粉 -->
     </LinearGradientBrush>
 
     <!-- 点名卡片背景: 微光 -->
