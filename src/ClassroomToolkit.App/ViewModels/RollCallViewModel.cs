@@ -65,6 +65,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action? TimerCompleted;
     public event Action? ReminderTriggered;
+    public event Action<string>? DataLoadFailed;
+    public event Action<string>? DataSaveFailed;
 
     public ObservableCollection<string> Groups { get; }
 
@@ -311,14 +313,26 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     private RollCallLoadResult LoadDataCore()
     {
-        var store = new StudentWorkbookStore();
-        var result = store.LoadOrCreate(_dataPath);
-        var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+        try
         {
-            states[pair.Key] = pair.Value;
+            var store = new StudentWorkbookStore();
+            var result = store.LoadOrCreate(_dataPath);
+            var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+            {
+                states[pair.Key] = pair.Value;
+            }
+            return new RollCallLoadResult(result.Workbook, states, null);
         }
-        return new RollCallLoadResult(result.Workbook, states);
+        catch (Exception ex)
+        {
+            var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
+            var fallbackWorkbook = new StudentWorkbook(
+                new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster },
+                "班级1");
+            var message = $"学生名册读取失败：{ex.Message}";
+            return new RollCallLoadResult(fallbackWorkbook, new Dictionary<string, ClassRollState>(), message);
+        }
     }
 
     private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
@@ -347,9 +361,16 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RefreshGroups();
         CurrentGroup = _engine.CurrentGroup;
         UpdateCurrentStudent();
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            DataLoadFailed?.Invoke(result.ErrorMessage);
+        }
     }
 
-    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates);
+    private sealed record RollCallLoadResult(
+        StudentWorkbook Workbook,
+        Dictionary<string, ClassRollState> ClassStates,
+        string? ErrorMessage);
 
     public bool SwitchClass(string className)
     {
@@ -669,10 +690,18 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         {
             return;
         }
-        StoreCurrentState();
-        var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase));
-        var store = new StudentWorkbookStore();
-        store.Save(_workbook, _dataPath, json);
+        try
+        {
+            StoreCurrentState();
+            var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase));
+            var store = new StudentWorkbookStore();
+            store.Save(_workbook, _dataPath, json);
+        }
+        catch (Exception ex)
+        {
+            var message = $"学生名册保存失败：{ex.Message}";
+            DataSaveFailed?.Invoke(message);
+        }
     }
 
     public void SetRemotePresenterKey(string value)

@@ -87,6 +87,30 @@ public sealed class IniSettingsStore
             }
             builder.AppendLine();
         }
-        File.WriteAllText(_path, builder.ToString(), Encoding.UTF8);
+        var directory = Path.GetDirectoryName(_path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+        var tempPath = $"{_path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(tempPath, builder.ToString(), Encoding.UTF8);
+            if (File.Exists(_path))
+            {
+                File.Replace(tempPath, _path, null);
+            }
+            else
+            {
+                File.Move(tempPath, _path);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
     }
 }

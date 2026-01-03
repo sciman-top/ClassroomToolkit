@@ -114,9 +114,25 @@ public partial class RollCallWindow : Window
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
         _viewModel.ReminderTriggered += OnReminderTriggered;
+        _viewModel.DataLoadFailed += OnDataLoadFailed;
+        _viewModel.DataSaveFailed += OnDataSaveFailed;
 
         PaintModeManager.Instance.PaintModeChanged += _ => UpdateWindowTransparency();
         PaintModeManager.Instance.IsDrawingChanged += _ => UpdateWindowTransparency();
+    }
+
+    private void OnDataLoadFailed(string message)
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册读取失败，请检查文件是否被占用或已损坏。" : message;
+        System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OnDataSaveFailed(string message)
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册保存失败，请关闭 Excel 后重试。" : message;
+        System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     public IReadOnlyList<string> AvailableClasses => _viewModel.AvailableClasses;
