@@ -886,7 +886,6 @@ public partial class PaintOverlayWindow : Window
             return false;
         }
         return IsDescendantOf(source, PhotoTitleBar) ||
-               IsDescendantOf(source, PhotoFullscreenButton) ||
                IsDescendantOf(source, PhotoCloseButton) ||
                IsDescendantOf(source, PhotoMinimizeLeftButton) ||
                IsDescendantOf(source, PhotoMinimizeRightButton) ||
@@ -1383,7 +1382,7 @@ public partial class PaintOverlayWindow : Window
             Activate();
             return;
         }
-        var wasFullscreen = _photoModeActive && _photoFullscreen;
+        var wasFullscreen = true;
         if (_photoModeActive)
         {
             SaveCurrentPageOnNavigate(forceBackground: false);
@@ -1863,10 +1862,6 @@ public partial class PaintOverlayWindow : Window
         {
             PhotoWindowFrame.Background = MediaBrushes.Transparent;
         }
-        if (PhotoFullscreenToggleText != null)
-        {
-            PhotoFullscreenToggleText.Text = _photoFullscreen ? "还原" : "全屏";
-        }
         if (_photoModeActive)
         {
             ResizeMode = _photoFullscreen ? ResizeMode.NoResize : ResizeMode.CanResize;
@@ -2009,17 +2004,14 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        WindowState = WindowState.Minimized;
-    }
-
-    private void OnPhotoFullscreenToggleClick(object sender, RoutedEventArgs e)
-    {
-        if (!_photoModeActive)
+        if (_photoFullscreen)
         {
+            _photoFullscreen = false;
+            SetPhotoWindowMode(fullscreen: false);
+            e.Handled = true;
             return;
         }
-        _photoFullscreen = !_photoFullscreen;
-        SetPhotoWindowMode(_photoFullscreen);
+        WindowState = WindowState.Minimized;
         e.Handled = true;
     }
 
@@ -2047,12 +2039,6 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         PhotoNavigationRequested?.Invoke(1);
-    }
-
-    private void OnPhotoCloseClick(object sender, RoutedEventArgs e)
-    {
-        ExitPhotoMode();
-        e.Handled = true;
     }
 
     private bool TrySetPhotoBackground(string imagePath)
