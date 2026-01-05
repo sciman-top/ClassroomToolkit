@@ -283,20 +283,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         _boardActive = BoardButton.IsChecked == true;
-        if (_overlay != null)
-        {
-            if (_boardActive)
-            {
-                _overlay.SetBoardColor(_boardColor);
-                _overlay.SetBoardOpacity(255);
-            }
-            else
-            {
-                _overlay.SetBoardColor(Colors.Transparent);
-                _overlay.SetBoardOpacity(0);
-            }
-        }
-        WhiteboardToggled?.Invoke(_boardActive);
+        ApplyBoardState();
     }
 
     private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
@@ -376,6 +363,37 @@ public partial class PaintToolbarWindow : Window
             _overlay.SetBoardColor(color);
             _overlay.SetBoardOpacity(255);
         }
+    }
+
+    public void SetBoardActive(bool active)
+    {
+        if (_boardActive == active)
+        {
+            return;
+        }
+        _initializing = true;
+        BoardButton.IsChecked = active;
+        _initializing = false;
+        _boardActive = active;
+        ApplyBoardState();
+    }
+
+    private void ApplyBoardState()
+    {
+        if (_overlay != null)
+        {
+            if (_boardActive)
+            {
+                _overlay.SetBoardColor(_boardColor);
+                _overlay.SetBoardOpacity(255);
+            }
+            else
+            {
+                _overlay.SetBoardColor(Colors.Transparent);
+                _overlay.SetBoardOpacity(0);
+            }
+        }
+        WhiteboardToggled?.Invoke(_boardActive);
     }
 
     private void OpenQuickColorDialog(int index)
@@ -577,14 +595,18 @@ public partial class PaintToolbarWindow : Window
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         var key = e.Key;
-        if (_overlay != null && _overlay.TryHandleReviewNavigationKey(key))
+        if (_overlay != null && _overlay.TryHandlePhotoKey(key))
         {
             e.Handled = true;
             return;
         }
-        // 只在光标模式下转发键盘事件到演示文稿
-        if (_currentMode != PaintToolMode.Cursor)
+        if (_overlay != null && (_overlay.IsPhotoModeActive || _overlay.IsWhiteboardActive))
         {
+            return;
+        }
+        if (_overlay != null && _overlay.TryHandleReviewNavigationKey(key))
+        {
+            e.Handled = true;
             return;
         }
         // 只转发演示文稿导航键

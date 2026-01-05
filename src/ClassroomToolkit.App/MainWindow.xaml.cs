@@ -639,10 +639,12 @@ public partial class MainWindow : Window
         {
             _imageManagerWindow.WindowState = WindowState.Normal;
         }
+        _imageManagerWindow.Topmost = _overlayWindow?.IsVisible == true
+            && (_overlayWindow.IsPhotoModeActive || _overlayWindow.Topmost);
         _imageManagerWindow.Activate();
     }
 
-    private void OnImageSelected(IReadOnlyList<string> images, int index)
+    private async void OnImageSelected(IReadOnlyList<string> images, int index)
     {
         if (_overlayWindow == null)
         {
@@ -653,6 +655,14 @@ public partial class MainWindow : Window
             return;
         }
         ShowPaintOverlayIfNeeded();
+        if (_toolbarWindow?.BoardActive == true)
+        {
+            _toolbarWindow.SetBoardActive(false);
+        }
+        if (_overlayWindow.TryExitPresentationFullscreen())
+        {
+            await Task.Delay(300);
+        }
         _photoSequence = images.ToList();
         _photoSequenceIndex = index;
         if (_photoSequenceIndex >= 0 && _photoSequenceIndex < _photoSequence.Count)

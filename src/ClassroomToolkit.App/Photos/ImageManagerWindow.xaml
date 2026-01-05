@@ -39,13 +39,13 @@
 
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{StaticResource Brush_Background_L2}"/>
 
-        <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" Padding="12" Margin="3,12,12,12">
+        <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12">
             <DockPanel>
-                <DockPanel DockPanel.Dock="Top">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,12,0">
                     <TextBlock x:Name="CurrentFolderText" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,0,8">
                         <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="200" Value="120"
+                        <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
                                 ValueChanged="OnThumbnailSizeChanged" Margin="0,0,10,0"/>
                         <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="26" Margin="0,0,6,0"
                                       Click="OnViewModeClick"/>
@@ -53,47 +53,50 @@
                     </StackPanel>
                 </DockPanel>
                 <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top" Text="请选择左侧文件夹查看图片"
-                           Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,8"/>
-                <ScrollViewer x:Name="ThumbnailScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" Background="Transparent" BorderThickness="0"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel IsItemsHost="True" />
-                            </ItemsPanelTemplate>
-                        </ListView.ItemsPanel>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="4">
-                                    <Border BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="6" Padding="4">
-                                        <Grid>
-                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
-                                                   Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
-                                                   Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value, Converter={StaticResource ThumbnailSizeRatio}}"/>
-                                            <Border Background="#99000000" CornerRadius="8" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                    Margin="0,0,4,4" Visibility="{Binding PageBadgeVisibility}">
-                                                <TextBlock Text="{Binding PageBadge}" Foreground="White" FontSize="10"/>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource Brush_Text_Secondary}"
-                                               TextTrimming="CharacterEllipsis" FontSize="12" Margin="2,6,2,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
+                           Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
+                <Grid HorizontalAlignment="Stretch">
+                    <ScrollViewer x:Name="ThumbnailScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  HorizontalAlignment="Stretch">
+                        <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" Background="Transparent" BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel IsItemsHost="True" />
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="4">
+                                        <Border BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="6" Padding="4">
+                                            <Grid>
+                                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
+                                                       Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}"
+                                                       Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value, Converter={StaticResource ThumbnailSizeRatio}}"/>
+                                                <Border Background="#99000000" CornerRadius="8" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                        Margin="0,0,4,4" Visibility="{Binding PageBadgeVisibility}">
+                                                    <TextBlock Text="{Binding PageBadge}" Foreground="White" FontSize="10"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource Brush_Text_Secondary}"
+                                                   TextTrimming="CharacterEllipsis" FontSize="12" Margin="2,6,2,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </ScrollViewer>
+                    <ListView x:Name="ImageListView" SelectionChanged="OnImageSelectionChanged" Background="Transparent" BorderThickness="0"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="名称" DisplayMemberBinding="{Binding Name}" Width="240"/>
+                                <GridViewColumn Header="类型" DisplayMemberBinding="{Binding TypeLabel}" Width="80"/>
+                                <GridViewColumn Header="页数" DisplayMemberBinding="{Binding PageLabel}" Width="80"/>
+                                <GridViewColumn Header="修改时间" DisplayMemberBinding="{Binding ModifiedLabel}" Width="160"/>
+                            </GridView>
+                        </ListView.View>
                     </ListView>
-                </ScrollViewer>
-                <ListView x:Name="ImageListView" SelectionChanged="OnImageSelectionChanged" Background="Transparent" BorderThickness="0"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="名称" DisplayMemberBinding="{Binding Name}" Width="240"/>
-                            <GridViewColumn Header="类型" DisplayMemberBinding="{Binding TypeLabel}" Width="80"/>
-                            <GridViewColumn Header="页数" DisplayMemberBinding="{Binding PageLabel}" Width="80"/>
-                            <GridViewColumn Header="修改时间" DisplayMemberBinding="{Binding ModifiedLabel}" Width="160"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                </Grid>
             </DockPanel>
         </Border>
     </Grid>
