@@ -17,6 +17,7 @@ public partial class ImageManagerWindow : Window
     private readonly ObservableCollection<ImageItem> _images = new();
     private string _currentFolder = string.Empty;
     private int _currentIndex = -1;
+    private bool _listMode;
 
     public event Action<IReadOnlyList<string>, int>? ImageSelected;
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
@@ -28,8 +29,10 @@ public partial class ImageManagerWindow : Window
         FavoritesList.ItemsSource = _favorites;
         RecentsList.ItemsSource = _recents;
         ImageList.ItemsSource = _images;
+        ImageListView.ItemsSource = _images;
         LoadFolderList(_favorites, favorites);
         LoadFolderList(_recents, recents);
+        SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
     }
@@ -121,13 +124,36 @@ public partial class ImageManagerWindow : Window
 
     private void OnImageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ImageList.SelectedItem is not ImageItem item)
+        if (sender is not System.Windows.Controls.ListView listView || listView.SelectedItem is not ImageItem item)
         {
             return;
         }
         _currentIndex = _images.IndexOf(item);
         ImageSelected?.Invoke(_images.Select(image => image.Path).ToList(), _currentIndex);
         ImageList.SelectedItem = null;
+        ImageListView.SelectedItem = null;
+    }
+
+    private void OnViewModeClick(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(sender, ThumbnailViewButton))
+        {
+            SetViewMode(listMode: false);
+            return;
+        }
+        if (ReferenceEquals(sender, ListViewButton))
+        {
+            SetViewMode(listMode: true);
+        }
+    }
+
+    private void SetViewMode(bool listMode)
+    {
+        _listMode = listMode;
+        ThumbnailViewButton.IsChecked = !listMode;
+        ListViewButton.IsChecked = listMode;
+        ThumbnailScroll.Visibility = listMode ? Visibility.Collapsed : Visibility.Visible;
+        ImageListView.Visibility = listMode ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void AddFavorite(string path)
@@ -179,12 +205,15 @@ public partial class ImageManagerWindow : Window
     {
         _images.Clear();
         var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(IsImageFile)
+            .Where(IsMediaFile)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
         foreach (var file in files)
         {
-            var thumbnail = LoadThumbnail(file);
-            _images.Add(new ImageItem(file, thumbnail));
+            var isPdf = IsPdfFile(file);
+            var thumbnail = isPdf ? LoadPdfThumbnail(file) : LoadThumbnail(file);
+            var pageCount = isPdf ? TryGetPdfPageCount(file) : 0;
+            var modified = GetModifiedTime(file);
+            _images.Add(new ImageItem(file, thumbnail, isPdf, pageCount, modified));
         }
         _currentIndex = _images.Count > 0 ? 0 : -1;
         EmptyHintText.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -215,13 +244,23 @@ public partial class ImageManagerWindow : Window
         return true;
     }
 
-    private static bool IsImageFile(string path)
+    private static bool IsMediaFile(string path)
     {
+        if (IsPdfFile(path))
+        {
+            return true;
+        }
         var ext = Path.GetExtension(path);
         return ext != null && (ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
                                || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
                                || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
                                || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsPdfFile(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return ext != null && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ImageSource? LoadThumbnail(string path)
@@ -240,6 +279,44 @@ public partial class ImageManagerWindow : Window
         catch
         {
             return null;
+        }
+    }
+
+    private static ImageSource? LoadPdfThumbnail(string path)
+    {
+        try
+        {
+            using var doc = PdfDocumentHost.Open(path);
+            return doc.RenderPage(1, 96);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static int TryGetPdfPageCount(string path)
+    {
+        try
+        {
+            using var doc = PdfDocumentHost.Open(path);
+            return doc.PageCount;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static DateTime GetModifiedTime(string path)
+    {
+        try
+        {
+            return File.GetLastWriteTime(path);
+        }
+        catch
+        {
+            return DateTime.MinValue;
         }
     }
 
@@ -300,8 +377,15 @@ public partial class ImageManagerWindow : Window
         }
     }
 
-    private sealed record ImageItem(string Path, ImageSource? Thumbnail)
+    private sealed record ImageItem(string Path, ImageSource? Thumbnail, bool IsPdf, int PageCount, DateTime Modified)
     {
         public string Name => System.IO.Path.GetFileName(Path);
+        public string TypeLabel => IsPdf ? "PDF" : "图片";
+        public string PageLabel => IsPdf && PageCount > 0 ? $"{PageCount}页" : string.Empty;
+        public string ModifiedLabel => Modified == DateTime.MinValue
+            ? string.Empty
+            : Modified.ToString("yyyy/MM/dd HH:mm");
+        public Visibility PageBadgeVisibility => IsPdf && PageCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+        public string PageBadge => IsPdf && PageCount > 0 ? $"{PageCount}P" : string.Empty;
     }
 }

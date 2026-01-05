@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using IoPath = System.IO.Path;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Photos;
 using MediaColor = System.Windows.Media.Color;
 using MediaBrushes = System.Windows.Media.Brushes;
 using MediaBrush = System.Windows.Media.Brush;
@@ -132,6 +133,8 @@ public partial class PaintOverlayWindow : Window
     private InkCacheScope _currentCacheScope = InkCacheScope.None;
     private readonly InkFinalCache _presentationCache = new(200);
     private readonly InkFinalCache _photoCache = new(80);
+    private const double PdfDefaultDpi = 150;
+    private const int PdfCacheLimit = 3;
     private bool _photoModeActive;
     private bool _photoFullscreen;
     private bool _reviewModeActive;
@@ -142,6 +145,11 @@ public partial class PaintOverlayWindow : Window
     private WpfPoint _photoPanStart;
     private double _photoPanOriginX;
     private double _photoPanOriginY;
+    private bool _photoDocumentIsPdf;
+    private PdfDocumentHost? _pdfDocument;
+    private int _pdfPageCount;
+    private readonly Dictionary<int, BitmapSource> _pdfPageCache = new();
+    private readonly LinkedList<int> _pdfPageOrder = new();
     private bool _rememberPhotoTransform;
     private bool _photoUserTransformDirty;
     private double _lastPhotoScaleX = 1.0;
@@ -849,6 +857,11 @@ public partial class PaintOverlayWindow : Window
         }
         if (IsPhotoNavigationKey(e.Key, out var direction))
         {
+            if (TryNavigatePdf(direction))
+            {
+                e.Handled = true;
+                return;
+            }
             PhotoNavigationRequested?.Invoke(direction);
             e.Handled = true;
             return;
@@ -1375,6 +1388,11 @@ public partial class PaintOverlayWindow : Window
         {
             SaveCurrentPageOnNavigate(forceBackground: false);
         }
+        var isPdf = IsPdfFile(sourcePath);
+        if (_photoModeActive && _photoDocumentIsPdf)
+        {
+            ClosePdfDocument();
+        }
         EnsurePhotoTransformsWritable();
         if (_rememberPhotoTransform && _photoUserTransformDirty)
         {
@@ -1390,24 +1408,44 @@ public partial class PaintOverlayWindow : Window
             _photoTranslate.X = 0;
             _photoTranslate.Y = 0;
         }
-        if (!TrySetPhotoBackground(sourcePath))
-        {
-            return;
-        }
         _photoModeActive = true;
         _photoFullscreen = wasFullscreen;
         _presentationActive = false;
         Topmost = false;
         SetReviewModeActive(false);
-        SetPhotoWindowMode(_photoFullscreen);
-        PhotoModeChanged?.Invoke(true);
         _currentCourseDate = DateTime.Today;
         _currentDocumentName = IoPath.GetFileNameWithoutExtension(sourcePath);
         _currentDocumentPath = sourcePath;
         _currentPageIndex = 1;
         _wpsPageIndex = 1;
         _currentCacheScope = InkCacheScope.Photo;
-        _currentCacheKey = BuildPhotoCacheKey(sourcePath);
+        _currentCacheKey = isPdf
+            ? BuildPdfCacheKey(sourcePath, _currentPageIndex)
+            : BuildPhotoCacheKey(sourcePath);
+        _photoDocumentIsPdf = isPdf;
+        SetPhotoWindowMode(_photoFullscreen);
+        if (isPdf)
+        {
+            if (!TryOpenPdfDocument(sourcePath))
+            {
+                ExitPhotoMode();
+                return;
+            }
+            if (!RenderPdfPage(_currentPageIndex))
+            {
+                ExitPhotoMode();
+                return;
+            }
+        }
+        else
+        {
+            if (!TrySetPhotoBackground(sourcePath))
+            {
+                ExitPhotoMode();
+                return;
+            }
+        }
+        PhotoModeChanged?.Invoke(true);
         if (PhotoTitleText != null)
         {
             PhotoTitleText.Text = _currentDocumentName;
@@ -1426,6 +1464,7 @@ public partial class PaintOverlayWindow : Window
         SaveCurrentPageOnNavigate(forceBackground: false);
         PhotoBackground.Source = null;
         PhotoBackground.Visibility = Visibility.Collapsed;
+        ClosePdfDocument();
         if (!_rememberPhotoTransform)
         {
             EnsurePhotoTransformsWritable();
@@ -1437,6 +1476,7 @@ public partial class PaintOverlayWindow : Window
         }
         _photoModeActive = false;
         _photoFullscreen = false;
+        _photoDocumentIsPdf = false;
         SetReviewModeActive(false);
         SetPhotoWindowMode(fullscreen: false);
         Topmost = true;
@@ -1989,12 +2029,20 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        if (TryNavigatePdf(-1))
+        {
+            return;
+        }
         PhotoNavigationRequested?.Invoke(-1);
     }
 
     private void OnPhotoNextClick(object sender, RoutedEventArgs e)
     {
         if (!_photoModeActive)
+        {
+            return;
+        }
+        if (TryNavigatePdf(1))
         {
             return;
         }
@@ -2038,6 +2086,112 @@ public partial class PaintOverlayWindow : Window
             return false;
         }
     }
+
+    private bool TryOpenPdfDocument(string path)
+    {
+        try
+        {
+            _pdfDocument = PdfDocumentHost.Open(path);
+            _pdfPageCount = _pdfDocument.PageCount;
+            _pdfPageCache.Clear();
+            _pdfPageOrder.Clear();
+            return _pdfPageCount > 0;
+        }
+        catch
+        {
+            ClosePdfDocument();
+            return false;
+        }
+    }
+
+    private void ClosePdfDocument()
+    {
+        _pdfDocument?.Dispose();
+        _pdfDocument = null;
+        _pdfPageCount = 0;
+        _pdfPageCache.Clear();
+        _pdfPageOrder.Clear();
+    }
+
+    private bool RenderPdfPage(int pageIndex)
+    {
+        var bitmap = GetPdfPageBitmap(pageIndex);
+        if (bitmap == null)
+        {
+            PhotoBackground.Source = null;
+            PhotoBackground.Visibility = Visibility.Collapsed;
+            return false;
+        }
+        PhotoBackground.Source = bitmap;
+        PhotoBackground.Visibility = Visibility.Visible;
+        if (!_rememberPhotoTransform || !_photoUserTransformDirty)
+        {
+            ApplyPhotoFitToViewport(bitmap);
+        }
+        return true;
+    }
+
+    private BitmapSource? GetPdfPageBitmap(int pageIndex)
+    {
+        if (_pdfDocument == null || _pdfPageCount <= 0)
+        {
+            return null;
+        }
+        var safeIndex = Math.Clamp(pageIndex, 1, _pdfPageCount);
+        if (_pdfPageCache.TryGetValue(safeIndex, out var cached))
+        {
+            TouchPdfCache(safeIndex);
+            return cached;
+        }
+        var rendered = _pdfDocument.RenderPage(safeIndex, PdfDefaultDpi);
+        if (rendered == null)
+        {
+            return null;
+        }
+        _pdfPageCache[safeIndex] = rendered;
+        TouchPdfCache(safeIndex);
+        if (_pdfPageOrder.Count > PdfCacheLimit)
+        {
+            var oldest = _pdfPageOrder.First?.Value;
+            if (oldest.HasValue)
+            {
+                _pdfPageOrder.RemoveFirst();
+                _pdfPageCache.Remove(oldest.Value);
+            }
+        }
+        return rendered;
+    }
+
+    private void TouchPdfCache(int pageIndex)
+    {
+        var node = _pdfPageOrder.Find(pageIndex);
+        if (node != null)
+        {
+            _pdfPageOrder.Remove(node);
+        }
+        _pdfPageOrder.AddLast(pageIndex);
+    }
+
+    private bool TryNavigatePdf(int direction)
+    {
+        if (!_photoModeActive || !_photoDocumentIsPdf || _pdfDocument == null)
+        {
+            return false;
+        }
+        var next = _currentPageIndex + direction;
+        if (next < 1 || next > _pdfPageCount)
+        {
+            return true;
+        }
+        SaveCurrentPageOnNavigate(forceBackground: false);
+        _currentPageIndex = next;
+        _currentCacheKey = BuildPdfCacheKey(_currentDocumentPath, _currentPageIndex);
+        ResetInkHistory();
+        LoadCurrentPageIfExists();
+        RenderPdfPage(_currentPageIndex);
+        return true;
+    }
+
 
     private void ApplyPhotoFitToViewport(BitmapSource bitmap)
     {
@@ -2180,6 +2334,28 @@ public partial class PaintOverlayWindow : Window
         {
             return $"img|{sourcePath}";
         }
+    }
+
+    private static string BuildPdfCacheKey(string sourcePath, int pageIndex)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return string.Empty;
+        }
+        try
+        {
+            return $"pdf|{IoPath.GetFullPath(sourcePath)}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
+        }
+        catch
+        {
+            return $"pdf|{sourcePath}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
+        }
+    }
+
+    private static bool IsPdfFile(string path)
+    {
+        var ext = IoPath.GetExtension(path);
+        return !string.IsNullOrWhiteSpace(ext) && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeWpsTitle(string title)
