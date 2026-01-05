@@ -27,13 +27,9 @@
                     </DockPanel>
                 </Border>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
-                    <Button x:Name="PhotoFullscreenButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoFullscreenToggleClick"
-                            Width="60" Height="28" Margin="0,0,6,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                        <TextBlock x:Name="PhotoFullscreenToggleText" Text="全屏" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
-                    </Button>
-                    <Button x:Name="PhotoCloseButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoCloseClick"
+                    <Button x:Name="PhotoCloseButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick"
                             Width="28" Height="28" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="12" Height="12"/>
+                        <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="12" Height="12"/>
                     </Button>
                 </StackPanel>
                 <Button x:Name="PhotoMinimizeLeftButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick" Width="28" Height="28"

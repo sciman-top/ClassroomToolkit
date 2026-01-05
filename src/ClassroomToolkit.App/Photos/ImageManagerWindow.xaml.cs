@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -154,6 +155,19 @@ public partial class ImageManagerWindow : Window
         ListViewButton.IsChecked = listMode;
         ThumbnailScroll.Visibility = listMode ? Visibility.Collapsed : Visibility.Visible;
         ImageListView.Visibility = listMode ? Visibility.Visible : Visibility.Collapsed;
+        if (ThumbnailSizeSlider != null)
+        {
+            ThumbnailSizeSlider.IsEnabled = !listMode;
+        }
+    }
+
+    private void OnThumbnailSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_listMode)
+        {
+            return;
+        }
+        ImageList?.Items.Refresh();
     }
 
     private void AddFavorite(string path)
@@ -387,5 +401,29 @@ public partial class ImageManagerWindow : Window
             : Modified.ToString("yyyy/MM/dd HH:mm");
         public Visibility PageBadgeVisibility => IsPdf && PageCount > 0 ? Visibility.Visible : Visibility.Collapsed;
         public string PageBadge => IsPdf && PageCount > 0 ? $"{PageCount}P" : string.Empty;
+    }
+
+}
+
+public sealed class MultiplyConverter : IValueConverter
+{
+    public double Factor { get; set; } = 1.0;
+
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is double d)
+        {
+            return d * Factor;
+        }
+        return value;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is double d && Factor != 0)
+        {
+            return d / Factor;
+        }
+        return value;
     }
 }

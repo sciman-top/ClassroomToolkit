@@ -628,10 +628,7 @@ public partial class MainWindow : Window
     {
         if (_imageManagerWindow == null)
         {
-            _imageManagerWindow = new Photos.ImageManagerWindow(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders)
-            {
-                Owner = this
-            };
+            _imageManagerWindow = new Photos.ImageManagerWindow(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders);
             _imageManagerWindow.ImageSelected += OnImageSelected;
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;

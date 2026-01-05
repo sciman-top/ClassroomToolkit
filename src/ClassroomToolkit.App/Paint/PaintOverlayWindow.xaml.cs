@@ -1448,7 +1448,7 @@ public partial class PaintOverlayWindow : Window
         PhotoModeChanged?.Invoke(true);
         if (PhotoTitleText != null)
         {
-            PhotoTitleText.Text = _currentDocumentName;
+            PhotoTitleText.Text = IoPath.GetFileName(sourcePath);
         }
         InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
         ResetInkHistory();
@@ -2126,7 +2126,7 @@ public partial class PaintOverlayWindow : Window
         PhotoBackground.Visibility = Visibility.Visible;
         if (!_rememberPhotoTransform || !_photoUserTransformDirty)
         {
-            ApplyPhotoFitToViewport(bitmap);
+            ApplyPhotoFitToViewport(bitmap, PdfDefaultDpi);
         }
         return true;
     }
@@ -2193,9 +2193,9 @@ public partial class PaintOverlayWindow : Window
     }
 
 
-    private void ApplyPhotoFitToViewport(BitmapSource bitmap)
+    private void ApplyPhotoFitToViewport(BitmapSource bitmap, double? dpiOverride = null)
     {
-        if (bitmap.Width <= 0 || bitmap.Height <= 0)
+        if (bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0)
         {
             return;
         }
@@ -2217,8 +2217,10 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var imageWidth = bitmap.Width;
-        var imageHeight = bitmap.Height;
+        var dpiX = dpiOverride.HasValue && dpiOverride.Value > 0 ? dpiOverride.Value : bitmap.DpiX;
+        var dpiY = dpiOverride.HasValue && dpiOverride.Value > 0 ? dpiOverride.Value : bitmap.DpiY;
+        var imageWidth = dpiX > 0 ? bitmap.PixelWidth * 96.0 / dpiX : bitmap.PixelWidth;
+        var imageHeight = dpiY > 0 ? bitmap.PixelHeight * 96.0 / dpiY : bitmap.PixelHeight;
         var scaleX = viewportWidth / imageWidth;
         var scaleY = viewportHeight / imageHeight;
         var scale = Math.Min(scaleX, scaleY);
