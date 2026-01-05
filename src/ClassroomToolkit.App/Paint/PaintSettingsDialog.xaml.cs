@@ -65,6 +65,8 @@ public partial class PaintSettingsDialog : Window
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
     public double ToolbarScale { get; private set; } = 1.0;
+    public bool InkCacheEnabled { get; private set; }
+    public bool PhotoRememberTransform { get; private set; }
 
     public PaintSettingsDialog(AppSettings settings)
     {
@@ -89,6 +91,8 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
+        InkCacheCheck.IsChecked = settings.InkCacheEnabled;
+        PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
 
         foreach (var (label, style) in BrushStyleChoices)
         {
@@ -156,6 +160,8 @@ public partial class PaintSettingsDialog : Window
         CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
+        InkCacheEnabled = InkCacheCheck.IsChecked == true;
+        PhotoRememberTransform = PhotoRememberTransformCheck.IsChecked == true;
         DialogResult = true;
     }
 
@@ -237,6 +243,7 @@ public partial class PaintSettingsDialog : Window
         CalligraphyOverlayThresholdSlider.IsEnabled = isCalligraphy;
         CalligraphyOverlayThresholdValue.IsEnabled = isCalligraphy;
     }
+
 
 
     private void OnTempColorClick(object sender, RoutedEventArgs e)

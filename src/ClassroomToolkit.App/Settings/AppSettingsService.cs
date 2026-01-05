@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.Infra.Settings;
@@ -96,6 +98,18 @@ public sealed class AppSettingsService
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
             settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
+            settings.InkSidebarX = GetInt(paint, "ink_sidebar_x", settings.InkSidebarX);
+            settings.InkSidebarY = GetInt(paint, "ink_sidebar_y", settings.InkSidebarY);
+            settings.InkCacheEnabled = GetBool(paint, "ink_cache_enabled", settings.InkCacheEnabled);
+            settings.InkRecordEnabled = GetBool(paint, "ink_record_enabled", settings.InkRecordEnabled);
+            settings.InkSidebarEnabled = GetBool(paint, "ink_sidebar_enabled", settings.InkSidebarEnabled);
+            settings.InkAutoSaveEnabled = GetBool(paint, "ink_auto_save_enabled", settings.InkAutoSaveEnabled);
+            settings.InkReplayPreviousEnabled = GetBool(paint, "ink_replay_previous_enabled", settings.InkReplayPreviousEnabled);
+            settings.InkRetentionDays = GetInt(paint, "ink_retention_days", settings.InkRetentionDays);
+            settings.InkPhotoRootPath = GetString(paint, "ink_photo_root_path", settings.InkPhotoRootPath);
+            settings.PhotoFavoriteFolders = ParseList(GetString(paint, "photo_favorites", string.Empty));
+            settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
+            settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -178,6 +192,18 @@ public sealed class AppSettingsService
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
         paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
+        paint["ink_sidebar_x"] = settings.InkSidebarX.ToString(CultureInfo.InvariantCulture);
+        paint["ink_sidebar_y"] = settings.InkSidebarY.ToString(CultureInfo.InvariantCulture);
+        paint["ink_cache_enabled"] = settings.InkCacheEnabled ? "True" : "False";
+        paint["ink_record_enabled"] = settings.InkRecordEnabled ? "True" : "False";
+        paint["ink_sidebar_enabled"] = settings.InkSidebarEnabled ? "True" : "False";
+        paint["ink_auto_save_enabled"] = settings.InkAutoSaveEnabled ? "True" : "False";
+        paint["ink_replay_previous_enabled"] = settings.InkReplayPreviousEnabled ? "True" : "False";
+        paint["ink_retention_days"] = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
+        paint["ink_photo_root_path"] = settings.InkPhotoRootPath ?? @"D:\ClassroomToolkit\Ink\Photos";
+        paint["photo_favorites"] = JoinList(settings.PhotoFavoriteFolders);
+        paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
+        paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);
@@ -356,5 +382,26 @@ public sealed class AppSettingsService
         return string.Create(
             CultureInfo.InvariantCulture,
             $"{safeWidth}x{safeHeight}{x:+#;-#;0}{y:+#;-#;0}");
+    }
+
+    private static List<string> ParseList(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return new List<string>();
+        }
+        return raw.Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Trim())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+    }
+
+    private static string JoinList(IReadOnlyList<string> items)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return string.Empty;
+        }
+        return string.Join("|", items.Where(item => !string.IsNullOrWhiteSpace(item)));
     }
 }

@@ -178,6 +178,9 @@
                     <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="34"/>
                 </Grid>
 
+                <CheckBox x:Name="InkCacheCheck" Content="启用笔迹缓存" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,12"/>
+                <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住图片缩放/平移" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,12"/>
+
                 <!-- WPS 演示文稿兼容性 -->
                 <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,4,0,0" Background="White">
                     <StackPanel>

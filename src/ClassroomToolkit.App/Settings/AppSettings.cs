@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
@@ -56,6 +57,18 @@ public sealed class AppSettings
     public int PaintToolbarX { get; set; } = 260;
     public int PaintToolbarY { get; set; } = 260;
     public double PaintToolbarScale { get; set; } = 1.0;
+    public int InkSidebarX { get; set; } = UnsetPosition;
+    public int InkSidebarY { get; set; } = UnsetPosition;
+    public bool InkCacheEnabled { get; set; } = true;
+    public bool InkRecordEnabled { get; set; } = false;
+    public bool InkSidebarEnabled { get; set; } = false;
+    public bool InkAutoSaveEnabled { get; set; } = false;
+    public bool InkReplayPreviousEnabled { get; set; } = false;
+    public int InkRetentionDays { get; set; } = 30;
+    public string InkPhotoRootPath { get; set; } = @"D:\ClassroomToolkit\Ink\Photos";
+    public List<string> PhotoFavoriteFolders { get; set; } = new();
+    public List<string> PhotoRecentFolders { get; set; } = new();
+    public bool PhotoRememberTransform { get; set; } = false;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;

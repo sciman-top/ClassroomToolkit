@@ -89,10 +89,10 @@
     <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Disabled}" PresentationOptions:Freeze="true"/>
 
     <!-- 边框 -->
-    <Color x:Key="Color_Border">#E1E8EE</Color>
+    <Color x:Key="Color_Border">#D0D4DA</Color>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Medium" Color="#CED6E0" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#F5F6FA" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#C7CCD4" PresentationOptions:Freeze="true"/>
 
     <!-- 玻璃态描边 -->
     <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>

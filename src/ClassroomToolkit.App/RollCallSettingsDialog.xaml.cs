@@ -225,20 +225,10 @@ public partial class RollCallSettingsDialog : Window
         var items = new[]
         {
             new ComboOption("tab", "Tab键（切换超链接）"),
-            new ComboOption("enter", "Enter键"),
-            new ComboOption("space", "Space键"),
-            new ComboOption("pageup", "PageUp键"),
-            new ComboOption("pagedown", "PageDown键"),
-            new ComboOption("left", "方向键←"),
-            new ComboOption("right", "方向键→"),
-            new ComboOption("up", "方向键↑"),
-            new ComboOption("down", "方向键↓"),
-            new ComboOption("f5", "F5键"),
-            new ComboOption("shift+f5", "Shift+F5键（从当前页放映）"),
-            new ComboOption("esc", "Esc键（退出放映）"),
             new ComboOption("b", "B键（黑屏）"),
             new ComboOption("w", "W键（白屏）"),
-            new ComboOption("shift+b", "Shift+B键（黑屏）")
+            new ComboOption("f5", "F5键（从第一页放映）"),
+            new ComboOption("esc", "Esc键（退出放映）")
         };
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);

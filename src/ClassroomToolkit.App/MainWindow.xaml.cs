@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,6 +12,8 @@ using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.App;
 
@@ -19,9 +22,15 @@ public partial class MainWindow : Window
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow;
+    private InkSidebarWindow? _inkSidebarWindow;
+    private InkManagerWindow? _inkManagerWindow;
+    private Photos.ImageManagerWindow? _imageManagerWindow;
+    private List<string> _photoSequence = new();
+    private int _photoSequenceIndex = -1;
     private LauncherBubbleWindow? _bubbleWindow;
     private readonly DispatcherTimer _autoExitTimer;
     private bool _allowClose;
+    private bool _inkSidebarRequested;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     public ICommand OpenRollCallSettingsCommand { get; }
@@ -30,6 +39,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _inkSidebarWindow = null;
         _settingsService = new AppSettingsService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini"));
         _settings = _settingsService.Load();
         _autoExitTimer = new DispatcherTimer();
@@ -57,6 +67,7 @@ public partial class MainWindow : Window
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
         ScheduleAutoExitTimer();
+        ScheduleInkCleanup();
         if (_settings.LauncherMinimized)
         {
             MinimizeLauncher(fromSettings: true);
@@ -104,6 +115,10 @@ public partial class MainWindow : Window
             CapturePaintToolbarPosition(save: true);
             _overlayWindow.Hide();
             _toolbarWindow.Hide();
+            if (_inkSidebarWindow != null)
+            {
+                _inkSidebarWindow.Hide();
+            }
             if (_rollCallWindow != null)
             {
                 _rollCallWindow.Owner = null;
@@ -126,6 +141,7 @@ public partial class MainWindow : Window
                 _rollCallWindow.Owner = _overlayWindow;
                 _rollCallWindow.SyncTopmost(true);
             }
+            EnsureInkSidebar();
         }
         UpdateToggleButtons();
     }
@@ -139,9 +155,22 @@ public partial class MainWindow : Window
         _overlayWindow = new Paint.PaintOverlayWindow();
         _toolbarWindow = new Paint.PaintToolbarWindow();
         _toolbarWindow.AttachOverlay(_overlayWindow);
+        _overlayWindow.ReviewModeChanged += _ => UpdateReviewNavigationState();
+        _overlayWindow.ReviewNavigationRequested += OnReviewNavigationRequested;
+        _overlayWindow.PhotoModeChanged += OnPhotoModeChanged;
+        _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
+        _overlayWindow.FloatingZOrderRequested += () =>
+            Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, DispatcherPriority.Background);
+        _overlayWindow.Activated += (_, _) => EnsureFloatingWindowsOnTop();
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
+            if (_inkSidebarWindow != null)
+            {
+                _inkSidebarWindow.Hide();
+            }
+            _inkSidebarRequested = false;
+            UpdateReviewNavigationState();
             UpdateToggleButtons();
         };
         _toolbarWindow.Closed += (_, _) =>
@@ -229,6 +258,7 @@ public partial class MainWindow : Window
             }
         };
         _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
+        _toolbarWindow.PhotoOpenRequested += OnOpenPhotoTeaching;
 
         _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
         _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
@@ -254,6 +284,9 @@ public partial class MainWindow : Window
         _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
         _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
         _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
+        _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
+        _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
+        EnsureInkSidebar();
     }
 
     private void ApplyPaintToolbarPosition()
@@ -281,6 +314,45 @@ public partial class MainWindow : Window
         }
         _settings.PaintToolbarX = (int)Math.Round(_toolbarWindow.Left);
         _settings.PaintToolbarY = (int)Math.Round(_toolbarWindow.Top);
+        if (save)
+        {
+            SaveSettings();
+        }
+    }
+
+    private void EnsureInkSidebar()
+    {
+        // Ink sidebar is removed per updated requirements.
+    }
+
+    private void ApplyInkSidebarPosition()
+    {
+        if (_inkSidebarWindow == null)
+        {
+            return;
+        }
+        if (_settings.InkSidebarX == AppSettings.UnsetPosition
+            && _settings.InkSidebarY == AppSettings.UnsetPosition)
+        {
+            _inkSidebarWindow.Left = _settings.PaintToolbarX + 320;
+            _inkSidebarWindow.Top = _settings.PaintToolbarY;
+        }
+        else
+        {
+            _inkSidebarWindow.Left = _settings.InkSidebarX;
+            _inkSidebarWindow.Top = _settings.InkSidebarY;
+        }
+        WindowPlacementHelper.EnsureVisible(_inkSidebarWindow);
+    }
+
+    private void CaptureInkSidebarPosition(bool save)
+    {
+        if (_inkSidebarWindow == null)
+        {
+            return;
+        }
+        _settings.InkSidebarX = (int)Math.Round(_inkSidebarWindow.Left);
+        _settings.InkSidebarY = (int)Math.Round(_inkSidebarWindow.Top);
         if (save)
         {
             SaveSettings();
@@ -421,6 +493,8 @@ public partial class MainWindow : Window
             _settings.ShapeType = dialog.ShapeType;
             _settings.BrushColor = dialog.BrushColor;
             _settings.PaintToolbarScale = dialog.ToolbarScale;
+            _settings.InkCacheEnabled = dialog.InkCacheEnabled;
+            _settings.PhotoRememberTransform = dialog.PhotoRememberTransform;
             SaveSettings();
 
             if (_overlayWindow != null)
@@ -429,6 +503,8 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
                 _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
+                _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
+                _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
                 _overlayWindow.SetBrushStyle(_settings.BrushStyle);
                 _overlayWindow.SetBrushTuning(_settings.WhiteboardPreset, _settings.CalligraphyPreset);
@@ -450,6 +526,261 @@ public partial class MainWindow : Window
             _toolbarWindow?.ApplySettings(_settings);
         }
         _overlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+    }
+
+    private void OnOpenInkSettings()
+    {
+        var dialog = new Ink.InkSettingsDialog(_settings)
+        {
+            Owner = _inkSidebarWindow != null ? (Window)_inkSidebarWindow : this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        _settings.InkRecordEnabled = dialog.InkRecordEnabled;
+        _settings.InkAutoSaveEnabled = dialog.InkAutoSaveEnabled;
+        _settings.InkReplayPreviousEnabled = dialog.InkReplayPreviousEnabled;
+        _settings.InkRetentionDays = dialog.InkRetentionDays;
+        _settings.InkPhotoRootPath = dialog.InkPhotoRootPath;
+        SaveSettings();
+
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
+        }
+        _toolbarWindow?.ApplySettings(_settings);
+    }
+
+    private void UpdateReviewNavigationState()
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        var enabled = _inkSidebarWindow != null
+                      && _inkSidebarWindow.IsVisible
+                      && _overlayWindow.IsReviewModeActive;
+        _overlayWindow.SetReviewNavigationEnabled(enabled);
+    }
+
+    private void OnReviewNavigationRequested(int direction)
+    {
+        if (_inkSidebarWindow == null || !_inkSidebarWindow.IsVisible)
+        {
+            return;
+        }
+        if (direction > 0)
+        {
+            _inkSidebarWindow.NavigateNext();
+            return;
+        }
+        if (direction < 0)
+        {
+            _inkSidebarWindow.NavigatePrevious();
+        }
+    }
+
+    private void OnOpenInkSidebar()
+    {
+        _inkSidebarRequested = !_inkSidebarRequested;
+        EnsureInkSidebar();
+        _inkSidebarWindow?.Activate();
+    }
+
+    private void OnInkPageSelected(int pageIndex)
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        _overlayWindow.LoadInkPage(pageIndex);
+    }
+
+    private void OnOpenInkManager()
+    {
+        if (_inkManagerWindow == null)
+        {
+            _inkManagerWindow = new InkManagerWindow
+            {
+                Owner = _overlayWindow != null && _overlayWindow.IsVisible ? (Window)_overlayWindow : this
+            };
+            _inkManagerWindow.PageSelected += OnInkReviewRequested;
+            _inkManagerWindow.Closed += (_, _) => _inkManagerWindow = null;
+        }
+        _inkManagerWindow.Show();
+        _inkManagerWindow.Activate();
+    }
+
+    private void OnInkReviewRequested(DateTime date, string documentName, int pageIndex)
+    {
+        EnsurePaintWindows();
+        if (_overlayWindow == null || _toolbarWindow == null)
+        {
+            return;
+        }
+        ShowPaintOverlayIfNeeded();
+        _overlayWindow.EnterReviewMode(date, documentName, pageIndex);
+        EnsureInkSidebar();
+    }
+
+    private void OnOpenPhotoTeaching()
+    {
+        if (_imageManagerWindow == null)
+        {
+            _imageManagerWindow = new Photos.ImageManagerWindow(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders)
+            {
+                Owner = this
+            };
+            _imageManagerWindow.ImageSelected += OnImageSelected;
+            _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
+            _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
+            _imageManagerWindow.Closed += (_, _) => _imageManagerWindow = null;
+        }
+        _imageManagerWindow.Show();
+        if (_imageManagerWindow.WindowState == WindowState.Minimized)
+        {
+            _imageManagerWindow.WindowState = WindowState.Normal;
+        }
+        _imageManagerWindow.Activate();
+    }
+
+    private void OnImageSelected(IReadOnlyList<string> images, int index)
+    {
+        if (_overlayWindow == null)
+        {
+            EnsurePaintWindows();
+        }
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        ShowPaintOverlayIfNeeded();
+        _photoSequence = images.ToList();
+        _photoSequenceIndex = index;
+        if (_photoSequenceIndex >= 0 && _photoSequenceIndex < _photoSequence.Count)
+        {
+            _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+        }
+    }
+
+    private void OnPhotoFavoritesChanged(IReadOnlyList<string> favorites)
+    {
+        _settings.PhotoFavoriteFolders = favorites.ToList();
+        SaveSettings();
+    }
+
+    private void OnPhotoRecentsChanged(IReadOnlyList<string> recents)
+    {
+        _settings.PhotoRecentFolders = recents.ToList();
+        SaveSettings();
+    }
+
+    private void OnPhotoNavigateRequested(int direction)
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        if (_imageManagerWindow != null && _imageManagerWindow.TryNavigate(direction))
+        {
+            return;
+        }
+        if (_photoSequence.Count == 0 || _photoSequenceIndex < 0)
+        {
+            return;
+        }
+        var next = _photoSequenceIndex + direction;
+        if (next < 0 || next >= _photoSequence.Count)
+        {
+            return;
+        }
+        _photoSequenceIndex = next;
+        _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+    }
+
+    private void ShowPaintOverlayIfNeeded()
+    {
+        if (_overlayWindow == null || _toolbarWindow == null)
+        {
+            return;
+        }
+        if (_overlayWindow.IsVisible)
+        {
+            return;
+        }
+        _overlayWindow.Show();
+        if (_toolbarWindow.Owner != _overlayWindow && _overlayWindow.IsVisible)
+        {
+            _toolbarWindow.Owner = _overlayWindow;
+        }
+        _toolbarWindow.Show();
+        WindowPlacementHelper.EnsureVisible(_toolbarWindow);
+        _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
+        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+        {
+            _rollCallWindow.Owner = _overlayWindow;
+            _rollCallWindow.SyncTopmost(true);
+        }
+    }
+
+    private void OnPhotoModeChanged(bool active)
+    {
+        if (_overlayWindow == null || _toolbarWindow == null)
+        {
+            return;
+        }
+        if (active)
+        {
+            _toolbarWindow.Owner = null;
+            if (_toolbarWindow.WindowState == WindowState.Minimized)
+            {
+                _toolbarWindow.WindowState = WindowState.Normal;
+            }
+            _toolbarWindow.Show();
+            _toolbarWindow.SyncTopmost(true);
+            if (_rollCallWindow != null)
+            {
+                _rollCallWindow.Owner = null;
+                if (_rollCallWindow.IsVisible)
+                {
+                    _rollCallWindow.SyncTopmost(true);
+                }
+            }
+            return;
+        }
+        if (_overlayWindow.IsVisible && _toolbarWindow.Owner != _overlayWindow)
+        {
+            _toolbarWindow.Owner = _overlayWindow;
+        }
+        if (_rollCallWindow != null && _rollCallWindow.IsVisible && _overlayWindow.IsVisible)
+        {
+            _rollCallWindow.Owner = _overlayWindow;
+            _rollCallWindow.SyncTopmost(true);
+        }
+    }
+
+    private void EnsureFloatingWindowsOnTop()
+    {
+        if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+        {
+            _toolbarWindow.SyncTopmost(true);
+        }
+        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+        {
+            _rollCallWindow.SyncTopmost(true);
+        }
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+            {
+                _toolbarWindow.SyncTopmost(true);
+            }
+            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+            {
+                _rollCallWindow.SyncTopmost(true);
+            }
+        }, DispatcherPriority.ApplicationIdle);
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
@@ -721,6 +1052,7 @@ public partial class MainWindow : Window
             return;
         }
         _allowClose = true;
+        TriggerInkCleanup();
         CapturePaintToolbarPosition(save: true);
         SaveLauncherSettings();
         if (_bubbleWindow != null)
@@ -749,6 +1081,16 @@ public partial class MainWindow : Window
     private void SaveSettings()
     {
         _settingsService.Save(_settings);
+    }
+
+    private void ScheduleInkCleanup()
+    {
+        // Ink persistence is disabled; no cleanup needed.
+    }
+
+    private void TriggerInkCleanup()
+    {
+        // Ink persistence is disabled; no cleanup needed.
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)

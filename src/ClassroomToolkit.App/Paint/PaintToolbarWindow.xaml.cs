@@ -15,8 +15,14 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
+    private static readonly IntPtr HwndTopmost = new(-1);
+    private static readonly IntPtr HwndNoTopmost = new(-2);
     private const int GwlExstyle = -20;
     private const int WsExNoActivate = 0x08000000;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpShowWindow = 0x0040;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
@@ -39,6 +45,7 @@ public partial class PaintToolbarWindow : Window
     public event Action<int, MediaColor>? QuickColorSlotChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action? SettingsRequested;
+    public event Action? PhotoOpenRequested;
     public event Action<bool>? WhiteboardToggled;
 
     public ICommand OpenBoardColorCommand { get; }
@@ -107,6 +114,7 @@ public partial class PaintToolbarWindow : Window
             BoardButton.IsChecked = _boardActive;
             UpdateQuickColorSelection(settings.BrushColor);
             ApplyUiScale(settings.PaintToolbarScale);
+            PhotoOpenButton.IsEnabled = true;
         }
         finally
         {
@@ -133,6 +141,17 @@ public partial class PaintToolbarWindow : Window
         _overlay = overlay;
     }
 
+    public void SyncTopmost(bool enabled)
+    {
+        Topmost = enabled;
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
+        SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+    }
+
     private void ApplyUiScale(double scale)
     {
         _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
@@ -142,6 +161,16 @@ public partial class PaintToolbarWindow : Window
         }
         WindowPlacementHelper.EnsureVisible(this);
     }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
 
     private void OnModeChecked(object sender, RoutedEventArgs e)
     {
@@ -268,6 +297,11 @@ public partial class PaintToolbarWindow : Window
             }
         }
         WhiteboardToggled?.Invoke(_boardActive);
+    }
+
+    private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
+    {
+        PhotoOpenRequested?.Invoke();
     }
 
     private void UpdateToolButtons(PaintToolMode mode)
@@ -542,13 +576,18 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        var key = e.Key;
+        if (_overlay != null && _overlay.TryHandleReviewNavigationKey(key))
+        {
+            e.Handled = true;
+            return;
+        }
         // 只在光标模式下转发键盘事件到演示文稿
         if (_currentMode != PaintToolMode.Cursor)
         {
             return;
         }
         // 只转发演示文稿导航键
-        var key = e.Key;
         bool isNavigationKey = key == System.Windows.Input.Key.Left ||
                                key == System.Windows.Input.Key.Right ||
                                key == System.Windows.Input.Key.Up ||

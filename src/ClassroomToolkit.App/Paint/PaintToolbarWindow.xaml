@@ -138,6 +138,10 @@
                 <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
             </Button>
             
+            <Button x:Name="PhotoOpenButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoOpenClick" ToolTip="图片管理">
+                <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
+            </Button>
+
             <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="白板" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}">
                  <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="20" Height="20"/>
             </ToggleButton>
