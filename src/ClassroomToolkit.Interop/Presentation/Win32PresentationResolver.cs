@@ -47,10 +47,20 @@ public sealed class Win32PresentationResolver
                 {
                     return true;
                 }
+                // Log ALL PowerPoint windows (before check filtering)
+                if (info.ProcessName.Contains("powerpnt", StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Resolver] PPT window BEFORE check: classes={string.Join(",", info.ClassNames)}");
+                }
                 var check = BuildWindowCheck(hwnd, info, classifier);
                 if (check == null)
                 {
                     return true;
+                }
+                // Log all Office candidate windows
+                if (check.Type == PresentationType.Office && allowOffice)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Resolver] Office candidate: process={info.ProcessName}, classes={string.Join(",", info.ClassNames)}, score={check.Score}, classMatch={check.ClassMatch}, fullscreen={check.IsFullscreen}");
                 }
                 if (check.Type == PresentationType.Wps && allowWps && check.Score > wpsScore)
                 {
@@ -66,6 +76,7 @@ public sealed class Win32PresentationResolver
             },
             IntPtr.Zero);
 
+        System.Diagnostics.Debug.WriteLine($"[Resolver] Final: wpsValid={wpsTarget.IsValid}, officeValid={officeTarget.IsValid}, officeScore={officeScore}");
         if (wpsTarget.IsValid)
         {
             return wpsTarget;
@@ -125,14 +136,17 @@ public sealed class Win32PresentationResolver
         var processMatch = type is PresentationType.Wps or PresentationType.Office;
         var hasCaption = HasCaption(hwnd);
         var isFullscreen = IsFullscreenWindow(hwnd);
-        if (!classMatch && !isFullscreen && hasCaption)
+        // Relaxed filter: Allow main window with caption as fallback (score will be lower)
+        // Only verify it's a known presentation type
+        if (type == PresentationType.None)
         {
             return null;
         }
         var score = 0;
+        // Strongly prioritize windows with slideshow class names (screenClass, pptviewwndclass, etc.)
         if (classMatch)
         {
-            score += 3;
+            score += 10;
         }
         if (processMatch)
         {

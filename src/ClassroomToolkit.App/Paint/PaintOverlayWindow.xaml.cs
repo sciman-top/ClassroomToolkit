@@ -40,7 +40,8 @@ public partial class PaintOverlayWindow : Window
     private const uint MonitorDefaultToNearest = 2;
     private const int PresentationFocusMonitorIntervalMs = 500;
     private const int PresentationFocusCooldownMs = 1200;
-    private const int PresentationRefreshDelayMs = 120;
+    private const int PresentationRefreshDelayMs = 180;
+    private const int PresentationRefreshMaxAttempts = 8;
     private const double CalligraphySealStrokeWidthFactor = 0.08;
     private const byte DefaultCalligraphyOverlayOpacityThreshold = 230;
     private const double PhotoWheelZoomBase = 1.0008;
@@ -51,6 +52,8 @@ public partial class PaintOverlayWindow : Window
     private bool _forcePresentationForegroundOnFullscreen;
     private readonly DispatcherTimer _presentationFocusMonitor;
     private readonly DispatcherTimer _presentationRefreshTimer;
+    private string _presentationRefreshStartKey = string.Empty;
+    private int _presentationRefreshAttempts;
     private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private const int HistoryLimit = 30;
@@ -134,9 +137,18 @@ public partial class PaintOverlayWindow : Window
     private int _currentPageIndex = 1;
     private int _wpsPageIndex = 1;
     private string _currentCacheKey = string.Empty;
+    // PPT/WPS slideshow page tracking for reliable page change detection
+    private string _pptTrackedDocumentName = string.Empty;
+    private int _pptTrackedPageIndex = 1;
+    private int _lastKnownSlideID = -1;
+    private int _lastKnownShowPosition = -1;
+    private int _currentSlideID = 0;
     private InkCacheScope _currentCacheScope = InkCacheScope.None;
     private readonly InkFinalCache _presentationCache = new(200);
     private readonly InkFinalCache _photoCache = new(80);
+    // WPS state machine for reliable slide tracking (avoids repeated GetActiveObject)
+    private readonly WpsSlideShowTracker _wpsTracker = new();
+    private bool _wpsTrackerActive;
     private const double PdfDefaultDpi = 96;
     private const int PdfCacheLimit = 3;
     private bool _photoModeActive;
@@ -249,14 +261,31 @@ public partial class PaintOverlayWindow : Window
         };
         _presentationRefreshTimer.Tick += (_, _) =>
         {
-            _presentationRefreshTimer.Stop();
             MonitorInkContext();
+            if (!string.IsNullOrWhiteSpace(_currentCacheKey)
+                && !string.Equals(_currentCacheKey, _presentationRefreshStartKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _presentationRefreshTimer.Stop();
+                return;
+            }
+            _presentationRefreshAttempts++;
+            if (_presentationRefreshAttempts >= PresentationRefreshMaxAttempts)
+            {
+                _presentationRefreshTimer.Stop();
+            }
         };
         _inkMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(600)
         };
         _inkMonitor.Tick += (_, _) => MonitorInkContext();
+        
+        // WPS tracker events for reliable slide tracking
+        _wpsTracker.SlideChanged += OnWpsSlideChanged;
+        _wpsTracker.SlideshowStarted += OnWpsSlideshowStarted;
+        _wpsTracker.SlideshowEnded += OnWpsSlideshowEnded;
+        _wpsTracker.EnteredDegradedMode += OnWpsEnteredDegradedMode;
+        
         KeyDown += OnKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
@@ -1703,6 +1732,8 @@ public partial class PaintOverlayWindow : Window
 
     private void SchedulePresentationContextRefresh()
     {
+        _presentationRefreshStartKey = _currentCacheKey;
+        _presentationRefreshAttempts = 0;
         if (_presentationRefreshTimer.IsEnabled)
         {
             _presentationRefreshTimer.Stop();
@@ -1738,33 +1769,71 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        if (_presentationOptions.AllowOffice)
+        var allowOffice = _presentationOptions.AllowOffice || _inkCacheEnabled;
+        var allowWps = _presentationOptions.AllowWps || _inkCacheEnabled;
+        
+        if (allowOffice)
         {
             var pptInfo = PresentationSlideResolver.TryResolvePowerPoint();
             if (pptInfo != null)
             {
                 var docName = IoPath.GetFileNameWithoutExtension(pptInfo.DisplayName);
                 _presentationActive = true;
-                UpdatePresentationContext(docName, pptInfo.FilePath, pptInfo.SlideIndex, isWps: false);
+                UpdatePresentationContext(docName, pptInfo.FilePath, pptInfo.SlideIndex, pptInfo.SlideID, pptInfo.CurrentShowPosition, isWps: false);
                 return;
             }
-            if (TryResolveOfficeSlideFromTitle(out var docName, out var slideIndex))
+            if (TryResolveOfficeSlideFromTitle(out var titleDocName, out var slideIndex))
             {
                 _presentationActive = true;
-                UpdatePresentationContext(docName, string.Empty, slideIndex, isWps: false);
+                UpdatePresentationContext(titleDocName, string.Empty, slideIndex, slideID: 0, showPosition: 0, isWps: false);
                 return;
             }
         }
-        if (_presentationOptions.AllowWps)
+        if (allowWps)
         {
+            // Use WPS state machine tracker for reliable slide tracking
+            // Always poll the tracker when it's active or in ActiveSlideshow state
+            if (_wpsTrackerActive || _wpsTracker.State == WpsSlideShowTracker.TrackingState.ActiveSlideshow)
+            {
+                _wpsTracker.Poll();
+                if (_wpsTrackerActive)
+                {
+                    return; // Tracker is handling WPS, skip legacy logic
+                }
+            }
+            
+            // Poll tracker to detect new slideshows (only if idle)
+            if (_wpsTracker.State == WpsSlideShowTracker.TrackingState.Idle)
+            {
+                _wpsTracker.Poll();
+                if (_wpsTracker.IsTrackingActive)
+                {
+                    return; // Tracker picked up a slideshow
+                }
+            }
+            
+            // Legacy fallback: try COM automation directly (for cases where tracker hasn't picked up)
+            var wpsInfo = PresentationSlideResolver.TryResolveWps();
+            if (wpsInfo != null)
+            {
+                var wpsDocName = IoPath.GetFileNameWithoutExtension(wpsInfo.DisplayName);
+                _presentationActive = true;
+                UpdatePresentationContext(wpsDocName, wpsInfo.FilePath, wpsInfo.SlideIndex, wpsInfo.SlideID, wpsInfo.CurrentShowPosition, isWps: true);
+                return;
+            }
+
+            // Fallback: detect via window target and title parsing
             var target = ResolveWpsTarget();
-            if (!target.IsValid || !_presentationClassifier.IsSlideshowWindow(target.Info))
+            if (!target.IsValid || target.Info == null || !_presentationClassifier.IsSlideshowWindow(target.Info))
             {
                 if (_presentationActive && IsCurrentWpsContext())
                 {
                     SaveCurrentPageOnNavigate(forceBackground: false);
                     _presentationActive = false;
+                    _lastKnownShowPosition = -1;
+                    _lastKnownSlideID = -1;
                 }
+                // No valid WPS slideshow target, stop processing
                 return;
             }
             var title = WindowTextHelper.GetWindowTitle(target.Handle);
@@ -1783,21 +1852,17 @@ public partial class PaintOverlayWindow : Window
             {
                 normalizedTitle = title;
             }
-            if (!string.Equals(normalizedTitle, _currentDocumentName, StringComparison.OrdinalIgnoreCase))
-            {
-                _wpsPageIndex = parsed.Value;
-            }
-            else
-            {
-                _wpsPageIndex = parsed.Value;
-            }
-            UpdatePresentationContext(normalizedTitle, string.Empty, _wpsPageIndex, isWps: true);
+            _wpsPageIndex = parsed.Value;
+            UpdatePresentationContext(normalizedTitle, string.Empty, _wpsPageIndex, slideID: 0, showPosition: 0, isWps: true);
             return;
         }
         if (_presentationActive)
         {
             SaveCurrentPageOnNavigate(forceBackground: false);
             _presentationActive = false;
+            // Reset tracking state for next slideshow session
+            _lastKnownShowPosition = -1;
+            _lastKnownSlideID = -1;
         }
     }
 
@@ -1806,6 +1871,106 @@ public partial class PaintOverlayWindow : Window
         return _currentCacheScope == InkCacheScope.Presentation
             && _currentCacheKey.StartsWith("wps|", StringComparison.OrdinalIgnoreCase);
     }
+
+    #region WPS Tracker Event Handlers
+    
+    private void OnWpsSlideChanged(int slideIndex, int slideID, int showPosition)
+    {
+        if (!_wpsTrackerActive || _photoModeActive)
+        {
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"[WpsTracker] SlideChanged: slideIndex={slideIndex}, slideID={slideID}, showPos={showPosition}");
+        
+        // Save current page before switching
+        SaveCurrentPageOnNavigate(forceBackground: false);
+        
+        // Update state
+        _currentPageIndex = slideIndex;
+        _currentSlideID = slideID;
+        _lastKnownShowPosition = showPosition;
+        _lastKnownSlideID = slideID;
+        
+        // Build new cache key using SlideID for stability
+        var newKey = BuildPresentationCacheKey(_currentDocumentName, _currentDocumentPath, slideIndex, slideID, isWps: true);
+        if (!string.IsNullOrWhiteSpace(newKey) && !string.Equals(_currentCacheKey, newKey, StringComparison.OrdinalIgnoreCase))
+        {
+            _currentCacheKey = newKey;
+            ResetInkHistory();
+            _inkStrokes.Clear();
+            RedrawInkSurface();
+            LoadCurrentPageIfExists();
+        }
+    }
+    
+    private void OnWpsSlideshowStarted(string presentationName, string presentationPath, int slideIndex, int slideID)
+    {
+        System.Diagnostics.Debug.WriteLine($"[WpsTracker] SlideshowStarted: {presentationName}, path={presentationPath}, slide={slideIndex}, slideID={slideID}");
+        
+        _wpsTrackerActive = true;
+        _presentationActive = true;
+        _currentDocumentName = IoPath.GetFileNameWithoutExtension(presentationName);
+        _currentDocumentPath = presentationPath;
+        _currentPageIndex = slideIndex > 0 ? slideIndex : 1;
+        _currentSlideID = slideID;
+        _currentCacheScope = InkCacheScope.Presentation;
+        _lastKnownShowPosition = -1;
+        _lastKnownSlideID = slideID;
+        
+        // Build initial cache key
+        _currentCacheKey = BuildPresentationCacheKey(_currentDocumentName, _currentDocumentPath, _currentPageIndex, _currentSlideID, isWps: true);
+        System.Diagnostics.Debug.WriteLine($"[WpsTracker] Initial cache key: {_currentCacheKey}");
+        
+        InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
+        ResetInkHistory();
+        _inkStrokes.Clear();
+        RedrawInkSurface();
+        LoadCurrentPageIfExists();
+    }
+    
+    private void OnWpsSlideshowEnded()
+    {
+        System.Diagnostics.Debug.WriteLine($"[WpsTracker] SlideshowEnded, saving last page: key={_currentCacheKey}");
+        
+        // Save last page before exiting
+        SaveCurrentPageOnNavigate(forceBackground: false);
+        
+        _wpsTrackerActive = false;
+        _presentationActive = false;
+        _lastKnownShowPosition = -1;
+        _lastKnownSlideID = -1;
+    }
+    
+    private void OnWpsEnteredDegradedMode()
+    {
+        System.Diagnostics.Debug.WriteLine("[WpsTracker] Entered degraded mode - WPS slideshow detected but cannot track pages");
+        
+        // In degraded mode, we use a session-level canvas (no per-page caching)
+        _wpsTrackerActive = false;
+        _presentationActive = true;
+        _currentDocumentName = "WPS_Session";
+        _currentPageIndex = 1;
+        _currentSlideID = 0;
+        _currentCacheKey = "wps|session|global";
+        _currentCacheScope = InkCacheScope.Presentation;
+        
+        ResetInkHistory();
+        _inkStrokes.Clear();
+        RedrawInkSurface();
+        LoadCurrentPageIfExists();
+    }
+    
+    /// <summary>
+    /// Start WPS slideshow via COM for reliable page tracking.
+    /// Call this instead of letting user press F5 in WPS.
+    /// </summary>
+    public bool StartWpsSlideshow()
+    {
+        return _wpsTracker.StartSlideshow();
+    }
+    
+    #endregion
 
     private bool TryResolveOfficeSlideFromTitle(out string documentName, out int slideIndex)
     {
@@ -1816,27 +1981,111 @@ public partial class PaintOverlayWindow : Window
             allowWps: false,
             allowOffice: true,
             _currentProcessId);
-        if (!target.IsValid || !_presentationClassifier.IsSlideshowWindow(target.Info))
+        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: target.IsValid={target.IsValid}, ProcessName={target.Info?.ProcessName}, ClassNames={string.Join(",", target.Info?.ClassNames ?? Array.Empty<string>())}");
+        var isSlideshow = target.IsValid && target.Info != null && _presentationClassifier.IsSlideshowWindow(target.Info);
+        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: IsSlideshowWindow={isSlideshow}");
+        
+        // Relaxed check: Allow main window fallback if we have a valid target
+        if (!target.IsValid)
         {
             return false;
         }
+        
         var title = WindowTextHelper.GetWindowTitle(target.Handle);
+        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: title={title}");
         if (string.IsNullOrWhiteSpace(title))
         {
             return false;
         }
         var parsed = TryParseSlideIndexFromTitle(title);
-        if (!parsed.HasValue)
+        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: parsed={parsed}");
+        
+        // Extract document name from title
+        var docName = NormalizeOfficeTitle(title);
+        if (string.IsNullOrWhiteSpace(docName))
         {
-            return false;
+            docName = title;
         }
-        slideIndex = parsed.Value;
-        documentName = NormalizeOfficeTitle(title);
-        if (string.IsNullOrWhiteSpace(documentName))
+        
+        if (parsed.HasValue)
         {
-            documentName = title;
+            // Title contains slide index - use it directly
+            slideIndex = parsed.Value;
+            documentName = docName;
+            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (from title) docName={documentName}, slideIndex={slideIndex}");
+            return true;
         }
+        
+        // FALLBACK 1: Try UI Automation to get slide index from PPT window
+        int? uiaSlideIndex = null;
+        try
+        {
+            uiaSlideIndex = ClassroomToolkit.Interop.Presentation.PowerPointSlideDetector.TryGetSlideIndex(target.Handle);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InkCache] UIA Exception: {ex.Message}");
+        }
+
+        if (uiaSlideIndex.HasValue && uiaSlideIndex.Value > 0)
+        {
+            slideIndex = uiaSlideIndex.Value;
+            documentName = docName;
+            _pptTrackedDocumentName = docName;
+            _pptTrackedPageIndex = slideIndex;
+            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (UI Automation) docName={documentName}, slideIndex={slideIndex}");
+            return true;
+        }
+        
+        // FALLBACK 2: Try Accessibility API
+        var accSlideIndex = ClassroomToolkit.Interop.Presentation.PowerPointSlideDetector.TryGetSlideIndexFromAccessibility(target.Handle);
+        if (accSlideIndex.HasValue && accSlideIndex.Value > 0)
+        {
+            slideIndex = accSlideIndex.Value;
+            documentName = docName;
+            _pptTrackedDocumentName = docName;
+            _pptTrackedPageIndex = slideIndex;
+            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (Accessibility) docName={documentName}, slideIndex={slideIndex}");
+            return true;
+        }
+        
+        // FALLBACK 3: Title doesn't contain slide index (PPT slideshow mode)
+        // Use tracked page index instead (starts at 1)
+        if (!docName.Equals(_pptTrackedDocumentName, StringComparison.OrdinalIgnoreCase))
+        {
+            // Document changed, reset tracking
+            _pptTrackedDocumentName = docName;
+            _pptTrackedPageIndex = 1;
+            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: NEW DOC, reset tracking to page 1");
+        }
+        slideIndex = _pptTrackedPageIndex;
+        documentName = docName;
+        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (tracked) docName={documentName}, slideIndex={slideIndex}");
         return true;
+    }
+    
+    /// <summary>
+    /// Updates the tracked PPT page index (called when navigation keys are detected).
+    /// Called externally when page-changing inputs (Page Down, Arrow Right, Space, etc.) are detected.
+    /// </summary>
+    public void UpdatePptTrackedPageIndex(int delta)
+    {
+        if (string.IsNullOrEmpty(_pptTrackedDocumentName))
+        {
+            return;
+        }
+        var newIndex = _pptTrackedPageIndex + delta;
+        if (newIndex < 1)
+        {
+            newIndex = 1;
+        }
+        if (newIndex != _pptTrackedPageIndex)
+        {
+            _pptTrackedPageIndex = newIndex;
+            System.Diagnostics.Debug.WriteLine($"[InkCache] UpdatePptTrackedPageIndex: delta={delta}, newIndex={_pptTrackedPageIndex}");
+            // Trigger immediate context refresh
+            MonitorInkContext();
+        }
     }
 
     private static string NormalizeOfficeTitle(string title)
@@ -1848,31 +2097,42 @@ public partial class PaintOverlayWindow : Window
         var cleaned = Regex.Replace(title, @"\b(\d+)\s*of\s*\d+\b", string.Empty, RegexOptions.IgnoreCase);
         cleaned = Regex.Replace(cleaned, @"第\s*\d+\s*(页|张)", string.Empty);
         cleaned = Regex.Replace(cleaned, @"\bSlide\s*\d+.*", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = cleaned.Replace("PowerPoint Slide Show -", string.Empty, StringComparison.OrdinalIgnoreCase);
-        cleaned = cleaned.Replace("PowerPoint 幻灯片放映 -", string.Empty, StringComparison.OrdinalIgnoreCase);
-        cleaned = cleaned.Replace("幻灯片放映 -", string.Empty, StringComparison.OrdinalIgnoreCase);
+        // Handle variable whitespace around dash (e.g., "PowerPoint 幻灯片放映  -  filename")
+        cleaned = Regex.Replace(cleaned, @"PowerPoint\s+Slide\s+Show\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
+        cleaned = Regex.Replace(cleaned, @"PowerPoint\s+幻灯片放映\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
+        cleaned = Regex.Replace(cleaned, @"幻灯片放映\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
         return cleaned.Trim().Trim('-').Trim();
     }
 
-    private void UpdatePresentationContext(string documentName, string documentPath, int pageIndex, bool isWps)
+    private void UpdatePresentationContext(string documentName, string documentPath, int pageIndex, int slideID, int showPosition, bool isWps)
     {
         if (string.IsNullOrWhiteSpace(documentName) || pageIndex <= 0)
         {
             return;
         }
         SetReviewModeActive(false);
-        var nextKey = BuildPresentationCacheKey(documentName, documentPath, pageIndex, isWps);
+
+        // Use SlideID for cache key if available (more stable than SlideIndex)
+        var nextKey = BuildPresentationCacheKey(documentName, documentPath, pageIndex, slideID, isWps);
         if (string.IsNullOrWhiteSpace(nextKey))
         {
             return;
         }
-        if (!string.Equals(documentName, _currentDocumentName, StringComparison.OrdinalIgnoreCase)
-            || _currentCacheScope != InkCacheScope.Presentation)
+
+        // Check for document change
+        bool isDocumentChange = !string.Equals(documentName, _currentDocumentName, StringComparison.OrdinalIgnoreCase)
+            || _currentCacheScope != InkCacheScope.Presentation;
+
+        if (isDocumentChange)
         {
+            System.Diagnostics.Debug.WriteLine($"[InkCache] Document changed: {_currentDocumentName} -> {documentName}");
             SaveCurrentPageOnNavigate(forceBackground: false);
             _currentDocumentName = documentName;
             _currentDocumentPath = documentPath ?? string.Empty;
             _currentPageIndex = Math.Max(1, pageIndex);
+            _currentSlideID = slideID;
+            _lastKnownShowPosition = showPosition;
+            _lastKnownSlideID = slideID;
             _currentCacheScope = InkCacheScope.Presentation;
             _currentCacheKey = nextKey;
             InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
@@ -1882,12 +2142,29 @@ public partial class PaintOverlayWindow : Window
             LoadCurrentPageIfExists();
             return;
         }
-        if (pageIndex != _currentPageIndex || !string.Equals(_currentCacheKey, nextKey, StringComparison.OrdinalIgnoreCase))
+
+        // Detect page change using CurrentShowPosition (most reliable for distinguishing animation vs page change)
+        // Animation steps do NOT change CurrentShowPosition; only true slide transitions do.
+        bool showPositionChanged = showPosition > 0 && showPosition != _lastKnownShowPosition;
+        bool slideIDChanged = slideID > 0 && slideID != _lastKnownSlideID;
+        bool pageIndexChanged = pageIndex != _currentPageIndex;
+        bool cacheKeyChanged = !string.Equals(_currentCacheKey, nextKey, StringComparison.OrdinalIgnoreCase);
+
+        // Determine if this is a real page change (not just animation)
+        bool isRealPageChange = showPositionChanged || slideIDChanged || (showPosition == 0 && slideID == 0 && (pageIndexChanged || cacheKeyChanged));
+
+        if (isRealPageChange)
         {
+            System.Diagnostics.Debug.WriteLine($"[InkCache] Page changed: {_currentPageIndex} -> {pageIndex}");
             SaveCurrentPageOnNavigate(forceBackground: false);
             _currentPageIndex = Math.Max(1, pageIndex);
+            _currentSlideID = slideID;
+            _lastKnownShowPosition = showPosition;
+            _lastKnownSlideID = slideID;
             _currentCacheKey = nextKey;
             ResetInkHistory();
+            _inkStrokes.Clear();
+            RedrawInkSurface();
             LoadCurrentPageIfExists();
         }
     }
@@ -1896,13 +2173,14 @@ public partial class PaintOverlayWindow : Window
     {
         if (!_inkCacheEnabled || string.IsNullOrWhiteSpace(_currentCacheKey))
         {
-            _inkStrokes.Clear();
+            _inkStrokes.Clear();;
             RedrawInkSurface();
             return;
         }
         var cache = _currentCacheScope == InkCacheScope.Photo ? _photoCache : _presentationCache;
         if (cache.TryGet(_currentCacheKey, out var cached))
         {
+            System.Diagnostics.Debug.WriteLine($"[InkCache] Loaded {cached.Count} strokes for key={_currentCacheKey}");
             ApplyInkStrokes(cached);
             return;
         }
@@ -1945,6 +2223,7 @@ public partial class PaintOverlayWindow : Window
         var strokes = CloneInkStrokes(_inkStrokes);
         var cache = _currentCacheScope == InkCacheScope.Photo ? _photoCache : _presentationCache;
         cache.Set(_currentCacheKey, strokes);
+        System.Diagnostics.Debug.WriteLine($"[InkCache] Saved {strokes.Count} strokes for key={_currentCacheKey}");
     }
 
     private bool ShouldAutoSavePresentationBackground()
@@ -2479,12 +2758,19 @@ public partial class PaintOverlayWindow : Window
         return null;
     }
 
-    private static string BuildPresentationCacheKey(string documentName, string documentPath, int pageIndex, bool isWps)
+    private static string BuildPresentationCacheKey(string documentName, string documentPath, int pageIndex, int slideID, bool isWps)
     {
         if (pageIndex <= 0)
         {
             return string.Empty;
         }
+
+        // Prefer SlideID for slide key (stable across slide reordering)
+        // Fall back to SlideIndex if SlideID is not available
+        var slideKey = slideID > 0
+            ? $"sid_{slideID}"
+            : $"idx_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
+
         if (isWps)
         {
             var normalized = NormalizeWpsTitle(documentName);
@@ -2492,7 +2778,7 @@ public partial class PaintOverlayWindow : Window
             {
                 normalized = documentName;
             }
-            return $"wps|{normalized}|slide_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
+            return $"wps|{normalized}|{slideKey}";
         }
         var docKey = string.Empty;
         if (!string.IsNullOrWhiteSpace(documentPath))
@@ -2510,7 +2796,7 @@ public partial class PaintOverlayWindow : Window
         {
             docKey = documentName;
         }
-        return $"ppt|{docKey}|slide_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
+        return $"ppt|{docKey}|{slideKey}";
     }
 
     private static string BuildPhotoCacheKey(string sourcePath)

@@ -266,6 +266,23 @@ public partial class PaintToolbarWindow : Window
         ClearRequested?.Invoke();
     }
 
+    private void OnWpsShowClick(object sender, RoutedEventArgs e)
+    {
+        if (_overlay != null)
+        {
+            // 通过 Overlay 启动 WPS 放映，以支持按页缓存
+            var success = _overlay.StartWpsSlideshow();
+            if (!success)
+            {
+                System.Windows.MessageBox.Show(this, 
+                    "未能检测到运行中的 WPS 演示文稿。\n请先确保 WPS 已启动且打开了演示文稿。", 
+                    "无法启动放映", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Information);
+            }
+        }
+    }
+
     private void OnUndoClick(object sender, RoutedEventArgs e)
     {
         if (_overlay != null)
