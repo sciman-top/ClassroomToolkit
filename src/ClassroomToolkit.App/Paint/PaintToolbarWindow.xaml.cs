@@ -235,11 +235,8 @@ public partial class PaintToolbarWindow : Window
         // 更新颜色选择状态
         UpdateQuickColorSelection(selectedColor);
         
-        // 如果当前不是画笔模式，切换到画笔模式
-        if (_currentMode != PaintToolMode.Brush)
-        {
-            UpdateToolButtons(PaintToolMode.Brush);
-        }
+        // 始终同步回画笔模式，避免工具高亮状态残留
+        UpdateToolButtons(PaintToolMode.Brush);
         
         // 重置形状类型（如果需要）
         if (shouldResetShape)
@@ -264,23 +261,6 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         ClearRequested?.Invoke();
-    }
-
-    private void OnWpsShowClick(object sender, RoutedEventArgs e)
-    {
-        if (_overlay != null)
-        {
-            // 通过 Overlay 启动 WPS 放映，以支持按页缓存
-            var success = _overlay.StartWpsSlideshow();
-            if (!success)
-            {
-                System.Windows.MessageBox.Show(this, 
-                    "未能检测到运行中的 WPS 演示文稿。\n请先确保 WPS 已启动且打开了演示文稿。", 
-                    "无法启动放映", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Information);
-            }
-        }
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)

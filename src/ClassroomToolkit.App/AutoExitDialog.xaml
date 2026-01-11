@@ -39,12 +39,6 @@
                 <TextBlock Text="设置为 0 则不自动关闭" FontSize="12" Foreground="#999" Margin="0,0,0,8"/>
                 
                 <TextBox x:Name="MinutesBox" Padding="8" BorderThickness="1" BorderBrush="#DDD" VerticalContentAlignment="Center"/>
-                
-                <Button x:Name="DiagnosticButton" Content="运行系统兼容性诊断" 
-                        Style="{StaticResource Style_PrimaryButton}"
-                        Click="OnDiagnosticClick"
-                        Height="36"
-                        Margin="0,20,0,0"/>
             </StackPanel>
 
             <!-- 3. 按钮 -->

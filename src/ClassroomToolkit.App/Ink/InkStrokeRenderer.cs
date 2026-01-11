@@ -15,6 +15,11 @@ namespace ClassroomToolkit.App.Ink;
 
 public sealed class InkStrokeRenderer
 {
+    private const int InkNoiseTileCacheLimit = 96;
+    private static readonly object InkNoiseTileCacheLock = new();
+    private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
+    private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
+
     public RenderTargetBitmap RenderPage(
         InkPageData page,
         int pixelWidth,
@@ -259,7 +264,91 @@ public sealed class InkStrokeRenderer
         brush.Transform = transforms;
     }
 
+    private sealed class InkNoiseTileEntry
+    {
+        public InkNoiseTileEntry(BitmapSource tile, LinkedListNode<InkNoiseTileKey> node)
+        {
+            Tile = tile;
+            Node = node;
+        }
+
+        public BitmapSource Tile { get; }
+        public LinkedListNode<InkNoiseTileKey> Node { get; }
+    }
+
+    private readonly struct InkNoiseTileKey : IEquatable<InkNoiseTileKey>
+    {
+        public InkNoiseTileKey(int size, int seed, double baseAlpha, double variation)
+        {
+            Size = size;
+            Seed = seed;
+            BaseAlphaBits = BitConverter.DoubleToInt64Bits(baseAlpha);
+            VariationBits = BitConverter.DoubleToInt64Bits(variation);
+        }
+
+        public int Size { get; }
+        public int Seed { get; }
+        public long BaseAlphaBits { get; }
+        public long VariationBits { get; }
+
+        public bool Equals(InkNoiseTileKey other)
+        {
+            return Size == other.Size
+                && Seed == other.Seed
+                && BaseAlphaBits == other.BaseAlphaBits
+                && VariationBits == other.VariationBits;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is InkNoiseTileKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Size, Seed, BaseAlphaBits, VariationBits);
+        }
+    }
+
     private static BitmapSource CreateInkNoiseTile(int size, double baseAlpha, double variation, int seed)
+    {
+        var key = new InkNoiseTileKey(size, seed, baseAlpha, variation);
+        lock (InkNoiseTileCacheLock)
+        {
+            if (InkNoiseTileCache.TryGetValue(key, out var entry))
+            {
+                InkNoiseTileOrder.Remove(entry.Node);
+                InkNoiseTileOrder.AddLast(entry.Node);
+                return entry.Tile;
+            }
+        }
+
+        var bitmap = CreateInkNoiseTileCore(size, baseAlpha, variation, seed);
+        lock (InkNoiseTileCacheLock)
+        {
+            if (InkNoiseTileCache.TryGetValue(key, out var existing))
+            {
+                InkNoiseTileOrder.Remove(existing.Node);
+                InkNoiseTileOrder.AddLast(existing.Node);
+                return existing.Tile;
+            }
+            var node = InkNoiseTileOrder.AddLast(key);
+            InkNoiseTileCache[key] = new InkNoiseTileEntry(bitmap, node);
+            while (InkNoiseTileOrder.Count > InkNoiseTileCacheLimit)
+            {
+                var oldest = InkNoiseTileOrder.First;
+                if (oldest == null)
+                {
+                    break;
+                }
+                InkNoiseTileOrder.RemoveFirst();
+                InkNoiseTileCache.Remove(oldest.Value);
+            }
+        }
+        return bitmap;
+    }
+
+    private static BitmapSource CreateInkNoiseTileCore(int size, double baseAlpha, double variation, int seed)
     {
         var rng = new Random(seed);
         int grid = 14;

@@ -67,6 +67,7 @@ public partial class PaintSettingsDialog : Window
     public double ToolbarScale { get; private set; } = 1.0;
     public bool InkCacheEnabled { get; private set; }
     public bool PhotoRememberTransform { get; private set; }
+    public bool PhotoCrossPageDisplay { get; private set; }
 
     public PaintSettingsDialog(AppSettings settings)
     {
@@ -93,6 +94,7 @@ public partial class PaintSettingsDialog : Window
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
         InkCacheCheck.IsChecked = settings.InkCacheEnabled;
         PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
+        PhotoCrossPageDisplayCheck.IsChecked = settings.PhotoCrossPageDisplay;
 
         foreach (var (label, style) in BrushStyleChoices)
         {
@@ -162,6 +164,7 @@ public partial class PaintSettingsDialog : Window
         ToolbarScale = GetSelectedScale();
         InkCacheEnabled = InkCacheCheck.IsChecked == true;
         PhotoRememberTransform = PhotoRememberTransformCheck.IsChecked == true;
+        PhotoCrossPageDisplay = PhotoCrossPageDisplayCheck.IsChecked == true;
         DialogResult = true;
     }
 

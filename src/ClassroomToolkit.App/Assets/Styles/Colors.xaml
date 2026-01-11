@@ -4,154 +4,181 @@
 
     <!-- ========================================
          Designed by: Gemini Art Director
-         Theme: Soft Tech (Iris & Mint)
+         Theme: Fluent Vivid (Electric Violet & Aurora)
+         Concept: High saturation, soft gradients, colored shadows
          ======================================== -->
 
     <!-- ========== 核心品牌色 (Brand Colors) ========== -->
     
-    <!-- 主色 (Primary) - Iris Purple: 艺术、创造力、科技 -->
-    <Color x:Key="Color_Primary_Light">#A29BFE</Color>
-    <Color x:Key="Color_Primary_Main">#6C5CE7</Color>
-    <Color x:Key="Color_Primary_Dark">#4834D4</Color>
+    <!-- 主色 (Primary) - Electric Violet -->
+    <!-- 更饱和、更通透的紫 -->
+    <Color x:Key="Color_Primary_Light">#B388FF</Color>
+    <Color x:Key="Color_Primary_Main">#7C4DFF</Color> 
+    <Color x:Key="Color_Primary_Dark">#651FFF</Color>
 
     <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary_Main}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Primary_Light" Color="{StaticResource Color_Primary_Light}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{StaticResource Color_Primary_Dark}" PresentationOptions:Freeze="true"/>
 
-    <!-- 辅助色 (Accent) - Mint Teal: 清新、通过、活力 -->
-    <Color x:Key="Color_Accent_Light">#55EFC4</Color>
-    <Color x:Key="Color_Accent_Main">#00B894</Color>
-    <Color x:Key="Color_Accent_Dark">#008E70</Color>
+    <!-- 辅助色 (Accent) - Fluorescent Cyan -->
+    <Color x:Key="Color_Accent_Light">#80DEEA</Color>
+    <Color x:Key="Color_Accent_Main">#00E5FF</Color>
+    <Color x:Key="Color_Accent_Dark">#00B8D4</Color>
 
     <SolidColorBrush x:Key="Brush_Accent" Color="{StaticResource Color_Accent_Main}" PresentationOptions:Freeze="true"/>
 
     <!-- ========== 功能色 (Functional Colors) ========== -->
 
-    <!-- 危险 (Danger) - Soft Red -->
-    <Color x:Key="Color_Danger">#FF7675</Color>
+    <!-- 危险 (Danger) - Coral Red -->
+    <Color x:Key="Color_Danger">#FF5252</Color>
     <SolidColorBrush x:Key="Brush_Danger" Color="{StaticResource Color_Danger}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Danger_Light" Color="#FFB4B4" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Danger_Light" Color="#FF8A80" PresentationOptions:Freeze="true"/>
+    <!-- 危险色背景 (用于浅色块) -->
+    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#FFF1F0" PresentationOptions:Freeze="true"/>
 
-    <!-- 警告 (Warning) - Sunflower -->
-    <Color x:Key="Color_Warning">#FDCB6E</Color>
+    <!-- 警告 (Warning) - Amber -->
+    <Color x:Key="Color_Warning">#FFAB00</Color>
     <SolidColorBrush x:Key="Brush_Warning" Color="{StaticResource Color_Warning}" PresentationOptions:Freeze="true"/>
 
-    <!-- 成功 (Success) - Green -->
-    <Color x:Key="Color_Success">#00B894</Color>
+    <!-- 成功 (Success) - Emerald -->
+    <Color x:Key="Color_Success">#00C853</Color>
     <SolidColorBrush x:Key="Brush_Success" Color="{StaticResource Color_Success}" PresentationOptions:Freeze="true"/>
 
-    <!-- 信息 (Info) - Blue -->
-    <Color x:Key="Color_Info">#0984E3</Color>
+    <!-- 信息 (Info) - Azure -->
+    <Color x:Key="Color_Info">#2979FF</Color>
     <SolidColorBrush x:Key="Brush_Info" Color="{StaticResource Color_Info}" PresentationOptions:Freeze="true"/>
 
-    <!-- ========== 背景与层级 (Backgrounds & Surfaces) ========== -->
+    <!-- ========== 沉浸式背景体系 (Immersive Backgrounds) ========== -->
 
-    <!-- 层级 1: 卡片/浮窗 (纯白) -->
+    <!-- 层级 1: 卡片/悬浮物 (纯白) -->
     <Color x:Key="Color_Background_L1">#FFFFFF</Color>
     <SolidColorBrush x:Key="Brush_Background" Color="{StaticResource Color_Background_L1}" PresentationOptions:Freeze="true"/>
 
-    <!-- 层级 2: 窗口底色 (极淡蓝灰) -->
-    <Color x:Key="Color_Background_L2">#F4F7FA</Color>
-    <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Background_L2}" PresentationOptions:Freeze="true"/>
+    <!-- 层级 2: 窗口底色 - 极光微光 (Subtle Gradient) -->
+    <!-- 这里使用 SolidColorBrush 作为回退，实际应用建议用 Grid 背景画刷 -->
+    <Color x:Key="Color_Background_L2">#FAFAFC</Color> 
+    <!-- 主窗口使用的微妙渐变背景 -->
+    <LinearGradientBrush x:Key="Brush_Window_Atmosphere" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#F3E5F5" Offset="0.6"/> <!-- Very subtle Purple hint -->
+        <GradientStop Color="#E1F5FE" Offset="1"/>   <!-- Very subtle Blue hint -->
+    </LinearGradientBrush>
 
-    <!-- 层级 3: 输入框/深色块 (淡灰) -->
-    <Color x:Key="Color_Background_L3">#DFE6E9</Color>
+    <!-- 层级 3: 输入框/深色块 (Off-White Gray) -->
+    <Color x:Key="Color_Background_L3">#F5F5F7</Color>
     <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Background_L3}" PresentationOptions:Freeze="true"/>
+    
+    <!-- 强调背景 (用于选中项) -->
+    <Color x:Key="Color_Surface_Active">#F2E7FE</Color> <!-- Lightest Purple -->
+    <SolidColorBrush x:Key="Brush_Surface_Active" Color="{StaticResource Color_Surface_Active}" PresentationOptions:Freeze="true"/>
 
-    <!-- 暗色背景 (用于HUD/计时器) -->
-    <SolidColorBrush x:Key="Brush_Background_Dark" Color="#2D3436" PresentationOptions:Freeze="true"/>
-
-    <!-- 悬停色 (极浅的主色) -->
-    <Color x:Key="Color_Surface_Tint">#F0F3FF</Color>
-    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="{StaticResource Color_Surface_Tint}" PresentationOptions:Freeze="true"/>
+    <!-- 悬停色 (用于按钮Hover) -->
+    <Color x:Key="Color_Surface_Hover">#F5F5F5</Color>
+    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="{StaticResource Color_Surface_Hover}" PresentationOptions:Freeze="true"/>
 
     <!-- 遮罩 -->
-    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#992D3436" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Overlay_Light" Color="#99FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#AA121212" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Overlay_Light" Color="#AAFFFFFF" PresentationOptions:Freeze="true"/>
+    
+    <!-- 玻璃质感辅助色 -->
+    <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Glass_Border" Color="#50FFFFFF" PresentationOptions:Freeze="true"/>
 
-    <!-- ========== 文本与边框 (Text & Borders) ========== -->
+    <!-- ========== 现代文本系统 (Modern Typography Colors) ========== -->
 
-    <!-- 主要文本 (Dracula Dark) -->
-    <Color x:Key="Color_Text_Primary">#2D3436</Color>
+    <!-- 主要文本 (Deep Indigo Gray) - 比纯黑更柔和 -->
+    <Color x:Key="Color_Text_Primary">#1A1A2E</Color>
     <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
 
-    <!-- 次要文本 (Slate) - 已加深以提高可读性 -->
-    <Color x:Key="Color_Text_Secondary">#4A5568</Color>
+    <!-- 次要文本 (Cool Gray) -->
+    <Color x:Key="Color_Text_Secondary">#5C5C7A</Color>
     <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
 
     <!-- 提示文本 -->
-    <Color x:Key="Color_Text_Tertiary">#B2BEC3</Color>
+    <Color x:Key="Color_Text_Tertiary">#9FA2B4</Color>
     <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Tertiary}" PresentationOptions:Freeze="true"/>
 
     <!-- 禁用 -->
-    <Color x:Key="Color_Disabled">#D1D8E0</Color>
+    <Color x:Key="Color_Disabled">#E0E0E0</Color>
     <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Disabled}" PresentationOptions:Freeze="true"/>
 
     <!-- 边框 -->
-    <Color x:Key="Color_Border">#D0D4DA</Color>
+    <Color x:Key="Color_Border">#E0E0E0</Color>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Border_Medium" Color="#CED6E0" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#C7CCD4" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Light" Color="#F0F0F0" PresentationOptions:Freeze="true"/>
+    <!-- 聚焦光环色 -->
+    <SolidColorBrush x:Key="Brush_Focus_Glow" Color="#407C4DFF" PresentationOptions:Freeze="true"/>
 
-    <!-- 玻璃态描边 -->
-    <SolidColorBrush x:Key="Brush_White_Translucent" Color="#80FFFFFF" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
+    <!-- ========== 兼容性映射 (Legacy Compatibility) ========== -->
+    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Medium" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Background_L2}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="{StaticResource Color_Surface_Hover}" PresentationOptions:Freeze="true"/>
 
-    <!-- ========== 渐变与特效 (Gradients & Effects) ========== -->
 
-    <!-- 主品牌渐变: Iris -> Light Purple -->
+    <!-- ========== 动态渐变 (Vivid Gradients) ========== -->
+
+    <!-- 主品牌渐变: Electric Violet -> Deep Blue (激进、科技) -->
     <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#6C5CE7" Offset="0"/>
-        <GradientStop Color="#a29bfe" Offset="1"/>
+        <GradientStop Color="#7C4DFF" Offset="0"/>
+        <GradientStop Color="#651FFF" Offset="1"/>
+    </LinearGradientBrush>
+    
+    <!-- 悬停态渐变 (略亮) -->
+    <LinearGradientBrush x:Key="Gradient_Primary_Hover" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#9965f4" Offset="0"/>
+        <GradientStop Color="#7C4DFF" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 启动球渐变: Cyan -> Blue -->
+    <!-- 启动球渐变: Neon Cyan -> Electric Blue -->
     <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#00CEC9" Offset="0"/>
-        <GradientStop Color="#0984E3" Offset="1"/>
+        <GradientStop Color="#00E5FF" Offset="0"/>
+        <GradientStop Color="#2979FF" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 计时器渐变 -->
-    <LinearGradientBrush x:Key="Gradient_Active" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
-        <GradientStop Color="#55EFC4" Offset="0"/>
-        <GradientStop Color="#00B894" Offset="1"/>
-    </LinearGradientBrush>
-
-    <!-- 点名卡片姓名区: 极光微渐变 (Aurora) -->
-    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#E3FDF5" Offset="0"/>      <!-- 极淡薄荷 -->
-        <GradientStop Color="#FFE6FA" Offset="1"/>      <!-- 极淡紫粉 -->
-    </LinearGradientBrush>
-
-    <!-- 点名卡片背景: 微光 -->
-    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#FFFFFF" Offset="0"/>
-        <GradientStop Color="#F4F7FA" Offset="1"/>
-    </LinearGradientBrush>
-
-    <!-- 霓虹色 -->
-    <Color x:Key="Color_Timer_Neon">#55EFC4</Color>
+    <!-- 计时器渐变 (Aqua -> Mint) -->
+    <Color x:Key="Color_Timer_Neon">#00E5FF</Color>
     <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
 
-    <!-- 画笔色 -->
-    <Color x:Key="Color_Pen_Red">#FF7675</Color>
+    <LinearGradientBrush x:Key="Gradient_Active" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
+        <GradientStop Color="#00E5FF" Offset="0"/>
+        <GradientStop Color="#00C853" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 点名卡片背景: 更加通透 -->
+    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0.5,0" EndPoint="0.5,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#F8F9FA" Offset="1"/>
+    </LinearGradientBrush>
+    
+    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
+        <GradientStop Color="#F3E5F5" Offset="0"/>
+        <GradientStop Color="#E1F5FE" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 画笔色 (更鲜艳) -->
+    <Color x:Key="Color_Pen_Red">#FF1744</Color>
     <SolidColorBrush x:Key="Brush_Pen_Red" Color="{StaticResource Color_Pen_Red}" PresentationOptions:Freeze="true"/>
-    <Color x:Key="Color_Pen_Blue">#0984E3</Color>
+    <Color x:Key="Color_Pen_Blue">#2979FF</Color>
     <SolidColorBrush x:Key="Brush_Pen_Blue" Color="{StaticResource Color_Pen_Blue}" PresentationOptions:Freeze="true"/>
 
-    <!-- 玻璃 -->
-    <SolidColorBrush x:Key="Brush_Glass_White" Color="#E6FFFFFF" PresentationOptions:Freeze="true"/>
-
-    <!-- ========== 阴影系统 (Shadows) ========== -->
-
-    <!-- 浮层阴影: 深邃 -->
-    <DropShadowEffect x:Key="Shadow_Floating" Color="#2D3436" BlurRadius="25" ShadowDepth="8" Opacity="0.15" RenderingBias="Quality"/>
+    <!-- ========== 高级阴影系统 (Colored Shadows) ========== -->
     
-    <!-- 卡片阴影: 轻柔 -->
-    <DropShadowEffect x:Key="Shadow_Card" Color="#636E72" BlurRadius="12" ShadowDepth="3" Opacity="0.08" RenderingBias="Quality"/>
+    <!-- 1. 弥散光影 (主色) - 用于主要 CTA 按钮 -->
+    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#7C4DFF" BlurRadius="20" ShadowDepth="4" Opacity="0.4" RenderingBias="Quality"/>
+    
+    <!-- 2. 也是弥散光影 (危险色) -->
+    <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#FF5252" BlurRadius="15" ShadowDepth="3" Opacity="0.3" RenderingBias="Quality"/>
 
-    <!-- 内部阴影 -->
-    <DropShadowEffect x:Key="Shadow_Inset" Color="#000000" BlurRadius="4" ShadowDepth="-1" Opacity="0.05" RenderingBias="Quality"/>
+    <!-- 3. 浮层阴影: 更柔和深远 -->
+    <DropShadowEffect x:Key="Shadow_Floating" Color="#1A1A2E" BlurRadius="40" ShadowDepth="12" Opacity="0.12" RenderingBias="Quality"/>
+    
+    <!-- 4. 紧凑卡片阴影 -->
+    <DropShadowEffect x:Key="Shadow_Card" Color="#1A1A2E" BlurRadius="8" ShadowDepth="2" Opacity="0.06" RenderingBias="Quality"/>
+
+    <!-- 5. 极简边框阴影 (用于浅色背景上的白色块) -->
+    <DropShadowEffect x:Key="Shadow_Subtle" Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.05" RenderingBias="Quality"/>
 
 </ResourceDictionary>

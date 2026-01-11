@@ -34,13 +34,20 @@ public static class PresentationSlideResolver
 
     public static PresentationSlideInfo? TryResolvePowerPoint()
     {
+        var result = TryResolvePowerPointWithApplication(out _);
+        return result;
+    }
+
+    public static PresentationSlideInfo? TryResolvePowerPointWithApplication(out object? application)
+    {
+        application = null;
         // Skip if COM failed recently
         if (DateTime.UtcNow - _lastPptComFailure < ComRetryInterval)
         {
             return null;
         }
 
-        var result = TryResolvePowerPointCore();
+        var result = TryResolvePowerPointCore(out application);
         if (result != null)
         {
             return result;
@@ -48,11 +55,55 @@ public static class PresentationSlideResolver
 
         // Mark failure to throttle retries
         _lastPptComFailure = DateTime.UtcNow;
+        application = null;
         return null;
     }
 
-    private static PresentationSlideInfo? TryResolvePowerPointCore()
+    public static object? TryGetPowerPointApplication()
     {
+        if (DateTime.UtcNow - _lastPptComFailure < ComRetryInterval)
+        {
+            return null;
+        }
+
+        try
+        {
+            var app = GetOrCreateApplication("PowerPoint.Application", ref _cachedPptApp, ref _lastPptCacheTime);
+            if (app == null)
+            {
+                _lastPptComFailure = DateTime.UtcNow;
+            }
+            return app;
+        }
+        catch (COMException)
+        {
+            InvalidatePptCache();
+            _lastPptComFailure = DateTime.UtcNow;
+            return null;
+        }
+        catch (InvalidOleVariantTypeException)
+        {
+            InvalidatePptCache();
+            _lastPptComFailure = DateTime.UtcNow;
+            return null;
+        }
+        catch (InvalidCastException)
+        {
+            InvalidatePptCache();
+            _lastPptComFailure = DateTime.UtcNow;
+            return null;
+        }
+        catch (Exception ex) when (ex.Message.Contains("RPC") || ex.Message.Contains("disconnected"))
+        {
+            InvalidatePptCache();
+            _lastPptComFailure = DateTime.UtcNow;
+            return null;
+        }
+    }
+
+    private static PresentationSlideInfo? TryResolvePowerPointCore(out object? application)
+    {
+        application = null;
         try
         {
             var app = GetOrCreateApplication("PowerPoint.Application", ref _cachedPptApp, ref _lastPptCacheTime);
@@ -61,6 +112,7 @@ public static class PresentationSlideResolver
                 return null;
             }
 
+            application = app;
             return ExtractSlideInfo(app);
         }
         catch (COMException)
@@ -306,6 +358,10 @@ public static class PresentationSlideResolver
                 System.Diagnostics.Debug.WriteLine($"[SlideResolver] Connected via GetActiveObject: {progId}");
                 return result;
             }
+        }
+        catch (InvalidOleVariantTypeException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SlideResolver] GetActiveObject failed for {progId}: {ex.Message}");
         }
         catch (Exception ex)
         {

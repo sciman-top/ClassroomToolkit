@@ -12,9 +12,10 @@
         ShowInTaskbar="False"
         Topmost="True">
 
-    <Border Background="White" CornerRadius="10" Margin="8" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_White_Translucent}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="18" ShadowDepth="4" Opacity="0.1"/>
+            <!-- 统一深邃浮层阴影 -->
+            <DropShadowEffect Color="#1A1A2E" BlurRadius="40" ShadowDepth="12" Opacity="0.15"/>
         </Border.Effect>
 
         <Grid>

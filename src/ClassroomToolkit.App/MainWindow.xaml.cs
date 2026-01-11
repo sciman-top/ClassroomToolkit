@@ -159,6 +159,7 @@ public partial class MainWindow : Window
         _overlayWindow.ReviewNavigationRequested += OnReviewNavigationRequested;
         _overlayWindow.PhotoModeChanged += OnPhotoModeChanged;
         _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
+        _overlayWindow.PhotoUnifiedTransformChanged += OnPhotoUnifiedTransformChanged;
         _overlayWindow.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, DispatcherPriority.Background);
         _overlayWindow.Activated += (_, _) => EnsureFloatingWindowsOnTop();
@@ -285,7 +286,19 @@ public partial class MainWindow : Window
         _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
         _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
         _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
+        _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
+        _overlayWindow.UpdateInkAutoSaveEnabled(_settings.InkAutoSaveEnabled);
+        _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
+        _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
+        _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
         _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
+        _overlayWindow.UpdateCrossPageDisplayEnabled(_settings.PhotoCrossPageDisplay);
+        _overlayWindow.SetPhotoUnifiedTransformState(
+            _settings.PhotoUnifiedTransformEnabled,
+            _settings.PhotoUnifiedScaleX,
+            _settings.PhotoUnifiedScaleY,
+            _settings.PhotoUnifiedTranslateX,
+            _settings.PhotoUnifiedTranslateY);
         EnsureInkSidebar();
     }
 
@@ -495,6 +508,7 @@ public partial class MainWindow : Window
             _settings.PaintToolbarScale = dialog.ToolbarScale;
             _settings.InkCacheEnabled = dialog.InkCacheEnabled;
             _settings.PhotoRememberTransform = dialog.PhotoRememberTransform;
+            _settings.PhotoCrossPageDisplay = dialog.PhotoCrossPageDisplay;
             SaveSettings();
 
             if (_overlayWindow != null)
@@ -504,7 +518,13 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
+                _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
+                _overlayWindow.UpdateInkAutoSaveEnabled(_settings.InkAutoSaveEnabled);
+                _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
+                _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
+                _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
                 _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
+                _overlayWindow.UpdateCrossPageDisplayEnabled(_settings.PhotoCrossPageDisplay);
                 _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
                 _overlayWindow.SetBrushStyle(_settings.BrushStyle);
                 _overlayWindow.SetBrushTuning(_settings.WhiteboardPreset, _settings.CalligraphyPreset);
@@ -634,6 +654,7 @@ public partial class MainWindow : Window
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
             _imageManagerWindow.Closed += (_, _) => _imageManagerWindow = null;
         }
+        _imageManagerWindow.Owner = this;
         _imageManagerWindow.Show();
         if (_imageManagerWindow.WindowState == WindowState.Minimized)
         {
@@ -665,6 +686,8 @@ public partial class MainWindow : Window
         }
         _photoSequence = images.ToList();
         _photoSequenceIndex = index;
+        // Pass the photo sequence to overlay for cross-page display
+        _overlayWindow.SetPhotoSequence(_photoSequence, _photoSequenceIndex);
         if (_photoSequenceIndex >= 0 && _photoSequenceIndex < _photoSequence.Count)
         {
             _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
@@ -703,6 +726,8 @@ public partial class MainWindow : Window
             return;
         }
         _photoSequenceIndex = next;
+        // Update overlay's sequence index for cross-page display
+        _overlayWindow.SetPhotoSequence(_photoSequence, _photoSequenceIndex);
         _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
     }
 
@@ -760,11 +785,26 @@ public partial class MainWindow : Window
         {
             _toolbarWindow.Owner = _overlayWindow;
         }
+        _toolbarWindow.SyncTopmost(true);
         if (_rollCallWindow != null && _rollCallWindow.IsVisible && _overlayWindow.IsVisible)
         {
             _rollCallWindow.Owner = _overlayWindow;
             _rollCallWindow.SyncTopmost(true);
         }
+    }
+
+    private void OnPhotoUnifiedTransformChanged(
+        double scaleX,
+        double scaleY,
+        double translateX,
+        double translateY)
+    {
+        _settings.PhotoUnifiedTransformEnabled = true;
+        _settings.PhotoUnifiedScaleX = scaleX;
+        _settings.PhotoUnifiedScaleY = scaleY;
+        _settings.PhotoUnifiedTranslateX = translateX;
+        _settings.PhotoUnifiedTranslateY = translateY;
+        SaveSettings();
     }
 
     private void EnsureFloatingWindowsOnTop()
@@ -807,7 +847,7 @@ public partial class MainWindow : Window
     private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / 60);
-        var dialog = new AutoExitDialog(currentMinutes, _settings)
+        var dialog = new AutoExitDialog(currentMinutes)
         {
             Owner = this
         };
@@ -1087,6 +1127,19 @@ public partial class MainWindow : Window
 
     private void SaveSettings()
     {
+        if (_overlayWindow != null
+            && _overlayWindow.TryGetPhotoUnifiedTransformState(
+                out var scaleX,
+                out var scaleY,
+                out var translateX,
+                out var translateY))
+        {
+            _settings.PhotoUnifiedTransformEnabled = true;
+            _settings.PhotoUnifiedScaleX = scaleX;
+            _settings.PhotoUnifiedScaleY = scaleY;
+            _settings.PhotoUnifiedTranslateX = translateX;
+            _settings.PhotoUnifiedTranslateY = translateY;
+        }
         _settingsService.Save(_settings);
     }
 

@@ -13,49 +13,77 @@
         <shell:WindowChrome CaptionHeight="28" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
     <Border x:Name="PhotoWindowFrame" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="0" Background="Transparent">
-        <Grid x:Name="OverlayRoot" Background="Transparent">
+        <Grid x:Name="OverlayRoot" Background="Transparent" ClipToBounds="True">
+            <Canvas x:Name="NeighborPagesCanvas" IsHitTestVisible="False" Visibility="Collapsed"/>
             <Image x:Name="PhotoBackground" Stretch="None" SnapsToDevicePixels="True" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"/>
             <Image x:Name="RasterImage" Stretch="None" SnapsToDevicePixels="True" HorizontalAlignment="Left" VerticalAlignment="Top" />
             <Canvas x:Name="PreviewCanvas" IsHitTestVisible="False" />
             <Border x:Name="CustomDrawHost" Background="Transparent" IsHitTestVisible="False" />
             <Grid x:Name="PhotoControlLayer" Visibility="Collapsed" Background="{x:Null}" Panel.ZIndex="10">
-                <Border x:Name="PhotoTitleBar" Height="36" Background="{StaticResource Brush_Background_L2}"
-                        HorizontalAlignment="Stretch" VerticalAlignment="Top" MouseLeftButtonDown="OnPhotoTitleBarDrag">
-                    <DockPanel Margin="12,0">
-                        <TextBlock x:Name="PhotoTitleText" Text="图片应用" VerticalAlignment="Center"
-                                   Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
+                <!-- 顶部浮动标题栏 -->
+                <Border x:Name="PhotoTitleBar" Height="48" Margin="0" VerticalAlignment="Top" 
+                        MouseLeftButtonDown="OnPhotoTitleBarDrag">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#E6FFFFFF" Offset="0"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <DockPanel Margin="12,0" VerticalAlignment="Top" Height="38">
+                        <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="19" Padding="16,0" Height="30" VerticalAlignment="Center" Margin="10,0,0,0">
+                             <Border.Effect>
+                                <DropShadowEffect Color="#B0BEC5" BlurRadius="6" ShadowDepth="1" Opacity="0.2"/>
+                            </Border.Effect>
+                            <TextBlock x:Name="PhotoTitleText" Text="图片应用" VerticalAlignment="Center"
+                                       Foreground="{StaticResource Brush_Text_Primary}" FontWeight="SemiBold" FontSize="13"/>
+                        </Border>
                     </DockPanel>
                 </Border>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+
+                <!-- 顶右角关闭 -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,8,12,0">
                     <Button x:Name="PhotoCloseButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick"
-                            Width="28" Height="28" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="12" Height="12"/>
+                            Width="36" Height="36" shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Background="{StaticResource Brush_Glass_Border}">
+                        <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                     </Button>
                 </StackPanel>
-                <Button x:Name="PhotoMinimizeLeftButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick" Width="28" Height="28"
-                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8">
-                    <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="12" Height="12"/>
+
+                <!-- 底部两侧浮动控制 -->
+                <Button x:Name="PhotoMinimizeLeftButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick" Width="36" Height="36"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16">
+                    <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                 </Button>
-                <Button x:Name="PhotoMinimizeRightButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick" Width="28" Height="28"
-                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8">
-                    <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="12" Height="12"/>
+                <Button x:Name="PhotoMinimizeRightButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoMinimizeClick" Width="36" Height="36"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16">
+                    <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                 </Button>
-                <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0">
-                    <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="48" Height="40" Margin="0,0,0,6" ToolTip="上一张">
-                        <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
-                    </Button>
-                    <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="48" Height="40" ToolTip="下一张">
-                        <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
-                    </Button>
-                </StackPanel>
-                <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="48" Height="40" Margin="0,0,0,6" ToolTip="上一张">
-                        <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
-                    </Button>
-                    <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="48" Height="40" ToolTip="下一张">
-                        <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="20" Height="20"/>
-                    </Button>
-                </StackPanel>
+
+                <!-- 左侧翻页 (Glassy Pill) -->
+                <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0,0,0" 
+                        Background="{StaticResource Brush_Glass_Border}" CornerRadius="20">
+                    <StackPanel Orientation="Vertical">
+                         <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一张">
+                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                        <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一张">
+                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Border>
+                
+                <!-- 右侧翻页 (Glassy Pill) -->
+                <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" 
+                        Background="{StaticResource Brush_Glass_Border}" CornerRadius="20">
+                    <StackPanel Orientation="Vertical">
+                        <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一张">
+                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                        <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一张">
+                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </Border>

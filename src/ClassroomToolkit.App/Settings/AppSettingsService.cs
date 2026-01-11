@@ -110,6 +110,27 @@ public sealed class AppSettingsService
             settings.PhotoFavoriteFolders = ParseList(GetString(paint, "photo_favorites", string.Empty));
             settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
             settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
+            settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
+            settings.PhotoUnifiedTransformEnabled = GetBool(
+                paint,
+                "photo_unified_transform_enabled",
+                settings.PhotoUnifiedTransformEnabled);
+            settings.PhotoUnifiedScaleX = GetDouble(
+                paint,
+                "photo_unified_scale_x",
+                settings.PhotoUnifiedScaleX);
+            settings.PhotoUnifiedScaleY = GetDouble(
+                paint,
+                "photo_unified_scale_y",
+                settings.PhotoUnifiedScaleY);
+            settings.PhotoUnifiedTranslateX = GetDouble(
+                paint,
+                "photo_unified_translate_x",
+                settings.PhotoUnifiedTranslateX);
+            settings.PhotoUnifiedTranslateY = GetDouble(
+                paint,
+                "photo_unified_translate_y",
+                settings.PhotoUnifiedTranslateY);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -204,6 +225,12 @@ public sealed class AppSettingsService
         paint["photo_favorites"] = JoinList(settings.PhotoFavoriteFolders);
         paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
         paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
+        paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
+        paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
+        paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_x"] = settings.PhotoUnifiedTranslateX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_y"] = settings.PhotoUnifiedTranslateY.ToString(CultureInfo.InvariantCulture);
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);

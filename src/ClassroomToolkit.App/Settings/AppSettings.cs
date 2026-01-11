@@ -69,6 +69,12 @@ public sealed class AppSettings
     public List<string> PhotoFavoriteFolders { get; set; } = new();
     public List<string> PhotoRecentFolders { get; set; } = new();
     public bool PhotoRememberTransform { get; set; } = false;
+    public bool PhotoCrossPageDisplay { get; set; } = false;
+    public bool PhotoUnifiedTransformEnabled { get; set; } = false;
+    public double PhotoUnifiedScaleX { get; set; } = 1.0;
+    public double PhotoUnifiedScaleY { get; set; } = 1.0;
+    public double PhotoUnifiedTranslateX { get; set; } = 0.0;
+    public double PhotoUnifiedTranslateY { get; set; } = 0.0;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;

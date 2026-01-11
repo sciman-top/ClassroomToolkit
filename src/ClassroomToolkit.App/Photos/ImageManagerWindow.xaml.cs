@@ -5,8 +5,10 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using WpfListViewItem = System.Windows.Controls.ListViewItem;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -16,6 +18,8 @@ public partial class ImageManagerWindow : Window
     private readonly ObservableCollection<FolderItem> _favorites = new();
     private readonly ObservableCollection<FolderItem> _recents = new();
     private readonly ObservableCollection<ImageItem> _images = new();
+    private readonly List<string> _backStack = new();
+    private readonly List<string> _forwardStack = new();
     private string _currentFolder = string.Empty;
     private int _currentIndex = -1;
     private bool _listMode;
@@ -129,10 +133,37 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
+        // 文件夹不触发选中事件
+        if (item.IsFolder)
+        {
+            ImageList.SelectedItem = null;
+            ImageListView.SelectedItem = null;
+            return;
+        }
         _currentIndex = _images.IndexOf(item);
         ImageSelected?.Invoke(_images.Select(image => image.Path).ToList(), _currentIndex);
         ImageList.SelectedItem = null;
         ImageListView.SelectedItem = null;
+    }
+
+    private void OnImageListDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        // 从 OriginalSource 获取实际被点击的元素
+        var dep = e.OriginalSource as DependencyObject;
+        while (dep != null && dep is not WpfListViewItem)
+        {
+            dep = VisualTreeHelper.GetParent(dep);
+        }
+        if (dep is not WpfListViewItem lvi || lvi.DataContext is not ImageItem item)
+        {
+            return;
+        }
+        // 双击文件夹进入
+        if (item.IsFolder && Directory.Exists(item.Path))
+        {
+            OpenFolder(item.Path);
+            e.Handled = true;
+        }
     }
 
     private void OnViewModeClick(object sender, RoutedEventArgs e)
@@ -146,6 +177,44 @@ public partial class ImageManagerWindow : Window
         {
             SetViewMode(listMode: true);
         }
+    }
+
+    private void OnBackClick(object sender, RoutedEventArgs e)
+    {
+        if (_backStack.Count == 0)
+        {
+            return;
+        }
+        // Save current folder to forward stack
+        if (!string.IsNullOrEmpty(_currentFolder))
+        {
+            _forwardStack.Add(_currentFolder);
+        }
+        var previousFolder = _backStack[^1];
+        _backStack.RemoveAt(_backStack.Count - 1);
+        OpenFolder(previousFolder, addToRecents: false, navigate: false);
+    }
+
+    private void OnForwardClick(object sender, RoutedEventArgs e)
+    {
+        if (_forwardStack.Count == 0)
+        {
+            return;
+        }
+        var nextFolder = _forwardStack[^1];
+        _forwardStack.RemoveAt(_forwardStack.Count - 1);
+        // Save current folder to back stack
+        if (!string.IsNullOrEmpty(_currentFolder))
+        {
+            _backStack.Add(_currentFolder);
+        }
+        OpenFolder(nextFolder, addToRecents: false, navigate: false);
+    }
+
+    private void UpdateNavigationButtons()
+    {
+        BackButton.IsEnabled = _backStack.Count > 0;
+        ForwardButton.IsEnabled = _forwardStack.Count > 0;
     }
 
     private void SetViewMode(bool listMode)
@@ -184,16 +253,23 @@ public partial class ImageManagerWindow : Window
         FavoritesChanged?.Invoke(_favorites.Select(item => item.Path).ToList());
     }
 
-    private void OpenFolder(string path, bool addToRecents = true)
+    private void OpenFolder(string path, bool addToRecents = true, bool navigate = true)
     {
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
         {
             ShowEmptyState();
             return;
         }
+        // Add current folder to back stack when navigating to a new folder
+        if (navigate && !string.IsNullOrEmpty(_currentFolder) && !string.Equals(_currentFolder, path, StringComparison.OrdinalIgnoreCase))
+        {
+            _backStack.Add(_currentFolder);
+            _forwardStack.Clear(); // Clear forward stack when navigating to a new location
+        }
         _currentFolder = path;
         CurrentFolderText.Text = path;
         LoadImages(path);
+        UpdateNavigationButtons();
         if (addToRecents)
         {
             UpdateRecents(path);
@@ -218,17 +294,41 @@ public partial class ImageManagerWindow : Window
     private void LoadImages(string folder)
     {
         _images.Clear();
-        var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(IsMediaFile)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
-        foreach (var file in files)
+
+        // 1. 添加非隐藏文件夹
+        var folders = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
+            .Where(d => !IsHiddenFile(d))
+            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+        foreach (var dir in folders)
         {
-            var isPdf = IsPdfFile(file);
-            var thumbnail = isPdf ? LoadPdfThumbnail(file) : LoadThumbnail(file);
-            var pageCount = isPdf ? TryGetPdfPageCount(file) : 0;
-            var modified = GetModifiedTime(file);
-            _images.Add(new ImageItem(file, thumbnail, isPdf, pageCount, modified));
+            var modified = GetModifiedTime(dir);
+            _images.Add(new ImageItem(dir, null, IsFolder: true, PageCount: 0, Modified: modified, IsImage: false));
         }
+
+        // 2. 添加 PDF 文件
+        var pdfFiles = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
+            .Where(f => !IsHiddenFile(f))
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in pdfFiles)
+        {
+            var thumbnail = LoadPdfThumbnail(file);
+            var pageCount = TryGetPdfPageCount(file);
+            var modified = GetModifiedTime(file);
+            _images.Add(new ImageItem(file, thumbnail, IsFolder: false, PageCount: pageCount, Modified: modified, IsImage: false));
+        }
+
+        // 3. 添加图片文件
+        var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
+        var imageFiles = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in imageFiles)
+        {
+            var thumbnail = LoadThumbnail(file);
+            var modified = GetModifiedTime(file);
+            _images.Add(new ImageItem(file, thumbnail, IsFolder: false, PageCount: 0, Modified: modified, IsImage: true));
+        }
+
         _currentIndex = _images.Count > 0 ? 0 : -1;
         EmptyHintText.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -240,6 +340,7 @@ public partial class ImageManagerWindow : Window
         _images.Clear();
         _currentIndex = -1;
         EmptyHintText.Visibility = Visibility.Visible;
+        UpdateNavigationButtons();
     }
 
     public bool TryNavigate(int direction)
@@ -258,23 +359,34 @@ public partial class ImageManagerWindow : Window
         return true;
     }
 
-    private static bool IsMediaFile(string path)
+    private static bool IsImageFile(string path)
     {
-        if (IsPdfFile(path))
-        {
-            return true;
-        }
         var ext = Path.GetExtension(path);
         return ext != null && (ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
                                || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
                                || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase));
+                               || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
+                               || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
+                               || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPdfFile(string path)
     {
         var ext = Path.GetExtension(path);
         return ext != null && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsHiddenFile(string path)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(path);
+            return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static ImageSource? LoadThumbnail(string path)
@@ -391,16 +503,17 @@ public partial class ImageManagerWindow : Window
         }
     }
 
-    private sealed record ImageItem(string Path, ImageSource? Thumbnail, bool IsPdf, int PageCount, DateTime Modified)
+    private sealed record ImageItem(string Path, ImageSource? Thumbnail, bool IsFolder, int PageCount, DateTime Modified, bool IsImage = false)
     {
         public string Name => System.IO.Path.GetFileName(Path);
-        public string TypeLabel => IsPdf ? "PDF" : "图片";
+        public string TypeLabel => IsFolder ? "文件夹" : IsPdf ? "PDF" : IsImage ? "图片" : string.Empty;
         public string PageLabel => IsPdf && PageCount > 0 ? $"{PageCount}页" : string.Empty;
         public string ModifiedLabel => Modified == DateTime.MinValue
             ? string.Empty
             : Modified.ToString("yyyy/MM/dd HH:mm");
         public Visibility PageBadgeVisibility => IsPdf && PageCount > 0 ? Visibility.Visible : Visibility.Collapsed;
         public string PageBadge => IsPdf && PageCount > 0 ? $"{PageCount}P" : string.Empty;
+        public bool IsPdf => !IsFolder && System.IO.Path.GetExtension(Path)?.Equals(".pdf", StringComparison.OrdinalIgnoreCase) == true;
     }
 
 }
@@ -425,5 +538,44 @@ public sealed class MultiplyConverter : IValueConverter
             return d / Factor;
         }
         return value;
+    }
+}
+
+public sealed class FolderVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        return value is true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public sealed class FileVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        return value is true ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public sealed class PdfBackgroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        return value is true ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)) : System.Windows.Media.Brushes.Transparent;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }

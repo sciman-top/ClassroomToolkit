@@ -60,3 +60,37 @@
 - 修改点（按文件列出，“为什么这样改”）
 - 验证（命令 + 结果）
 - 风险/后续（必要时）
+
+## 10. WPS 演示特殊说明
+WPS 的 COM 自动化接口与 PowerPoint 存在显著差异，开发时需注意：
+
+- **手动放映不可追踪**：用户按 F5 启动放映时，`Application.SlideShowWindows.Count` 始终返回 0，外部进程无法获取当前页码。
+- **推荐启动方式**：通过工具栏【开始放映】按钮调用 `SlideShowSettings.Run()` 启动，才能启用按页笔迹缓存。
+- **降级模式**：若检测到 WPS 放映但无法读取页码，自动降级为"会话级画布"（不按页清除笔迹）。
+- **版本差异**：
+  - ProgID：优先 `KWPP.Application`，回退 `WPP.Application`
+  - 进程名：`wpp.exe` 或 `wps.exe`（因版本而异）
+- **个人版限制**：WPS 个人版可能阉割 COM 自动化能力，即使调用 `Run()` 也可能不创建 SlideShowWindow。
+
+## 11. 调试速查
+| 问题类型 | 排查方法 |
+|---------|---------|
+| 焦点/穿透 | Spy++ 查看窗口样式；检查 `WS_EX_NOACTIVATE`、`WS_EX_TRANSPARENT` |
+| WPS 放映检测 | 检查 `SlideShowWindows.Count`；查看 `[WpsTracker]` 开头的 Debug 输出 |
+| 笔迹缓存 | 检查 `_currentCacheKey`；查看 `[InkCache]` 开头的 Debug 输出 |
+| COM 连接 | 运行 `find_wps_progid.ps1` 验证 ProgID 注册情况 |
+| F5 拦截 | 查看 `[F5Interceptor]` 开头的 Debug 输出；检查 UIPI 权限差异 |
+
+## 12. F5 拦截模块（实验性）
+为解决"手动 F5 放映无法追踪"问题，新增以下模块：
+
+- **F5InterceptorController**：全局 WH_KEYBOARD_LL 钩子，当 WPS 前台时拦截 F5/Shift+F5，转为 COM Run()
+- **WpsForegroundDetector**：检测前台窗口是否属于 WPS 进程，并检测 UIPI 权限限制
+- **OleMessageFilter**：处理 COM RPC_E_CALL_REJECTED，自动重试繁忙的 COM 调用
+- **StartSlideshowFromCurrentSlide**：支持 Shift+F5 从当前页放映
+
+**注意事项**：
+- 钩子回调必须极轻量（<10ms），COM 调用通过 Dispatcher 异步执行
+- UIPI 限制：若 WPS 以管理员运行而本程序非管理员，拦截可能无效，自动降级
+- **当前状态：已禁用**。全局键盘钩子会导致绘图卡顿，需要进一步优化（考虑改用 RegisterHotKey 或仅在 WPS 进程存在时启用）
+
