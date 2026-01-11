@@ -345,6 +345,7 @@ public partial class PaintOverlayWindow : Window
         PhotoBackground.RenderTransform = photoTransform;
         
         WindowState = WindowState.Maximized;
+        _refreshOrchestrator = new RefreshOrchestrator(Dispatcher, MonitorInkContext);
         _presentationFocusMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
@@ -377,7 +378,6 @@ public partial class PaintOverlayWindow : Window
             Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
         };
         _inkMonitor.Tick += (_, _) => _refreshOrchestrator.RequestRefresh("poll");
-        _refreshOrchestrator = new RefreshOrchestrator(Dispatcher, MonitorInkContext);
         _perfMonitor = new PerfStats("MonitorInkContext");
         _perfResolvePpt = new PerfStats("ResolvePowerPoint");
         _perfResolveTitle = new PerfStats("ResolveTitle");
@@ -2421,6 +2421,13 @@ public partial class PaintOverlayWindow : Window
                     : ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
                 var officeSlideshow = IsPresentationSlideshow(officeTarget);
                 var wpsSlideshow = IsPresentationSlideshow(wpsTarget);
+                var decision = BuildPresentationDecision(
+                    pptInfo,
+                    wpsInfo,
+                    titleResult,
+                    foreground,
+                    officeSlideshow,
+                    wpsSlideshow);
                 snapshot = new PresentationResolveSnapshot(
                     pptInfo,
                     pptApp,
@@ -2429,6 +2436,7 @@ public partial class PaintOverlayWindow : Window
                     foreground,
                     officeSlideshow,
                     wpsSlideshow,
+                    decision,
                     pptMs,
                     titleMs,
                     DateTime.UtcNow);
@@ -2441,8 +2449,9 @@ public partial class PaintOverlayWindow : Window
                     null,
                     null,
                     ClassroomToolkit.Interop.Presentation.PresentationType.None,
-                    officeSlideshow: false,
-                    wpsSlideshow: false,
+                    OfficeSlideshow: false,
+                    WpsSlideshow: false,
+                    PresentationResolveDecision.None,
                     0,
                     0,
                     DateTime.UtcNow);
