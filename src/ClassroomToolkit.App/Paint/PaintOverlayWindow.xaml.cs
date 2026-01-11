@@ -2183,50 +2183,24 @@ public partial class PaintOverlayWindow : Window
             {
                 var resolveAgeMs = (DateTime.UtcNow - snapshot.CompletedUtc).TotalMilliseconds;
                 allowPresentationClear = resolveAgeMs <= PresentationResolveStaleMs;
-                var foregroundType = snapshot.ForegroundType;
 
-                if (snapshot.PptInfo != null
-                    && snapshot.OfficeSlideshow
-                    && (foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-                        || snapshot.WpsInfo == null))
+                var decision = snapshot.Decision;
+                if (decision.IsValid)
                 {
-                    var docName = IoPath.GetFileNameWithoutExtension(snapshot.PptInfo.DisplayName);
-                    _presentationActive = true;
-                    _pptSlideshowActive = true;
-                    UpdatePresentationContext(docName, snapshot.PptInfo.FilePath, snapshot.PptInfo.SlideIndex, snapshot.PptInfo.SlideID, snapshot.PptInfo.CurrentShowPosition, isWps: false);
-                    UpdateInkMonitorInterval();
-                    if (wasSlideshowActive != _pptSlideshowActive)
+                    if (decision.Kind == PresentationDecisionKind.Title && snapshot.TitleResult != null)
                     {
-                        _refreshOrchestrator.RequestRefresh("slideshow-state");
+                        _pptTrackedDocumentName = snapshot.TitleResult.TrackedDocumentName;
+                        _pptTrackedPageIndex = snapshot.TitleResult.TrackedPageIndex;
                     }
-                    _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                    return;
-                }
-
-                if (snapshot.WpsInfo != null
-                    && snapshot.WpsSlideshow
-                    && foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Office)
-                {
-                    var docName = IoPath.GetFileNameWithoutExtension(snapshot.WpsInfo.DisplayName);
                     _presentationActive = true;
-                    _pptSlideshowActive = true;
-                    UpdatePresentationContext(docName, snapshot.WpsInfo.FilePath, snapshot.WpsInfo.SlideIndex, snapshot.WpsInfo.SlideID, snapshot.WpsInfo.CurrentShowPosition, isWps: true);
-                    UpdateInkMonitorInterval();
-                    if (wasSlideshowActive != _pptSlideshowActive)
-                    {
-                        _refreshOrchestrator.RequestRefresh("slideshow-state");
-                    }
-                    _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                    return;
-                }
-
-                if (snapshot.TitleResult != null && snapshot.TitleResult.IsSlideshowWindow)
-                {
-                    _pptTrackedDocumentName = snapshot.TitleResult.TrackedDocumentName;
-                    _pptTrackedPageIndex = snapshot.TitleResult.TrackedPageIndex;
-                    _presentationActive = true;
-                    _pptSlideshowActive = snapshot.TitleResult.IsSlideshowWindow;
-                    UpdatePresentationContext(snapshot.TitleResult.DocumentName, string.Empty, snapshot.TitleResult.SlideIndex, slideID: 0, showPosition: 0, isWps: false);
+                    _pptSlideshowActive = decision.IsSlideshowWindow;
+                    UpdatePresentationContext(
+                        decision.DocumentName,
+                        decision.DocumentPath,
+                        decision.PageIndex,
+                        decision.SlideID,
+                        decision.ShowPosition,
+                        decision.IsWps);
                     UpdateInkMonitorInterval();
                     if (wasSlideshowActive != _pptSlideshowActive)
                     {
@@ -6619,9 +6593,117 @@ public partial class PaintOverlayWindow : Window
         ClassroomToolkit.Interop.Presentation.PresentationType ForegroundType,
         bool OfficeSlideshow,
         bool WpsSlideshow,
+        PresentationResolveDecision Decision,
         double ResolvePowerPointMs,
         double ResolveTitleMs,
         DateTime CompletedUtc);
+
+    private enum PresentationDecisionKind
+    {
+        None,
+        PowerPoint,
+        Wps,
+        Title
+    }
+
+    private readonly struct PresentationResolveDecision
+    {
+        public PresentationResolveDecision(
+            PresentationDecisionKind kind,
+            string documentName,
+            string documentPath,
+            int pageIndex,
+            int slideID,
+            int showPosition,
+            bool isWps,
+            bool isSlideshowWindow)
+        {
+            Kind = kind;
+            DocumentName = documentName;
+            DocumentPath = documentPath;
+            PageIndex = pageIndex;
+            SlideID = slideID;
+            ShowPosition = showPosition;
+            IsWps = isWps;
+            IsSlideshowWindow = isSlideshowWindow;
+        }
+
+        public PresentationDecisionKind Kind { get; }
+        public string DocumentName { get; }
+        public string DocumentPath { get; }
+        public int PageIndex { get; }
+        public int SlideID { get; }
+        public int ShowPosition { get; }
+        public bool IsWps { get; }
+        public bool IsSlideshowWindow { get; }
+        public bool IsValid => Kind != PresentationDecisionKind.None
+            && !string.IsNullOrWhiteSpace(DocumentName)
+            && PageIndex > 0;
+
+        public static PresentationResolveDecision None => new(
+            PresentationDecisionKind.None,
+            string.Empty,
+            string.Empty,
+            0,
+            0,
+            0,
+            isWps: false,
+            isSlideshowWindow: false);
+    }
+
+    private static PresentationResolveDecision BuildPresentationDecision(
+        PresentationSlideInfo? pptInfo,
+        PresentationSlideInfo? wpsInfo,
+        TitleResolveResult? titleResult,
+        ClassroomToolkit.Interop.Presentation.PresentationType foregroundType,
+        bool officeSlideshow,
+        bool wpsSlideshow)
+    {
+        if (pptInfo != null
+            && officeSlideshow
+            && (foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Wps
+                || wpsInfo == null))
+        {
+            var docName = IoPath.GetFileNameWithoutExtension(pptInfo.DisplayName);
+            return new PresentationResolveDecision(
+                PresentationDecisionKind.PowerPoint,
+                docName,
+                pptInfo.FilePath,
+                pptInfo.SlideIndex,
+                pptInfo.SlideID,
+                pptInfo.CurrentShowPosition,
+                isWps: false,
+                isSlideshowWindow: true);
+        }
+        if (wpsInfo != null
+            && wpsSlideshow
+            && foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Office)
+        {
+            var docName = IoPath.GetFileNameWithoutExtension(wpsInfo.DisplayName);
+            return new PresentationResolveDecision(
+                PresentationDecisionKind.Wps,
+                docName,
+                wpsInfo.FilePath,
+                wpsInfo.SlideIndex,
+                wpsInfo.SlideID,
+                wpsInfo.CurrentShowPosition,
+                isWps: true,
+                isSlideshowWindow: true);
+        }
+        if (titleResult != null && titleResult.IsSlideshowWindow)
+        {
+            return new PresentationResolveDecision(
+                PresentationDecisionKind.Title,
+                titleResult.DocumentName,
+                string.Empty,
+                titleResult.SlideIndex,
+                slideID: 0,
+                showPosition: 0,
+                isWps: false,
+                isSlideshowWindow: true);
+        }
+        return PresentationResolveDecision.None;
+    }
 
     private sealed class StaResolveWorker : IDisposable
     {
