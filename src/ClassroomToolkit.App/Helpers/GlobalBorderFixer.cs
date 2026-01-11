@@ -1,7 +1,5 @@
 using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace ClassroomToolkit.App.Helpers
 {
@@ -21,7 +19,7 @@ namespace ClassroomToolkit.App.Helpers
                 var mainWindow = System.Windows.Application.Current?.MainWindow;
                 if (mainWindow != null)
                 {
-                    FixAllBordersRecursive(mainWindow);
+                    BorderFixHelper.FixAllBorders(mainWindow);
                     System.Diagnostics.Debug.WriteLine("GlobalBorderFixer: 修复主窗口完成");
                 }
                 
@@ -33,7 +31,7 @@ namespace ClassroomToolkit.App.Helpers
                     {
                         if (window != null && window != mainWindow)
                         {
-                            FixAllBordersRecursive(window);
+                            BorderFixHelper.FixAllBorders(window);
                             System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 修复窗口 {window.GetType().Name} 完成");
                         }
                     }
@@ -42,83 +40,6 @@ namespace ClassroomToolkit.App.Helpers
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer 错误: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 递归修复窗口中的所有 Border 控件
-        /// </summary>
-        private static void FixAllBordersRecursive(DependencyObject parent)
-        {
-            try
-            {
-                for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-                {
-                    var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-                    
-                    // 如果是 Border，强制修复
-                    if (child is Border border)
-                    {
-                        ForceFixBorder(border);
-                    }
-                    
-                    // 递归处理子控件
-                    FixAllBordersRecursive(child);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FixAllBordersRecursive 错误: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 强制修复 Border 控件
-        /// </summary>
-        private static void ForceFixBorder(Border border)
-        {
-            try
-            {
-                var cornerRadius = border.CornerRadius;
-                
-                if (cornerRadius != new CornerRadius(0))
-                {
-                    var borderBrush = border.BorderBrush;
-                    
-                    // 检查是否为 DependencyProperty.UnsetValue 或 null
-                    if (borderBrush == null || borderBrush == DependencyProperty.UnsetValue)
-                    {
-                        try
-                        {
-                            // 设置透明边框
-                            border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                            
-                            var name = border.Name ?? "(未命名)";
-                            var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
-                            System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 修复 Border '{name}' (父元素: {parentName})");
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 修复 Border 失败 - {ex.Message}");
-                            
-                            // 尝试其他方法：清除并重新设置
-                            try
-                            {
-                                border.ClearValue(Border.BorderBrushProperty);
-                                border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                                System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: 使用 ClearValue 方法修复 Border '{border.Name}'");
-                            }
-                            catch (Exception ex2)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer: ClearValue 方法也失败 - {ex2.Message}");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ForceFixBorder 错误: {ex.Message}");
             }
         }
     }

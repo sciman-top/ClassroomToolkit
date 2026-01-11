@@ -127,7 +127,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         {
             return new IntPtr(1);
         }
-        return new IntPtr(1);
+        return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
     }
 
     private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -152,7 +152,11 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         }
         var direction = delta < 0 ? 1 : -1;
         NavigationRequested?.Invoke(direction, "wheel");
-        return new IntPtr(1);
+        if (_blockOnly)
+        {
+            return new IntPtr(1);
+        }
+        return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
     }
 
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);

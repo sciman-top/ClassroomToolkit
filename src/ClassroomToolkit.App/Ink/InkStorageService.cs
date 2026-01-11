@@ -163,7 +163,21 @@ public sealed class InkStorageService
             fileName = Guid.NewGuid().ToString("N");
         }
         var targetPath = Path.Combine(dateFolder, fileName);
-        File.Copy(sourcePath, targetPath, overwrite: true);
+        if (File.Exists(targetPath))
+        {
+            var name = Path.GetFileNameWithoutExtension(fileName);
+            var ext = Path.GetExtension(fileName);
+            for (var i = 1; i < 1000; i++)
+            {
+                var candidate = Path.Combine(dateFolder, $"{name}_{i}{ext}");
+                if (!File.Exists(candidate))
+                {
+                    targetPath = candidate;
+                    break;
+                }
+            }
+        }
+        File.Copy(sourcePath, targetPath, overwrite: false);
         return targetPath;
     }
 

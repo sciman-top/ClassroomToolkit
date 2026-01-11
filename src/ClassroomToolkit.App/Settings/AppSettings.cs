@@ -57,11 +57,8 @@ public sealed class AppSettings
     public int PaintToolbarX { get; set; } = 260;
     public int PaintToolbarY { get; set; } = 260;
     public double PaintToolbarScale { get; set; } = 1.0;
-    public int InkSidebarX { get; set; } = UnsetPosition;
-    public int InkSidebarY { get; set; } = UnsetPosition;
     public bool InkCacheEnabled { get; set; } = true;
     public bool InkRecordEnabled { get; set; } = false;
-    public bool InkSidebarEnabled { get; set; } = false;
     public bool InkAutoSaveEnabled { get; set; } = false;
     public bool InkReplayPreviousEnabled { get; set; } = false;
     public int InkRetentionDays { get; set; } = 30;

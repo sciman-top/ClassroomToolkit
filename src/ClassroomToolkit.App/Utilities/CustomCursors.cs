@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -24,6 +25,13 @@ public static class CustomCursors
     private static MediaColor _currentBrushColor = Colors.Red;
     private static WpfCursor? _eraserCursor;
     private static WpfCursor? _regionEraseCursor;
+    private static readonly List<string> TempCursorFiles = new();
+    private static readonly object TempCursorLock = new();
+
+    static CustomCursors()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => CleanupTempCursorFiles();
+    }
 
     /// <summary>
     /// 获取指定颜色的画笔光标
@@ -379,6 +387,7 @@ public static class CustomCursors
             $"{name}_{Guid.NewGuid():N}.cur");
 
         CreateCursorFile(renderBitmap, hotSpotX, hotSpotY, cursorPath);
+        TrackTempCursorFile(cursorPath);
 
         // 加载光标
         return new WpfCursor(cursorPath);
@@ -390,5 +399,41 @@ public static class CustomCursors
     private static bool AreColorsEqual(MediaColor a, MediaColor b)
     {
         return a.A == b.A && a.R == b.R && a.G == b.G && a.B == b.B;
+    }
+
+    private static void TrackTempCursorFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        lock (TempCursorLock)
+        {
+            TempCursorFiles.Add(path);
+        }
+    }
+
+    private static void CleanupTempCursorFiles()
+    {
+        List<string> files;
+        lock (TempCursorLock)
+        {
+            files = new List<string>(TempCursorFiles);
+            TempCursorFiles.Clear();
+        }
+        foreach (var path in files)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+                // Ignore cleanup failures.
+            }
+        }
     }
 }

@@ -601,11 +601,6 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        if (_overlay != null && _overlay.TryHandleReviewNavigationKey(key))
-        {
-            e.Handled = true;
-            return;
-        }
         // 只转发演示文稿导航键
         bool isNavigationKey = key == System.Windows.Input.Key.Left ||
                                key == System.Windows.Input.Key.Right ||

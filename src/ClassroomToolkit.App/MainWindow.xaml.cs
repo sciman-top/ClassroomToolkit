@@ -12,7 +12,6 @@ using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
-using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.App;
@@ -22,15 +21,12 @@ public partial class MainWindow : Window
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow;
-    private InkSidebarWindow? _inkSidebarWindow;
-    private InkManagerWindow? _inkManagerWindow;
     private Photos.ImageManagerWindow? _imageManagerWindow;
     private List<string> _photoSequence = new();
     private int _photoSequenceIndex = -1;
     private LauncherBubbleWindow? _bubbleWindow;
     private readonly DispatcherTimer _autoExitTimer;
     private bool _allowClose;
-    private bool _inkSidebarRequested;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     public ICommand OpenRollCallSettingsCommand { get; }
@@ -39,7 +35,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _inkSidebarWindow = null;
         _settingsService = new AppSettingsService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini"));
         _settings = _settingsService.Load();
         _autoExitTimer = new DispatcherTimer();
@@ -115,10 +110,6 @@ public partial class MainWindow : Window
             CapturePaintToolbarPosition(save: true);
             _overlayWindow.Hide();
             _toolbarWindow.Hide();
-            if (_inkSidebarWindow != null)
-            {
-                _inkSidebarWindow.Hide();
-            }
             if (_rollCallWindow != null)
             {
                 _rollCallWindow.Owner = null;
@@ -141,7 +132,6 @@ public partial class MainWindow : Window
                 _rollCallWindow.Owner = _overlayWindow;
                 _rollCallWindow.SyncTopmost(true);
             }
-            EnsureInkSidebar();
         }
         UpdateToggleButtons();
     }
@@ -155,23 +145,16 @@ public partial class MainWindow : Window
         _overlayWindow = new Paint.PaintOverlayWindow();
         _toolbarWindow = new Paint.PaintToolbarWindow();
         _toolbarWindow.AttachOverlay(_overlayWindow);
-        _overlayWindow.ReviewModeChanged += _ => UpdateReviewNavigationState();
-        _overlayWindow.ReviewNavigationRequested += OnReviewNavigationRequested;
         _overlayWindow.PhotoModeChanged += OnPhotoModeChanged;
         _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
         _overlayWindow.PhotoUnifiedTransformChanged += OnPhotoUnifiedTransformChanged;
+        _overlayWindow.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
         _overlayWindow.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, DispatcherPriority.Background);
         _overlayWindow.Activated += (_, _) => EnsureFloatingWindowsOnTop();
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
-            if (_inkSidebarWindow != null)
-            {
-                _inkSidebarWindow.Hide();
-            }
-            _inkSidebarRequested = false;
-            UpdateReviewNavigationState();
             UpdateToggleButtons();
         };
         _toolbarWindow.Closed += (_, _) =>
@@ -243,6 +226,11 @@ public partial class MainWindow : Window
             {
                 if (active)
                 {
+                    if (_overlayWindow.IsPhotoModeActive)
+                    {
+                        _overlayWindow.ExitPhotoMode();
+                    }
+                    _overlayWindow.TryExitPresentationFullscreen();
                     _overlayWindow.SetBoardColor(_settings.BoardColor);
                     _overlayWindow.SetBoardOpacity(255);
                 }
@@ -299,7 +287,6 @@ public partial class MainWindow : Window
             _settings.PhotoUnifiedScaleY,
             _settings.PhotoUnifiedTranslateX,
             _settings.PhotoUnifiedTranslateY);
-        EnsureInkSidebar();
     }
 
     private void ApplyPaintToolbarPosition()
@@ -327,45 +314,6 @@ public partial class MainWindow : Window
         }
         _settings.PaintToolbarX = (int)Math.Round(_toolbarWindow.Left);
         _settings.PaintToolbarY = (int)Math.Round(_toolbarWindow.Top);
-        if (save)
-        {
-            SaveSettings();
-        }
-    }
-
-    private void EnsureInkSidebar()
-    {
-        // Ink sidebar is removed per updated requirements.
-    }
-
-    private void ApplyInkSidebarPosition()
-    {
-        if (_inkSidebarWindow == null)
-        {
-            return;
-        }
-        if (_settings.InkSidebarX == AppSettings.UnsetPosition
-            && _settings.InkSidebarY == AppSettings.UnsetPosition)
-        {
-            _inkSidebarWindow.Left = _settings.PaintToolbarX + 320;
-            _inkSidebarWindow.Top = _settings.PaintToolbarY;
-        }
-        else
-        {
-            _inkSidebarWindow.Left = _settings.InkSidebarX;
-            _inkSidebarWindow.Top = _settings.InkSidebarY;
-        }
-        WindowPlacementHelper.EnsureVisible(_inkSidebarWindow);
-    }
-
-    private void CaptureInkSidebarPosition(bool save)
-    {
-        if (_inkSidebarWindow == null)
-        {
-            return;
-        }
-        _settings.InkSidebarX = (int)Math.Round(_inkSidebarWindow.Left);
-        _settings.InkSidebarY = (int)Math.Round(_inkSidebarWindow.Top);
         if (save)
         {
             SaveSettings();
@@ -552,7 +500,7 @@ public partial class MainWindow : Window
     {
         var dialog = new Ink.InkSettingsDialog(_settings)
         {
-            Owner = _inkSidebarWindow != null ? (Window)_inkSidebarWindow : this
+            Owner = _overlayWindow != null && _overlayWindow.IsVisible ? (Window)_overlayWindow : this
         };
         if (dialog.ShowDialog() != true)
         {
@@ -572,78 +520,6 @@ public partial class MainWindow : Window
         _toolbarWindow?.ApplySettings(_settings);
     }
 
-    private void UpdateReviewNavigationState()
-    {
-        if (_overlayWindow == null)
-        {
-            return;
-        }
-        var enabled = _inkSidebarWindow != null
-                      && _inkSidebarWindow.IsVisible
-                      && _overlayWindow.IsReviewModeActive;
-        _overlayWindow.SetReviewNavigationEnabled(enabled);
-    }
-
-    private void OnReviewNavigationRequested(int direction)
-    {
-        if (_inkSidebarWindow == null || !_inkSidebarWindow.IsVisible)
-        {
-            return;
-        }
-        if (direction > 0)
-        {
-            _inkSidebarWindow.NavigateNext();
-            return;
-        }
-        if (direction < 0)
-        {
-            _inkSidebarWindow.NavigatePrevious();
-        }
-    }
-
-    private void OnOpenInkSidebar()
-    {
-        _inkSidebarRequested = !_inkSidebarRequested;
-        EnsureInkSidebar();
-        _inkSidebarWindow?.Activate();
-    }
-
-    private void OnInkPageSelected(int pageIndex)
-    {
-        if (_overlayWindow == null)
-        {
-            return;
-        }
-        _overlayWindow.LoadInkPage(pageIndex);
-    }
-
-    private void OnOpenInkManager()
-    {
-        if (_inkManagerWindow == null)
-        {
-            _inkManagerWindow = new InkManagerWindow
-            {
-                Owner = _overlayWindow != null && _overlayWindow.IsVisible ? (Window)_overlayWindow : this
-            };
-            _inkManagerWindow.PageSelected += OnInkReviewRequested;
-            _inkManagerWindow.Closed += (_, _) => _inkManagerWindow = null;
-        }
-        _inkManagerWindow.Show();
-        _inkManagerWindow.Activate();
-    }
-
-    private void OnInkReviewRequested(DateTime date, string documentName, int pageIndex)
-    {
-        EnsurePaintWindows();
-        if (_overlayWindow == null || _toolbarWindow == null)
-        {
-            return;
-        }
-        ShowPaintOverlayIfNeeded();
-        _overlayWindow.EnterReviewMode(date, documentName, pageIndex);
-        EnsureInkSidebar();
-    }
-
     private void OnOpenPhotoTeaching()
     {
         if (_imageManagerWindow == null)
@@ -652,9 +528,14 @@ public partial class MainWindow : Window
             _imageManagerWindow.ImageSelected += OnImageSelected;
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
-            _imageManagerWindow.Closed += (_, _) => _imageManagerWindow = null;
+            _imageManagerWindow.StateChanged += OnImageManagerStateChanged;
+            _imageManagerWindow.Closed += (_, _) =>
+            {
+                _imageManagerWindow.StateChanged -= OnImageManagerStateChanged;
+                _imageManagerWindow = null;
+            };
         }
-        _imageManagerWindow.Owner = this;
+        _imageManagerWindow.Owner = null;
         _imageManagerWindow.Show();
         if (_imageManagerWindow.WindowState == WindowState.Minimized)
         {
@@ -663,6 +544,30 @@ public partial class MainWindow : Window
         _imageManagerWindow.Topmost = _overlayWindow?.IsVisible == true
             && (_overlayWindow.IsPhotoModeActive || _overlayWindow.Topmost);
         _imageManagerWindow.Activate();
+    }
+
+    private void OnImageManagerStateChanged(object? sender, EventArgs e)
+    {
+        if (_imageManagerWindow == null
+            || _imageManagerWindow.WindowState != WindowState.Minimized)
+        {
+            return;
+        }
+        if (_overlayWindow == null || !_overlayWindow.IsVisible)
+        {
+            return;
+        }
+        if (_overlayWindow.WindowState != WindowState.Minimized)
+        {
+            return;
+        }
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_overlayWindow != null && _overlayWindow.WindowState == WindowState.Minimized)
+            {
+                _overlayWindow.WindowState = WindowState.Normal;
+            }
+        }, DispatcherPriority.Background);
     }
 
     private async void OnImageSelected(IReadOnlyList<string> images, int index)
@@ -793,18 +698,29 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnPresentationFullscreenDetected()
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        if (_toolbarWindow?.BoardActive == true)
+        {
+            _toolbarWindow.SetBoardActive(false);
+        }
+        if (_overlayWindow.IsPhotoModeActive)
+        {
+            _overlayWindow.ExitPhotoMode();
+        }
+        EnsureFloatingWindowsOnTop();
+    }
+
     private void OnPhotoUnifiedTransformChanged(
         double scaleX,
         double scaleY,
         double translateX,
         double translateY)
     {
-        _settings.PhotoUnifiedTransformEnabled = true;
-        _settings.PhotoUnifiedScaleX = scaleX;
-        _settings.PhotoUnifiedScaleY = scaleY;
-        _settings.PhotoUnifiedTranslateX = translateX;
-        _settings.PhotoUnifiedTranslateY = translateY;
-        SaveSettings();
     }
 
     private void EnsureFloatingWindowsOnTop()
@@ -1127,19 +1043,6 @@ public partial class MainWindow : Window
 
     private void SaveSettings()
     {
-        if (_overlayWindow != null
-            && _overlayWindow.TryGetPhotoUnifiedTransformState(
-                out var scaleX,
-                out var scaleY,
-                out var translateX,
-                out var translateY))
-        {
-            _settings.PhotoUnifiedTransformEnabled = true;
-            _settings.PhotoUnifiedScaleX = scaleX;
-            _settings.PhotoUnifiedScaleY = scaleY;
-            _settings.PhotoUnifiedTranslateX = translateX;
-            _settings.PhotoUnifiedTranslateY = translateY;
-        }
         _settingsService.Save(_settings);
     }
 

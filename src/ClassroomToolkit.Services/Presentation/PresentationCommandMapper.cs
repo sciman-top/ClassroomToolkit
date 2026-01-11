@@ -18,15 +18,11 @@ public sealed class PresentationCommandMapper
 
     private static KeyBinding MapNext(PresentationType type)
     {
-        return type == PresentationType.Wps
-            ? new KeyBinding(VirtualKey.PageDown, KeyModifiers.None)
-            : new KeyBinding(VirtualKey.PageDown, KeyModifiers.None);
+        return new KeyBinding(VirtualKey.PageDown, KeyModifiers.None);
     }
 
     private static KeyBinding MapPrevious(PresentationType type)
     {
-        return type == PresentationType.Wps
-            ? new KeyBinding(VirtualKey.PageUp, KeyModifiers.None)
-            : new KeyBinding(VirtualKey.PageUp, KeyModifiers.None);
+        return new KeyBinding(VirtualKey.PageUp, KeyModifiers.None);
     }
 }

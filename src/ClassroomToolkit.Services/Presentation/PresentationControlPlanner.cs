@@ -44,12 +44,7 @@ public sealed class PresentationControlPlanner
         {
             return requested;
         }
-        return type switch
-        {
-            PresentationType.Wps => InputStrategy.Raw,
-            PresentationType.Office => InputStrategy.Raw,
-            _ => InputStrategy.Raw
-        };
+        return InputStrategy.Raw;
     }
 
     private static bool IsNavigationCommand(PresentationCommand command)

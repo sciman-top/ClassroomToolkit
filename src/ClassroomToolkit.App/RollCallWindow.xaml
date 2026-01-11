@@ -119,10 +119,7 @@
                             Cursor="Hand"
                             Margin="0,0,12,0">
                         <Border.Background>
-                           <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                               <GradientStop Color="#FFFFFF" Offset="0"/>
-                               <GradientStop Color="#F3E5F5" Offset="1"/>
-                           </LinearGradientBrush>
+                           <StaticResource ResourceKey="Gradient_RollCall_Card"/>
                         </Border.Background>
                         <Border.Effect>
                             <!-- 柔和的漫反射阴影 -->

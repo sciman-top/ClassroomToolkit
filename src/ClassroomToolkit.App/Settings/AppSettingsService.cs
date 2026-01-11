@@ -98,11 +98,8 @@ public sealed class AppSettingsService
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
             settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
-            settings.InkSidebarX = GetInt(paint, "ink_sidebar_x", settings.InkSidebarX);
-            settings.InkSidebarY = GetInt(paint, "ink_sidebar_y", settings.InkSidebarY);
             settings.InkCacheEnabled = GetBool(paint, "ink_cache_enabled", settings.InkCacheEnabled);
             settings.InkRecordEnabled = GetBool(paint, "ink_record_enabled", settings.InkRecordEnabled);
-            settings.InkSidebarEnabled = GetBool(paint, "ink_sidebar_enabled", settings.InkSidebarEnabled);
             settings.InkAutoSaveEnabled = GetBool(paint, "ink_auto_save_enabled", settings.InkAutoSaveEnabled);
             settings.InkReplayPreviousEnabled = GetBool(paint, "ink_replay_previous_enabled", settings.InkReplayPreviousEnabled);
             settings.InkRetentionDays = GetInt(paint, "ink_retention_days", settings.InkRetentionDays);
@@ -111,26 +108,6 @@ public sealed class AppSettingsService
             settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
             settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
             settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
-            settings.PhotoUnifiedTransformEnabled = GetBool(
-                paint,
-                "photo_unified_transform_enabled",
-                settings.PhotoUnifiedTransformEnabled);
-            settings.PhotoUnifiedScaleX = GetDouble(
-                paint,
-                "photo_unified_scale_x",
-                settings.PhotoUnifiedScaleX);
-            settings.PhotoUnifiedScaleY = GetDouble(
-                paint,
-                "photo_unified_scale_y",
-                settings.PhotoUnifiedScaleY);
-            settings.PhotoUnifiedTranslateX = GetDouble(
-                paint,
-                "photo_unified_translate_x",
-                settings.PhotoUnifiedTranslateX);
-            settings.PhotoUnifiedTranslateY = GetDouble(
-                paint,
-                "photo_unified_translate_y",
-                settings.PhotoUnifiedTranslateY);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -213,11 +190,8 @@ public sealed class AppSettingsService
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
         paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
-        paint["ink_sidebar_x"] = settings.InkSidebarX.ToString(CultureInfo.InvariantCulture);
-        paint["ink_sidebar_y"] = settings.InkSidebarY.ToString(CultureInfo.InvariantCulture);
         paint["ink_cache_enabled"] = settings.InkCacheEnabled ? "True" : "False";
         paint["ink_record_enabled"] = settings.InkRecordEnabled ? "True" : "False";
-        paint["ink_sidebar_enabled"] = settings.InkSidebarEnabled ? "True" : "False";
         paint["ink_auto_save_enabled"] = settings.InkAutoSaveEnabled ? "True" : "False";
         paint["ink_replay_previous_enabled"] = settings.InkReplayPreviousEnabled ? "True" : "False";
         paint["ink_retention_days"] = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
@@ -226,11 +200,21 @@ public sealed class AppSettingsService
         paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
         paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
         paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
-        paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
-        paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_translate_x"] = settings.PhotoUnifiedTranslateX.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_translate_y"] = settings.PhotoUnifiedTranslateY.ToString(CultureInfo.InvariantCulture);
+        paint.Remove("photo_unified_transform_enabled");
+        paint.Remove("photo_unified_scale_x");
+        paint.Remove("photo_unified_scale_y");
+        paint.Remove("photo_unified_translate_x");
+        paint.Remove("photo_unified_translate_y");
+        paint.Remove("ink_sidebar_x");
+        paint.Remove("ink_sidebar_y");
+        paint.Remove("ink_sidebar_enabled");
+        paint.Remove("photo_current_page");
+        paint.Remove("photo_current_index");
+        paint.Remove("pdf_current_page");
+        paint.Remove("image_current_index");
+        paint.Remove("ppt_current_slide");
+        paint.Remove("wps_current_slide");
+        paint.Remove("presentation_current_page");
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);

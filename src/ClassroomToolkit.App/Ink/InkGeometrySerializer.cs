@@ -21,6 +21,13 @@ public static class InkGeometrySerializer
         {
             return null;
         }
-        return Geometry.Parse(data);
+        try
+        {
+            return Geometry.Parse(data);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

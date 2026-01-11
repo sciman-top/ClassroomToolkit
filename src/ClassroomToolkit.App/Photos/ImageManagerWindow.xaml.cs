@@ -6,14 +6,23 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Runtime.InteropServices;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
 
 namespace ClassroomToolkit.App.Photos;
 
 public partial class ImageManagerWindow : Window
 {
+    private const int GwlStyle = -16;
+    private const int WsMinimizeBox = 0x20000;
+    private const int SwpNoSize = 0x0001;
+    private const int SwpNoMove = 0x0002;
+    private const int SwpNoZOrder = 0x0004;
+    private const int SwpNoOwnerZOrder = 0x0200;
+    private const int SwpFrameChanged = 0x0020;
     private const int RecentLimit = 10;
     private readonly ObservableCollection<FolderItem> _favorites = new();
     private readonly ObservableCollection<FolderItem> _recents = new();
@@ -40,6 +49,7 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
+        SourceInitialized += (_, _) => RemoveMinimizeButton();
     }
 
     private void InitializeTree()
@@ -495,6 +505,24 @@ public partial class ImageManagerWindow : Window
         }
     }
 
+    private void RemoveMinimizeButton()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var style = GetWindowLong(hwnd, GwlStyle);
+        if ((style & WsMinimizeBox) == 0)
+        {
+            return;
+        }
+        style &= ~WsMinimizeBox;
+        SetWindowLong(hwnd, GwlStyle, style);
+        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoOwnerZOrder | SwpFrameChanged);
+    }
+
     private sealed record FolderItem(string Path)
     {
         public override string ToString()
@@ -515,6 +543,22 @@ public partial class ImageManagerWindow : Window
         public string PageBadge => IsPdf && PageCount > 0 ? $"{PageCount}P" : string.Empty;
         public bool IsPdf => !IsFolder && System.IO.Path.GetExtension(Path)?.Equals(".pdf", StringComparison.OrdinalIgnoreCase) == true;
     }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
 
 }
 

@@ -13,6 +13,10 @@ public static class WindowCaptureHelper
         {
             return false;
         }
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            return false;
+        }
         if (!GetWindowRect(hwnd, out var rect))
         {
             return false;
@@ -23,25 +27,37 @@ public static class WindowCaptureHelper
         {
             return false;
         }
-        using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
-        bool printed = false;
-        using (var graphics = Graphics.FromImage(bitmap))
+        try
         {
-            var hdc = graphics.GetHdc();
-            try
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrWhiteSpace(directory))
             {
-                printed = PrintWindow(hwnd, hdc, 0);
+                Directory.CreateDirectory(directory);
             }
-            finally
+            using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
+            bool printed = false;
+            using (var graphics = Graphics.FromImage(bitmap))
             {
-                graphics.ReleaseHdc(hdc);
+                var hdc = graphics.GetHdc();
+                try
+                {
+                    printed = PrintWindow(hwnd, hdc, 0);
+                }
+                finally
+                {
+                    graphics.ReleaseHdc(hdc);
+                }
+                if (!printed)
+                {
+                    graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+                }
             }
-            if (!printed)
-            {
-                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-            }
+            bitmap.Save(outputPath, ImageFormat.Png);
         }
-        bitmap.Save(outputPath, ImageFormat.Png);
+        catch
+        {
+            return false;
+        }
         return true;
     }
 

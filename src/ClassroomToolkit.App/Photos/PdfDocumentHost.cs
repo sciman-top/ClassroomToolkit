@@ -23,6 +23,18 @@ internal sealed class PdfDocumentHost : IDisposable
         return new PdfDocumentHost(doc);
     }
 
+    public bool TryGetPageSize(int pageIndex, out SizeF size)
+    {
+        size = default;
+        if (_document == null || _document.PageCount <= 0)
+        {
+            return false;
+        }
+        var page = Math.Clamp(pageIndex, 1, _document.PageCount) - 1;
+        size = _document.PageSizes[page];
+        return true;
+    }
+
     public BitmapSource? RenderPage(int pageIndex, double dpi)
     {
         using var bitmap = RenderPageBitmap(pageIndex, dpi);
