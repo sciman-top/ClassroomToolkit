@@ -324,7 +324,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         await dispatcher.InvokeAsync(() =>
         {
             ApplyLoadResult(result, preferredClass);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.Render);
     }
 
     private RollCallLoadResult LoadDataCore()

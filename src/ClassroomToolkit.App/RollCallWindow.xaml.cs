@@ -26,6 +26,13 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow : Window
 {
+    public static readonly DependencyProperty IsDataLoadedProperty =
+        DependencyProperty.Register(
+            nameof(IsDataLoaded),
+            typeof(bool),
+            typeof(RollCallWindow),
+            new PropertyMetadata(false));
+
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
     private const uint SwpNoActivate = 0x0010;
@@ -55,12 +62,19 @@ public partial class RollCallWindow : Window
     private bool _speechUnavailableNotified;
     private bool _remoteHookUnavailableNotified;
     private bool _initialized;
+    private bool _dataLoaded;
     private bool _hovering;
     private DateTime _suppressRollUntil = DateTime.MinValue;
     private IntPtr _hwnd;
     private readonly DispatcherTimer _hoverCheckTimer;
     
     public ICommand OpenRemoteKeyCommand { get; }
+
+    public bool IsDataLoaded
+    {
+        get => (bool)GetValue(IsDataLoadedProperty);
+        set => SetValue(IsDataLoadedProperty, value);
+    }
 
     public RollCallWindow(string dataPath, AppSettingsService settingsService, AppSettings settings)
     {
@@ -163,12 +177,19 @@ public partial class RollCallWindow : Window
         _stopwatch.Restart();
         _timer.Start();
         UpdateRemoteHookState();
+        _dataLoaded = true;
+        IsDataLoaded = true;
+        UpdateWindowTransparency();
     }
 
     // --- Window Control ---
 
     private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
     {
+        if (!_dataLoaded)
+        {
+            return;
+        }
         if (e.ChangedButton == MouseButton.Left)
         {
             if (e.OriginalSource is DependencyObject source && IsInteractiveElement(source))
@@ -181,6 +202,10 @@ public partial class RollCallWindow : Window
 
     private void OnBackgroundDrag(object sender, MouseButtonEventArgs e)
     {
+        if (!_dataLoaded)
+        {
+            return;
+        }
         if (e.ChangedButton != MouseButton.Left)
         {
             return;
@@ -191,6 +216,7 @@ public partial class RollCallWindow : Window
             {
                 return;
             }
+            // 姓名卡片和计时器卡片需要响应点击/展示，不应用作窗口拖动区域
             if (IsDescendantOf(source, RollNameCard) || IsDescendantOf(source, TimerCard))
             {
                 return;
