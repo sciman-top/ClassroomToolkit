@@ -2346,6 +2346,8 @@ public partial class PaintOverlayWindow : Window
             // Reset tracking state for next slideshow session
             _lastKnownShowPosition = -1;
             _lastKnownSlideID = -1;
+            
+            // Unconditionally clear ink when exiting presentation mode
             ClearInkSurfaceState();
         }
         if (!_presentationActive
@@ -2357,6 +2359,8 @@ public partial class PaintOverlayWindow : Window
             _lastKnownShowPosition = -1;
             _lastKnownSlideID = -1;
             ClearPendingPresentationPageChange();
+            
+            // Unconditionally clear ink when exiting presentation mode
             ClearInkSurfaceState();
         }
 
