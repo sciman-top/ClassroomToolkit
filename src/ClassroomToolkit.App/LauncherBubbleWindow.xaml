@@ -16,7 +16,8 @@
                 CornerRadius="24"
                 BorderThickness="1"
                 BorderBrush="{StaticResource Brush_Border}"
-                Background="{StaticResource Brush_Background_L2}">
+                Background="{StaticResource Brush_Background_L2}"
+                TextElement.Foreground="{StaticResource Brush_Text_Primary}">
             <Border.Effect>
                 <!-- 阴影让它浮起来 -->
                 <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.5"/>

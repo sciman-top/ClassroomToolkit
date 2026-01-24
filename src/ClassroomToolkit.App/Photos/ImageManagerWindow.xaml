@@ -24,44 +24,104 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12" Margin="12,12,3,12" CornerRadius="8">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
+            <!-- 1. 收藏夹 -->
+            <Border Grid.Row="0" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+                    BorderThickness="1" Padding="12" Margin="12,12,3,6" CornerRadius="8">
+                <StackPanel>
                     <TextBlock Text="收藏夹" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
                         <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
                     </StackPanel>
-                    <ListBox x:Name="FavoritesList" Height="120" SelectionChanged="OnFavoritesSelectionChanged"
+                    <ListBox x:Name="FavoritesList" Height="100" SelectionChanged="OnFavoritesSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </StackPanel>
+            </Border>
 
-                <StackPanel Grid.Row="1">
-                    <TextBlock Text="最近目录" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,12,0,6"/>
-                    <ListBox x:Name="RecentsList" Height="120" SelectionChanged="OnRecentsSelectionChanged"
+            <!-- 2. 最近目录 -->
+            <Border Grid.Row="1" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+                    BorderThickness="1" Padding="12" Margin="12,6,3,6" CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="最近目录" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
+                    <ListBox x:Name="RecentsList" Height="100" SelectionChanged="OnRecentsSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </StackPanel>
+            </Border>
 
-                <Grid Grid.Row="2">
+            <!-- 3. 此电脑 -->
+            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+                    BorderThickness="1" Padding="12" Margin="12,6,3,12" CornerRadius="8">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="此电脑" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,12,0,6"/>
+                    <TextBlock Text="此电脑" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
                     <TreeView Grid.Row="1" x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
+                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
+                        <TreeView.Resources>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI"/>
+                                <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TreeViewItem">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" MinWidth="19"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition/>
+                                                </Grid.RowDefinitions>
+                                                <ToggleButton x:Name="Expander" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" 
+                                                              Style="{StaticResource Style_ToggleButton}" Background="Transparent" BorderThickness="0" Padding="0" Width="16" Height="16" VerticalAlignment="Center">
+                                                     <Path x:Name="Arrow" Data="M0,0 L4,4 L0,8" Stroke="{StaticResource Brush_Text_Secondary}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           RenderTransformOrigin="0.5,0.5">
+                                                         <Path.RenderTransform>
+                                                             <RotateTransform Angle="0"/>
+                                                         </Path.RenderTransform>
+                                                     </Path>
+                                                </ToggleButton>
+                                                <Border x:Name="Bd" Grid.Column="1" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                                                    <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                </Border>
+                                                <ItemsPresenter x:Name="ItemsHost" Grid.Column="1" Grid.Row="1"/>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsExpanded" Value="False">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                                <Trigger SourceName="Expander" Property="IsChecked" Value="True">
+                                                    <Setter TargetName="Arrow" Property="RenderTransform">
+                                                        <Setter.Value>
+                                                            <RotateTransform Angle="90"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TreeView.Resources>
+                    </TreeView>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+        </Grid>
 
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
 
@@ -79,15 +139,16 @@
                 <!-- 工具栏 -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,12,8">
                     <StackPanel Orientation="Horizontal">
-                        <Button x:Name="BackButton" Content="后退" Width="60" Height="26" Margin="0,0,6,0"
-                                Click="OnBackClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
-                        <Button x:Name="ForwardButton" Content="前进" Width="60" Height="26" Margin="0,0,12,0"
-                                Click="OnForwardClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
-                        <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="26" Margin="0,0,6,0"
-                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton} " FontSize="12"/>
-                        <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="26" Margin="0,0,12,0"
-                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="12"/>
-                        <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}"
+                        <!-- 增加高度到 30，统一字体 13 -->
+                        <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
+                                Click="OnBackClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                        <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,12,0"
+                                Click="OnForwardClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                        <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
+                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
+                        <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="30" Margin="0,0,12,0"
+                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
+                        <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
                                 ValueChanged="OnThumbnailSizeChanged"/>

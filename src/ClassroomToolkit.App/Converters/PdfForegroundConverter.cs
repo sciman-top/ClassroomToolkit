@@ -9,7 +9,7 @@ public sealed class PdfForegroundConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value is bool isPdf && isPdf ? new Media.SolidColorBrush(Media.Color.FromRgb(33, 150, 243)) : DependencyProperty.UnsetValue;
+        return value is bool isPdf && isPdf ? new Media.SolidColorBrush(Media.Color.FromRgb(255, 145, 0)) : DependencyProperty.UnsetValue;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -248,6 +248,7 @@ public partial class PaintOverlayWindow : Window
     private int _resolveInFlight;
     private DateTime _lastResolveRequestUtc = DateTime.MinValue;
     private bool _presentationActive;
+    private bool _presentationFullscreenActive;
     private DateTime _currentCourseDate = DateTime.Today;
     private string _currentDocumentName = string.Empty;
     private string _currentDocumentPath = string.Empty;
@@ -320,6 +321,7 @@ public partial class PaintOverlayWindow : Window
     // Cross-page display (continuous scroll) feature
     private bool _crossPageDisplayEnabled;
     private bool _crossPageDragging;
+    private bool _crossPageTranslateClamped;
     private List<string> _photoSequencePaths = new();
     private int _photoSequenceIndex = -1;
     private readonly Dictionary<int, BitmapSource> _neighborImageCache = new();
@@ -2277,6 +2279,10 @@ public partial class PaintOverlayWindow : Window
             _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
             return;
         }
+        if (TryClearInkOnWpsFullscreenExit(monitorStart, uiThread))
+        {
+            return;
+        }
         var wasSlideshowActive = _pptSlideshowActive;
         _pptSlideshowActive = false;
         var allowOffice = _presentationOptions.AllowOffice || _inkCacheEnabled;
@@ -2300,6 +2306,46 @@ public partial class PaintOverlayWindow : Window
                 var decision = snapshot.Decision;
                 if (decision.IsValid)
                 {
+                    var fullscreenNow = false;
+                    if (decision.IsWps)
+                    {
+                        var wpsTarget = ResolveWpsTarget();
+                        fullscreenNow = IsFullscreenPresentationWindow(wpsTarget);
+                    }
+                    if (_presentationFullscreenActive && !fullscreenNow && decision.IsWps && _presentationActive)
+                    {
+                        SaveCurrentPageOnNavigate(forceBackground: false);
+                        _presentationActive = false;
+                        _currentCacheScope = InkCacheScope.None;
+                        _currentCacheKey = string.Empty;
+                        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+                        ClearPendingPresentationPageChange();
+                        _lastKnownShowPosition = -1;
+                        _lastKnownSlideID = -1;
+                        _presentationFullscreenActive = false;
+                        ClearInkSurfaceState();
+                        UpdateInkMonitorInterval();
+                        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
+                        return;
+                    }
+                    _presentationFullscreenActive = fullscreenNow;
+                    // If slideshow was active but now it's not, clear ink (WPS/Office exit fullscreen)
+                    if (wasSlideshowActive && !decision.IsSlideshowWindow && _presentationActive)
+                    {
+                        SaveCurrentPageOnNavigate(forceBackground: false);
+                        _presentationActive = false;
+                        _currentCacheScope = InkCacheScope.None;
+                        _currentCacheKey = string.Empty;
+                        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+                        ClearPendingPresentationPageChange();
+                        _lastKnownShowPosition = -1;
+                        _lastKnownSlideID = -1;
+                        _presentationFullscreenActive = false;
+                        ClearInkSurfaceState();
+                        UpdateInkMonitorInterval();
+                        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
+                        return;
+                    }
                     if (decision.Kind == PresentationDecisionKind.Title && snapshot.TitleResult != null)
                     {
                         _pptTrackedDocumentName = snapshot.TitleResult.TrackedDocumentName;
@@ -2324,6 +2370,25 @@ public partial class PaintOverlayWindow : Window
         }
         if (_presentationActive)
         {
+            // For WPS/Office: if slideshow was active but no snapshot available, it likely exited
+            // Force clear ink in this case regardless of allowOffice setting
+            if (allowOffice && !snapshotAvailable && wasSlideshowActive)
+            {
+                // WPS/Office slideshow ended (no longer detectable), force clear ink
+                SaveCurrentPageOnNavigate(forceBackground: false);
+                _presentationActive = false;
+                _currentCacheScope = InkCacheScope.None;
+                _currentCacheKey = string.Empty;
+                _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+                ClearPendingPresentationPageChange();
+                _lastKnownShowPosition = -1;
+                _lastKnownSlideID = -1;
+                _presentationFullscreenActive = false;
+                ClearInkSurfaceState();
+                UpdateInkMonitorInterval();
+                _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
+                return;
+            }
             if (allowOffice && (!snapshotAvailable || !allowPresentationClear))
             {
                 UpdateInkMonitorInterval();
@@ -2343,6 +2408,7 @@ public partial class PaintOverlayWindow : Window
             _currentCacheKey = string.Empty;
             _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
             ClearPendingPresentationPageChange();
+            _presentationFullscreenActive = false;
             // Reset tracking state for next slideshow session
             _lastKnownShowPosition = -1;
             _lastKnownSlideID = -1;
@@ -2359,6 +2425,7 @@ public partial class PaintOverlayWindow : Window
             _lastKnownShowPosition = -1;
             _lastKnownSlideID = -1;
             ClearPendingPresentationPageChange();
+            _presentationFullscreenActive = false;
             
             // Unconditionally clear ink when exiting presentation mode
             ClearInkSurfaceState();
@@ -2403,6 +2470,42 @@ public partial class PaintOverlayWindow : Window
         }
         _lastPresentationFullscreenSignalUtc = nowUtc;
         PresentationFullscreenDetected?.Invoke();
+    }
+
+    private bool TryClearInkOnWpsFullscreenExit(Stopwatch monitorStart, bool uiThread)
+    {
+        if (!_presentationOptions.AllowWps)
+        {
+            return false;
+        }
+        if (!_presentationFullscreenActive)
+        {
+            return false;
+        }
+        if (_currentPresentationType != ClassroomToolkit.Interop.Presentation.PresentationType.Wps
+            && !_presentationActive)
+        {
+            return false;
+        }
+        var wpsTarget = ResolveWpsTarget();
+        var fullscreenNow = IsFullscreenPresentationWindow(wpsTarget);
+        if (fullscreenNow)
+        {
+            return false;
+        }
+        SaveCurrentPageOnNavigate(forceBackground: false);
+        _presentationActive = false;
+        _currentCacheScope = InkCacheScope.None;
+        _currentCacheKey = string.Empty;
+        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        ClearPendingPresentationPageChange();
+        _lastKnownShowPosition = -1;
+        _lastKnownSlideID = -1;
+        _presentationFullscreenActive = false;
+        ClearInkSurfaceState();
+        UpdateInkMonitorInterval();
+        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
+        return true;
     }
 
     private ClassroomToolkit.Interop.Presentation.PresentationType ResolveForegroundPresentationType()
@@ -2625,7 +2728,17 @@ public partial class PaintOverlayWindow : Window
     {
         Dispatcher.BeginInvoke(() =>
         {
+            bool wasSlideshowActive = _pptSlideshowActive;
             _pptSlideshowActive = eventType != PowerPointSlideshowEventType.End;
+            // When slideshow ends, force clear ink immediately (for PowerPoint)
+            if (wasSlideshowActive && !_pptSlideshowActive && _presentationActive)
+            {
+                SaveCurrentPageOnNavigate(forceBackground: false);
+                _presentationActive = false;
+                _currentCacheScope = InkCacheScope.None;
+                _currentCacheKey = string.Empty;
+                ClearInkSurfaceState();
+            }
             _refreshOrchestrator.RequestRefresh("ppt-event");
         }, DispatcherPriority.Background);
     }
@@ -3165,6 +3278,7 @@ public partial class PaintOverlayWindow : Window
         var delta = point - _photoPanStart;
         _photoTranslate.X = _photoPanOriginX + delta.X;
         _photoTranslate.Y = _photoPanOriginY + delta.Y;
+        UpdateNeighborTransformsForPan();
         // Enable cross-page display when dragging vertically
         if (_crossPageDisplayEnabled && Math.Abs(delta.Y) > 5)
         {
@@ -3237,7 +3351,9 @@ public partial class PaintOverlayWindow : Window
             maxY = middle;
         }
         // Apply limits
+        var originalY = _photoTranslate.Y;
         _photoTranslate.Y = Math.Clamp(_photoTranslate.Y, minY, maxY);
+        _crossPageTranslateClamped = Math.Abs(originalY - _photoTranslate.Y) > 0.5;
     }
 
     private void EnsurePhotoTransformsWritable()
@@ -3275,6 +3391,7 @@ public partial class PaintOverlayWindow : Window
         if (_crossPageDragging && _crossPageDisplayEnabled)
         {
             _crossPageDragging = false;
+            _crossPageTranslateClamped = false;
             FinalizeCurrentPageFromScroll();
         }
         RequestInkRedraw();
@@ -3557,7 +3674,12 @@ public partial class PaintOverlayWindow : Window
             ScheduleNeighborImagePrefetch(currentPage + 1);
         }
         // Render neighbor pages
-        RenderNeighborPages(visiblePages.Where(p => p.PageIndex != currentPage).ToList());
+        var neighborPages = visiblePages.Where(p => p.PageIndex != currentPage).ToList();
+        if (_crossPageDragging && _crossPageTranslateClamped && neighborPages.Count == 0)
+        {
+            return;
+        }
+        RenderNeighborPages(neighborPages);
     }
 
     private void RenderNeighborPages(List<(int PageIndex, double Top)> neighborPages)
@@ -3629,12 +3751,61 @@ public partial class PaintOverlayWindow : Window
             }
             if (bitmap != null)
             {
+                var baseTop = top - _photoTranslate.Y;
+                img.Tag = baseTop;
+                inkImg.Tag = baseTop;
                 // Apply same transform as current page
                 var transform = new TransformGroup();
                 transform.Children.Add(new ScaleTransform(_photoScale.ScaleX, _photoScale.ScaleY));
-                transform.Children.Add(new TranslateTransform(_photoTranslate.X, top));
+                transform.Children.Add(new TranslateTransform(_photoTranslate.X, _photoTranslate.Y + baseTop));
                 img.RenderTransform = transform;
                 inkImg.RenderTransform = transform;
+            }
+        }
+    }
+
+    private void UpdateNeighborTransformsForPan()
+    {
+        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        {
+            return;
+        }
+        if (_neighborPageImages.Count == 0 || _neighborInkImages.Count == 0)
+        {
+            return;
+        }
+        for (int i = 0; i < _neighborPageImages.Count; i++)
+        {
+            var img = _neighborPageImages[i];
+            if (img.Visibility != Visibility.Visible || img.RenderTransform is not TransformGroup group)
+            {
+                continue;
+            }
+            if (img.Tag is not double baseTop || group.Children.Count < 2)
+            {
+                continue;
+            }
+            if (group.Children[1] is TranslateTransform translate)
+            {
+                translate.X = _photoTranslate.X;
+                translate.Y = _photoTranslate.Y + baseTop;
+            }
+            if (i < _neighborInkImages.Count)
+            {
+                var inkImg = _neighborInkImages[i];
+                if (inkImg.Visibility != Visibility.Visible || inkImg.RenderTransform is not TransformGroup inkGroup)
+                {
+                    continue;
+                }
+                if (inkGroup.Children.Count < 2)
+                {
+                    continue;
+                }
+                if (inkGroup.Children[1] is TranslateTransform inkTranslate)
+                {
+                    inkTranslate.X = _photoTranslate.X;
+                    inkTranslate.Y = _photoTranslate.Y + baseTop;
+                }
             }
         }
     }

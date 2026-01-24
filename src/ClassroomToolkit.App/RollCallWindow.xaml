@@ -22,7 +22,8 @@
     <Border Background="{StaticResource Brush_Window_Atmosphere}"
             CornerRadius="20"
             BorderBrush="{StaticResource Brush_Border}"
-            BorderThickness="1">
+            BorderThickness="1"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <!-- 使用统一的深邃浮层阴影 -->
             <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
@@ -216,9 +217,10 @@
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.2"/>
                 </Border.Effect>
-                <Border BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="-1"/>
-
                 <Grid>
+                    <Border BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="-1"/>
+
+                    <Grid>
                     <!-- 点名操作 -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                         <ItemsControl ItemsSource="{Binding GroupButtons}">
@@ -304,6 +306,7 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                </Grid>
                 </Grid>
             </Border>
 

@@ -10,7 +10,8 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="12" Padding="6,4">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="12" Padding="6,4"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
         </Border.Effect>

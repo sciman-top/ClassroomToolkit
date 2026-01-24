@@ -21,7 +21,8 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="10">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="10"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>

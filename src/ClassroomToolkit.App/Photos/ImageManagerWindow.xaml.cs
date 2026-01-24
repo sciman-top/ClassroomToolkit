@@ -307,7 +307,7 @@ public partial class ImageManagerWindow : Window
 
         // 1. 添加非隐藏文件夹
         var folders = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
-            .Where(d => !IsHiddenFile(d))
+            .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
             .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
         foreach (var dir in folders)
         {
@@ -463,7 +463,7 @@ public partial class ImageManagerWindow : Window
             Header = header,
             Tag = path
         };
-        item.Items.Add(new TreeViewItem { Header = "加载中..." });
+        item.Items.Add(new TreeViewItem { Header = "\u52a0\u8f7d\u4e2d..." });
         item.Expanded += OnFolderExpanded;
         return item;
     }
@@ -478,7 +478,7 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
-        if (placeholder.Header is not string text || !text.Contains("加载中"))
+        if (placeholder.Header is not string text || !text.Contains("\u52a0\u8f7d\u4e2d"))
         {
             return;
         }
