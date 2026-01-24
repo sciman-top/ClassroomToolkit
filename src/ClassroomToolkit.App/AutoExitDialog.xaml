@@ -12,9 +12,9 @@
         ShowInTaskbar="False"
         Topmost="True">
     
-    <Border Background="White" CornerRadius="8" Margin="10" BorderBrush="Transparent">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -26,19 +26,19 @@
 
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="启动器设置" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="#333"/>
+                <TextBlock Text="启动器设置" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,8,0">
-                    <Path Data="{StaticResource Icon_Close}" Fill="#888" Stretch="Uniform" Width="10" Height="10"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 -->
             <StackPanel Grid.Row="1" Margin="24">
-                <TextBlock Text="自动关闭时间 (分钟)" Foreground="#666" Margin="0,0,0,8"/>
-                <TextBlock Text="设置为 0 则不自动关闭" FontSize="12" Foreground="#999" Margin="0,0,0,8"/>
+                <TextBlock Text="自动关闭时间 (分钟)" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
+                <TextBlock Text="设置为 0 则不自动关闭" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,8"/>
                 
-                <TextBox x:Name="MinutesBox" Padding="8" BorderThickness="1" BorderBrush="#DDD" VerticalContentAlignment="Center"/>
+                <TextBox x:Name="MinutesBox" Padding="8" />
             </StackPanel>
 
             <!-- 3. 按钮 -->

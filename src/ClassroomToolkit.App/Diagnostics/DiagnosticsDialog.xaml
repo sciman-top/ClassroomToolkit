@@ -21,9 +21,9 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Border Background="White" BorderBrush="#E0E0E0" CornerRadius="8" Margin="10">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="10">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="4" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -35,12 +35,12 @@
 
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="系统兼容性诊断" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="#333"/>
+                <TextBlock Text="系统兼容性诊断" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,8,0">
-                    <Path Data="{StaticResource Icon_Close}" Fill="#888" Stretch="Uniform" Width="10" Height="10"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 -->
             <Grid Grid.Row="1" Margin="12">
@@ -61,11 +61,27 @@
                     <TabControl.Resources>
                         <Style TargetType="TabItem">
                             <Setter Property="Padding" Value="12,6"/>
-                            <Setter Property="HeaderTemplate">
+                             <Setter Property="Template">
                                 <Setter.Value>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="13"/>
-                                    </DataTemplate>
+                                    <ControlTemplate TargetType="TabItem">
+                                        <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" BorderBrush="Transparent">
+                                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="False">
+                                                <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
                                 </Setter.Value>
                             </Setter>
                         </Style>
@@ -78,10 +94,12 @@
                                  VerticalScrollBarVisibility="Auto"
                                  HorizontalScrollBarVisibility="Auto"
                                  Padding="8"
-                                 Background="#F8F9FA"
+                                 Background="{StaticResource Brush_Background_L2}"
+                                 Foreground="{StaticResource Brush_Text_Primary}"
                                  FontFamily="Consolas"
                                  FontSize="12"
-                                 Margin="0,8,0,0"/>
+                                 Margin="0,8,0,0"
+                                 BorderThickness="0"/>
                     </TabItem>
                     <TabItem Header="建议">
                         <TextBox x:Name="SuggestionBox"
@@ -90,10 +108,12 @@
                                  VerticalScrollBarVisibility="Auto"
                                  HorizontalScrollBarVisibility="Auto"
                                  Padding="8"
-                                 Background="#F8F9FA"
+                                 Background="{StaticResource Brush_Background_L2}"
+                                 Foreground="{StaticResource Brush_Text_Primary}"
                                  FontFamily="Consolas"
                                  FontSize="12"
-                                 Margin="0,8,0,0"/>
+                                 Margin="0,8,0,0"
+                                 BorderThickness="0"/>
                     </TabItem>
                 </TabControl>
             </Grid>

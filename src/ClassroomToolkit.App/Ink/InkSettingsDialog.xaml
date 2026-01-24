@@ -11,9 +11,9 @@
         Background="{x:Null}"
         Topmost="True">
 
-    <Border Background="White" CornerRadius="12" Margin="8" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="8" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="#8899AA" BlurRadius="26" ShadowDepth="8" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -29,7 +29,7 @@
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <StackPanel Grid.Row="1" Margin="16,14">
                 <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录/回看" Margin="0,0,0,10"/>

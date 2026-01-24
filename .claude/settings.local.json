@@ -11,7 +11,20 @@
       "Bash(claude plugin:*)",
       "Bash(curl:*)",
       "Bash(claude plugins)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(dir:*)",
+      "Bash(claude skills)",
+      "Bash(claude mcp list:*)",
+      "Bash(echo:*)",
+      "Bash(powershell -Command \"echo $env:APPDATA\")",
+      "Bash(powershell -Command \"[Environment]::GetFolderPath\\(''ApplicationData''\\) + ''\\\\Claude''\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\Users\\\\sciman\\\\AppData\\\\Roaming\\\\Claude'' -Recurse -ErrorAction SilentlyContinue | Select-Object FullName\")",
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\sciman\\\\AppData\\\\Roaming\\\\Claude''\")",
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\sciman\\\\AppData\\\\Local\\\\Claude''\")",
+      "Bash(powershell:*)",
+      "Bash(claude mcp --help:*)",
+      "Bash(claude mcp get:*)",
+      "Bash(claude mcp remove:*)"
     ]
   }
 }

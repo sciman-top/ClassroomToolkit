@@ -28,7 +28,7 @@
                                     BorderBrush="{TemplateBinding BorderBrush}" 
                                     BorderThickness="{TemplateBinding BorderThickness}">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="Black" BlurRadius="6" ShadowDepth="1" Opacity="0.1"/>
+                                    <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.5"/>
                                 </Border.Effect>
                             </Border>
                             <!-- 选中/悬停高亮圈 -->
@@ -51,10 +51,10 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_White_Translucent}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
             <!-- 统一的深浮层阴影 -->
-            <DropShadowEffect Color="#1A1A2E" BlurRadius="40" ShadowDepth="12" Opacity="0.15"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -72,7 +72,7 @@
                 </Button>
             </Grid>
             <!-- 分隔线 -->
-            <Rectangle Grid.Row="0" VerticalAlignment="Bottom" Height="1" Fill="#10000000" Margin="24,0"/>
+            <Rectangle Grid.Row="0" VerticalAlignment="Bottom" Height="1" Fill="{StaticResource Brush_Border}" Margin="24,0"/>
 
             <!-- 2. 内容 -->
             <StackPanel Grid.Row="1" Margin="24,20">
@@ -185,12 +185,21 @@
                     <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="36"/>
                 </Grid>
 
-                <CheckBox x:Name="InkCacheCheck" Content="笔迹缓存" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,10"/>
-                <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示模式" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,10"/>
-                <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住pdf、图片的缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,10"/>
+                <!-- PDF、图片的设置 -->
+                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,8,0,0" Background="{StaticResource Brush_Background_L3}">
+                     <Border.Effect>
+                        <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.05"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="pdf、图片的设置" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                        <CheckBox x:Name="InkCacheCheck" Content="笔迹缓存" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- WPS 演示文稿兼容性 -->
-                <Border BorderThickness="0" CornerRadius="12" Padding="16" Margin="0,8,0,0" Background="#FFFFFF">
+                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,8,0,0" Background="{StaticResource Brush_Background_L3}">
                      <Border.Effect>
                         <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.05"/>
                     </Border.Effect>

@@ -85,9 +85,32 @@ public static class PowerPointSlideDetector
 
             return null;
         }
-        catch (Exception ex)
+        catch (ElementNotAvailableException)
         {
-            System.Diagnostics.Debug.WriteLine($"[UIAutomation] Error: {ex.Message}");
+            // UI 元素已经不可用（窗口关闭或状态改变）- 正常情况
+            return null;
+        }
+        catch (System.Runtime.InteropServices.COMException comEx)
+        {
+            // COM 互操作错误（UIA 底层使用 COM）
+            System.Diagnostics.Debug.WriteLine($"[UIAutomation] COM Error (0x{comEx.HResult:X}): {comEx.Message}");
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // UIPI 权限限制（如管理员权限的 PPT）- 静默降级
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            // UIA 操作无效（常见于窗口状态变化时）
+            System.Diagnostics.Debug.WriteLine($"[UIAutomation] Invalid operation: {ex.Message}");
+            return null;
+        }
+        catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException))
+        {
+            // 其他非致命异常 - 记录但不传播（避免崩溃）
+            System.Diagnostics.Debug.WriteLine($"[UIAutomation] Unexpected error: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }

@@ -10,7 +10,10 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    <Border Background="#F9FAFB" BorderBrush="#C9D1D9" BorderThickness="1" CornerRadius="6" Padding="6,4">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="12" Padding="6,4">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
+        </Border.Effect>
         <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
     </Border>
 </Window>

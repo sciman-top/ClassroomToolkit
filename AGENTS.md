@@ -1,111 +1,133 @@
-# AGENTS.md — ClassroomToolkit (Project-Level)
+# AGENTS.md — ClassroomToolkit 项目规则（Codex）
+**项目**: ClassroomToolkit  
+**类型**: Windows WPF (.NET 8)  
+**适用范围**: 项目级（仓库根）  
+**上下文**: 项目根目录  
+**版本**: 1.23  
+**最后更新**: 2026-01-24
 
-> Scope: This file contains **project-specific** guidance for coding agents. User/global rules still apply unless explicitly overridden.  
-> Context: Codex supports cascading `AGENTS.md` / `AGENTS.override.md` rules by directory. Keep this root file repo-wide and add narrower files only when needed.  
+## 0. 变更记录
+- 2026-01-24 v1.23：统一 A.1 规则来源表述，确保项目级共性段一致。
+- 2026-01-24 v1.22：补充项目级一致性约束，明确仅平台差异可变。
+- 2026-01-24 v1.21：统一 B.4 注意事项措辞风格。
+- 2026-01-24 v1.20：补充协同效能边界句；保持与全局规则互补不重叠。
+- 2026-01-24 v1.19：进一步精简项目平台差异表述；统一子项措辞。
+- 2026-01-24 v1.18：强化中文沟通口径；收敛平台差异到项目耦合内容。
+- 2026-01-21 v1.17：将批量改动说明格式指向 C.9 模板。
+- 2026-01-21 v1.16：补充批量改动说明格式示例。
+- 2026-01-21 v1.15：细化批量改动阈值与说明口径。
+- 2026-01-21 v1.14：调整平台差异边界，迁移操作/验证范式到共性基线。
+- 2026-01-21 v1.13：优化变更影响模板展示，新增多文件/规则改写必填要求。
+- 2026-01-21 v1.12：补充规则来源提示与模板示例，明确维护清单附录属性。
+- 2026-01-21 v1.11：补充协作边界、变更影响模板与维护校验清单，完善验证豁免规则。
+- 2026-01-21 v1.10：统一平台差异措辞，补充边界说明。
+- 2026-01-21 v1.9：精简平台通用条款，保留项目内差异。
+- 2026-01-20 v1.8：明确提交语言覆盖全局默认。
+- 2026-01-20 v1.7：补充 Codex 项目内操作范式。
+- 2026-01-20 v1.6：强调与全局规则的协作边界与继承关系，减少重复表述。
+- 2026-01-20 v1.5：强化项目规则的优先级与冲突处理表述。
+- 2026-01-20 v1.4：明确项目级语言边界与协作分工，减少与全局重复。
+- 2026-01-20 v1.3：去重通用约束，补齐 Codex 项目内规则边界说明。
+- 2026-01-20 v1.2：按三层结构重组规则，补齐 Codex 项目差异说明。
+- 2026-01-20 v1.1：统一项目模板，补齐 UI/数据/调试与技术债要点。
 
-## 0. 项目概览
-- 项目名：**ClassroomToolkit**
-- 类型：**Windows WPF 桌面教学辅助工具**
-- 目标场景：点名、计时、屏幕画笔/形状标注、白板、PowerPoint/WPS 翻页控制、笔迹记录/回看、图片教学等课堂交互。
+## A. 共性基线（项目级）
+- 稳定性优先：课堂场景禁止崩溃/卡死；外部交互失败必须降级。
+- Interop 防御：所有 Win32/COM 调用必须 `try/catch`；错误不抛到 UI。
+- 数据完整性：`students.xlsx`、`student_photos/`、`settings.ini` 结构不可破坏；写入保持原子替换（已有实现勿破坏）。
+- 语言边界：对用户回复优先中文（除非用户要求英文）；面向教师/学生的 UI 文案尽量中文；代码/命令/日志等技术项保留英文。
 
-## 1. 语言与表达
-- 默认：**尽量使用简体中文**进行说明与沟通。
-- 例外：当英文能显著减少歧义或必须保留原始信息时，保留英文原文（错误信息/日志、API 名称、命令、配置键、标识符、文件路径等）。
-- 代码注释：**English**（Why-comments；避免“解释代码在做什么”的废话注释）。
+### A.1 协作与优先级
+- 继承：遵循全局共性基线与平台差异。
+- 优先级：项目规则优先于全局规则；冲突需在回复中说明采用的规则。
+- 边界：项目级仅补充仓库特定差异，不重复全局条款。
+- 规则来源：对应平台的 GlobalUser 文件 → 项目根同名文件，以项目为准。
+- 协同效能：全局提供稳定共性与平台差异，本项目聚焦仓库特性与验证落地，避免重复与缺失。
 
-## 2. 技术栈与运行约束
-- .NET 8.0 + WPF（含 Windows Forms 互操作）
-- Win32 / PInvoke 互操作（User32 等）
-- Excel 读写：ClosedXML（学生名册）
-- 测试：xUnit（可选 FluentAssertions）
-- 运行环境：**Windows Only**（WPF 必需）
+### A.2 操作与验证范式
+- 定位：优先 `rg`/`rg --files` 定位，再打开必要文件；避免全量遍历 `student_photos/`。
+- 批量改动：>=2 文件或跨模块视为批量，完成后复查受影响文件清单并说明范围。
+- 说明格式：批量改动按 C.9 变更影响模板说明。
+- 验证：多步骤优先 `powershell -File scripts/ctoolkit.ps1`，单点验证用 `dotnet test --filter ...`。
 
-## 3. 目录结构（repo-wide）
-- `src/ClassroomToolkit.App/`：WPF UI、XAML、窗口与画笔逻辑
-- `src/ClassroomToolkit.Domain/`：核心业务逻辑（RollCallEngine、TimerEngine 等）
-- `src/ClassroomToolkit.Services/`：应用服务层（演示控制策略）
-- `src/ClassroomToolkit.Interop/`：Win32/WPS/PowerPoint 互操作
-- `src/ClassroomToolkit.Infra/`：持久化与设置（INI、Excel）
+## B. 平台差异（Codex 项目内）
+### B.1 加载与作用域
+- 无项目特有差异，遵循全局规则。
+### B.2 配置与上限
+- 无项目特有差异，遵循全局规则。
+### B.3 诊断与命令
+- 无项目特有差异，遵循全局规则。
+### B.4 注意事项
+- 注意事项：本项目小改优先 `apply_patch`，跨多文件改动优先脚本以便复查。
+- 注意事项：本节仅放本项目的平台代理细节，不重复全局规则。
 
-## 4. 必跑命令（完成任何改动后）
-> 目标：可复现、可回归。能跑就跑；不能跑要明确说明原因与替代验证方式。
+## C. 项目差异（领域/技术）
+### 1. 目录与模块
+- `src/ClassroomToolkit.App` — WPF UI (MVVM)
+- `src/ClassroomToolkit.Domain` — 纯业务逻辑
+- `src/ClassroomToolkit.Services` — 应用服务编排
+- `src/ClassroomToolkit.Interop` — Win32/COM 高风险区
+- `src/ClassroomToolkit.Infra` — 配置/持久化
+- `tests/ClassroomToolkit.Tests` — xUnit + FluentAssertions
+- `scripts/ctoolkit.ps1` — 构建/测试脚本
+- `docs/`、`tools/` — 支持材料
+- `students.xlsx`、`student_photos/` — 示例数据
 
-- 还原依赖：`dotnet restore`
-- 构建：`dotnet build ClassroomToolkit.sln`
-- 运行：`dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`
-- 测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`
+### 2. 构建/测试/运行
+- `dotnet restore`
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test --filter "FullyQualifiedName~PresentationControlServiceTests"`
+- `dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`
+- `powershell -File scripts/ctoolkit.ps1`（可加 `-SkipTests`/`-SkipCommit`）
 
-建议（如仓库已配置）：`dotnet format` / `dotnet test` 增量运行。
-如因非 Windows 环境或依赖缺失无法执行，请明确写明原因与替代验证（例如仅 `dotnet build`）。
+### 3. 代码规范
+- 4 spaces 缩进，使用 file-scoped namespaces
+- 类型/方法 PascalCase，局部/参数 camelCase，接口 `I` 前缀
+- Nullability 明确（`string?` vs `string`），不可变模型优先用 records
+- 注释使用英文，强调“why”而非重复代码
 
-## 5. 编码规范与边界
-### 5.1 代码风格
-- 缩进：4 空格；遵循现有 C# 代码风格
-- 命名：
-  - 类/方法：PascalCase
-  - 字段/局部变量：camelCase
-  - 常量：UPPER_SNAKE_CASE
-- 变更策略：**最小差异（minimal diff）**，避免无关重构与大范围格式化。
+### 4. UI 开发（WPF）
+- 颜色/样式使用资源（如 `WidgetStyles.xaml` 或主题资源），避免硬编码
+- 新窗口继承 `BaseWindow` 或严格遵循现有视觉样式
 
-### 5.2 互操作（Win32 / PInvoke）约束
-- P/Invoke 声明应集中在清晰的 interop 边界内（通常在 `ClassroomToolkit.Interop` 或特定 native library 对应的静态类中），避免分散在业务/界面层。
-- 常量使用 `const int`；句柄优先使用 `SafeHandle`（如已有相关模式/封装则沿用）。
-- 不要为“临时修复”引入宽泛的 catch-all 互操作包装；优先定位 root cause。
+### 5. 变更边界与依赖
+- 不改变 `students.xlsx` 结构或 `settings.ini` 格式
+- 不提交真实学生数据；`students.xlsx` 与 `student_photos/` 仅为示例资产
+- Interop 大幅重构需先沟通确认
 
-### 5.3 用户数据与资源的保护（强约束）
-- **避免破坏/覆盖**：
-  - `students.xlsx`（学生名册）
-  - `student_photos/`（照片资源）
-- 照片复制/导入避免同名覆盖；优先生成唯一文件名。
-- 笔迹/截图/照片存储默认路径：`D:\ClassroomToolkit\Ink\`（照片可在画笔设置中自定义根目录）。
-- 禁止做以下操作，除非用户明确要求：
-  - 重命名/删除/批量改写上述文件或目录
-  - 改变 Excel 文件结构（列/表名/格式）导致兼容性破坏
-- `settings.ini` 为运行时生成：如需写入，建议使用“写临时文件 → 原子替换”的方式，避免崩溃造成半写文件。
+### 6. 关键技术要点（高风险区）
+- COM 对象需释放（`Marshal.ReleaseComObject`/`try/finally`）
+- 处理 `RPC_E_CALL_REJECTED`（COM 忙）并降级
+- P/Invoke 通常使用 `CharSet.Auto` 与 `SetLastError = true`
+- WPS 幻灯片：手动 F5 时 `SlideShowWindows.Count` 可能为 0；`SlideShowSettings.Run()` 可跟踪页码；无法跟踪时降级为“会话级画布”
+- WPS ProgIDs：优先 `KWPP.Application`，退化 `WPP.Application`
 
-### 5.4 图片管理与图片模式约束
-- 图片管理窗口支持缩略图/列表视图；最近目录自动记录（最多 10）；收藏夹可手动增删；默认定位“此电脑”。
-- 图片模式：默认按窗口等比最大化适配并居中显示；可选“记住图片缩放/平移”以沿用上次手动调整。
-- 图片模式窗口不置顶，画笔工具条/点名窗口保持最前（除非用户手动隐藏）。
-- 笔迹缓存仅内存保存“最终态”，不持久化；图片/PPT 页面背景不缓存。
+### 7. 调试与技术债（概要）
+- 调试标签：`[WpsTracker]`、`[InkCache]`、`[PresentationControl]`、`[UIAutomation]`
+- 技术债：F5 拦截（需 `RegisterHotKey`）、Ink 序列化性能、WPS COM 重试、High DPI 模糊
 
-### 5.5 资源与性能（补充约束）
-- 避免在 UI 线程或高频路径强制 `GC.Collect()`；优先通过缓存/释放策略解决内存问题。
-- 临时文件（如自定义光标）需记录并在进程退出时清理，避免堆积。
+### 8. 验证与测试
+- 框架：xUnit + FluentAssertions（coverlet 已启用）
+- 轻量验证：按需跑单测或特定类；完整验证：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- Interop 难以单测，优先覆盖 Domain 逻辑
+- 仅文档/规则/注释调整可不运行测试，但需说明未运行原因与风险。
+- 若未运行测试，需在回复中说明原因与风险
 
-### 5.6 输入与钩子（补充约束）
-- WPS 全局钩子拦截需遵循“是否阻断”开关：`_blockOnly` 为 false 时不得无条件拦截输入。
+### 9. 变更影响模板
+- 多文件/规则改写必须填写本模板，其他变更建议填写。
+- 模板：影响模块=；影响数据/配置=；UI/交互=；Interop/外部依赖=；验证与回滚=。
+- 示例：影响模块=App/UI；影响数据/配置=无；UI/交互=新增按钮；Interop/外部依赖=无；验证与回滚=未测/可回退提交。
 
-## 6. 错误处理（产品级行为约束）
-- 关键路径（点名/计时/画笔/演示控制/读写 Excel/互操作调用）应避免直接崩溃：
-  - 使用局部 `try/catch` 包裹“外部依赖/不可信边界”（I/O、COM/Automation、PInvoke、设备/音频等）
-  - 关键失败：**MessageBox** 告知用户可执行的下一步（例如：检查文件是否被占用、是否打开 PPT、是否启用权限）
-  - MessageBox 文案简短明确，优先中文，必要时保留关键英文术语
-- 外部集成降级策略：
-  - Excel 失败：允许只读/或提示使用默认名单（如有）
-  - 语音/播报失败：静默降级或提示（以“不阻塞课堂”为优先）
+### 10. 提交与PR
+- Commit 用中文简短摘要，可含前缀如 `feat:`（覆盖全局默认英文）
+- PR 需包含摘要、测试命令、UI 变更截图
 
-## 7. 调试与定位（高频问题速查）
-### 7.1 焦点/窗口/鼠标穿透
-- 使用 Spy++ / Inspect 工具核对：
-  - `GetForegroundWindow()` 返回值与预期是否一致
-  - 窗口样式：`WS_EX_NOACTIVATE` / `WS_EX_TRANSPARENT` 是否导致输入异常
-- 对于 WPF/WinForms 互操作输入问题，优先在 interop 边界定位消息流转、按键（尤其是 Alt/系统键）行为。
-
-### 7.2 演示控制（PowerPoint/WPS）
-- 启用诊断日志：检查 `PresentationClassifier` 分类结果与输入发送（键盘/消息/自动化）是否匹配当前演示应用。
-- 优先保障“不误触发、不乱翻页”，宁可降级为提示用户手动操作。
-- 输入发送必须指向“放映窗口”（Slideshow），避免唤起或操作编辑窗口；同时存在 PPT/WPS 时，优先前台或全屏放映窗口。
-
-### 7.3 性能（画笔/绘制）
-- 绘制优先使用 WriteableBitmap 等高效路径（以现有实现为准）。
-- 高频事件（Move/Stroke）避免：
-  - 阻塞 I/O
-  - 大对象分配
-  - 频繁创建 Brush/Pen（可冻结则冻结）
-
-## 8. 输出要求（每次提交结果）
-- 计划（checklist，简短）
-- 修改点（按文件列出，说明“为什么这样改”）
-- 验证（跑了哪些命令，结果如何）
-- 风险/后续（如：尚未覆盖的边界条件、建议补测试点）
+## D. 维护校验清单（项目级）
+说明：维护清单为附录性质，不属于三层结构。
+- 同步：`AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 三文件同步更新差异。
+- 版本：版本号、最后更新、变更记录同步更新。
+- 结构：保持 A/B/C/D 结构与编号一致。
+- 边界：平台差异仅放平台代理细节，不复制共性或领域规则。
+- 一致性：项目级 A/C/D 内容三文件保持一致；仅 B 节允许平台差异。
+- 验证：变更后补充验证命令或未执行原因与风险。

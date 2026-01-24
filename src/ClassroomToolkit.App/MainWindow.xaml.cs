@@ -704,10 +704,6 @@ public partial class MainWindow : Window
         {
             return;
         }
-        if (_toolbarWindow?.BoardActive == true)
-        {
-            _toolbarWindow.SetBoardActive(false);
-        }
         if (_overlayWindow.IsPhotoModeActive)
         {
             _overlayWindow.ExitPhotoMode();

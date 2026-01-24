@@ -21,11 +21,11 @@
     <!-- 1. 主容器：圆角+深邃阴影 -->
     <Border Background="{StaticResource Brush_Window_Atmosphere}"
             CornerRadius="20"
-            BorderBrush="{StaticResource Brush_White_Translucent}"
+            BorderBrush="{StaticResource Brush_Border}"
             BorderThickness="1">
         <Border.Effect>
             <!-- 使用统一的深邃浮层阴影 -->
-            <DropShadowEffect Color="#1A1A2E" BlurRadius="40" ShadowDepth="12" Opacity="0.15"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid MouseLeftButtonDown="OnBackgroundDrag" Background="Transparent">
@@ -51,11 +51,8 @@
                             Padding="12,6"
                             Margin="0,0,12,0"
                             Height="34"
-                            Background="White"
-                            BorderThickness="0">
-                        <Button.Effect>
-                            <DropShadowEffect Color="#B0BEC5" BlurRadius="8" ShadowDepth="2" Opacity="0.1"/>
-                        </Button.Effect>
+                            Background="{StaticResource Brush_Background_L3}"
+                            BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <Path Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
                                 <Path.Style>
@@ -79,12 +76,9 @@
                             Padding="12,6"
                             Height="34"
                             MinWidth="110"
-                            Background="White"
-                            BorderThickness="0"
+                            Background="{StaticResource Brush_Background_L3}"
+                            BorderThickness="1"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                        <Button.Effect>
-                            <DropShadowEffect Color="#B0BEC5" BlurRadius="8" ShadowDepth="2" Opacity="0.1"/>
-                        </Button.Effect>
                         <TextBlock Text="{Binding ClassButtonLabel}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}"/>
                     </Button>
                 </StackPanel>
@@ -123,7 +117,7 @@
                         </Border.Background>
                         <Border.Effect>
                             <!-- 柔和的漫反射阴影 -->
-                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="30" ShadowDepth="8" Opacity="0.08"/>
+                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="40" ShadowDepth="0" Opacity="0.3"/>
                         </Border.Effect>
 
                         <!-- 名字展示 -->
@@ -141,7 +135,7 @@
                                            TextWrapping="Wrap"
                                            Margin="0">
                                     <TextBlock.Effect>
-                                        <DropShadowEffect Color="#B0BEC5" BlurRadius="2" ShadowDepth="2" Opacity="0.1"/>
+                                        <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="2" Opacity="0.5"/>
                                     </TextBlock.Effect>
                                 </TextBlock>
 
@@ -163,9 +157,9 @@
                           VerticalAlignment="Center"
                           Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
                         <!-- 照片容器 -->
-                        <Border CornerRadius="16" ClipToBounds="True" Background="White">
+                        <Border CornerRadius="16" ClipToBounds="True" Background="{StaticResource Brush_Background_L2}">
                             <Border.Effect>
-                                <DropShadowEffect Color="#1A1A2E" BlurRadius="20" ShadowDepth="5" Opacity="0.1"/>
+                                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="8" Opacity="0.4"/>
                             </Border.Effect>
                             <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill"/>
                         </Border>
@@ -175,7 +169,7 @@
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <GradientStop Color="Transparent" Offset="0"/>
-                                    <GradientStop Color="#80000000" Offset="1"/>
+                                    <GradientStop Color="#CC000000" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
                             <TextBlock Text="{Binding CurrentStudentName}"
@@ -192,11 +186,11 @@
                 <!-- B. 计时视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
                     <Border x:Name="TimerCard" 
-                            Background="#212121" 
+                            Background="{StaticResource Brush_Background_L2}" 
                             CornerRadius="20" 
-                            BorderBrush="#33FFFFFF" BorderThickness="1">
+                            BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
                         <Border.Effect>
-                            <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="50" ShadowDepth="0" Opacity="0.2"/>
+                            <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="40" ShadowDepth="0" Opacity="0.15"/>
                         </Border.Effect>
                         <Grid>
                             <!-- 装饰线条 -->
@@ -208,7 +202,7 @@
                                            FontFamily="Consolas, Courier New"
                                            FontWeight="Bold">
                                      <TextBlock.Effect>
-                                         <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="20" ShadowDepth="0" Opacity="0.6"/>
+                                         <DropShadowEffect Color="{StaticResource Color_Timer_Neon}" BlurRadius="30" ShadowDepth="0" Opacity="0.5"/>
                                      </TextBlock.Effect>
                                 </TextBlock>
                             </Viewbox>
@@ -218,10 +212,11 @@
             </Grid>
 
             <!-- 4. 底部操作栏 -->
-            <Border Grid.Row="2" Background="White" CornerRadius="16" Margin="20,0,20,16" Padding="6,4">
+            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" CornerRadius="16" Margin="20,0,20,16" Padding="6,4">
                 <Border.Effect>
-                    <DropShadowEffect Color="#1A1A2E" BlurRadius="10" ShadowDepth="2" Opacity="0.05"/>
+                    <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.2"/>
                 </Border.Effect>
+                <Border BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="-1"/>
 
                 <Grid>
                     <!-- 点名操作 -->
@@ -245,9 +240,9 @@
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Background" Value="{StaticResource Brush_Primary}"/>
+                                                        <Setter Property="Foreground" Value="#121212"/>
+                                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -258,7 +253,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Rectangle Width="1" Height="16" Fill="{StaticResource Brush_Border_Light}" Margin="10,0" Opacity="1"/>
+                        <Rectangle Width="1" Height="16" Fill="{StaticResource Brush_Border}" Margin="10,0" Opacity="1"/>
 
                         <Button Style="{StaticResource Style_SecondaryButton}" Click="OnResetClick" Margin="3,0" Padding="10,6">
                             <StackPanel Orientation="Horizontal">
@@ -282,7 +277,7 @@
 
                         <!-- 播放/暂停按钮：主色调 -->
                         <Button Style="{StaticResource Style_PrimaryButton}" Margin="12,0" MinWidth="60" Height="38" Click="OnTimerStartPauseClick">
-                            <Path Fill="White" Width="18" Height="18" Stretch="Uniform">
+                            <Path Fill="#121212" Width="18" Height="18" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
@@ -315,7 +310,7 @@
             <!-- 5. 加载占位 -->
             <Grid Grid.RowSpan="3"
                   Panel.ZIndex="100"
-                  Background="#66000000"
+                  Background="#CC000000"
                   Visibility="{Binding IsDataLoaded, ElementName=NameWindow, Converter={StaticResource InverseBoolToVis}}">
                 <TextBlock Text="加载中..."
                            FontSize="18"

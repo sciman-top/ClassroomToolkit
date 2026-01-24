@@ -11,9 +11,9 @@
         Background="{x:Null}"
         Topmost="True">
 
-    <Border Background="White" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="8" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="30" ShadowDepth="8" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -26,11 +26,11 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="点名设置" FontWeight="SemiBold" Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="16"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,12,0" Width="32" Height="32">
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,12,0" Width="36" Height="36">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}" Margin="0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 (TabControl) -->
             <TabControl x:Name="SettingsTabs" Grid.Row="1" Margin="20,16,20,16" BorderThickness="0" Background="Transparent">
@@ -41,6 +41,8 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TabItem">
@@ -49,13 +51,13 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                                             <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                         </Trigger>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
-                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

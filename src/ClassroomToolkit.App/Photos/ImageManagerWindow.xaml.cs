@@ -232,7 +232,7 @@ public partial class ImageManagerWindow : Window
         _listMode = listMode;
         ThumbnailViewButton.IsChecked = !listMode;
         ListViewButton.IsChecked = listMode;
-        ThumbnailScroll.Visibility = listMode ? Visibility.Collapsed : Visibility.Visible;
+        ImageList.Visibility = listMode ? Visibility.Collapsed : Visibility.Visible;
         ImageListView.Visibility = listMode ? Visibility.Visible : Visibility.Collapsed;
         if (ThumbnailSizeSlider != null)
         {

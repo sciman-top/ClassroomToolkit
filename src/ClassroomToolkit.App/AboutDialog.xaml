@@ -12,10 +12,10 @@
         ShowInTaskbar="False"
         Topmost="True">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_White_Translucent}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
             <!-- 统一深邃浮层阴影 -->
-            <DropShadowEffect Color="#1A1A2E" BlurRadius="40" ShadowDepth="12" Opacity="0.15"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -35,20 +35,20 @@
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 内容 - 浅蓝背景点缀版 -->
-            <Border Grid.Row="1" Margin="22" Background="{StaticResource Brush_Surface_Tint}" CornerRadius="8" Padding="20,16" BorderBrush="Transparent">
+            <Border Grid.Row="1" Margin="22" Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="20,16" BorderBrush="Transparent">
                 <StackPanel>
                     <!-- App Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Gradient_Primary}" Margin="0,0,14,0" BorderBrush="Transparent">
+                        <Border Width="42" Height="42" CornerRadius="9" Background="{StaticResource Brush_Primary}" Margin="0,0,14,0" BorderBrush="Transparent">
                             <Border.Effect>
-                                <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.22"/>
+                                <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="10" ShadowDepth="0" Opacity="0.4"/>
                             </Border.Effect>
                             <!-- 使用 Icon_RollCall 代替 Icon_Apps，因为更符合主视觉 -->
-                            <Path Data="{StaticResource Icon_RollCall}" Fill="White" Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_RollCall}" Fill="#121212" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}"/>
-                            <TextBlock Text="Version 6.0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,3,0,0"/>
+                            <TextBlock Text="Version 6.0" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,3,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -59,14 +59,14 @@
                     <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                         <TextBlock>
-                            <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate">sciman</Hyperlink>
+                            <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman</Hyperlink>
                         </TextBlock>
                     </WrapPanel>
 
                     <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
                         <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
                         <TextBlock>
-                            <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate">sciman-top/ClassroomTools</Hyperlink>
+                            <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomTools</Hyperlink>
                         </TextBlock>
                     </WrapPanel>
                 </StackPanel>
