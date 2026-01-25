@@ -1,7 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,12 +21,17 @@ public partial class ImageManagerWindow : Window
 {
     private const int GwlStyle = -16;
     private const int WsMinimizeBox = 0x20000;
+    private static readonly IntPtr HwndTopmost = new(-1);
+    private static readonly IntPtr HwndNoTopmost = new(-2);
     private const int SwpNoSize = 0x0001;
     private const int SwpNoMove = 0x0002;
     private const int SwpNoZOrder = 0x0004;
     private const int SwpNoOwnerZOrder = 0x0200;
     private const int SwpFrameChanged = 0x0020;
+    private const int SwpNoActivate = 0x0010;
+    private const int SwpShowWindow = 0x0040;
     private const int RecentLimit = 10;
+    private IntPtr _hwnd;
     private readonly ObservableCollection<FolderItem> _favorites = new();
     private readonly ObservableCollection<FolderItem> _recents = new();
     private readonly ObservableCollection<ImageItem> _images = new();
@@ -32,6 +40,8 @@ public partial class ImageManagerWindow : Window
     private string _currentFolder = string.Empty;
     private int _currentIndex = -1;
     private bool _listMode;
+    private CancellationTokenSource? _thumbnailCts;
+    private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
 
     public event Action<IReadOnlyList<string>, int>? ImageSelected;
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
@@ -49,7 +59,11 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
-        SourceInitialized += (_, _) => RemoveMinimizeButton();
+        SourceInitialized += (_, _) =>
+        {
+            _hwnd = new WindowInteropHelper(this).Handle;
+            RemoveMinimizeButton();
+        };
     }
 
     private void InitializeTree()
@@ -303,6 +317,10 @@ public partial class ImageManagerWindow : Window
 
     private void LoadImages(string folder)
     {
+        _thumbnailCts?.Cancel();
+        _thumbnailCts?.Dispose();
+        _thumbnailCts = new CancellationTokenSource();
+        var token = _thumbnailCts.Token;
         _images.Clear();
 
         // 1. 添加非隐藏文件夹
@@ -312,7 +330,7 @@ public partial class ImageManagerWindow : Window
         foreach (var dir in folders)
         {
             var modified = GetModifiedTime(dir);
-            _images.Add(new ImageItem(dir, null, IsFolder: true, PageCount: 0, Modified: modified, IsImage: false));
+            _images.Add(new ImageItem(dir, null, isFolder: true, pageCount: 0, modified: modified, isImage: false));
         }
 
         // 2. 添加 PDF 文件
@@ -321,10 +339,11 @@ public partial class ImageManagerWindow : Window
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
         foreach (var file in pdfFiles)
         {
-            var thumbnail = LoadPdfThumbnail(file);
             var pageCount = TryGetPdfPageCount(file);
             var modified = GetModifiedTime(file);
-            _images.Add(new ImageItem(file, thumbnail, IsFolder: false, PageCount: pageCount, Modified: modified, IsImage: false));
+            var item = new ImageItem(file, null, isFolder: false, pageCount: pageCount, modified: modified, isImage: false);
+            _images.Add(item);
+            QueueThumbnailLoad(item, isPdf: true, token);
         }
 
         // 3. 添加图片文件
@@ -334,9 +353,10 @@ public partial class ImageManagerWindow : Window
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
         foreach (var file in imageFiles)
         {
-            var thumbnail = LoadThumbnail(file);
             var modified = GetModifiedTime(file);
-            _images.Add(new ImageItem(file, thumbnail, IsFolder: false, PageCount: 0, Modified: modified, IsImage: true));
+            var item = new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true);
+            _images.Add(item);
+            QueueThumbnailLoad(item, isPdf: false, token);
         }
 
         _currentIndex = _images.Count > 0 ? 0 : -1;
@@ -345,12 +365,51 @@ public partial class ImageManagerWindow : Window
 
     private void ShowEmptyState()
     {
+        _thumbnailCts?.Cancel();
+        _thumbnailCts?.Dispose();
+        _thumbnailCts = null;
         _currentFolder = string.Empty;
         CurrentFolderText.Text = "此电脑";
         _images.Clear();
         _currentIndex = -1;
         EmptyHintText.Visibility = Visibility.Visible;
         UpdateNavigationButtons();
+    }
+
+    private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _thumbnailSemaphore.WaitAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            ImageSource? thumbnail = null;
+            try
+            {
+                thumbnail = isPdf ? LoadPdfThumbnail(item.Path) : LoadThumbnail(item.Path);
+            }
+            finally
+            {
+                _thumbnailSemaphore.Release();
+            }
+            if (thumbnail == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+            Dispatcher.Invoke(() =>
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                item.Thumbnail = thumbnail;
+            });
+        }, token);
     }
 
     public bool TryNavigate(int direction)
@@ -507,7 +566,7 @@ public partial class ImageManagerWindow : Window
 
     private void RemoveMinimizeButton()
     {
-        var hwnd = new WindowInteropHelper(this).Handle;
+        var hwnd = _hwnd != IntPtr.Zero ? _hwnd : new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero)
         {
             return;
@@ -523,6 +582,18 @@ public partial class ImageManagerWindow : Window
             SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoOwnerZOrder | SwpFrameChanged);
     }
 
+    public void SyncTopmost(bool enabled)
+    {
+        Topmost = enabled;
+        var hwnd = _hwnd != IntPtr.Zero ? _hwnd : new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
+        SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+    }
+
     private sealed record FolderItem(string Path)
     {
         public override string ToString()
@@ -531,8 +602,46 @@ public partial class ImageManagerWindow : Window
         }
     }
 
-    private sealed record ImageItem(string Path, ImageSource? Thumbnail, bool IsFolder, int PageCount, DateTime Modified, bool IsImage = false)
+    private sealed class ImageItem : INotifyPropertyChanged
     {
+        private ImageSource? _thumbnail;
+
+        public ImageItem(string path, ImageSource? thumbnail, bool isFolder, int pageCount, DateTime modified, bool isImage)
+        {
+            Path = path;
+            _thumbnail = thumbnail;
+            IsFolder = isFolder;
+            PageCount = pageCount;
+            Modified = modified;
+            IsImage = isImage;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public string Path { get; }
+
+        public ImageSource? Thumbnail
+        {
+            get => _thumbnail;
+            set
+            {
+                if (ReferenceEquals(_thumbnail, value))
+                {
+                    return;
+                }
+                _thumbnail = value;
+                OnPropertyChanged(nameof(Thumbnail));
+            }
+        }
+
+        public bool IsFolder { get; }
+
+        public int PageCount { get; }
+
+        public DateTime Modified { get; }
+
+        public bool IsImage { get; }
+
         public string Name => System.IO.Path.GetFileName(Path);
         public string TypeLabel => IsFolder ? "文件夹" : IsPdf ? "PDF" : IsImage ? "图片" : string.Empty;
         public string PageLabel => IsPdf && PageCount > 0 ? $"{PageCount}页" : string.Empty;
@@ -542,6 +651,11 @@ public partial class ImageManagerWindow : Window
         public Visibility PageBadgeVisibility => IsPdf && PageCount > 0 ? Visibility.Visible : Visibility.Collapsed;
         public string PageBadge => IsPdf && PageCount > 0 ? $"{PageCount}P" : string.Empty;
         public bool IsPdf => !IsFolder && System.IO.Path.GetExtension(Path)?.Equals(".pdf", StringComparison.OrdinalIgnoreCase) == true;
+
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     [DllImport("user32.dll")]
