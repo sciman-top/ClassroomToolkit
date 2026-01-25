@@ -321,6 +321,7 @@ public partial class PaintOverlayWindow : Window
     private bool _foregroundPresentationActive;
     private ClassroomToolkit.Interop.Presentation.PresentationType _foregroundPresentationType;
     private IntPtr _foregroundPresentationHandle;
+    private bool _foregroundPhotoActive;
     private double _pendingUnifiedScaleX;
     private double _pendingUnifiedScaleY;
     private double _pendingUnifiedTranslateX;
@@ -357,6 +358,7 @@ public partial class PaintOverlayWindow : Window
     public event Action? FloatingZOrderRequested;
     public event Action? PresentationFullscreenDetected;
     public event Action<ClassroomToolkit.Interop.Presentation.PresentationType>? PresentationForegroundDetected;
+    public event Action? PhotoForegroundDetected;
 
     private sealed record InkSnapshot(List<InkStrokeData> Strokes);
 
@@ -1938,6 +1940,7 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        _foregroundPhotoActive = false;
         if (WindowState == WindowState.Minimized)
         {
             WindowState = WindowState.Normal;
@@ -2113,6 +2116,7 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        _foregroundPhotoActive = false;
         FlushPhotoTransformSave();
         SaveCurrentPageOnNavigate(forceBackground: false);
         PhotoBackground.Source = null;
@@ -2218,7 +2222,9 @@ public partial class PaintOverlayWindow : Window
     private void UpdatePresentationFocusMonitor()
     {
         var shouldMonitor = IsVisible
-            && (_presentationOptions.AllowOffice || _presentationOptions.AllowWps);
+            && (_presentationOptions.AllowOffice
+                || _presentationOptions.AllowWps
+                || (_photoModeActive && _photoFullscreen));
         if (shouldMonitor)
         {
             if (!_presentationFocusMonitor.IsEnabled)
@@ -2269,6 +2275,32 @@ public partial class PaintOverlayWindow : Window
         PresentationForegroundDetected?.Invoke(type);
     }
 
+    private void DetectForegroundPhoto()
+    {
+        if (!_photoModeActive || !_photoFullscreen)
+        {
+            _foregroundPhotoActive = false;
+            return;
+        }
+        if (_hwnd == IntPtr.Zero)
+        {
+            _foregroundPhotoActive = false;
+            return;
+        }
+        var foreground = GetForegroundWindow();
+        if (foreground != _hwnd)
+        {
+            _foregroundPhotoActive = false;
+            return;
+        }
+        if (_foregroundPhotoActive)
+        {
+            return;
+        }
+        _foregroundPhotoActive = true;
+        PhotoForegroundDetected?.Invoke();
+    }
+
     private void SchedulePresentationContextRefresh()
     {
         _presentationRefreshStartKey = _currentCacheKey;
@@ -2283,6 +2315,7 @@ public partial class PaintOverlayWindow : Window
     private void MonitorPresentationFocus()
     {
         DetectForegroundPresentation();
+        DetectForegroundPhoto();
         if (!_presentationFocusRestoreEnabled)
         {
             return;
@@ -3340,13 +3373,13 @@ public partial class PaintOverlayWindow : Window
         var delta = point - _photoPanStart;
         _photoTranslate.X = _photoPanOriginX + delta.X;
         _photoTranslate.Y = _photoPanOriginY + delta.Y;
-        UpdateNeighborTransformsForPan();
         // Enable cross-page display when dragging vertically
         if (_crossPageDisplayEnabled && Math.Abs(delta.Y) > 5)
         {
             _crossPageDragging = true;
             ApplyCrossPageBoundaryLimits();
         }
+        UpdateNeighborTransformsForPan();
         if (_crossPageDisplayEnabled)
         {
             RequestCrossPageDisplayUpdate();

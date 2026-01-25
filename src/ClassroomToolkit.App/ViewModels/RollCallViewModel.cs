@@ -9,6 +9,7 @@ using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.Infra.Storage;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -16,6 +17,11 @@ namespace ClassroomToolkit.App.ViewModels;
 
 public sealed class RollCallViewModel : INotifyPropertyChanged
 {
+    private static readonly object PreloadLock = new();
+    private static Task<RollCallLoadResult>? _preloadTask;
+    private static RollCallLoadResult? _preloadedResult;
+    private static string? _preloadedPath;
+    private static DateTime _preloadedWriteTimeUtc;
     private readonly string _dataPath;
     private StudentWorkbook? _workbook;
     private RollCallEngine? _engine;
@@ -312,6 +318,57 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public int TimerSeconds => _timerSeconds;
 
+    public static void WarmupData(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        if (!File.Exists(path))
+        {
+            return;
+        }
+        DateTime writeTimeUtc;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+        }
+        catch
+        {
+            return;
+        }
+        lock (PreloadLock)
+        {
+            if (_preloadedResult != null
+                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                && _preloadedWriteTimeUtc == writeTimeUtc)
+            {
+                return;
+            }
+            if (_preloadTask != null
+                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                && _preloadedWriteTimeUtc == writeTimeUtc)
+            {
+                return;
+            }
+            _preloadedPath = path;
+            _preloadedWriteTimeUtc = writeTimeUtc;
+            _preloadTask = Task.Run(() => LoadDataFromPath(path));
+            _preloadTask.ContinueWith(task =>
+            {
+                lock (PreloadLock)
+                {
+                    if (task.Status == TaskStatus.RanToCompletion
+                        && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
+                    {
+                        _preloadedResult = task.Result;
+                    }
+                    _preloadTask = null;
+                }
+            }, TaskScheduler.Default);
+        }
+    }
+
     public void LoadData(string? preferredClass = null)
     {
         var result = LoadDataCore();
@@ -329,10 +386,74 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     private RollCallLoadResult LoadDataCore()
     {
+        var preload = TryConsumePreloadedResult(_dataPath);
+        if (preload != null)
+        {
+            return preload;
+        }
+        return LoadDataFromPath(_dataPath);
+    }
+
+    private static RollCallLoadResult? TryConsumePreloadedResult(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return null;
+        }
+        DateTime writeTimeUtc;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+        }
+        catch
+        {
+            return null;
+        }
+        Task<RollCallLoadResult>? preloadTask = null;
+        lock (PreloadLock)
+        {
+            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                || _preloadedWriteTimeUtc != writeTimeUtc)
+            {
+                return null;
+            }
+            if (_preloadedResult != null)
+            {
+                var result = _preloadedResult;
+                _preloadedResult = null;
+                return result;
+            }
+            if (_preloadTask != null)
+            {
+                preloadTask = _preloadTask;
+                _preloadTask = null;
+            }
+        }
+        if (preloadTask != null)
+        {
+            try
+            {
+                var result = preloadTask.GetAwaiter().GetResult();
+                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                {
+                    return null;
+                }
+                return result;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static RollCallLoadResult LoadDataFromPath(string path)
+    {
         try
         {
             var store = new StudentWorkbookStore();
-            var result = store.LoadOrCreate(_dataPath);
+            var result = store.LoadOrCreate(path);
             var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
             {
@@ -377,6 +498,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RefreshGroups();
         CurrentGroup = _engine.CurrentGroup;
         UpdateCurrentStudent();
+
+        // 预热照片缓存，提升首次查询性能
+        _photoResolver.WarmupCache(_workbook.ClassNames);
+
         if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
         {
             DataLoadFailed?.Invoke(result.ErrorMessage);

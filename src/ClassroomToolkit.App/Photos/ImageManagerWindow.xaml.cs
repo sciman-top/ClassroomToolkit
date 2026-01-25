@@ -164,8 +164,12 @@ public partial class ImageManagerWindow : Window
             ImageListView.SelectedItem = null;
             return;
         }
-        _currentIndex = _images.IndexOf(item);
-        ImageSelected?.Invoke(_images.Select(image => image.Path).ToList(), _currentIndex);
+        var navigableItems = GetNavigableItems();
+        _currentIndex = navigableItems.IndexOf(item);
+        if (_currentIndex >= 0)
+        {
+            ImageSelected?.Invoke(navigableItems.Select(image => image.Path).ToList(), _currentIndex);
+        }
         ImageList.SelectedItem = null;
         ImageListView.SelectedItem = null;
     }
@@ -359,7 +363,7 @@ public partial class ImageManagerWindow : Window
             QueueThumbnailLoad(item, isPdf: false, token);
         }
 
-        _currentIndex = _images.Count > 0 ? 0 : -1;
+        _currentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
         EmptyHintText.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -414,18 +418,24 @@ public partial class ImageManagerWindow : Window
 
     public bool TryNavigate(int direction)
     {
-        if (_images.Count == 0 || _currentIndex < 0)
+        var navigableItems = GetNavigableItems();
+        if (navigableItems.Count == 0 || _currentIndex < 0)
         {
             return false;
         }
         var next = _currentIndex + direction;
-        if (next < 0 || next >= _images.Count)
+        if (next < 0 || next >= navigableItems.Count)
         {
             return false;
         }
         _currentIndex = next;
-        ImageSelected?.Invoke(_images.Select(image => image.Path).ToList(), _currentIndex);
+        ImageSelected?.Invoke(navigableItems.Select(image => image.Path).ToList(), _currentIndex);
         return true;
+    }
+
+    private List<ImageItem> GetNavigableItems()
+    {
+        return _images.Where(item => !item.IsFolder && (item.IsPdf || item.IsImage)).ToList();
     }
 
     private static bool IsImageFile(string path)

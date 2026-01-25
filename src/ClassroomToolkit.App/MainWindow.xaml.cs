@@ -13,15 +13,29 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App;
 
 public partial class MainWindow : Window
 {
+    private enum ZOrderSurface
+    {
+        None,
+        PresentationFullscreen,
+        PhotoFullscreen,
+        Whiteboard,
+        ImageManager
+    }
+
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow;
     private Photos.ImageManagerWindow? _imageManagerWindow;
+    private readonly List<ZOrderSurface> _surfaceStack = new();
+    private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
+    private IDisposable? _presentationForegroundSuppression;
+    private bool _zOrderPolicyApplying;
     private List<string> _photoSequence = new();
     private int _photoSequenceIndex = -1;
     private LauncherBubbleWindow? _bubbleWindow;
@@ -43,6 +57,8 @@ public partial class MainWindow : Window
             _autoExitTimer.Stop();
             RequestExit();
         };
+        _presentationForegroundSuppressionTimer = new DispatcherTimer();
+        _presentationForegroundSuppressionTimer.Tick += (_, _) => ReleasePresentationForegroundSuppression();
         OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
         OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
         DataContext = this;
@@ -63,6 +79,7 @@ public partial class MainWindow : Window
         WindowPlacementHelper.EnsureVisible(this);
         ScheduleAutoExitTimer();
         ScheduleInkCleanup();
+        WarmupRollCallData();
         if (_settings.LauncherMinimized)
         {
             MinimizeLauncher(fromSettings: true);
@@ -72,6 +89,19 @@ public partial class MainWindow : Window
             UpdateToggleButtons();
         }
         RunStartupDiagnostics();
+    }
+
+    private void WarmupRollCallData()
+    {
+        try
+        {
+            var path = ResolveStudentWorkbookPath();
+            ClassroomToolkit.App.ViewModels.RollCallViewModel.WarmupData(path);
+        }
+        catch
+        {
+            // Ignore warmup failures.
+        }
     }
 
     private void OnRollCallClick(object sender, RoutedEventArgs e)
@@ -95,6 +125,7 @@ public partial class MainWindow : Window
                 _rollCallWindow.Owner = _overlayWindow;
             }
         }
+        ApplyZOrderPolicy();
         UpdateToggleButtons();
     }
 
@@ -149,9 +180,11 @@ public partial class MainWindow : Window
         _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
         _overlayWindow.PhotoUnifiedTransformChanged += OnPhotoUnifiedTransformChanged;
         _overlayWindow.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
+        _overlayWindow.PresentationForegroundDetected += OnPresentationForegroundDetected;
+        _overlayWindow.PhotoForegroundDetected += OnPhotoForegroundDetected;
         _overlayWindow.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, DispatcherPriority.Background);
-        _overlayWindow.Activated += (_, _) => EnsureFloatingWindowsOnTop();
+        _overlayWindow.Activated += (_, _) => OnOverlayActivated();
         _overlayWindow.Closed += (_, _) =>
         {
             _overlayWindow = null;
@@ -230,7 +263,6 @@ public partial class MainWindow : Window
                     {
                         _overlayWindow.ExitPhotoMode();
                     }
-                    _overlayWindow.TryExitPresentationFullscreen();
                     _overlayWindow.SetBoardColor(_settings.BoardColor);
                     _overlayWindow.SetBoardOpacity(255);
                 }
@@ -240,11 +272,16 @@ public partial class MainWindow : Window
                     _overlayWindow.SetBoardOpacity(0);
                 }
             }
+            if (active)
+            {
+                TouchSurface(ZOrderSurface.Whiteboard, applyPolicy: false);
+            }
             if (_rollCallWindow != null && _rollCallWindow.IsVisible)
             {
                 _rollCallWindow.Owner = _overlayWindow;
                 _rollCallWindow.SyncTopmost(true);
             }
+            ApplyZOrderPolicy();
         };
         _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
         _toolbarWindow.PhotoOpenRequested += OnOpenPhotoTeaching;
@@ -529,21 +566,24 @@ public partial class MainWindow : Window
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
             _imageManagerWindow.StateChanged += OnImageManagerStateChanged;
+            _imageManagerWindow.Activated += (_, _) => TouchSurface(ZOrderSurface.ImageManager);
             _imageManagerWindow.Closed += (_, _) =>
             {
                 _imageManagerWindow.StateChanged -= OnImageManagerStateChanged;
                 _imageManagerWindow = null;
+                ApplyZOrderPolicy();
             };
         }
-        _imageManagerWindow.Owner = null;
+        _imageManagerWindow.Owner = _overlayWindow != null && _overlayWindow.IsVisible
+            ? _overlayWindow
+            : null;
         _imageManagerWindow.Show();
         if (_imageManagerWindow.WindowState == WindowState.Minimized)
         {
             _imageManagerWindow.WindowState = WindowState.Normal;
         }
-        _imageManagerWindow.Topmost = _overlayWindow?.IsVisible == true
-            && (_overlayWindow.IsPhotoModeActive || _overlayWindow.Topmost);
-        _imageManagerWindow.Activate();
+        _imageManagerWindow.SyncTopmost(true);
+        TouchSurface(ZOrderSurface.ImageManager);
     }
 
     private void OnImageManagerStateChanged(object? sender, EventArgs e)
@@ -568,9 +608,10 @@ public partial class MainWindow : Window
                 _overlayWindow.WindowState = WindowState.Normal;
             }
         }, DispatcherPriority.Background);
+        ApplyZOrderPolicy();
     }
 
-    private async void OnImageSelected(IReadOnlyList<string> images, int index)
+    private void OnImageSelected(IReadOnlyList<string> images, int index)
     {
         if (_overlayWindow == null)
         {
@@ -585,10 +626,7 @@ public partial class MainWindow : Window
         {
             _toolbarWindow.SetBoardActive(false);
         }
-        if (_overlayWindow.TryExitPresentationFullscreen())
-        {
-            await Task.Delay(300);
-        }
+        BeginPresentationForegroundSuppression(TimeSpan.FromMilliseconds(800));
         _photoSequence = images.ToList();
         _photoSequenceIndex = index;
         // Pass the photo sequence to overlay for cross-page display
@@ -596,6 +634,7 @@ public partial class MainWindow : Window
         if (_photoSequenceIndex >= 0 && _photoSequenceIndex < _photoSequence.Count)
         {
             _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+            TouchSurface(ZOrderSurface.PhotoFullscreen);
         }
     }
 
@@ -617,23 +656,181 @@ public partial class MainWindow : Window
         {
             return;
         }
+        // 优先尝试通过 ImageManager 导航(如果窗口打开)
         if (_imageManagerWindow != null && _imageManagerWindow.TryNavigate(direction))
         {
-            return;
+            return; // 成功导航到下一个文件
         }
+        // 如果没有照片序列,直接返回(不做任何事,保持当前状态)
         if (_photoSequence.Count == 0 || _photoSequenceIndex < 0)
         {
             return;
         }
+        // 计算下一个索引
         var next = _photoSequenceIndex + direction;
+        // 到达边界检查:如果超出范围,直接返回而不退出全屏
+        // 这样可以保持当前文件的显示,不会意外关闭全屏模式
         if (next < 0 || next >= _photoSequence.Count)
         {
-            return;
+            return; // 已到达第一个/最后一个文件,保持当前状态
         }
+        // 切换到序列中的下一个文件
         _photoSequenceIndex = next;
         // Update overlay's sequence index for cross-page display
         _overlayWindow.SetPhotoSequence(_photoSequence, _photoSequenceIndex);
         _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+    }
+
+    private void BeginPresentationForegroundSuppression(TimeSpan duration)
+    {
+        if (_presentationForegroundSuppression == null)
+        {
+            _presentationForegroundSuppression = PresentationWindowFocus.SuppressForeground();
+        }
+        _presentationForegroundSuppressionTimer.Stop();
+        _presentationForegroundSuppressionTimer.Interval = duration;
+        _presentationForegroundSuppressionTimer.Start();
+    }
+
+    private void ReleasePresentationForegroundSuppression()
+    {
+        _presentationForegroundSuppressionTimer.Stop();
+        _presentationForegroundSuppression?.Dispose();
+        _presentationForegroundSuppression = null;
+    }
+
+    private void TouchSurface(ZOrderSurface surface, bool applyPolicy = true)
+    {
+        if (surface == ZOrderSurface.None)
+        {
+            return;
+        }
+        _surfaceStack.Remove(surface);
+        _surfaceStack.Add(surface);
+        if (applyPolicy)
+        {
+            ApplyZOrderPolicy();
+        }
+    }
+
+    private void ApplyZOrderPolicy()
+    {
+        if (_zOrderPolicyApplying)
+        {
+            return;
+        }
+        _zOrderPolicyApplying = true;
+        try
+        {
+            var overlayVisible = _overlayWindow?.IsVisible == true;
+            var photoActive = _overlayWindow?.IsPhotoModeActive == true;
+            var presentationFullscreen = _overlayWindow?.IsPresentationFullscreenActive == true;
+            var whiteboardActive = _toolbarWindow?.BoardActive == true;
+            var imageManagerVisible = _imageManagerWindow?.IsVisible == true
+                && _imageManagerWindow.WindowState != WindowState.Minimized;
+
+            PruneSurfaceStack(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            var frontSurface = ResolveFrontSurface(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+
+            if (_imageManagerWindow != null && imageManagerVisible)
+            {
+                _imageManagerWindow.SyncTopmost(true);
+                if (frontSurface == ZOrderSurface.ImageManager && !_imageManagerWindow.IsActive)
+                {
+                    _imageManagerWindow.Activate();
+                }
+            }
+
+            if (_overlayWindow != null && overlayVisible)
+            {
+                if (frontSurface is ZOrderSurface.PhotoFullscreen or ZOrderSurface.Whiteboard)
+                {
+                    _overlayWindow.Activate();
+                }
+            }
+
+            if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+            {
+                _toolbarWindow.SyncTopmost(true);
+            }
+            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+            {
+                if (_overlayWindow != null && _overlayWindow.IsVisible)
+                {
+                    _rollCallWindow.Owner = _overlayWindow;
+                }
+                _rollCallWindow.SyncTopmost(true);
+            }
+        }
+        finally
+        {
+            _zOrderPolicyApplying = false;
+        }
+    }
+
+    private ZOrderSurface ResolveFrontSurface(
+        bool photoActive,
+        bool presentationFullscreen,
+        bool whiteboardActive,
+        bool imageManagerVisible)
+    {
+        for (int i = _surfaceStack.Count - 1; i >= 0; i--)
+        {
+            var surface = _surfaceStack[i];
+            if (IsSurfaceActive(surface, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible))
+            {
+                return surface;
+            }
+        }
+        if (imageManagerVisible)
+        {
+            return ZOrderSurface.ImageManager;
+        }
+        if (photoActive)
+        {
+            return ZOrderSurface.PhotoFullscreen;
+        }
+        if (presentationFullscreen)
+        {
+            return ZOrderSurface.PresentationFullscreen;
+        }
+        if (whiteboardActive)
+        {
+            return ZOrderSurface.Whiteboard;
+        }
+        return ZOrderSurface.None;
+    }
+
+    private void PruneSurfaceStack(
+        bool photoActive,
+        bool presentationFullscreen,
+        bool whiteboardActive,
+        bool imageManagerVisible)
+    {
+        for (int i = _surfaceStack.Count - 1; i >= 0; i--)
+        {
+            if (!IsSurfaceActive(_surfaceStack[i], photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible))
+            {
+                _surfaceStack.RemoveAt(i);
+            }
+        }
+    }
+
+    private static bool IsSurfaceActive(
+        ZOrderSurface surface,
+        bool photoActive,
+        bool presentationFullscreen,
+        bool whiteboardActive,
+        bool imageManagerVisible)
+    {
+        return surface switch
+        {
+            ZOrderSurface.PhotoFullscreen => photoActive,
+            ZOrderSurface.PresentationFullscreen => presentationFullscreen,
+            ZOrderSurface.Whiteboard => whiteboardActive,
+            ZOrderSurface.ImageManager => imageManagerVisible,
+            _ => false
+        };
     }
 
     private void ShowPaintOverlayIfNeeded()
@@ -684,6 +881,8 @@ public partial class MainWindow : Window
                     _rollCallWindow.SyncTopmost(true);
                 }
             }
+            TouchSurface(ZOrderSurface.PhotoFullscreen, applyPolicy: false);
+            ApplyZOrderPolicy();
             return;
         }
         if (_overlayWindow.IsVisible && _toolbarWindow.Owner != _overlayWindow)
@@ -696,6 +895,24 @@ public partial class MainWindow : Window
             _rollCallWindow.Owner = _overlayWindow;
             _rollCallWindow.SyncTopmost(true);
         }
+        ApplyZOrderPolicy();
+    }
+
+    private void OnOverlayActivated()
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        if (_overlayWindow.IsPhotoModeActive)
+        {
+            TouchSurface(ZOrderSurface.PhotoFullscreen, applyPolicy: false);
+        }
+        else if (_toolbarWindow?.BoardActive == true)
+        {
+            TouchSurface(ZOrderSurface.Whiteboard, applyPolicy: false);
+        }
+        ApplyZOrderPolicy();
     }
 
     private void OnPresentationFullscreenDetected()
@@ -704,11 +921,27 @@ public partial class MainWindow : Window
         {
             return;
         }
-        if (_overlayWindow.IsPhotoModeActive)
+        ApplyZOrderPolicy();
+    }
+
+    private void OnPresentationForegroundDetected(ClassroomToolkit.Interop.Presentation.PresentationType type)
+    {
+        if (_overlayWindow == null)
         {
-            _overlayWindow.ExitPhotoMode();
+            return;
         }
-        EnsureFloatingWindowsOnTop();
+        TouchSurface(ZOrderSurface.PresentationFullscreen, applyPolicy: false);
+        ApplyZOrderPolicy();
+    }
+
+    private void OnPhotoForegroundDetected()
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+        TouchSurface(ZOrderSurface.PhotoFullscreen, applyPolicy: false);
+        ApplyZOrderPolicy();
     }
 
     private void OnPhotoUnifiedTransformChanged(
@@ -721,25 +954,7 @@ public partial class MainWindow : Window
 
     private void EnsureFloatingWindowsOnTop()
     {
-        if (_toolbarWindow != null && _toolbarWindow.IsVisible)
-        {
-            _toolbarWindow.SyncTopmost(true);
-        }
-        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-        {
-            _rollCallWindow.SyncTopmost(true);
-        }
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (_toolbarWindow != null && _toolbarWindow.IsVisible)
-            {
-                _toolbarWindow.SyncTopmost(true);
-            }
-            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-            {
-                _rollCallWindow.SyncTopmost(true);
-            }
-        }, DispatcherPriority.ApplicationIdle);
+        ApplyZOrderPolicy();
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
