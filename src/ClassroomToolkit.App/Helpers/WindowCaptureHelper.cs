@@ -4,6 +4,8 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 
+using ClassroomToolkit.Interop;
+
 namespace ClassroomToolkit.App.Helpers;
 
 public static class WindowCaptureHelper
@@ -18,7 +20,7 @@ public static class WindowCaptureHelper
         {
             return false;
         }
-        if (!GetWindowRect(hwnd, out var rect))
+        if (!NativeMethods.GetWindowRect(hwnd, out var rect))
         {
             return false;
         }
@@ -42,7 +44,7 @@ public static class WindowCaptureHelper
                 var hdc = graphics.GetHdc();
                 try
                 {
-                    printed = PrintWindow(hwnd, hdc, 0);
+                    printed = NativeMethods.PrintWindow(hwnd, hdc, 0);
                 }
                 finally
                 {
@@ -62,18 +64,4 @@ public static class WindowCaptureHelper
         return true;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect lpRect);
-
-    [DllImport("user32.dll")]
-    private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint flags);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
 }

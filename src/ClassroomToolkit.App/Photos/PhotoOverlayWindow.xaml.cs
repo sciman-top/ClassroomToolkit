@@ -15,8 +15,7 @@ namespace ClassroomToolkit.App.Photos;
 
 public partial class PhotoOverlayWindow : Window
 {
-    private const int GwlExstyle = -20;
-    private const int WsExNoActivate = 0x08000000;
+
     private readonly DispatcherTimer _autoCloseTimer;
     private string? _currentStudentId;
     private string? _currentPhotoPath;
@@ -204,9 +203,4 @@ public partial class PhotoOverlayWindow : Window
         }
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

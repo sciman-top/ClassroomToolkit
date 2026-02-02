@@ -4,6 +4,8 @@ using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
 
+using ClassroomToolkit.Interop;
+
 namespace ClassroomToolkit.App;
 
 public partial class LauncherBubbleWindow : Window
@@ -18,9 +20,10 @@ public partial class LauncherBubbleWindow : Window
     private const double DragThreshold = 5.0;
 
     // Windows API 常量
-    private const int GwlExstyle = -20;
-    private const int WsExNoActivate = 0x08000000;
-    private const int WsExToolWindow = 0x00000080;
+    // Windows API 常量
+    // private const int GwlExstyle = -20;
+    // private const int WsExNoActivate = 0x08000000;
+    // private const int WsExToolWindow = 0x00000080;
 
     public LauncherBubbleWindow()
     {
@@ -50,8 +53,8 @@ public partial class LauncherBubbleWindow : Window
     {
         if (_hwnd != IntPtr.Zero)
         {
-            var exStyle = GetWindowLong(_hwnd, GwlExstyle);
-            SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate | WsExToolWindow);
+            var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
+            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle | NativeMethods.WsExNoActivate | NativeMethods.WsExToolWindow);
         }
     }
 
@@ -199,9 +202,4 @@ public partial class LauncherBubbleWindow : Window
         _moved = false;
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

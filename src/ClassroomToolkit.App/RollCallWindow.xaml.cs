@@ -11,14 +11,19 @@ using System.Windows.Media;
 using System.Windows.Interop;
 using WpfSize = System.Windows.Size;
 using System.Windows.Threading;
+
+using ClassroomToolkit.App.Photos;
+
+using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.Interop;
+using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.Services;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Models;
-using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Domain.Timers;
-using ClassroomToolkit.Interop.Presentation;
 using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Paint;
 
@@ -33,14 +38,7 @@ public partial class RollCallWindow : Window
             typeof(RollCallWindow),
             new PropertyMetadata(false));
 
-    private const int GwlExstyle = -20;
-    private const int WsExTransparent = 0x20;
-    private const uint SwpNoActivate = 0x0010;
-    private const uint SwpNoMove = 0x0002;
-    private const uint SwpNoSize = 0x0001;
-    private const uint SwpShowWindow = 0x0040;
-    private static readonly IntPtr HwndTopmost = new(-1);
-    private static readonly IntPtr HwndNoTopmost = new(-2);
+
 
     private readonly RollCallViewModel _viewModel;
     private readonly AppSettingsService _settingsService;
@@ -55,7 +53,7 @@ public partial class RollCallWindow : Window
     private PhotoOverlayWindow? _photoOverlay;
     private StudentPhotoResolver? _photoResolver;
     private string? _lastPhotoStudentId;
-    private SpeechSynthesizer? _speechSynthesizer;
+
     private string _lastVoiceId = string.Empty;
     private bool _allowClose;
     private bool _timerStateApplied;
@@ -171,8 +169,8 @@ public partial class RollCallWindow : Window
         {
             return;
         }
-        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
-        SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
+        NativeMethods.SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -289,7 +287,10 @@ public partial class RollCallWindow : Window
         _rollStateDirty = false;
         StopKeyboardHook();
         ClosePhotoOverlay();
-        _speechSynthesizer?.Dispose();
+        if (_speechInitTask?.Status == TaskStatus.RanToCompletion)
+        {
+            _speechInitTask.Result.Dispose();
+        }
         PersistSettings();
         _viewModel.SaveState();
     }
@@ -353,16 +354,16 @@ public partial class RollCallWindow : Window
         }
         var allowTransparent = !_hovering && PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false);
         UpdateHoverTimer(allowTransparent);
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
         if (allowTransparent)
         {
-            exStyle |= WsExTransparent;
+            exStyle |= NativeMethods.WsExTransparent;
         }
         else
         {
-            exStyle &= ~WsExTransparent;
+            exStyle &= ~NativeMethods.WsExTransparent;
         }
-        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle);
     }
 
     private void UpdateHoverTimer(bool transparentEnabled)
@@ -384,11 +385,12 @@ public partial class RollCallWindow : Window
         {
             return;
         }
-        if (!GetCursorPos(out var point))
+        if (!NativeMethods.GetCursorPos(out var point))
         {
             return;
         }
-        if (!GetWindowRect(_hwnd, out var rect))
+        NativeMethods.NativeRect rect;
+        if (!NativeMethods.GetWindowRect(_hwnd, out rect))
         {
             return;
         }
@@ -399,44 +401,6 @@ public partial class RollCallWindow : Window
         }
         _hovering = inside;
         UpdateWindowTransparency();
-    }
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
-
-    [DllImport("user32.dll")]
-    private static extern bool SetWindowPos(
-        IntPtr hwnd,
-        IntPtr hwndInsertAfter,
-        int x,
-        int y,
-        int cx,
-        int cy,
-        uint flags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out NativePoint point);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
-    {
-        public int X;
-        public int Y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
     }
 
     private void OnGroupEntryClick(object sender, RoutedEventArgs e)
@@ -791,6 +755,8 @@ public partial class RollCallWindow : Window
         }
     }
 
+    private Task<SpeechSynthesizer>? _speechInitTask;
+
     private void SpeakStudentName()
     {
         if (!_viewModel.SpeechEnabled)
@@ -802,32 +768,82 @@ public partial class RollCallWindow : Window
         {
             return;
         }
+
+        if (_speechInitTask == null)
+        {
+            _speechInitTask = Task.Run(() => new SpeechSynthesizer());
+        }
+
+        if (_speechInitTask.Status == TaskStatus.RanToCompletion)
+        {
+            try
+            {
+                var synth = _speechInitTask.Result;
+                var voiceId = _viewModel.SpeechVoiceId ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(voiceId) && !voiceId.Equals(_lastVoiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    synth.SelectVoice(voiceId);
+                    _lastVoiceId = voiceId;
+                }
+                synth.SpeakAsyncCancelAll();
+                synth.SpeakAsync(name);
+            }
+            catch
+            {
+                NotifySpeechError();
+            }
+        }
+        else
+        {
+            // First time or still initializing: wait for it
+            _ = ContinueSpeechAfterInit(name);
+        }
+    }
+
+    private async Task ContinueSpeechAfterInit(string name)
+    {
         try
         {
-            _speechSynthesizer ??= new SpeechSynthesizer();
-            var voiceId = _viewModel.SpeechVoiceId ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(voiceId) && !voiceId.Equals(_lastVoiceId, StringComparison.OrdinalIgnoreCase))
+            if (_speechInitTask == null) return;
+            var synth = await _speechInitTask;
+            await Dispatcher.InvokeAsync(() =>
             {
-                _speechSynthesizer.SelectVoice(voiceId);
-                _lastVoiceId = voiceId;
-            }
-            _speechSynthesizer.SpeakAsyncCancelAll();
-            _speechSynthesizer.SpeakAsync(name);
+                try
+                {
+                    var voiceId = _viewModel.SpeechVoiceId ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(voiceId) && !voiceId.Equals(_lastVoiceId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        synth.SelectVoice(voiceId);
+                        _lastVoiceId = voiceId;
+                    }
+                    synth.SpeakAsyncCancelAll();
+                    synth.SpeakAsync(name);
+                }
+                catch
+                {
+                    NotifySpeechError();
+                }
+            });
         }
         catch
         {
-            if (_speechUnavailableNotified)
-            {
-                return;
-            }
-            _speechUnavailableNotified = true;
-            Dispatcher.BeginInvoke(() =>
-            {
-                var owner = System.Windows.Application.Current?.MainWindow;
-                var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
-                System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            });
+            NotifySpeechError();
         }
+    }
+
+    private void NotifySpeechError()
+    {
+        if (_speechUnavailableNotified)
+        {
+            return;
+        }
+        _speechUnavailableNotified = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
+            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        });
     }
 
     private void StartKeyboardHook()

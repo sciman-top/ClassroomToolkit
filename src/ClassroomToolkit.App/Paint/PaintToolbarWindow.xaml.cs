@@ -11,18 +11,12 @@ using ClassroomToolkit.App.Settings;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 
+using ClassroomToolkit.Interop;
+
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
-    private static readonly IntPtr HwndTopmost = new(-1);
-    private static readonly IntPtr HwndNoTopmost = new(-2);
-    private const int GwlExstyle = -20;
-    private const int WsExNoActivate = 0x08000000;
-    private const uint SwpNoMove = 0x0002;
-    private const uint SwpNoSize = 0x0001;
-    private const uint SwpNoActivate = 0x0010;
-    private const uint SwpShowWindow = 0x0040;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
@@ -148,8 +142,8 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
-        SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
+        NativeMethods.SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
     }
 
     private void ApplyUiScale(double scale)
@@ -162,15 +156,7 @@ public partial class PaintToolbarWindow : Window
         WindowPlacementHelper.EnsureVisible(this);
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetWindowPos(
-        IntPtr hWnd,
-        IntPtr hWndInsertAfter,
-        int x,
-        int y,
-        int cx,
-        int cy,
-        uint uFlags);
+
 
     private void OnModeChecked(object sender, RoutedEventArgs e)
     {
@@ -628,13 +614,8 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
-        SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate);
+        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
+        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle | NativeMethods.WsExNoActivate);
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

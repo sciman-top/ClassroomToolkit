@@ -1,0 +1,28 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ClassroomToolkit.Interop -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net8.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Domain -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net8.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Services -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net8.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.Infra -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net8.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.Tests -> E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net8.0-windows\ClassroomToolkit.Tests.dll
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Photos\ImageManagerWindow.xaml.cs(461,17): warning CS4014: 由于此调用不会等待，因此在此调用完成之前将会继续执行当前方法。请考虑将 "await" 运算符应用于调用结果。 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2178,26): error CS0103: 当前上下文中不存在名称“GetForegroundWindow” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2524,23): error CS0103: 当前上下文中不存在名称“MonitorFromWindow” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2533,14): error CS0103: 当前上下文中不存在名称“GetMonitorInfo” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2549,9): error CS1501: “GetCurrentMonitorRect”方法没有采用 2 个参数的重载 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2579,9): error CS1501: “GetCurrentMonitorRect”方法没有采用 2 个参数的重载 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(56,32): warning CS0649: 从未对字段“RollCallWindow._speechSynthesizer”赋值，字段将一直保持其默认值 null [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+
+生成失败。
+
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Photos\ImageManagerWindow.xaml.cs(461,17): warning CS4014: 由于此调用不会等待，因此在此调用完成之前将会继续执行当前方法。请考虑将 "await" 运算符应用于调用结果。 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(56,32): warning CS0649: 从未对字段“RollCallWindow._speechSynthesizer”赋值，字段将一直保持其默认值 null [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2178,26): error CS0103: 当前上下文中不存在名称“GetForegroundWindow” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2524,23): error CS0103: 当前上下文中不存在名称“MonitorFromWindow” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2533,14): error CS0103: 当前上下文中不存在名称“GetMonitorInfo” [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2549,9): error CS1501: “GetCurrentMonitorRect”方法没有采用 2 个参数的重载 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs(2579,9): error CS1501: “GetCurrentMonitorRect”方法没有采用 2 个参数的重载 [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_hd5bjirz_wpftmp.csproj]
+    2 个警告
+    5 个错误
+
+已用时间 00:00:02.08

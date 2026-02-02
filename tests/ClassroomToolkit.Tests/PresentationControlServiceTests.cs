@@ -13,7 +13,8 @@ public sealed class PresentationControlServiceTests
         var mapper = new PresentationCommandMapper();
         var sender = new RecordingInputSender();
         var resolver = new Win32PresentationResolver();
-        var service = new PresentationControlService(planner, mapper, sender, resolver);
+        var validator = new MockValidator();
+        var service = new PresentationControlService(planner, mapper, sender, resolver, validator);
         var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
         var target = new PresentationTarget(new IntPtr(1234), info);
         var options = new PresentationControlOptions
@@ -39,7 +40,8 @@ public sealed class PresentationControlServiceTests
         var mapper = new PresentationCommandMapper();
         var sender = new RecordingInputSender();
         var resolver = new Win32PresentationResolver();
-        var service = new PresentationControlService(planner, mapper, sender, resolver);
+        var validator = new MockValidator();
+        var service = new PresentationControlService(planner, mapper, sender, resolver, validator);
         var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
         var target = new PresentationTarget(new IntPtr(1234), info);
         var options = new PresentationControlOptions
@@ -66,7 +68,8 @@ public sealed class PresentationControlServiceTests
         var mapper = new PresentationCommandMapper();
         var sender = new RecordingInputSender();
         var resolver = new Win32PresentationResolver();
-        var service = new PresentationControlService(planner, mapper, sender, resolver);
+        var validator = new MockValidator();
+        var service = new PresentationControlService(planner, mapper, sender, resolver, validator);
         var info = new PresentationWindowInfo(2, "powerpnt.exe", new[] { "screenclass" });
         var target = new PresentationTarget(new IntPtr(5678), info);
         var options = new PresentationControlOptions
@@ -114,5 +117,10 @@ public sealed class PresentationControlServiceTests
             LastWheelStrategy = strategy;
             return true;
         }
+    }
+
+    private sealed class MockValidator : IPresentationWindowValidator
+    {
+        public bool IsWindowValid(IntPtr hwnd) => true;
     }
 }

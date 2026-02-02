@@ -1,0 +1,59 @@
+  姝ｅ湪纭畾瑕佽繕鍘熺殑椤圭洰鈥?
+  鎵€鏈夐」鐩潎鏄渶鏂扮殑锛屾棤娉曡繕鍘熴€?
+  ClassroomToolkit.Domain -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net8.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Interop -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net8.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Services -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net8.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.Infra -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net8.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.Tests -> E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net8.0-windows\ClassroomToolkit.Tests.dll
+E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net8.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+VSTest 鐗堟湰 17.14.1 (x64)
+
+姝ｅ湪鍚姩娴嬭瘯鎵ц锛岃绋嶅€?..
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.85]     ClassroomToolkit.Tests.PresentationControlServiceTests.Office_ShouldFallbackToMessageWhenNotForeground [FAIL]
+[xUnit.net 00:00:00.85]     ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardDisabled_ShouldSendWheel [FAIL]
+[xUnit.net 00:00:00.85]     ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardEnabled_ShouldSendKeyDownOnlyUsingMessageFallback [FAIL]
+  澶辫触 ClassroomToolkit.Tests.PresentationControlServiceTests.Office_ShouldFallbackToMessageWhenNotForeground [34 ms]
+  閿欒娑堟伅:
+   Expected result to be true, but found False.
+  鍫嗘爤璺熻釜:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at ClassroomToolkit.Tests.PresentationControlServiceTests.Office_ShouldFallbackToMessageWhenNotForeground() in E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlServiceTests.cs:line 81
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  澶辫触 ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardDisabled_ShouldSendWheel [2 ms]
+  閿欒娑堟伅:
+   Expected result to be true, but found False.
+  鍫嗘爤璺熻釜:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardDisabled_ShouldSendWheel() in E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlServiceTests.cs:line 28
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  澶辫触 ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardEnabled_ShouldSendKeyDownOnlyUsingMessageFallback [< 1 ms]
+  閿欒娑堟伅:
+   Expected result to be true, but found False.
+  鍫嗘爤璺熻釜:
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)
+   at ClassroomToolkit.Tests.PresentationControlServiceTests.WpsWheelForwardEnabled_ShouldSendKeyDownOnlyUsingMessageFallback() in E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlServiceTests.cs:line 54
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+澶辫触!  - 澶辫触:     3锛岄€氳繃:    24锛屽凡璺宠繃:     0锛屾€昏:    27锛屾寔缁椂闂? 847 ms - ClassroomToolkit.Tests.dll (net8.0)

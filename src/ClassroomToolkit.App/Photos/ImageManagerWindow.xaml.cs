@@ -13,23 +13,13 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices;
+using ClassroomToolkit.Interop;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
 
 namespace ClassroomToolkit.App.Photos;
 
 public partial class ImageManagerWindow : Window
 {
-    private const int GwlStyle = -16;
-    private const int WsMinimizeBox = 0x20000;
-    private static readonly IntPtr HwndTopmost = new(-1);
-    private static readonly IntPtr HwndNoTopmost = new(-2);
-    private const int SwpNoSize = 0x0001;
-    private const int SwpNoMove = 0x0002;
-    private const int SwpNoZOrder = 0x0004;
-    private const int SwpNoOwnerZOrder = 0x0200;
-    private const int SwpFrameChanged = 0x0020;
-    private const int SwpNoActivate = 0x0010;
-    private const int SwpShowWindow = 0x0040;
     private const int RecentLimit = 10;
     private IntPtr _hwnd;
     private readonly ObservableCollection<FolderItem> _favorites = new();
@@ -323,7 +313,7 @@ public partial class ImageManagerWindow : Window
         RecentsChanged?.Invoke(_recents.Select(item => item.Path).ToList());
     }
 
-    private void LoadImages(string folder)
+    private async void LoadImages(string folder)
     {
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
@@ -331,72 +321,91 @@ public partial class ImageManagerWindow : Window
         var token = _thumbnailCts.Token;
         _images.Clear();
         _navigableDirty = true;
+        
+        // Show loading state if needed, or just clear
+        EmptyHintText.Visibility = Visibility.Collapsed;
 
-        // 1. 添加非隐藏文件夹
-        IEnumerable<string> folders;
         try
         {
-            folders = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
-                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+            // Offload directory enumeration to thread pool
+            var result = await Task.Run(() => 
+            {
+                var list = new List<ImageItem>();
+                try 
+                {
+                    // 1. Folders
+                    var dirs = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
+                        .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
+                        .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+                        
+                    foreach (var dir in dirs)
+                    {
+                        if (token.IsCancellationRequested) return null;
+                        var modified = GetModifiedTime(dir);
+                        list.Add(new ImageItem(dir, null, isFolder: true, pageCount: 0, modified: modified, isImage: false));
+                    }
+
+                    // 2. PDFs
+                    var pdfs = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
+                        .Where(f => !IsHiddenFile(f))
+                        .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var file in pdfs)
+                    {
+                        if (token.IsCancellationRequested) return null;
+                        var pageCount = TryGetPdfPageCount(file);
+                        var modified = GetModifiedTime(file);
+                        list.Add(new ImageItem(file, null, isFolder: false, pageCount: pageCount, modified: modified, isImage: false));
+                    }
+
+                    // 3. Images
+                    var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
+                    var imgs = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+                        .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
+                        .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var file in imgs)
+                    {
+                        if (token.IsCancellationRequested) return null;
+                        var modified = GetModifiedTime(file);
+                        list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ImageManager: IO Error: {ex.Message}");
+                }
+                return list;
+            }, token);
+
+            if (result == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            // Batch add to collection to minimize UI updates
+            foreach (var item in result)
+            {
+                _images.Add(item);
+                // Start thumbnail generation after adding to UI
+                if (!item.IsFolder)
+                {
+                    QueueThumbnailLoad(item, item.IsPdf, token);
+                }
+            }
+
+            _currentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
+            EmptyHintText.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取目录失败: {ex.Message}");
-            folders = Enumerable.Empty<string>();
+            System.Diagnostics.Debug.WriteLine($"ImageManager: LoadImages Error: {ex}");
+            ShowEmptyState();
         }
-        foreach (var dir in folders)
-        {
-            var modified = GetModifiedTime(dir);
-            _images.Add(new ImageItem(dir, null, isFolder: true, pageCount: 0, modified: modified, isImage: false));
-        }
-
-        // 2. 添加 PDF 文件
-        IEnumerable<string> pdfFiles;
-        try
-        {
-            pdfFiles = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
-                .Where(f => !IsHiddenFile(f))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取 PDF 失败: {ex.Message}");
-            pdfFiles = Enumerable.Empty<string>();
-        }
-        foreach (var file in pdfFiles)
-        {
-            var pageCount = TryGetPdfPageCount(file);
-            var modified = GetModifiedTime(file);
-            var item = new ImageItem(file, null, isFolder: false, pageCount: pageCount, modified: modified, isImage: false);
-            _images.Add(item);
-            QueueThumbnailLoad(item, isPdf: true, token);
-        }
-
-        // 3. 添加图片文件
-        var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
-        IEnumerable<string> imageFiles;
-        try
-        {
-            imageFiles = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取图片失败: {ex.Message}");
-            imageFiles = Enumerable.Empty<string>();
-        }
-        foreach (var file in imageFiles)
-        {
-            var modified = GetModifiedTime(file);
-            var item = new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true);
-            _images.Add(item);
-            QueueThumbnailLoad(item, isPdf: false, token);
-        }
-
-        _currentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
-        EmptyHintText.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ShowEmptyState()
@@ -646,15 +655,15 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
-        var style = GetWindowLong(hwnd, GwlStyle);
-        if ((style & WsMinimizeBox) == 0)
+        var style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GwlStyle);
+        if ((style & NativeMethods.WsMinimizeBox) == 0)
         {
             return;
         }
-        style &= ~WsMinimizeBox;
-        SetWindowLong(hwnd, GwlStyle, style);
-        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
-            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoOwnerZOrder | SwpFrameChanged);
+        style &= ~NativeMethods.WsMinimizeBox;
+        NativeMethods.SetWindowLong(hwnd, NativeMethods.GwlStyle, style);
+        NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+            NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoZOrder | NativeMethods.SwpNoOwnerZOrder | NativeMethods.SwpFrameChanged);
     }
 
     public void SyncTopmost(bool enabled)
@@ -665,8 +674,8 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
-        var insertAfter = enabled ? HwndTopmost : HwndNoTopmost;
-        SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
+        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
+        NativeMethods.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
     }
 
     private sealed record FolderItem(string Path)
@@ -733,21 +742,7 @@ public partial class ImageManagerWindow : Window
         }
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
 
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetWindowPos(
-        IntPtr hWnd,
-        IntPtr hWndInsertAfter,
-        int x,
-        int y,
-        int cx,
-        int cy,
-        uint uFlags);
 
 }
 

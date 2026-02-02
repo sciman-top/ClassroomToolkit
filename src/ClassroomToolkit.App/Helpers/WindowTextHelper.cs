@@ -2,6 +2,8 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using ClassroomToolkit.Interop;
+
 namespace ClassroomToolkit.App.Helpers;
 
 public static class WindowTextHelper
@@ -13,7 +15,7 @@ public static class WindowTextHelper
             return string.Empty;
         }
         var buffer = new StringBuilder(256);
-        int length = GetWindowText(hwnd, buffer, buffer.Capacity);
+        int length = NativeMethods.GetWindowText(hwnd, buffer, buffer.Capacity);
         if (length <= 0)
         {
             return string.Empty;
@@ -21,6 +23,4 @@ public static class WindowTextHelper
         return buffer.ToString();
     }
 
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int maxCount);
 }

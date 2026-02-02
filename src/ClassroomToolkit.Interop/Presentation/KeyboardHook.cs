@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
-
-namespace ClassroomToolkit.Interop.Presentation;
+using System.Diagnostics;
+using ClassroomToolkit.Interop.Presentation;
 
 public sealed class KeyboardHook : IDisposable
 {
@@ -9,6 +9,9 @@ public sealed class KeyboardHook : IDisposable
     private const int WmKeyUp = 0x0101;
     private const int WmSysKeyDown = 0x0104;
     private const int WmSysKeyUp = 0x0105;
+    
+    // Performance monitoring
+    private const int HookCallbackTimeoutMs = 50;
 
     private readonly HookProc _hookProc;
     private IntPtr _hookId;
@@ -44,14 +47,23 @@ public sealed class KeyboardHook : IDisposable
         {
             return;
         }
-        _hookId = SetHook(_hookProc);
-        if (_hookId == IntPtr.Zero)
+
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
+            _hookId = SetHook(_hookProc);
+            if (_hookId != IntPtr.Zero)
+            {
+                LastError = 0;
+                RefreshModifierState();
+                return;
+            }
             LastError = Marshal.GetLastWin32Error();
-        }
-        else
-        {
-            LastError = 0;
+            if (attempt < maxRetries - 1)
+            {
+                var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200ms
+                System.Threading.Thread.Sleep(delayMs);
+            }
         }
     }
 
@@ -72,6 +84,7 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
+        var startTime = Stopwatch.GetTimestamp();
         try
         {
             if (nCode >= 0)
@@ -80,6 +93,8 @@ public sealed class KeyboardHook : IDisposable
                 var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
                 var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
                 var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+
+                // Original logic for modifier tracking and binding triggering
                 if (isDown || isUp)
                 {
                     UpdateModifiers((VirtualKey)data.VirtualKeyCode, isDown);
@@ -101,12 +116,27 @@ public sealed class KeyboardHook : IDisposable
                         }
                     }
                 }
+
+                // New logic for performance monitoring and potential new event handling (if KeyInterop, RawKeyEventArgs, _modifierKeys were defined)
+                // The provided snippet for HookCallback was incomplete and syntactically incorrect to fully replace the original.
+                // I've integrated the performance monitoring part and kept the original key processing logic.
+                // If KeyInterop, RawKeyEventArgs, and _modifierKeys were intended to replace the existing key processing,
+                // those types would need to be defined and the logic fully integrated.
+                // For now, I'm adding the performance monitoring around the existing logic.
             }
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
         catch
         {
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+        finally
+        {
+             var elapsedMs = (Stopwatch.GetTimestamp() - startTime) * 1000.0 / Stopwatch.Frequency;
+             if (elapsedMs > HookCallbackTimeoutMs)
+             {
+                 Debug.WriteLine($"[KeyboardHook] Callback took {elapsedMs:F1}ms");
+             }
         }
     }
 
@@ -161,6 +191,22 @@ public sealed class KeyboardHook : IDisposable
 
     private KeyModifiers CurrentModifiers()
     {
+        // Consistency check: Verified against actual system state
+        // This prevents "stuck" modifiers if a Up event was missed
+        bool inconsistent = 
+            (_leftShiftDown != IsKeyDown(VirtualKey.LeftShift)) ||
+            (_rightShiftDown != IsKeyDown(VirtualKey.RightShift)) ||
+            (_leftCtrlDown != IsKeyDown(VirtualKey.LeftControl)) ||
+            (_rightCtrlDown != IsKeyDown(VirtualKey.RightControl)) ||
+            (_leftAltDown != IsKeyDown(VirtualKey.LeftAlt)) ||
+            (_rightAltDown != IsKeyDown(VirtualKey.RightAlt));
+
+        if (inconsistent)
+        {
+             Debug.WriteLine("[KeyboardHook] Modifier state inconsistency detected. Forcing refresh.");
+             RefreshModifierState();
+        }
+
         var modifiers = KeyModifiers.None;
         if (_leftShiftDown || _rightShiftDown)
         {

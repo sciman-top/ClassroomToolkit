@@ -8,6 +8,7 @@ public sealed class PresentationControlService
     private readonly PresentationCommandMapper _mapper;
     private readonly IInputSender _inputSender;
     private readonly Win32PresentationResolver _resolver;
+    private readonly IPresentationWindowValidator _validator;
     private DateTime _lastWpsCommandAt = DateTime.MinValue;
     private PresentationCommand? _lastWpsCommandType;
     private IntPtr _lastWpsTarget = IntPtr.Zero;
@@ -20,12 +21,14 @@ public sealed class PresentationControlService
         PresentationControlPlanner planner,
         PresentationCommandMapper mapper,
         IInputSender inputSender,
-        Win32PresentationResolver resolver)
+        Win32PresentationResolver resolver,
+        IPresentationWindowValidator validator)
     {
         _planner = planner;
         _mapper = mapper;
         _inputSender = inputSender;
         _resolver = resolver;
+        _validator = validator;
         _currentProcessId = (uint)Environment.ProcessId;
     }
 
@@ -150,9 +153,9 @@ public sealed class PresentationControlService
         return sent;
     }
 
-    private static bool IsTargetHandleValid(PresentationTarget target)
+    private bool IsTargetHandleValid(PresentationTarget target)
     {
-        return target.IsValid && PresentationWindowFocus.IsWindowValid(target.Handle);
+        return target.IsValid && _validator.IsWindowValid(target.Handle);
     }
 
     private bool TrySendWithStrategy(

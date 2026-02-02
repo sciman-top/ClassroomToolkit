@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
@@ -12,6 +13,11 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
     private const int WmSysKeyDown = 0x0104;
     private const int WmSysKeyUp = 0x0105;
     private const int WmMouseWheel = 0x020A;
+    private const int WsExTransparent = 0x20;
+    private const int WsExLayered = 0x80000;
+    
+    private const int HookCallbackTimeoutMs = 50;
+    private const int MaxHookRetries = 3;
 
     private readonly HookProc _keyboardProc;
     private readonly HookProc _mouseProc;
@@ -37,8 +43,8 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public WpsSlideshowNavigationHook()
     {
-        _keyboardProc = KeyboardCallback;
-        _mouseProc = MouseCallback;
+        _keyboardProc = KeyboardProc;
+        _mouseProc = MouseProc;
     }
 
     public event Action<int, string>? NavigationRequested;
@@ -66,16 +72,30 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             return true;
         }
         var moduleHandle = GetModuleHandle(null);
-        _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, moduleHandle, 0);
-        _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, moduleHandle, 0);
-        if (_keyboardHook == IntPtr.Zero || _mouseHook == IntPtr.Zero)
+        for (int attempt = 0; attempt < MaxHookRetries; attempt++)
         {
-            LastError = Marshal.GetLastWin32Error();
-            Stop();
-            return false;
+            if (_keyboardHook == IntPtr.Zero)
+            {
+                _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, moduleHandle, 0);
+            }
+            if (_mouseHook == IntPtr.Zero)
+            {
+                _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, moduleHandle, 0);
+            }
+            if (_keyboardHook != IntPtr.Zero && _mouseHook != IntPtr.Zero)
+            {
+                LastError = 0;
+                return true;
+            }
+            if (attempt < MaxHookRetries - 1)
+            {
+                var delayMs = 50 * (1 << attempt); // Exponential backoff
+                Thread.Sleep(delayMs);
+            }
         }
-        LastError = 0;
-        return true;
+        LastError = Marshal.GetLastWin32Error();
+        Stop();
+        return false;
     }
 
     public void Stop()
@@ -99,8 +119,9 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public void Dispose() => Stop();
 
-    private IntPtr KeyboardCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
+        var startTime = Stopwatch.GetTimestamp();
         try
         {
             if (nCode != HcAction || !_interceptEnabled || !_interceptKeyboard)
@@ -135,10 +156,19 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         {
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
+        finally
+        {
+             var elapsedMs = (Stopwatch.GetTimestamp() - startTime) * 1000.0 / Stopwatch.Frequency;
+             if (elapsedMs > HookCallbackTimeoutMs)
+             {
+                 Debug.WriteLine($"[WpsNavHook] Keyboard callback took {elapsedMs:F1}ms");
+             }
+        }
     }
 
-    private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    private IntPtr MouseProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
+        var startTime = Stopwatch.GetTimestamp();
         try
         {
             if (nCode != HcAction || !_interceptEnabled || !_interceptWheel)
@@ -170,6 +200,14 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         catch
         {
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+        }
+        finally
+        {
+             var elapsedMs = (Stopwatch.GetTimestamp() - startTime) * 1000.0 / Stopwatch.Frequency;
+             if (elapsedMs > HookCallbackTimeoutMs)
+             {
+                 Debug.WriteLine($"[WpsNavHook] Mouse callback took {elapsedMs:F1}ms");
+             }
         }
     }
 
