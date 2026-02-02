@@ -72,35 +72,42 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0)
+        try
         {
-            var msg = wParam.ToInt32();
-            var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
-            var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
-            var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
-            if (isDown || isUp)
+            if (nCode >= 0)
             {
-                UpdateModifiers((VirtualKey)data.VirtualKeyCode, isDown);
-            }
-            if (isDown)
-            {
-                var key = MapKey((VirtualKey)data.VirtualKeyCode);
-                if (key.HasValue)
+                var msg = wParam.ToInt32();
+                var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
+                var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
+                var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+                if (isDown || isUp)
                 {
-                    var modifiers = CurrentModifiers();
-                    var binding = new KeyBinding(key.Value, modifiers);
-                    if (TargetBinding != null && binding.Equals(TargetBinding))
+                    UpdateModifiers((VirtualKey)data.VirtualKeyCode, isDown);
+                }
+                if (isDown)
+                {
+                    var key = MapKey((VirtualKey)data.VirtualKeyCode);
+                    if (key.HasValue)
                     {
-                        BindingTriggered?.Invoke(binding);
-                        if (SuppressWhenMatched)
+                        var modifiers = CurrentModifiers();
+                        var binding = new KeyBinding(key.Value, modifiers);
+                        if (TargetBinding != null && binding.Equals(TargetBinding))
                         {
-                            return new IntPtr(1);
+                            BindingTriggered?.Invoke(binding);
+                            if (SuppressWhenMatched)
+                            {
+                                return new IntPtr(1);
+                            }
                         }
                     }
                 }
             }
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
-        return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        catch
+        {
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
     }
 
     private void UpdateModifiers(VirtualKey key, bool isDown)
@@ -108,8 +115,7 @@ public sealed class KeyboardHook : IDisposable
         switch (key)
         {
             case VirtualKey.Shift:
-                _leftShiftDown = isDown;
-                _rightShiftDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftShift:
                 _leftShiftDown = isDown;
@@ -118,8 +124,7 @@ public sealed class KeyboardHook : IDisposable
                 _rightShiftDown = isDown;
                 break;
             case VirtualKey.Control:
-                _leftCtrlDown = isDown;
-                _rightCtrlDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftControl:
                 _leftCtrlDown = isDown;
@@ -128,8 +133,7 @@ public sealed class KeyboardHook : IDisposable
                 _rightCtrlDown = isDown;
                 break;
             case VirtualKey.Alt:
-                _leftAltDown = isDown;
-                _rightAltDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftAlt:
                 _leftAltDown = isDown;
@@ -138,6 +142,21 @@ public sealed class KeyboardHook : IDisposable
                 _rightAltDown = isDown;
                 break;
         }
+    }
+
+    private void RefreshModifierState()
+    {
+        _leftShiftDown = IsKeyDown(VirtualKey.LeftShift);
+        _rightShiftDown = IsKeyDown(VirtualKey.RightShift);
+        _leftCtrlDown = IsKeyDown(VirtualKey.LeftControl);
+        _rightCtrlDown = IsKeyDown(VirtualKey.RightControl);
+        _leftAltDown = IsKeyDown(VirtualKey.LeftAlt);
+        _rightAltDown = IsKeyDown(VirtualKey.RightAlt);
+    }
+
+    private static bool IsKeyDown(VirtualKey key)
+    {
+        return (GetKeyState((int)key) & 0x8000) != 0;
     }
 
     private KeyModifiers CurrentModifiers()
@@ -198,6 +217,9 @@ public sealed class KeyboardHook : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern short GetKeyState(int nVirtKey);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);

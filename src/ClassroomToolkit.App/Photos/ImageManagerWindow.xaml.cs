@@ -35,11 +35,14 @@ public partial class ImageManagerWindow : Window
     private readonly ObservableCollection<FolderItem> _favorites = new();
     private readonly ObservableCollection<FolderItem> _recents = new();
     private readonly ObservableCollection<ImageItem> _images = new();
+    private readonly List<ImageItem> _navigableCache = new();
+    private bool _navigableDirty = true;
     private readonly List<string> _backStack = new();
     private readonly List<string> _forwardStack = new();
     private string _currentFolder = string.Empty;
     private int _currentIndex = -1;
     private bool _listMode;
+    private bool _isClosing;
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
 
@@ -59,6 +62,7 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
+        Closing += (_, _) => BeginClose();
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
@@ -326,11 +330,21 @@ public partial class ImageManagerWindow : Window
         _thumbnailCts = new CancellationTokenSource();
         var token = _thumbnailCts.Token;
         _images.Clear();
+        _navigableDirty = true;
 
         // 1. 添加非隐藏文件夹
-        var folders = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
-            .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
-            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+        IEnumerable<string> folders;
+        try
+        {
+            folders = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
+                .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
+                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取目录失败: {ex.Message}");
+            folders = Enumerable.Empty<string>();
+        }
         foreach (var dir in folders)
         {
             var modified = GetModifiedTime(dir);
@@ -338,9 +352,18 @@ public partial class ImageManagerWindow : Window
         }
 
         // 2. 添加 PDF 文件
-        var pdfFiles = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
-            .Where(f => !IsHiddenFile(f))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        IEnumerable<string> pdfFiles;
+        try
+        {
+            pdfFiles = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
+                .Where(f => !IsHiddenFile(f))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取 PDF 失败: {ex.Message}");
+            pdfFiles = Enumerable.Empty<string>();
+        }
         foreach (var file in pdfFiles)
         {
             var pageCount = TryGetPdfPageCount(file);
@@ -352,9 +375,18 @@ public partial class ImageManagerWindow : Window
 
         // 3. 添加图片文件
         var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
-        var imageFiles = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        IEnumerable<string> imageFiles;
+        try
+        {
+            imageFiles = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ImageManager: 读取图片失败: {ex.Message}");
+            imageFiles = Enumerable.Empty<string>();
+        }
         foreach (var file in imageFiles)
         {
             var modified = GetModifiedTime(file);
@@ -375,6 +407,7 @@ public partial class ImageManagerWindow : Window
         _currentFolder = string.Empty;
         CurrentFolderText.Text = "此电脑";
         _images.Clear();
+        _navigableDirty = true;
         _currentIndex = -1;
         EmptyHintText.Visibility = Visibility.Visible;
         UpdateNavigationButtons();
@@ -392,6 +425,11 @@ public partial class ImageManagerWindow : Window
             {
                 return;
             }
+            if (token.IsCancellationRequested || _isClosing)
+            {
+                _thumbnailSemaphore.Release();
+                return;
+            }
             ImageSource? thumbnail = null;
             try
             {
@@ -405,15 +443,36 @@ public partial class ImageManagerWindow : Window
             {
                 return;
             }
-            Dispatcher.Invoke(() =>
+            if (_isClosing || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
             {
-                if (token.IsCancellationRequested)
+                return;
+            }
+            try
+            {
+                Dispatcher.BeginInvoke(() =>
                 {
-                    return;
-                }
-                item.Thumbnail = thumbnail;
-            });
+                    if (_isClosing || token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    item.Thumbnail = thumbnail;
+                });
+            }
+            catch
+            {
+                // Ignore dispatcher shutdown race.
+            }
         }, token);
+    }
+
+    private void BeginClose()
+    {
+        if (_isClosing)
+        {
+            return;
+        }
+        _isClosing = true;
+        _thumbnailCts?.Cancel();
     }
 
     public bool TryNavigate(int direction)
@@ -435,7 +494,13 @@ public partial class ImageManagerWindow : Window
 
     private List<ImageItem> GetNavigableItems()
     {
-        return _images.Where(item => !item.IsFolder && (item.IsPdf || item.IsImage)).ToList();
+        if (_navigableDirty)
+        {
+            _navigableCache.Clear();
+            _navigableCache.AddRange(_images.Where(item => !item.IsFolder && (item.IsPdf || item.IsImage)));
+            _navigableDirty = false;
+        }
+        return _navigableCache;
     }
 
     private static bool IsImageFile(string path)

@@ -101,62 +101,76 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     private IntPtr KeyboardCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode != HcAction || !_interceptEnabled || !_interceptKeyboard)
+        try
+        {
+            if (nCode != HcAction || !_interceptEnabled || !_interceptKeyboard)
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
+            var msg = wParam.ToInt32();
+            var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
+            var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
+            if (!isDown && !isUp)
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
+            var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+            var key = (VirtualKey)data.VirtualKeyCode;
+            if (!_allowedKeys.Contains(key))
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
+            if (isDown)
+            {
+                var direction = key is VirtualKey.Up or VirtualKey.Left or VirtualKey.PageUp ? -1 : 1;
+                NavigationRequested?.Invoke(direction, "keyboard");
+            }
+            if (_blockOnly)
+            {
+                return new IntPtr(1);
+            }
+            return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+        }
+        catch
         {
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
-        var msg = wParam.ToInt32();
-        var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
-        var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
-        if (!isDown && !isUp)
-        {
-            return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
-        }
-        var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
-        var key = (VirtualKey)data.VirtualKeyCode;
-        if (!_allowedKeys.Contains(key))
-        {
-            return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
-        }
-        if (isDown)
-        {
-            var direction = key is VirtualKey.Up or VirtualKey.Left or VirtualKey.PageUp ? -1 : 1;
-            NavigationRequested?.Invoke(direction, "keyboard");
-        }
-        if (_blockOnly)
-        {
-            return new IntPtr(1);
-        }
-        return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
     }
 
     private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode != HcAction || !_interceptEnabled || !_interceptWheel)
+        try
+        {
+            if (nCode != HcAction || !_interceptEnabled || !_interceptWheel)
+            {
+                return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+            }
+            if (wParam.ToInt32() != WmMouseWheel)
+            {
+                return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+            }
+            var data = Marshal.PtrToStructure<MsllHookStruct>(lParam);
+            var delta = (short)((data.MouseData >> 16) & 0xFFFF);
+            if (delta == 0)
+            {
+                return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+            }
+            if (_blockOnly && !_emitWheelOnBlock)
+            {
+                return new IntPtr(1);
+            }
+            var direction = delta < 0 ? 1 : -1;
+            NavigationRequested?.Invoke(direction, "wheel");
+            if (_blockOnly)
+            {
+                return new IntPtr(1);
+            }
+            return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+        }
+        catch
         {
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
         }
-        if (wParam.ToInt32() != WmMouseWheel)
-        {
-            return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
-        }
-        var data = Marshal.PtrToStructure<MsllHookStruct>(lParam);
-        var delta = (short)((data.MouseData >> 16) & 0xFFFF);
-        if (delta == 0)
-        {
-            return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
-        }
-        if (_blockOnly && !_emitWheelOnBlock)
-        {
-            return new IntPtr(1);
-        }
-        var direction = delta < 0 ? 1 : -1;
-        NavigationRequested?.Invoke(direction, "wheel");
-        if (_blockOnly)
-        {
-            return new IntPtr(1);
-        }
-        return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
     }
 
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);

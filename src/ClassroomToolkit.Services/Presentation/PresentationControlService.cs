@@ -45,17 +45,21 @@ public sealed class PresentationControlService
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
     {
         var target = _resolver.ResolveForeground();
-        if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
+        if (!IsForegroundCandidate(target, options))
         {
-            target = _lastTarget;
-            if (!target.IsValid)
-            {
-                target = _resolver.ResolvePresentationTarget(
-                    _planner.Classifier,
-                    options.AllowWps,
-                    options.AllowOffice,
-                    _currentProcessId);
-            }
+            target = _resolver.ResolvePresentationTarget(
+                _planner.Classifier,
+                options.AllowWps,
+                options.AllowOffice,
+                _currentProcessId);
+        }
+        if (!IsTargetHandleValid(target))
+        {
+            target = _resolver.ResolvePresentationTarget(
+                _planner.Classifier,
+                options.AllowWps,
+                options.AllowOffice,
+                _currentProcessId);
         }
         if (!target.IsValid)
         {
@@ -77,8 +81,34 @@ public sealed class PresentationControlService
         return TrySendToTarget(fallback, command, options);
     }
 
+    private bool IsForegroundCandidate(PresentationTarget target, PresentationControlOptions options)
+    {
+        if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
+        {
+            return false;
+        }
+        var targetType = _planner.Classifier.Classify(target.Info);
+        if (targetType is PresentationType.None or PresentationType.Other)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.Wps && !options.AllowWps)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.Office && !options.AllowOffice)
+        {
+            return false;
+        }
+        return true;
+    }
+
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        if (!IsTargetHandleValid(target))
+        {
+            return false;
+        }
         var targetType = _planner.Classifier.Classify(target.Info);
         if (targetType == PresentationType.Wps && !options.AllowWps)
         {
@@ -118,6 +148,11 @@ public sealed class PresentationControlService
             }
         }
         return sent;
+    }
+
+    private static bool IsTargetHandleValid(PresentationTarget target)
+    {
+        return target.IsValid && PresentationWindowFocus.IsWindowValid(target.Handle);
     }
 
     private bool TrySendWithStrategy(

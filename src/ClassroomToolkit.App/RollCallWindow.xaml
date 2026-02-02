@@ -5,7 +5,7 @@
         x:Name="NameWindow"
         Title="Classroom Toolkit"
         Height="420" Width="640"
-        MinWidth="400" MinHeight="300"
+        MinWidth="320" MinHeight="240"
         WindowStartupLocation="Manual"
         Topmost="True"
         WindowStyle="None"
@@ -29,7 +29,7 @@
             <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
-        <Grid MouseLeftButtonDown="OnBackgroundDrag" Background="Transparent">
+        <Grid x:Name="RootGrid" MouseLeftButtonDown="OnBackgroundDrag" Background="Transparent">
             <Grid.RowDefinitions>
                 <RowDefinition Height="56"/>
                 <RowDefinition Height="*"/>
@@ -37,7 +37,7 @@
             </Grid.RowDefinitions>
 
             <!-- 2. 顶部标题栏 -->
-            <Grid Grid.Row="0" MouseLeftButtonDown="OnTitleBarDrag" Background="Transparent">
+            <Grid x:Name="TitleBarRoot" Grid.Row="0" MouseLeftButtonDown="OnTitleBarDrag" Background="Transparent">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -118,7 +118,7 @@
                         </Border.Background>
                         <Border.Effect>
                             <!-- 柔和的漫反射阴影 -->
-                            <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="40" ShadowDepth="0" Opacity="0.3"/>
+                            <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="40" ShadowDepth="0" Opacity="0.3"/>
                         </Border.Effect>
 
                         <!-- 名字展示 -->
@@ -213,7 +213,7 @@
             </Grid>
 
             <!-- 4. 底部操作栏 -->
-            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" CornerRadius="16" Margin="20,0,20,16" Padding="6,4">
+            <Border x:Name="BottomBarRoot" Grid.Row="2" Background="{StaticResource Brush_Background_L2}" CornerRadius="16" Margin="20,0,20,16" Padding="6,4">
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.2"/>
                 </Border.Effect>
@@ -222,8 +222,8 @@
 
                     <Grid>
                     <!-- 点名操作 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl ItemsSource="{Binding GroupButtons}">
+                    <StackPanel x:Name="RollCallActionsPanel" Orientation="Horizontal" HorizontalAlignment="Left" Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl x:Name="GroupButtonsControl" ItemsSource="{Binding GroupButtons}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal"/>
@@ -272,7 +272,7 @@
                     </StackPanel>
 
                     <!-- 计时操作 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
+                    <StackPanel x:Name="TimerActionsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
                         <Button Style="{StaticResource Style_SecondaryButton}" Margin="3,0" Click="OnTimerModeClick" Padding="10,6" MinWidth="70">
                              <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="13"/>
                         </Button>

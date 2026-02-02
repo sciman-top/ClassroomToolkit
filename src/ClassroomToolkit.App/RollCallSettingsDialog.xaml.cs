@@ -54,11 +54,11 @@ public partial class RollCallSettingsDialog : Window
 
         TimerSoundCheck.IsChecked = settings.RollCallTimerSoundEnabled;
         BuildTimerSoundCombo(settings.RollCallTimerSoundVariant);
-        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "gentle";
+        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "bell";
 
         ReminderSoundCheck.IsChecked = settings.RollCallTimerReminderEnabled;
         BuildReminderSoundCombo(settings.RollCallTimerReminderSoundVariant);
-        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "soft_beep";
+        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "short_bell";
         var interval = settings.RollCallTimerReminderIntervalMinutes;
         if (interval <= 0)
         {
@@ -179,10 +179,10 @@ public partial class RollCallSettingsDialog : Window
         RollCallPhotoDurationSeconds = (int)Math.Round(PhotoDurationSlider.Value);
         RollCallPhotoSharedClass = GetSelectedValue(PhotoSharedCombo, string.Empty);
         RollCallTimerSoundEnabled = TimerSoundCheck.IsChecked == true;
-        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "gentle");
+        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "bell");
         RollCallTimerReminderEnabled = ReminderSoundCheck.IsChecked == true;
         RollCallTimerReminderIntervalMinutes = (int)Math.Round(ReminderIntervalSlider.Value);
-        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "soft_beep");
+        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "short_bell");
         RollCallSpeechEnabled = SpeechCheck.IsChecked == true;
         RollCallSpeechEngine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
         RollCallSpeechVoiceId = GetSelectedValue(SpeechVoiceCombo, _initialVoiceId);
@@ -520,32 +520,29 @@ public partial class RollCallSettingsDialog : Window
     {
         var items = new[]
         {
-            new ComboOption("gentle", "柔和铃声"),
             new ComboOption("bell", "上课铃"),
-            new ComboOption("digital", "电子滴答"),
-            new ComboOption("buzz", "蜂鸣器"),
-            new ComboOption("urgent", "紧张倒计时")
+            new ComboOption("gentle", "下课铃"),
+            new ComboOption("digital", "闹钟"),
+            new ComboOption("buzz", "门铃")
         };
         TimerSoundCombo.ItemsSource = items;
         TimerSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         TimerSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        TimerSoundCombo.SelectedValue = current ?? "gentle";
+        TimerSoundCombo.SelectedValue = current ?? "bell";
     }
 
     private void BuildReminderSoundCombo(string? current)
     {
         var items = new[]
         {
-            new ComboOption("soft_beep", "轻柔提示"),
-            new ComboOption("ping", "清脆提示"),
-            new ComboOption("chime", "简洁钟声"),
-            new ComboOption("pulse", "节奏哔哔"),
-            new ComboOption("short_bell", "短铃提示")
+            new ComboOption("short_bell", "轻柔铃声"),
+            new ComboOption("chime", "提醒钟"),
+            new ComboOption("soft_beep", "短提示音")
         };
         ReminderSoundCombo.ItemsSource = items;
         ReminderSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         ReminderSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        ReminderSoundCombo.SelectedValue = current ?? "soft_beep";
+        ReminderSoundCombo.SelectedValue = current ?? "short_bell";
     }
 
     private void UpdateReminderIntervalLabel()

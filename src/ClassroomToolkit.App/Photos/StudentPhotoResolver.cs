@@ -1,19 +1,62 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.App.Photos;
 
 public sealed class StudentPhotoResolver
 {
     private static readonly string[] Extensions = { ".jpg", ".jpeg", ".png", ".bmp" };
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);  // 延长缓存时间，减少重复索引
     private readonly string _rootPath;
     private readonly ConcurrentDictionary<string, DirectoryCache> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, object> _indexLocks = new(StringComparer.OrdinalIgnoreCase);
 
     public StudentPhotoResolver(string rootPath)
     {
         _rootPath = rootPath;
+    }
+
+    /// <summary>
+    /// 在后台预热照片索引，提升首次查询性能
+    /// </summary>
+    public void WarmupCache(IEnumerable<string>? classNames = null)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (classNames != null)
+                {
+                    foreach (var className in classNames)
+                    {
+                        var normalizedClass = SanitizeSegment(className);
+                        if (!string.IsNullOrWhiteSpace(normalizedClass))
+                        {
+                            var directory = Path.Combine(_rootPath, normalizedClass);
+                            if (Directory.Exists(directory))
+                            {
+                                GetIndex(directory);  // 触发索引构建
+                            }
+                        }
+                    }
+                }
+                else if (Directory.Exists(_rootPath))
+                {
+                    // 预热所有班级目录
+                    foreach (var directory in Directory.EnumerateDirectories(_rootPath))
+                    {
+                        GetIndex(directory);
+                    }
+                }
+            }
+            catch
+            {
+                // 静默失败，不影响主流程
+            }
+        });
     }
 
     public string? ResolvePhotoPath(string className, string studentId)
@@ -23,6 +66,10 @@ public sealed class StudentPhotoResolver
             return null;
         }
         var normalizedClass = SanitizeSegment(className);
+        if (!string.Equals(normalizedClass, (className ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.WriteLine($"StudentPhotoResolver: 班级名包含非法字符或空值，已规范化为 '{normalizedClass}'。");
+        }
         if (string.IsNullOrWhiteSpace(normalizedClass))
         {
             normalizedClass = "default";
@@ -91,29 +138,42 @@ public sealed class StudentPhotoResolver
         {
             return cached.Index;
         }
-        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        try
+        lock (GetIndexLock(directory))
         {
-            foreach (var file in Directory.EnumerateFiles(directory))
+            now = DateTime.UtcNow;
+            if (_cache.TryGetValue(directory, out cached) && now - cached.Timestamp < CacheTtl)
             {
-                var ext = Path.GetExtension(file);
-                if (!Extensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                return cached.Index;
+            }
+            var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(directory))
                 {
-                    continue;
-                }
-                var baseName = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
-                if (!index.ContainsKey(baseName))
-                {
-                    index[baseName] = file;
+                    var ext = Path.GetExtension(file);
+                    if (!Extensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    var baseName = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
+                    if (!index.ContainsKey(baseName))
+                    {
+                        index[baseName] = file;
+                    }
                 }
             }
+            catch
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            _cache[directory] = new DirectoryCache(now, index);
+            return index;
         }
-        catch
-        {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
-        _cache[directory] = new DirectoryCache(now, index);
-        return index;
+    }
+
+    private object GetIndexLock(string directory)
+    {
+        return _indexLocks.GetOrAdd(directory, _ => new object());
     }
 
     private sealed record DirectoryCache(DateTime Timestamp, Dictionary<string, string> Index);

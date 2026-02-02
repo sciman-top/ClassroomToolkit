@@ -115,7 +115,7 @@ public sealed class InkStorageService
 
     public IReadOnlyList<string> ListDocuments(DateTime date)
     {
-        var dateFolder = EnsureDateFolder(date);
+        var dateFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
         if (!Directory.Exists(dateFolder))
         {
             return Array.Empty<string>();
@@ -129,7 +129,8 @@ public sealed class InkStorageService
 
     public IReadOnlyList<InkPageData> ListPages(DateTime date, string documentName)
     {
-        var docFolder = EnsureDocumentFolder(date, documentName);
+        var safeName = SanitizeName(documentName);
+        var docFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture), safeName);
         var pagesFolder = Path.Combine(docFolder, PagesFolderName);
         if (!Directory.Exists(pagesFolder))
         {

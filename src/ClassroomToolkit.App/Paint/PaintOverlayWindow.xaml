@@ -85,6 +85,11 @@
                     </StackPanel>
                 </Border>
             </Grid>
+            <Grid x:Name="PhotoLoadingOverlay" Visibility="Collapsed" Background="#80000000" Panel.ZIndex="20">
+                <Border Background="#CC1A1A2E" CornerRadius="12" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="PhotoLoadingText" Text="正在加载..." Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
         </Grid>
     </Border>
 </Window>

@@ -14,6 +14,7 @@ public sealed class RollCallEngine
     private Dictionary<string, int?> _groupLastStudent = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<int> _globalDrawn = new();
     private Dictionary<int, HashSet<string>> _studentGroups = new();
+    private HashSet<string> _duplicateRowKeys = new(StringComparer.OrdinalIgnoreCase);
 
     public RollCallEngine(ClassRoster roster)
     {
@@ -246,6 +247,7 @@ public sealed class RollCallEngine
 
     private void RebuildGroupIndices()
     {
+        _duplicateRowKeys = BuildDuplicateRowKeys();
         _groupAll = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         _groupRemaining = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         _groupLastStudent = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
@@ -773,11 +775,30 @@ public sealed class RollCallEngine
             return string.Empty;
         }
         var student = _roster.Students[index];
-        if (!string.IsNullOrWhiteSpace(student.RowKey))
+        if (!string.IsNullOrWhiteSpace(student.RowKey)
+            && !_duplicateRowKeys.Contains(student.RowKey))
         {
             return student.RowKey;
         }
         return student.RowId;
+    }
+
+    private HashSet<string> BuildDuplicateRowKeys()
+    {
+        var duplicates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var student in _roster.Students)
+        {
+            if (string.IsNullOrWhiteSpace(student.RowKey))
+            {
+                continue;
+            }
+            if (!seen.Add(student.RowKey))
+            {
+                duplicates.Add(student.RowKey);
+            }
+        }
+        return duplicates;
     }
 
     private static string ResolveGroupName(string? value)
@@ -794,12 +815,20 @@ public sealed class RollCallEngine
         var rowIdMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var rowKeyMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var duplicateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var duplicateRowIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < _roster.Students.Count; i++)
         {
             var student = _roster.Students[i];
             if (!string.IsNullOrWhiteSpace(student.RowId))
             {
-                rowIdMap[student.RowId] = i;
+                if (rowIdMap.ContainsKey(student.RowId))
+                {
+                    duplicateRowIds.Add(student.RowId);
+                }
+                else
+                {
+                    rowIdMap[student.RowId] = i;
+                }
             }
             if (!string.IsNullOrWhiteSpace(student.RowKey))
             {
@@ -816,6 +845,10 @@ public sealed class RollCallEngine
         foreach (var key in duplicateKeys)
         {
             rowKeyMap.Remove(key);
+        }
+        foreach (var rowId in duplicateRowIds)
+        {
+            rowIdMap.Remove(rowId);
         }
         return (rowIdMap, rowKeyMap);
     }

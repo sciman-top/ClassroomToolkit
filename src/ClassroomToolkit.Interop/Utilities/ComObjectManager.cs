@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace ClassroomToolkit.Interop.Utilities;
@@ -9,6 +10,7 @@ namespace ClassroomToolkit.Interop.Utilities;
 public sealed class ComObjectManager : IDisposable
 {
     private readonly List<object> _comObjects = new();
+    private readonly HashSet<object> _comObjectSet = new(ReferenceEqualityComparer.Instance);
     private readonly object _lock = new object();
     private bool _disposed;
 
@@ -18,16 +20,17 @@ public sealed class ComObjectManager : IDisposable
     /// <typeparam name="T">COM 对象类型</typeparam>
     /// <param name="comObject">要追踪的 COM 对象</param>
     /// <returns>原 COM 对象（便于链式调用）</returns>
+    [return: NotNullIfNotNull(nameof(comObject))]
     public T Track<T>(T comObject) where T : class
     {
         if (comObject == null)
         {
-            return comObject;
+            return comObject!;
         }
 
         if (!Marshal.IsComObject(comObject))
         {
-            return comObject;
+            return comObject!;
         }
 
         lock (_lock)
@@ -38,10 +41,13 @@ public sealed class ComObjectManager : IDisposable
                 Marshal.ReleaseComObject(comObject);
                 throw new ObjectDisposedException(nameof(ComObjectManager));
             }
-            _comObjects.Add(comObject);
+            if (_comObjectSet.Add(comObject))
+            {
+                _comObjects.Add(comObject);
+            }
         }
 
-        return comObject;
+        return comObject!;
     }
 
     /// <summary>
@@ -56,7 +62,9 @@ public sealed class ComObjectManager : IDisposable
 
         lock (_lock)
         {
-            if (_comObjects.Remove(comObject))
+            var removed = _comObjects.Remove(comObject);
+            removed = _comObjectSet.Remove(comObject) || removed;
+            if (removed)
             {
                 try
                 {
@@ -101,6 +109,7 @@ public sealed class ComObjectManager : IDisposable
             }
 
             _comObjects.Clear();
+            _comObjectSet.Clear();
         }
     }
 }

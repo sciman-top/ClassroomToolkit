@@ -15,8 +15,8 @@ public static class RollStateSerializer
 
     public static string SerializeClassState(ClassRollState state)
     {
-        state.Version = CurrentVersion;
-        return JsonSerializer.Serialize(state, Options);
+        var payload = CloneWithVersion(state, CurrentVersion);
+        return JsonSerializer.Serialize(payload, Options);
     }
 
     public static ClassRollState? DeserializeClassState(string? json)
@@ -38,11 +38,12 @@ public static class RollStateSerializer
     public static string SerializeWorkbookStates(Dictionary<string, ClassRollState> states)
     {
         var payload = states ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
-        foreach (var state in payload.Values)
+        var snapshot = new Dictionary<string, ClassRollState>(payload.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in payload)
         {
-            state.Version = CurrentVersion;
+            snapshot[pair.Key] = CloneWithVersion(pair.Value, CurrentVersion);
         }
-        return JsonSerializer.Serialize(payload, Options);
+        return JsonSerializer.Serialize(snapshot, Options);
     }
 
     public static Dictionary<string, ClassRollState> DeserializeWorkbookStates(string? json)
@@ -60,5 +61,26 @@ public static class RollStateSerializer
         {
             return new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
         }
+    }
+
+    private static ClassRollState CloneWithVersion(ClassRollState state, string version)
+    {
+        var cloned = new ClassRollState
+        {
+            Version = version,
+            CurrentGroup = state.CurrentGroup,
+            CurrentStudent = state.CurrentStudent,
+            PendingStudent = state.PendingStudent
+        };
+        foreach (var pair in state.GroupRemaining)
+        {
+            cloned.GroupRemaining[pair.Key] = new List<string>(pair.Value);
+        }
+        foreach (var pair in state.GroupLast)
+        {
+            cloned.GroupLast[pair.Key] = pair.Value;
+        }
+        cloned.GlobalDrawn = new List<string>(state.GlobalDrawn);
+        return cloned;
     }
 }

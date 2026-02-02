@@ -100,7 +100,6 @@ public sealed class AppSettingsService
             settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
             settings.InkCacheEnabled = GetBool(paint, "ink_cache_enabled", settings.InkCacheEnabled);
             settings.InkRecordEnabled = GetBool(paint, "ink_record_enabled", settings.InkRecordEnabled);
-            settings.InkAutoSaveEnabled = GetBool(paint, "ink_auto_save_enabled", settings.InkAutoSaveEnabled);
             settings.InkReplayPreviousEnabled = GetBool(paint, "ink_replay_previous_enabled", settings.InkReplayPreviousEnabled);
             settings.InkRetentionDays = GetInt(paint, "ink_retention_days", settings.InkRetentionDays);
             settings.InkPhotoRootPath = GetString(paint, "ink_photo_root_path", settings.InkPhotoRootPath);
@@ -192,7 +191,6 @@ public sealed class AppSettingsService
         paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
         paint["ink_cache_enabled"] = settings.InkCacheEnabled ? "True" : "False";
         paint["ink_record_enabled"] = settings.InkRecordEnabled ? "True" : "False";
-        paint["ink_auto_save_enabled"] = settings.InkAutoSaveEnabled ? "True" : "False";
         paint["ink_replay_previous_enabled"] = settings.InkReplayPreviousEnabled ? "True" : "False";
         paint["ink_retention_days"] = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
         paint["ink_photo_root_path"] = settings.InkPhotoRootPath ?? @"D:\ClassroomToolkit\Ink\Photos";
@@ -212,6 +210,7 @@ public sealed class AppSettingsService
         paint.Remove("photo_current_index");
         paint.Remove("pdf_current_page");
         paint.Remove("image_current_index");
+        paint.Remove("ink_auto_save_enabled");
         paint.Remove("ppt_current_slide");
         paint.Remove("wps_current_slide");
         paint.Remove("presentation_current_page");

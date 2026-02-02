@@ -55,7 +55,7 @@ public static class SettingsMigrator
     {
         if (string.IsNullOrWhiteSpace(mode))
         {
-            return "auto";
+            return rawInput ? "raw" : "auto";
         }
         var lower = mode.Trim().ToLowerInvariant();
         return lower switch
@@ -64,7 +64,7 @@ public static class SettingsMigrator
             "raw" => "raw",
             "message" => "message",
             "manual" => rawInput ? "raw" : "message",
-            _ => "auto"
+            _ => rawInput ? "raw" : "auto"
         };
     }
 

@@ -33,9 +33,8 @@
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <StackPanel Grid.Row="1" Margin="16,14">
-                <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录/回看" Margin="0,0,0,10"/>
-                <CheckBox x:Name="InkAutoSaveCheck" Content="翻页自动保存（PPT/WPS 全屏放映时）" Margin="0,0,0,10"/>
-                <CheckBox x:Name="InkReplayPreviousCheck" Content="显示同一个课件在上次课的笔迹" Margin="0,0,0,10"/>
+                <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录/回看" Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Primary}"/>
+                <CheckBox x:Name="InkReplayPreviousCheck" Content="显示同一个课件在上次课的笔迹" Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Primary}"/>
                 <Grid Margin="0,4,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

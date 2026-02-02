@@ -4,176 +4,135 @@
 
     <!-- ========================================
          Designed by: Gemini Art Director
-         Theme: Deep Obsidian (Premium Dark)
-         Concept: Sophisticated, Deep, Vibrant
+         Theme: Modern Slate (Dark Blue)
+         Concept: Professional, Deep, Calm
          ======================================== -->
 
-    <!-- ========== 核心品牌色 (Brand Colors) ========== -->
+    <!-- ========== 1. 核心色板 (Slate Palette) ========== -->
     
-    <!-- 主色 (Primary) - Vibrant Blue-Violet Fusion -->
-    <Color x:Key="Color_Primary_Light">#60A5FA</Color> <!-- Blue 400 -->
-    <Color x:Key="Color_Primary_Main">#3B82F6</Color>  <!-- Blue 500 -->
-    <Color x:Key="Color_Primary_Dark">#2563EB</Color>  <!-- Blue 600 -->
+    <!-- Backgrounds (Slate 900-800) -->
+    <Color x:Key="Color_Bg_Deep">#0F172A</Color>    <!-- Slate 900: Window Background -->
+    <Color x:Key="Color_Bg_Surface">#1E293B</Color>  <!-- Slate 800: Cards/Dialogs -->
+    <Color x:Key="Color_Bg_Input">#334155</Color>    <!-- Slate 700: Inputs/Hovers -->
+    <Color x:Key="Color_Bg_Overlay">#020617</Color>  <!-- Slate 950: Overlay base -->
 
-    <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary_Main}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Primary_Light" Color="{StaticResource Color_Primary_Light}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{StaticResource Color_Primary_Dark}" PresentationOptions:Freeze="true"/>
+    <!-- Accents (Blue 600) -->
+    <Color x:Key="Color_Primary">#2563EB</Color>     <!-- Blue 600: Primary Action -->
+    <Color x:Key="Color_Primary_Hover">#3B82F6</Color> <!-- Blue 500: Hover -->
+    <Color x:Key="Color_Primary_Active">#1D4ED8</Color> <!-- Blue 700: Pressed -->
+    <Color x:Key="Color_Primary_Glow">#60A5FA</Color> <!-- Blue 400: Glows -->
 
-    <!-- 辅助色 (Accent) - Electric Indigo -->
-    <Color x:Key="Color_Accent_Light">#A78BFA</Color>
-    <Color x:Key="Color_Accent_Main">#8B5CF6</Color>
-    <Color x:Key="Color_Accent_Dark">#7C3AED</Color>
+    <!-- Functional -->
+    <Color x:Key="Color_Danger">#EF4444</Color>      <!-- Red 500 -->
+    <Color x:Key="Color_Success">#10B981</Color>     <!-- Emerald 500 -->
+    <Color x:Key="Color_Warning">#F59E0B</Color>     <!-- Amber 500 -->
+    
+    <!-- Text -->
+    <Color x:Key="Color_Text_Primary">#F1F5F9</Color>   <!-- Slate 100 -->
+    <Color x:Key="Color_Text_Secondary">#94A3B8</Color> <!-- Slate 400 -->
+    <Color x:Key="Color_Text_Disabled">#475569</Color>  <!-- Slate 600 -->
 
-    <SolidColorBrush x:Key="Brush_Accent" Color="{StaticResource Color_Accent_Main}" PresentationOptions:Freeze="true"/>
+    <!-- Borders -->
+    <Color x:Key="Color_Border_Subtle">#334155</Color>  <!-- Slate 700 -->
+    <Color x:Key="Color_Border_Strong">#475569</Color>  <!-- Slate 600 -->
 
-    <!-- ========== 功能色 (Functional Colors) ========== -->
+    <!-- ========== 2. 笔刷系统 (Brushes) ========== -->
 
-    <!-- 危险 (Danger) - Soft Red -->
-    <Color x:Key="Color_Danger">#EF4444</Color>
+    <!-- Backgrounds -->
+    <SolidColorBrush x:Key="Brush_Background" Color="{StaticResource Color_Bg_Deep}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Window_Atmosphere" Color="{StaticResource Color_Bg_Deep}" PresentationOptions:Freeze="true"/>
+    
+    <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Bg_Surface}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Bg_Input}" PresentationOptions:Freeze="true"/>
+
+    <!-- States -->
+    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#334155" PresentationOptions:Freeze="true"/> <!-- Slate 700 -->
+    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#475569" PresentationOptions:Freeze="true"/> <!-- Slate 600 -->
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#1E293B" PresentationOptions:Freeze="true"/>
+
+    <!-- Primary -->
+    <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Light" Color="{StaticResource Color_Primary_Hover}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{StaticResource Color_Primary_Active}" PresentationOptions:Freeze="true"/>
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Disabled}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Disabled" Color="#20FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
+
+    <!-- Borders -->
+    <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Light" Color="{StaticResource Color_Border_Strong}" PresentationOptions:Freeze="true"/>
+
+    <!-- Functional -->
     <SolidColorBrush x:Key="Brush_Danger" Color="{StaticResource Color_Danger}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#2A1215" PresentationOptions:Freeze="true"/> <!-- Kept for compatibility -->
     <SolidColorBrush x:Key="Brush_Danger_Light" Color="#F87171" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#2A1215" PresentationOptions:Freeze="true"/>
-
-    <!-- 警告 (Warning) - Amber -->
-    <Color x:Key="Color_Warning">#F59E0B</Color>
-    <SolidColorBrush x:Key="Brush_Warning" Color="{StaticResource Color_Warning}" PresentationOptions:Freeze="true"/>
-
-    <!-- 成功 (Success) - Emerald -->
-    <Color x:Key="Color_Success">#10B981</Color>
+    
     <SolidColorBrush x:Key="Brush_Success" Color="{StaticResource Color_Success}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Warning" Color="{StaticResource Color_Warning}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Info" Color="#38BDF8" PresentationOptions:Freeze="true"/>
 
-    <!-- 信息 (Info) - Sky -->
-    <Color x:Key="Color_Info">#0EA5E9</Color>
-    <SolidColorBrush x:Key="Brush_Info" Color="{StaticResource Color_Info}" PresentationOptions:Freeze="true"/>
-
-    <!-- ========== 沉浸式背景体系 (Immersive Backgrounds) ========== -->
-
-    <!-- 层级 1: 窗口底色 (Deep Zinc) -->
-    <Color x:Key="Color_Background_L1">#09090B</Color> <!-- Zinc 950 -->
-    <SolidColorBrush x:Key="Brush_Background" Color="{StaticResource Color_Background_L1}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Window_Atmosphere" Color="#09090B" PresentationOptions:Freeze="true"/>
-
-    <!-- 层级 2: 卡片背景 (Elevation 1) -->
-    <Color x:Key="Color_Background_L2">#18181B</Color> <!-- Zinc 900 -->
-    <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Background_L2}" PresentationOptions:Freeze="true"/>
-    
-    <!-- 层级 3: 浮层/输入框 (Elevation 2) -->
-    <Color x:Key="Color_Background_L3">#27272A</Color> <!-- Zinc 800 -->
-    <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Background_L3}" PresentationOptions:Freeze="true"/>
-    
-    <!-- 强调背景 (Selected) -->
-    <Color x:Key="Color_Surface_Active">#3F3F46</Color> <!-- Zinc 700 -->
-    <SolidColorBrush x:Key="Brush_Surface_Active" Color="{StaticResource Color_Surface_Active}" PresentationOptions:Freeze="true"/>
-
-    <!-- 悬停色 (Hover) -->
-    <Color x:Key="Color_Surface_Hover">#27272A</Color> <!-- Zinc 800 but slightly lighter via transparency usually, using solid here -->
-    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#323238" PresentationOptions:Freeze="true"/>
-    
-    <!-- 兼容性映射 -->
-    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="{StaticResource Color_Surface_Hover}" PresentationOptions:Freeze="true"/>
-
-    <!-- 遮罩 -->
-    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#CC000000" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Overlay_Light" Color="#1FFFFFFF" PresentationOptions:Freeze="true"/>
-    
-    <!-- 玻璃质感辅助色 -->
+    <!-- Translucency / Glass -->
     <SolidColorBrush x:Key="Brush_White_Translucent" Color="#1AFFFFFF" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#08FFFFFF" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Glass_Border" Color="#26FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#CC020617" PresentationOptions:Freeze="true"/>
 
-    <!-- ========== 现代文本系统 (High Contrast) ========== -->
+    <!-- ========== 3. 渐变与特效 (Gradients & Effects) ========== -->
 
-    <!-- 主要文本 (High Emphasis) -->
-    <Color x:Key="Color_Text_Primary">#FAFAFA</Color>
-    <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
-
-    <!-- 次要文本 (Medium Emphasis) -->
-    <Color x:Key="Color_Text_Secondary">#A1A1AA</Color>
-    <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
-
-    <!-- 提示文本 (Disabled/Hint) -->
-    <Color x:Key="Color_Text_Tertiary">#71717A</Color>
-    <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Tertiary}" PresentationOptions:Freeze="true"/>
-
-    <!-- 禁用 -->
-    <Color x:Key="Color_Disabled">#3F3F46</Color>
-    <SolidColorBrush x:Key="Brush_Disabled" Color="{StaticResource Color_Disabled}" PresentationOptions:Freeze="true"/>
-
-    <!-- 边框 -->
-    <Color x:Key="Color_Border">#3F3F46</Color> <!-- Zinc 700 -->
-    <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Border_Light" Color="#52525B" PresentationOptions:Freeze="true"/>
-    
-    <!-- 聚焦光环色 -->
-    <SolidColorBrush x:Key="Brush_Focus_Glow" Color="#4D3B82F6" PresentationOptions:Freeze="true"/>
-
-    <!-- 兼容性映射 (Legacy) -->
-    <SolidColorBrush x:Key="Brush_Border_Subtle" Color="#27272A" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Border_Medium" Color="{StaticResource Color_Border}" PresentationOptions:Freeze="true"/>
-
-    <!-- ========== 动态渐变 (Gradients) ========== -->
-
-    <!-- 主品牌渐变 (Blue to Violet) -->
-    <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+    <!-- Subtle Primary Gradient (Vertical) -->
+    <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
         <GradientStop Color="#3B82F6" Offset="0"/>
-        <GradientStop Color="#8B5CF6" Offset="1"/>
+        <GradientStop Color="#2563EB" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Gradient_Primary_Hover" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#60A5FA" Offset="0"/>
+        <GradientStop Color="#3B82F6" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Legacy Mappings for Compatibility -->
+    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0.5,0" EndPoint="0.5,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Bg_Input}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Bg_Surface}" Offset="1"/>
     </LinearGradientBrush>
     
-    <!-- 悬停态渐变 (Lighter) -->
-    <LinearGradientBrush x:Key="Gradient_Primary_Hover" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#60A5FA" Offset="0"/>
-        <GradientStop Color="#A78BFA" Offset="1"/>
+    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Bg_Surface}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Bg_Input}" Offset="1"/>
     </LinearGradientBrush>
-
-    <!-- 启动球渐变 -->
+    
     <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#7C3AED" Offset="0"/>
-        <GradientStop Color="#EC4899" Offset="1"/>
+        <GradientStop Color="#2563EB" Offset="0"/>
+        <GradientStop Color="#0F172A" Offset="1"/>
     </LinearGradientBrush>
-
-    <!-- 计时器渐变 -->
+    
     <Color x:Key="Color_Timer_Neon">#10B981</Color>
     <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
 
-    <LinearGradientBrush x:Key="Gradient_Active" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
-        <GradientStop Color="#3B82F6" Offset="0"/>
-        <GradientStop Color="#10B981" Offset="1"/>
-    </LinearGradientBrush>
-
-    <!-- 点名卡片背景 (Subtle Gradient) -->
-    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0.5,0" EndPoint="0.5,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#27272A" Offset="0"/>
-        <GradientStop Color="#18181B" Offset="1"/>
-    </LinearGradientBrush>
+    <!-- Shadows (Optimized for performance) -->
+    <!-- 1. Soft Glow (Primary) -->
+    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#3B82F6" BlurRadius="16" ShadowDepth="0" Opacity="0.2" RenderingBias="Performance"/>
     
-    <!-- 姓名条渐变 -->
-    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
-        <GradientStop Color="#18181B" Offset="0"/>
-        <GradientStop Color="#27272A" Offset="1"/>
-    </LinearGradientBrush>
+    <!-- 2. Danger Glow -->
+    <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#EF4444" BlurRadius="16" ShadowDepth="0" Opacity="0.2" RenderingBias="Performance"/>
 
-    <!-- 画笔色 -->
+    <!-- 3. Floating (Deep) -->
+    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="32" ShadowDepth="8" Opacity="0.5" RenderingBias="Performance"/>
+    
+    <!-- 4. Card (Crisp) -->
+    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.3" RenderingBias="Performance"/>
+
+    <!-- 5. Subtle Border substitute -->
+    <DropShadowEffect x:Key="Shadow_Subtle" Color="#000000" BlurRadius="2" ShadowDepth="1" Opacity="0.2" RenderingBias="Performance"/>
+
+    <!-- Pen Colors -->
     <Color x:Key="Color_Pen_Red">#EF4444</Color>
     <SolidColorBrush x:Key="Brush_Pen_Red" Color="{StaticResource Color_Pen_Red}" PresentationOptions:Freeze="true"/>
     <Color x:Key="Color_Pen_Blue">#3B82F6</Color>
     <SolidColorBrush x:Key="Brush_Pen_Blue" Color="{StaticResource Color_Pen_Blue}" PresentationOptions:Freeze="true"/>
-
-    <!-- ========== 高级阴影系统 (Subtle Depth) ========== -->
-    
-    <!-- 1. 主推光影 (Soft & Spread) -->
-    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#3B82F6" BlurRadius="24" ShadowDepth="0" Opacity="0.25" RenderingBias="Quality"/>
-    
-    <!-- 2. 危险光影 -->
-    <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#EF4444" BlurRadius="24" ShadowDepth="0" Opacity="0.2" RenderingBias="Quality"/>
-
-    <!-- 3. 浮层阴影 (Deep) -->
-    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.6" RenderingBias="Quality"/>
-    
-    <!-- 4. 紧凑卡片阴影 (Crisp) -->
-    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="4" ShadowDepth="2" Opacity="0.3" RenderingBias="Quality"/>
-
-    <!-- 5. 极简边框阴影 -->
-    <DropShadowEffect x:Key="Shadow_Subtle" Color="#000000" BlurRadius="2" ShadowDepth="1" Opacity="0.3" RenderingBias="Quality"/>
 
 </ResourceDictionary>

@@ -62,4 +62,25 @@ public sealed class RollCallEngineTests
 
         engine.CurrentGroup.Should().Be(IdentityUtils.AllGroupName);
     }
+
+    [Fact]
+    public void RestoreState_ShouldHandleDuplicateRowKeys()
+    {
+        var students = new List<StudentRecord>
+        {
+            StudentRecord.Create("1", "张三", "一班", "一组", "row-a"),
+            StudentRecord.Create("1", "张三", "一班", "一组", "row-b"),
+            StudentRecord.Create("2", "李四", "一班", "二组", "row-c"),
+        };
+        var roster = new ClassRoster("一班", students);
+        var engine = new RollCallEngine(roster);
+
+        engine.SetCurrentStudentIndex(0);
+        var state = engine.CaptureState();
+
+        var restored = new RollCallEngine(roster);
+        restored.RestoreState(state);
+
+        restored.CurrentStudentIndex.Should().Be(0);
+    }
 }

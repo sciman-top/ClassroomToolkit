@@ -44,16 +44,27 @@ public sealed class Win32InputSender : IInputSender
     {
         var downParam = BuildKeyLParam(isKeyUp: false);
         var upParam = BuildKeyLParam(isKeyUp: true);
-        if (!SendModifiers(hwnd, modifiers, true))
+        var appliedModifiers = new List<VirtualKey>();
+        var modifiersApplied = SendModifiers(hwnd, modifiers, true, appliedModifiers);
+        try
         {
-            return false;
+            if (!modifiersApplied)
+            {
+                return false;
+            }
+            var down = NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyDown, (IntPtr)key, downParam);
+            var up = keyDownOnly || !down
+                ? true
+                : NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyUp, (IntPtr)key, upParam);
+            return down && up;
         }
-        var down = NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyDown, (IntPtr)key, downParam);
-        var up = keyDownOnly || !down
-            ? true
-            : NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyUp, (IntPtr)key, upParam);
-        SendModifiers(hwnd, modifiers, false);
-        return down && up;
+        finally
+        {
+            if (appliedModifiers.Count > 0)
+            {
+                SendModifiers(hwnd, appliedModifiers, false);
+            }
+        }
     }
 
     private static bool SendKeyInput(VirtualKey key, KeyModifiers modifiers, bool keyDownOnly)
@@ -93,9 +104,23 @@ public sealed class Win32InputSender : IInputSender
         return SendInputs(new List<NativeMethods.Input> { input });
     }
 
-    private static bool SendModifiers(IntPtr hwnd, KeyModifiers modifiers, bool isKeyDown)
+    private static bool SendModifiers(IntPtr hwnd, KeyModifiers modifiers, bool isKeyDown, List<VirtualKey>? applied)
     {
         foreach (var mod in EnumerateModifiers(modifiers))
+        {
+            var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
+            if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))
+            {
+                return false;
+            }
+            applied?.Add(mod);
+        }
+        return true;
+    }
+
+    private static bool SendModifiers(IntPtr hwnd, IReadOnlyList<VirtualKey> modifiers, bool isKeyDown)
+    {
+        foreach (var mod in modifiers)
         {
             var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
             if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))

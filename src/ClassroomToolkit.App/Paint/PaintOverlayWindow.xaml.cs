@@ -13,7 +13,6 @@ using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Globalization;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Threading;
 using IoPath = System.IO.Path;
 using ClassroomToolkit.App.Helpers;
@@ -56,12 +55,6 @@ public partial class PaintOverlayWindow : Window
     /// <summary>演示文稿焦点恢复冷却时间（ms） - 防止频繁切换导致闪烁</summary>
     private const int PresentationFocusCooldownMs = 1200;
     
-    /// <summary>演示文稿刷新延迟（ms） - 给 PPT 窗口状态稳定的时间</summary>
-    private const int PresentationRefreshDelayMs = 180;
-    
-    /// <summary>演示文稿刷新最大尝试次数 - 避免无限重试</summary>
-    private const int PresentationRefreshMaxAttempts = 8;
-    
     /// <summary>墨迹输入冷却时间（ms） - 防抖动</summary>
     private const int InkInputCooldownMs = 120;
     
@@ -71,38 +64,14 @@ public partial class PaintOverlayWindow : Window
     /// <summary>墨迹监控空闲间隔（ms） - 无绘图活动时降低检查频率以节省性能</summary>
     private const int InkMonitorIdleIntervalMs = 1400;
     
-    /// <summary>墨迹监控幻灯片放映间隔（ms） - PPT/WPS 放映时更频繁检查页面变化</summary>
-    private const int InkMonitorSlideshowIntervalMs = 200;
-    
     /// <summary>墨迹空闲阈值（ms） - 超过此时间无输入视为空闲状态</summary>
     private const int InkIdleThresholdMs = 2500;
-    
-    /// <summary>演示文稿解析最小间隔（ms） - 限流避免过度调用 UIAutomation</summary>
-    private const int PresentationResolveMinIntervalMs = 150;
-    
-    /// <summary>演示文稿解析过期时间（ms） - 缓存结果的有效期</summary>
-    private const int PresentationResolveStaleMs = 1200;
-    
-    /// <summary>演示文稿输入冷却（ms） - 键盘/鼠标操作后的等待时间</summary>
-    private const int PresentationInputCooldownMs = 220;
-    
-    /// <summary>演示文稿页面确认延迟（ms） - 等待 UI 元素稳定后再读取页码</summary>
-    private const int PresentationPageConfirmDelayMs = 260;
-    
-    /// <summary>演示文稿页面稳定计数器 - 页码需连续相同 N 次才视为确认</summary>
-    private const int PresentationPageConfirmStableCount = 2;
     
     /// <summary>墨迹重绘最小间隔（ms） - 约 60fps，平衡流畅度和性能</summary>
     private const int InkRedrawMinIntervalMs = 16;
     
     /// <summary>跨页更新最小间隔（ms） - 连续滚动时的渲染节流</summary>
     private const int CrossPageUpdateMinIntervalMs = 24;
-    
-    /// <summary>演示文稿独占检查间隔（ms） - 检测全屏状态的频率</summary>
-    private const int PresentationExclusivityCheckIntervalMs = 700;
-    
-    /// <summary>演示文稿独占信号冷却（ms） - 防止重复触发全屏检测事件</summary>
-    private const int PresentationExclusivitySignalCooldownMs = 1500;
     
     /// <summary>书法印章笔画宽度因子 - 相对于笔画宽度的比例</summary>
     private const double CalligraphySealStrokeWidthFactor = 0.08;
@@ -127,12 +96,7 @@ public partial class PaintOverlayWindow : Window
     private bool _focusBlocked;
     private bool _forcePresentationForegroundOnFullscreen;
     private readonly DispatcherTimer _presentationFocusMonitor;
-    private readonly DispatcherTimer _presentationRefreshTimer;
-    private string _presentationRefreshStartKey = string.Empty;
-    private int _presentationRefreshAttempts;
     private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
-    private DateTime _lastPresentationExclusivityCheckUtc = DateTime.MinValue;
-    private DateTime _lastPresentationFullscreenSignalUtc = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private const int HistoryLimit = 30;
     private bool _calligraphyInkBloomEnabled = true;
@@ -207,30 +171,19 @@ public partial class PaintOverlayWindow : Window
     private bool _presentationFocusRestoreEnabled = false;
     private readonly List<InkStrokeData> _inkStrokes = new();
     private bool _inkCacheDirty;
-    private DateTime _presentationTransitionStartUtc = DateTime.MinValue;
     private bool _boardSuspendedPhotoCache;
     private readonly List<InkSnapshot> _inkHistory = new();
     private readonly DispatcherTimer _inkMonitor;
     private readonly Random _inkSeedRandom = new Random();
     private bool _inkRecordEnabled = true;
-    private bool _inkAutoSaveEnabled;
     private bool _inkReplayPreviousEnabled;
     private int _inkRetentionDays = 30;
     private string _inkPhotoRootPath = string.Empty;
     private bool _inkCacheEnabled = true;
     private DateTime _lastInkInputUtc = DateTime.MinValue;
-    private DateTime _lastPresentationInputUtc = DateTime.MinValue;
-    private int _pendingPresentationPageIndex;
-    private string _pendingPresentationCacheKey = string.Empty;
-    private DateTime _pendingPresentationSeenUtc = DateTime.MinValue;
-    private int _pendingPresentationStableCount;
     private bool _pendingInkContextCheck;
-    private bool _pptSlideshowActive;
-    private readonly PowerPointSlideshowEventBridge _pptEventBridge = new();
     private readonly RefreshOrchestrator _refreshOrchestrator;
     private readonly PerfStats _perfMonitor;
-    private readonly PerfStats _perfResolvePpt;
-    private readonly PerfStats _perfResolveTitle;
     private readonly PerfStats _perfSavePage;
     private readonly PerfStats _perfLoadPage;
     private readonly PerfStats _perfRedrawSurface;
@@ -244,34 +197,21 @@ public partial class PaintOverlayWindow : Window
     private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
     private byte[]? _clearSurfaceBuffer;
     private int _clearSurfaceBufferSize;
-    private readonly StaResolveWorker _resolveWorker;
-    private PresentationResolveSnapshot? _latestResolve;
-    private int _resolveInFlight;
-    private DateTime _lastResolveRequestUtc = DateTime.MinValue;
-    private bool _presentationActive;
     private bool _presentationFullscreenActive;
     private DateTime _currentCourseDate = DateTime.Today;
     private string _currentDocumentName = string.Empty;
     private string _currentDocumentPath = string.Empty;
     private int _currentPageIndex = 1;
     private string _currentCacheKey = string.Empty;
-    // PPT/WPS slideshow page tracking for reliable page change detection
-    private string _pptTrackedDocumentName = string.Empty;
-    private int _pptTrackedPageIndex = 1;
-    private int _lastKnownSlideID = -1;
-    private int _lastKnownShowPosition = -1;
-    private int _currentSlideID = 0;
     private ClassroomToolkit.Interop.Presentation.PresentationType _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
     private InkCacheScope _currentCacheScope = InkCacheScope.None;
     private readonly InkFinalCache _photoCache = new(80);
     private InkStorageService _inkStorage = new();
-    private DispatcherTimer? _inkAutoSaveTimer;
-    private bool _inkAutoSavePending;
-    private bool _presentationTransitionPending;
     private const double PdfDefaultDpi = 96;
     private const int PdfCacheLimit = 6;
     private bool _photoModeActive;
     private bool _photoFullscreen;
+    private bool _photoLoading;
     private bool _photoCrossPageDisplayEnabled;
     private bool _crossPageUpdatePending;
     private DateTime _lastCrossPageUpdateUtc = DateTime.MinValue;
@@ -297,6 +237,7 @@ public partial class PaintOverlayWindow : Window
     private readonly HashSet<int> _pdfPinnedPages = new();
     private int _pdfVisiblePrefetchInFlight;
     private int _pdfVisiblePrefetchToken;
+    private int _photoLoadToken;
     private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);
     private string _photoSessionPath = string.Empty;
     private bool _photoSessionIsPdf;
@@ -347,8 +288,7 @@ public partial class PaintOverlayWindow : Window
     private enum InkCacheScope
     {
         None = 0,
-        Presentation = 1,
-        Photo = 2
+        Photo = 1
     }
 
     public event Action<string, DateTime>? InkContextChanged;
@@ -430,44 +370,18 @@ public partial class PaintOverlayWindow : Window
             Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
         };
         _presentationFocusMonitor.Tick += (_, _) => MonitorPresentationFocus();
-        _presentationRefreshTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(PresentationRefreshDelayMs)
-        };
-        _presentationRefreshTimer.Tick += (_, _) =>
-        {
-            _refreshOrchestrator.RequestRefresh("presentation-refresh");
-            Dispatcher.BeginInvoke(() =>
-            {
-                if (!string.IsNullOrWhiteSpace(_currentCacheKey)
-                    && !string.Equals(_currentCacheKey, _presentationRefreshStartKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    _presentationRefreshTimer.Stop();
-                    return;
-                }
-                _presentationRefreshAttempts++;
-                if (_presentationRefreshAttempts >= PresentationRefreshMaxAttempts)
-                {
-                    _presentationRefreshTimer.Stop();
-                }
-            }, DispatcherPriority.ContextIdle);
-        };
         _inkMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
         };
         _inkMonitor.Tick += (_, _) => _refreshOrchestrator.RequestRefresh("poll");
         _perfMonitor = new PerfStats("MonitorInkContext");
-        _perfResolvePpt = new PerfStats("ResolvePowerPoint");
-        _perfResolveTitle = new PerfStats("ResolveTitle");
         _perfSavePage = new PerfStats("SavePage");
         _perfLoadPage = new PerfStats("LoadPage");
         _perfRedrawSurface = new PerfStats("RedrawSurface");
         _perfEnsureSurface = new PerfStats("EnsureSurface");
         _perfClearSurface = new PerfStats("ClearSurface");
         _perfApplyStrokes = new PerfStats("ApplyStrokes");
-        _resolveWorker = new StaResolveWorker("PptResolveWorker");
-        _pptEventBridge.EventReceived += OnPowerPointSlideshowEvent;
         
         KeyDown += OnKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
@@ -527,8 +441,6 @@ public partial class PaintOverlayWindow : Window
             StopWpsNavHook();
             _presentationFocusMonitor.Stop();
             _inkMonitor.Stop();
-            _pptEventBridge.Dispose();
-            _resolveWorker.Dispose();
         };
         IsVisibleChanged += (_, _) =>
         {
@@ -654,7 +566,6 @@ public partial class PaintOverlayWindow : Window
         {
             _inkStrokes.Clear();
             MarkInkCacheDirty();
-            TryAutoSave();
         }
     }
 
@@ -670,6 +581,11 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_photoLoading)
+        {
+            e.Handled = true;
+            return;
+        }
         if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject))
         {
             return;
@@ -689,6 +605,11 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (_photoLoading)
+        {
+            e.Handled = true;
+            return;
+        }
         if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject))
         {
             return;
@@ -717,6 +638,11 @@ public partial class PaintOverlayWindow : Window
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_photoLoading)
+        {
+            e.Handled = true;
+            return;
+        }
         if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject))
         {
             return;
@@ -1009,7 +935,6 @@ public partial class PaintOverlayWindow : Window
         }
         _isErasing = false;
         _lastEraserPoint = null;
-        TryAutoSave();
         UpdateActiveCacheSnapshot();
     }
 
@@ -1054,7 +979,6 @@ public partial class PaintOverlayWindow : Window
         {
             EraseRect(region);
         }
-        TryAutoSave();
         UpdateActiveCacheSnapshot();
     }
 
@@ -1155,6 +1079,11 @@ public partial class PaintOverlayWindow : Window
 
     private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (_photoLoading)
+        {
+            e.Handled = true;
+            return;
+        }
         if (TryHandlePhotoKey(e.Key))
         {
             e.Handled = true;
@@ -1550,12 +1479,10 @@ public partial class PaintOverlayWindow : Window
                 Dispatcher.BeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
             }
             SaveCurrentPageOnNavigate(forceBackground: false);
-            _presentationActive = false;
-            _presentationTransitionPending = false;
+            _presentationFullscreenActive = false;
+            _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
-            _lastKnownShowPosition = -1;
-            _lastKnownSlideID = -1;
             _boardSuspendedPhotoCache = _photoModeActive;
             if (_photoModeActive && _crossPageDisplayEnabled)
             {
@@ -1796,11 +1723,6 @@ public partial class PaintOverlayWindow : Window
         _inkRecordEnabled = enabled;
     }
 
-    public void UpdateInkAutoSaveEnabled(bool enabled)
-    {
-        _inkAutoSaveEnabled = enabled;
-    }
-
     public void UpdateInkReplayPreviousEnabled(bool enabled)
     {
         _inkReplayPreviousEnabled = enabled;
@@ -1965,16 +1887,12 @@ public partial class PaintOverlayWindow : Window
         {
             SaveCurrentPageOnNavigate(forceBackground: false);
         }
-        else if (_currentCacheScope == InkCacheScope.Presentation || _presentationActive || wasPresentationFullscreen)
+        else if (wasPresentationFullscreen || _presentationFullscreenActive)
         {
-            _presentationActive = false;
-            _presentationTransitionPending = false;
-            _presentationTransitionStartUtc = DateTime.MinValue;
+            _presentationFullscreenActive = false;
+            _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
-            _lastKnownShowPosition = -1;
-            _lastKnownSlideID = -1;
-            ClearPendingPresentationPageChange();
             ClearInkSurfaceState();
         }
         else if (!_photoModeActive && (_inkStrokes.Count > 0 || _hasDrawing))
@@ -2059,7 +1977,8 @@ public partial class PaintOverlayWindow : Window
         _photoModeActive = true;
         _photoFullscreen = wasFullscreen;
         _photoRestoreFullscreenPending = false;
-        _presentationActive = false;
+        _presentationFullscreenActive = false;
+        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
         Topmost = true;
         _currentCourseDate = DateTime.Today;
         _currentDocumentName = IoPath.GetFileNameWithoutExtension(sourcePath);
@@ -2074,24 +1993,18 @@ public partial class PaintOverlayWindow : Window
         SetPhotoWindowMode(_photoFullscreen);
         UpdateWpsNavHookState();
         UpdatePresentationFocusMonitor();
+        HidePhotoLoadingOverlay();
         if (isPdf)
         {
-            if (!TryOpenPdfDocument(sourcePath))
-            {
-                ExitPhotoMode();
-                return;
-            }
-            _lastPdfNavigationDirection = 1;
-            if (!RenderPdfPage(_currentPageIndex))
-            {
-                ExitPhotoMode();
-                return;
-            }
+            ClosePdfDocument();
+            ShowPhotoLoadingOverlay("正在加载PDF...");
+            StartPdfOpenAsync(sourcePath);
         }
         else
         {
             if (!TrySetPhotoBackground(sourcePath))
             {
+                HidePhotoLoadingOverlay();
                 ExitPhotoMode();
                 return;
             }
@@ -2116,6 +2029,8 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
+        Interlocked.Increment(ref _photoLoadToken);
+        HidePhotoLoadingOverlay();
         _foregroundPhotoActive = false;
         FlushPhotoTransformSave();
         SaveCurrentPageOnNavigate(forceBackground: false);
@@ -2301,17 +2216,6 @@ public partial class PaintOverlayWindow : Window
         PhotoForegroundDetected?.Invoke();
     }
 
-    private void SchedulePresentationContextRefresh()
-    {
-        _presentationRefreshStartKey = _currentCacheKey;
-        _presentationRefreshAttempts = 0;
-        if (_presentationRefreshTimer.IsEnabled)
-        {
-            _presentationRefreshTimer.Stop();
-        }
-        _presentationRefreshTimer.Start();
-    }
-
     private void MonitorPresentationFocus()
     {
         DetectForegroundPresentation();
@@ -2344,15 +2248,30 @@ public partial class PaintOverlayWindow : Window
         var monitorStart = Stopwatch.StartNew();
         bool uiThread = Dispatcher.CheckAccess();
         _pendingInkContextCheck = false;
-        if (_photoModeActive)
+
+        var allowPresentation = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
+        if (!allowPresentation)
         {
-            CheckPresentationFullscreenExclusivity();
-            _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-            return;
+            if (_presentationFullscreenActive)
+            {
+                _presentationFullscreenActive = false;
+                _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+                PresentationFullscreenDetected?.Invoke();
+                if (!_photoModeActive && !IsBoardActive())
+                {
+                    _currentCacheScope = InkCacheScope.None;
+                    _currentCacheKey = string.Empty;
+                    ClearInkSurfaceState();
+                }
+            }
         }
-        if (IsBoardActive())
+        else
         {
-            CheckPresentationFullscreenExclusivity();
+            UpdatePresentationFullscreenState(clearInkOnExit: !_photoModeActive && !IsBoardActive());
+        }
+
+        if (_photoModeActive || IsBoardActive())
+        {
             _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
             return;
         }
@@ -2362,233 +2281,38 @@ public partial class PaintOverlayWindow : Window
             _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
             return;
         }
-        if (TryClearInkOnWpsFullscreenExit(monitorStart, uiThread))
-        {
-            return;
-        }
-        var wasSlideshowActive = _pptSlideshowActive;
-        _pptSlideshowActive = false;
-        var allowOffice = _presentationOptions.AllowOffice || _inkCacheEnabled;
-        bool allowPresentationClear = !allowOffice;
-        bool snapshotAvailable = false;
-        
-        if (allowOffice)
-        {
-            RequestPresentationResolve();
-            var snapshot = _latestResolve;
-            snapshotAvailable = snapshot != null;
-            if (snapshot == null)
-            {
-                _pptSlideshowActive = wasSlideshowActive;
-            }
-            else
-            {
-                var resolveAgeMs = (DateTime.UtcNow - snapshot.CompletedUtc).TotalMilliseconds;
-                allowPresentationClear = resolveAgeMs <= PresentationResolveStaleMs;
-
-                var decision = snapshot.Decision;
-                if (decision.IsValid)
-                {
-                    var fullscreenNow = false;
-                    if (decision.IsWps)
-                    {
-                        var wpsTarget = ResolveWpsTarget();
-                        fullscreenNow = IsFullscreenPresentationWindow(wpsTarget);
-                    }
-                    if (_presentationFullscreenActive && !fullscreenNow && decision.IsWps && _presentationActive)
-                    {
-                        SaveCurrentPageOnNavigate(forceBackground: false);
-                        _presentationActive = false;
-                        _currentCacheScope = InkCacheScope.None;
-                        _currentCacheKey = string.Empty;
-                        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-                        ClearPendingPresentationPageChange();
-                        _lastKnownShowPosition = -1;
-                        _lastKnownSlideID = -1;
-                        _presentationFullscreenActive = false;
-                        ClearInkSurfaceState();
-                        UpdateInkMonitorInterval();
-                        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                        return;
-                    }
-                    _presentationFullscreenActive = fullscreenNow;
-                    // If slideshow was active but now it's not, clear ink (WPS/Office exit fullscreen)
-                    if (wasSlideshowActive && !decision.IsSlideshowWindow && _presentationActive)
-                    {
-                        SaveCurrentPageOnNavigate(forceBackground: false);
-                        _presentationActive = false;
-                        _currentCacheScope = InkCacheScope.None;
-                        _currentCacheKey = string.Empty;
-                        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-                        ClearPendingPresentationPageChange();
-                        _lastKnownShowPosition = -1;
-                        _lastKnownSlideID = -1;
-                        _presentationFullscreenActive = false;
-                        ClearInkSurfaceState();
-                        UpdateInkMonitorInterval();
-                        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                        return;
-                    }
-                    if (decision.Kind == PresentationDecisionKind.Title && snapshot.TitleResult != null)
-                    {
-                        _pptTrackedDocumentName = snapshot.TitleResult.TrackedDocumentName;
-                        _pptTrackedPageIndex = snapshot.TitleResult.TrackedPageIndex;
-                    }
-                    if (snapshot.ContextPlan.PendingChanged)
-                    {
-                        ApplyPendingPresentationState(snapshot.ContextPlan.PendingState);
-                    }
-                    _presentationActive = true;
-                    _pptSlideshowActive = decision.IsSlideshowWindow;
-                    ApplyPresentationContextPlan(snapshot.ContextPlan);
-                    UpdateInkMonitorInterval();
-                    if (wasSlideshowActive != _pptSlideshowActive)
-                    {
-                        _refreshOrchestrator.RequestRefresh("slideshow-state");
-                    }
-                    _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                    return;
-                }
-            }
-        }
-        if (_presentationActive)
-        {
-            // For WPS/Office: if slideshow was active but no snapshot available, it likely exited
-            // Force clear ink in this case regardless of allowOffice setting
-            if (allowOffice && !snapshotAvailable && wasSlideshowActive)
-            {
-                // WPS/Office slideshow ended (no longer detectable), force clear ink
-                SaveCurrentPageOnNavigate(forceBackground: false);
-                _presentationActive = false;
-                _currentCacheScope = InkCacheScope.None;
-                _currentCacheKey = string.Empty;
-                _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-                ClearPendingPresentationPageChange();
-                _lastKnownShowPosition = -1;
-                _lastKnownSlideID = -1;
-                _presentationFullscreenActive = false;
-                ClearInkSurfaceState();
-                UpdateInkMonitorInterval();
-                _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                return;
-            }
-            if (allowOffice && (!snapshotAvailable || !allowPresentationClear))
-            {
-                UpdateInkMonitorInterval();
-                if (wasSlideshowActive != _pptSlideshowActive)
-                {
-                    _refreshOrchestrator.RequestRefresh("slideshow-state");
-                }
-                _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-                return;
-            }
-            if (_currentCacheScope == InkCacheScope.Presentation)
-            {
-                _inkStrokes.Clear();
-            }
-            _presentationActive = false;
-            _currentCacheScope = InkCacheScope.None;
-            _currentCacheKey = string.Empty;
-            _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-            ClearPendingPresentationPageChange();
-            _presentationFullscreenActive = false;
-            // Reset tracking state for next slideshow session
-            _lastKnownShowPosition = -1;
-            _lastKnownSlideID = -1;
-            
-            // Unconditionally clear ink when exiting presentation mode
-            ClearInkSurfaceState();
-        }
-        if (!_presentationActive
-            && _currentCacheScope == InkCacheScope.Presentation)
-        {
-            _currentCacheScope = InkCacheScope.None;
-            _currentCacheKey = string.Empty;
-            _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-            _lastKnownShowPosition = -1;
-            _lastKnownSlideID = -1;
-            ClearPendingPresentationPageChange();
-            _presentationFullscreenActive = false;
-            
-            // Unconditionally clear ink when exiting presentation mode
-            ClearInkSurfaceState();
-        }
 
         UpdateInkMonitorInterval();
-        if (wasSlideshowActive != _pptSlideshowActive)
-        {
-            _refreshOrchestrator.RequestRefresh("slideshow-state");
-        }
         _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
     }
 
-    private void CheckPresentationFullscreenExclusivity()
+    private void UpdatePresentationFullscreenState(bool clearInkOnExit)
     {
-        if (!_photoModeActive && !IsBoardActive())
-        {
-            return;
-        }
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
-        {
-            return;
-        }
-        var nowUtc = DateTime.UtcNow;
-        if ((nowUtc - _lastPresentationExclusivityCheckUtc).TotalMilliseconds < PresentationExclusivityCheckIntervalMs)
-        {
-            return;
-        }
-        _lastPresentationExclusivityCheckUtc = nowUtc;
         var target = _presentationResolver.ResolvePresentationTarget(
             _presentationClassifier,
             _presentationOptions.AllowWps,
             _presentationOptions.AllowOffice,
             _currentProcessId);
-        if (!target.IsValid || !IsFullscreenPresentationWindow(target))
+        var fullscreenNow = target.IsValid && IsFullscreenPresentationWindow(target);
+        var nextType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        if (fullscreenNow && target.Info != null)
+        {
+            nextType = _presentationClassifier.Classify(target.Info);
+        }
+        var stateChanged = fullscreenNow != _presentationFullscreenActive;
+        _presentationFullscreenActive = fullscreenNow;
+        _currentPresentationType = fullscreenNow ? nextType : ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        if (!stateChanged)
         {
             return;
         }
-        if ((nowUtc - _lastPresentationFullscreenSignalUtc).TotalMilliseconds < PresentationExclusivitySignalCooldownMs)
-        {
-            return;
-        }
-        _lastPresentationFullscreenSignalUtc = nowUtc;
         PresentationFullscreenDetected?.Invoke();
-    }
-
-    private bool TryClearInkOnWpsFullscreenExit(Stopwatch monitorStart, bool uiThread)
-    {
-        if (!_presentationOptions.AllowWps)
+        if (!fullscreenNow && clearInkOnExit)
         {
-            return false;
+            _currentCacheScope = InkCacheScope.None;
+            _currentCacheKey = string.Empty;
+            ClearInkSurfaceState();
         }
-        if (!_presentationFullscreenActive)
-        {
-            return false;
-        }
-        if (_currentPresentationType != ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-            && !_presentationActive)
-        {
-            return false;
-        }
-        var wpsTarget = ResolveWpsTarget();
-        var fullscreenNow = IsFullscreenPresentationWindow(wpsTarget);
-        if (fullscreenNow)
-        {
-            return false;
-        }
-        SaveCurrentPageOnNavigate(forceBackground: false);
-        _presentationActive = false;
-        _currentCacheScope = InkCacheScope.None;
-        _currentCacheKey = string.Empty;
-        _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-        ClearPendingPresentationPageChange();
-        _lastKnownShowPosition = -1;
-        _lastKnownSlideID = -1;
-        _presentationFullscreenActive = false;
-        ClearInkSurfaceState();
-        UpdateInkMonitorInterval();
-        _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
-        return true;
     }
 
     private ClassroomToolkit.Interop.Presentation.PresentationType ResolveForegroundPresentationType()
@@ -2607,62 +2331,9 @@ public partial class PaintOverlayWindow : Window
         UpdateInkMonitorInterval();
     }
 
-    private void MarkPresentationInput()
-    {
-        _lastPresentationInputUtc = DateTime.UtcNow;
-    }
-
-    private void OnPresentationCommandSent()
-    {
-        MarkPresentationInput();
-        SchedulePresentationContextRefresh();
-    }
-
-    private void ClearPendingPresentationPageChange()
-    {
-        _pendingPresentationPageIndex = 0;
-        _pendingPresentationCacheKey = string.Empty;
-        _pendingPresentationSeenUtc = DateTime.MinValue;
-        _pendingPresentationStableCount = 0;
-    }
-
-    private PresentationContextState CapturePresentationContextState()
-    {
-        return new PresentationContextState(
-            _currentDocumentName,
-            _currentDocumentPath,
-            _currentPageIndex,
-            _currentSlideID,
-            _lastKnownShowPosition,
-            _lastKnownSlideID,
-            _currentCacheKey,
-            _currentCacheScope,
-            _presentationTransitionPending,
-            _presentationTransitionStartUtc,
-            _inkStrokes.Count,
-            new PresentationPendingState(
-                _pendingPresentationPageIndex,
-                _pendingPresentationCacheKey,
-                _pendingPresentationSeenUtc,
-                _pendingPresentationStableCount));
-    }
-
-    private void ApplyPendingPresentationState(PresentationPendingState pending)
-    {
-        _pendingPresentationPageIndex = pending.PageIndex;
-        _pendingPresentationCacheKey = pending.CacheKey;
-        _pendingPresentationSeenUtc = pending.SeenUtc;
-        _pendingPresentationStableCount = pending.StableCount;
-    }
-
     private bool ShouldDeferInkContext()
     {
         if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
-        {
-            return true;
-        }
-        if (_lastPresentationInputUtc != DateTime.MinValue
-            && (DateTime.UtcNow - _lastPresentationInputUtc).TotalMilliseconds < PresentationInputCooldownMs)
         {
             return true;
         }
@@ -2676,13 +2347,10 @@ public partial class PaintOverlayWindow : Window
     private void UpdateInkMonitorInterval()
     {
         var nowUtc = DateTime.UtcNow;
-        var idle = !_presentationActive
-                   && _lastInkInputUtc != DateTime.MinValue
+        var idle = _lastInkInputUtc != DateTime.MinValue
                    && (nowUtc - _lastInkInputUtc).TotalMilliseconds > InkIdleThresholdMs;
 
-        var targetMs = _pptSlideshowActive
-            ? InkMonitorSlideshowIntervalMs
-            : (idle ? InkMonitorIdleIntervalMs : InkMonitorActiveIntervalMs);
+        var targetMs = idle ? InkMonitorIdleIntervalMs : InkMonitorActiveIntervalMs;
         var currentMs = _inkMonitor.Interval.TotalMilliseconds;
         if (Math.Abs(currentMs - targetMs) < 1)
         {
@@ -2691,341 +2359,14 @@ public partial class PaintOverlayWindow : Window
         _inkMonitor.Interval = TimeSpan.FromMilliseconds(targetMs);
     }
 
-    private void RequestPresentationResolve()
-    {
-        var nowUtc = DateTime.UtcNow;
-        if ((nowUtc - _lastResolveRequestUtc).TotalMilliseconds < PresentationResolveMinIntervalMs)
-        {
-            return;
-        }
-        _lastResolveRequestUtc = nowUtc;
-
-        if (Interlocked.CompareExchange(ref _resolveInFlight, 1, 0) != 0)
-        {
-            return;
-        }
-
-        var trackedDocName = _pptTrackedDocumentName;
-        var trackedPageIndex = _pptTrackedPageIndex;
-        var contextState = CapturePresentationContextState();
-
-        _resolveWorker.Post(() =>
-        {
-            PresentationResolveSnapshot snapshot;
-            try
-            {
-                var pptSw = Stopwatch.StartNew();
-                var pptInfo = PresentationSlideResolver.TryResolvePowerPointWithApplication(out var pptApp);
-                var pptMs = pptSw.Elapsed.TotalMilliseconds;
-                PresentationSlideInfo? wpsInfo = null;
-                if (_presentationOptions.AllowWps)
-                {
-                    wpsInfo = PresentationSlideResolver.TryResolveWps();
-                }
-
-                TitleResolveResult? titleResult = null;
-                double titleMs = 0;
-                if (pptInfo == null)
-                {
-                    var titleSw = Stopwatch.StartNew();
-                    titleResult = ResolveOfficeSlideFromTitleWorker(trackedDocName, trackedPageIndex);
-                    titleMs = titleSw.Elapsed.TotalMilliseconds;
-                }
-
-                var foreground = ResolveForegroundPresentationType();
-                var officeTarget = _presentationResolver.ResolvePresentationTarget(
-                    _presentationClassifier,
-                    allowWps: false,
-                    allowOffice: true,
-                    _currentProcessId);
-                var wpsTarget = _presentationOptions.AllowWps
-                    ? ResolveWpsTarget()
-                    : ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
-                var officeSlideshow = IsPresentationSlideshow(officeTarget);
-                var wpsSlideshow = IsPresentationSlideshow(wpsTarget);
-                var decision = BuildPresentationDecision(
-                    pptInfo,
-                    wpsInfo,
-                    titleResult,
-                    foreground,
-                    officeSlideshow,
-                    wpsSlideshow);
-                var plan = BuildPresentationContextPlan(contextState, decision);
-                snapshot = new PresentationResolveSnapshot(
-                    pptInfo,
-                    pptApp,
-                    wpsInfo,
-                    titleResult,
-                    foreground,
-                    officeSlideshow,
-                    wpsSlideshow,
-                    decision,
-                    plan,
-                    pptMs,
-                    titleMs,
-                    DateTime.UtcNow);
-            }
-            catch
-            {
-                snapshot = new PresentationResolveSnapshot(
-                    null,
-                    null,
-                    null,
-                    null,
-                    ClassroomToolkit.Interop.Presentation.PresentationType.None,
-                    OfficeSlideshow: false,
-                    WpsSlideshow: false,
-                    PresentationResolveDecision.None,
-                    PresentationContextPlan.None,
-                    0,
-                    0,
-                    DateTime.UtcNow);
-            }
-
-            Dispatcher.BeginInvoke(() =>
-            {
-                _latestResolve = snapshot;
-                if (snapshot.PptApplication != null)
-                {
-                    _pptEventBridge.TryAttach(snapshot.PptApplication);
-                }
-                else
-                {
-                    _pptEventBridge.Detach();
-                }
-                if (snapshot.ResolvePowerPointMs > 0)
-                {
-                    _perfResolvePpt.Add(snapshot.ResolvePowerPointMs, uiThread: false);
-                }
-                if (snapshot.ResolveTitleMs > 0)
-                {
-                    _perfResolveTitle.Add(snapshot.ResolveTitleMs, uiThread: false);
-                }
-                Interlocked.Exchange(ref _resolveInFlight, 0);
-                _refreshOrchestrator.RequestRefresh("resolve-complete");
-            }, DispatcherPriority.Background);
-        });
-    }
-
-    private void OnPowerPointSlideshowEvent(PowerPointSlideshowEventType eventType)
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            bool wasSlideshowActive = _pptSlideshowActive;
-            _pptSlideshowActive = eventType != PowerPointSlideshowEventType.End;
-            // When slideshow ends, force clear ink immediately (for PowerPoint)
-            if (wasSlideshowActive && !_pptSlideshowActive && _presentationActive)
-            {
-                SaveCurrentPageOnNavigate(forceBackground: false);
-                _presentationActive = false;
-                _currentCacheScope = InkCacheScope.None;
-                _currentCacheKey = string.Empty;
-                ClearInkSurfaceState();
-            }
-            _refreshOrchestrator.RequestRefresh("ppt-event");
-        }, DispatcherPriority.Background);
-    }
-
-
-    private TitleResolveResult? ResolveOfficeSlideFromTitleWorker(string trackedDocumentName, int trackedPageIndex)
-    {
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            allowWps: false,
-            allowOffice: true,
-            _currentProcessId);
-        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: target.IsValid={target.IsValid}, ProcessName={target.Info?.ProcessName}, ClassNames={string.Join(",", target.Info?.ClassNames ?? Array.Empty<string>())}");
-        var isSlideshow = target.IsValid && target.Info != null && _presentationClassifier.IsSlideshowWindow(target.Info);
-        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: IsSlideshowWindow={isSlideshow}");
-
-        // Relaxed check: Allow main window fallback if we have a valid target
-        if (!target.IsValid)
-        {
-            return null;
-        }
-
-        var title = WindowTextHelper.GetWindowTitle(target.Handle);
-        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: title={title}");
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return null;
-        }
-        var parsed = TryParseSlideIndexFromTitle(title);
-        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: parsed={parsed}");
-
-        // Extract document name from title
-        var docName = NormalizeOfficeTitle(title);
-        if (string.IsNullOrWhiteSpace(docName))
-        {
-            docName = title;
-        }
-
-        if (parsed.HasValue)
-        {
-            // Title contains slide index - use it directly
-            var slideIndex = parsed.Value;
-            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (from title) docName={docName}, slideIndex={slideIndex}");
-            return new TitleResolveResult(docName, slideIndex, trackedDocumentName, trackedPageIndex, isSlideshow);
-        }
-
-        // FALLBACK 1: Try UI Automation to get slide index from PPT window
-        int? uiaSlideIndex = null;
-        try
-        {
-            uiaSlideIndex = ClassroomToolkit.Interop.Presentation.PowerPointSlideDetector.TryGetSlideIndex(target.Handle);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkCache] UIA Exception: {ex.Message}");
-        }
-
-        if (uiaSlideIndex.HasValue && uiaSlideIndex.Value > 0)
-        {
-            var slideIndex = uiaSlideIndex.Value;
-            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (UI Automation) docName={docName}, slideIndex={slideIndex}");
-            return new TitleResolveResult(docName, slideIndex, docName, slideIndex, isSlideshow);
-        }
-
-        // FALLBACK 2: Try Accessibility API
-        var accSlideIndex = ClassroomToolkit.Interop.Presentation.PowerPointSlideDetector.TryGetSlideIndexFromAccessibility(target.Handle);
-        if (accSlideIndex.HasValue && accSlideIndex.Value > 0)
-        {
-            var slideIndex = accSlideIndex.Value;
-            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (Accessibility) docName={docName}, slideIndex={slideIndex}");
-            return new TitleResolveResult(docName, slideIndex, docName, slideIndex, isSlideshow);
-        }
-
-        // FALLBACK 3: Title doesn't contain slide index (PPT slideshow mode)
-        // Use tracked page index instead (starts at 1)
-        
-        // Guard: If the new detected name is generic/empty (e.g. just "PowerPoint"), 
-        // DO NOT reset tracking. Assume it's the same document.
-        bool isNewNameGeneric = string.IsNullOrWhiteSpace(docName) 
-                                || docName.Equals("PowerPoint", StringComparison.OrdinalIgnoreCase)
-                                || docName.Equals("幻灯片放映", StringComparison.OrdinalIgnoreCase);
-
-        if (isNewNameGeneric && !string.IsNullOrEmpty(trackedDocumentName))
-        {
-            docName = trackedDocumentName;
-        }
-
-        if (!docName.Equals(trackedDocumentName, StringComparison.OrdinalIgnoreCase))
-        {
-            // Document changed, reset tracking
-            trackedDocumentName = docName;
-            trackedPageIndex = 1;
-            System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: NEW DOC, reset tracking to page 1");
-        }
-        var trackedIndex = Math.Max(1, trackedPageIndex);
-        System.Diagnostics.Debug.WriteLine($"[InkCache] TryResolveOfficeSlideFromTitle: SUCCESS (tracked) docName={docName}, slideIndex={trackedIndex}");
-        return new TitleResolveResult(docName, trackedIndex, trackedDocumentName, trackedIndex, isSlideshow);
-    }
-    
-    /// <summary>
-    /// Updates the tracked PPT page index (called when navigation keys are detected).
-    /// Called externally when page-changing inputs (Page Down, Arrow Right, Space, etc.) are detected.
-    /// </summary>
-    public void UpdatePptTrackedPageIndex(int delta)
-    {
-        if (string.IsNullOrEmpty(_pptTrackedDocumentName))
-        {
-            return;
-        }
-        var newIndex = _pptTrackedPageIndex + delta;
-        if (newIndex < 1)
-        {
-            newIndex = 1;
-        }
-        if (newIndex != _pptTrackedPageIndex)
-        {
-            _pptTrackedPageIndex = newIndex;
-            System.Diagnostics.Debug.WriteLine($"[InkCache] UpdatePptTrackedPageIndex: delta={delta}, newIndex={_pptTrackedPageIndex}");
-            // Trigger immediate context refresh
-            _refreshOrchestrator.RequestRefresh("ppt-tracked");
-        }
-    }
-
-    private static string NormalizeOfficeTitle(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return string.Empty;
-        }
-        var cleaned = Regex.Replace(title, @"\b(\d+)\s*of\s*\d+\b", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"第\s*\d+\s*(页|张)", string.Empty);
-        cleaned = Regex.Replace(cleaned, @"\bSlide\s*\d+.*", string.Empty, RegexOptions.IgnoreCase);
-        // Handle variable whitespace around dash (e.g., "PowerPoint 幻灯片放映  -  filename")
-        cleaned = Regex.Replace(cleaned, @"PowerPoint\s+Slide\s+Show\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"PowerPoint\s+幻灯片放映\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"幻灯片放映\s*-\s*", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"\s*-\s*(Microsoft\s+)?PowerPoint\s*$", string.Empty, RegexOptions.IgnoreCase);
-        
-        // Remove state suffixes that might cause jitter
-        cleaned = Regex.Replace(cleaned, @"\s*\[兼容模式\]", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"\s*\[Compatibility Mode\]", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"\s*\[只读\]", string.Empty, RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"\s*\[Read-Only\]", string.Empty, RegexOptions.IgnoreCase);
-
-        cleaned = cleaned.Trim().Trim('-').Trim();
-        try
-        {
-            return IoPath.GetFileNameWithoutExtension(cleaned);
-        }
-        catch
-        {
-            return cleaned;
-        }
-    }
-
-    private void ApplyPresentationContextPlan(PresentationContextPlan plan)
-    {
-        if (plan.Kind == PresentationPlanKind.None)
-        {
-            return;
-        }
-        _currentPresentationType = plan.IsWps
-            ? ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-            : ClassroomToolkit.Interop.Presentation.PresentationType.Office;
-
-        if (plan.Kind == PresentationPlanKind.DocumentChange)
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkCache] Document changed: {_currentDocumentName} -> {plan.DocumentName}");
-            _currentDocumentName = plan.DocumentName;
-            _currentDocumentPath = plan.DocumentPath ?? string.Empty;
-            _currentPageIndex = Math.Max(1, plan.PageIndex);
-            _currentSlideID = plan.SlideID;
-            _lastKnownShowPosition = plan.ShowPosition;
-            _lastKnownSlideID = plan.SlideID;
-            _currentCacheScope = InkCacheScope.Presentation;
-            _currentCacheKey = plan.CacheKey;
-            ClearPendingPresentationPageChange();
-            InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
-            LoadCurrentPageIfExists();
-            return;
-        }
-
-        if (plan.Kind == PresentationPlanKind.PageChange)
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkCache] Page changed: {_currentPageIndex} -> {plan.PageIndex}");
-            _currentPageIndex = Math.Max(1, plan.PageIndex);
-            _currentSlideID = plan.SlideID;
-            _lastKnownShowPosition = plan.ShowPosition;
-            _lastKnownSlideID = plan.SlideID;
-            _currentCacheKey = plan.CacheKey;
-            ClearPendingPresentationPageChange();
-            LoadCurrentPageIfExists();
-            _refreshOrchestrator.RequestRefresh("page-change");
-        }
-    }
-
     private void LoadCurrentPageIfExists()
     {
+        if (_currentCacheScope != InkCacheScope.Photo)
+        {
+            return;
+        }
         if (!_inkCacheEnabled)
         {
-            if (_currentCacheScope == InkCacheScope.Presentation)
-            {
-                return;
-            }
             ClearInkSurfaceState();
             return;
         }
@@ -3039,10 +2380,7 @@ public partial class PaintOverlayWindow : Window
             ApplyInkStrokes(cached);
             return;
         }
-        if (_currentCacheScope == InkCacheScope.Photo)
-        {
-            ClearInkSurfaceState();
-        }
+        ClearInkSurfaceState();
     }
 
     private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes)
@@ -3065,84 +2403,9 @@ public partial class PaintOverlayWindow : Window
         _inkCacheDirty = true;
     }
 
-    private void TryAutoSave()
-    {
-        if (!_inkRecordEnabled)
-        {
-            return;
-        }
-        if (!_inkAutoSaveEnabled)
-        {
-            return;
-        }
-        if (!_pptSlideshowActive || _currentCacheScope != InkCacheScope.Presentation)
-        {
-            return;
-        }
-        ScheduleInkAutoSave();
-    }
-
-    private void ScheduleInkAutoSave()
-    {
-        _inkAutoSavePending = true;
-        if (_inkAutoSaveTimer == null)
-        {
-            _inkAutoSaveTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(800)
-            };
-            _inkAutoSaveTimer.Tick += (_, _) =>
-            {
-                _inkAutoSaveTimer?.Stop();
-                if (!_inkAutoSavePending)
-                {
-                    return;
-                }
-                _inkAutoSavePending = false;
-                var page = BuildCurrentInkPage();
-                if (page == null)
-                {
-                    return;
-                }
-                _ = System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        _inkStorage.SavePage(_currentCourseDate, page);
-                        if (_inkRetentionDays > 0)
-                        {
-                            _inkStorage.CleanupOldRecords(_inkRetentionDays);
-                        }
-                    }
-                    catch
-                    {
-                        // Ignore auto-save failures.
-                    }
-                });
-            };
-        }
-        _inkAutoSaveTimer.Stop();
-        _inkAutoSaveTimer.Start();
-    }
-
-    private InkPageData? BuildCurrentInkPage()
-    {
-        if (GetCommittedStrokeCount() == 0 || string.IsNullOrWhiteSpace(_currentDocumentName) || _currentPageIndex <= 0)
-        {
-            return null;
-        }
-        return new InkPageData
-        {
-            DocumentName = _currentDocumentName,
-            SourcePath = _currentDocumentPath,
-            PageIndex = _currentPageIndex,
-            Strokes = CloneCommittedInkStrokes()
-        };
-    }
-
     private void SaveCurrentPageOnNavigate(bool forceBackground)
     {
-        if (_currentCacheScope == InkCacheScope.Presentation)
+        if (_currentCacheScope != InkCacheScope.Photo)
         {
             return;
         }
@@ -3195,16 +2458,6 @@ public partial class PaintOverlayWindow : Window
         {
             OverlayRoot.ReleaseMouseCapture();
         }
-    }
-
-    private bool ShouldAutoSavePresentationBackground()
-    {
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        return IsFullscreenPresentationWindow(target);
     }
 
     private void CopyPhotoBackground(string imagePath)
@@ -4129,7 +3382,7 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         _neighborInkRenderPending.Add(cacheKey);
-        Dispatcher.BeginInvoke(() =>
+        var scheduled = TryBeginInvoke(() =>
         {
             try
             {
@@ -4167,6 +3420,10 @@ public partial class PaintOverlayWindow : Window
                 _neighborInkRenderPending.Remove(cacheKey);
             }
         }, DispatcherPriority.Background);
+        if (!scheduled)
+        {
+            _neighborInkRenderPending.Remove(cacheKey);
+        }
     }
 
     private string BuildNeighborInkCacheKey(int pageIndex)
@@ -4234,36 +3491,108 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private bool TryOpenPdfDocument(string path)
+    private void StartPdfOpenAsync(string sourcePath)
     {
+        var token = Interlocked.Increment(ref _photoLoadToken);
+        _ = System.Threading.Tasks.Task.Run(() =>
+        {
+            if (!TryOpenPdfDocumentCore(sourcePath, out var document, out var pageCount))
+            {
+                var scheduled = TryBeginInvoke(() =>
+                {
+                    if (token != _photoLoadToken)
+                    {
+                        return;
+                    }
+                    HidePhotoLoadingOverlay();
+                    ExitPhotoMode();
+                }, DispatcherPriority.Normal);
+                if (!scheduled && document != null)
+                {
+                    document.Dispose();
+                }
+                return;
+            }
+            var openedDocument = document!;
+            var scheduledApply = TryBeginInvoke(() =>
+            {
+                if (token != _photoLoadToken
+                    || !_photoModeActive
+                    || !_photoDocumentIsPdf
+                    || !string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    openedDocument.Dispose();
+                    return;
+                }
+                ApplyPdfDocument(openedDocument, pageCount);
+                _lastPdfNavigationDirection = 1;
+                if (!RenderPdfPage(_currentPageIndex))
+                {
+                    HidePhotoLoadingOverlay();
+                    ExitPhotoMode();
+                    return;
+                }
+                HidePhotoLoadingOverlay();
+            }, DispatcherPriority.Render);
+            if (!scheduledApply)
+            {
+                openedDocument.Dispose();
+            }
+        });
+    }
+
+    private static bool TryOpenPdfDocumentCore(string path, out PdfDocumentHost? document, out int pageCount)
+    {
+        document = null;
+        pageCount = 0;
         try
         {
-            _pdfDocument = PdfDocumentHost.Open(path);
-            _pdfPageCount = _pdfDocument.PageCount;
+            document = PdfDocumentHost.Open(path);
+        }
+        catch
+        {
+            document?.Dispose();
+            return false;
+        }
+        if (document == null)
+        {
+            return false;
+        }
+        pageCount = document.PageCount;
+        return pageCount > 0;
+    }
+
+    private void ApplyPdfDocument(PdfDocumentHost document, int pageCount)
+    {
+        lock (_pdfRenderLock)
+        {
+            _pdfDocument = document;
+            _pdfPageCount = pageCount;
             _pdfPageCache.Clear();
             _pdfPageOrder.Clear();
             _pdfPinnedPages.Clear();
             Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
             Interlocked.Increment(ref _pdfPrefetchToken);
-            return _pdfPageCount > 0;
-        }
-        catch
-        {
-            ClosePdfDocument();
-            return false;
+            Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
+            Interlocked.Increment(ref _pdfVisiblePrefetchToken);
         }
     }
 
     private void ClosePdfDocument()
     {
-        _pdfDocument?.Dispose();
-        _pdfDocument = null;
-        _pdfPageCount = 0;
-        _pdfPageCache.Clear();
-        _pdfPageOrder.Clear();
-        _pdfPinnedPages.Clear();
-        Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
-        Interlocked.Increment(ref _pdfPrefetchToken);
+        lock (_pdfRenderLock)
+        {
+            _pdfDocument?.Dispose();
+            _pdfDocument = null;
+            _pdfPageCount = 0;
+            _pdfPageCache.Clear();
+            _pdfPageOrder.Clear();
+            _pdfPinnedPages.Clear();
+            Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
+            Interlocked.Increment(ref _pdfPrefetchToken);
+            Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
+            Interlocked.Increment(ref _pdfVisiblePrefetchToken);
+        }
     }
 
     private bool RenderPdfPage(int pageIndex)
@@ -4471,14 +3800,14 @@ public partial class PaintOverlayWindow : Window
             return;
         }
         var token = _pdfPrefetchToken;
-        _ = System.Threading.Tasks.Task.Run(() =>
+        _ = System.Threading.Tasks.Task.Run(async () =>
         {
             try
             {
                 var delay = _crossPageDisplayEnabled ? 0 : 120;
                 if (delay > 0)
                 {
-                    System.Threading.Thread.Sleep(delay);
+                    await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
                 }
                 if (token != _pdfPrefetchToken || !_photoModeActive || !_photoDocumentIsPdf)
                 {
@@ -4538,7 +3867,7 @@ public partial class PaintOverlayWindow : Window
                 Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
                 if (token == _pdfVisiblePrefetchToken)
                 {
-                    Dispatcher.BeginInvoke(() =>
+                    TryBeginInvoke(() =>
                     {
                         if (_photoModeActive && _photoDocumentIsPdf && _crossPageDisplayEnabled)
                         {
@@ -4817,101 +4146,6 @@ public partial class PaintOverlayWindow : Window
         }
     }
 
-    private void CaptureBackgroundImage(string imagePath)
-    {
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        if (!target.IsValid)
-        {
-            return;
-        }
-        try
-        {
-            WindowCaptureHelper.TryCaptureWindow(target.Handle, imagePath);
-        }
-        catch
-        {
-            // Ignore capture exceptions.
-        }
-    }
-
-    private static int? TryParseSlideIndexFromTitle(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return null;
-        }
-        var match = Regex.Match(title, @"(\d+)\s*[\/／]\s*\d+");
-        if (match.Success && int.TryParse(match.Groups[1].Value, out var index))
-        {
-            return index;
-        }
-        match = Regex.Match(title, @"第\s*(\d+)\s*(页|张)");
-        if (match.Success && int.TryParse(match.Groups[1].Value, out index))
-        {
-            return index;
-        }
-        match = Regex.Match(title, @"\b(\d+)\s*of\s*\d+\b", RegexOptions.IgnoreCase);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out index))
-        {
-            return index;
-        }
-        match = Regex.Match(title, @"\bSlide\s*(\d+)", RegexOptions.IgnoreCase);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out index))
-        {
-            return index;
-        }
-        return null;
-    }
-
-    private static string BuildPresentationCacheKey(string documentName, string documentPath, int pageIndex, int slideID, bool isWps)
-    {
-        if (pageIndex <= 0)
-        {
-            return string.Empty;
-        }
-
-        // Prefer SlideID for slide key (stable across slide reordering)
-        // Fall back to SlideIndex if SlideID is not available
-        var slideKey = slideID > 0
-            ? $"sid_{slideID}"
-            : $"idx_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
-
-        if (isWps)
-        {
-            var normalized = NormalizeWpsTitle(documentName);
-            if (string.IsNullOrWhiteSpace(normalized))
-            {
-                normalized = documentName;
-            }
-            return $"wps|{normalized}|{slideKey}";
-        }
-        var docKey = string.Empty;
-        if (!string.IsNullOrWhiteSpace(documentPath))
-        {
-            try
-            {
-                docKey = IoPath.GetFileNameWithoutExtension(documentPath);
-            }
-            catch
-            {
-                docKey = documentPath;
-            }
-        }
-        if (string.IsNullOrWhiteSpace(docKey))
-        {
-            docKey = NormalizeOfficeTitle(documentName);
-        }
-        if (string.IsNullOrWhiteSpace(docKey))
-        {
-            docKey = documentName;
-        }
-        return $"ppt|{docKey}|{slideKey}";
-    }
-
     private static string BuildPhotoCacheKey(string sourcePath)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))
@@ -4957,19 +4191,6 @@ public partial class PaintOverlayWindow : Window
     {
         var ext = IoPath.GetExtension(path);
         return !string.IsNullOrWhiteSpace(ext) && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeWpsTitle(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return string.Empty;
-        }
-        var normalized = Regex.Replace(title, @"\s*-\s*WPS.*$", string.Empty, RegexOptions.IgnoreCase);
-        normalized = Regex.Replace(normalized, @"\s*\d+\s*/\s*\d+\s*$", string.Empty);
-        normalized = Regex.Replace(normalized, @"\s*第\s*\d+\s*(页|张).*?$", string.Empty, RegexOptions.IgnoreCase);
-        normalized = Regex.Replace(normalized, @"\s*Slide\s*\d+.*?$", string.Empty, RegexOptions.IgnoreCase);
-        return normalized.Trim();
     }
 
     private bool IsForegroundOwnedByCurrentProcess()
@@ -5093,7 +4314,6 @@ public partial class PaintOverlayWindow : Window
         if (_presentationService.TrySendToTarget(target, command, options))
         {
             RememberWpsNav(direction, target.Handle);
-            SchedulePresentationContextRefresh();
         }
     }
 
@@ -5200,14 +4420,12 @@ public partial class PaintOverlayWindow : Window
             && wpsSlideshow
             && TrySendWpsNavigation(command, wpsTarget, allowBackground: false))
         {
-            OnPresentationCommandSent();
             return true;
         }
         if (foreground == ClassroomToolkit.Interop.Presentation.PresentationType.Office
             && officeSlideshow
             && TrySendOfficeNavigation(command, officeTarget, allowBackground: false))
         {
-            OnPresentationCommandSent();
             return true;
         }
 
@@ -5216,13 +4434,11 @@ public partial class PaintOverlayWindow : Window
             if (_currentPresentationType == ClassroomToolkit.Interop.Presentation.PresentationType.Wps
                 && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
             {
-                OnPresentationCommandSent();
                 return true;
             }
             if (_currentPresentationType == ClassroomToolkit.Interop.Presentation.PresentationType.Office
                 && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
             {
-                OnPresentationCommandSent();
                 return true;
             }
             var wpsFullscreen = IsFullscreenWindow(wpsTarget.Handle);
@@ -5230,25 +4446,21 @@ public partial class PaintOverlayWindow : Window
             if (wpsFullscreen && !officeFullscreen
                 && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
             {
-                OnPresentationCommandSent();
                 return true;
             }
             if (officeFullscreen && !wpsFullscreen
                 && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
             {
-                OnPresentationCommandSent();
                 return true;
             }
         }
 
         if (wpsSlideshow && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
         {
-            OnPresentationCommandSent();
             return true;
         }
         if (officeSlideshow && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
         {
-            OnPresentationCommandSent();
             return true;
         }
         return false;
@@ -5314,11 +4526,6 @@ public partial class PaintOverlayWindow : Window
         if (fullscreen != ClassroomToolkit.Interop.Presentation.PresentationType.None)
         {
             return fullscreen;
-        }
-        if (_presentationActive && _currentCacheScope == InkCacheScope.Presentation
-            && _currentPresentationType != ClassroomToolkit.Interop.Presentation.PresentationType.None)
-        {
-            return _currentPresentationType;
         }
         return _currentPresentationType;
     }
@@ -5959,16 +5166,11 @@ public partial class PaintOverlayWindow : Window
     private void CommitStroke(InkStrokeData stroke)
     {
         _inkStrokes.Add(stroke);
-        if (_currentCacheScope != InkCacheScope.Presentation)
+        if (_currentCacheScope == InkCacheScope.Photo)
         {
             MarkInkCacheDirty();
+            UpdateActiveCacheSnapshot();
         }
-        if (_currentCacheScope == InkCacheScope.Presentation)
-        {
-            return;
-        }
-        UpdateActiveCacheSnapshot();
-        TryAutoSave();
     }
 
     private void UpdateActiveCacheSnapshot()
@@ -6063,7 +5265,7 @@ public partial class PaintOverlayWindow : Window
                 {
                     return;
                 }
-                _ = Dispatcher.BeginInvoke(() =>
+                var scheduled = TryBeginInvoke(() =>
                 {
                     if (token != _inkRedrawToken)
                     {
@@ -6085,11 +5287,15 @@ public partial class PaintOverlayWindow : Window
                         _redrawInProgress = false;
                     }
                 }, DispatcherPriority.Render);
+                if (!scheduled)
+                {
+                    _redrawPending = false;
+                }
             });
             return;
         }
         _redrawPending = true;
-        _ = Dispatcher.BeginInvoke(() =>
+        var directScheduled = TryBeginInvoke(() =>
         {
             _redrawPending = false;
             if (_redrawInProgress)
@@ -6107,6 +5313,10 @@ public partial class PaintOverlayWindow : Window
                 _redrawInProgress = false;
             }
         }, DispatcherPriority.Render);
+        if (!directScheduled)
+        {
+            _redrawPending = false;
+        }
     }
 
     private void RequestCrossPageDisplayUpdate()
@@ -6133,7 +5343,7 @@ public partial class PaintOverlayWindow : Window
                 {
                     return;
                 }
-                _ = Dispatcher.BeginInvoke(() =>
+                var scheduled = TryBeginInvoke(() =>
                 {
                     if (token != _crossPageUpdateToken)
                     {
@@ -6147,11 +5357,15 @@ public partial class PaintOverlayWindow : Window
                     _lastCrossPageUpdateUtc = DateTime.UtcNow;
                     UpdateCrossPageDisplay();
                 }, DispatcherPriority.Render);
+                if (!scheduled)
+                {
+                    _crossPageUpdatePending = false;
+                }
             });
             return;
         }
         _crossPageUpdatePending = true;
-        Dispatcher.BeginInvoke(() =>
+        var directScheduled = TryBeginInvoke(() =>
         {
             _crossPageUpdatePending = false;
             if (!_photoModeActive || !_crossPageDisplayEnabled)
@@ -6161,6 +5375,57 @@ public partial class PaintOverlayWindow : Window
             _lastCrossPageUpdateUtc = DateTime.UtcNow;
             UpdateCrossPageDisplay();
         }, DispatcherPriority.Render);
+        if (!directScheduled)
+        {
+            _crossPageUpdatePending = false;
+        }
+    }
+
+    private bool TryBeginInvoke(Action action, DispatcherPriority priority)
+    {
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return false;
+        }
+        try
+        {
+            Dispatcher.BeginInvoke(action, priority);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ShowPhotoLoadingOverlay(string message)
+    {
+        _photoLoading = true;
+        if (PhotoLoadingText != null)
+        {
+            PhotoLoadingText.Text = message;
+        }
+        if (PhotoLoadingOverlay != null)
+        {
+            PhotoLoadingOverlay.Visibility = Visibility.Visible;
+        }
+        if (OverlayRoot != null)
+        {
+            OverlayRoot.IsHitTestVisible = false;
+        }
+    }
+
+    private void HidePhotoLoadingOverlay()
+    {
+        _photoLoading = false;
+        if (PhotoLoadingOverlay != null)
+        {
+            PhotoLoadingOverlay.Visibility = Visibility.Collapsed;
+        }
+        if (OverlayRoot != null)
+        {
+            OverlayRoot.IsHitTestVisible = _mode != PaintToolMode.Cursor || _photoModeActive;
+        }
     }
 
     private void ShowPhotoContextMenu(WpfPoint position)
@@ -7509,446 +6774,6 @@ public partial class PaintOverlayWindow : Window
             return new Int32Rect(0, 0, 0, 0);
         }
         return new Int32Rect(x, y, width, height);
-    }
-
-    private sealed record TitleResolveResult(
-        string DocumentName,
-        int SlideIndex,
-        string TrackedDocumentName,
-        int TrackedPageIndex,
-        bool IsSlideshowWindow);
-
-    private sealed record PresentationResolveSnapshot(
-        PresentationSlideInfo? PptInfo,
-        object? PptApplication,
-        PresentationSlideInfo? WpsInfo,
-        TitleResolveResult? TitleResult,
-        ClassroomToolkit.Interop.Presentation.PresentationType ForegroundType,
-        bool OfficeSlideshow,
-        bool WpsSlideshow,
-        PresentationResolveDecision Decision,
-        PresentationContextPlan ContextPlan,
-        double ResolvePowerPointMs,
-        double ResolveTitleMs,
-        DateTime CompletedUtc);
-
-    private enum PresentationDecisionKind
-    {
-        None,
-        PowerPoint,
-        Wps,
-        Title
-    }
-
-    private readonly struct PresentationResolveDecision
-    {
-        public PresentationResolveDecision(
-            PresentationDecisionKind kind,
-            string documentName,
-            string documentPath,
-            int pageIndex,
-            int slideID,
-            int showPosition,
-            bool isWps,
-            bool isSlideshowWindow)
-        {
-            Kind = kind;
-            DocumentName = documentName;
-            DocumentPath = documentPath;
-            PageIndex = pageIndex;
-            SlideID = slideID;
-            ShowPosition = showPosition;
-            IsWps = isWps;
-            IsSlideshowWindow = isSlideshowWindow;
-        }
-
-        public PresentationDecisionKind Kind { get; }
-        public string DocumentName { get; }
-        public string DocumentPath { get; }
-        public int PageIndex { get; }
-        public int SlideID { get; }
-        public int ShowPosition { get; }
-        public bool IsWps { get; }
-        public bool IsSlideshowWindow { get; }
-        public bool IsValid => Kind != PresentationDecisionKind.None
-            && !string.IsNullOrWhiteSpace(DocumentName)
-            && PageIndex > 0;
-
-        public static PresentationResolveDecision None => new(
-            PresentationDecisionKind.None,
-            string.Empty,
-            string.Empty,
-            0,
-            0,
-            0,
-            isWps: false,
-            isSlideshowWindow: false);
-    }
-
-    private readonly struct PresentationPendingState
-    {
-        public PresentationPendingState(int pageIndex, string cacheKey, DateTime seenUtc, int stableCount)
-        {
-            PageIndex = pageIndex;
-            CacheKey = cacheKey ?? string.Empty;
-            SeenUtc = seenUtc;
-            StableCount = stableCount;
-        }
-
-        public int PageIndex { get; }
-        public string CacheKey { get; }
-        public DateTime SeenUtc { get; }
-        public int StableCount { get; }
-
-        public static PresentationPendingState Empty => new(0, string.Empty, DateTime.MinValue, 0);
-    }
-
-    private readonly struct PresentationContextState
-    {
-        public PresentationContextState(
-            string currentDocumentName,
-            string currentDocumentPath,
-            int currentPageIndex,
-            int currentSlideId,
-            int lastKnownShowPosition,
-            int lastKnownSlideId,
-            string currentCacheKey,
-            InkCacheScope currentCacheScope,
-            bool presentationTransitionPending,
-            DateTime presentationTransitionStartUtc,
-            int inkStrokesCount,
-            PresentationPendingState pendingState)
-        {
-            CurrentDocumentName = currentDocumentName ?? string.Empty;
-            CurrentDocumentPath = currentDocumentPath ?? string.Empty;
-            CurrentPageIndex = currentPageIndex;
-            CurrentSlideId = currentSlideId;
-            LastKnownShowPosition = lastKnownShowPosition;
-            LastKnownSlideId = lastKnownSlideId;
-            CurrentCacheKey = currentCacheKey ?? string.Empty;
-            CurrentCacheScope = currentCacheScope;
-            PresentationTransitionPending = presentationTransitionPending;
-            PresentationTransitionStartUtc = presentationTransitionStartUtc;
-            InkStrokesCount = inkStrokesCount;
-            PendingState = pendingState;
-        }
-
-        public string CurrentDocumentName { get; }
-        public string CurrentDocumentPath { get; }
-        public int CurrentPageIndex { get; }
-        public int CurrentSlideId { get; }
-        public int LastKnownShowPosition { get; }
-        public int LastKnownSlideId { get; }
-        public string CurrentCacheKey { get; }
-        public InkCacheScope CurrentCacheScope { get; }
-        public bool PresentationTransitionPending { get; }
-        public DateTime PresentationTransitionStartUtc { get; }
-        public int InkStrokesCount { get; }
-        public PresentationPendingState PendingState { get; }
-    }
-
-    private enum PresentationPlanKind
-    {
-        None,
-        DocumentChange,
-        PageChange
-    }
-
-    private readonly struct PresentationContextPlan
-    {
-        public PresentationContextPlan(
-            PresentationPlanKind kind,
-            string documentName,
-            string documentPath,
-            int pageIndex,
-            int slideId,
-            int showPosition,
-            string cacheKey,
-            bool isWps,
-            bool hasOrphanStrokes,
-            PresentationPendingState pendingState,
-            bool pendingChanged)
-        {
-            Kind = kind;
-            DocumentName = documentName ?? string.Empty;
-            DocumentPath = documentPath ?? string.Empty;
-            PageIndex = pageIndex;
-            SlideID = slideId;
-            ShowPosition = showPosition;
-            CacheKey = cacheKey ?? string.Empty;
-            IsWps = isWps;
-            HasOrphanStrokes = hasOrphanStrokes;
-            PendingState = pendingState;
-            PendingChanged = pendingChanged;
-        }
-
-        public PresentationPlanKind Kind { get; }
-        public string DocumentName { get; }
-        public string DocumentPath { get; }
-        public int PageIndex { get; }
-        public int SlideID { get; }
-        public int ShowPosition { get; }
-        public string CacheKey { get; }
-        public bool IsWps { get; }
-        public bool HasOrphanStrokes { get; }
-        public PresentationPendingState PendingState { get; }
-        public bool PendingChanged { get; }
-
-        public static PresentationContextPlan None => new(
-            PresentationPlanKind.None,
-            string.Empty,
-            string.Empty,
-            0,
-            0,
-            0,
-            string.Empty,
-            isWps: false,
-            hasOrphanStrokes: false,
-            PresentationPendingState.Empty,
-            pendingChanged: false);
-    }
-
-    private static PresentationResolveDecision BuildPresentationDecision(
-        PresentationSlideInfo? pptInfo,
-        PresentationSlideInfo? wpsInfo,
-        TitleResolveResult? titleResult,
-        ClassroomToolkit.Interop.Presentation.PresentationType foregroundType,
-        bool officeSlideshow,
-        bool wpsSlideshow)
-    {
-        if (pptInfo != null
-            && officeSlideshow
-            && (foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-                || wpsInfo == null))
-        {
-            var docName = IoPath.GetFileNameWithoutExtension(pptInfo.DisplayName);
-            return new PresentationResolveDecision(
-                PresentationDecisionKind.PowerPoint,
-                docName,
-                pptInfo.FilePath,
-                pptInfo.SlideIndex,
-                pptInfo.SlideID,
-                pptInfo.CurrentShowPosition,
-                isWps: false,
-                isSlideshowWindow: true);
-        }
-        if (wpsInfo != null
-            && wpsSlideshow
-            && foregroundType != ClassroomToolkit.Interop.Presentation.PresentationType.Office)
-        {
-            var docName = IoPath.GetFileNameWithoutExtension(wpsInfo.DisplayName);
-            return new PresentationResolveDecision(
-                PresentationDecisionKind.Wps,
-                docName,
-                wpsInfo.FilePath,
-                wpsInfo.SlideIndex,
-                wpsInfo.SlideID,
-                wpsInfo.CurrentShowPosition,
-                isWps: true,
-                isSlideshowWindow: true);
-        }
-        if (titleResult != null && titleResult.IsSlideshowWindow)
-        {
-            return new PresentationResolveDecision(
-                PresentationDecisionKind.Title,
-                titleResult.DocumentName,
-                string.Empty,
-                titleResult.SlideIndex,
-                slideID: 0,
-                showPosition: 0,
-                isWps: false,
-                isSlideshowWindow: true);
-        }
-        return PresentationResolveDecision.None;
-    }
-
-    private static PresentationContextPlan BuildPresentationContextPlan(
-        PresentationContextState state,
-        PresentationResolveDecision decision)
-    {
-        if (!decision.IsValid)
-        {
-            return PresentationContextPlan.None;
-        }
-        if (string.IsNullOrWhiteSpace(decision.DocumentName) || decision.PageIndex <= 0)
-        {
-            return PresentationContextPlan.None;
-        }
-        var slideIdForKey = decision.SlideID;
-        if (slideIdForKey <= 0
-            && decision.PageIndex == state.CurrentPageIndex
-            && state.CurrentSlideId > 0)
-        {
-            // Keep cache key stable when SlideID is temporarily unavailable.
-            slideIdForKey = state.CurrentSlideId;
-        }
-        var nextKey = BuildPresentationCacheKey(
-            decision.DocumentName,
-            decision.DocumentPath,
-            decision.PageIndex,
-            slideIdForKey,
-            decision.IsWps);
-        if (string.IsNullOrWhiteSpace(nextKey))
-        {
-            return PresentationContextPlan.None;
-        }
-
-        var isDocumentChange = !string.Equals(
-            decision.DocumentName,
-            state.CurrentDocumentName,
-            StringComparison.OrdinalIgnoreCase)
-            || state.CurrentCacheScope != InkCacheScope.Presentation;
-        if (isDocumentChange)
-        {
-            var hasOrphanStrokes = string.IsNullOrWhiteSpace(state.CurrentCacheKey) && state.InkStrokesCount > 0;
-            return new PresentationContextPlan(
-                PresentationPlanKind.DocumentChange,
-                decision.DocumentName,
-                decision.DocumentPath,
-                decision.PageIndex,
-                decision.SlideID,
-                decision.ShowPosition,
-                nextKey,
-                decision.IsWps,
-                hasOrphanStrokes,
-                PresentationPendingState.Empty,
-                pendingChanged: true);
-        }
-
-        bool pageIndexChanged = decision.PageIndex != state.CurrentPageIndex;
-        bool cacheKeyChanged = !string.Equals(state.CurrentCacheKey, nextKey, StringComparison.OrdinalIgnoreCase);
-        bool indexFallback = decision.ShowPosition == 0 && decision.SlideID == 0 && (pageIndexChanged || cacheKeyChanged);
-        bool candidateChanged = cacheKeyChanged || indexFallback;
-        var pendingState = state.PendingState;
-        bool pendingChanged = false;
-        bool confirmedIndexChange = false;
-        if (candidateChanged)
-        {
-            var confirm = ConfirmPresentationPageChange(pendingState, nextKey, decision.PageIndex, DateTime.UtcNow);
-            confirmedIndexChange = confirm.Confirmed;
-            pendingState = confirm.PendingState;
-            pendingChanged = confirm.PendingChanged;
-        }
-        bool isRealPageChange = confirmedIndexChange;
-        if (isRealPageChange)
-        {
-            return new PresentationContextPlan(
-                PresentationPlanKind.PageChange,
-                decision.DocumentName,
-                decision.DocumentPath,
-                decision.PageIndex,
-                decision.SlideID,
-                decision.ShowPosition,
-                nextKey,
-                decision.IsWps,
-                hasOrphanStrokes: false,
-                PresentationPendingState.Empty,
-                pendingChanged: true);
-        }
-
-        if (pendingChanged)
-        {
-            return new PresentationContextPlan(
-                PresentationPlanKind.None,
-                decision.DocumentName,
-                decision.DocumentPath,
-                decision.PageIndex,
-                decision.SlideID,
-                decision.ShowPosition,
-                nextKey,
-                decision.IsWps,
-                hasOrphanStrokes: false,
-                pendingState,
-                pendingChanged: true);
-        }
-        return PresentationContextPlan.None;
-    }
-
-    private readonly struct PresentationPageConfirmResult
-    {
-        public PresentationPageConfirmResult(bool confirmed, PresentationPendingState pendingState, bool pendingChanged)
-        {
-            Confirmed = confirmed;
-            PendingState = pendingState;
-            PendingChanged = pendingChanged;
-        }
-
-        public bool Confirmed { get; }
-        public PresentationPendingState PendingState { get; }
-        public bool PendingChanged { get; }
-    }
-
-    private static PresentationPageConfirmResult ConfirmPresentationPageChange(
-        PresentationPendingState pendingState,
-        string cacheKey,
-        int pageIndex,
-        DateTime nowUtc)
-    {
-        if (pendingState.PageIndex == pageIndex
-            && string.Equals(pendingState.CacheKey, cacheKey, StringComparison.OrdinalIgnoreCase))
-        {
-            var stableCount = pendingState.StableCount + 1;
-            if (stableCount >= PresentationPageConfirmStableCount
-                && (nowUtc - pendingState.SeenUtc).TotalMilliseconds >= PresentationPageConfirmDelayMs)
-            {
-                return new PresentationPageConfirmResult(true, PresentationPendingState.Empty, pendingChanged: true);
-            }
-            return new PresentationPageConfirmResult(
-                false,
-                new PresentationPendingState(pageIndex, cacheKey, pendingState.SeenUtc, stableCount),
-                pendingChanged: true);
-        }
-        return new PresentationPageConfirmResult(
-            false,
-            new PresentationPendingState(pageIndex, cacheKey, nowUtc, 1),
-            pendingChanged: true);
-    }
-
-    private sealed class StaResolveWorker : IDisposable
-    {
-        private readonly Thread _thread;
-        private readonly AutoResetEvent _ready = new(false);
-        private Dispatcher? _dispatcher;
-        private bool _disposed;
-
-        public StaResolveWorker(string name)
-        {
-            _thread = new Thread(Run)
-            {
-                IsBackground = true,
-                Name = name
-            };
-            _thread.SetApartmentState(ApartmentState.STA);
-            _thread.Start();
-            _ready.WaitOne();
-        }
-
-        public void Post(Action action)
-        {
-            var dispatcher = _dispatcher;
-            if (_disposed || dispatcher == null)
-            {
-                return;
-            }
-            dispatcher.BeginInvoke(action, DispatcherPriority.Background);
-        }
-
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-            _disposed = true;
-            _dispatcher?.BeginInvokeShutdown(DispatcherPriority.Background);
-        }
-
-        private void Run()
-        {
-            _dispatcher = Dispatcher.CurrentDispatcher;
-            _ready.Set();
-            Dispatcher.Run();
-        }
     }
 
     private sealed class RefreshOrchestrator

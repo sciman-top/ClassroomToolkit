@@ -192,7 +192,8 @@
                                     </Border>
                                     <TextBlock Text="{Binding Name}"
                                                TextTrimming="CharacterEllipsis" FontSize="12" Margin="2,6,2,0"
-                                               Foreground="{StaticResource Brush_Text_Primary}"
+                                               Foreground="{Binding IsPdf, Converter={StaticResource PdfForegroundConverter}}"
+                                               FontWeight="{Binding IsPdf, Converter={StaticResource PdfFontWeightConverter}}"
                                                HorizontalAlignment="Center" TextAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>

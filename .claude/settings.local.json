@@ -24,7 +24,15 @@
       "Bash(powershell:*)",
       "Bash(claude mcp --help:*)",
       "Bash(claude mcp get:*)",
-      "Bash(claude mcp remove:*)"
+      "Bash(claude mcp remove:*)",
+      "Bash(claude config:*)",
+      "Bash(claude doctor:*)",
+      "Bash(claude:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(codex:*)",
+      "Bash(findstr:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

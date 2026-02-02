@@ -340,6 +340,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         lock (PreloadLock)
         {
             if (_preloadedResult != null
+                && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                    || _preloadedWriteTimeUtc != writeTimeUtc))
+            {
+                _preloadedResult = null;
+            }
+            if (_preloadedResult != null
                 && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
                 && _preloadedWriteTimeUtc == writeTimeUtc)
             {
@@ -353,7 +359,9 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             }
             _preloadedPath = path;
             _preloadedWriteTimeUtc = writeTimeUtc;
-            _preloadTask = Task.Run(() => LoadDataFromPath(path));
+            var expectedPath = path;
+            var expectedWriteTimeUtc = writeTimeUtc;
+            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath));
             _preloadTask.ContinueWith(task =>
             {
                 lock (PreloadLock)
@@ -361,7 +369,11 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
                     if (task.Status == TaskStatus.RanToCompletion
                         && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
                     {
-                        _preloadedResult = task.Result;
+                        if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase)
+                            && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
+                        {
+                            _preloadedResult = task.Result;
+                        }
                     }
                     _preloadTask = null;
                 }
@@ -377,6 +389,15 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public async Task LoadDataAsync(string? preferredClass, Dispatcher dispatcher)
     {
+        var preload = TryConsumePreloadedResult(_dataPath);
+        if (preload != null)
+        {
+            await dispatcher.InvokeAsync(() =>
+            {
+                ApplyLoadResult(preload, preferredClass);
+            }, DispatcherPriority.Render);
+            return;
+        }
         var result = await Task.Run(LoadDataCore).ConfigureAwait(false);
         await dispatcher.InvokeAsync(() =>
         {
@@ -410,11 +431,13 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             return null;
         }
         Task<RollCallLoadResult>? preloadTask = null;
+        bool consumeTask = false;
         lock (PreloadLock)
         {
             if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
                 || _preloadedWriteTimeUtc != writeTimeUtc)
             {
+                _preloadedResult = null;
                 return null;
             }
             if (_preloadedResult != null)
@@ -423,17 +446,22 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
                 _preloadedResult = null;
                 return result;
             }
-            if (_preloadTask != null)
+            if (_preloadTask != null && _preloadTask.IsCompleted)
             {
                 preloadTask = _preloadTask;
                 _preloadTask = null;
+                consumeTask = true;
             }
         }
-        if (preloadTask != null)
+        if (preloadTask != null && consumeTask)
         {
             try
             {
-                var result = preloadTask.GetAwaiter().GetResult();
+                if (!preloadTask.IsCompletedSuccessfully)
+                {
+                    return null;
+                }
+                var result = preloadTask.Result;
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
                 {
                     return null;

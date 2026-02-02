@@ -48,6 +48,7 @@ public partial class RollCallWindow : Window
     private readonly string _dataPath;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _rollStateSaveTimer;
+    private readonly DispatcherTimer _windowBoundsSaveTimer;
     private readonly Stopwatch _stopwatch;
     private KeyboardHook? _keyboardHook;
     private Action<ClassroomToolkit.Interop.Presentation.KeyBinding>? _remoteHandler;
@@ -63,7 +64,9 @@ public partial class RollCallWindow : Window
     private bool _remoteHookUnavailableNotified;
     private bool _initialized;
     private bool _dataLoaded;
+    private bool _settingsSaveFailedNotified;
     private bool _hovering;
+    private bool _windowBoundsDirty;
     private DateTime _suppressRollUntil = DateTime.MinValue;
     private IntPtr _hwnd;
     private readonly DispatcherTimer _hoverCheckTimer;
@@ -86,6 +89,7 @@ public partial class RollCallWindow : Window
         
         _viewModel = new RollCallViewModel(dataPath);
         DataContext = _viewModel;
+        _viewModel.GroupButtons.CollectionChanged += (_, _) => UpdateMinWindowSize();
         
         Loaded += OnLoaded;
         SourceInitialized += (_, _) =>
@@ -118,6 +122,12 @@ public partial class RollCallWindow : Window
             Interval = TimeSpan.FromMilliseconds(1200)
         };
         _rollStateSaveTimer.Tick += OnRollStateSaveTick;
+
+        _windowBoundsSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(240)
+        };
+        _windowBoundsSaveTimer.Tick += (_, _) => SaveWindowBoundsIfNeeded();
         
         _hoverCheckTimer = new DispatcherTimer
         {
@@ -133,6 +143,9 @@ public partial class RollCallWindow : Window
 
         PaintModeManager.Instance.PaintModeChanged += _ => UpdateWindowTransparency();
         PaintModeManager.Instance.IsDrawingChanged += _ => UpdateWindowTransparency();
+
+        SizeChanged += (_, _) => ScheduleWindowBoundsSave();
+        LocationChanged += (_, _) => ScheduleWindowBoundsSave();
     }
 
     private void OnDataLoadFailed(string message)
@@ -168,18 +181,34 @@ public partial class RollCallWindow : Window
         {
             return;
         }
-        _initialized = true;
-        ApplySettings(_settings, updatePhoto: false);
-        await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
-        RestoreGroupSelection();
-        UpdatePhotoDisplay();
-        WindowPlacementHelper.EnsureVisible(this);
-        _stopwatch.Restart();
-        _timer.Start();
-        UpdateRemoteHookState();
-        _dataLoaded = true;
-        IsDataLoaded = true;
-        UpdateWindowTransparency();
+        try
+        {
+            _initialized = true;
+            ApplySettings(_settings, updatePhoto: false);
+            await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+            RestoreGroupSelection();
+            UpdatePhotoDisplay();
+            WindowPlacementHelper.EnsureVisible(this);
+            _stopwatch.Restart();
+            _timer.Start();
+            UpdateRemoteHookState();
+            _dataLoaded = true;
+            IsDataLoaded = true;
+            UpdateMinWindowSize();
+            UpdateWindowTransparency();
+        }
+        catch (Exception ex)
+        {
+            _initialized = false;
+            System.Diagnostics.Debug.WriteLine($"RollCallWindow 初始化失败: {ex.Message}");
+            var owner = System.Windows.Application.Current?.MainWindow;
+            System.Windows.MessageBox.Show(
+                owner ?? this,
+                "点名窗口初始化失败，请稍后重试。",
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
     }
 
     // --- Window Control ---
@@ -256,6 +285,7 @@ public partial class RollCallWindow : Window
         _timer.Stop();
         _stopwatch.Stop();
         _rollStateSaveTimer.Stop();
+        _windowBoundsSaveTimer.Stop();
         _rollStateDirty = false;
         StopKeyboardHook();
         ClosePhotoOverlay();
@@ -467,6 +497,7 @@ public partial class RollCallWindow : Window
         _viewModel.ToggleMode();
         UpdateRemoteHookState();
         UpdatePhotoDisplay(forceHide: true);
+        UpdateMinWindowSize();
     }
 
     private void OnClassSelectClick(object sender, RoutedEventArgs e)
@@ -532,7 +563,7 @@ public partial class RollCallWindow : Window
         _settings.RollCallSpeechOutputId = dialog.RollCallSpeechOutputId;
         _settings.RollCallRemoteEnabled = dialog.RollCallRemoteEnabled;
         _settings.RemotePresenterKey = dialog.RemotePresenterKey;
-        _settingsService.Save(_settings);
+        SaveSettingsSafe();
         ApplySettings(_settings, updatePhoto: false);
         HidePhotoOverlay();
         _lastPhotoStudentId = null;
@@ -878,7 +909,7 @@ public partial class RollCallWindow : Window
         {
             _viewModel.SetRemotePresenterKey(dialog.SelectedKey);
             _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
-            _settingsService.Save(_settings);
+            SaveSettingsSafe();
             RestartKeyboardHook();
         }
     }
@@ -971,7 +1002,7 @@ public partial class RollCallWindow : Window
         _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
         _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
-        _settingsService.Save(_settings);
+        SaveSettingsSafe();
     }
 
     private void RestartKeyboardHook()
@@ -983,6 +1014,26 @@ public partial class RollCallWindow : Window
     private void ShowRollCallMessage(string message)
     {
         System.Windows.MessageBox.Show(message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void SaveSettingsSafe()
+    {
+        try
+        {
+            _settingsService.Save(_settings);
+            _settingsSaveFailedNotified = false;
+        }
+        catch (Exception ex)
+        {
+            if (_settingsSaveFailedNotified)
+            {
+                return;
+            }
+            _settingsSaveFailedNotified = true;
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
+            System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void UpdateRemoteHookState()
@@ -1018,6 +1069,7 @@ public partial class RollCallWindow : Window
             UpdatePhotoDisplay(forceHide: true);
             PersistSettings();
             _viewModel.SaveState();
+            UpdateMinWindowSize();
             SuppressRollClicks(TimeSpan.FromMilliseconds(250));
             return;
         }
@@ -1108,5 +1160,82 @@ public partial class RollCallWindow : Window
         _settings.RollCallWindowHeight = (int)Math.Round(height);
         _settings.RollCallWindowX = (int)Math.Round(Left);
         _settings.RollCallWindowY = (int)Math.Round(Top);
+    }
+
+    private void ScheduleWindowBoundsSave()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+        _windowBoundsDirty = true;
+        if (_windowBoundsSaveTimer.IsEnabled)
+        {
+            _windowBoundsSaveTimer.Stop();
+        }
+        _windowBoundsSaveTimer.Start();
+    }
+
+    private void SaveWindowBoundsIfNeeded()
+    {
+        _windowBoundsSaveTimer.Stop();
+        if (!_windowBoundsDirty)
+        {
+            return;
+        }
+        _windowBoundsDirty = false;
+        CaptureWindowBounds();
+        SaveSettingsSafe();
+    }
+
+    private void UpdateMinWindowSize()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+        Dispatcher.BeginInvoke(() =>
+        {
+            var titleSize = MeasureElement(TitleBarRoot);
+            var bottomSize = MeasureElement(BottomBarRoot);
+            var groupButtonsSize = MeasureElement(GroupButtonsControl);
+
+            var minWidth = titleSize.Width;
+            if (_viewModel.IsRollCallMode)
+            {
+                minWidth = Math.Max(minWidth, groupButtonsSize.Width + GetBottomBarChromeWidth());
+            }
+
+            var minHeight = titleSize.Height + bottomSize.Height;
+
+            MinWidth = Math.Max(240, Math.Ceiling(minWidth));
+            MinHeight = Math.Max(240, Math.Ceiling(minHeight));
+        }, DispatcherPriority.Background);
+    }
+
+    private double GetBottomBarChromeWidth()
+    {
+        if (BottomBarRoot == null)
+        {
+            return 0;
+        }
+        var padding = BottomBarRoot.Padding;
+        var border = BottomBarRoot.BorderThickness;
+        var margin = BottomBarRoot.Margin;
+        return padding.Left + padding.Right + border.Left + border.Right + margin.Left + margin.Right;
+    }
+
+    private static WpfSize MeasureElement(FrameworkElement? element)
+    {
+        if (element == null)
+        {
+            return new WpfSize(0, 0);
+        }
+        element.Measure(new WpfSize(double.PositiveInfinity, double.PositiveInfinity));
+        var desired = element.DesiredSize;
+        var margin = element.Margin;
+        return new WpfSize(
+            desired.Width + margin.Left + margin.Right,
+            desired.Height + margin.Top + margin.Bottom);
     }
 }

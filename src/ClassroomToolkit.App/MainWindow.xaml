@@ -32,7 +32,7 @@
                             <!-- 弥散光影底层 (仅悬停时显示) -->
                             <Border x:Name="glow" CornerRadius="16" Background="{StaticResource Brush_Primary}" Margin="10" Opacity="0">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="24" ShadowDepth="0" Opacity="0.5"/>
+                                    <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="24" ShadowDepth="0" Opacity="0.5"/>
                                 </Border.Effect>
                             </Border>
 

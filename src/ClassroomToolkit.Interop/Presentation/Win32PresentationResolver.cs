@@ -136,9 +136,8 @@ public sealed class Win32PresentationResolver
         var processMatch = type is PresentationType.Wps or PresentationType.Office;
         var hasCaption = HasCaption(hwnd);
         var isFullscreen = IsFullscreenWindow(hwnd);
-        // Relaxed filter: Allow main window with caption as fallback (score will be lower)
-        // Only verify it's a known presentation type
-        if (type == PresentationType.None)
+        // Filter: require slideshow class match or fullscreen; caption only affects score.
+        if (type == PresentationType.None || (!classMatch && !isFullscreen))
         {
             return null;
         }

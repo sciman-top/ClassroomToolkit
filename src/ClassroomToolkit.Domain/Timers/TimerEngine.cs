@@ -51,6 +51,7 @@ public sealed class TimerEngine
     {
         _countdownSeconds = Math.Max(0, minutes * 60 + seconds);
         _secondsLeft = _countdownSeconds;
+        _reminderCounter = 0;
     }
 
     public void SetState(TimerMode mode, int countdownSeconds, int secondsLeft, int stopwatchSeconds, bool running)
@@ -65,6 +66,11 @@ public sealed class TimerEngine
 
     public void Start()
     {
+        if (Mode == TimerMode.Clock)
+        {
+            Running = false;
+            return;
+        }
         Running = true;
     }
 
@@ -75,6 +81,11 @@ public sealed class TimerEngine
 
     public void Toggle()
     {
+        if (Mode == TimerMode.Clock)
+        {
+            Running = false;
+            return;
+        }
         Running = !Running;
     }
 

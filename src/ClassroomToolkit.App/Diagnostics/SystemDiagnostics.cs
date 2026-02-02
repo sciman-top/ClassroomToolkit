@@ -48,6 +48,12 @@ public static class SystemDiagnostics
         {
             lines.Add("照片目录：不存在（首次使用会自动创建）");
         }
+        if (TryDetectMultipleSolutionRoots(out var baseRoot, out var currentRoot))
+        {
+            lines.Add($"检测到多个目录：{baseRoot} / {currentRoot}");
+            issues.Add("检测到多个 ClassroomToolkit 目录：学生数据可能来自非当前目录。");
+            fixes.Add("请确认当前运行目录与数据目录一致，必要时移动或清理多余副本。");
+        }
 
         lines.Add($"控制Office演示：{(settings.ControlMsPpt ? "启用" : "禁用")}");
         lines.Add($"控制WPS演示：{(settings.ControlWpsPpt ? "启用" : "禁用")}");
@@ -96,6 +102,12 @@ public static class SystemDiagnostics
         if (!TryReportWritable(settingsPath, lines, issues, fixes))
         {
             fixes.Add("请将程序放到可写目录（如用户目录/桌面），或以管理员身份运行。");
+        }
+        if (TryDetectMultipleSolutionRoots(out var baseRoot, out var currentRoot))
+        {
+            lines.Add($"检测到多个目录：{baseRoot} / {currentRoot}");
+            issues.Add("检测到多个 ClassroomToolkit 目录：学生数据可能来自非当前目录。");
+            fixes.Add("请确认当前运行目录与数据目录一致，必要时移动或清理多余副本。");
         }
 
         if (!OperatingSystem.IsWindows())
@@ -320,5 +332,35 @@ public static class SystemDiagnostics
             return "（空）";
         }
         return string.Join(" | ", names.Where(name => !string.IsNullOrWhiteSpace(name)));
+    }
+
+    private static bool TryDetectMultipleSolutionRoots(out string? baseRoot, out string? currentRoot)
+    {
+        baseRoot = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory);
+        currentRoot = FindSolutionDirectory(Environment.CurrentDirectory);
+        if (string.IsNullOrWhiteSpace(baseRoot) || string.IsNullOrWhiteSpace(currentRoot))
+        {
+            return false;
+        }
+        return !string.Equals(baseRoot, currentRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? FindSolutionDirectory(string startPath)
+    {
+        if (string.IsNullOrWhiteSpace(startPath))
+        {
+            return null;
+        }
+        var current = new DirectoryInfo(Path.GetFullPath(startPath));
+        while (current != null)
+        {
+            var slnPath = Path.Combine(current.FullName, "ClassroomToolkit.sln");
+            if (File.Exists(slnPath))
+            {
+                return current.FullName;
+            }
+            current = current.Parent;
+        }
+        return null;
     }
 }

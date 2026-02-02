@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private LauncherBubbleWindow? _bubbleWindow;
     private readonly DispatcherTimer _autoExitTimer;
     private bool _allowClose;
+    private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     public ICommand OpenRollCallSettingsCommand { get; }
@@ -312,7 +313,6 @@ public partial class MainWindow : Window
         _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
         _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
         _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
-        _overlayWindow.UpdateInkAutoSaveEnabled(_settings.InkAutoSaveEnabled);
         _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
         _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
         _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
@@ -504,7 +504,6 @@ public partial class MainWindow : Window
                 _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
                 _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
                 _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
-                _overlayWindow.UpdateInkAutoSaveEnabled(_settings.InkAutoSaveEnabled);
                 _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
                 _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
                 _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
@@ -544,7 +543,6 @@ public partial class MainWindow : Window
             return;
         }
         _settings.InkRecordEnabled = dialog.InkRecordEnabled;
-        _settings.InkAutoSaveEnabled = dialog.InkAutoSaveEnabled;
         _settings.InkReplayPreviousEnabled = dialog.InkReplayPreviousEnabled;
         _settings.InkRetentionDays = dialog.InkRetentionDays;
         _settings.InkPhotoRootPath = dialog.InkPhotoRootPath;
@@ -731,6 +729,7 @@ public partial class MainWindow : Window
 
             PruneSurfaceStack(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
             var frontSurface = ResolveFrontSurface(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            SyncFloatingWindowOwners(overlayVisible);
 
             if (_imageManagerWindow != null && imageManagerVisible)
             {
@@ -755,10 +754,6 @@ public partial class MainWindow : Window
             }
             if (_rollCallWindow != null && _rollCallWindow.IsVisible)
             {
-                if (_overlayWindow != null && _overlayWindow.IsVisible)
-                {
-                    _rollCallWindow.Owner = _overlayWindow;
-                }
                 _rollCallWindow.SyncTopmost(true);
             }
         }
@@ -866,7 +861,6 @@ public partial class MainWindow : Window
         }
         if (active)
         {
-            _toolbarWindow.Owner = null;
             if (_toolbarWindow.WindowState == WindowState.Minimized)
             {
                 _toolbarWindow.WindowState = WindowState.Normal;
@@ -875,7 +869,6 @@ public partial class MainWindow : Window
             _toolbarWindow.SyncTopmost(true);
             if (_rollCallWindow != null)
             {
-                _rollCallWindow.Owner = null;
                 if (_rollCallWindow.IsVisible)
                 {
                     _rollCallWindow.SyncTopmost(true);
@@ -896,6 +889,39 @@ public partial class MainWindow : Window
             _rollCallWindow.SyncTopmost(true);
         }
         ApplyZOrderPolicy();
+    }
+
+    private void SyncFloatingWindowOwners(bool overlayVisible)
+    {
+        var overlay = _overlayWindow;
+        if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+        {
+            if (overlayVisible && overlay != null)
+            {
+                if (_toolbarWindow.Owner != overlay)
+                {
+                    _toolbarWindow.Owner = overlay;
+                }
+            }
+            else if (_toolbarWindow.Owner != null)
+            {
+                _toolbarWindow.Owner = null;
+            }
+        }
+        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+        {
+            if (overlayVisible && overlay != null)
+            {
+                if (_rollCallWindow.Owner != overlay)
+                {
+                    _rollCallWindow.Owner = overlay;
+                }
+            }
+            else if (_rollCallWindow.Owner != null)
+            {
+                _rollCallWindow.Owner = null;
+            }
+        }
     }
 
     private void OnOverlayActivated()
@@ -1254,7 +1280,21 @@ public partial class MainWindow : Window
 
     private void SaveSettings()
     {
-        _settingsService.Save(_settings);
+        try
+        {
+            _settingsService.Save(_settings);
+            _settingsSaveFailedNotified = false;
+        }
+        catch (Exception ex)
+        {
+            if (_settingsSaveFailedNotified)
+            {
+                return;
+            }
+            _settingsSaveFailedNotified = true;
+            var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
+            System.Windows.MessageBox.Show(this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void ScheduleInkCleanup()

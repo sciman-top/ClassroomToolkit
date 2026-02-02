@@ -47,6 +47,19 @@ public static class PresentationWindowFocus
         return foreground != IntPtr.Zero && foreground == hwnd;
     }
 
+    public static bool IsWindowValid(IntPtr hwnd)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+        return NativeMethods.IsWindow(hwnd);
+    }
+
     private sealed class ForegroundSuppression : IDisposable
     {
         private int _disposed;

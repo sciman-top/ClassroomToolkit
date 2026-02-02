@@ -41,7 +41,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource Brush_Primary}" Margin="0,0,12,0" BorderBrush="Transparent">
                             <Border.Effect>
-                                <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="12" ShadowDepth="0" Opacity="0.3"/>
+                                <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="12" ShadowDepth="0" Opacity="0.3"/>
                             </Border.Effect>
                             <Path Data="{StaticResource Icon_RollCall}" Fill="#FAFAFA" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>

@@ -59,7 +59,6 @@ public sealed class AppSettings
     public double PaintToolbarScale { get; set; } = 1.0;
     public bool InkCacheEnabled { get; set; } = true;
     public bool InkRecordEnabled { get; set; } = false;
-    public bool InkAutoSaveEnabled { get; set; } = false;
     public bool InkReplayPreviousEnabled { get; set; } = false;
     public int InkRetentionDays { get; set; } = 30;
     public string InkPhotoRootPath { get; set; } = @"D:\ClassroomToolkit\Ink\Photos";

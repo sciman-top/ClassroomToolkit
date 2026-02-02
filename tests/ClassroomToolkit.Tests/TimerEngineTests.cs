@@ -62,4 +62,17 @@ public sealed class TimerEngineTests
 
         reminders.Should().Be(0);
     }
+
+    [Fact]
+    public void ClockMode_ShouldNotEnterRunningState()
+    {
+        var engine = new TimerEngine();
+        engine.SetMode(TimerMode.Clock);
+
+        engine.Start();
+        engine.Running.Should().BeFalse();
+
+        engine.Toggle();
+        engine.Running.Should().BeFalse();
+    }
 }

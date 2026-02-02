@@ -7,7 +7,6 @@ namespace ClassroomToolkit.App.Ink;
 public partial class InkSettingsDialog : Window
 {
     public bool InkRecordEnabled { get; private set; }
-    public bool InkAutoSaveEnabled { get; private set; }
     public bool InkReplayPreviousEnabled { get; private set; }
     public int InkRetentionDays { get; private set; }
     public string InkPhotoRootPath { get; private set; } = @"D:\ClassroomToolkit\Ink\Photos";
@@ -16,7 +15,6 @@ public partial class InkSettingsDialog : Window
     {
         InitializeComponent();
         InkRecordCheck.IsChecked = settings.InkRecordEnabled;
-        InkAutoSaveCheck.IsChecked = settings.InkAutoSaveEnabled;
         InkReplayPreviousCheck.IsChecked = settings.InkReplayPreviousEnabled;
         InkRetentionDaysBox.Text = settings.InkRetentionDays.ToString();
         InkPhotoPathBox.Text = settings.InkPhotoRootPath;
@@ -28,7 +26,6 @@ public partial class InkSettingsDialog : Window
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
         InkRecordEnabled = InkRecordCheck.IsChecked == true;
-        InkAutoSaveEnabled = InkAutoSaveCheck.IsChecked == true;
         InkReplayPreviousEnabled = InkReplayPreviousCheck.IsChecked == true;
         InkRetentionDays = NormalizeRetentionDays(InkRetentionDaysBox.Text);
         InkPhotoRootPath = NormalizePhotoRoot(InkPhotoPathBox.Text);
@@ -43,13 +40,11 @@ public partial class InkSettingsDialog : Window
     private void UpdateInkRecordState()
     {
         bool enabled = InkRecordCheck.IsChecked == true;
-        InkAutoSaveCheck.IsEnabled = enabled;
         InkReplayPreviousCheck.IsEnabled = enabled;
         InkRetentionDaysBox.IsEnabled = enabled;
         InkPhotoPathBox.IsEnabled = enabled;
         if (!enabled)
         {
-            InkAutoSaveCheck.IsChecked = false;
             InkReplayPreviousCheck.IsChecked = false;
         }
     }
