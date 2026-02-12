@@ -140,6 +140,7 @@ public partial class PaintOverlayWindow
         }
         PhotoBackground.Source = bitmap;
         PhotoBackground.Visibility = Visibility.Visible;
+        UpdateCurrentPageWidthNormalization(bitmap);
         SchedulePdfPrefetch(pageIndex, _lastPdfNavigationDirection);
         if (_crossPageDisplayEnabled)
         {
@@ -214,13 +215,13 @@ public partial class PaintOverlayWindow
         {
             return 0;
         }
-        if (TryGetPdfPageSize(pageIndex, out var size))
-        {
-            return size.Height * _photoScale.ScaleY;
-        }
         if (TryGetCachedPdfPageBitmap(pageIndex, out var cached))
         {
             return GetScaledPageHeight(cached);
+        }
+        if (TryGetPdfPageSize(pageIndex, out var size))
+        {
+            return size.Height * _photoScale.ScaleY;
         }
         return 0;
     }

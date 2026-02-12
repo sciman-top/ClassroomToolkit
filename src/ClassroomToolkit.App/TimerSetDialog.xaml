@@ -75,7 +75,7 @@
                 </Grid>
                 
                 <Slider Grid.Row="1" x:Name="MinutesSlider" Minimum="0" Maximum="25"
-                        ValueChanged="OnMinutesSliderChanged" 
+                        ValueChanged="OnMinutesSliderChanged"
                         IsSnapToTickEnabled="True" TickFrequency="1"/>
             </Grid>
 

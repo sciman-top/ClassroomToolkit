@@ -19,8 +19,8 @@ public partial class PaintOverlayWindow
         }
         return IsDescendantOf(source, PhotoTitleBar) ||
                IsDescendantOf(source, PhotoCloseButton) ||
-               IsDescendantOf(source, PhotoMinimizeLeftButton) ||
-               IsDescendantOf(source, PhotoMinimizeRightButton) ||
+               IsDescendantOf(source, PhotoCloseLeftButton) ||
+               IsDescendantOf(source, PhotoCloseRightButton) ||
                IsDescendantOf(source, PhotoPrevButtonLeft) ||
                IsDescendantOf(source, PhotoNextButtonLeft) ||
                IsDescendantOf(source, PhotoPrevButtonRight) ||
@@ -433,9 +433,15 @@ public partial class PaintOverlayWindow
             }
             return;
         }
+        if (_photoPanning)
+        {
+            e.Handled = true;
+            return;
+        }
         EnsurePhotoTransformsWritable();
         var scale = e.DeltaManipulation.Scale;
-        if (Math.Abs(scale.X - 1.0) > 0.001 || Math.Abs(scale.Y - 1.0) > 0.001)
+        // Filter tiny touch/manipulation noise to avoid accidental zoom jumps while dragging.
+        if (Math.Abs(scale.X - 1.0) > 0.02 || Math.Abs(scale.Y - 1.0) > 0.02)
         {
             var factor = (scale.X + scale.Y) / 2.0;
             ApplyPhotoScale(factor, e.ManipulationOrigin);

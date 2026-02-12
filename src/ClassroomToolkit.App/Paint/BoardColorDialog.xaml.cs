@@ -66,6 +66,7 @@ public partial class BoardColorDialog : Window
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
+        presenter.SetValue(TextElement.ForegroundProperty, new TemplateBindingExtension(WpfButton.ForegroundProperty));
         border.AppendChild(presenter);
         
         template.VisualTree = border;

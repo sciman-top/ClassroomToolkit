@@ -34,7 +34,8 @@
       "Bash(findstr:*)",
       "Bash(git reset:*)",
       "Bash(Select-String:*)",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(Select-Object -First 5)"
     ]
   }
 }

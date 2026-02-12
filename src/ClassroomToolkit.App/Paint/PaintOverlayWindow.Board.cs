@@ -104,7 +104,7 @@ public partial class PaintOverlayWindow
             PhotoBackground.Visibility = active
                 ? Visibility.Collapsed
                 : (PhotoBackground.Source != null ? Visibility.Visible : Visibility.Collapsed);
-            PhotoControlLayer.Visibility = !active
+            PhotoControlLayer.Visibility = _photoModeActive
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }

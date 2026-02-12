@@ -801,6 +801,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         _timerEngine.Toggle();
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void ResetTimer()
@@ -812,6 +813,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         _timerEngine.Reset();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void SetCountdown(int minutes, int seconds)
@@ -838,6 +840,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RaisePropertyChanged(nameof(TimerModeLabel));
         RaisePropertyChanged(nameof(StartPauseLabel));
         RaisePropertyChanged(nameof(CurrentTimerMode));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void TickTimer(TimeSpan elapsed)

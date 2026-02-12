@@ -64,7 +64,7 @@ public partial class MainWindow
         _overlayWindow.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
         _overlayWindow.PresentationForegroundDetected += OnPresentationForegroundDetected;
         _overlayWindow.PhotoForegroundDetected += OnPhotoForegroundDetected;
-        _overlayWindow.PhotoMinimizeRequested += OnPhotoMinimizeRequested;
+        _overlayWindow.PhotoCloseRequested += OnPhotoCloseRequested;
         _overlayWindow.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, System.Windows.Threading.DispatcherPriority.Background);
         _overlayWindow.Activated += (_, _) => OnOverlayActivated();
@@ -390,9 +390,9 @@ public partial class MainWindow
         _toolbarWindow?.ApplySettings(_settings);
     }
 
-    private void OnPhotoMinimizeRequested()
+    private void OnPhotoCloseRequested()
     {
-        // 断开工具条和点名窗口的Owner关系，防止它们随PhotoOverlayWindow最小化
+        // 断开工具条和点名窗口的Owner关系，避免关闭图片模式时受 owner 链影响
         if (_toolbarWindow != null && _toolbarWindow.Owner == _overlayWindow)
         {
             _toolbarWindow.Owner = null;

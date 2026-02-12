@@ -135,6 +135,7 @@ public partial class PaintOverlayWindow : Window
     private bool _crossPageUpdatePending;
     private DateTime _lastCrossPageUpdateUtc = DateTime.MinValue;
     private int _crossPageUpdateToken;
+    private ScaleTransform _photoPageScale = new ScaleTransform(1.0, 1.0);
     private ScaleTransform _photoScale = new ScaleTransform(1.0, 1.0);
     private TranslateTransform _photoTranslate = new TranslateTransform(0, 0);
     private bool _photoPanning;
@@ -144,6 +145,7 @@ public partial class PaintOverlayWindow : Window
     private double _photoPanOriginX;
     private double _photoPanOriginY;
     private bool _photoRestoreFullscreenPending;
+    private int _photoFullscreenBoundsToken;
     private bool _photoDocumentIsPdf;
     private PdfDocumentHost? _pdfDocument;
     private int _pdfPageCount;
@@ -199,6 +201,7 @@ public partial class PaintOverlayWindow : Window
     private readonly List<WpfImage> _neighborPageImages = new();
     private readonly List<WpfImage> _neighborInkImages = new();
     private readonly Dictionary<string, InkBitmapCacheEntry> _neighborInkCache = new(StringComparer.OrdinalIgnoreCase);
+    private double _crossPageNormalizedWidthDip;
 
 
     public event Action<string, DateTime>? InkContextChanged;
@@ -209,7 +212,7 @@ public partial class PaintOverlayWindow : Window
     public event Action? PresentationFullscreenDetected;
     public event Action<ClassroomToolkit.Interop.Presentation.PresentationType>? PresentationForegroundDetected;
     public event Action? PhotoForegroundDetected;
-    public event Action? PhotoMinimizeRequested;
+    public event Action? PhotoCloseRequested;
 
 
 
@@ -222,6 +225,7 @@ public partial class PaintOverlayWindow : Window
         _visualHost = new DrawingVisualHost();
         CustomDrawHost.Child = _visualHost;
         var photoTransform = new TransformGroup();
+        photoTransform.Children.Add(_photoPageScale);
         photoTransform.Children.Add(_photoScale);
         photoTransform.Children.Add(_photoTranslate);
         PhotoBackground.RenderTransform = photoTransform;
@@ -704,6 +708,7 @@ public partial class PaintOverlayWindow : Window
         }
         _crossPageDisplayEnabled = enabled;
         _photoCrossPageDisplayEnabled = enabled;
+        ResetCrossPageNormalizedWidth();
         if (_photoModeActive && _crossPageDisplayEnabled)
         {
             if (_photoUnifiedTransformReady)
@@ -720,10 +725,26 @@ public partial class PaintOverlayWindow : Window
             {
                 SavePhotoTransformState(userAdjusted: _photoUserTransformDirty);
             }
+            UpdateCurrentPageWidthNormalization();
         }
         if (!_crossPageDisplayEnabled)
         {
             ClearNeighborPages();
+            UpdateCurrentPageWidthNormalization();
+        }
+        if (_photoModeActive && !_photoDocumentIsPdf)
+        {
+            // Reset image cache to avoid mixing different decode policies
+            // between cross-page and single-page rendering.
+            ClearNeighborImageCache();
+            var currentPage = GetCurrentPageIndexForCrossPage();
+            var bitmap = GetPageBitmap(currentPage);
+            if (bitmap != null)
+            {
+                PhotoBackground.Source = bitmap;
+                PhotoBackground.Visibility = Visibility.Visible;
+                UpdateCurrentPageWidthNormalization(bitmap);
+            }
         }
         if (_photoModeActive && _photoDocumentIsPdf)
         {
@@ -753,6 +774,7 @@ public partial class PaintOverlayWindow : Window
             _photoScale.ScaleY = _lastPhotoScaleY;
             _photoTranslate.X = _lastPhotoTranslateX;
             _photoTranslate.Y = _lastPhotoTranslateY;
+            UpdateCurrentPageWidthNormalization();
             RequestInkRedraw();
         }
     }
