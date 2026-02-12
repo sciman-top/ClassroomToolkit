@@ -209,6 +209,7 @@ public partial class PaintOverlayWindow : Window
     public event Action? PresentationFullscreenDetected;
     public event Action<ClassroomToolkit.Interop.Presentation.PresentationType>? PresentationForegroundDetected;
     public event Action? PhotoForegroundDetected;
+    public event Action? PhotoMinimizeRequested;
 
 
 

@@ -536,6 +536,7 @@ public partial class PaintOverlayWindow
 
     private void ExecutePhotoMinimize()
     {
+        PhotoMinimizeRequested?.Invoke();
         WindowState = WindowState.Minimized;
     }
 
@@ -644,6 +645,22 @@ public partial class PaintOverlayWindow
             return TryGetCachedPdfPageBitmap(pageIndex, out var cached) ? cached : null;
         }
         return GetPageBitmap(pageIndex);
+    }
+
+    private BitmapSource? GetNeighborPageBitmapForRender(int pageIndex)
+    {
+        if (!_photoDocumentIsPdf)
+        {
+            return GetPageBitmap(pageIndex);
+        }
+
+        // In cross-page mode, a cache miss can leave a large blank gap between pages.
+        // Fallback to direct render once so visible neighbors are always drawable.
+        if (TryGetCachedPdfPageBitmap(pageIndex, out var cached))
+        {
+            return cached;
+        }
+        return GetPdfPageBitmap(pageIndex);
     }
 
     private BitmapSource? TryLoadBitmapSource(string path)
@@ -772,46 +789,52 @@ public partial class PaintOverlayWindow
             viewportHeight = ActualHeight;
         }
         var currentPageHeight = GetScaledPageHeight(currentBitmap);
+        if (currentPageHeight <= 0)
+        {
+            return;
+        }
         var currentTop = _photoTranslate.Y;
         var currentBottom = currentTop + currentPageHeight;
-        // Determine which neighbor pages are visible
-        var visiblePages = new List<(int PageIndex, double Top)>();
-        // Always include current page
-        visiblePages.Add((currentPage, currentTop));
-        // Check if previous page is visible (above viewport top)
-        if (currentTop > 0 && currentPage > 1)
+
+        // Dynamically collect all pages intersecting viewport to avoid missing strips
+        // when zoomed out or when page heights vary significantly.
+        const double visibilityMargin = 2.0;
+        var visiblePages = new List<(int PageIndex, double Top)>
         {
-            var prevBitmap = GetNeighborPageBitmap(currentPage - 1);
-            if (prevBitmap != null)
+            (currentPage, currentTop)
+        };
+
+        var prevTop = currentTop;
+        for (int pageIndex = currentPage - 1; pageIndex >= 1; pageIndex--)
+        {
+            var prevHeight = GetScaledHeightForPage(pageIndex);
+            if (prevHeight <= 0)
             {
-                var prevHeight = GetScaledPageHeight(prevBitmap);
-                visiblePages.Insert(0, (currentPage - 1, currentTop - prevHeight));
-                // Check if page before that is visible
-                if (currentTop - prevHeight > 0 && currentPage > 2)
-                {
-                    var prevPrevBitmap = GetNeighborPageBitmap(currentPage - 2);
-                    if (prevPrevBitmap != null)
-                    {
-                        var prevPrevHeight = GetScaledPageHeight(prevPrevBitmap);
-                        visiblePages.Insert(0, (currentPage - 2, currentTop - prevHeight - prevPrevHeight));
-                    }
-                }
+                break;
             }
+            prevTop -= prevHeight;
+            var prevBottom = prevTop + prevHeight;
+            if (prevBottom < -visibilityMargin)
+            {
+                break;
+            }
+            visiblePages.Insert(0, (pageIndex, prevTop));
         }
-        // Check if next page is visible (current bottom above viewport bottom)
-        if (currentBottom < viewportHeight && currentPage < totalPages)
+
+        var nextTop = currentBottom;
+        for (int pageIndex = currentPage + 1; pageIndex <= totalPages; pageIndex++)
         {
-            visiblePages.Add((currentPage + 1, currentBottom));
-            // Check if page after that is visible
-            var nextBitmap = GetNeighborPageBitmap(currentPage + 1);
-            if (nextBitmap != null)
+            if (nextTop > viewportHeight + visibilityMargin)
             {
-                var nextHeight = GetScaledPageHeight(nextBitmap);
-                if (currentBottom + nextHeight < viewportHeight && currentPage + 1 < totalPages)
-                {
-                    visiblePages.Add((currentPage + 2, currentBottom + nextHeight));
-                }
+                break;
             }
+            visiblePages.Add((pageIndex, nextTop));
+            var nextHeight = GetScaledHeightForPage(pageIndex);
+            if (nextHeight <= 0)
+            {
+                break;
+            }
+            nextTop += nextHeight;
         }
         if (_photoDocumentIsPdf)
         {
@@ -843,6 +866,19 @@ public partial class PaintOverlayWindow
             return;
         }
         RenderNeighborPages(neighborPages);
+    }
+
+    private double GetScaledHeightForPage(int pageIndex)
+    {
+        if (pageIndex <= 0)
+        {
+            return 0;
+        }
+        if (_photoDocumentIsPdf)
+        {
+            return GetScaledPdfPageHeight(pageIndex);
+        }
+        return GetScaledPageHeight(GetPageBitmap(pageIndex));
     }
 
     private void RenderNeighborPages(List<(int PageIndex, double Top)> neighborPages)
@@ -896,7 +932,7 @@ public partial class PaintOverlayWindow
         for (int i = 0; i < neighborPages.Count; i++)
         {
             var (pageIndex, top) = neighborPages[i];
-            var bitmap = GetNeighborPageBitmap(pageIndex);
+            var bitmap = GetNeighborPageBitmapForRender(pageIndex);
             var img = _neighborPageImages[i];
             img.Source = bitmap;
             img.Visibility = bitmap != null ? Visibility.Visible : Visibility.Collapsed;
@@ -1089,7 +1125,8 @@ public partial class PaintOverlayWindow
 
     private void OnPhotoTitleBarDrag(object sender, MouseButtonEventArgs e)
     {
-        if (!_photoModeActive)
+        // 全屏模式下不允许拖动窗口
+        if (!_photoModeActive || _photoFullscreen)
         {
             return;
         }

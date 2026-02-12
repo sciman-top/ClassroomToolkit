@@ -250,7 +250,7 @@ public partial class ImageManagerWindow : Window
         {
             _backStack.Add(_currentFolder);
         }
-        OpenFolder(nextFolder, addToRecents: false, navigate: false);
+        OpenFolder(nextFolder, addToRecents: true, navigate: false);
     }
 
     private void OnUpClick(object sender, RoutedEventArgs e)
@@ -264,7 +264,7 @@ public partial class ImageManagerWindow : Window
             var parentDir = Directory.GetParent(_currentFolder);
             if (parentDir != null && parentDir.Exists)
             {
-                OpenFolder(parentDir.FullName, addToRecents: false);
+                OpenFolder(parentDir.FullName, addToRecents: true);
             }
         }
         catch

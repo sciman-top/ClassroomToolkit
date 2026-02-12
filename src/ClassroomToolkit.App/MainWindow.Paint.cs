@@ -64,6 +64,7 @@ public partial class MainWindow
         _overlayWindow.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
         _overlayWindow.PresentationForegroundDetected += OnPresentationForegroundDetected;
         _overlayWindow.PhotoForegroundDetected += OnPhotoForegroundDetected;
+        _overlayWindow.PhotoMinimizeRequested += OnPhotoMinimizeRequested;
         _overlayWindow.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, System.Windows.Threading.DispatcherPriority.Background);
         _overlayWindow.Activated += (_, _) => OnOverlayActivated();
@@ -387,5 +388,18 @@ public partial class MainWindow
             _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
         }
         _toolbarWindow?.ApplySettings(_settings);
+    }
+
+    private void OnPhotoMinimizeRequested()
+    {
+        // 断开工具条和点名窗口的Owner关系，防止它们随PhotoOverlayWindow最小化
+        if (_toolbarWindow != null && _toolbarWindow.Owner == _overlayWindow)
+        {
+            _toolbarWindow.Owner = null;
+        }
+        if (_rollCallWindow != null && _rollCallWindow.Owner == _overlayWindow)
+        {
+            _rollCallWindow.Owner = null;
+        }
     }
 }
