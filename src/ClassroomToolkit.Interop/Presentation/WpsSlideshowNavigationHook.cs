@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Threading;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
@@ -13,11 +14,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
     private const int WmSysKeyDown = 0x0104;
     private const int WmSysKeyUp = 0x0105;
     private const int WmMouseWheel = 0x020A;
-    private const int WsExTransparent = 0x20;
-    private const int WsExLayered = 0x80000;
     
     private const int HookCallbackTimeoutMs = 50;
     private const int MaxHookRetries = 3;
+    private const int ExceptionLogIntervalMs = 30000;
 
     private readonly HookProc _keyboardProc;
     private readonly HookProc _mouseProc;
@@ -28,6 +28,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
     private bool _interceptKeyboard = true;
     private bool _interceptWheel = true;
     private bool _emitWheelOnBlock = true;
+    private int _callbackExceptionCount;
+    private long _lastExceptionLogTick;
+    private int _dispatchGeneration;
+    private volatile bool _disposed;
     public int LastError { get; private set; }
     private readonly HashSet<VirtualKey> _allowedKeys = new()
     {
@@ -61,7 +65,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public void SetEmitWheelOnBlock(bool enabled) => _emitWheelOnBlock = enabled;
 
-    public bool Start()
+    public async Task<bool> StartAsync()
     {
         if (!Available)
         {
@@ -90,7 +94,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             if (attempt < MaxHookRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff
-                Thread.Sleep(delayMs);
+                await Task.Delay(delayMs);
             }
         }
         LastError = Marshal.GetLastWin32Error();
@@ -100,6 +104,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public void Stop()
     {
+        Interlocked.Increment(ref _dispatchGeneration);
         if (_keyboardHook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_keyboardHook);
@@ -117,7 +122,23 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         _emitWheelOnBlock = true;
     }
 
-    public void Dispose() => Stop();
+    ~WpsSlideshowNavigationHook()
+    {
+        // Finalizer runs on GC thread — only do minimal unhook,
+        // avoid calling Stop() which modifies non-thread-safe state.
+        var kbHook = _keyboardHook;
+        var msHook = _mouseHook;
+        if (kbHook != IntPtr.Zero) UnhookWindowsHookEx(kbHook);
+        if (msHook != IntPtr.Zero) UnhookWindowsHookEx(msHook);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
     private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
     {
@@ -125,6 +146,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         try
         {
             if (nCode != HcAction || !_interceptEnabled || !_interceptKeyboard)
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
+            if (lParam == IntPtr.Zero)
             {
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
@@ -144,7 +169,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             if (isDown)
             {
                 var direction = key is VirtualKey.Up or VirtualKey.Left or VirtualKey.PageUp ? -1 : 1;
-                NavigationRequested?.Invoke(direction, "keyboard");
+                QueueNavigationRequest(direction, "keyboard");
             }
             if (_blockOnly)
             {
@@ -152,8 +177,9 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             }
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
-        catch
+        catch (Exception ex)
         {
+            RecordCallbackException("keyboard", ex);
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
         finally
@@ -175,6 +201,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             {
                 return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
             }
+            if (lParam == IntPtr.Zero)
+            {
+                return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+            }
             if (wParam.ToInt32() != WmMouseWheel)
             {
                 return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
@@ -190,15 +220,16 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
                 return new IntPtr(1);
             }
             var direction = delta < 0 ? 1 : -1;
-            NavigationRequested?.Invoke(direction, "wheel");
+            QueueNavigationRequest(direction, "wheel");
             if (_blockOnly)
             {
                 return new IntPtr(1);
             }
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
         }
-        catch
+        catch (Exception ex)
         {
+            RecordCallbackException("mouse", ex);
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
         }
         finally
@@ -238,6 +269,39 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
     {
         public int X;
         public int Y;
+    }
+
+    private void RecordCallbackException(string source, Exception ex)
+    {
+        var count = Interlocked.Increment(ref _callbackExceptionCount);
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastExceptionLogTick);
+        if (now - last < ExceptionLogIntervalMs)
+        {
+            return;
+        }
+        Interlocked.Exchange(ref _lastExceptionLogTick, now);
+        Debug.WriteLine($"[WpsNavHook][{source}] callback exception count={count}, type={ex.GetType().Name}, message={ex.Message}");
+    }
+
+    private void QueueNavigationRequest(int direction, string source)
+    {
+        var generation = Volatile.Read(ref _dispatchGeneration);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (_disposed || generation != Volatile.Read(ref _dispatchGeneration))
+                {
+                    return;
+                }
+                NavigationRequested?.Invoke(direction, source);
+            }
+            catch (Exception ex)
+            {
+                RecordCallbackException($"{source}_async", ex);
+            }
+        });
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]

@@ -3,38 +3,51 @@
                     xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
 
     <!-- ========================================
-         Designed by: Gemini Art Director
-         Theme: Modern Slate (Dark Blue)
-         Concept: Professional, Deep, Calm
+         Theme: Radiant Dark (Vibrant & Deep)
+         Concept: High Contrast, Glassmorphism, Neon Accents
          ======================================== -->
 
-    <!-- ========== 1. 核心色板 (Slate Palette) ========== -->
+    <!-- ========== 1. 核心色板 (Radiant Palette) ========== -->
     
-    <!-- Backgrounds (Slate 900-800) -->
-    <Color x:Key="Color_Bg_Deep">#0F172A</Color>    <!-- Slate 900: Window Background -->
-    <Color x:Key="Color_Bg_Surface">#1E293B</Color>  <!-- Slate 800: Cards/Dialogs -->
-    <Color x:Key="Color_Bg_Input">#334155</Color>    <!-- Slate 700: Inputs/Hovers -->
-    <Color x:Key="Color_Bg_Overlay">#020617</Color>  <!-- Slate 950: Overlay base -->
+    <!-- Backgrounds (Deep & Cool) -->
+    <Color x:Key="Color_Bg_Deep">#050508</Color>      <!-- Main Window Background (Deepest Void) -->
+    <Color x:Key="Color_Bg_Surface">#13131A</Color>    <!-- Cards, Panels (Rich Dark) -->
+    <Color x:Key="Color_Bg_Input">#1C1C24</Color>      <!-- Inputs (Distinct Layer) -->
+    <Color x:Key="Color_Bg_Overlay">#0A0A0E</Color>    <!-- Overlay masking -->
+    <Color x:Key="Color_Bg_Glass">#CC13131A</Color>    <!-- Semi-transparent Surface -->
 
-    <!-- Accents (Blue 600) -->
-    <Color x:Key="Color_Primary">#2563EB</Color>     <!-- Blue 600: Primary Action -->
-    <Color x:Key="Color_Primary_Hover">#3B82F6</Color> <!-- Blue 500: Hover -->
-    <Color x:Key="Color_Primary_Active">#1D4ED8</Color> <!-- Blue 700: Pressed -->
-    <Color x:Key="Color_Primary_Glow">#60A5FA</Color> <!-- Blue 400: Glows -->
-
-    <!-- Functional -->
-    <Color x:Key="Color_Danger">#EF4444</Color>      <!-- Red 500 -->
-    <Color x:Key="Color_Success">#10B981</Color>     <!-- Emerald 500 -->
-    <Color x:Key="Color_Warning">#F59E0B</Color>     <!-- Amber 500 -->
+    <!-- Accents (Vibrant Gradients Sources) -->
+    <Color x:Key="Color_Primary">#3B82F6</Color>       <!-- Base Blue -->
+    <Color x:Key="Color_Primary_GradientStart">#3B82F6</Color>
+    <Color x:Key="Color_Primary_GradientEnd">#8B5CF6</Color>   <!-- Violet Shift -->
     
-    <!-- Text -->
-    <Color x:Key="Color_Text_Primary">#F1F5F9</Color>   <!-- Slate 100 -->
-    <Color x:Key="Color_Text_Secondary">#94A3B8</Color> <!-- Slate 400 -->
-    <Color x:Key="Color_Text_Disabled">#475569</Color>  <!-- Slate 600 -->
+    <Color x:Key="Color_Secondary">#64748B</Color>     <!-- Slate -->
 
-    <!-- Borders -->
-    <Color x:Key="Color_Border_Subtle">#334155</Color>  <!-- Slate 700 -->
-    <Color x:Key="Color_Border_Strong">#475569</Color>  <!-- Slate 600 -->
+    <!-- Functional Colors -->
+    <Color x:Key="Color_Danger">#EF4444</Color>        <!-- Red -->
+    <Color x:Key="Color_Danger_GradientEnd">#EC4899</Color> <!-- Pink Shift -->
+    
+    <Color x:Key="Color_Success">#10B981</Color>       <!-- Green -->
+    <Color x:Key="Color_Success_GradientStart">#2DD4BF</Color> <!-- Teal Shift -->
+    
+    <Color x:Key="Color_Warning">#F59E0B</Color>       <!-- Amber -->
+    <Color x:Key="Color_Warning_GradientEnd">#F97316</Color>   <!-- Orange Shift -->
+    
+    <!-- Harmonious Accents -->
+    <Color x:Key="Color_Accent_Teal">#2DD4BF</Color>
+    <Color x:Key="Color_Accent_Violet">#A78BFA</Color>
+    <Color x:Key="Color_Accent_Amber">#FBBF24</Color>
+    
+    <!-- Text (High Readability) -->
+    <Color x:Key="Color_Text_Primary">#F8FAFC</Color>   <!-- Bright White-Blue -->
+    <Color x:Key="Color_Text_Secondary">#94A3B8</Color> <!-- Cool Grey -->
+    <Color x:Key="Color_Text_Tertiary">#475569</Color>  <!-- Darker Grey -->
+    <Color x:Key="Color_Text_Black">#0F172A</Color>     <!-- For use on Light/Neon backgrounds ONLY -->
+
+    <!-- Borders (Subtle & Glassy) -->
+    <Color x:Key="Color_Border_Subtle">#252530</Color>
+    <Color x:Key="Color_Border_Strong">#404050</Color>
+    <Color x:Key="Color_Border_Glass">#30FFFFFF</Color> <!-- White glass edge -->
 
     <!-- ========== 2. 笔刷系统 (Brushes) ========== -->
 
@@ -44,90 +57,113 @@
     
     <SolidColorBrush x:Key="Brush_Background_L2" Color="{StaticResource Color_Bg_Surface}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Bg_Input}" PresentationOptions:Freeze="true"/>
+    
+    <!-- Glass Brushes -->
+    <SolidColorBrush x:Key="Brush_Glass_Surface" Color="{StaticResource Color_Bg_Glass}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Glass_Border" Color="#1FFFFFFF" PresentationOptions:Freeze="true"/>
 
     <!-- States -->
-    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#334155" PresentationOptions:Freeze="true"/> <!-- Slate 700 -->
-    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#475569" PresentationOptions:Freeze="true"/> <!-- Slate 600 -->
-    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#1E293B" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#252530" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#303040" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#181820" PresentationOptions:Freeze="true"/>
 
-    <!-- Primary -->
+    <!-- Primary (Fallback / Solid) -->
     <SolidColorBrush x:Key="Brush_Primary" Color="{StaticResource Color_Primary}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Primary_Light" Color="{StaticResource Color_Primary_Hover}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{StaticResource Color_Primary_Active}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Light" Color="#60A5FA" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Primary_Dark" Color="#2563EB" PresentationOptions:Freeze="true"/>
 
     <!-- Text -->
     <SolidColorBrush x:Key="Brush_Text_Primary" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{StaticResource Color_Text_Secondary}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Disabled}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Disabled" Color="#20FFFFFF" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{StaticResource Color_Text_Tertiary}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Text_Black" Color="{StaticResource Color_Text_Black}" PresentationOptions:Freeze="true"/>
+    
+    <SolidColorBrush x:Key="Brush_Disabled" Color="#40FFFFFF" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Foreground" Color="{StaticResource Color_Text_Primary}" PresentationOptions:Freeze="true"/>
 
     <!-- Borders -->
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Light" Color="{StaticResource Color_Border_Strong}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Border_Glass" Color="{StaticResource Color_Border_Glass}" PresentationOptions:Freeze="true"/>
 
-    <!-- Functional -->
+    <!-- Functional Brushes -->
     <SolidColorBrush x:Key="Brush_Danger" Color="{StaticResource Color_Danger}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#2A1215" PresentationOptions:Freeze="true"/> <!-- Kept for compatibility -->
-    <SolidColorBrush x:Key="Brush_Danger_Light" Color="#F87171" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#2A1215" PresentationOptions:Freeze="true"/>
     
     <SolidColorBrush x:Key="Brush_Success" Color="{StaticResource Color_Success}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Warning" Color="{StaticResource Color_Warning}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Info" Color="#38BDF8" PresentationOptions:Freeze="true"/>
+    
+    <!-- Harmonious Accent Brushes (Solids) -->
+    <SolidColorBrush x:Key="Brush_Accent_Teal" Color="{StaticResource Color_Accent_Teal}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Accent_Violet" Color="{StaticResource Color_Accent_Violet}" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Accent_Amber" Color="{StaticResource Color_Accent_Amber}" PresentationOptions:Freeze="true"/>
 
-    <!-- Translucency / Glass -->
+    <!-- Translucency -->
     <SolidColorBrush x:Key="Brush_White_Translucent" Color="#1AFFFFFF" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_White_Translucent_Low" Color="#08FFFFFF" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Glass_Border" Color="#26FFFFFF" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#CC020617" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#E6050508" PresentationOptions:Freeze="true"/>
 
     <!-- ========== 3. 渐变与特效 (Gradients & Effects) ========== -->
 
-    <!-- Subtle Primary Gradient (Vertical) -->
-    <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#3B82F6" Offset="0"/>
-        <GradientStop Color="#2563EB" Offset="1"/>
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="Gradient_Primary_Hover" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#60A5FA" Offset="0"/>
-        <GradientStop Color="#3B82F6" Offset="1"/>
-    </LinearGradientBrush>
-
-    <!-- Legacy Mappings for Compatibility -->
-    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0.5,0" EndPoint="0.5,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="{StaticResource Color_Bg_Input}" Offset="0"/>
-        <GradientStop Color="{StaticResource Color_Bg_Surface}" Offset="1"/>
+    <!-- Primary Gradient (Blue -> Violet) -->
+    <LinearGradientBrush x:Key="Gradient_Primary" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Primary_GradientStart}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Primary_GradientEnd}" Offset="1"/>
     </LinearGradientBrush>
     
-    <LinearGradientBrush x:Key="Gradient_RollCall_Name" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
-        <GradientStop Color="{StaticResource Color_Bg_Surface}" Offset="0"/>
-        <GradientStop Color="{StaticResource Color_Bg_Input}" Offset="1"/>
+    <LinearGradientBrush x:Key="Gradient_Primary_Hover" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#60A5FA" Offset="0"/>
+        <GradientStop Color="#A78BFA" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Success Gradient (Teal -> Blue) -->
+    <LinearGradientBrush x:Key="Gradient_Success" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Success_GradientStart}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Success}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Danger Gradient (Red -> Pink) -->
+    <LinearGradientBrush x:Key="Gradient_Danger" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Danger}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Danger_GradientEnd}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Warning Gradient (Amber -> Orange) -->
+    <LinearGradientBrush x:Key="Gradient_Warning" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="{StaticResource Color_Warning}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color_Warning_GradientEnd}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Special Context Gradients -->
+    <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
+        <GradientStop Color="#1E293B" Offset="0"/> <!-- Dark Slate Blue -->
+        <GradientStop Color="#0F172A" Offset="1"/> <!-- Deepest Blue -->
     </LinearGradientBrush>
     
     <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#2563EB" Offset="0"/>
+        <GradientStop Color="#3B82F6" Offset="0"/>
         <GradientStop Color="#0F172A" Offset="1"/>
     </LinearGradientBrush>
     
-    <Color x:Key="Color_Timer_Neon">#10B981</Color>
+    <Color x:Key="Color_Timer_Neon">#2DD4BF</Color>
     <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Neon}" PresentationOptions:Freeze="true"/>
 
-    <!-- Shadows (Optimized for performance) -->
-    <!-- 1. Soft Glow (Primary) -->
-    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#3B82F6" BlurRadius="16" ShadowDepth="0" Opacity="0.2" RenderingBias="Performance"/>
+    <!-- Shadows (Radiant Glows) -->
+    
+    <!-- 1. Primary Glow (Vibrant Blue/Violet) -->
+    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#8B5CF6" BlurRadius="20" ShadowDepth="0" Opacity="0.4" RenderingBias="Performance"/>
     
     <!-- 2. Danger Glow -->
-    <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#EF4444" BlurRadius="16" ShadowDepth="0" Opacity="0.2" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#EF4444" BlurRadius="20" ShadowDepth="0" Opacity="0.4" RenderingBias="Performance"/>
 
-    <!-- 3. Floating (Deep) -->
-    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="32" ShadowDepth="8" Opacity="0.5" RenderingBias="Performance"/>
+    <!-- 3. Floating (Deep Void) -->
+    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.7" RenderingBias="Performance"/>
     
-    <!-- 4. Card (Crisp) -->
-    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.3" RenderingBias="Performance"/>
+    <!-- 4. Card (Soft) -->
+    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="8" ShadowDepth="4" Opacity="0.4" RenderingBias="Performance"/>
 
-    <!-- 5. Subtle Border substitute -->
-    <DropShadowEffect x:Key="Shadow_Subtle" Color="#000000" BlurRadius="2" ShadowDepth="1" Opacity="0.2" RenderingBias="Performance"/>
+    <!-- 5. Glass Glow (Subtle White) -->
+    <DropShadowEffect x:Key="Shadow_Glass_Glow" Color="#FFFFFF" BlurRadius="10" ShadowDepth="0" Opacity="0.1" RenderingBias="Performance"/>
 
     <!-- Pen Colors -->
     <Color x:Key="Color_Pen_Red">#EF4444</Color>

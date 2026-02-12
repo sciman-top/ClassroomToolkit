@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Threading;
 using ClassroomToolkit.Interop.Presentation;
 
 public sealed class KeyboardHook : IDisposable
@@ -12,6 +13,7 @@ public sealed class KeyboardHook : IDisposable
     
     // Performance monitoring
     private const int HookCallbackTimeoutMs = 50;
+    private const int ExceptionLogIntervalMs = 30000;
 
     private readonly HookProc _hookProc;
     private IntPtr _hookId;
@@ -21,6 +23,8 @@ public sealed class KeyboardHook : IDisposable
     private bool _rightCtrlDown;
     private bool _leftAltDown;
     private bool _rightAltDown;
+    private int _callbackExceptionCount;
+    private long _lastExceptionLogTick;
 
     public bool IsActive => _hookId != IntPtr.Zero;
 
@@ -38,6 +42,16 @@ public sealed class KeyboardHook : IDisposable
     public event Action<KeyBinding>? BindingTriggered;
 
     public void Start()
+    {
+        StartCore(async: false).GetAwaiter().GetResult();
+    }
+
+    public Task StartAsync()
+    {
+        return StartCore(async: true);
+    }
+
+    private async Task StartCore(bool async)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -62,7 +76,10 @@ public sealed class KeyboardHook : IDisposable
             if (attempt < maxRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200ms
-                System.Threading.Thread.Sleep(delayMs);
+                if (async)
+                    await Task.Delay(delayMs);
+                else
+                    Thread.Sleep(delayMs);
             }
         }
     }
@@ -77,9 +94,19 @@ public sealed class KeyboardHook : IDisposable
         _hookId = IntPtr.Zero;
     }
 
+    ~KeyboardHook()
+    {
+        var hook = _hookId;
+        if (hook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(hook);
+        }
+    }
+
     public void Dispose()
     {
         Stop();
+        GC.SuppressFinalize(this);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -87,47 +114,44 @@ public sealed class KeyboardHook : IDisposable
         var startTime = Stopwatch.GetTimestamp();
         try
         {
-            if (nCode >= 0)
+            if (nCode < 0 || lParam == IntPtr.Zero)
             {
-                var msg = wParam.ToInt32();
-                var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
-                var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
-                var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+                return CallNextHookEx(_hookId, nCode, wParam, lParam);
+            }
 
-                // Original logic for modifier tracking and binding triggering
-                if (isDown || isUp)
+            var msg = wParam.ToInt32();
+            var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
+            var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
+            var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+            var virtualKey = (VirtualKey)data.VirtualKeyCode;
+
+            if (isDown || isUp)
+            {
+                UpdateModifiers(virtualKey, isDown);
+            }
+
+            if (isDown)
+            {
+                var key = MapKey(virtualKey);
+                if (key.HasValue)
                 {
-                    UpdateModifiers((VirtualKey)data.VirtualKeyCode, isDown);
-                }
-                if (isDown)
-                {
-                    var key = MapKey((VirtualKey)data.VirtualKeyCode);
-                    if (key.HasValue)
+                    var modifiers = CurrentModifiers();
+                    var binding = new KeyBinding(key.Value, modifiers);
+                    if (TargetBinding != null && binding.Equals(TargetBinding))
                     {
-                        var modifiers = CurrentModifiers();
-                        var binding = new KeyBinding(key.Value, modifiers);
-                        if (TargetBinding != null && binding.Equals(TargetBinding))
+                        BindingTriggered?.Invoke(binding);
+                        if (SuppressWhenMatched)
                         {
-                            BindingTriggered?.Invoke(binding);
-                            if (SuppressWhenMatched)
-                            {
-                                return new IntPtr(1);
-                            }
+                            return new IntPtr(1);
                         }
                     }
                 }
-
-                // New logic for performance monitoring and potential new event handling (if KeyInterop, RawKeyEventArgs, _modifierKeys were defined)
-                // The provided snippet for HookCallback was incomplete and syntactically incorrect to fully replace the original.
-                // I've integrated the performance monitoring part and kept the original key processing logic.
-                // If KeyInterop, RawKeyEventArgs, and _modifierKeys were intended to replace the existing key processing,
-                // those types would need to be defined and the logic fully integrated.
-                // For now, I'm adding the performance monitoring around the existing logic.
             }
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
-        catch
+        catch (Exception ex)
         {
+            RecordCallbackException("keyboard", ex);
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
         finally
@@ -233,6 +257,19 @@ public sealed class KeyboardHook : IDisposable
             return null;
         }
         return Enum.IsDefined(typeof(VirtualKey), key) ? key : null;
+    }
+
+    private void RecordCallbackException(string source, Exception ex)
+    {
+        var count = Interlocked.Increment(ref _callbackExceptionCount);
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastExceptionLogTick);
+        if (now - last < ExceptionLogIntervalMs)
+        {
+            return;
+        }
+        Interlocked.Exchange(ref _lastExceptionLogTick, now);
+        Debug.WriteLine($"[KeyboardHook][{source}] callback exception count={count}, type={ex.GetType().Name}, message={ex.Message}");
     }
 
     private static IntPtr SetHook(HookProc proc)

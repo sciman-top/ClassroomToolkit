@@ -52,6 +52,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _speechVoiceId = string.Empty;
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
+    private bool _canPersistWorkbook = true;
+    private bool _persistBlockedNotified;
 
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
@@ -247,6 +249,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         private set => SetField(ref _availableClasses, value ?? Array.Empty<string>());
     }
 
+    public bool CanPersistWorkbook => _canPersistWorkbook;
+
     public bool TimerSoundEnabled
     {
         get => _timerSoundEnabled;
@@ -312,6 +316,21 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     {
         get => _speechOutputId;
         set => SetField(ref _speechOutputId, value ?? string.Empty);
+    }
+
+    private string _remoteGroupSwitchKey = "b";
+    private bool _remoteGroupSwitchEnabled = false;
+
+    public string RemoteGroupSwitchKey
+    {
+        get => _remoteGroupSwitchKey;
+        set => SetField(ref _remoteGroupSwitchKey, value ?? "b");
+    }
+
+    public bool RemoteGroupSwitchEnabled
+    {
+        get => _remoteGroupSwitchEnabled;
+        set => SetField(ref _remoteGroupSwitchEnabled, value);
     }
 
     public int TimerMinutes => _timerMinutes;
@@ -503,6 +522,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
     {
         _workbook = result.Workbook;
+        _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
+        _persistBlockedNotified = false;
         _classStates.Clear();
         foreach (var pair in result.ClassStates)
         {
@@ -853,10 +874,34 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         SetPlaceholderStudent();
     }
 
+    public void SwitchToNextGroup()
+    {
+        if (_engine == null || Groups.Count <= 1)
+        {
+            return;
+        }
+
+        var currentIndex = Groups.IndexOf(CurrentGroup);
+        var nextIndex = (currentIndex + 1) % Groups.Count;
+        var nextGroup = Groups[nextIndex];
+        
+        SetCurrentGroup(nextGroup);
+        UpdateGroupSelection();
+    }
+
     public void SaveState()
     {
         if (_engine == null || _workbook == null)
         {
+            return;
+        }
+        if (!CanPersistWorkbook)
+        {
+            if (!_persistBlockedNotified)
+            {
+                _persistBlockedNotified = true;
+                DataSaveFailed?.Invoke("学生名册当前处于恢复只读模式，本次会话已禁用保存以避免覆盖原始数据。");
+            }
             return;
         }
         try

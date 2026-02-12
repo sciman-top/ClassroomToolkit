@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -35,6 +36,7 @@ public partial class ImageManagerWindow : Window
     private bool _isClosing;
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
+    private int _loadImagesRequestId;
 
     public event Action<IReadOnlyList<string>, int>? ImageSelected;
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
@@ -147,25 +149,43 @@ public partial class ImageManagerWindow : Window
 
     private void OnImageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.ListView listView || listView.SelectedItem is not ImageItem item)
+        var item = ResolveSelectedImageItem(sender, e);
+        if (item == null)
         {
             return;
         }
         // 文件夹不触发选中事件
         if (item.IsFolder)
         {
-            ImageList.SelectedItem = null;
-            ImageListView.SelectedItem = null;
             return;
         }
+
         var navigableItems = GetNavigableItems();
         _currentIndex = navigableItems.IndexOf(item);
+        if (_currentIndex < 0)
+        {
+            _currentIndex = navigableItems.FindIndex(image =>
+                string.Equals(image.Path, item.Path, StringComparison.OrdinalIgnoreCase));
+        }
         if (_currentIndex >= 0)
         {
             ImageSelected?.Invoke(navigableItems.Select(image => image.Path).ToList(), _currentIndex);
         }
-        ImageList.SelectedItem = null;
-        ImageListView.SelectedItem = null;
+    }
+
+    private static ImageItem? ResolveSelectedImageItem(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is Selector selector && selector.SelectedItem is ImageItem selected)
+        {
+            return selected;
+        }
+
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is ImageItem added)
+        {
+            return added;
+        }
+
+        return null;
     }
 
     private void OnImageListDoubleClick(object sender, MouseButtonEventArgs e)
@@ -233,6 +253,26 @@ public partial class ImageManagerWindow : Window
         OpenFolder(nextFolder, addToRecents: false, navigate: false);
     }
 
+    private void OnUpClick(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_currentFolder))
+        {
+            return;
+        }
+        try
+        {
+            var parentDir = Directory.GetParent(_currentFolder);
+            if (parentDir != null && parentDir.Exists)
+            {
+                OpenFolder(parentDir.FullName, addToRecents: false);
+            }
+        }
+        catch
+        {
+            // Ignore errors (e.g., access denied, root directory)
+        }
+    }
+
     private void UpdateNavigationButtons()
     {
         BackButton.IsEnabled = _backStack.Count > 0;
@@ -290,7 +330,7 @@ public partial class ImageManagerWindow : Window
         }
         _currentFolder = path;
         CurrentFolderText.Text = path;
-        LoadImages(path);
+        StartLoadImages(path);
         UpdateNavigationButtons();
         if (addToRecents)
         {
@@ -313,7 +353,13 @@ public partial class ImageManagerWindow : Window
         RecentsChanged?.Invoke(_recents.Select(item => item.Path).ToList());
     }
 
-    private async void LoadImages(string folder)
+    private void StartLoadImages(string folder)
+    {
+        var requestId = Interlocked.Increment(ref _loadImagesRequestId);
+        _ = LoadImagesAsync(folder, requestId);
+    }
+
+    private async Task LoadImagesAsync(string folder, int requestId)
     {
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
@@ -378,7 +424,7 @@ public partial class ImageManagerWindow : Window
                 return list;
             }, token);
 
-            if (result == null || token.IsCancellationRequested)
+            if (result == null || token.IsCancellationRequested || !IsCurrentLoadRequest(requestId))
             {
                 return;
             }
@@ -390,7 +436,7 @@ public partial class ImageManagerWindow : Window
                 // Start thumbnail generation after adding to UI
                 if (!item.IsFolder)
                 {
-                    QueueThumbnailLoad(item, item.IsPdf, token);
+                    QueueThumbnailLoad(item, item.IsPdf, token, requestId);
                 }
             }
 
@@ -404,8 +450,16 @@ public partial class ImageManagerWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"ImageManager: LoadImages Error: {ex}");
-            ShowEmptyState();
+            if (IsCurrentLoadRequest(requestId))
+            {
+                ShowEmptyState();
+            }
         }
+    }
+
+    private bool IsCurrentLoadRequest(int requestId)
+    {
+        return requestId == Volatile.Read(ref _loadImagesRequestId);
     }
 
     private void ShowEmptyState()
@@ -422,7 +476,7 @@ public partial class ImageManagerWindow : Window
         UpdateNavigationButtons();
     }
 
-    private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token)
+    private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token, int requestId)
     {
         _ = Task.Run(async () =>
         {
@@ -448,7 +502,7 @@ public partial class ImageManagerWindow : Window
             {
                 _thumbnailSemaphore.Release();
             }
-            if (thumbnail == null || token.IsCancellationRequested)
+            if (thumbnail == null || token.IsCancellationRequested || !IsCurrentLoadRequest(requestId))
             {
                 return;
             }
@@ -458,9 +512,9 @@ public partial class ImageManagerWindow : Window
             }
             try
             {
-                Dispatcher.BeginInvoke(() =>
+                await Dispatcher.BeginInvoke(() =>
                 {
-                    if (_isClosing || token.IsCancellationRequested)
+                    if (_isClosing || token.IsCancellationRequested || !IsCurrentLoadRequest(requestId))
                     {
                         return;
                     }
@@ -778,7 +832,7 @@ public sealed class FolderVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return System.Windows.Data.Binding.DoNothing;
     }
 }
 
@@ -791,7 +845,7 @@ public sealed class FileVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return System.Windows.Data.Binding.DoNothing;
     }
 }
 
@@ -804,6 +858,6 @@ public sealed class PdfBackgroundConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return System.Windows.Data.Binding.DoNothing;
     }
 }

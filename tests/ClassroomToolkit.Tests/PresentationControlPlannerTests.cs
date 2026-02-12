@@ -63,4 +63,17 @@ public sealed class PresentationControlPlannerTests
 
         plan.Should().BeNull();
     }
+
+    [Fact]
+    public void OtherWindowType_ShouldReturnNull()
+    {
+        var classifier = new PresentationClassifier();
+        var planner = new PresentationControlPlanner(classifier);
+        var info = new PresentationWindowInfo(790, "notepad.exe", new[] { "Notepad" });
+        var options = new PresentationControlOptions { Strategy = InputStrategy.Auto };
+
+        var plan = planner.Plan(info, options, PresentationCommand.Next);
+
+        plan.Should().BeNull();
+    }
 }

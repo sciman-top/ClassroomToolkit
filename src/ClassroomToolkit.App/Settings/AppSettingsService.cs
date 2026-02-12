@@ -49,6 +49,8 @@ public sealed class AppSettingsService
             settings.RollCallSpeechVoiceId = GetString(roll, "speech_voice_id", settings.RollCallSpeechVoiceId);
             settings.RollCallSpeechOutputId = GetString(roll, "speech_output_id", settings.RollCallSpeechOutputId);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
+            settings.RollCallRemoteGroupSwitchEnabled = GetBool(roll, "remote_group_switch_enabled", settings.RollCallRemoteGroupSwitchEnabled);
+            settings.RemoteGroupSwitchKey = GetString(roll, "remote_group_switch_key", settings.RemoteGroupSwitchKey);
             settings.RollCallCurrentClass = GetString(roll, "current_class", settings.RollCallCurrentClass);
             settings.RollCallCurrentGroup = GetString(roll, "current_group", settings.RollCallCurrentGroup);
             var geometry = GetString(roll, "geometry", string.Empty);
@@ -107,6 +109,26 @@ public sealed class AppSettingsService
             settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
             settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
             settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
+            settings.PhotoUnifiedTransformEnabled = GetBool(
+                paint,
+                "photo_unified_transform_enabled",
+                settings.PhotoUnifiedTransformEnabled);
+            settings.PhotoUnifiedScaleX = GetDouble(
+                paint,
+                "photo_unified_scale_x",
+                settings.PhotoUnifiedScaleX);
+            settings.PhotoUnifiedScaleY = GetDouble(
+                paint,
+                "photo_unified_scale_y",
+                settings.PhotoUnifiedScaleY);
+            settings.PhotoUnifiedTranslateX = GetDouble(
+                paint,
+                "photo_unified_translate_x",
+                settings.PhotoUnifiedTranslateX);
+            settings.PhotoUnifiedTranslateY = GetDouble(
+                paint,
+                "photo_unified_translate_y",
+                settings.PhotoUnifiedTranslateY);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -150,7 +172,10 @@ public sealed class AppSettingsService
         roll["speech_engine"] = settings.RollCallSpeechEngine ?? "pyttsx3";
         roll["speech_voice_id"] = settings.RollCallSpeechVoiceId ?? string.Empty;
         roll["speech_output_id"] = settings.RollCallSpeechOutputId ?? string.Empty;
+        roll["remote_roll_enabled"] = settings.RollCallRemoteEnabled ? "True" : "False";
         roll["remote_roll_key"] = settings.RemotePresenterKey;
+        roll["remote_group_switch_enabled"] = settings.RollCallRemoteGroupSwitchEnabled ? "True" : "False";
+        roll["remote_group_switch_key"] = settings.RemoteGroupSwitchKey;
         roll["current_class"] = settings.RollCallCurrentClass ?? string.Empty;
         roll["current_group"] = settings.RollCallCurrentGroup ?? "全部";
         if (HasGeometry(settings))
@@ -198,11 +223,11 @@ public sealed class AppSettingsService
         paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
         paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
         paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
-        paint.Remove("photo_unified_transform_enabled");
-        paint.Remove("photo_unified_scale_x");
-        paint.Remove("photo_unified_scale_y");
-        paint.Remove("photo_unified_translate_x");
-        paint.Remove("photo_unified_translate_y");
+        paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
+        paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_x"] = settings.PhotoUnifiedTranslateX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_y"] = settings.PhotoUnifiedTranslateY.ToString(CultureInfo.InvariantCulture);
         paint.Remove("ink_sidebar_x");
         paint.Remove("ink_sidebar_y");
         paint.Remove("ink_sidebar_enabled");
@@ -274,8 +299,16 @@ public sealed class AppSettingsService
         {
             return fallback;
         }
-        return value.Trim().Equals("true", StringComparison.OrdinalIgnoreCase) ||
-               value.Trim().Equals("1", StringComparison.OrdinalIgnoreCase);
+        var normalized = value.Trim();
+        if (normalized.Equals("true", StringComparison.OrdinalIgnoreCase) || normalized.Equals("1", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (normalized.Equals("false", StringComparison.OrdinalIgnoreCase) || normalized.Equals("0", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return fallback;
     }
 
     private static PaintShapeType GetShapeType(string raw)

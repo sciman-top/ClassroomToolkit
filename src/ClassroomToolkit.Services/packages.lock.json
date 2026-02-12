@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0-windows7.0": {
+      "classroomtoolkit.domain": {
+        "type": "Project"
+      },
+      "classroomtoolkit.interop": {
+        "type": "Project"
+      }
+    }
+  }
+}

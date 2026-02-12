@@ -37,6 +37,12 @@ public sealed class InkStrokeData
 
     [JsonIgnore]
     public string DebugLabel => $"{Type}-{BrushStyle}-{GeometryPath.Length}";
+
+    [JsonIgnore]
+    public System.Windows.Media.Geometry? CachedGeometry { get; set; }
+
+    [JsonIgnore]
+    public System.Windows.Rect? CachedBounds { get; set; }
 }
 
 public sealed class InkPageData

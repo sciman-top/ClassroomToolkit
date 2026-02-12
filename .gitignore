@@ -1,6 +1,8 @@
 # Build outputs
 bin/
 obj/
+artifacts/
+**/artifacts/
 
 # Visual Studio
 .vs/
@@ -14,6 +16,12 @@ obj/
 
 # Logs and local data
 classroom_toolkit.log
+build_error_analysis.log
+test_failure_debug.log
+**/build_log*.txt
+**/TestResults/
+*.trx
+*.bak
 settings.ini
 students.xlsx
 student_photos/

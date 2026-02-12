@@ -100,10 +100,10 @@ public static class NativeMethods
 
     public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern int GetWindowLong(IntPtr hwnd, int index);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -124,7 +124,7 @@ public static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo exInfo);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetCursorPos(out NativePoint point);
     
     [DllImport("user32.dll")]
@@ -146,7 +146,7 @@ public static class NativeMethods
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int maxCount);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -155,6 +155,6 @@ public static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hwnd);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint inputs, [MarshalAs(UnmanagedType.LPArray), In] Input[] input, int size);
 }

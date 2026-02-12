@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Threading;
+using ClassroomToolkit.App.Utilities;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -13,6 +15,8 @@ public sealed class StudentPhotoResolver
     private readonly string _rootPath;
     private readonly ConcurrentDictionary<string, DirectoryCache> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, object> _indexLocks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _warmupLock = new();
+    private CancellationTokenSource? _warmupCancellation;
 
     public StudentPhotoResolver(string rootPath)
     {
@@ -24,39 +28,44 @@ public sealed class StudentPhotoResolver
     /// </summary>
     public void WarmupCache(IEnumerable<string>? classNames = null)
     {
-        _ = Task.Run(() =>
+        var token = ReplaceWarmupCancellationToken();
+        _ = SafeTaskRunner.Run("StudentPhotoResolver.WarmupCache", _ =>
         {
-            try
+            if (classNames != null)
             {
-                if (classNames != null)
+                foreach (var className in classNames)
                 {
-                    foreach (var className in classNames)
+                    if (token.IsCancellationRequested)
                     {
-                        var normalizedClass = SanitizeSegment(className);
-                        if (!string.IsNullOrWhiteSpace(normalizedClass))
+                        return;
+                    }
+                    var normalizedClass = SanitizeSegment(className);
+                    if (!string.IsNullOrWhiteSpace(normalizedClass))
+                    {
+                        var directory = Path.Combine(_rootPath, normalizedClass);
+                        if (Directory.Exists(directory))
                         {
-                            var directory = Path.Combine(_rootPath, normalizedClass);
-                            if (Directory.Exists(directory))
-                            {
-                                GetIndex(directory);  // 触发索引构建
-                            }
+                            GetIndex(directory);  // 触发索引构建
                         }
                     }
                 }
-                else if (Directory.Exists(_rootPath))
-                {
-                    // 预热所有班级目录
-                    foreach (var directory in Directory.EnumerateDirectories(_rootPath))
-                    {
-                        GetIndex(directory);
-                    }
-                }
+                return;
             }
-            catch
+
+            if (!Directory.Exists(_rootPath))
             {
-                // 静默失败，不影响主流程
+                return;
             }
-        });
+            // 预热所有班级目录
+            foreach (var directory in Directory.EnumerateDirectories(_rootPath))
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                GetIndex(directory);
+            }
+        }, token, ex => Debug.WriteLine($"StudentPhotoResolver warmup failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     public string? ResolvePhotoPath(string className, string studentId)
@@ -123,12 +132,19 @@ public sealed class StudentPhotoResolver
         var buffer = text.ToCharArray();
         for (var i = 0; i < buffer.Length; i++)
         {
-            if (invalid.Contains(buffer[i]))
+            if (invalid.Contains(buffer[i]) ||
+                buffer[i] == Path.DirectorySeparatorChar ||
+                buffer[i] == Path.AltDirectorySeparatorChar)
             {
                 buffer[i] = '_';
             }
         }
-        return new string(buffer).Trim('_');
+        var sanitized = new string(buffer).Trim('_');
+        if (sanitized is "." or "..")
+        {
+            return string.Empty;
+        }
+        return sanitized;
     }
 
     private Dictionary<string, string> GetIndex(string directory)
@@ -174,6 +190,17 @@ public sealed class StudentPhotoResolver
     private object GetIndexLock(string directory)
     {
         return _indexLocks.GetOrAdd(directory, _ => new object());
+    }
+
+    private CancellationToken ReplaceWarmupCancellationToken()
+    {
+        lock (_warmupLock)
+        {
+            _warmupCancellation?.Cancel();
+            _warmupCancellation?.Dispose();
+            _warmupCancellation = new CancellationTokenSource();
+            return _warmupCancellation.Token;
+        }
     }
 
     private sealed record DirectoryCache(DateTime Timestamp, Dictionary<string, string> Index);

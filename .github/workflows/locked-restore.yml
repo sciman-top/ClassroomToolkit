@@ -1,0 +1,27 @@
+name: locked-restore
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+
+jobs:
+  verify-lock:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore (locked mode)
+        run: dotnet restore ClassroomToolkit.sln --locked-mode
+
+      - name: Build
+        run: dotnet build ClassroomToolkit.sln -c Debug --no-restore
+
+      - name: Test
+        run: dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build

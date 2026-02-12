@@ -15,19 +15,24 @@ public sealed class IniSettingsStore
 
     public Dictionary<string, Dictionary<string, string>> Load()
     {
-        var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        TryLoad(out var data);
+        return data;
+    }
+
+    public bool TryLoad(out Dictionary<string, Dictionary<string, string>> data)
+    {
+        data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         if (!File.Exists(_path))
         {
-            return data;
+            return true;
         }
-        string[] lines;
-        try
+        if (!TryReadAllLinesWithFallback(_path, out var lines))
         {
-            lines = File.ReadAllLines(_path, Encoding.UTF8);
+            return false;
         }
-        catch
+        if (ContainsNullCharacter(lines))
         {
-            return data;
+            return false;
         }
 
         string? currentSection = null;
@@ -72,7 +77,51 @@ public sealed class IniSettingsStore
             }
             data[currentSection][key] = value;
         }
-        return data;
+        return true;
+    }
+
+    private static bool ContainsNullCharacter(IEnumerable<string> lines)
+    {
+        foreach (var line in lines)
+        {
+            if (line.IndexOf('\0') >= 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryReadAllLinesWithFallback(string path, out string[] lines)
+    {
+        static bool TryRead(string sourcePath, Encoding encoding, out string[] content)
+        {
+            try
+            {
+                content = File.ReadAllLines(sourcePath, encoding);
+                return true;
+            }
+            catch
+            {
+                content = Array.Empty<string>();
+                return false;
+            }
+        }
+
+        var utf8Strict = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+        if (TryRead(path, utf8Strict, out lines))
+        {
+            return true;
+        }
+        if (TryRead(path, Encoding.Unicode, out lines))
+        {
+            return true;
+        }
+        if (TryRead(path, Encoding.BigEndianUnicode, out lines))
+        {
+            return true;
+        }
+        return TryRead(path, Encoding.Default, out lines);
     }
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)

@@ -2,6 +2,7 @@ using WpfApplication = System.Windows.Application;
 using System.Windows;
 using System.Windows.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 using System.IO;
 using ClassroomToolkit.App.Helpers;
 
@@ -9,6 +10,9 @@ namespace ClassroomToolkit.App;
 
 public partial class App : WpfApplication
 {
+    private static readonly object LogWriteLock = new();
+    private int _criticalDialogShowing;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         // 注册全局异常处理
@@ -54,7 +58,14 @@ public partial class App : WpfApplication
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        e.Handled = true; // 防止应用直接崩溃
+        if (IsFatalException(e.Exception))
+        {
+            LogException(e.Exception, "Dispatcher.UnhandledException.Fatal");
+            e.Handled = false;
+            return;
+        }
+
+        e.Handled = true; // 非致命异常优先降级处理，防止应用直接崩溃
         HandleCriticalException(e.Exception, "Dispatcher.UnhandledException");
     }
 
@@ -62,11 +73,28 @@ public partial class App : WpfApplication
     {
         LogException(ex, source);
 
-        // 弹窗提示用户
+        if (Dispatcher == null || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        // 弹窗提示用户（防止重入导致消息风暴）
         Dispatcher.BeginInvoke(() =>
         {
+            if (Interlocked.Exchange(ref _criticalDialogShowing, 1) == 1)
+            {
+                return;
+            }
+
             var message = $"程序遇到了未预期的错误 ({source}):\n\n{ex.Message}\n\n详细错误已记录到日志文件。";
-            MessageBox.Show(message, "系统错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            try
+            {
+                System.Windows.MessageBox.Show(message, "系统错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _criticalDialogShowing, 0);
+            }
         });
     }
 
@@ -82,7 +110,10 @@ public partial class App : WpfApplication
             var logContent = $"[{timestamp}] [{source}] {ex}\n" +
                              $"--------------------------------------------------------------------------------\n";
             
-            File.AppendAllText(logFile, logContent);
+            lock (LogWriteLock)
+            {
+                File.AppendAllText(logFile, logContent);
+            }
             System.Diagnostics.Debug.WriteLine($"[Exception][{source}] {ex.Message}");
         }
         catch
@@ -90,5 +121,15 @@ public partial class App : WpfApplication
             // 如果写日志也失败了，最后退路只有 Debug
             System.Diagnostics.Debug.WriteLine($"致命错误记录失败: {ex.Message}");
         }
+    }
+
+    private static bool IsFatalException(Exception ex)
+    {
+        return ex is OutOfMemoryException
+            or AppDomainUnloadedException
+            or BadImageFormatException
+            or CannotUnloadAppDomainException
+            or InvalidProgramException
+            or StackOverflowException;
     }
 }

@@ -22,7 +22,9 @@ public partial class RollCallSettingsDialog : Window
     public bool RollCallShowId { get; private set; }
     public bool RollCallShowName { get; private set; }
     public bool RollCallRemoteEnabled { get; private set; }
+    public bool RollCallRemoteGroupSwitchEnabled { get; private set; }
     public string RemotePresenterKey { get; private set; } = "tab";
+    public string RemoteGroupSwitchKey { get; private set; } = "b";
     public bool RollCallShowPhoto { get; private set; }
     public int RollCallPhotoDurationSeconds { get; private set; }
     public string RollCallPhotoSharedClass { get; private set; } = string.Empty;
@@ -68,18 +70,27 @@ public partial class RollCallSettingsDialog : Window
         RemoteEnabledCheck.IsChecked = settings.RollCallRemoteEnabled;
         BuildRemoteKeyCombo(settings.RemotePresenterKey);
 
+        RemoteGroupSwitchCheck.IsChecked = settings.RollCallRemoteGroupSwitchEnabled;
+        BuildRemoteGroupSwitchKeyCombo(settings.RemoteGroupSwitchKey);
+
         UpdatePhotoDurationLabel();
         UpdatePhotoControls();
         UpdateTimerControls();
         UpdateReminderIntervalLabel();
         UpdateSpeechControls();
         UpdateRemoteKeyEnabled();
+        UpdateRemoteGroupSwitchEnabled();
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnRemoteEnabledChanged(object sender, RoutedEventArgs e)
     {
         UpdateRemoteKeyEnabled();
+    }
+
+    private void OnRemoteGroupSwitchChanged(object sender, RoutedEventArgs e)
+    {
+        UpdateRemoteGroupSwitchEnabled();
     }
 
 
@@ -114,6 +125,12 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
+    }
+
+    private void UpdateRemoteGroupSwitchEnabled()
+    {
+        var enabled = RemoteGroupSwitchCheck.IsChecked == true;
+        RemoteGroupSwitchKeyCombo.IsEnabled = enabled;
     }
 
     private void UpdatePhotoControls()
@@ -160,19 +177,38 @@ public partial class RollCallSettingsDialog : Window
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
         var keyText = GetRemoteKey();
-        if (string.IsNullOrWhiteSpace(keyText))
-        {
-            keyText = "tab";
-        }
+        var groupKeyText = GetRemoteGroupSwitchKey();
+
+        if (string.IsNullOrWhiteSpace(keyText)) keyText = "tab";
+        if (string.IsNullOrWhiteSpace(groupKeyText)) groupKeyText = "b";
+
         if (RemoteEnabledCheck.IsChecked == true)
         {
             if (!KeyBindingParser.TryParse(keyText, out var binding) || binding == null)
             {
-                System.Windows.MessageBox.Show("请输入有效的按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("请输入有效的点名按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
             keyText = binding.ToString();
         }
+
+        if (RemoteGroupSwitchCheck.IsChecked == true)
+        {
+            if (!KeyBindingParser.TryParse(groupKeyText, out var binding) || binding == null)
+            {
+                System.Windows.MessageBox.Show("请输入有效的分组切换按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            groupKeyText = binding.ToString();
+        }
+
+        if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true && 
+            string.Equals(keyText, groupKeyText, StringComparison.OrdinalIgnoreCase))
+        {
+            System.Windows.MessageBox.Show("点名按键与分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
         RollCallShowId = ShowIdCheck.IsChecked == true;
         RollCallShowName = ShowNameCheck.IsChecked == true;
         RollCallShowPhoto = ShowPhotoCheck.IsChecked == true;
@@ -188,7 +224,9 @@ public partial class RollCallSettingsDialog : Window
         RollCallSpeechVoiceId = GetSelectedValue(SpeechVoiceCombo, _initialVoiceId);
         RollCallSpeechOutputId = GetSelectedValue(SpeechOutputCombo, _initialOutputId);
         RollCallRemoteEnabled = RemoteEnabledCheck.IsChecked == true;
+        RollCallRemoteGroupSwitchEnabled = RemoteGroupSwitchCheck.IsChecked == true;
         RemotePresenterKey = keyText;
+        RemoteGroupSwitchKey = groupKeyText;
         DialogResult = true;
     }
 
@@ -222,14 +260,7 @@ public partial class RollCallSettingsDialog : Window
 
     private void BuildRemoteKeyCombo(string? current)
     {
-        var items = new[]
-        {
-            new ComboOption("tab", "Tab键（切换超链接）"),
-            new ComboOption("b", "B键（黑屏）"),
-            new ComboOption("w", "W键（白屏）"),
-            new ComboOption("f5", "F5键（从第一页放映）"),
-            new ComboOption("esc", "Esc键（退出放映）")
-        };
+        var items = GetRemoteKeyOptions();
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
@@ -239,6 +270,31 @@ public partial class RollCallSettingsDialog : Window
             selected = "tab";
         }
         RemoteKeyCombo.SelectedValue = selected;
+    }
+
+    private void BuildRemoteGroupSwitchKeyCombo(string? current)
+    {
+        var items = GetRemoteKeyOptions();
+        RemoteGroupSwitchKeyCombo.ItemsSource = items;
+        RemoteGroupSwitchKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
+        RemoteGroupSwitchKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
+        var selected = string.IsNullOrWhiteSpace(current) ? "b" : current;
+        if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "b";
+        }
+        RemoteGroupSwitchKeyCombo.SelectedValue = selected;
+    }
+
+    private static IReadOnlyList<ComboOption> GetRemoteKeyOptions()
+    {
+        return new[]
+        {
+            new ComboOption("tab", "Tab键（切换超链接）"),
+            new ComboOption("enter", "Enter键（确认打开超链接）"),
+            new ComboOption("f5", "F5/Shift+F5/Esc键（全屏/退出全屏）"),
+            new ComboOption("b", "B/b键（黑屏）")
+        };
     }
 
     private void BuildSpeechEngineCombo(string? current)
@@ -562,7 +618,17 @@ public partial class RollCallSettingsDialog : Window
         {
             return selected;
         }
-        return (RemoteKeyCombo.Text ?? string.Empty).Trim().ToLowerInvariant();
+        return (RemoteKeyCombo.Text ?? string.Empty).Trim();
+    }
+
+    private string GetRemoteGroupSwitchKey()
+    {
+        var selected = GetSelectedValue(RemoteGroupSwitchKeyCombo, string.Empty);
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+        return (RemoteGroupSwitchKeyCombo.Text ?? string.Empty).Trim();
     }
 
     private static string GetSelectedValue(System.Windows.Controls.ComboBox combo, string fallback)

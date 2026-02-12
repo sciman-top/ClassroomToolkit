@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace ClassroomToolkit.Interop.Presentation;
@@ -53,9 +54,17 @@ public sealed class Win32InputSender : IInputSender
                 return false;
             }
             var down = NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyDown, (IntPtr)key, downParam);
+            if (!down)
+            {
+                Debug.WriteLine($"[Win32InputSender] PostMessage key down failed: hwnd={hwnd}, key={key}, lastError={Marshal.GetLastWin32Error()}");
+            }
             var up = keyDownOnly || !down
                 ? true
                 : NativeMethods.PostMessage(hwnd, NativeMethods.WmKeyUp, (IntPtr)key, upParam);
+            if (!keyDownOnly && down && !up)
+            {
+                Debug.WriteLine($"[Win32InputSender] PostMessage key up failed: hwnd={hwnd}, key={key}, lastError={Marshal.GetLastWin32Error()}");
+            }
             return down && up;
         }
         finally
@@ -84,7 +93,12 @@ public sealed class Win32InputSender : IInputSender
     {
         var wParam = BuildWheelWParam(delta);
         var lParam = BuildWheelLParam();
-        return NativeMethods.PostMessage(hwnd, NativeMethods.WmMouseWheel, wParam, lParam);
+        var sent = NativeMethods.PostMessage(hwnd, NativeMethods.WmMouseWheel, wParam, lParam);
+        if (!sent)
+        {
+            Debug.WriteLine($"[Win32InputSender] PostMessage wheel failed: hwnd={hwnd}, delta={delta}, lastError={Marshal.GetLastWin32Error()}");
+        }
+        return sent;
     }
 
     private static bool SendWheelInput(int delta)
@@ -111,6 +125,7 @@ public sealed class Win32InputSender : IInputSender
             var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
             if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))
             {
+                Debug.WriteLine($"[Win32InputSender] PostMessage modifier failed: hwnd={hwnd}, key={mod}, isDown={isKeyDown}, lastError={Marshal.GetLastWin32Error()}");
                 return false;
             }
             applied?.Add(mod);
@@ -125,6 +140,7 @@ public sealed class Win32InputSender : IInputSender
             var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
             if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))
             {
+                Debug.WriteLine($"[Win32InputSender] PostMessage applied modifier release failed: hwnd={hwnd}, key={mod}, isDown={isKeyDown}, lastError={Marshal.GetLastWin32Error()}");
                 return false;
             }
         }
@@ -181,6 +197,10 @@ public sealed class Win32InputSender : IInputSender
         var array = inputs.ToArray();
         var size = Marshal.SizeOf<NativeMethods.Input>();
         var sent = NativeMethods.SendInput((uint)array.Length, array, size);
+        if (sent != array.Length)
+        {
+            Debug.WriteLine($"[Win32InputSender] SendInput failed: expected={array.Length}, actual={sent}, lastError={Marshal.GetLastWin32Error()}");
+        }
         return sent == array.Length;
     }
 
@@ -208,6 +228,7 @@ public sealed class Win32InputSender : IInputSender
     {
         if (!NativeMethods.GetCursorPos(out var point))
         {
+            Debug.WriteLine($"[Win32InputSender] GetCursorPos failed: lastError={Marshal.GetLastWin32Error()}");
             return IntPtr.Zero;
         }
         var x = point.X & 0xFFFF;

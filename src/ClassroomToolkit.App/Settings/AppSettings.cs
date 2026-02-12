@@ -14,6 +14,7 @@ public sealed class AppSettings
     public bool RollCallShowId { get; set; } = true;
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; } = false;
+    public bool RollCallRemoteGroupSwitchEnabled { get; set; } = false;
     public bool RollCallShowPhoto { get; set; } = false;
     public int RollCallPhotoDurationSeconds { get; set; } = 0;
     public string RollCallPhotoSharedClass { get; set; } = string.Empty;
@@ -41,6 +42,7 @@ public sealed class AppSettings
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
     public string RemotePresenterKey { get; set; } = "tab";
+    public string RemoteGroupSwitchKey { get; set; } = "b";
     public string RollCallCurrentClass { get; set; } = string.Empty;
     public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;

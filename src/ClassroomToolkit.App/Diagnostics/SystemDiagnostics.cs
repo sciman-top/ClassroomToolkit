@@ -288,7 +288,7 @@ public static class SystemDiagnostics
             {
                 return false;
             }
-            var started = hook.Start();
+            var started = hook.StartAsync().GetAwaiter().GetResult();
             if (!started && hook.LastError != 0)
             {
                 error = $"Win32 Error {hook.LastError}";

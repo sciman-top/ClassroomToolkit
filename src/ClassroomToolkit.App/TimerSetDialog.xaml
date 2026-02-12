@@ -37,7 +37,7 @@
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="分钟" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="分钟(最大150分钟)" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="MinutesDownButton" Content="−" Width="28" Height="28" Margin="0,0,2,0"
                                 FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"

@@ -149,6 +149,8 @@ public sealed class TimerEngine
         {
             return;
         }
+        // Cap triggers to avoid sound storm on large elapsed jumps
+        triggers = Math.Min(triggers, 3);
         for (var i = 0; i < triggers; i++)
         {
             ReminderTriggered?.Invoke();

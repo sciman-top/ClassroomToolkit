@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Buffers;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -27,7 +28,7 @@ public partial class PaintOverlayWindow
     private bool _calligraphySealEnabled = true;
     private byte _calligraphyOverlayOpacityThreshold = 230;
     private CalligraphyBrushPreset _calligraphyPreset = CalligraphyBrushPreset.Sharp;
-    private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Standard;
+    private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Balanced;
     private int _inkRedrawToken;
     private DateTime _lastInkRedrawUtc = DateTime.MinValue;
 
@@ -69,6 +70,9 @@ public partial class PaintOverlayWindow
     
     // Pools & Buffers
     private static readonly ArrayPool<byte> PixelPool = ArrayPool<byte>.Shared;
+    private const int HistoryLimit = 20;
+    private const long MaxHistoryMemoryBytes = 512 * 1024 * 1024; // 512MB
+    private long _currentHistoryMemoryBytes;
     private const int InkNoiseTileCacheLimit = 96;
     private static readonly object InkNoiseTileCacheLock = new();
     private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
@@ -96,7 +100,7 @@ public partial class PaintOverlayWindow
     private readonly InkFinalCache _photoCache = new(80);
 
 
-    private sealed class RasterSnapshot
+    private sealed class RasterSnapshot : IDisposable
     {
         public RasterSnapshot(int width, int height, double dpiX, double dpiY, byte[] pixels)
         {
@@ -112,6 +116,14 @@ public partial class PaintOverlayWindow
         public double DpiX { get; }
         public double DpiY { get; }
         public byte[] Pixels { get; }
+
+        public void Dispose()
+        {
+            if (Pixels != null)
+            {
+                PixelPool.Return(Pixels);
+            }
+        }
     }
 
     private sealed record InkSnapshot(List<InkStrokeData> Strokes);
@@ -397,6 +409,21 @@ public partial class PaintOverlayWindow
         _inkCacheDirty = false;
     }
 
+    private void ClearInkSurfaceForPresentationExit()
+    {
+        _activeRenderer?.Reset();
+        _visualHost.Clear();
+        _strokeInProgress = false;
+        _isErasing = false;
+        _lastEraserPoint = null;
+        _lastCalligraphyPreviewPoint = null;
+        _inkStrokes.Clear();
+        _hasDrawing = false;
+        ResetInkHistory();
+        ClearSurface();
+        _inkCacheDirty = false;
+    }
+
     private void SaveAndClearInkSurface()
     {
         SaveCurrentPageOnNavigate(forceBackground: false);
@@ -405,17 +432,54 @@ public partial class PaintOverlayWindow
 
     private void RenderStoredStroke(InkStrokeData stroke)
     {
-        var geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+        var geometry = stroke.CachedGeometry;
+        if (geometry == null)
+        {
+            geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+            if (geometry != null)
+            {
+                if (geometry.CanFreeze)
+                {
+                    geometry.Freeze();
+                }
+                stroke.CachedGeometry = geometry;
+                stroke.CachedBounds = geometry.Bounds;
+            }
+        }
+
         if (geometry == null)
         {
             return;
         }
+
+        // Culling: Check if stroke is visible
+        // Note: For simplicity, we only cull if not in photo mode (matrix transform is complex)
+        // Or we can transform bounds.
+        // Let's implement simple culling for non-photo mode first.
+        if (!_photoModeActive && stroke.CachedBounds.HasValue)
+        {
+             var bounds = stroke.CachedBounds.Value;
+             if (bounds.Right < 0 || bounds.Bottom < 0 || bounds.Left > _surfacePixelWidth || bounds.Top > _surfacePixelHeight)
+             {
+                 return;
+             }
+        }
+        
         var renderGeometry = _photoModeActive ? ToScreenGeometry(geometry) : geometry;
         if (renderGeometry == null)
         {
             return;
         }
-        var color = (MediaColor)MediaColorConverter.ConvertFromString(stroke.ColorHex);
+        
+        // Culling for Photo Mode: check if transformed geometry is visible
+        if (_photoModeActive && !renderGeometry.Bounds.IntersectsWith(new Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight)))
+        {
+            return;
+        }
+        if (!TryParseStrokeColor(stroke.ColorHex, out var color))
+        {
+            color = Colors.Red;
+        }
         color.A = stroke.Opacity;
         if (stroke.Type == InkStrokeType.Shape || stroke.BrushStyle != PaintBrushStyle.Calligraphy)
         {
@@ -585,6 +649,31 @@ public partial class PaintOverlayWindow
         return string.Create(CultureInfo.InvariantCulture, $"#{color.R:X2}{color.G:X2}{color.B:X2}");
     }
 
+    private static bool TryParseStrokeColor(string? colorHex, out MediaColor color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(colorHex))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parsed = System.Windows.Media.ColorConverter.ConvertFromString(colorHex);
+            if (parsed is MediaColor value)
+            {
+                color = value;
+                return true;
+            }
+        }
+        catch
+        {
+            // Ignore invalid persisted color payload.
+        }
+
+        return false;
+    }
+
     private static void UpdateSelectionRect(WpfRectangle rect, WpfPoint start, WpfPoint end)
     {
         var left = Math.Min(start.X, end.X);
@@ -613,14 +702,26 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+
         var stride = _surfacePixelWidth * 4;
-        var pixels = new byte[stride * _surfacePixelHeight];
-        _rasterSurface.CopyPixels(pixels, stride, 0);
-        _history.Add(new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels));
-        if (_history.Count > HistoryLimit)
+        var bytesRequired = stride * _surfacePixelHeight;
+        
+        // Check memory pressure and trim if needed
+        while (_history.Count > 0 && (_history.Count >= HistoryLimit || _currentHistoryMemoryBytes + bytesRequired > MaxHistoryMemoryBytes))
         {
+            var oldest = _history[0];
+            _currentHistoryMemoryBytes -= oldest.Pixels.Length;
+            oldest.Dispose();
             _history.RemoveAt(0);
         }
+
+        var pixels = PixelPool.Rent(bytesRequired);
+        _rasterSurface.CopyPixels(pixels, stride, 0);
+        
+        var snapshot = new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels);
+        _history.Add(snapshot);
+        _currentHistoryMemoryBytes += pixels.Length;
+
         if (_inkRecordEnabled)
         {
             _inkHistory.Add(new InkSnapshot(CloneInkStrokes(_inkStrokes)));
@@ -2210,5 +2311,39 @@ public partial class PaintOverlayWindow
     private void SetInkCacheDirty()
     {
         _inkCacheDirty = true;
+    }
+
+    private void MarkInkInput()
+    {
+        _lastInkInputUtc = DateTime.UtcNow;
+        UpdateInkMonitorInterval();
+    }
+
+    private bool ShouldDeferInkContext()
+    {
+        if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
+        {
+            return true;
+        }
+        if (_lastInkInputUtc == DateTime.MinValue)
+        {
+            return false;
+        }
+        return (DateTime.UtcNow - _lastInkInputUtc).TotalMilliseconds < InkInputCooldownMs;
+    }
+
+    private void UpdateInkMonitorInterval()
+    {
+        var nowUtc = DateTime.UtcNow;
+        var idle = _lastInkInputUtc != DateTime.MinValue
+                   && (nowUtc - _lastInkInputUtc).TotalMilliseconds > InkIdleThresholdMs;
+
+        var targetMs = idle ? InkMonitorIdleIntervalMs : InkMonitorActiveIntervalMs;
+        var currentMs = _inkMonitor.Interval.TotalMilliseconds;
+        if (Math.Abs(currentMs - targetMs) < 1)
+        {
+            return;
+        }
+        _inkMonitor.Interval = TimeSpan.FromMilliseconds(targetMs);
     }
 }

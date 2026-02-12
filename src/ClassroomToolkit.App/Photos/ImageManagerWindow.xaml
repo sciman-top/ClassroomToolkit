@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Photos"
         xmlns:converters="clr-namespace:ClassroomToolkit.App.Converters"
-        Title="图片管理"
+        Title="PDF/图片管理"
         Width="900"
         Height="600"
         WindowStartupLocation="CenterScreen"
@@ -37,8 +37,8 @@
                 <StackPanel>
                     <TextBlock Text="收藏夹" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
-                        <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_SecondaryButton}" FontSize="12"/>
+                        <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
+                        <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
                     </StackPanel>
                     <ListBox x:Name="FavoritesList" Height="100" SelectionChanged="OnFavoritesSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -69,55 +69,7 @@
                     <TreeView Grid.Row="1" x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                               Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
-                        <TreeView.Resources>
-                            <Style TargetType="TreeViewItem">
-                                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI"/>
-                                <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="Padding" Value="4,2"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="TreeViewItem">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" MinWidth="19"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition/>
-                                                </Grid.RowDefinitions>
-                                                <ToggleButton x:Name="Expander" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" 
-                                                              Style="{StaticResource Style_ToggleButton}" Background="Transparent" BorderThickness="0" Padding="0" Width="16" Height="16" VerticalAlignment="Center">
-                                                     <Path x:Name="Arrow" Data="M0,0 L4,4 L0,8" Stroke="{StaticResource Brush_Text_Secondary}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           RenderTransformOrigin="0.5,0.5">
-                                                         <Path.RenderTransform>
-                                                             <RotateTransform Angle="0"/>
-                                                         </Path.RenderTransform>
-                                                     </Path>
-                                                </ToggleButton>
-                                                <Border x:Name="Bd" Grid.Column="1" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                                                    <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                                </Border>
-                                                <ItemsPresenter x:Name="ItemsHost" Grid.Column="1" Grid.Row="1"/>
-                                            </Grid>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsExpanded" Value="False">
-                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
-                                                </Trigger>
-                                                <Trigger SourceName="Expander" Property="IsChecked" Value="True">
-                                                    <Setter TargetName="Arrow" Property="RenderTransform">
-                                                        <Setter.Value>
-                                                            <RotateTransform Angle="90"/>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </TreeView.Resources>
+                        <!-- Global TreeViewItem style applied automatically -->
                     </TreeView>
                 </Grid>
             </Border>
@@ -142,8 +94,10 @@
                         <!-- 增加高度到 30，统一字体 13 -->
                         <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
                                 Click="OnBackClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                        <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,12,0"
+                        <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,6,0"
                                 Click="OnForwardClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                        <Button x:Name="UpButton" Content="向上" Width="60" Height="30" Margin="0,0,12,0"
+                                Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
                         <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
                                       Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
                         <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="30" Margin="0,0,12,0"
@@ -163,6 +117,35 @@
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               Foreground="{StaticResource Brush_Text_Primary}">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,1"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListViewItem">
+                                            <Border x:Name="bd"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="4"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel IsItemsHost="True" />
@@ -204,7 +187,15 @@
                               Foreground="{StaticResource Brush_Text_Primary}">
                         <ListView.View>
                             <GridView>
-                                <GridViewColumn Header="名称" DisplayMemberBinding="{Binding Name}" Width="240"/>
+                                <GridViewColumn Header="名称" Width="240">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{Binding IsPdf, Converter={StaticResource PdfForegroundConverter}}"
+                                                       FontWeight="{Binding IsPdf, Converter={StaticResource PdfFontWeightConverter}}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                                 <GridViewColumn Header="类型" DisplayMemberBinding="{Binding TypeLabel}" Width="80"/>
                                 <GridViewColumn Header="页数" DisplayMemberBinding="{Binding PageLabel}" Width="80"/>
                                 <GridViewColumn Header="修改时间" DisplayMemberBinding="{Binding ModifiedLabel}" Width="160"/>

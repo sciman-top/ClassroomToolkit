@@ -182,6 +182,7 @@ public partial class PaintOverlayWindow
         if (restored)
         {
             _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
+            LogPresentationState("focus-restored");
         }
     }
 
@@ -203,7 +204,7 @@ public partial class PaintOverlayWindow
                 {
                     _currentCacheScope = InkCacheScope.None;
                     _currentCacheKey = string.Empty;
-                    ClearInkSurfaceState();
+                    ClearInkSurfaceForPresentationExit();
                 }
             }
         }
@@ -230,17 +231,10 @@ public partial class PaintOverlayWindow
 
     private void UpdatePresentationFullscreenState(bool clearInkOnExit)
     {
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        var fullscreenNow = target.IsValid && IsFullscreenPresentationWindow(target);
-        var nextType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
-        if (fullscreenNow && target.Info != null)
-        {
-            nextType = _presentationClassifier.Classify(target.Info);
-        }
+        // Keep fullscreen tracking aligned with slideshow-window validation.
+        // This avoids treating WPS non-slideshow fullscreen windows as active presentation sessions.
+        var nextType = ResolveFullscreenPresentationType();
+        var fullscreenNow = nextType != ClassroomToolkit.Interop.Presentation.PresentationType.None;
         var stateChanged = fullscreenNow != _presentationFullscreenActive;
         _presentationFullscreenActive = fullscreenNow;
         _currentPresentationType = fullscreenNow ? nextType : ClassroomToolkit.Interop.Presentation.PresentationType.None;
@@ -253,7 +247,7 @@ public partial class PaintOverlayWindow
         {
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
-            ClearInkSurfaceState();
+            ClearInkSurfaceForPresentationExit();
         }
     }
 
@@ -312,38 +306,42 @@ public partial class PaintOverlayWindow
 
     private void OnWpsNavHookRequested(int direction, string source)
     {
-        if (!_presentationOptions.AllowWps)
+        Dispatcher.BeginInvoke(new Action(() =>
         {
-            return;
-        }
-        MarkWpsHookInput();
-        if (IsBoardActive() || direction == 0)
-        {
-            return;
-        }
-        var target = ResolveWpsTarget();
-        if (!target.IsValid)
-        {
-            return;
-        }
-        var passthrough = IsWpsRawInputPassthrough(target);
-        var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
-        if (passthrough && !interceptSource)
-        {
-            return;
-        }
-        if (ShouldSuppressWpsNav(direction, target.Handle))
-        {
-            return;
-        }
-        var command = direction > 0
-            ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
-            : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        var options = BuildWpsOptions(source);
-        if (_presentationService.TrySendToTarget(target, command, options))
-        {
-            RememberWpsNav(direction, target.Handle);
-        }
+            if (!_presentationOptions.AllowWps)
+            {
+                return;
+            }
+            MarkWpsHookInput();
+            if (IsBoardActive() || direction == 0)
+            {
+                return;
+            }
+            var target = ResolveWpsTarget();
+            if (!target.IsValid)
+            {
+                return;
+            }
+            var passthrough = IsWpsRawInputPassthrough(target);
+            var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
+            if (passthrough && !interceptSource)
+            {
+                return;
+            }
+            if (ShouldSuppressWpsNav(direction, target.Handle))
+            {
+                return;
+            }
+            var command = direction > 0
+                ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
+                : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
+            var options = BuildWpsOptions(source);
+            if (_presentationService.TrySendToTarget(target, command, options))
+            {
+                RememberWpsNav(direction, target.Handle);
+                LogPresentationState($"wps-nav:{source}:{direction}");
+            }
+        }));
     }
 
     private bool TrySendWpsNavigation(ClassroomToolkit.Services.Presentation.PresentationCommand command)
@@ -615,6 +613,16 @@ public partial class PaintOverlayWindow
 
     private void UpdateWpsNavHookState()
     {
+        var generation = _wpsNavHookStateGate.NextGeneration();
+        _ = _wpsNavHookStateGate.RunAsync(generation, UpdateWpsNavHookStateCoreAsync);
+    }
+
+    private async Task UpdateWpsNavHookStateCoreAsync(Func<bool> isCurrent)
+    {
+        if (!isCurrent())
+        {
+            return;
+        }
         if (_wpsNavHook == null || !_wpsNavHook.Available)
         {
             _wpsNavHookActive = false;
@@ -623,6 +631,11 @@ public partial class PaintOverlayWindow
                 var hookTarget = ResolveWpsTarget();
                 MarkWpsHookUnavailable(hookTarget.IsValid);
             }
+            LogPresentationState("wps-hook-unavailable");
+            return;
+        }
+        if (!isCurrent())
+        {
             return;
         }
         _wpsForceMessageFallback = false;
@@ -683,7 +696,19 @@ public partial class PaintOverlayWindow
             _wpsHookInterceptWheel = interceptWheel;
             if (!_wpsNavHookActive)
             {
-                _wpsNavHookActive = _wpsNavHook.Start();
+                try
+                {
+                    _wpsNavHookActive = await _wpsNavHook.StartAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
+                    _wpsNavHookActive = false;
+                }
+            }
+            if (!isCurrent())
+            {
+                return;
             }
             if (!_wpsNavHookActive)
             {
@@ -694,9 +719,15 @@ public partial class PaintOverlayWindow
             {
                 _wpsForceMessageFallback = false;
             }
+            LogPresentationState($"wps-hook-enabled:{sendMode}");
+            return;
+        }
+        if (!isCurrent())
+        {
             return;
         }
         StopWpsNavHook();
+        LogPresentationState("wps-hook-disabled");
     }
 
     private void StopWpsNavHook()
@@ -874,13 +905,13 @@ public partial class PaintOverlayWindow
             return false;
         }
         var monitor = Interop.NativeMethods.MonitorFromWindow(hwnd, Interop.NativeMethods.MonitorDefaultToNearest);
-        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        var info = new Interop.NativeMethods.MonitorInfo { Size = Marshal.SizeOf<Interop.NativeMethods.MonitorInfo>() };
         if (!Interop.NativeMethods.GetMonitorInfo(monitor, ref info))
         {
             return false;
         }
-        var rect = new NativeRect();
-        if (!Interop.NativeMethods.GetWindowRect(hwnd, ref rect))
+        var rect = new Interop.NativeMethods.NativeRect();
+        if (!Interop.NativeMethods.GetWindowRect(hwnd, out rect))
         {
             return false;
         }
@@ -891,21 +922,14 @@ public partial class PaintOverlayWindow
                && Math.Abs(rect.Bottom - info.Monitor.Bottom) <= tolerance;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
+    private void LogPresentationState(string reason)
     {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
+        Debug.WriteLine(
+            $"[PresentationState] reason={reason}; allowWps={_presentationOptions.AllowWps}; allowOffice={_presentationOptions.AllowOffice}; " +
+            $"mode={_presentationOptions.Strategy}; wheelAsKey={_presentationOptions.WheelAsKey}; " +
+            $"hookActive={_wpsNavHookActive}; hookKeyboard={_wpsHookInterceptKeyboard}; hookWheel={_wpsHookInterceptWheel}; " +
+            $"forceMessage={_wpsForceMessageFallback}; photoMode={_photoModeActive}; boardMode={IsBoardActive()}; " +
+            $"fullscreen={_presentationFullscreenActive}; fgType={_foregroundPresentationType}; currentType={_currentPresentationType}");
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MonitorInfo
-    {
-        public int Size;
-        public NativeRect Monitor;
-        public NativeRect Work;
-        public uint Flags;
-    }
 }

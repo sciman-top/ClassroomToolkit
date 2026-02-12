@@ -89,6 +89,65 @@ public sealed class Win32PresentationResolver
         return PresentationTarget.Empty;
     }
 
+    public PresentationTarget ResolveFullscreenPresentationTarget(
+        PresentationClassifier classifier,
+        bool allowWps,
+        bool allowOffice,
+        uint? excludeProcessId = null)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return PresentationTarget.Empty;
+        }
+
+        PresentationTarget bestTarget = PresentationTarget.Empty;
+        var bestScore = int.MinValue;
+
+        NativeMethods.EnumWindows(
+            (hwnd, _) =>
+            {
+                if (hwnd == IntPtr.Zero || !NativeMethods.IsWindowVisible(hwnd))
+                {
+                    return true;
+                }
+
+                var info = BuildWindowInfo(hwnd);
+                if (excludeProcessId.HasValue && info.ProcessId == excludeProcessId.Value)
+                {
+                    return true;
+                }
+
+                var check = BuildWindowCheck(hwnd, info, classifier);
+                if (check == null || !check.IsFullscreen)
+                {
+                    return true;
+                }
+
+                if (check.Type == PresentationType.Wps && !allowWps)
+                {
+                    return true;
+                }
+                if (check.Type == PresentationType.Office && !allowOffice)
+                {
+                    return true;
+                }
+
+                // Prefer fullscreen candidates that also match slideshow classes.
+                var score = check.Score + (check.ClassMatch ? 100 : 0);
+                if (score <= bestScore)
+                {
+                    return true;
+                }
+
+                bestScore = score;
+                bestTarget = new PresentationTarget(hwnd, info);
+                return true;
+            },
+            IntPtr.Zero);
+
+        return bestTarget;
+    }
+
     public PresentationWindowCheck? CheckWindow(IntPtr hwnd, PresentationClassifier classifier)
     {
         if (!OperatingSystem.IsWindows() || hwnd == IntPtr.Zero)

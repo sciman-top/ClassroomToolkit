@@ -40,7 +40,7 @@
                             <Border x:Name="border" 
                                     Background="{TemplateBinding Background}"
                                     CornerRadius="16"
-                                    BorderBrush="{StaticResource Brush_Border}"
+                                    BorderBrush="{StaticResource Brush_Border_Glass}"
                                     BorderThickness="1"
                                     Margin="2">
                                 <Grid>
@@ -164,7 +164,7 @@
             CornerRadius="20"
             Background="{StaticResource Brush_Window_Atmosphere}"
             BorderThickness="1"
-            BorderBrush="{StaticResource Brush_Border}"
+            BorderBrush="{StaticResource Brush_Border_Glass}"
             MouseLeftButtonDown="OnDragAreaMouseDown">
         
         <Border.Effect>
@@ -209,9 +209,9 @@
 
             <!-- 3. 底部工具栏 (Floating Capsule) -->
             <Border Grid.Row="2" 
-                    Background="{StaticResource Brush_Background_L2}" 
+                    Background="{StaticResource Brush_Glass_Surface}" 
                     CornerRadius="14" 
-                    BorderBrush="{StaticResource Brush_Border_Light}"
+                    BorderBrush="{StaticResource Brush_Border_Glass}"
                     BorderThickness="1"
                     Padding="8,4" 
                     Margin="8,0,8,4"
