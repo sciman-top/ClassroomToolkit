@@ -138,7 +138,7 @@
 
             <!-- 5. 常用操作 -->
             <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
-                <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Info}" Stretch="Uniform" Width="20" Height="20"/>
+                <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="20" Height="20"/>
             </Button>
 
             <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="白板" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">

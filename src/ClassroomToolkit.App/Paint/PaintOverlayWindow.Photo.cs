@@ -1020,7 +1020,7 @@ public partial class PaintOverlayWindow
             var newHeight = _photoDocumentIsPdf
                 ? GetScaledPdfPageHeight(newCurrentPage)
                 : GetScaledPageHeight(GetPageBitmap(newCurrentPage));
-            newTranslateY = currentTop + (newHeight > 0 ? newHeight : currentPageHeight);
+            newTranslateY = currentTop + currentPageHeight;
         }
 
         if (newCurrentPage != currentPage)
