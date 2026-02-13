@@ -541,22 +541,6 @@ public partial class PaintOverlayWindow
         return IsFullscreenWindow(target.Handle);
     }
 
-    private ClassroomToolkit.Interop.Presentation.PresentationType ResolvePreferredPresentationType()
-    {
-        var foreground = ResolveForegroundPresentationType();
-        if (foreground == ClassroomToolkit.Interop.Presentation.PresentationType.Office
-            || foreground == ClassroomToolkit.Interop.Presentation.PresentationType.Wps)
-        {
-            return foreground;
-        }
-        var fullscreen = ResolveFullscreenPresentationType();
-        if (fullscreen != ClassroomToolkit.Interop.Presentation.PresentationType.None)
-        {
-            return fullscreen;
-        }
-        return _currentPresentationType;
-    }
-
     private ClassroomToolkit.Interop.Presentation.PresentationType ResolveFullscreenPresentationType()
     {
         bool wpsFullscreen = false;

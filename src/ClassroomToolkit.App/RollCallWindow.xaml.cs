@@ -763,8 +763,6 @@ public partial class RollCallWindow : Window
     }
 
      private SpeechSynthesizer? _speechSynthesizer;
-     private const int SpeechMaxRetries = 3;
-
      private async void SpeakStudentName()
      {
          if (!_viewModel.SpeechEnabled)

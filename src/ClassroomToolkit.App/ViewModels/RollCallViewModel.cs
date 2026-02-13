@@ -1024,15 +1024,6 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         _classStates[_workbook.ActiveClass] = _engine.CaptureState();
     }
 
-    private bool AreAllGroupsCompleted()
-    {
-        if (_engine == null)
-        {
-            return false;
-        }
-        return _engine.AllGroupsCompleted();
-    }
-
     private static StudentSortKey BuildStudentSortKey(string studentId, string studentName)
     {
         var id = IdentityUtils.CompactText(studentId);

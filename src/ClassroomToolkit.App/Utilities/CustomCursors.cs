@@ -23,7 +23,7 @@ public static class CustomCursors
 {
     private static WpfCursor? _brushCursor;
     private static MediaColor _currentBrushColor = Colors.Red;
-    private static WpfCursor? _eraserCursor;
+    private static readonly Dictionary<int, WpfCursor> EraserCursorCache = new();
     private static WpfCursor? _regionEraseCursor;
     private static readonly List<string> TempCursorFiles = new();
     private static readonly object TempCursorLock = new();
@@ -48,18 +48,25 @@ public static class CustomCursors
     }
 
     /// <summary>
-    /// 橡皮擦光标
+    /// 橡皮擦光标（兼容旧调用）
     /// </summary>
     public static WpfCursor Eraser
     {
-        get
+        get => GetEraserCursor(24.0);
+    }
+
+    /// <summary>
+    /// 橡皮擦光标（包含可擦除范围圈）
+    /// </summary>
+    public static WpfCursor GetEraserCursor(double eraserSize)
+    {
+        int bucket = (int)Math.Round(Math.Max(4.0, Math.Min(96.0, eraserSize)));
+        if (!EraserCursorCache.TryGetValue(bucket, out var cursor))
         {
-            if (_eraserCursor == null)
-            {
-                _eraserCursor = CreateEraserCursor();
-            }
-            return _eraserCursor;
+            cursor = CreateEraserCursor(bucket);
+            EraserCursorCache[bucket] = cursor;
         }
+        return cursor;
     }
 
     /// <summary>
@@ -214,15 +221,26 @@ public static class CustomCursors
     /// <summary>
     /// 创建橡皮擦光标 - 使用矢量图标渲染，更加形象直观
     /// </summary>
-    private static WpfCursor CreateEraserCursor()
+    private static WpfCursor CreateEraserCursor(double eraserSize)
     {
-        const int cursorSize = 32;
+        const int cursorSize = 96;
         const int iconSize = 24;
         const int offset = (cursorSize - iconSize) / 2;
+        var center = new WpfPoint(cursorSize / 2.0, cursorSize / 2.0);
+        var radius = Math.Max(2.0, eraserSize * 0.5);
 
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
+            // 先画擦除范围圈（双层描边，保证各种背景下可见）
+            var outerRangePen = new WpfPen(new SolidColorBrush(MediaColor.FromArgb(220, 0, 0, 0)), 2.0);
+            outerRangePen.Freeze();
+            var innerRangePen = new WpfPen(new SolidColorBrush(MediaColor.FromArgb(230, 255, 255, 255)), 1.0);
+            innerRangePen.Freeze();
+            var rangeGeometry = new EllipseGeometry(center, radius, radius);
+            context.DrawGeometry(null, outerRangePen, rangeGeometry);
+            context.DrawGeometry(null, innerRangePen, rangeGeometry);
+
             // 1. 从 XAML 资源加载橡皮擦图标几何形状（避免 Geometry.Parse 的区域设置问题）
             var resourceGeometry = (Geometry)System.Windows.Application.Current.FindResource("Icon_Eraser");
             var eraserGeometry = resourceGeometry.Clone();

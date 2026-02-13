@@ -23,8 +23,10 @@ public partial class PaintOverlayWindow
                IsDescendantOf(source, PhotoCloseRightButton) ||
                IsDescendantOf(source, PhotoPrevButtonLeft) ||
                IsDescendantOf(source, PhotoNextButtonLeft) ||
+               IsDescendantOf(source, PhotoFitButtonLeft) ||
                IsDescendantOf(source, PhotoPrevButtonRight) ||
-               IsDescendantOf(source, PhotoNextButtonRight);
+               IsDescendantOf(source, PhotoNextButtonRight) ||
+               IsDescendantOf(source, PhotoFitButtonRight);
     }
 
     private static bool IsDescendantOf(DependencyObject? source, DependencyObject? ancestor)
@@ -142,14 +144,8 @@ public partial class PaintOverlayWindow
         }
         if (IsPhotoNavigationKey(key, out var direction))
         {
-            if (TryNavigatePdf(direction))
-            {
-                return true;
-            }
-            if (!IsAtFileSequenceBoundary(direction))
-            {
-                PhotoNavigationRequested?.Invoke(direction);
-            }
+            PhotoNavigationDiagnostics.Log("Overlay.Key", $"key={key}, dir={direction}, isPdf={_photoDocumentIsPdf}");
+            HandlePhotoNavigationRequest(direction);
             return true;
         }
         if (key == Key.Add || key == Key.OemPlus)
@@ -194,13 +190,17 @@ public partial class PaintOverlayWindow
     {
         if (_photoLoading)
         {
+            HideEraserPreview();
             e.Handled = true;
             return;
         }
         if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject))
         {
+            HideEraserPreview();
             return;
         }
+        var position = e.GetPosition(OverlayRoot);
+        _lastPointerPosition = position;
         if (_photoPanning && _photoModeActive && _mode == PaintToolMode.Cursor)
         {
             if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed
@@ -210,7 +210,7 @@ public partial class PaintOverlayWindow
                 e.Handled = true;
                 return;
             }
-            UpdatePhotoPan(e.GetPosition(OverlayRoot));
+            UpdatePhotoPan(position);
             e.Handled = true;
             return;
         }
@@ -218,7 +218,6 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var position = e.GetPosition(OverlayRoot);
         HandlePointerMove(position);
         e.Handled = true;
     }
@@ -298,6 +297,11 @@ public partial class PaintOverlayWindow
             EndPhotoPan();
         }
         _photoRightClickPending = false;
+    }
+
+    private void OnOverlayMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        HideEraserPreview();
     }
 
     private void OnRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)

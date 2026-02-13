@@ -63,11 +63,14 @@
                 <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0,0,0" 
                         Background="{StaticResource Brush_Background_L2}" CornerRadius="20" Opacity="0.8">
                     <StackPanel Orientation="Vertical">
-                         <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一张">
+                         <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一版">
                             <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
                         </Button>
-                        <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一张">
+                        <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一版">
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                        <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="宽度适配并居中">
+                            <TextBlock Text="宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" FontWeight="SemiBold"/>
                         </Button>
                     </StackPanel>
                 </Border>
@@ -76,11 +79,14 @@
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" 
                         Background="{StaticResource Brush_Background_L2}" CornerRadius="20" Opacity="0.8">
                     <StackPanel Orientation="Vertical">
-                        <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一张">
+                        <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一版">
                             <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
                         </Button>
-                        <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一张">
+                        <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一版">
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                        </Button>
+                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="宽度适配并居中">
+                            <TextBlock Text="宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" FontWeight="SemiBold"/>
                         </Button>
                     </StackPanel>
                 </Border>

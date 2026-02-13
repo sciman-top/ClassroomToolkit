@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Photos;
@@ -71,6 +72,7 @@ public partial class MainWindow
 
     private void OnImageSelected(IReadOnlyList<string> images, int index)
     {
+        PhotoNavigationDiagnostics.Log("MainWindow.Select", $"count={images.Count}, index={index}");
         if (_overlayWindow == null)
         {
             EnsurePaintWindows();
@@ -79,20 +81,31 @@ public partial class MainWindow
         {
             return;
         }
+        var shouldCloseImageManager = _imageManagerWindow != null && _imageManagerWindow.IsVisible;
+        if (shouldCloseImageManager)
+        {
+            // 全屏展示时关闭管理窗口，避免其继续吃键盘事件。
+            PhotoNavigationDiagnostics.Log("MainWindow.Select", "close ImageManager");
+            _imageManagerWindow!.Owner = null;
+            _imageManagerWindow.SyncTopmost(false);
+            _imageManagerWindow.Close();
+        }
         ShowPaintOverlayIfNeeded();
         if (_toolbarWindow?.BoardActive == true)
         {
             _toolbarWindow.SetBoardActive(false);
         }
         BeginPresentationForegroundSuppression(TimeSpan.FromMilliseconds(800));
-        _photoSequence = images.ToList();
-        _photoSequenceIndex = index;
+        _photoNavigationSession.Reset(images, index);
         // Pass the photo sequence to overlay for cross-page display
-        _overlayWindow.SetPhotoSequence(_photoSequence, _photoSequenceIndex);
-        if (_photoSequenceIndex >= 0 && _photoSequenceIndex < _photoSequence.Count)
+        _overlayWindow.SetPhotoSequence(_photoNavigationSession.Sequence, _photoNavigationSession.CurrentIndex);
+        var selectedPath = _photoNavigationSession.GetCurrentPath();
+        if (!string.IsNullOrWhiteSpace(selectedPath))
         {
-            _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+            PhotoNavigationDiagnostics.Log("MainWindow.Select", $"enter path={selectedPath}");
+            _overlayWindow.EnterPhotoMode(selectedPath);
             TouchSurface(ZOrderSurface.PhotoFullscreen);
+            FocusOverlayForPhotoNavigation(defer: true);
         }
     }
 
@@ -114,29 +127,33 @@ public partial class MainWindow
         {
             return;
         }
-        // 优先尝试通过 ImageManager 导航(如果窗口打开)
-        if (_imageManagerWindow != null && _imageManagerWindow.TryNavigate(direction))
+        PhotoNavigationDiagnostics.Log(
+            "MainWindow.FileNav",
+            $"dir={direction}, overlayPath={_overlayWindow.CurrentDocumentPath}, overlayType={_overlayWindow.CurrentPhotoFileType}, sessionIndex={_photoNavigationSession.CurrentIndex}, sessionCount={_photoNavigationSession.Sequence.Count}");
+        var decision = _photoNavigationSession.Plan(
+            _overlayWindow.CurrentDocumentPath,
+            direction,
+            _overlayWindow.CurrentPhotoFileType);
+
+        // Keep index aligned with the actual page shown in overlay.
+        _photoNavigationSession.SyncResolvedIndex(decision);
+        PhotoNavigationDiagnostics.Log(
+            "MainWindow.FileNav",
+            $"decision navigate={decision.ShouldNavigateFile}, resolved={decision.ResolvedCurrentIndex}, next={decision.NextIndex}, currentType={decision.CurrentFileType}");
+
+        if (!_photoNavigationSession.TryApplyFileNavigation(decision, out var nextPath)
+            || string.IsNullOrWhiteSpace(nextPath))
         {
-            return; // 成功导航到下一个文件
-        }
-        // 如果没有照片序列,直接返回(不做任何事,保持当前状态)
-        if (_photoSequence.Count == 0 || _photoSequenceIndex < 0)
-        {
+            PhotoNavigationDiagnostics.Log("MainWindow.FileNav", "skip file navigation");
             return;
         }
-        // 计算下一个索引
-        var next = _photoSequenceIndex + direction;
-        // 到达边界检查:如果超出范围,直接返回而不退出全屏
-        // 这样可以保持当前文件的显示,不会意外关闭全屏模式
-        if (next < 0 || next >= _photoSequence.Count)
-        {
-            return; // 已到达第一个/最后一个文件,保持当前状态
-        }
-        // 切换到序列中的下一个文件
-        _photoSequenceIndex = next;
+
+        // 切换到序列中的下一个文件（由统一策略决策）
         // Update overlay's sequence index for cross-page display
-        _overlayWindow.SetPhotoSequence(_photoSequence, _photoSequenceIndex);
-        _overlayWindow.EnterPhotoMode(_photoSequence[_photoSequenceIndex]);
+        _overlayWindow.SetPhotoSequence(_photoNavigationSession.Sequence, _photoNavigationSession.CurrentIndex);
+        _overlayWindow.EnterPhotoMode(nextPath);
+        PhotoNavigationDiagnostics.Log("MainWindow.FileNav", $"enter nextPath={nextPath}");
+        FocusOverlayForPhotoNavigation(defer: true);
     }
 
     private void BeginPresentationForegroundSuppression(TimeSpan duration)
@@ -163,6 +180,7 @@ public partial class MainWindow
         {
             return;
         }
+        _imageManagerWindow?.SetKeyboardNavigationSuppressed(active);
         if (active)
         {
             if (_toolbarWindow.WindowState == WindowState.Minimized)
@@ -180,6 +198,7 @@ public partial class MainWindow
             }
             TouchSurface(ZOrderSurface.PhotoFullscreen, applyPolicy: false);
             ApplyZOrderPolicy();
+            FocusOverlayForPhotoNavigation(defer: false);
             return;
         }
         if (_overlayWindow.IsVisible && _toolbarWindow.Owner != _overlayWindow)
@@ -193,6 +212,34 @@ public partial class MainWindow
             _rollCallWindow.SyncTopmost(true);
         }
         ApplyZOrderPolicy();
+    }
+
+    private void FocusOverlayForPhotoNavigation(bool defer)
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+
+        void FocusNow()
+        {
+            if (_overlayWindow == null || !_overlayWindow.IsVisible)
+            {
+                return;
+            }
+
+            _overlayWindow.Activate();
+            Keyboard.Focus(_overlayWindow);
+            PhotoNavigationDiagnostics.Log("MainWindow.Focus", $"defer={defer}, focused=true");
+        }
+
+        if (defer)
+        {
+            Dispatcher.BeginInvoke(FocusNow, DispatcherPriority.Input);
+            return;
+        }
+
+        FocusNow();
     }
 
     private void OnOverlayActivated()

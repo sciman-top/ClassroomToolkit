@@ -65,7 +65,10 @@ public partial class PaintOverlayWindow
         {
             if (!_photoModeActive)
             {
-                WindowState = WindowState.Maximized;
+                // Keep overlay on monitor bounds instead of work-area maximize semantics.
+                WindowState = WindowState.Normal;
+                ApplyFullscreenBounds();
+                Dispatcher.BeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
             }
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
