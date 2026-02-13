@@ -866,42 +866,6 @@ private const int CornerArcSegments = 6;
     }
 
     /// <summary>
-    /// v10: 主几何生成方法 - 实现增强动力学、防止骨头效果、飞白等
-    /// v11 修复: 确保使用 NonZero 填充规则防止裂纹
-    /// </summary>
-    private Geometry? GenerateSmoothGeometryV10()
-    {
-        if (_points.Count < 2) return null;
-
-        var geometry = new StreamGeometry();
-        geometry.FillRule = FillRule.Nonzero; // v11: 使用 NonZero 防止白裂纹
-
-        using (var ctx = geometry.Open())
-        {
-            // 阶段1: 构建采样点并应用v10算法
-            var samples = BuildCenterlineSamplesV10();
-            if (samples.Count < 2) return null;
-
-            // 阶段2: 生成左右边缘
-            var leftEdge = new List<WpfPoint>();
-            var rightEdge = new List<WpfPoint>();
-            BuildRibbonEdgesV10(samples, leftEdge, rightEdge, 0, 0);
-
-            // 阶段3: 过滤倒刺
-            FilterLoops(leftEdge);
-            FilterLoops(rightEdge);
-
-            // 阶段4: 构建最终路径（使用改进的尖端）
-            if (leftEdge.Count > 1 && rightEdge.Count > 1)
-            {
-                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples);
-            }
-        }
-
-        return geometry;
-    }
-
-    /// <summary>
     /// v13: 最终采样与宽度计算（严格按速度映射 + 骨头修复 + 平滑）
     /// </summary>
     private List<StrokePoint> BuildCenterlineSamplesFinal()
@@ -1741,17 +1705,6 @@ private const int CornerArcSegments = 6;
         var proj = new WpfPoint(a.X + (ab.X * t), a.Y + (ab.Y * t));
         var diff = p - proj;
         return (diff.X * diff.X) + (diff.Y * diff.Y);
-    }
-
-    private bool IsSeepGeometryEligible(Geometry geometry)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(_baseSize * 0.8, 12.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
     /// <summary>

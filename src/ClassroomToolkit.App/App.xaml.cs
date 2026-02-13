@@ -48,9 +48,8 @@ public partial class App : WpfApplication
     private void ConfigureServices()
     {
         var services = new ServiceCollection();
-        var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-
-        services.AddSingleton(_ => new AppSettingsService(settingsPath));
+        services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<AppSettingsService>();
         services.AddSingleton(provider => provider.GetRequiredService<AppSettingsService>().Load());
         services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
         services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
@@ -58,7 +57,6 @@ public partial class App : WpfApplication
         services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
         services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
         services.AddSingleton<MainWindow>();
-
         _services = services.BuildServiceProvider();
     }
 

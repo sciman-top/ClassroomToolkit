@@ -161,14 +161,6 @@ public partial class PaintOverlayWindow : Window
     private int _pdfVisiblePrefetchToken;
     private int _photoLoadToken;
     private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);
-    private string _photoSessionPath = string.Empty;
-    private bool _photoSessionIsPdf;
-    private int _photoSessionPageIndex = 1;
-    private bool _photoSessionHasTransform;
-    private double _photoSessionScaleX = 1.0;
-    private double _photoSessionScaleY = 1.0;
-    private double _photoSessionTranslateX;
-    private double _photoSessionTranslateY;
     private bool _rememberPhotoTransform;
     private bool _photoUserTransformDirty;
     private double _lastPhotoScaleX = 1.0;
@@ -271,6 +263,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.MouseRightButtonDown += OnRightButtonDown;
         OverlayRoot.MouseRightButtonUp += OnRightButtonUp;
         OverlayRoot.MouseMove += OnRightButtonMove;
+        OverlayRoot.MouseLeave += OnOverlayMouseLeave;
         OverlayRoot.LostMouseCapture += OnOverlayLostMouseCapture;
         OverlayRoot.IsManipulationEnabled = true;
         OverlayRoot.ManipulationStarting += OnManipulationStarting;
@@ -354,6 +347,7 @@ public partial class PaintOverlayWindow : Window
         {
             ClearShapePreview();
         }
+        HideEraserPreview();
         
         // 绔嬪嵆鏇存柊杈撳叆绌块€忕姸鎬侊紙杞婚噺绾ф搷浣滐級
         UpdateInputPassthrough();
@@ -378,7 +372,7 @@ public partial class PaintOverlayWindow : Window
         {
             PaintToolMode.Cursor => System.Windows.Input.Cursors.Arrow,
             PaintToolMode.Brush => Utilities.CustomCursors.GetBrushCursor(_brushColor),  // 甯﹂鑹茬殑鐢荤瑪鏍峰紡
-            PaintToolMode.Eraser => Utilities.CustomCursors.Eraser,  // 姗＄毊鎿︽牱寮?
+            PaintToolMode.Eraser => Utilities.CustomCursors.GetEraserCursor(_eraserSize),  // 姗＄毊鎿︽牱寮?
             PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,     // 鍗佸瓧鍑嗘槦锛岀簿纭粯鍒?
             PaintToolMode.RegionErase => Utilities.CustomCursors.RegionErase, // 妗嗛€夋牱寮?
             _ => System.Windows.Input.Cursors.Arrow
@@ -403,6 +397,10 @@ public partial class PaintOverlayWindow : Window
     public void SetEraserSize(double size)
     {
         _eraserSize = Math.Max(4.0, size);
+        if (_mode == PaintToolMode.Eraser)
+        {
+            UpdateCursor(PaintToolMode.Eraser);
+        }
     }
 
     public void SetShapeType(PaintShapeType type)
@@ -433,13 +431,16 @@ public partial class PaintOverlayWindow : Window
     public MediaColor CurrentBrushColor => _brushColor;
     public byte CurrentBrushOpacity => _brushOpacity;
     public string CurrentDocumentName => _currentDocumentName;
+    public string CurrentDocumentPath => _currentDocumentPath;
+    public PhotoFileType CurrentPhotoFileType => !_photoModeActive
+        ? PhotoFileType.Unknown
+        : _photoDocumentIsPdf
+            ? PhotoFileType.Pdf
+            : PhotoNavigationPlanner.ClassifyPath(_currentDocumentPath);
     public DateTime CurrentCourseDate => _currentCourseDate;
     public int CurrentPageIndex => _currentPageIndex;
 
     // 杈呭姪灞炴€э細绠€鍖栭噸澶嶇殑澶嶅悎鍒ゆ柇閫昏緫锛堟浛浠?30+ 澶勯噸澶嶄唬鐮侊級
-    private bool IsPhotoDocumentPdf => _photoModeActive && _photoDocumentIsPdf;
-    private bool IsPhotoFullscreen => _photoModeActive && _photoFullscreen;
-
     public void Undo()
     {
         if (_inkRecordEnabled && _inkHistory.Count > 0)

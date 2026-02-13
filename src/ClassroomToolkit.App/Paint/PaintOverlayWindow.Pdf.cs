@@ -257,14 +257,6 @@ public partial class PaintOverlayWindow
 
     #region PDF Cache Management
 
-    private void TouchPdfCache(int pageIndex)
-    {
-        lock (_pdfRenderLock)
-        {
-            TouchPdfCacheUnsafe(pageIndex);
-        }
-    }
-
     private void TouchPdfCacheUnsafe(int pageIndex)
     {
         var node = _pdfPageOrder.Find(pageIndex);

@@ -446,13 +446,6 @@ public class MarkerBrushRenderer : IBrushRenderer
         return geometry;
     }
 
-    private static WpfPen CreateFrozenPen(WpfColor color, double thickness)
-    {
-        var pen = new WpfPen(new SolidColorBrush(color), thickness);
-        pen.Freeze();
-        return pen;
-    }
-
     private static double Lerp(double start, double end, double t)
     {
         return start + ((end - start) * t);

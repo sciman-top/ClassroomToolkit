@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
@@ -32,8 +33,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
     private IDisposable? _presentationForegroundSuppression;
     private bool _zOrderPolicyApplying;
-    private List<string> _photoSequence = new();
-    private int _photoSequenceIndex = -1;
+    private readonly PhotoNavigationSession _photoNavigationSession = new();
     private LauncherBubbleWindow? _bubbleWindow;
     private readonly DispatcherTimer _autoExitTimer;
     private readonly CancellationTokenSource _backgroundTasksCancellation = new();
@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly MainViewModel _mainViewModel;
+    private readonly IConfigurationService _configurationService;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
     private readonly Paint.IPaintWindowFactory _paintWindowFactory;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
         AppSettingsService settingsService,
         AppSettings settings,
         MainViewModel mainViewModel,
+        IConfigurationService configurationService,
         IRollCallWindowFactory rollCallWindowFactory,
         Paint.IPaintWindowFactory paintWindowFactory,
         Photos.IImageManagerWindowFactory imageManagerWindowFactory,
@@ -59,6 +61,7 @@ public partial class MainWindow : Window
         _settingsService = settingsService;
         _settings = settings;
         _mainViewModel = mainViewModel;
+        _configurationService = configurationService;
         _rollCallWindowFactory = rollCallWindowFactory;
         _paintWindowFactory = paintWindowFactory;
         _imageManagerWindowFactory = imageManagerWindowFactory;
@@ -237,8 +240,9 @@ public partial class MainWindow : Window
 
             if (_imageManagerWindow != null && imageManagerVisible)
             {
-                _imageManagerWindow.SyncTopmost(true);
-                if (frontSurface == ZOrderSurface.ImageManager && !_imageManagerWindow.IsActive)
+                var imageManagerFront = frontSurface == ZOrderSurface.ImageManager;
+                _imageManagerWindow.SyncTopmost(imageManagerFront);
+                if (imageManagerFront && !_imageManagerWindow.IsActive)
                 {
                     _imageManagerWindow.Activate();
                 }

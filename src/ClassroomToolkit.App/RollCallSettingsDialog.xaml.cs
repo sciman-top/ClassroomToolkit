@@ -11,11 +11,6 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
-    private static readonly HashSet<string> SilentVoices = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // 完全清空过滤列表，确保显示所有语音
-        // 如果需要过滤，请基于实际的语音名称进行过滤
-    };
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
 
@@ -388,22 +383,6 @@ public partial class RollCallSettingsDialog : Window
     }
 
     /// <summary>
-    /// 格式化发音人标签，显示名称、语言和性别信息
-    /// </summary>
-    private static string FormatVoiceLabel(System.Speech.Synthesis.VoiceInfo info, bool isChinese, bool isEnabled)
-    {
-        var languageName = GetLanguageDisplayName(info.Culture.Name);
-        var gender = GetGenderDisplayName(info);
-
-        // 中文发音人优先，在标签前加"【推荐】"
-        var prefix = isChinese ? "【推荐】" : "";
-        var suffix = isEnabled ? string.Empty : "（未启用）";
-
-        // 格式：名称（语言，性别）
-        return $"{prefix}{info.Name}（{languageName}，{gender}）{suffix}";
-    }
-
-    /// <summary>
     /// 获取语言的显示名称
     /// </summary>
     private static string GetLanguageDisplayName(string cultureName)
@@ -549,16 +528,6 @@ public partial class RollCallSettingsDialog : Window
             }
         }
         return string.Empty;
-    }
-
-    private static string FormatRegistryVoiceLabel(RegistryVoice voice)
-    {
-        var languageName = string.IsNullOrWhiteSpace(voice.CultureName)
-            ? "未知语言"
-            : GetLanguageDisplayName(voice.CultureName);
-        var gender = string.IsNullOrWhiteSpace(voice.Gender) ? "未知" : voice.Gender;
-        var suffix = voice.Enabled ? string.Empty : "（未启用）";
-        return $"{voice.Name}（{languageName}，{gender}）{suffix}";
     }
 
     private void BuildOutputCombo(string? engine, string? current)

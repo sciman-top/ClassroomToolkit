@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+
 using MediaColor = System.Windows.Media.Color;
 using WpfButton = System.Windows.Controls.Button;
 
@@ -32,7 +33,11 @@ public partial class BoardColorDialog : Window
         {
             var button = new WpfButton
             {
-                Content = option.Name,
+                Content = new TextBlock
+                {
+                    Text = option.Name,
+                    Foreground = new SolidColorBrush(GetContrastingColor(option.Color))
+                },
                 Width = 80,
                 Height = 40,
                 Margin = new Thickness(0, 0, 8, 0),
@@ -67,7 +72,7 @@ public partial class BoardColorDialog : Window
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
-        presenter.SetValue(TextElement.ForegroundProperty, new TemplateBindingExtension(WpfButton.ForegroundProperty));
+
         border.AppendChild(presenter);
         
         template.VisualTree = border;

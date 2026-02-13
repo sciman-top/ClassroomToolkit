@@ -37,6 +37,7 @@ public partial class ImageManagerWindow : Window
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
     private int _loadImagesRequestId;
+    private bool _suppressKeyboardNavigation;
 
     public event Action<IReadOnlyList<string>, int>? ImageSelected;
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
@@ -54,12 +55,18 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
+        PreviewKeyDown += OnPreviewKeyDown;
         Closing += (_, _) => BeginClose();
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
             RemoveMinimizeButton();
         };
+    }
+
+    public void SetKeyboardNavigationSuppressed(bool suppressed)
+    {
+        _suppressKeyboardNavigation = suppressed;
     }
 
     private void InitializeTree()
@@ -206,6 +213,32 @@ public partial class ImageManagerWindow : Window
             OpenFolder(item.Path);
             e.Handled = true;
         }
+    }
+
+    private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!_suppressKeyboardNavigation)
+        {
+            return;
+        }
+        if (!IsPhotoNavigationKey(e.Key))
+        {
+            return;
+        }
+        PhotoNavigationDiagnostics.Log("ImageManager.Key", $"suppressed key={e.Key}");
+        e.Handled = true;
+    }
+
+    private static bool IsPhotoNavigationKey(Key key)
+    {
+        return key == Key.Left
+            || key == Key.Right
+            || key == Key.Up
+            || key == Key.Down
+            || key == Key.PageUp
+            || key == Key.PageDown
+            || key == Key.Space
+            || key == Key.Enter;
     }
 
     private void OnViewModeClick(object sender, RoutedEventArgs e)
@@ -564,17 +597,6 @@ public partial class ImageManagerWindow : Window
             _navigableDirty = false;
         }
         return _navigableCache;
-    }
-
-    private static bool IsImageFile(string path)
-    {
-        var ext = Path.GetExtension(path);
-        return ext != null && (ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
-                               || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPdfFile(string path)

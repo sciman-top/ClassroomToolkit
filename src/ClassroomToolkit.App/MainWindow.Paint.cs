@@ -369,29 +369,6 @@ public partial class MainWindow
         _overlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
     }
 
-    private void OnOpenInkSettings()
-    {
-        var dialog = new Ink.InkSettingsDialog(_settings)
-        {
-            Owner = _overlayWindow != null && _overlayWindow.IsVisible ? (Window)_overlayWindow : this
-        };
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-        _settings.InkRecordEnabled = dialog.InkRecordEnabled;
-        _settings.InkReplayPreviousEnabled = dialog.InkReplayPreviousEnabled;
-        _settings.InkRetentionDays = dialog.InkRetentionDays;
-        _settings.InkPhotoRootPath = dialog.InkPhotoRootPath;
-        SaveSettings();
-
-        if (_overlayWindow != null)
-        {
-            _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
-        }
-        _toolbarWindow?.ApplySettings(_settings);
-    }
-
     private void OnPhotoCloseRequested()
     {
         // 断开工具条和点名窗口的Owner关系，避免关闭图片模式时受 owner 链影响

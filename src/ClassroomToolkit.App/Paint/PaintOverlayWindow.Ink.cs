@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.Interop;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -180,7 +181,6 @@ public partial class PaintOverlayWindow
 
     // Constants
     private const double CalligraphySealStrokeWidthFactor = 0.08;
-    private const byte DefaultCalligraphyOverlayOpacityThreshold = 230;
     private const int CalligraphyPreviewMinIntervalMs = 16;
     private const double CalligraphyPreviewMinDistance = 2.0;
     private const int InkInputCooldownMs = 120;
@@ -523,79 +523,6 @@ public partial class PaintOverlayWindow
             stroke.MaskSeed);
     }
 
-    private void RenderStoredInkLayers(
-        Geometry geometry,
-        MediaColor color,
-        double inkFlow,
-        double ribbonOpacity,
-        Vector strokeDirection,
-        double brushSize,
-        int maskSeed)
-    {
-        var solidBrush = new SolidColorBrush(color)
-        {
-            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
-        };
-        solidBrush.Freeze();
-        var mask = IsInkMaskEligible(geometry, brushSize)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, maskSeed)
-            : null;
-        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
-    }
-
-    private void RenderStoredInkCore(Geometry geometry, MediaColor color, double brushSize, bool sealEnabled)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        RenderAndBlend(geometry, brush, null, erase: false, null);
-        if (!sealEnabled)
-        {
-            return;
-        }
-        double sealWidth = Math.Max(brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-        if (sealWidth <= 0)
-        {
-            return;
-        }
-        var pen = new MediaPen(brush, sealWidth)
-        {
-            LineJoin = PenLineJoin.Round,
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round
-        };
-        pen.Freeze();
-        RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void RenderStoredInkEdge(
-        Geometry geometry,
-        MediaColor color,
-        double inkFlow,
-        Vector strokeDirection,
-        double brushSize,
-        int maskSeed)
-    {
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
-        double edgeOpacity = Math.Clamp(Lerp(0.14, 0.3, dryFactor), 0.08, 0.45);
-        double edgeWidth = Math.Max(brushSize * Lerp(0.04, 0.09, dryFactor), 0.55);
-        var edgeBrush = new SolidColorBrush(color)
-        {
-            Opacity = edgeOpacity
-        };
-        edgeBrush.Freeze();
-        var pen = new MediaPen(edgeBrush, edgeWidth)
-        {
-            LineJoin = PenLineJoin.Round,
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round
-        };
-        pen.Freeze();
-        var mask = IsInkMaskEligible(geometry, brushSize)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, maskSeed)
-            : null;
-        RenderAndBlend(geometry, null, pen, erase: false, mask);
-    }
-
     private static string? ExcludeGeometry(string geometryPath, Geometry eraser)
     {
         if (string.IsNullOrWhiteSpace(geometryPath))
@@ -933,16 +860,6 @@ public partial class PaintOverlayWindow
         var pen = new MediaPen(brush, sealWidth);
         pen.Freeze();
         RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void RenderInkRibbonSolid(Geometry geometry, MediaColor color, double opacity)
-    {
-        var brush = new SolidColorBrush(color)
-        {
-            Opacity = Math.Clamp(opacity, 0.08, 0.85)
-        };
-        brush.Freeze();
-        RenderAndBlend(geometry, brush, null, erase: false, null);
     }
 
     private static Geometry? UnionGeometries(IReadOnlyList<Geometry> geometries)
@@ -1882,6 +1799,11 @@ public partial class PaintOverlayWindow
         _isDrawingShape = false;
     }
 
+    private void HideEraserPreview()
+    {
+        // Eraser live preview is currently disabled.
+    }
+
     private Geometry? BuildShapeGeometry(PaintShapeType type, WpfPoint start, WpfPoint end)
     {
         var rect = new Rect(start, end);
@@ -2179,11 +2101,6 @@ public partial class PaintOverlayWindow
             return;
         }
         _photoCache.Set(cacheKey, strokes);
-    }
-
-    private int GetCommittedStrokeCount()
-    {
-        return _inkStrokes.Count;
     }
 
     private List<InkStrokeData> CloneCommittedInkStrokes()

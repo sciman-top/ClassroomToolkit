@@ -248,7 +248,7 @@ public partial class MainWindow
         {
             return;
         }
-        var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
+        var settingsPath = _configurationService.SettingsIniPath;
         _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", _ =>
         {
             var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);

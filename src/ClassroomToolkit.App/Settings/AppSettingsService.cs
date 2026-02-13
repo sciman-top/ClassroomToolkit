@@ -11,6 +11,11 @@ public sealed class AppSettingsService
 {
     private readonly SettingsRepository _repository;
 
+    public AppSettingsService(IConfigurationService configurationService)
+        : this(configurationService.SettingsIniPath)
+    {
+    }
+
     public AppSettingsService(string settingsPath)
     {
         _repository = new SettingsRepository(settingsPath);

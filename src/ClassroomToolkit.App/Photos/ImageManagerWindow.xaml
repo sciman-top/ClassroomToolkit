@@ -19,42 +19,51 @@
 
     <Grid Background="{StaticResource Brush_Window_Atmosphere}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240" MinWidth="180"/>
+            <ColumnDefinition Width="1*" MinWidth="200" MaxWidth="400"/>
             <ColumnDefinition Width="6"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="3*"/>
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="2*"/>
             </Grid.RowDefinitions>
 
             <!-- 1. 收藏夹 -->
             <Border Grid.Row="0" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="12" Margin="12,12,3,6" CornerRadius="8">
-                <StackPanel>
-                    <TextBlock Text="收藏夹" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="收藏夹" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
                         <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
                         <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
                     </StackPanel>
-                    <ListBox x:Name="FavoritesList" Height="100" SelectionChanged="OnFavoritesSelectionChanged"
+                    <ListBox Grid.Row="2" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
-                </StackPanel>
+                </Grid>
             </Border>
 
             <!-- 2. 最近目录 -->
             <Border Grid.Row="1" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="12" Margin="12,6,3,6" CornerRadius="8">
-                <StackPanel>
-                    <TextBlock Text="最近目录" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
-                    <ListBox x:Name="RecentsList" Height="100" SelectionChanged="OnRecentsSelectionChanged"
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="最近目录" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
+                    <ListBox Grid.Row="1" x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
-                </StackPanel>
+                </Grid>
             </Border>
 
             <!-- 3. 此电脑 -->
