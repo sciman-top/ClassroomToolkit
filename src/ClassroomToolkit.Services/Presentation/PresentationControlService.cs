@@ -1,4 +1,5 @@
 using ClassroomToolkit.Interop.Presentation;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.Services.Presentation;
 
@@ -8,24 +9,29 @@ public sealed class PresentationControlService
     private readonly PresentationCommandMapper _mapper;
     private readonly IInputSender _inputSender;
     private readonly Win32PresentationResolver _resolver;
-    private DateTime _lastWpsCommandAt = DateTime.MinValue;
+    private readonly IPresentationWindowValidator _validator;
+    private long _lastWpsCommandTick;
     private PresentationCommand? _lastWpsCommandType;
     private IntPtr _lastWpsTarget = IntPtr.Zero;
-    private PresentationTarget _lastTarget = PresentationTarget.Empty;
     private readonly uint _currentProcessId;
     private bool _wpsAutoForceMessage;
     private bool _officeAutoForceMessage;
+    private readonly IForegroundWindowController _foregroundController;
 
     public PresentationControlService(
         PresentationControlPlanner planner,
         PresentationCommandMapper mapper,
         IInputSender inputSender,
-        Win32PresentationResolver resolver)
+        Win32PresentationResolver resolver,
+        IPresentationWindowValidator validator,
+        IForegroundWindowController? foregroundController = null)
     {
         _planner = planner;
         _mapper = mapper;
         _inputSender = inputSender;
         _resolver = resolver;
+        _validator = validator;
+        _foregroundController = foregroundController ?? new PresentationForegroundController();
         _currentProcessId = (uint)Environment.ProcessId;
     }
 
@@ -45,17 +51,21 @@ public sealed class PresentationControlService
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
     {
         var target = _resolver.ResolveForeground();
-        if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
+        if (!IsForegroundCandidate(target, options))
         {
-            target = _lastTarget;
-            if (!target.IsValid)
-            {
-                target = _resolver.ResolvePresentationTarget(
-                    _planner.Classifier,
-                    options.AllowWps,
-                    options.AllowOffice,
-                    _currentProcessId);
-            }
+            target = _resolver.ResolvePresentationTarget(
+                _planner.Classifier,
+                options.AllowWps,
+                options.AllowOffice,
+                _currentProcessId);
+        }
+        if (!IsTargetHandleValid(target))
+        {
+            target = _resolver.ResolvePresentationTarget(
+                _planner.Classifier,
+                options.AllowWps,
+                options.AllowOffice,
+                _currentProcessId);
         }
         if (!target.IsValid)
         {
@@ -77,8 +87,34 @@ public sealed class PresentationControlService
         return TrySendToTarget(fallback, command, options);
     }
 
+    private bool IsForegroundCandidate(PresentationTarget target, PresentationControlOptions options)
+    {
+        if (!target.IsValid || target.Info.ProcessId == _currentProcessId)
+        {
+            return false;
+        }
+        var targetType = _planner.Classifier.Classify(target.Info);
+        if (targetType is PresentationType.None or PresentationType.Other)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.Wps && !options.AllowWps)
+        {
+            return false;
+        }
+        if (targetType == PresentationType.Office && !options.AllowOffice)
+        {
+            return false;
+        }
+        return true;
+    }
+
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        if (!IsTargetHandleValid(target))
+        {
+            return false;
+        }
         var targetType = _planner.Classifier.Classify(target.Info);
         if (targetType == PresentationType.Wps && !options.AllowWps)
         {
@@ -88,7 +124,7 @@ public sealed class PresentationControlService
         {
             return false;
         }
-        if (targetType == PresentationType.None)
+        if (targetType is PresentationType.None or PresentationType.Other)
         {
             return false;
         }
@@ -120,6 +156,11 @@ public sealed class PresentationControlService
         return sent;
     }
 
+    private bool IsTargetHandleValid(PresentationTarget target)
+    {
+        return target.IsValid && _validator.IsWindowValid(target.Handle);
+    }
+
     private bool TrySendWithStrategy(
         PresentationTarget target,
         PresentationCommand command,
@@ -127,6 +168,11 @@ public sealed class PresentationControlService
         InputStrategy strategy,
         out PresentationType targetType)
     {
+        if (target.Handle == IntPtr.Zero)
+        {
+            targetType = PresentationType.None;
+            return false;
+        }
         var effective = new PresentationControlOptions
         {
             Strategy = strategy,
@@ -146,28 +192,9 @@ public sealed class PresentationControlService
             return false;
         }
         var keyDownOnly = plan.TargetType == PresentationType.Wps;
-        if (plan.TargetType == PresentationType.Wps && plan.Strategy == InputStrategy.Raw)
+        if (plan.Strategy == InputStrategy.Raw && RequiresForeground(plan.TargetType))
         {
-            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            if (!isForeground)
-            {
-                PresentationWindowFocus.EnsureForeground(target.Handle);
-                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            }
-            if (!isForeground)
-            {
-                plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
-            }
-        }
-        if (plan.TargetType == PresentationType.Office && plan.Strategy == InputStrategy.Raw)
-        {
-            var isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            if (!isForeground)
-            {
-                PresentationWindowFocus.EnsureForeground(target.Handle);
-                isForeground = PresentationWindowFocus.IsForeground(target.Handle);
-            }
-            if (!isForeground)
+            if (!TryEnsureForeground(target.Handle))
             {
                 plan = new PresentationControlPlan(plan.TargetType, InputStrategy.Message, plan.UseWheelAsKey);
             }
@@ -181,7 +208,6 @@ public sealed class PresentationControlService
             var wheelSent = _inputSender.SendWheel(target.Handle, delta, wheelStrategy);
             if (wheelSent)
             {
-                _lastTarget = target;
                 RememberWpsCommand(command, target.Handle);
             }
             return wheelSent;
@@ -190,7 +216,6 @@ public sealed class PresentationControlService
         var sent = _inputSender.SendKey(target.Handle, binding.Key, binding.Modifiers, plan.Strategy, keyDownOnly);
         if (sent)
         {
-            _lastTarget = target;
             if (plan.TargetType == PresentationType.Wps)
             {
                 RememberWpsCommand(command, target.Handle);
@@ -209,14 +234,31 @@ public sealed class PresentationControlService
         {
             return false;
         }
-        var elapsed = DateTime.UtcNow - _lastWpsCommandAt;
-        return elapsed.TotalMilliseconds < 200;
+        var elapsedMs = (Stopwatch.GetTimestamp() - _lastWpsCommandTick)
+            * 1000.0 / Stopwatch.Frequency;
+        return elapsedMs < 200;
     }
 
     private void RememberWpsCommand(PresentationCommand command, IntPtr target)
     {
-        _lastWpsCommandAt = DateTime.UtcNow;
+        _lastWpsCommandTick = Stopwatch.GetTimestamp();
         _lastWpsCommandType = command;
         _lastWpsTarget = target;
+    }
+
+    private static bool RequiresForeground(PresentationType targetType)
+    {
+        return targetType == PresentationType.Wps || targetType == PresentationType.Office;
+    }
+
+    private bool TryEnsureForeground(IntPtr target)
+    {
+        var isForeground = _foregroundController.IsForeground(target);
+        if (isForeground)
+        {
+            return true;
+        }
+        _foregroundController.EnsureForeground(target);
+        return _foregroundController.IsForeground(target);
     }
 }

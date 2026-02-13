@@ -1,36 +1,75 @@
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Collections.Generic;
+using System.Linq;
+using System.Diagnostics;
+using System.Buffers;
 using System.Runtime.InteropServices;
+using System.Globalization;
+using System.IO;
+using System.Threading;
+using IoPath = System.IO.Path;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.Interop;
+using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.Services.Presentation;
+using MonitorInfo = ClassroomToolkit.Interop.NativeMethods.MonitorInfo;
 using MediaColor = System.Windows.Media.Color;
 using MediaBrushes = System.Windows.Media.Brushes;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaPen = System.Windows.Media.Pen;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using WpfPath = System.Windows.Shapes.Path;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 using WpfPoint = System.Windows.Point;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Ink;
+using WpfImage = System.Windows.Controls.Image;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow : Window
 {
-    private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
+
+    
+    // Win32 绐楀彛鏍峰紡甯搁噺
     private const int GwlStyle = -16;
     private const int GwlExstyle = -20;
     private const int WsExTransparent = 0x20;
     private const int WsExNoActivate = 0x08000000;
-    private const int WsCaption = 0x00C00000;
+
     private const uint MonitorDefaultToNearest = 2;
+    private const uint SwpNoZorder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpShowWindow = 0x0040;
+    
+    /// <summary>婕旂ず鏂囩鐒︾偣鐩戞帶闂撮殧锛坢s锛?- 骞宠　鍝嶅簲閫熷害鍜?CPU 鍗犵敤</summary>
     private const int PresentationFocusMonitorIntervalMs = 500;
+    
+    /// <summary>婕旂ず鏂囩鐒︾偣鎭㈠鍐峰嵈鏃堕棿锛坢s锛?- 闃叉棰戠箒鍒囨崲瀵艰嚧闂儊</summary>
     private const int PresentationFocusCooldownMs = 1200;
-    private const double CalligraphySealStrokeWidthFactor = 0.08;
+    
+
+    
+    /// <summary>璺ㄩ〉鏇存柊鏈€灏忛棿闅旓紙ms锛?- 杩炵画婊氬姩鏃剁殑娓叉煋鑺傛祦</summary>
+    private const int CrossPageUpdateMinIntervalMs = 24;
+    
+    /// <summary>鐓х墖婊氳疆缂╂斁鍩烘暟 - 姣忔婊氳疆鍒诲害鐨勭缉鏀剧郴鏁帮紙鎺ヨ繎 1.0 浣跨缉鏀惧钩婊戯級</summary>
+    private const double PhotoWheelZoomBase = 1.0008;
+    
+    /// <summary>鐓х墖鎸夐敭缂╂斁姝ヨ繘 - 浣跨敤 +/- 閿椂鐨勭缉鏀惧箙搴?/summary>
+    private const double PhotoKeyZoomStep = 1.06;
+
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
     private bool _focusBlocked;
@@ -38,31 +77,11 @@ public partial class PaintOverlayWindow : Window
     private readonly DispatcherTimer _presentationFocusMonitor;
     private DateTime _nextPresentationFocusAttempt = DateTime.MinValue;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
-    private const int HistoryLimit = 30;
-    private bool _calligraphyInkBloomEnabled = true;
-    private bool _calligraphySealEnabled = true;
 
-    private sealed class RasterSnapshot
-    {
-        public RasterSnapshot(int width, int height, double dpiX, double dpiY, byte[] pixels)
-        {
-            PixelWidth = width;
-            PixelHeight = height;
-            DpiX = dpiX;
-            DpiY = dpiY;
-            Pixels = pixels;
-        }
 
-        public int PixelWidth { get; }
-        public int PixelHeight { get; }
-        public double DpiX { get; }
-        public double DpiY { get; }
-        public byte[] Pixels { get; }
-    }
     private PaintToolMode _mode = PaintToolMode.Brush;
     private PaintShapeType _shapeType = PaintShapeType.Line;
-    private MediaColor _boardColor = Colors.Transparent;
-    private byte _boardOpacity;
+
     private bool _isDrawingShape;
     private WpfPoint _shapeStart;
     private Shape? _activeShape;
@@ -74,6 +93,7 @@ public partial class PaintOverlayWindow : Window
     private readonly ClassroomToolkit.Interop.Presentation.PresentationClassifier _presentationClassifier;
     private readonly ClassroomToolkit.Interop.Presentation.Win32PresentationResolver _presentationResolver;
     private readonly ClassroomToolkit.Interop.Presentation.WpsSlideshowNavigationHook? _wpsNavHook;
+    private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();
     private const int WpsNavDebounceMs = 200;
     private bool _wpsNavHookActive;
     private bool _wpsHookInterceptKeyboard = true;
@@ -85,87 +105,152 @@ public partial class PaintOverlayWindow : Window
     private DateTime _lastWpsHookInput = DateTime.MinValue;
     private readonly List<RasterSnapshot> _history = new();
 
-    private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
-    private IBrushRenderer? _activeRenderer;
-    private DrawingVisualHost _visualHost;
-    private WriteableBitmap? _rasterSurface;
-    private int _surfacePixelWidth;
-    private int _surfacePixelHeight;
-    private double _surfaceDpiX = 96.0;
-    private double _surfaceDpiY = 96.0;
-    private MediaColor _brushColor = Colors.Red;
-    private double _brushSize = 12.0;
-    private byte _brushOpacity = 255;
-    private double _eraserSize = 24.0;
-    private bool _isErasing;
-    private bool _strokeInProgress;
-    private WpfPoint? _lastEraserPoint;
-    private bool _hasDrawing;
-    private readonly Random _inkRandom = new Random();
+
+    private WpfPoint? _lastPointerPosition;
     private bool _presentationFocusRestoreEnabled = false;
 
-    private class DrawingVisualHost : FrameworkElement
-    {
-        private readonly VisualCollection _children;
+    private readonly RefreshOrchestrator _refreshOrchestrator;
+    private readonly PerfStats _perfMonitor;
+    private readonly PerfStats _perfSavePage;
+    private readonly PerfStats _perfLoadPage;
+    private readonly PerfStats _perfRedrawSurface;
+    private readonly PerfStats _perfEnsureSurface;
+    private readonly PerfStats _perfClearSurface;
+    private readonly PerfStats _perfApplyStrokes;
 
-        public DrawingVisualHost()
-        {
-            _children = new VisualCollection(this);
-        }
+    private bool _presentationFullscreenActive;
+    private DateTime _currentCourseDate = DateTime.Today;
+    private string _currentDocumentName = string.Empty;
+    private string _currentDocumentPath = string.Empty;
+    private int _currentPageIndex = 1;
+    private string _currentCacheKey = string.Empty;
+    private ClassroomToolkit.Interop.Presentation.PresentationType _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
 
-        public void AddVisual(Visual visual)
-        {
-            _children.Add(visual);
-        }
-        
-        public void RemoveVisual(Visual visual)
-        {
-            _children.Remove(visual);
-        }
+    private const double PdfDefaultDpi = 96;
+    private const int PdfCacheLimit = 6;
+    private bool _photoModeActive;
+    private bool _photoFullscreen;
+    private bool _photoLoading;
+    private bool _photoCrossPageDisplayEnabled;
+    private bool _crossPageUpdatePending;
+    private DateTime _lastCrossPageUpdateUtc = DateTime.MinValue;
+    private int _crossPageUpdateToken;
+    private ScaleTransform _photoPageScale = new ScaleTransform(1.0, 1.0);
+    private ScaleTransform _photoScale = new ScaleTransform(1.0, 1.0);
+    private TranslateTransform _photoTranslate = new TranslateTransform(0, 0);
+    private bool _photoPanning;
+    private bool _photoRightClickPending;
+    private WpfPoint _photoRightClickStart;
+    private WpfPoint _photoPanStart;
+    private double _photoPanOriginX;
+    private double _photoPanOriginY;
+    private bool _photoRestoreFullscreenPending;
+    private int _photoFullscreenBoundsToken;
+    private bool _photoDocumentIsPdf;
+    private PdfDocumentHost? _pdfDocument;
+    private int _pdfPageCount;
+    private int _lastPdfNavigationDirection;
+    private readonly Dictionary<int, BitmapSource> _pdfPageCache = new();
+    private readonly LinkedList<int> _pdfPageOrder = new();
+    private readonly object _pdfRenderLock = new();
+    private const int NeighborPageCacheLimit = 5;
+    private int _pdfPrefetchInFlight;
+    private int _pdfPrefetchToken;
+    private readonly HashSet<int> _pdfPinnedPages = new();
+    private int _pdfVisiblePrefetchInFlight;
+    private int _pdfVisiblePrefetchToken;
+    private int _photoLoadToken;
+    private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);
+    private string _photoSessionPath = string.Empty;
+    private bool _photoSessionIsPdf;
+    private int _photoSessionPageIndex = 1;
+    private bool _photoSessionHasTransform;
+    private double _photoSessionScaleX = 1.0;
+    private double _photoSessionScaleY = 1.0;
+    private double _photoSessionTranslateX;
+    private double _photoSessionTranslateY;
+    private bool _rememberPhotoTransform;
+    private bool _photoUserTransformDirty;
+    private double _lastPhotoScaleX = 1.0;
+    private double _lastPhotoScaleY = 1.0;
+    private double _lastPhotoTranslateX;
+    private double _lastPhotoTranslateY;
+    private readonly Dictionary<string, PhotoTransformState> _photoPageTransforms = new(StringComparer.OrdinalIgnoreCase);
+    private bool _photoUnifiedTransformReady;
+    private DispatcherTimer? _photoUnifiedTransformSaveTimer;
+    private DispatcherTimer? _photoTransformSaveTimer;
+    private bool _photoTransformSavePending;
+    private bool _photoTransformSaveUserAdjusted;
+    private bool _foregroundPresentationActive;
+    private ClassroomToolkit.Interop.Presentation.PresentationType _foregroundPresentationType;
+    private IntPtr _foregroundPresentationHandle;
+    private bool _foregroundPhotoActive;
+    private double _pendingUnifiedScaleX;
+    private double _pendingUnifiedScaleY;
+    private double _pendingUnifiedTranslateX;
+    private double _pendingUnifiedTranslateY;
+    // Cross-page display (continuous scroll) feature
+    private bool _crossPageDisplayEnabled;
+    private bool _crossPageDragging;
+    private bool _crossPageTranslateClamped;
+    private List<string> _photoSequencePaths = new();
+    private int _photoSequenceIndex = -1;
+    private readonly Dictionary<int, BitmapSource> _neighborImageCache = new();
+    private readonly HashSet<int> _neighborImagePrefetchPending = new();
+    private System.Windows.Controls.Canvas? _neighborPagesCanvas;
+    private readonly List<WpfImage> _neighborPageImages = new();
+    private readonly List<WpfImage> _neighborInkImages = new();
+    private readonly Dictionary<string, InkBitmapCacheEntry> _neighborInkCache = new(StringComparer.OrdinalIgnoreCase);
+    private double _crossPageNormalizedWidthDip;
 
-        public void Clear()
-        {
-            _children.Clear();
-        }
 
-        public void UpdateVisual(Action<DrawingContext> renderAction)
-        {
-            if (_children.Count == 0)
-            {
-                _children.Add(new DrawingVisual());
-            }
+    public event Action<string, DateTime>? InkContextChanged;
+    public event Action<bool>? PhotoModeChanged;
+    public event Action<int>? PhotoNavigationRequested;
+    public event Action<double, double, double, double>? PhotoUnifiedTransformChanged;
+    public event Action? FloatingZOrderRequested;
+    public event Action? PresentationFullscreenDetected;
+    public event Action<ClassroomToolkit.Interop.Presentation.PresentationType>? PresentationForegroundDetected;
+    public event Action? PhotoForegroundDetected;
+    public event Action? PhotoCloseRequested;
 
-            var visual = (DrawingVisual)_children[0];
-            using (var dc = visual.RenderOpen())
-            {
-                renderAction(dc);
-            }
-        }
 
-        protected override int VisualChildrenCount => _children.Count;
 
-        protected override Visual GetVisualChild(int index)
-        {
-            if (index < 0 || index >= _children.Count)
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-            return _children[index];
-        }
-    }
+
 
     public PaintOverlayWindow()
     {
         InitializeComponent();
+        _neighborPagesCanvas = FindName("NeighborPagesCanvas") as System.Windows.Controls.Canvas;
         _visualHost = new DrawingVisualHost();
         CustomDrawHost.Child = _visualHost;
+        var photoTransform = new TransformGroup();
+        photoTransform.Children.Add(_photoPageScale);
+        photoTransform.Children.Add(_photoScale);
+        photoTransform.Children.Add(_photoTranslate);
+        PhotoBackground.RenderTransform = photoTransform;
         
         WindowState = WindowState.Maximized;
+        _refreshOrchestrator = new RefreshOrchestrator(Dispatcher, MonitorInkContext);
         _presentationFocusMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
         };
         _presentationFocusMonitor.Tick += (_, _) => MonitorPresentationFocus();
+        _inkMonitor = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
+        };
+        _inkMonitor.Tick += (_, _) => _refreshOrchestrator.RequestRefresh("poll");
+        _perfMonitor = new PerfStats("MonitorInkContext");
+        _perfSavePage = new PerfStats("SavePage");
+        _perfLoadPage = new PerfStats("LoadPage");
+        _perfRedrawSurface = new PerfStats("RedrawSurface");
+        _perfEnsureSurface = new PerfStats("EnsureSurface");
+        _perfClearSurface = new PerfStats("ClearSurface");
+        _perfApplyStrokes = new PerfStats("ApplyStrokes");
+        
+        KeyDown += OnKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
         {
@@ -183,12 +268,20 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.MouseLeftButtonDown += OnMouseDown;
         OverlayRoot.MouseMove += OnMouseMove;
         OverlayRoot.MouseLeftButtonUp += OnMouseUp;
+        OverlayRoot.MouseRightButtonDown += OnRightButtonDown;
+        OverlayRoot.MouseRightButtonUp += OnRightButtonUp;
+        OverlayRoot.MouseMove += OnRightButtonMove;
+        OverlayRoot.LostMouseCapture += OnOverlayLostMouseCapture;
+        OverlayRoot.IsManipulationEnabled = true;
+        OverlayRoot.ManipulationStarting += OnManipulationStarting;
+        OverlayRoot.ManipulationDelta += OnManipulationDelta;
         OverlayRoot.StylusDown += OnStylusDown;
         OverlayRoot.StylusMove += OnStylusMove;
         OverlayRoot.StylusUp += OnStylusUp;
         MouseWheel += OnMouseWheel;
         Loaded += (_, _) => EnsureRasterSurface();
-        SizeChanged += (_, _) => EnsureRasterSurface();
+        SizeChanged += OnWindowSizeChanged;
+        StateChanged += OnWindowStateChanged;
         UpdateBoardBackground();
 
         _presentationClassifier = new ClassroomToolkit.Interop.Presentation.PresentationClassifier();
@@ -196,7 +289,7 @@ public partial class PaintOverlayWindow : Window
         var mapper = new ClassroomToolkit.Services.Presentation.PresentationCommandMapper();
         var sender = new ClassroomToolkit.Interop.Presentation.Win32InputSender();
         _presentationResolver = new ClassroomToolkit.Interop.Presentation.Win32PresentationResolver();
-        _presentationService = new ClassroomToolkit.Services.Presentation.PresentationControlService(planner, mapper, sender, _presentationResolver);
+        _presentationService = new ClassroomToolkit.Services.Presentation.PresentationControlService(planner, mapper, sender, _presentationResolver, new ClassroomToolkit.Services.Presentation.Win32PresentationWindowValidator());
         _presentationOptions = new ClassroomToolkit.Services.Presentation.PresentationControlOptions
         {
             Strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Auto,
@@ -211,8 +304,11 @@ public partial class PaintOverlayWindow : Window
         }
         Closed += (_, _) =>
         {
+            SaveCurrentPageIfNeeded();
+            _wpsNavHookStateGate.NextGeneration();
             StopWpsNavHook();
             _presentationFocusMonitor.Stop();
+            _inkMonitor.Stop();
         };
         IsVisibleChanged += (_, _) =>
         {
@@ -225,20 +321,25 @@ public partial class PaintOverlayWindow : Window
     public void SetMode(PaintToolMode mode)
     {
         _mode = mode;
-        OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor;
+        OverlayRoot.IsHitTestVisible = mode != PaintToolMode.Cursor || _photoModeActive;
+        if (_photoModeActive && mode == PaintToolMode.Cursor)
+        {
+            Focus();
+            Keyboard.Focus(this);
+        }
         
-        // 更新全局绘图模式状态
+        // 鏇存柊鍏ㄥ眬缁樺浘妯″紡鐘舵€?
         var isPaintMode = mode != PaintToolMode.Cursor;
         PaintModeManager.Instance.IsPaintMode = isPaintMode;
         
-        // 立即设置光标（光标模式使用系统光标，无需创建文件）
+        // 绔嬪嵆璁剧疆鍏夋爣锛堝厜鏍囨ā寮忎娇鐢ㄧ郴缁熷厜鏍囷紝鏃犻渶鍒涘缓鏂囦欢锛?
         if (mode == PaintToolMode.Cursor)
         {
             this.Cursor = System.Windows.Input.Cursors.Arrow;
         }
         else
         {
-            // 其他模式的光标更新延迟执行，避免阻塞
+            // 鍏朵粬妯″紡鐨勫厜鏍囨洿鏂板欢杩熸墽琛岋紝閬垮厤闃诲
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 UpdateCursor(mode);
@@ -254,16 +355,16 @@ public partial class PaintOverlayWindow : Window
             ClearShapePreview();
         }
         
-        // 立即更新输入穿透状态（轻量级操作）
+        // 绔嬪嵆鏇存柊杈撳叆绌块€忕姸鎬侊紙杞婚噺绾ф搷浣滐級
         UpdateInputPassthrough();
         
-        // 延迟更新钩子和焦点状态，避免卡顿
+        // 寤惰繜鏇存柊閽╁瓙鍜岀劍鐐圭姸鎬侊紝閬垮厤鍗￠】
         Dispatcher.BeginInvoke(new Action(() =>
         {
             UpdateWpsNavHookState();
             UpdateFocusAcceptance();
             
-            // 光标模式下恢复焦点
+            // 鍏夋爣妯″紡涓嬫仮澶嶇劍鐐?
             if (mode == PaintToolMode.Cursor)
             {
                 RestorePresentationFocusIfNeeded(requireFullscreen: false);
@@ -276,10 +377,10 @@ public partial class PaintOverlayWindow : Window
         System.Windows.Input.Cursor cursor = mode switch
         {
             PaintToolMode.Cursor => System.Windows.Input.Cursors.Arrow,
-            PaintToolMode.Brush => Utilities.CustomCursors.GetBrushCursor(_brushColor),  // 带颜色的画笔样式
-            PaintToolMode.Eraser => Utilities.CustomCursors.Eraser,  // 橡皮擦样式
-            PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,     // 十字准星，精确绘制
-            PaintToolMode.RegionErase => Utilities.CustomCursors.RegionErase, // 框选样式
+            PaintToolMode.Brush => Utilities.CustomCursors.GetBrushCursor(_brushColor),  // 甯﹂鑹茬殑鐢荤瑪鏍峰紡
+            PaintToolMode.Eraser => Utilities.CustomCursors.Eraser,  // 姗＄毊鎿︽牱寮?
+            PaintToolMode.Shape => System.Windows.Input.Cursors.Cross,     // 鍗佸瓧鍑嗘槦锛岀簿纭粯鍒?
+            PaintToolMode.RegionErase => Utilities.CustomCursors.RegionErase, // 妗嗛€夋牱寮?
             _ => System.Windows.Input.Cursors.Arrow
         };
 
@@ -292,7 +393,7 @@ public partial class PaintOverlayWindow : Window
         _brushSize = Math.Max(1.0, size);
         _brushOpacity = opacity;
 
-        // 如果当前是画笔模式，更新光标以显示新颜色
+        // 濡傛灉褰撳墠鏄敾绗旀ā寮忥紝鏇存柊鍏夋爣浠ユ樉绀烘柊棰滆壊
         if (_mode == PaintToolMode.Brush)
         {
             UpdateCursor(PaintToolMode.Brush);
@@ -309,11 +410,7 @@ public partial class PaintOverlayWindow : Window
         _shapeType = type == PaintShapeType.RectangleFill ? PaintShapeType.Rectangle : type;
     }
 
-    public void SetBoardColor(MediaColor color)
-    {
-        _boardColor = color;
-        UpdateBoardBackground();
-    }
+
 
     public void ClearAll()
     {
@@ -326,349 +423,42 @@ public partial class PaintOverlayWindow : Window
         ClearShapePreview();
         ClearRegionSelection();
         _hasDrawing = false;
+        if (_inkRecordEnabled)
+        {
+            _inkStrokes.Clear();
+            MarkInkCacheDirty();
+        }
     }
 
     public MediaColor CurrentBrushColor => _brushColor;
     public byte CurrentBrushOpacity => _brushOpacity;
+    public string CurrentDocumentName => _currentDocumentName;
+    public DateTime CurrentCourseDate => _currentCourseDate;
+    public int CurrentPageIndex => _currentPageIndex;
 
-    private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
-        {
-            return;
-        }
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerDown(position);
-        e.Handled = true;
-    }
-
-    private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
-        {
-            return;
-        }
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerMove(position);
-        e.Handled = true;
-    }
-
-    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerUp(position);
-        e.Handled = true;
-    }
-
-    private void HandlePointerDown(WpfPoint position)
-    {
-        // 设置正在绘图状态
-        PaintModeManager.Instance.IsDrawing = true;
-        
-        if (_mode == PaintToolMode.RegionErase)
-        {
-            BeginRegionSelection(position);
-            OverlayRoot.CaptureMouse();
-            return;
-        }
-        if (_mode == PaintToolMode.Eraser)
-        {
-            BeginEraser(position);
-            OverlayRoot.CaptureMouse();
-            return;
-        }
-        if (_mode == PaintToolMode.Shape)
-        {
-            BeginShape(position);
-            OverlayRoot.CaptureMouse();
-            return;
-        }
-        if (_mode == PaintToolMode.Brush)
-        {
-            BeginBrushStroke(position);
-            OverlayRoot.CaptureMouse();
-        }
-    }
-
-    private void HandlePointerMove(WpfPoint position)
-    {
-        if (_mode == PaintToolMode.Brush)
-        {
-            UpdateBrushStroke(position);
-            return;
-        }
-        if (_mode == PaintToolMode.Eraser)
-        {
-            UpdateEraser(position);
-            return;
-        }
-        if (_mode == PaintToolMode.RegionErase)
-        {
-            UpdateRegionSelection(position);
-            return;
-        }
-        if (_mode == PaintToolMode.Shape)
-        {
-            UpdateShapePreview(position);
-        }
-    }
-
-    private void HandlePointerUp(WpfPoint position)
-    {
-        if (_mode == PaintToolMode.Brush)
-        {
-            EndBrushStroke(position);
-        }
-        else if (_mode == PaintToolMode.Eraser)
-        {
-            EndEraser(position);
-        }
-        else if (_mode == PaintToolMode.RegionErase)
-        {
-            EndRegionSelection(position);
-        }
-        else if (_mode == PaintToolMode.Shape)
-        {
-            EndShape(position);
-        }
-        if (OverlayRoot.IsMouseCaptured)
-        {
-            OverlayRoot.ReleaseMouseCapture();
-        }
-    }
-
-    private void BeginBrushStroke(WpfPoint position)
-    {
-        EnsureActiveRenderer();
-        if (_activeRenderer == null)
-        {
-            return;
-        }
-        PushHistory();
-        _strokeInProgress = true;
-        var color = EffectiveBrushColor();
-        _activeRenderer.Initialize(color, _brushSize, color.A);
-        _activeRenderer.OnDown(position);
-        _visualHost.UpdateVisual(_activeRenderer.Render);
-    }
-
-    private void UpdateBrushStroke(WpfPoint position)
-    {
-        if (!_strokeInProgress || _activeRenderer == null)
-        {
-            return;
-        }
-        _activeRenderer.OnMove(position);
-        _visualHost.UpdateVisual(_activeRenderer.Render);
-    }
-
-    private void EndBrushStroke(WpfPoint position)
-    {
-        if (!_strokeInProgress || _activeRenderer == null)
-        {
-            return;
-        }
-        _activeRenderer.OnUp(position);
-        var geometry = _activeRenderer.GetLastStrokeGeometry();
-        if (geometry != null)
-        {
-            CommitGeometryFill(geometry, EffectiveBrushColor());
-        }
-        _activeRenderer.Reset();
-        _visualHost.Clear();
-        _strokeInProgress = false;
-    }
-
-    private void BeginEraser(WpfPoint position)
-    {
-        PushHistory();
-        _isErasing = true;
-        _lastEraserPoint = position;
-        ApplyEraserAt(position);
-    }
-
-    private void UpdateEraser(WpfPoint position)
-    {
-        if (!_isErasing || _lastEraserPoint == null)
-        {
-            return;
-        }
-        var last = _lastEraserPoint.Value;
-        var distance = (position - last).Length;
-        var threshold = Math.Max(1.0, _eraserSize * 0.2);
-        if (distance < threshold)
-        {
-            return;
-        }
-        var geometry = BuildEraserGeometry(last, position);
-        if (geometry != null)
-        {
-            EraseGeometry(geometry);
-        }
-        _lastEraserPoint = position;
-    }
-
-    private void EndEraser(WpfPoint position)
-    {
-        if (!_isErasing)
-        {
-            return;
-        }
-        if (_lastEraserPoint == null || (_lastEraserPoint.Value - position).Length < 0.5)
-        {
-            ApplyEraserAt(position);
-        }
-        _isErasing = false;
-        _lastEraserPoint = null;
-    }
-
-    private void BeginRegionSelection(WpfPoint position)
-    {
-        PushHistory();
-        _regionStart = position;
-        if (_regionRect == null)
-        {
-            _regionRect = new WpfRectangle
-            {
-                Stroke = new SolidColorBrush(MediaColor.FromArgb(200, 255, 200, 60)),
-                StrokeThickness = 2,
-                StrokeDashArray = new DoubleCollection { 6, 4 },
-                Fill = new SolidColorBrush(MediaColor.FromArgb(30, 255, 200, 60)),
-                IsHitTestVisible = false
-            };
-            PreviewCanvas.Children.Add(_regionRect);
-        }
-        UpdateSelectionRect(_regionRect, _regionStart, position);
-        _isRegionSelecting = true;
-    }
-
-    private void UpdateRegionSelection(WpfPoint position)
-    {
-        if (_isRegionSelecting && _regionRect != null)
-        {
-            UpdateSelectionRect(_regionRect, _regionStart, position);
-        }
-    }
-
-    private void EndRegionSelection(WpfPoint position)
-    {
-        if (!_isRegionSelecting)
-        {
-            return;
-        }
-        _isRegionSelecting = false;
-        var region = BuildRegionRect(_regionStart, position);
-        ClearRegionSelection();
-        if (region.Width > 2 && region.Height > 2)
-        {
-            EraseRect(region);
-        }
-    }
-
-    private void BeginShape(WpfPoint position)
-    {
-        if (_shapeType == PaintShapeType.None)
-        {
-            return;
-        }
-        PushHistory();
-        _shapeStart = position;
-        _activeShape = CreateShape(_shapeType);
-        if (_activeShape == null)
-        {
-            return;
-        }
-        ApplyShapeStyle(_activeShape);
-        PreviewCanvas.Children.Add(_activeShape);
-        UpdateShape(_activeShape, _shapeStart, position);
-        _isDrawingShape = true;
-    }
-
-    private void UpdateShapePreview(WpfPoint position)
-    {
-        if (!_isDrawingShape || _activeShape == null)
-        {
-            return;
-        }
-        UpdateShape(_activeShape, _shapeStart, position);
-    }
-
-    private void EndShape(WpfPoint position)
-    {
-        if (!_isDrawingShape || _activeShape == null)
-        {
-            return;
-        }
-        var geometry = BuildShapeGeometry(_shapeType, _shapeStart, position);
-        if (geometry != null)
-        {
-            var pen = BuildShapePen();
-            CommitGeometryStroke(geometry, pen);
-        }
-        ClearShapePreview();
-    }
-
-    private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-    {
-        if (_mode != PaintToolMode.Cursor
-            && _mode != PaintToolMode.Brush
-            && _mode != PaintToolMode.Shape
-            && _mode != PaintToolMode.Eraser
-            && _mode != PaintToolMode.RegionErase)
-        {
-            return;
-        }
-        if (_mode == PaintToolMode.Cursor && _inputPassthroughEnabled)
-        {
-            return;
-        }
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
-        {
-            return;
-        }
-        if (_wpsNavHookActive && _wpsHookInterceptWheel)
-        {
-            return;
-        }
-        if (WpsHookRecentlyFired())
-        {
-            return;
-        }
-        var command = e.Delta < 0
-            ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
-            : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        if (_presentationOptions.AllowWps)
-        {
-            var target = ResolveWpsTarget();
-            if (target.IsValid)
-            {
-                var wpsForeground = IsTargetForeground(target);
-                if (!IsBoardActive() && wpsForeground && !_presentationOptions.WheelAsKey && _inputPassthroughEnabled)
-                {
-                    return;
-                }
-            }
-        }
-        if (TrySendWpsNavigation(command))
-        {
-            e.Handled = true;
-            return;
-        }
-        if (_presentationService.TrySendForeground(command, _presentationOptions))
-        {
-            e.Handled = true;
-        }
-    }
+    // 杈呭姪灞炴€э細绠€鍖栭噸澶嶇殑澶嶅悎鍒ゆ柇閫昏緫锛堟浛浠?30+ 澶勯噸澶嶄唬鐮侊級
+    private bool IsPhotoDocumentPdf => _photoModeActive && _photoDocumentIsPdf;
+    private bool IsPhotoFullscreen => _photoModeActive && _photoFullscreen;
 
     public void Undo()
     {
+        if (_inkRecordEnabled && _inkHistory.Count > 0)
+        {
+            var snapshot = _inkHistory[^1];
+            _inkHistory.RemoveAt(_inkHistory.Count - 1);
+            _inkStrokes.Clear();
+            _inkStrokes.AddRange(CloneInkStrokes(snapshot.Strokes));
+            RedrawInkSurface();
+            MarkInkCacheDirty();
+            return;
+        }
         if (_history.Count == 0)
         {
             return;
         }
-        var snapshot = _history[^1];
+        var rasterSnapshot = _history[^1];
         _history.RemoveAt(_history.Count - 1);
-        RestoreSnapshot(snapshot);
+        RestoreSnapshot(rasterSnapshot);
     }
 
     public void SetBrushOpacity(byte opacity)
@@ -680,6 +470,18 @@ public partial class PaintOverlayWindow : Window
     {
         _calligraphyInkBloomEnabled = inkBloomEnabled;
         _calligraphySealEnabled = sealEnabled;
+    }
+
+    public void SetCalligraphyOverlayOpacityThreshold(byte threshold)
+    {
+        _calligraphyOverlayOpacityThreshold = threshold;
+    }
+
+    public void SetBrushTuning(WhiteboardBrushPreset whiteboardPreset, CalligraphyBrushPreset calligraphyPreset)
+    {
+        _whiteboardPreset = whiteboardPreset;
+        _calligraphyPreset = calligraphyPreset;
+        EnsureActiveRenderer(force: true);
     }
 
     public void SetBrushStyle(PaintBrushStyle style)
@@ -697,7 +499,13 @@ public partial class PaintOverlayWindow : Window
         {
             if (force || _activeRenderer is not VariableWidthBrushRenderer)
             {
-                _activeRenderer = new VariableWidthBrushRenderer();
+                var config = _calligraphyPreset switch
+                {
+                    CalligraphyBrushPreset.Sharp => BrushPhysicsConfig.CreateCalligraphySharp(),
+                    CalligraphyBrushPreset.Soft => BrushPhysicsConfig.CreateCalligraphySoft(),
+                    _ => BrushPhysicsConfig.CreateCalligraphyBalanced()
+                };
+                _activeRenderer = new VariableWidthBrushRenderer(config);
             }
             return;
         }
@@ -705,13 +513,25 @@ public partial class PaintOverlayWindow : Window
         {
             if (force || _activeRenderer is not MarkerBrushRenderer marker || marker.RenderMode != MarkerRenderMode.Ribbon)
             {
-                _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon);
+                var config = _whiteboardPreset switch
+                {
+                    WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
+                    WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
+                    _ => MarkerBrushConfig.Smooth
+                };
+                _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon, config);
             }
             return;
         }
         if (force || _activeRenderer is not MarkerBrushRenderer)
         {
-            _activeRenderer = new MarkerBrushRenderer();
+            var config = _whiteboardPreset switch
+            {
+                WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
+                WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
+                _ => MarkerBrushConfig.Smooth
+            };
+            _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.SegmentUnion, config);
         }
     }
 
@@ -720,29 +540,11 @@ public partial class PaintOverlayWindow : Window
         return MediaColor.FromArgb(_brushOpacity, _brushColor.R, _brushColor.G, _brushColor.B);
     }
 
-    public void SetBoardOpacity(byte opacity)
-    {
-        _boardOpacity = opacity;
-        UpdateBoardBackground();
-        UpdateInputPassthrough();
-        UpdateWpsNavHookState();
-        UpdateFocusAcceptance();
-    }
 
-    private void UpdateBoardBackground()
-    {
-        var color = _boardColor;
-        var opacity = _boardOpacity;
-        if (opacity == 0 || color.A == 0)
-        {
-            color = TransparentHitTestColor;
-        }
-        else
-        {
-            color = MediaColor.FromArgb(opacity, color.R, color.G, color.B);
-        }
-        OverlayRoot.Background = new SolidColorBrush(color);
-    }
+
+
+
+
 
     private void UpdateInputPassthrough()
     {
@@ -750,32 +552,11 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var enable = _mode == PaintToolMode.Cursor && _boardOpacity == 0;
+        var enable = _mode == PaintToolMode.Cursor && _boardOpacity == 0 && !_photoModeActive;
         _inputPassthroughEnabled = enable;
         ApplyWindowStyles();
         UpdateFocusAcceptance();
     }
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo info);
 
     private void UpdateFocusAcceptance()
     {
@@ -794,8 +575,8 @@ public partial class PaintOverlayWindow : Window
 
     private bool ShouldBlockFocus()
     {
-        // 光标模式下，不阻止焦点，让输入事件自由传递到演示文稿
-        // 这样可以确保键盘和滚轮事件正常工作
+        // 鍏夋爣妯″紡涓嬶紝涓嶉樆姝㈢劍鐐癸紝璁╄緭鍏ヤ簨浠惰嚜鐢变紶閫掑埌婕旂ず鏂囩
+        // 杩欐牱鍙互纭繚閿洏鍜屾粴杞簨浠舵甯稿伐浣?
         if (_mode == PaintToolMode.Cursor)
         {
             return false;
@@ -835,1302 +616,203 @@ public partial class PaintOverlayWindow : Window
         {
             return;
         }
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
+        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
         if (_inputPassthroughEnabled)
         {
-            exStyle |= WsExTransparent;
+            exStyle |= NativeMethods.WsExTransparent;
         }
         else
         {
-            exStyle &= ~WsExTransparent;
+            exStyle &= ~NativeMethods.WsExTransparent;
         }
         if (_focusBlocked)
         {
-            exStyle |= WsExNoActivate;
+            exStyle |= NativeMethods.WsExNoActivate;
         }
         else
         {
-            exStyle &= ~WsExNoActivate;
+            exStyle &= ~NativeMethods.WsExNoActivate;
         }
-        SetWindowLong(_hwnd, GwlExstyle, exStyle);
+        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle);
     }
 
-    public void UpdateWpsMode(string mode)
+
+    public void UpdateInkCacheEnabled(bool enabled)
     {
-        _presentationOptions.Strategy = mode switch
+        _inkCacheEnabled = enabled;
+        if (!_inkMonitor.IsEnabled)
         {
-            "raw" => ClassroomToolkit.Interop.Presentation.InputStrategy.Raw,
-            "message" => ClassroomToolkit.Interop.Presentation.InputStrategy.Message,
-            _ => ClassroomToolkit.Interop.Presentation.InputStrategy.Auto
-        };
-        _presentationService.ResetWpsAutoFallback();
-        _presentationService.ResetOfficeAutoFallback();
-        _wpsForceMessageFallback = false;
-        _wpsHookUnavailableNotified = false;
-        UpdateWpsNavHookState();
-        UpdateFocusAcceptance();
+            _inkMonitor.Start();
+        }
+        if (!_inkCacheEnabled)
+        {
+            _photoCache.Clear();
+        }
+        _refreshOrchestrator.RequestRefresh("ink-cache");
     }
 
-    public void UpdateWpsWheelMapping(bool enabled)
+    public void UpdateInkRecordEnabled(bool enabled)
     {
-        _presentationOptions.WheelAsKey = enabled;
-        UpdateWpsNavHookState();
-        UpdateFocusAcceptance();
+        _inkRecordEnabled = enabled;
     }
 
-    public void UpdatePresentationTargets(bool allowOffice, bool allowWps)
+    public void UpdateInkReplayPreviousEnabled(bool enabled)
     {
-        _presentationOptions.AllowOffice = allowOffice;
-        _presentationOptions.AllowWps = allowWps;
-        if (!allowWps)
-        {
-            _wpsForceMessageFallback = false;
-            _wpsHookUnavailableNotified = false;
-        }
-        _presentationService.ResetOfficeAutoFallback();
-        UpdateWpsNavHookState();
-        UpdateFocusAcceptance();
-        UpdatePresentationFocusMonitor();
+        _inkReplayPreviousEnabled = enabled;
     }
 
-    public void UpdatePresentationForegroundPolicy(bool forceForegroundOnFullscreen)
+    public void UpdateInkRetentionDays(int days)
     {
-        _forcePresentationForegroundOnFullscreen = forceForegroundOnFullscreen;
-    }
-
-    public bool RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
-    {
-        if (!IsVisible)
+        _inkRetentionDays = Math.Max(0, days);
+        if (_inkRetentionDays > 0 && _inkRecordEnabled)
         {
-            return false;
-        }
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
-        {
-            return false;
-        }
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        if (!target.IsValid)
-        {
-            return false;
-        }
-        if (!_presentationClassifier.IsSlideshowWindow(target.Info))
-        {
-            return false;
-        }
-        if (requireFullscreen && !IsFullscreenPresentationWindow(target))
-        {
-            return false;
-        }
-        var force = ShouldForcePresentationForeground(target);
-        if (!force && !IsForegroundOwnedByCurrentProcess())
-        {
-            return false;
-        }
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
-    }
-
-    public void ForwardKeyboardToPresentation(Key key)
-    {
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
-        {
-            return;
-        }
-        // 将键盘按键转换为演示文稿命令
-        ClassroomToolkit.Services.Presentation.PresentationCommand? command = null;
-        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Next;
-        }
-        else if (key == Key.Left || key == Key.Up || key == Key.PageUp)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        }
-        if (command == null)
-        {
-            return;
-        }
-        // 优先尝试 WPS，然后尝试 Office
-        if (_presentationOptions.AllowWps)
-        {
-            var wpsTarget = ResolveWpsTarget();
-            if (wpsTarget.IsValid && TrySendWpsNavigation(command.Value))
+            _ = System.Threading.Tasks.Task.Run(() =>
             {
-                return;
-            }
-        }
-        if (_presentationOptions.AllowOffice)
-        {
-            _presentationService.TrySendForeground(command.Value, _presentationOptions);
-        }
-    }
-
-    private void UpdatePresentationFocusMonitor()
-    {
-        var shouldMonitor = IsVisible && (_presentationOptions.AllowOffice || _presentationOptions.AllowWps);
-        if (shouldMonitor)
-        {
-            if (!_presentationFocusMonitor.IsEnabled)
-            {
-                _presentationFocusMonitor.Start();
-            }
-            return;
-        }
-        if (_presentationFocusMonitor.IsEnabled)
-        {
-            _presentationFocusMonitor.Stop();
-        }
-    }
-
-    private void MonitorPresentationFocus()
-    {
-        if (!_presentationFocusRestoreEnabled)
-        {
-            return;
-        }
-
-        if (DateTime.UtcNow < _nextPresentationFocusAttempt)
-        {
-            return;
-        }
-        if (!IsForegroundOwnedByCurrentProcess())
-        {
-            return;
-        }
-        var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
-        if (restored)
-        {
-            _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
-        }
-    }
-
-    private bool IsForegroundOwnedByCurrentProcess()
-    {
-        var foreground = GetForegroundWindow();
-        if (foreground == IntPtr.Zero)
-        {
-            return false;
-        }
-        GetWindowThreadProcessId(foreground, out var processId);
-        return processId == _currentProcessId;
-    }
-
-    private bool ShouldForcePresentationForeground(
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
-    {
-        if (!_forcePresentationForegroundOnFullscreen || !target.IsValid)
-        {
-            return false;
-        }
-        return IsFullscreenPresentationWindow(target);
-    }
-
-    private bool IsFullscreenPresentationWindow(
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
-    {
-        if (!target.IsValid)
-        {
-            return false;
-        }
-        if (!_presentationClassifier.IsSlideshowWindow(target.Info))
-        {
-            return false;
-        }
-        return IsFullscreenWindow(target.Handle);
-    }
-
-    private static bool IsFullscreenWindow(IntPtr hwnd)
-    {
-        if (hwnd == IntPtr.Zero)
-        {
-            return false;
-        }
-        var style = GetWindowLong(hwnd, GwlStyle);
-        if ((style & WsCaption) != 0)
-        {
-            return false;
-        }
-        if (!GetWindowRect(hwnd, out var rect))
-        {
-            return false;
-        }
-        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
-        if (monitor == IntPtr.Zero)
-        {
-            return false;
-        }
-        var info = new MonitorInfo
-        {
-            Size = Marshal.SizeOf<MonitorInfo>()
-        };
-        if (!GetMonitorInfo(monitor, ref info))
-        {
-            return false;
-        }
-        const int tolerance = 2;
-        return Math.Abs(rect.Left - info.Monitor.Left) <= tolerance
-               && Math.Abs(rect.Top - info.Monitor.Top) <= tolerance
-               && Math.Abs(rect.Right - info.Monitor.Right) <= tolerance
-               && Math.Abs(rect.Bottom - info.Monitor.Bottom) <= tolerance;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MonitorInfo
-    {
-        public int Size;
-        public NativeRect Monitor;
-        public NativeRect Work;
-        public uint Flags;
-    }
-
-    private void OnWpsNavHookRequested(int direction, string source)
-    {
-        if (!_presentationOptions.AllowWps)
-        {
-            return;
-        }
-        MarkWpsHookInput();
-        if (IsBoardActive() || direction == 0)
-        {
-            return;
-        }
-        var target = ResolveWpsTarget();
-        if (!target.IsValid)
-        {
-            return;
-        }
-        var passthrough = IsWpsRawInputPassthrough(target);
-        var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
-        if (passthrough && !interceptSource)
-        {
-            return;
-        }
-        if (ShouldSuppressWpsNav(direction, target.Handle))
-        {
-            return;
-        }
-        var command = direction > 0
-            ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
-            : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        var options = BuildWpsOptions(source);
-        if (_presentationService.TrySendToTarget(target, command, options))
-        {
-            RememberWpsNav(direction, target.Handle);
-        }
-    }
-
-    private bool TrySendWpsNavigation(ClassroomToolkit.Services.Presentation.PresentationCommand command)
-    {
-        if (!_presentationOptions.AllowWps)
-        {
-            return false;
-        }
-        if (IsBoardActive())
-        {
-            return false;
-        }
-        var target = ResolveWpsTarget();
-        if (!target.IsValid)
-        {
-            return false;
-        }
-        var direction = command == ClassroomToolkit.Services.Presentation.PresentationCommand.Next ? 1 : -1;
-        if (ShouldSuppressWpsNav(direction, target.Handle))
-        {
-            return false;
-        }
-        var options = BuildWpsOptions("wheel");
-        var sent = _presentationService.TrySendToTarget(target, command, options);
-        if (sent)
-        {
-            RememberWpsNav(direction, target.Handle);
-        }
-        return sent;
-    }
-
-    private ClassroomToolkit.Services.Presentation.PresentationControlOptions BuildWpsOptions(string? source = null)
-    {
-        var strategy = _presentationOptions.Strategy;
-        if (_wpsForceMessageFallback)
-        {
-            strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-        }
-        if (string.Equals(source, "wheel", StringComparison.OrdinalIgnoreCase) && _presentationOptions.WheelAsKey)
-        {
-            strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-        }
-        return new ClassroomToolkit.Services.Presentation.PresentationControlOptions
-        {
-            Strategy = strategy,
-            WheelAsKey = _presentationOptions.WheelAsKey,
-            AllowOffice = false,
-            AllowWps = true
-        };
-    }
-
-    private void UpdateWpsNavHookState()
-    {
-        if (_wpsNavHook == null || !_wpsNavHook.Available)
-        {
-            _wpsNavHookActive = false;
-            if (_presentationOptions.AllowWps)
-            {
-                var hookTarget = ResolveWpsTarget();
-                MarkWpsHookUnavailable(hookTarget.IsValid);
-            }
-            return;
-        }
-        _wpsForceMessageFallback = false;
-        var shouldEnable = _presentationOptions.AllowWps && !IsBoardActive() && IsVisible;
-        var blockOnly = false;
-        var interceptKeyboard = true;
-        var interceptWheel = true;
-        var emitWheelOnBlock = true;
-        var target = ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
-        if (shouldEnable)
-        {
-            target = ResolveWpsTarget();
-            shouldEnable = target.IsValid;
-        }
-        var sendMode = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-        var wheelForward = false;
-        if (shouldEnable)
-        {
-            sendMode = ResolveWpsSendMode(target);
-            wheelForward = _presentationOptions.WheelAsKey;
-            interceptWheel = wheelForward;
-            emitWheelOnBlock = wheelForward;
-        }
-        
-        // 光标模式下，直接禁用钩子拦截，让输入直接传递到 WPS
-        if (_mode == PaintToolMode.Cursor)
-        {
-            interceptKeyboard = false;
-            interceptWheel = false;
-        }
-        else if (shouldEnable && sendMode == ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
-        {
-            blockOnly = true;
-            if (IsTargetForeground(target))
-            {
-                if (!wheelForward)
+                try
                 {
-                    blockOnly = false;
-                    emitWheelOnBlock = false;
+                    _inkStorage.CleanupOldRecords(_inkRetentionDays);
                 }
-            }
+                catch
+                {
+                    // Ignore cleanup failures.
+                }
+            });
         }
-        
-        if (shouldEnable)
+    }
+
+    public void UpdateInkPhotoRootPath(string path)
+    {
+        _inkPhotoRootPath = path ?? string.Empty;
+        _inkStorage = new InkStorageService(photoRootPath: _inkPhotoRootPath);
+    }
+
+    public void UpdatePhotoTransformMemoryEnabled(bool enabled)
+    {
+        _rememberPhotoTransform = enabled;
+        if (!_rememberPhotoTransform)
         {
-            _wpsNavHook.SetInterceptEnabled(true);
-            _wpsNavHook.SetBlockOnly(blockOnly);
-            _wpsNavHook.SetInterceptKeyboard(interceptKeyboard);
-            _wpsNavHook.SetInterceptWheel(interceptWheel);
-            _wpsNavHook.SetEmitWheelOnBlock(emitWheelOnBlock);
-            _wpsHookInterceptKeyboard = interceptKeyboard;
-            _wpsHookInterceptWheel = interceptWheel;
-            if (!_wpsNavHookActive)
+            _photoUserTransformDirty = false;
+        }
+    }
+
+    public void LoadInkPage(int pageIndex)
+    {
+        // Ink history view is removed; keep for compatibility.
+    }
+
+    public void UpdateCrossPageDisplayEnabled(bool enabled)
+    {
+        if (_crossPageDisplayEnabled == enabled && _photoCrossPageDisplayEnabled == enabled)
+        {
+            return;
+        }
+        _crossPageDisplayEnabled = enabled;
+        _photoCrossPageDisplayEnabled = enabled;
+        ResetCrossPageNormalizedWidth();
+        if (_photoModeActive && _crossPageDisplayEnabled)
+        {
+            if (_photoUnifiedTransformReady)
             {
-                _wpsNavHookActive = _wpsNavHook.Start();
-            }
-            if (!_wpsNavHookActive)
-            {
-                StopWpsNavHook();
-                MarkWpsHookUnavailable(target.IsValid);
+                EnsurePhotoTransformsWritable();
+                _photoScale.ScaleX = _lastPhotoScaleX;
+                _photoScale.ScaleY = _lastPhotoScaleY;
+                _photoTranslate.X = _lastPhotoTranslateX;
+                _photoTranslate.Y = _lastPhotoTranslateY;
+                _photoUserTransformDirty = true;
+                RequestInkRedraw();
             }
             else
             {
-                _wpsForceMessageFallback = false;
+                SavePhotoTransformState(userAdjusted: _photoUserTransformDirty);
             }
-            return;
+            UpdateCurrentPageWidthNormalization();
         }
-        StopWpsNavHook();
-    }
-
-    private void StopWpsNavHook()
-    {
-        if (_wpsNavHook == null)
+        if (!_crossPageDisplayEnabled)
         {
-            return;
+            ClearNeighborPages();
+            UpdateCurrentPageWidthNormalization();
         }
-        _wpsNavHook.SetInterceptEnabled(false);
-        _wpsNavHook.SetBlockOnly(false);
-        _wpsNavHook.SetInterceptKeyboard(true);
-        _wpsNavHook.SetInterceptWheel(true);
-        _wpsNavHook.SetEmitWheelOnBlock(true);
-        _wpsNavHook.Stop();
-        _wpsNavHookActive = false;
-        _wpsHookInterceptKeyboard = true;
-        _wpsHookInterceptWheel = true;
-    }
-
-    private ClassroomToolkit.Interop.Presentation.PresentationTarget ResolveWpsTarget()
-    {
-        return _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            allowWps: true,
-            allowOffice: false,
-            (uint)Environment.ProcessId);
-    }
-
-    private ClassroomToolkit.Interop.Presentation.InputStrategy ResolveWpsSendMode(
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
-    {
-        if (_wpsForceMessageFallback)
+        if (_photoModeActive && !_photoDocumentIsPdf)
         {
-            return ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-        }
-        var mode = _presentationOptions.Strategy;
-        if (mode == ClassroomToolkit.Interop.Presentation.InputStrategy.Auto)
-        {
-            if (_presentationService.IsWpsAutoForcedMessage)
+            // Reset image cache to avoid mixing different decode policies
+            // between cross-page and single-page rendering.
+            ClearNeighborImageCache();
+            var currentPage = GetCurrentPageIndexForCrossPage();
+            var bitmap = GetPageBitmap(currentPage);
+            if (bitmap != null)
             {
-                return ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-            }
-            return target.IsValid
-                ? ClassroomToolkit.Interop.Presentation.InputStrategy.Raw
-                : ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
-        }
-        return mode;
-    }
-
-    private void MarkWpsHookUnavailable(bool notify)
-    {
-        _wpsForceMessageFallback = true;
-        if (notify)
-        {
-            NotifyWpsHookUnavailable();
-        }
-    }
-
-    private void NotifyWpsHookUnavailable()
-    {
-        if (_wpsHookUnavailableNotified)
-        {
-            return;
-        }
-        _wpsHookUnavailableNotified = true;
-        Dispatcher.BeginInvoke(() =>
-        {
-            var owner = System.Windows.Application.Current?.MainWindow;
-            var message = "检测到 WPS 放映全局钩子不可用，已自动切换为消息投递模式。";
-            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        });
-    }
-
-    private bool IsWpsRawInputPassthrough(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
-    {
-        if (ResolveWpsSendMode(target) != ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
-        {
-            return false;
-        }
-        return IsTargetForeground(target);
-    }
-
-    private bool IsTargetForeground(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
-    {
-        if (!target.IsValid)
-        {
-            return false;
-        }
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle);
-    }
-
-    private bool ShouldSuppressWpsNav(int direction, IntPtr target)
-    {
-        if (target == IntPtr.Zero)
-        {
-            return false;
-        }
-        if (_wpsNavBlockUntil > DateTime.UtcNow)
-        {
-            return true;
-        }
-        if (_lastWpsNavEvent.HasValue)
-        {
-            var last = _lastWpsNavEvent.Value;
-            if (last.Code == direction && last.Target == target)
-            {
-                var elapsed = DateTime.UtcNow - last.Timestamp;
-                if (elapsed.TotalMilliseconds < WpsNavDebounceMs)
-                {
-                    return true;
-                }
+                PhotoBackground.Source = bitmap;
+                PhotoBackground.Visibility = Visibility.Visible;
+                UpdateCurrentPageWidthNormalization(bitmap);
             }
         }
-        return false;
-    }
-
-    private void RememberWpsNav(int direction, IntPtr target)
-    {
-        _lastWpsNavEvent = (direction, target, DateTime.UtcNow);
-        _wpsNavBlockUntil = DateTime.UtcNow.AddMilliseconds(WpsNavDebounceMs);
-    }
-
-    private void MarkWpsHookInput()
-    {
-        _lastWpsHookInput = DateTime.UtcNow;
-    }
-
-    private bool WpsHookRecentlyFired()
-    {
-        if (_lastWpsHookInput == DateTime.MinValue)
+        if (_photoModeActive && _photoDocumentIsPdf)
         {
+            SaveCurrentPageOnNavigate(forceBackground: false);
+            _currentCacheKey = BuildPhotoModeCacheKey(_currentDocumentPath, _currentPageIndex, isPdf: true);
+            ResetInkHistory();
+            LoadCurrentPageIfExists();
+        }
+    }
+
+    public void SetPhotoUnifiedTransformState(bool enabled, double scaleX, double scaleY, double translateX, double translateY)
+    {
+        _photoUnifiedTransformReady = enabled;
+        if (!enabled)
+        {
+            return;
+        }
+        _lastPhotoScaleX = scaleX;
+        _lastPhotoScaleY = scaleY;
+        _lastPhotoTranslateX = translateX;
+        _lastPhotoTranslateY = translateY;
+        _photoUserTransformDirty = true;
+        if (_photoModeActive && _crossPageDisplayEnabled)
+        {
+            EnsurePhotoTransformsWritable();
+            _photoScale.ScaleX = _lastPhotoScaleX;
+            _photoScale.ScaleY = _lastPhotoScaleY;
+            _photoTranslate.X = _lastPhotoTranslateX;
+            _photoTranslate.Y = _lastPhotoTranslateY;
+            UpdateCurrentPageWidthNormalization();
+            RequestInkRedraw();
+        }
+    }
+
+    public bool TryGetPhotoUnifiedTransformState(out double scaleX, out double scaleY, out double translateX, out double translateY)
+    {
+        if (!_photoUnifiedTransformReady)
+        {
+            scaleX = 1.0;
+            scaleY = 1.0;
+            translateX = 0.0;
+            translateY = 0.0;
             return false;
         }
-        return (DateTime.UtcNow - _lastWpsHookInput).TotalMilliseconds < WpsNavDebounceMs;
-    }
-
-    private bool IsBoardActive()
-    {
-        return _boardOpacity > 0 && _boardColor.A > 0;
-    }
-
-    private void OnStylusDown(object sender, System.Windows.Input.StylusDownEventArgs e)
-    {
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerDown(position);
-        e.Handled = true;
-    }
-
-    private void OnStylusMove(object sender, System.Windows.Input.StylusEventArgs e)
-    {
-        if (e.InAir)
-        {
-            return;
-        }
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerMove(position);
-        e.Handled = true;
-    }
-
-    private void OnStylusUp(object sender, System.Windows.Input.StylusEventArgs e)
-    {
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerUp(position);
-        e.Handled = true;
-    }
-
-    private Shape? CreateShape(PaintShapeType type)
-    {
-        return type switch
-        {
-            PaintShapeType.None => null,
-            PaintShapeType.Line => new Line(),
-            PaintShapeType.DashedLine => new Line(),
-            PaintShapeType.Rectangle => new System.Windows.Shapes.Rectangle(),
-            PaintShapeType.RectangleFill => new System.Windows.Shapes.Rectangle(),
-            PaintShapeType.Ellipse => new Ellipse(),
-            PaintShapeType.Path => new Path(),
-            _ => null
-        };
-    }
-
-    private void ApplyShapeStyle(Shape shape)
-    {
-        var stroke = new SolidColorBrush(EffectiveBrushColor());
-        stroke.Freeze();
-        shape.Stroke = stroke;
-        shape.StrokeThickness = Math.Max(1, _brushSize);
-        shape.StrokeStartLineCap = PenLineCap.Round;
-        shape.StrokeEndLineCap = PenLineCap.Round;
-        shape.StrokeLineJoin = PenLineJoin.Round;
-        if (_shapeType == PaintShapeType.DashedLine)
-        {
-            shape.StrokeDashArray = new DoubleCollection { 6, 4 };
-        }
-        shape.Fill = null;
-        shape.IsHitTestVisible = false;
-    }
-
-    private static void UpdateShape(Shape shape, WpfPoint start, WpfPoint end)
-    {
-        var left = Math.Min(start.X, end.X);
-        var top = Math.Min(start.Y, end.Y);
-        var width = Math.Abs(end.X - start.X);
-        var height = Math.Abs(end.Y - start.Y);
-        if (shape is Line line)
-        {
-            line.X1 = start.X;
-            line.Y1 = start.Y;
-            line.X2 = end.X;
-            line.Y2 = end.Y;
-        }
-        else
-        {
-            System.Windows.Controls.Canvas.SetLeft(shape, left);
-            System.Windows.Controls.Canvas.SetTop(shape, top);
-            shape.Width = Math.Max(1, width);
-            shape.Height = Math.Max(1, height);
-        }
-    }
-
-    private void ClearShapePreview()
-    {
-        if (_activeShape != null)
-        {
-            PreviewCanvas.Children.Remove(_activeShape);
-            _activeShape = null;
-        }
-        _isDrawingShape = false;
-    }
-
-    private Geometry? BuildShapeGeometry(PaintShapeType type, WpfPoint start, WpfPoint end)
-    {
-        var rect = new Rect(start, end);
-        return type switch
-        {
-            PaintShapeType.Line => new LineGeometry(start, end),
-            PaintShapeType.DashedLine => new LineGeometry(start, end),
-            PaintShapeType.Rectangle => new RectangleGeometry(rect),
-            PaintShapeType.RectangleFill => new RectangleGeometry(rect),
-            PaintShapeType.Ellipse => new EllipseGeometry(rect),
-            _ => null
-        };
-    }
-
-    private MediaPen BuildShapePen()
-    {
-        var brush = new SolidColorBrush(EffectiveBrushColor());
-        brush.Freeze();
-        var pen = new MediaPen(brush, Math.Max(1.0, _brushSize))
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-        if (_shapeType == PaintShapeType.DashedLine)
-        {
-            pen.DashStyle = new DashStyle(new double[] { 6, 4 }, 0);
-            pen.DashCap = PenLineCap.Round;
-        }
-        pen.Freeze();
-        return pen;
-    }
-
-    private Geometry? BuildEraserGeometry(WpfPoint start, WpfPoint end)
-    {
-        var radius = Math.Max(2.0, _eraserSize * 0.5);
-        var delta = end - start;
-        if (delta.Length < 0.5)
-        {
-            return new EllipseGeometry(start, radius, radius);
-        }
-        var path = new StreamGeometry();
-        using (var ctx = path.Open())
-        {
-            ctx.BeginFigure(start, isFilled: false, isClosed: false);
-            ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
-        }
-        var pen = new MediaPen(MediaBrushes.Black, Math.Max(1.0, _eraserSize))
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-        return path.GetWidenedPathGeometry(pen);
-    }
-
-    private void ApplyEraserAt(WpfPoint position)
-    {
-        var radius = Math.Max(2.0, _eraserSize * 0.5);
-        var geometry = new EllipseGeometry(position, radius, radius);
-        EraseGeometry(geometry);
-    }
-
-    private void EraseRect(Rect region)
-    {
-        EnsureRasterSurface();
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var rect = new Int32Rect(
-            (int)Math.Floor(region.X * dpi.DpiScaleX),
-            (int)Math.Floor(region.Y * dpi.DpiScaleY),
-            (int)Math.Ceiling(region.Width * dpi.DpiScaleX),
-            (int)Math.Ceiling(region.Height * dpi.DpiScaleY));
-        rect = IntersectRects(rect, new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight));
-        if (rect.Width <= 0 || rect.Height <= 0)
-        {
-            return;
-        }
-        var stride = rect.Width * 4;
-        var clear = new byte[stride * rect.Height];
-        _rasterSurface.WritePixels(rect, clear, stride, 0);
-        _hasDrawing = true;
-    }
-
-    private void ClearRegionSelection()
-    {
-        if (_regionRect != null)
-        {
-            PreviewCanvas.Children.Remove(_regionRect);
-            _regionRect = null;
-        }
-        _isRegionSelecting = false;
-    }
-
-    private static void UpdateSelectionRect(WpfRectangle rect, WpfPoint start, WpfPoint end)
-    {
-        var left = Math.Min(start.X, end.X);
-        var top = Math.Min(start.Y, end.Y);
-        var width = Math.Abs(end.X - start.X);
-        var height = Math.Abs(end.Y - start.Y);
-        System.Windows.Controls.Canvas.SetLeft(rect, left);
-        System.Windows.Controls.Canvas.SetTop(rect, top);
-        rect.Width = Math.Max(1, width);
-        rect.Height = Math.Max(1, height);
-    }
-
-    private static Rect BuildRegionRect(WpfPoint start, WpfPoint end)
-    {
-        var left = Math.Min(start.X, end.X);
-        var top = Math.Min(start.Y, end.Y);
-        var width = Math.Abs(end.X - start.X);
-        var height = Math.Abs(end.Y - start.Y);
-        return new Rect(left, top, Math.Max(1, width), Math.Max(1, height));
-    }
-
-    private void PushHistory()
-    {
-        EnsureRasterSurface();
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        var stride = _surfacePixelWidth * 4;
-        var pixels = new byte[stride * _surfacePixelHeight];
-        _rasterSurface.CopyPixels(pixels, stride, 0);
-        _history.Add(new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels));
-        if (_history.Count > HistoryLimit)
-        {
-            _history.RemoveAt(0);
-        }
-    }
-
-    private void RestoreSnapshot(RasterSnapshot snapshot)
-    {
-        if (_rasterSurface == null
-            || snapshot.PixelWidth != _surfacePixelWidth
-            || snapshot.PixelHeight != _surfacePixelHeight)
-        {
-            _rasterSurface = new WriteableBitmap(
-                snapshot.PixelWidth,
-                snapshot.PixelHeight,
-                snapshot.DpiX,
-                snapshot.DpiY,
-                PixelFormats.Pbgra32,
-                null);
-            _surfacePixelWidth = snapshot.PixelWidth;
-            _surfacePixelHeight = snapshot.PixelHeight;
-            _surfaceDpiX = snapshot.DpiX;
-            _surfaceDpiY = snapshot.DpiY;
-            RasterImage.Source = _rasterSurface;
-        }
-        var rect = new Int32Rect(0, 0, snapshot.PixelWidth, snapshot.PixelHeight);
-        var stride = snapshot.PixelWidth * 4;
-        _rasterSurface.WritePixels(rect, snapshot.Pixels, stride, 0);
-        _hasDrawing = true;
-    }
-
-    private void EnsureRasterSurface()
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var pixelWidth = Math.Max(1, (int)Math.Round(ActualWidth * dpi.DpiScaleX));
-        var pixelHeight = Math.Max(1, (int)Math.Round(ActualHeight * dpi.DpiScaleY));
-        if (_rasterSurface != null
-            && pixelWidth == _surfacePixelWidth
-            && pixelHeight == _surfacePixelHeight)
-        {
-            return;
-        }
-        var newSurface = new WriteableBitmap(
-            pixelWidth,
-            pixelHeight,
-            dpi.PixelsPerInchX,
-            dpi.PixelsPerInchY,
-            PixelFormats.Pbgra32,
-            null);
-        if (_rasterSurface != null)
-        {
-            CopyBitmapToSurface(_rasterSurface, newSurface);
-        }
-        _rasterSurface = newSurface;
-        _surfacePixelWidth = pixelWidth;
-        _surfacePixelHeight = pixelHeight;
-        _surfaceDpiX = dpi.PixelsPerInchX;
-        _surfaceDpiY = dpi.PixelsPerInchY;
-        RasterImage.Source = _rasterSurface;
-    }
-
-    private void ClearSurface()
-    {
-        EnsureRasterSurface();
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        var rect = new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
-        var stride = _surfacePixelWidth * 4;
-        var clear = new byte[stride * _surfacePixelHeight];
-        _rasterSurface.WritePixels(rect, clear, stride, 0);
-    }
-
-    private void CopyBitmapToSurface(BitmapSource source, WriteableBitmap target)
-    {
-        var stride = target.PixelWidth * 4;
-        if (source.PixelWidth == target.PixelWidth && source.PixelHeight == target.PixelHeight)
-        {
-            var pixels = new byte[stride * target.PixelHeight];
-            source.CopyPixels(pixels, stride, 0);
-            target.WritePixels(new Int32Rect(0, 0, target.PixelWidth, target.PixelHeight), pixels, stride, 0);
-            return;
-        }
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-        {
-            var dipWidth = target.PixelWidth * 96.0 / target.DpiX;
-            var dipHeight = target.PixelHeight * 96.0 / target.DpiY;
-            dc.DrawImage(source, new Rect(0, 0, dipWidth, dipHeight));
-        }
-        var rtb = new RenderTargetBitmap(target.PixelWidth, target.PixelHeight, target.DpiX, target.DpiY, PixelFormats.Pbgra32);
-        rtb.Render(visual);
-        var pixelsOut = new byte[stride * target.PixelHeight];
-        rtb.CopyPixels(pixelsOut, stride, 0);
-        target.WritePixels(new Int32Rect(0, 0, target.PixelWidth, target.PixelHeight), pixelsOut, stride, 0);
-    }
-
-    private void CommitGeometryFill(Geometry geometry, MediaColor color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        bool isCalligraphy = _brushStyle == PaintBrushStyle.Calligraphy;
-        double inkFlow = 1.0;
-        Vector? strokeDirection = null;
-        if (isCalligraphy)
-        {
-            if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
-            {
-                inkFlow = calligraphyRenderer.LastInkFlow;
-                strokeDirection = calligraphyRenderer.LastStrokeDirection;
-                var coreGeometry = calligraphyRenderer.GetLastCoreGeometry();
-                if (coreGeometry != null)
-                {
-                    if (_calligraphyInkBloomEnabled)
-                    {
-                        var blooms = calligraphyRenderer.GetInkBloomGeometries();
-                        if (blooms != null)
-                        {
-                            foreach (var bloom in blooms)
-                            {
-                                var bloomBrush = new SolidColorBrush(color)
-                                {
-                                    Opacity = bloom.Opacity
-                                };
-                                bloomBrush.Freeze();
-                                RenderAndBlend(bloom.Geometry, bloomBrush, null, erase: false, null, coreGeometry);
-                            }
-                        }
-                    }
-                    RenderInkEdge(coreGeometry, color, inkFlow, strokeDirection);
-                    RenderInkCore(coreGeometry, color);
-                    return;
-                }
-            }
-        }
-        if (isCalligraphy)
-        {
-            RenderInkLayers(geometry, color, inkFlow, 1.0, strokeDirection);
-            return;
-        }
-        RenderAndBlend(geometry, brush, null, erase: false, null);
-    }
-
-    private void CommitGeometryStroke(Geometry geometry, MediaPen pen)
-    {
-        RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void EraseGeometry(Geometry geometry)
-    {
-        RenderAndBlend(geometry, MediaBrushes.White, null, erase: true, null);
-    }
-
-    private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
-    {
-        var solidBrush = new SolidColorBrush(color)
-        {
-            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
-        };
-        solidBrush.Freeze();
-        var mask = IsInkMaskEligible(geometry)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection)
-            : null;
-        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
-    }
-
-    private void RenderInkCore(Geometry geometry, MediaColor color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        RenderAndBlend(geometry, brush, null, erase: false, null);
-        if (!_calligraphySealEnabled)
-        {
-            return;
-        }
-        double sealWidth = Math.Max(_brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-        if (sealWidth <= 0)
-        {
-            return;
-        }
-        var pen = new MediaPen(brush, sealWidth);
-        pen.Freeze();
-        RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void RenderInkEdge(Geometry coreGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
-    {
-        return;
-    }
-    
-    private bool IsInkMaskEligible(Geometry geometry)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(_brushSize * 1.0, 14.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
-    }
-    
-
-    private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask, Geometry? clipGeometry = null)
-    {
-        EnsureRasterSurface();
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        if (!TryRenderGeometry(geometry, fill, pen, opacityMask, clipGeometry, out var rect, out var pixels, out var stride))
-        {
-            return;
-        }
-        if (erase)
-        {
-            ApplyEraseMask(rect, pixels, stride);
-        }
-        else
-        {
-            BlendSourceOver(rect, pixels, stride);
-        }
-        _hasDrawing = true;
-    }
-
-    private bool TryRenderGeometry(
-        Geometry geometry,
-        MediaBrush? fill,
-        MediaPen? pen,
-        MediaBrush? opacityMask,
-        Geometry? clipGeometry,
-        out Int32Rect destRect,
-        out byte[] pixels,
-        out int stride)
-    {
-        destRect = new Int32Rect(0, 0, 0, 0);
-        pixels = Array.Empty<byte>();
-        stride = 0;
-        if (_rasterSurface == null || geometry == null)
-        {
-            return false;
-        }
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = pen != null ? geometry.GetRenderBounds(pen) : geometry.Bounds;
-        if (bounds.IsEmpty)
-        {
-            return false;
-        }
-        bounds.Inflate(2, 2);
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var rawRect = new Int32Rect(
-            (int)Math.Floor(bounds.X * dpi.DpiScaleX),
-            (int)Math.Floor(bounds.Y * dpi.DpiScaleY),
-            (int)Math.Ceiling(bounds.Width * dpi.DpiScaleX),
-            (int)Math.Ceiling(bounds.Height * dpi.DpiScaleY));
-        var surfaceRect = new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
-        destRect = IntersectRects(rawRect, surfaceRect);
-        if (destRect.Width <= 0 || destRect.Height <= 0)
-        {
-            return false;
-        }
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-        {
-            var offsetX = destRect.X / dpi.DpiScaleX;
-            var offsetY = destRect.Y / dpi.DpiScaleY;
-            dc.PushTransform(new TranslateTransform(-offsetX, -offsetY));
-            if (clipGeometry != null)
-            {
-                dc.PushClip(clipGeometry);
-            }
-            if (opacityMask != null)
-            {
-                dc.PushOpacityMask(opacityMask);
-            }
-            dc.DrawGeometry(fill, pen, geometry);
-            if (opacityMask != null)
-            {
-                dc.Pop();
-            }
-            if (clipGeometry != null)
-            {
-                dc.Pop();
-            }
-            dc.Pop();
-        }
-        var rtb = new RenderTargetBitmap(destRect.Width, destRect.Height, _surfaceDpiX, _surfaceDpiY, PixelFormats.Pbgra32);
-        rtb.Render(visual);
-        stride = destRect.Width * 4;
-        pixels = new byte[stride * destRect.Height];
-        rtb.CopyPixels(pixels, stride, 0);
+        scaleX = _lastPhotoScaleX;
+        scaleY = _lastPhotoScaleY;
+        translateX = _lastPhotoTranslateX;
+        translateY = _lastPhotoTranslateY;
         return true;
     }
 
-    private MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection)
+
+
+    private bool TryBeginInvoke(Action action, DispatcherPriority priority)
     {
-        if (bounds.IsEmpty)
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
-            return null;
+            return false;
         }
-
-        int tileSize = (int)Math.Round(Math.Clamp(_brushSize * 2.2, 18, 90));
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
-        double baseAlpha = Lerp(0.68, 0.96, inkFlow);
-        double variation = Lerp(0.08, 0.24, dryFactor);
-        var tile = CreateInkNoiseTile(tileSize, baseAlpha, variation, _inkRandom.Next());
-
-        var texture = new ImageBrush(tile)
+        try
         {
-            TileMode = TileMode.Tile,
-            Viewport = new Rect(bounds.X, bounds.Y, tileSize, tileSize),
-            ViewportUnits = BrushMappingMode.Absolute,
-            Stretch = Stretch.None,
-            Opacity = Math.Clamp(0.72 + (inkFlow * 0.28), 0.6, 1.0)
-        };
-        ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor);
-        texture.Freeze();
-
-        var centerOpacity = Math.Clamp(0.95 + (inkFlow * 0.05), 0.85, 1.0);
-        var edgeOpacity = Math.Clamp(0.72 + (inkFlow * 0.08), 0.6, 0.9);
-        var radial = new RadialGradientBrush
+            Dispatcher.BeginInvoke(action, priority);
+            return true;
+        }
+        catch
         {
-            MappingMode = BrushMappingMode.Absolute,
-            Center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
-            GradientOrigin = new WpfPoint(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
-            RadiusX = bounds.Width * 0.55,
-            RadiusY = bounds.Height * 0.55
-        };
-        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
-        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
-        radial.Freeze();
-
-        var group = new DrawingGroup();
-        group.Children.Add(new GeometryDrawing(MediaBrushes.White, null, new RectangleGeometry(bounds)));
-        group.Children.Add(new GeometryDrawing(radial, null, new RectangleGeometry(bounds)));
-        group.Children.Add(new GeometryDrawing(texture, null, new RectangleGeometry(bounds)));
-        group.Freeze();
-        return new DrawingBrush(group) { Stretch = Stretch.None };
+            return false;
+        }
     }
 
-    private static void ApplyInkTextureTransform(ImageBrush brush, Rect bounds, Vector? strokeDirection, double dryFactor)
-    {
-        var dir = strokeDirection ?? new Vector(1, 0);
-        if (dir.LengthSquared < 0.0001)
-        {
-            dir = new Vector(1, 0);
-        }
-        else
-        {
-            dir.Normalize();
-        }
-
-        double angle = Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI;
-        double centerX = bounds.X + bounds.Width * 0.5;
-        double centerY = bounds.Y + bounds.Height * 0.5;
-        double stretch = Lerp(1.3, 1.8, dryFactor);
-        double squash = Lerp(0.85, 0.6, dryFactor);
-
-        var transforms = new TransformGroup();
-        transforms.Children.Add(new ScaleTransform(stretch, squash, centerX, centerY));
-        transforms.Children.Add(new RotateTransform(angle, centerX, centerY));
-        brush.Transform = transforms;
-    }
-
-    private static BitmapSource CreateInkNoiseTile(int size, double baseAlpha, double variation, int seed)
-    {
-        var rng = new Random(seed);
-        int grid = 14;
-        var gridValues = new double[grid + 1, grid + 1];
-
-        for (int y = 0; y <= grid; y++)
-        {
-            for (int x = 0; x <= grid; x++)
-            {
-                double jitter = (rng.NextDouble() * 2.0 - 1.0) * variation;
-                gridValues[x, y] = Math.Clamp(baseAlpha + jitter, 0.0, 1.0);
-            }
-        }
-
-        double angle = rng.NextDouble() * Math.PI;
-        double fx = Math.Cos(angle);
-        double fy = Math.Sin(angle);
-        double fiberFreq = 2.6 + rng.NextDouble() * 2.2;
-        double fiberPhase = rng.NextDouble() * Math.PI * 2.0;
-        double fiberAmp = variation * 0.2;
-
-        int stride = size * 4;
-        var pixels = new byte[stride * size];
-        double scale = grid / (double)(size - 1);
-
-        for (int y = 0; y < size; y++)
-        {
-            double gy = y * scale;
-            int y0 = (int)Math.Floor(gy);
-            int y1 = Math.Min(y0 + 1, grid);
-            double ty = gy - y0;
-
-            for (int x = 0; x < size; x++)
-            {
-                double gx = x * scale;
-                int x0 = (int)Math.Floor(gx);
-                int x1 = Math.Min(x0 + 1, grid);
-                double tx = gx - x0;
-
-                double n0 = Lerp(gridValues[x0, y0], gridValues[x1, y0], tx);
-                double n1 = Lerp(gridValues[x0, y1], gridValues[x1, y1], tx);
-                double noise = Lerp(n0, n1, ty);
-
-                double fiber = Math.Sin(((x * fx + y * fy) / size) * (Math.PI * 2.0 * fiberFreq) + fiberPhase) * fiberAmp;
-                double value = Math.Clamp(noise + fiber, 0.0, 1.0);
-                byte alpha = (byte)Math.Round(value * 255);
-
-                int idx = (y * size + x) * 4;
-                pixels[idx] = alpha;
-                pixels[idx + 1] = alpha;
-                pixels[idx + 2] = alpha;
-                pixels[idx + 3] = alpha;
-            }
-        }
-
-        var bitmap = new WriteableBitmap(size, size, 96, 96, PixelFormats.Pbgra32, null);
-        bitmap.WritePixels(new Int32Rect(0, 0, size, size), pixels, stride, 0);
-        bitmap.Freeze();
-        return bitmap;
-    }
-
-    private static double Lerp(double a, double b, double t)
-    {
-        return a + (b - a) * t;
-    }
-
-    private void BlendSourceOver(Int32Rect rect, byte[] srcPixels, int srcStride)
-    {
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        var destStride = rect.Width * 4;
-        var destPixels = new byte[destStride * rect.Height];
-        _rasterSurface.CopyPixels(rect, destPixels, destStride, 0);
-        for (int y = 0; y < rect.Height; y++)
-        {
-            var srcRow = y * srcStride;
-            var destRow = y * destStride;
-            for (int x = 0; x < rect.Width; x++)
-            {
-                int i = srcRow + x * 4;
-                byte srcA = srcPixels[i + 3];
-                if (srcA == 0)
-                {
-                    continue;
-                }
-                int invA = 255 - srcA;
-                int d = destRow + x * 4;
-                destPixels[d] = (byte)(srcPixels[i] + destPixels[d] * invA / 255);
-                destPixels[d + 1] = (byte)(srcPixels[i + 1] + destPixels[d + 1] * invA / 255);
-                destPixels[d + 2] = (byte)(srcPixels[i + 2] + destPixels[d + 2] * invA / 255);
-                destPixels[d + 3] = (byte)(srcA + destPixels[d + 3] * invA / 255);
-            }
-        }
-        _rasterSurface.WritePixels(rect, destPixels, destStride, 0);
-    }
-
-    private void ApplyEraseMask(Int32Rect rect, byte[] maskPixels, int maskStride)
-    {
-        if (_rasterSurface == null)
-        {
-            return;
-        }
-        var destStride = rect.Width * 4;
-        var destPixels = new byte[destStride * rect.Height];
-        _rasterSurface.CopyPixels(rect, destPixels, destStride, 0);
-        for (int y = 0; y < rect.Height; y++)
-        {
-            var maskRow = y * maskStride;
-            var destRow = y * destStride;
-            for (int x = 0; x < rect.Width; x++)
-            {
-                int i = maskRow + x * 4;
-                byte maskA = maskPixels[i + 3];
-                if (maskA == 0)
-                {
-                    continue;
-                }
-                int invA = 255 - maskA;
-                int d = destRow + x * 4;
-                destPixels[d] = (byte)(destPixels[d] * invA / 255);
-                destPixels[d + 1] = (byte)(destPixels[d + 1] * invA / 255);
-                destPixels[d + 2] = (byte)(destPixels[d + 2] * invA / 255);
-                destPixels[d + 3] = (byte)(destPixels[d + 3] * invA / 255);
-            }
-        }
-        _rasterSurface.WritePixels(rect, destPixels, destStride, 0);
-    }
-
-    private static Int32Rect IntersectRects(Int32Rect a, Int32Rect b)
-    {
-        int x = Math.Max(a.X, b.X);
-        int y = Math.Max(a.Y, b.Y);
-        int right = Math.Min(a.X + a.Width, b.X + b.Width);
-        int bottom = Math.Min(a.Y + a.Height, b.Y + b.Height);
-        int width = right - x;
-        int height = bottom - y;
-        if (width <= 0 || height <= 0)
-        {
-            return new Int32Rect(0, 0, 0, 0);
-        }
-        return new Int32Rect(x, y, width, height);
-    }
 }

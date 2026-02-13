@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App;
@@ -6,6 +8,7 @@ namespace ClassroomToolkit.App;
 public partial class TimerSetDialog : Window
 {
     private bool _updating;
+    private DispatcherTimer? _repeatTimer;
 
     public TimerSetDialog(int minutes, int seconds)
     {
@@ -40,6 +43,90 @@ public partial class TimerSetDialog : Window
             return;
         }
         SetMinutes((int)Math.Round(e.NewValue), updateSlider: false);
+    }
+
+    private void OnMinutesUpClick(object sender, RoutedEventArgs e)
+    {
+        if (_updating)
+        {
+            return;
+        }
+        if (!int.TryParse(MinutesBox.Text, out var minutes))
+        {
+            minutes = 0;
+        }
+        minutes = Math.Min(minutes + 1, 150);
+        SetMinutes(minutes, updateSlider: minutes <= 25);
+    }
+
+    private void OnMinutesDownClick(object sender, RoutedEventArgs e)
+    {
+        if (_updating)
+        {
+            return;
+        }
+        if (!int.TryParse(MinutesBox.Text, out var minutes))
+        {
+            minutes = 0;
+        }
+        minutes = Math.Max(minutes - 1, 0);
+        SetMinutes(minutes, updateSlider: minutes <= 25);
+    }
+
+    private void OnMinutesUpMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        StartRepeatTimer(isIncrement: true);
+        e.Handled = true;
+    }
+
+    private void OnMinutesDownMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        StartRepeatTimer(isIncrement: false);
+        e.Handled = true;
+    }
+
+    private void OnMinutesMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        StopRepeatTimer();
+    }
+
+    private void OnMinutesMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        StopRepeatTimer();
+    }
+
+    private void StartRepeatTimer(bool isIncrement)
+    {
+        StopRepeatTimer();
+        _repeatTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300) // 初始延迟 300ms
+        };
+        int tickCount = 0;
+        _repeatTimer.Tick += (_, _) =>
+        {
+            tickCount++;
+            if (tickCount == 1)
+            {
+                // 首次触发后，加快速度为 100ms 间隔
+                _repeatTimer.Interval = TimeSpan.FromMilliseconds(100);
+            }
+            if (isIncrement)
+            {
+                OnMinutesUpClick(this, new RoutedEventArgs());
+            }
+            else
+            {
+                OnMinutesDownClick(this, new RoutedEventArgs());
+            }
+        };
+        _repeatTimer.Start();
+    }
+
+    private void StopRepeatTimer()
+    {
+        _repeatTimer?.Stop();
+        _repeatTimer = null;
     }
 
     private void OnSecondsTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)

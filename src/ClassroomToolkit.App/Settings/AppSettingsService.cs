@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.Infra.Settings;
@@ -47,6 +49,8 @@ public sealed class AppSettingsService
             settings.RollCallSpeechVoiceId = GetString(roll, "speech_voice_id", settings.RollCallSpeechVoiceId);
             settings.RollCallSpeechOutputId = GetString(roll, "speech_output_id", settings.RollCallSpeechOutputId);
             settings.RemotePresenterKey = GetString(roll, "remote_roll_key", settings.RemotePresenterKey);
+            settings.RollCallRemoteGroupSwitchEnabled = GetBool(roll, "remote_group_switch_enabled", settings.RollCallRemoteGroupSwitchEnabled);
+            settings.RemoteGroupSwitchKey = GetString(roll, "remote_group_switch_key", settings.RemoteGroupSwitchKey);
             settings.RollCallCurrentClass = GetString(roll, "current_class", settings.RollCallCurrentClass);
             settings.RollCallCurrentGroup = GetString(roll, "current_group", settings.RollCallCurrentGroup);
             var geometry = GetString(roll, "geometry", string.Empty);
@@ -64,6 +68,8 @@ public sealed class AppSettingsService
             settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
             settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
             settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
+            settings.WhiteboardPreset = ResolveWhiteboardPreset(paint, settings.WhiteboardPreset);
+            settings.CalligraphyPreset = ResolveCalligraphyPreset(paint, settings.CalligraphyPreset);
             settings.CalligraphyInkBloomEnabled = GetBool(
                 paint,
                 "calligraphy_ink_bloom_enabled",
@@ -72,6 +78,10 @@ public sealed class AppSettingsService
                 paint,
                 "calligraphy_seal_enabled",
                 settings.CalligraphySealEnabled);
+            settings.CalligraphyOverlayOpacityThreshold = GetByte(
+                paint,
+                "calligraphy_overlay_opacity_threshold",
+                settings.CalligraphyOverlayOpacityThreshold);
             settings.BoardOpacity = 255;
             settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
             settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
@@ -90,6 +100,35 @@ public sealed class AppSettingsService
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
             settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
+            settings.InkCacheEnabled = GetBool(paint, "ink_cache_enabled", settings.InkCacheEnabled);
+            settings.InkRecordEnabled = GetBool(paint, "ink_record_enabled", settings.InkRecordEnabled);
+            settings.InkReplayPreviousEnabled = GetBool(paint, "ink_replay_previous_enabled", settings.InkReplayPreviousEnabled);
+            settings.InkRetentionDays = GetInt(paint, "ink_retention_days", settings.InkRetentionDays);
+            settings.InkPhotoRootPath = GetString(paint, "ink_photo_root_path", settings.InkPhotoRootPath);
+            settings.PhotoFavoriteFolders = ParseList(GetString(paint, "photo_favorites", string.Empty));
+            settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
+            settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
+            settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
+            settings.PhotoUnifiedTransformEnabled = GetBool(
+                paint,
+                "photo_unified_transform_enabled",
+                settings.PhotoUnifiedTransformEnabled);
+            settings.PhotoUnifiedScaleX = GetDouble(
+                paint,
+                "photo_unified_scale_x",
+                settings.PhotoUnifiedScaleX);
+            settings.PhotoUnifiedScaleY = GetDouble(
+                paint,
+                "photo_unified_scale_y",
+                settings.PhotoUnifiedScaleY);
+            settings.PhotoUnifiedTranslateX = GetDouble(
+                paint,
+                "photo_unified_translate_x",
+                settings.PhotoUnifiedTranslateX);
+            settings.PhotoUnifiedTranslateY = GetDouble(
+                paint,
+                "photo_unified_translate_y",
+                settings.PhotoUnifiedTranslateY);
         }
         if (data.TryGetValue("Launcher", out var launcher))
         {
@@ -133,7 +172,10 @@ public sealed class AppSettingsService
         roll["speech_engine"] = settings.RollCallSpeechEngine ?? "pyttsx3";
         roll["speech_voice_id"] = settings.RollCallSpeechVoiceId ?? string.Empty;
         roll["speech_output_id"] = settings.RollCallSpeechOutputId ?? string.Empty;
+        roll["remote_roll_enabled"] = settings.RollCallRemoteEnabled ? "True" : "False";
         roll["remote_roll_key"] = settings.RemotePresenterKey;
+        roll["remote_group_switch_enabled"] = settings.RollCallRemoteGroupSwitchEnabled ? "True" : "False";
+        roll["remote_group_switch_key"] = settings.RemoteGroupSwitchKey;
         roll["current_class"] = settings.RollCallCurrentClass ?? string.Empty;
         roll["current_group"] = settings.RollCallCurrentGroup ?? "全部";
         if (HasGeometry(settings))
@@ -148,8 +190,12 @@ public sealed class AppSettingsService
         var paint = GetOrCreate(data, "Paint");
         paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_style"] = settings.BrushStyle.ToString();
+        paint["whiteboard_preset"] = settings.WhiteboardPreset.ToString();
+        paint["calligraphy_preset"] = settings.CalligraphyPreset.ToString();
         paint["calligraphy_ink_bloom_enabled"] = settings.CalligraphyInkBloomEnabled ? "True" : "False";
         paint["calligraphy_seal_enabled"] = settings.CalligraphySealEnabled ? "True" : "False";
+        paint["calligraphy_overlay_opacity_threshold"] =
+            settings.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture);
         paint["eraser_size"] = settings.EraserSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_opacity"] = settings.BrushOpacity.ToString(CultureInfo.InvariantCulture);
         paint["board_opacity"] = settings.BoardOpacity.ToString(CultureInfo.InvariantCulture);
@@ -168,6 +214,31 @@ public sealed class AppSettingsService
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
         paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
+        paint["ink_cache_enabled"] = settings.InkCacheEnabled ? "True" : "False";
+        paint["ink_record_enabled"] = settings.InkRecordEnabled ? "True" : "False";
+        paint["ink_replay_previous_enabled"] = settings.InkReplayPreviousEnabled ? "True" : "False";
+        paint["ink_retention_days"] = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
+        paint["ink_photo_root_path"] = settings.InkPhotoRootPath ?? @"D:\ClassroomToolkit\Ink\Photos";
+        paint["photo_favorites"] = JoinList(settings.PhotoFavoriteFolders);
+        paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
+        paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
+        paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
+        paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
+        paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_x"] = settings.PhotoUnifiedTranslateX.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_y"] = settings.PhotoUnifiedTranslateY.ToString(CultureInfo.InvariantCulture);
+        paint.Remove("ink_sidebar_x");
+        paint.Remove("ink_sidebar_y");
+        paint.Remove("ink_sidebar_enabled");
+        paint.Remove("photo_current_page");
+        paint.Remove("photo_current_index");
+        paint.Remove("pdf_current_page");
+        paint.Remove("image_current_index");
+        paint.Remove("ink_auto_save_enabled");
+        paint.Remove("ppt_current_slide");
+        paint.Remove("wps_current_slide");
+        paint.Remove("presentation_current_page");
 
         var launcher = GetOrCreate(data, "Launcher");
         launcher["x"] = settings.LauncherX.ToString(CultureInfo.InvariantCulture);
@@ -228,8 +299,16 @@ public sealed class AppSettingsService
         {
             return fallback;
         }
-        return value.Trim().Equals("true", StringComparison.OrdinalIgnoreCase) ||
-               value.Trim().Equals("1", StringComparison.OrdinalIgnoreCase);
+        var normalized = value.Trim();
+        if (normalized.Equals("true", StringComparison.OrdinalIgnoreCase) || normalized.Equals("1", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (normalized.Equals("false", StringComparison.OrdinalIgnoreCase) || normalized.Equals("0", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return fallback;
     }
 
     private static PaintShapeType GetShapeType(string raw)
@@ -256,6 +335,45 @@ public sealed class AppSettingsService
             return parsed;
         }
         return PaintBrushStyle.StandardRibbon;
+    }
+
+    private static WhiteboardBrushPreset ResolveWhiteboardPreset(Dictionary<string, string> section, WhiteboardBrushPreset fallback)
+    {
+        if (section.TryGetValue("whiteboard_preset", out var raw) &&
+            Enum.TryParse<WhiteboardBrushPreset>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+        if (section.TryGetValue("whiteboard_preset", out var legacyPreset) &&
+            legacyPreset.Trim().Equals("Compatibility", StringComparison.OrdinalIgnoreCase))
+        {
+            return WhiteboardBrushPreset.Sharp;
+        }
+
+        if (section.TryGetValue("whiteboard_smooth_mode", out var legacyRaw))
+        {
+            bool legacy = GetBool(section, "whiteboard_smooth_mode", true);
+            return legacy ? WhiteboardBrushPreset.Smooth : WhiteboardBrushPreset.Sharp;
+        }
+
+        return fallback;
+    }
+
+    private static CalligraphyBrushPreset ResolveCalligraphyPreset(Dictionary<string, string> section, CalligraphyBrushPreset fallback)
+    {
+        if (section.TryGetValue("calligraphy_preset", out var raw) &&
+            Enum.TryParse<CalligraphyBrushPreset>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (section.TryGetValue("calligraphy_sharp_mode", out var legacyRaw))
+        {
+            bool legacy = GetBool(section, "calligraphy_sharp_mode", true);
+            return legacy ? CalligraphyBrushPreset.Sharp : CalligraphyBrushPreset.Soft;
+        }
+
+        return fallback;
     }
 
     private static bool HasGeometry(AppSettings settings)
@@ -307,5 +425,26 @@ public sealed class AppSettingsService
         return string.Create(
             CultureInfo.InvariantCulture,
             $"{safeWidth}x{safeHeight}{x:+#;-#;0}{y:+#;-#;0}");
+    }
+
+    private static List<string> ParseList(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return new List<string>();
+        }
+        return raw.Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Trim())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+    }
+
+    private static string JoinList(IReadOnlyList<string> items)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return string.Empty;
+        }
+        return string.Join("|", items.Where(item => !string.IsNullOrWhiteSpace(item)));
     }
 }

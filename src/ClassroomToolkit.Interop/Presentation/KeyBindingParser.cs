@@ -35,6 +35,15 @@ public static class KeyBindingParser
 
         var modifiers = KeyModifiers.None;
         VirtualKey? key = null;
+        bool TryAssignKey(VirtualKey candidate)
+        {
+            if (key.HasValue && key.Value != candidate)
+            {
+                return false;
+            }
+            key = candidate;
+            return true;
+        }
         foreach (var token in tokens)
         {
             switch (token)
@@ -52,17 +61,26 @@ public static class KeyBindingParser
                 default:
                     if (TokenMap.TryGetValue(token, out var mapped))
                     {
-                        key = mapped;
+                        if (!TryAssignKey(mapped))
+                        {
+                            return false;
+                        }
                         break;
                     }
                     if (TryParseAlphaNumeric(token, out var alphaNumeric))
                     {
-                        key = alphaNumeric;
+                        if (!TryAssignKey(alphaNumeric))
+                        {
+                            return false;
+                        }
                         break;
                     }
                     if (TryParseFunctionKey(token, out var functionKey))
                     {
-                        key = functionKey;
+                        if (!TryAssignKey(functionKey))
+                        {
+                            return false;
+                        }
                     }
                     break;
             }

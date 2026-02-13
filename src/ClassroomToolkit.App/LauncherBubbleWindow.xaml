@@ -13,26 +13,29 @@
     <Grid Background="Transparent">
         <!-- 悬浮球主体 -->
         <Border Width="48" Height="48" 
-                CornerRadius="100"
-                BorderThickness="1.5"
-                BorderBrush="{StaticResource Brush_White_Translucent}"
-                Background="{StaticResource Gradient_Launcher}">
+                CornerRadius="24"
+                BorderThickness="1"
+                BorderBrush="{StaticResource Brush_Border}"
+                Background="{StaticResource Brush_Background_L2}"
+                TextElement.Foreground="{StaticResource Brush_Text_Primary}">
             <Border.Effect>
                 <!-- 阴影让它浮起来 -->
-                <DropShadowEffect Color="#204FACFE" BlurRadius="16" ShadowDepth="4" Opacity="0.6"/>
+                <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.5"/>
             </Border.Effect>
             
             <!-- 图标 -->
-            <Path Data="{StaticResource Icon_Apps}" 
-                  Fill="White" 
-                  Stretch="Uniform" 
-                  Width="22" Height="22"
-                  HorizontalAlignment="Center" 
-                  VerticalAlignment="Center">
-                <Path.Effect>
-                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.2"/>
-                </Path.Effect>
-            </Path>
+            <Grid>
+                 <Path Data="{StaticResource Icon_Apps}" 
+                       Fill="{StaticResource Brush_Primary}" 
+                       Stretch="Uniform" 
+                       Width="20" Height="20"
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center">
+                     <Path.Effect>
+                         <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/>
+                     </Path.Effect>
+                 </Path>
+            </Grid>
             
             <!-- 鼠标交互反馈 -->
             <Border.Triggers>
@@ -41,6 +44,7 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Width" To="52" Duration="0:0:0.1"/>
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="52" Duration="0:0:0.1"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="{StaticResource Color_Bg_Input}" Duration="0:0:0.1"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
@@ -49,6 +53,7 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Width" To="48" Duration="0:0:0.2"/>
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="48" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="{StaticResource Color_Bg_Surface}" Duration="0:0:0.2"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>

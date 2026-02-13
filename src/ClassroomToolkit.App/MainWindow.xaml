@@ -17,22 +17,22 @@
         WindowStartupLocation="Manual">
 
     <Window.Resources>
-        <!-- 主功能磁贴样式 -->
+        <!-- 主功能磁贴 (Hero Tile) - Compact & Modern -->
         <Style x:Key="Style_HeroTile" TargetType="Button">
-            <Setter Property="Width" Value="86"/>
-            <Setter Property="Height" Value="86"/>
-            <Setter Property="Margin" Value="6"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Width" Value="72"/>
+            <Setter Property="Height" Value="72"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <!-- 阴影层 -->
-                            <Border x:Name="shadow" CornerRadius="18" Background="White" Margin="3" BorderBrush="Transparent">
+                            <!-- 弥散光影底层 (仅悬停时显示) -->
+                            <Border x:Name="glow" CornerRadius="16" Background="{StaticResource Brush_Primary}" Margin="10" Opacity="0">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#B0C4DE" BlurRadius="12" ShadowDepth="4" Opacity="0.18"/>
+                                    <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="24" ShadowDepth="0" Opacity="0.5"/>
                                 </Border.Effect>
                             </Border>
 
@@ -40,124 +40,95 @@
                             <Border x:Name="border" 
                                     Background="{TemplateBinding Background}"
                                     CornerRadius="16"
-                                    BorderBrush="{StaticResource Brush_Border_Subtle}"
+                                    BorderBrush="{StaticResource Brush_Border_Glass}"
                                     BorderThickness="1"
-                                    Margin="3">
+                                    Margin="2">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="12"/>
+                                        <RowDefinition Height="10"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- 图标区域 -->
-                                    <Border Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                            Width="42" Height="42" CornerRadius="21"
-                                            Background="{StaticResource Brush_Surface_Tint}">
+                                    <!-- 图标底色 (Squircle) -->
+                                    <Border x:Name="iconBg" 
+                                            Grid.Row="0" 
+                                            VerticalAlignment="Center" HorizontalAlignment="Center"
+                                            Width="32" Height="32" CornerRadius="10"
+                                            Background="{StaticResource Brush_Background_L3}">
+                                        <!-- 图标 (Fill 模式) -->
                                         <Path x:Name="icon" 
                                               Data="{TemplateBinding Tag}" 
-                                              Fill="{StaticResource Brush_Primary}" 
+                                              Fill="{StaticResource Brush_Primary}"
                                               Stretch="Uniform" 
-                                              Width="20" Height="20"
+                                              Width="18" Height="18"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 
-                                    <!-- 文字区域 -->
+                                    <!-- 文字 -->
                                     <TextBlock Grid.Row="1" 
                                                Text="{TemplateBinding Content}" 
                                                HorizontalAlignment="Center"
                                                FontFamily="Microsoft YaHei UI"
-                                               FontSize="13"
+                                               FontSize="11"
                                                FontWeight="SemiBold"
-                                               Foreground="{StaticResource Brush_Text_Primary}"/>
+                                               Foreground="{StaticResource Brush_Text_Secondary}"/>
                                 </Grid>
                             </Border>
                         </Grid>
                         
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <!-- 悬停：卡片上浮，图标变色 -->
                                 <Setter TargetName="border" Property="RenderTransform">
                                     <Setter.Value>
-                                        <TranslateTransform Y="-3"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="shadow" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect Color="{StaticResource Color_Primary_Main}" BlurRadius="20" ShadowDepth="8" Opacity="0.25"/>
+                                        <TranslateTransform Y="-2"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
-                                <!-- 图标反白高亮 -->
-                                <Setter TargetName="icon" Property="Fill" Value="White"/>
-                                <Setter TargetName="icon" Property="Width" Value="24"/> <!-- 微缩放 -->
-                                <Setter TargetName="icon" Property="Height" Value="24"/>
-                                <!-- 图标背景变渐变 -->
-                                <Setter TargetName="icon" Property="Fill" Value="White"/>
-                                <Setter TargetName="icon" Property="Effect">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                                <Setter TargetName="glow" Property="Opacity" Value="0.6"/>
+                                <!-- 悬停变色 -->
+                                <Setter TargetName="iconBg" Property="Background" Value="{StaticResource Brush_Primary}"/>
+                                <Setter TargetName="icon" Property="Fill" Value="#FAFAFA"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="RenderTransform">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="White" BlurRadius="8" Opacity="0.5"/>
+                                        <TranslateTransform Y="1"/>
                                     </Setter.Value>
                                 </Setter>
+                                <Setter TargetName="glow" Property="Opacity" Value="0.3"/>
                             </Trigger>
-                            <!-- 特殊触发器：无法直接在Style Trigger中设置Border.Background为渐变Brush资源(若它是Freezable)，
-                                 这里简化处理，悬停时直接改色 -->
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="icon" Property="Fill" Value="White"/>
-                            </MultiTrigger>
-                            
-                            <!-- 解决办法：使用动画或更复杂的模板。简化起见，悬停时只改变阴影和位移，
-                                 图标背景可以用Brush_Primary -->
-                             <Trigger Property="IsMouseOver" Value="True">
-                                 <Setter TargetName="icon" Property="Fill" Value="{StaticResource Brush_Primary_Dark}"/> 
-                                 <!-- 修正：保持简单，图标变深色，或者背景变色 -->
-                                 <Setter TargetName="icon" Property="Fill" Value="#FFFFFF"/>
-                             </Trigger>
-
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            
-            <!-- 针对悬停时图标背景变色的补丁 (Style Trigger限制较多，直接覆盖模板更稳，
-                 但在Style里只能通过Name引用。上面的Trigger逻辑有点乱，重新理清：
-                 悬停时：卡片上浮，阴影加深。图标背景变品牌色，图标变白。) -->
-            <Style.Triggers>
-                 <Trigger Property="IsMouseOver" Value="True">
-                     <!-- 这是一个简化方案，复杂的变色最好在模板Trigger里写 -->
-                 </Trigger>
-            </Style.Triggers>
         </Style>
-        
-        <!-- 修正模板 Trigger 中的背景设置 (因为Setter Value 必须是资源) -->
-        <!-- 上面的 Style 已包含模板 Trigger，这里不再重复 -->
 
         <!-- 迷你工具按钮 -->
         <Style x:Key="Style_MiniTool" TargetType="Button">
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="Transparent">
-                            <Path x:Name="ico" Data="{TemplateBinding Tag}" Fill="{StaticResource Brush_Text_Secondary}" 
-                                  Stretch="Uniform" Width="18" Height="18" 
+                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}">
+                            <Path x:Name="ico" Data="{TemplateBinding Tag}" 
+                                  Fill="{StaticResource Brush_Text_Tertiary}"
+                                  Stretch="Uniform" Width="15" Height="15" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Background_L3}"/>
-                                <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Text_Primary}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                                <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Primary}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Border}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -169,14 +140,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="Transparent">
-                            <Path x:Name="ico" Data="{TemplateBinding Tag}" Fill="{StaticResource Brush_Text_Secondary}" 
-                                  Stretch="Uniform" Width="18" Height="18" 
+                        <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}">
+                            <Path x:Name="ico" Data="{TemplateBinding Tag}" 
+                                  Fill="{StaticResource Brush_Text_Tertiary}"
+                                  Stretch="Uniform" Width="15" Height="15" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#1AEF4444"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Danger_Surface}"/>
                                 <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Danger}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -187,40 +159,39 @@
 
     </Window.Resources>
 
-    <!-- 主布局容器 -->
+    <!-- 主布局容器 (Atmospheric Gradient) -->
     <Border x:Name="MainContainer"
-            CornerRadius="22"
-            Background="#FDFDFD"
+            CornerRadius="20"
+            Background="{StaticResource Brush_Window_Atmosphere}"
             BorderThickness="1"
-            BorderBrush="{StaticResource Brush_White_Translucent_Low}"
+            BorderBrush="{StaticResource Brush_Border_Glass}"
             MouseLeftButtonDown="OnDragAreaMouseDown">
         
         <Border.Effect>
-            <!-- 全局环境光阴影 -->
-            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="10" Opacity="0.25"/>
+            <!-- 柔和的环境光阴影 (Deep & Blur) -->
+            <DropShadowEffect Color="#000000" BlurRadius="32" ShadowDepth="8" Opacity="0.6"/>
         </Border.Effect>
 
-        <Grid Margin="4">
+        <Grid Margin="6,4,6,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- 拖拽条 -->
                 <RowDefinition Height="Auto"/> <!-- 功能区 -->
                 <RowDefinition Height="Auto"/> <!-- 工具栏 -->
             </Grid.RowDefinitions>
 
-            <!-- 1. 顶部装饰 (拖拽把手) -->
-            <Grid Grid.Row="0" Height="12" Background="Transparent" VerticalAlignment="Top">
-                <Rectangle Width="32" Height="3" RadiusX="1.5" RadiusY="1.5" 
-                           Fill="{StaticResource Brush_Border}" 
-                           Opacity="0.6" 
-                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            <!-- 1. 顶部装饰 (拖拽把手 - Pill) -->
+            <Grid Grid.Row="0" Height="14" Background="Transparent" VerticalAlignment="Top">
+                <Rectangle Width="28" Height="4" RadiusX="2" RadiusY="2" 
+                           Fill="{StaticResource Brush_Border_Light}"
+                           VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5"/>
             </Grid>
 
             <!-- 2. 核心功能区 -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,4,6">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                 <!-- 屏幕画笔 -->
                 <Button x:Name="PaintButton" 
                         Style="{StaticResource Style_HeroTile}"
-                        Content="屏幕画笔"
+                        Content="{Binding PaintButtonText}"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
                         ToolTip="开启画笔 (长按设置)"
@@ -229,37 +200,38 @@
                 <!-- 点名/计时 -->
                 <Button x:Name="RollCallButton" 
                         Style="{StaticResource Style_HeroTile}"
-                        Content="课堂互动"
+                        Content="{Binding RollCallButtonText}"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
                         ToolTip="开启点名 (长按设置)"
                         behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}"/>
             </StackPanel>
 
-            <!-- 3. 底部工具栏 -->
+            <!-- 3. 底部工具栏 (Floating Capsule) -->
             <Border Grid.Row="2" 
-                    Background="{StaticResource Brush_Surface_Tint}" 
-                    CornerRadius="12" 
-                    Padding="4,2" 
-                    Margin="8,0,8,8">
+                    Background="{StaticResource Brush_Glass_Surface}" 
+                    CornerRadius="14" 
+                    BorderBrush="{StaticResource Brush_Border_Glass}"
+                    BorderThickness="1"
+                    Padding="8,4" 
+                    Margin="8,0,8,4"
+                    HorizontalAlignment="Center">
+                
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- 最小化 -->
                     <Button Grid.Column="0" x:Name="MinimizeButton"
                             Style="{StaticResource Style_MiniTool}"
-                            Click="OnMinimizeClick" ToolTip="最小化">
-                        <Button.Tag>
-                            <Geometry>M4,12 L14,12 L14,14 L4,14 Z</Geometry>
-                        </Button.Tag>
-                    </Button>
+                            Tag="{StaticResource Icon_Minimize}"
+                            Click="OnMinimizeClick" ToolTip="最小化"/>
 
                     <!-- 分隔 -->
-                    <Rectangle Grid.Column="1" Width="1" Height="16" Fill="{StaticResource Brush_Border_Medium}" Opacity="0.5"/>
+                    <Rectangle Grid.Column="1" Width="1" Height="14" Fill="{StaticResource Brush_Border_Light}" Margin="4,0" Opacity="0.5"/>
 
                     <!-- 右侧功能 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -273,7 +245,7 @@
                                 Tag="{StaticResource Icon_Info}"
                                 Click="OnAboutClick" ToolTip="关于软件"/>
 
-                        <Rectangle Width="1" Height="16" Fill="{StaticResource Brush_Border_Medium}" Margin="4,0" Opacity="0.5"/>
+                        <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Light}" Margin="4,0" Opacity="0.5"/>
                         
                         <Button x:Name="ExitButton"
                                 Style="{StaticResource Style_MiniDanger}"

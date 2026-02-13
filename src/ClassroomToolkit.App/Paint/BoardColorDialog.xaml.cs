@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using MediaColor = System.Windows.Media.Color;
 using WpfButton = System.Windows.Controls.Button;
@@ -66,6 +67,7 @@ public partial class BoardColorDialog : Window
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
+        presenter.SetValue(TextElement.ForegroundProperty, new TemplateBindingExtension(WpfButton.ForegroundProperty));
         border.AppendChild(presenter);
         
         template.VisualTree = border;
@@ -92,3 +94,4 @@ public partial class BoardColorDialog : Window
         return luminance >= 160 ? Colors.Black : Colors.White;
     }
 }
+

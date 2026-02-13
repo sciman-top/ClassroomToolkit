@@ -51,6 +51,7 @@ public sealed class TimerEngine
     {
         _countdownSeconds = Math.Max(0, minutes * 60 + seconds);
         _secondsLeft = _countdownSeconds;
+        _reminderCounter = 0;
     }
 
     public void SetState(TimerMode mode, int countdownSeconds, int secondsLeft, int stopwatchSeconds, bool running)
@@ -65,6 +66,11 @@ public sealed class TimerEngine
 
     public void Start()
     {
+        if (Mode == TimerMode.Clock)
+        {
+            Running = false;
+            return;
+        }
         Running = true;
     }
 
@@ -75,6 +81,11 @@ public sealed class TimerEngine
 
     public void Toggle()
     {
+        if (Mode == TimerMode.Clock)
+        {
+            Running = false;
+            return;
+        }
         Running = !Running;
     }
 
@@ -103,43 +114,45 @@ public sealed class TimerEngine
         {
             return;
         }
-        for (var i = 0; i < totalSeconds; i++)
+        if (Mode == TimerMode.Stopwatch)
         {
-            TickOneSecond();
+            _stopwatchSeconds = Math.Max(0, _stopwatchSeconds + totalSeconds);
+            return;
         }
-    }
-
-    private void TickOneSecond()
-    {
         if (Mode == TimerMode.Countdown)
         {
-            if (_secondsLeft > 0)
+            var tickSeconds = Math.Min(totalSeconds, _secondsLeft);
+            if (tickSeconds <= 0)
             {
-                _secondsLeft--;
-                TriggerReminder();
-                if (_secondsLeft == 0)
-                {
-                    Running = false;
-                    TimerCompleted?.Invoke();
-                }
+                return;
             }
-        }
-        else if (Mode == TimerMode.Stopwatch)
-        {
-            _stopwatchSeconds++;
+            _secondsLeft -= tickSeconds;
+            TriggerReminder(tickSeconds);
+            if (_secondsLeft == 0)
+            {
+                Running = false;
+                TimerCompleted?.Invoke();
+            }
         }
     }
 
-    private void TriggerReminder()
+    private void TriggerReminder(int elapsedSeconds)
     {
-        if (_reminderSeconds <= 0 || Mode != TimerMode.Countdown)
+        if (_reminderSeconds <= 0 || Mode != TimerMode.Countdown || elapsedSeconds <= 0)
         {
             return;
         }
-        _reminderCounter++;
-        if (_reminderCounter >= _reminderSeconds)
+        var total = _reminderCounter + elapsedSeconds;
+        var triggers = total / _reminderSeconds;
+        _reminderCounter = total % _reminderSeconds;
+        if (triggers <= 0)
         {
-            _reminderCounter = 0;
+            return;
+        }
+        // Cap triggers to avoid sound storm on large elapsed jumps
+        triggers = Math.Min(triggers, 3);
+        for (var i = 0; i < triggers; i++)
+        {
             ReminderTriggered?.Invoke();
         }
     }

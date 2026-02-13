@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
@@ -47,10 +48,20 @@ public sealed class Win32PresentationResolver
                 {
                     return true;
                 }
+                // Log ALL PowerPoint windows (before check filtering)
+                if (info.ProcessName.Contains("powerpnt", StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Resolver] PPT window BEFORE check: classes={string.Join(",", info.ClassNames)}");
+                }
                 var check = BuildWindowCheck(hwnd, info, classifier);
                 if (check == null)
                 {
                     return true;
+                }
+                // Log all Office candidate windows
+                if (check.Type == PresentationType.Office && allowOffice)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Resolver] Office candidate: process={info.ProcessName}, classes={string.Join(",", info.ClassNames)}, score={check.Score}, classMatch={check.ClassMatch}, fullscreen={check.IsFullscreen}");
                 }
                 if (check.Type == PresentationType.Wps && allowWps && check.Score > wpsScore)
                 {
@@ -66,6 +77,7 @@ public sealed class Win32PresentationResolver
             },
             IntPtr.Zero);
 
+        System.Diagnostics.Debug.WriteLine($"[Resolver] Final: wpsValid={wpsTarget.IsValid}, officeValid={officeTarget.IsValid}, officeScore={officeScore}");
         if (wpsTarget.IsValid)
         {
             return wpsTarget;
@@ -75,6 +87,65 @@ public sealed class Win32PresentationResolver
             return officeTarget;
         }
         return PresentationTarget.Empty;
+    }
+
+    public PresentationTarget ResolveFullscreenPresentationTarget(
+        PresentationClassifier classifier,
+        bool allowWps,
+        bool allowOffice,
+        uint? excludeProcessId = null)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return PresentationTarget.Empty;
+        }
+
+        PresentationTarget bestTarget = PresentationTarget.Empty;
+        var bestScore = int.MinValue;
+
+        NativeMethods.EnumWindows(
+            (hwnd, _) =>
+            {
+                if (hwnd == IntPtr.Zero || !NativeMethods.IsWindowVisible(hwnd))
+                {
+                    return true;
+                }
+
+                var info = BuildWindowInfo(hwnd);
+                if (excludeProcessId.HasValue && info.ProcessId == excludeProcessId.Value)
+                {
+                    return true;
+                }
+
+                var check = BuildWindowCheck(hwnd, info, classifier);
+                if (check == null || !check.IsFullscreen)
+                {
+                    return true;
+                }
+
+                if (check.Type == PresentationType.Wps && !allowWps)
+                {
+                    return true;
+                }
+                if (check.Type == PresentationType.Office && !allowOffice)
+                {
+                    return true;
+                }
+
+                // Prefer fullscreen candidates that also match slideshow classes.
+                var score = check.Score + (check.ClassMatch ? 100 : 0);
+                if (score <= bestScore)
+                {
+                    return true;
+                }
+
+                bestScore = score;
+                bestTarget = new PresentationTarget(hwnd, info);
+                return true;
+            },
+            IntPtr.Zero);
+
+        return bestTarget;
     }
 
     public PresentationWindowCheck? CheckWindow(IntPtr hwnd, PresentationClassifier classifier)
@@ -125,14 +196,16 @@ public sealed class Win32PresentationResolver
         var processMatch = type is PresentationType.Wps or PresentationType.Office;
         var hasCaption = HasCaption(hwnd);
         var isFullscreen = IsFullscreenWindow(hwnd);
-        if (!classMatch && !isFullscreen && hasCaption)
+        // Filter: require slideshow class match or fullscreen; caption only affects score.
+        if (type == PresentationType.None || (!classMatch && !isFullscreen))
         {
             return null;
         }
         var score = 0;
+        // Strongly prioritize windows with slideshow class names (screenClass, pptviewwndclass, etc.)
         if (classMatch)
         {
-            score += 3;
+            score += 10;
         }
         if (processMatch)
         {

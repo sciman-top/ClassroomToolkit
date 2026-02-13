@@ -11,12 +11,12 @@ using ClassroomToolkit.App.Settings;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 
+using ClassroomToolkit.Interop;
+
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
-    private const int GwlExstyle = -20;
-    private const int WsExNoActivate = 0x08000000;
     private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
@@ -39,6 +39,7 @@ public partial class PaintToolbarWindow : Window
     public event Action<int, MediaColor>? QuickColorSlotChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action? SettingsRequested;
+    public event Action? PhotoOpenRequested;
     public event Action<bool>? WhiteboardToggled;
 
     public ICommand OpenBoardColorCommand { get; }
@@ -107,6 +108,7 @@ public partial class PaintToolbarWindow : Window
             BoardButton.IsChecked = _boardActive;
             UpdateQuickColorSelection(settings.BrushColor);
             ApplyUiScale(settings.PaintToolbarScale);
+            PhotoOpenButton.IsEnabled = true;
         }
         finally
         {
@@ -133,6 +135,17 @@ public partial class PaintToolbarWindow : Window
         _overlay = overlay;
     }
 
+    public void SyncTopmost(bool enabled)
+    {
+        Topmost = enabled;
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
+        NativeMethods.SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
+    }
+
     private void ApplyUiScale(double scale)
     {
         _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
@@ -142,6 +155,8 @@ public partial class PaintToolbarWindow : Window
         }
         WindowPlacementHelper.EnsureVisible(this);
     }
+
+
 
     private void OnModeChecked(object sender, RoutedEventArgs e)
     {
@@ -206,11 +221,8 @@ public partial class PaintToolbarWindow : Window
         // 更新颜色选择状态
         UpdateQuickColorSelection(selectedColor);
         
-        // 如果当前不是画笔模式，切换到画笔模式
-        if (_currentMode != PaintToolMode.Brush)
-        {
-            UpdateToolButtons(PaintToolMode.Brush);
-        }
+        // 始终同步回画笔模式，避免工具高亮状态残留
+        UpdateToolButtons(PaintToolMode.Brush);
         
         // 重置形状类型（如果需要）
         if (shouldResetShape)
@@ -254,20 +266,12 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         _boardActive = BoardButton.IsChecked == true;
-        if (_overlay != null)
-        {
-            if (_boardActive)
-            {
-                _overlay.SetBoardColor(_boardColor);
-                _overlay.SetBoardOpacity(255);
-            }
-            else
-            {
-                _overlay.SetBoardColor(Colors.Transparent);
-                _overlay.SetBoardOpacity(0);
-            }
-        }
-        WhiteboardToggled?.Invoke(_boardActive);
+        ApplyBoardState();
+    }
+
+    private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
+    {
+        PhotoOpenRequested?.Invoke();
     }
 
     private void UpdateToolButtons(PaintToolMode mode)
@@ -342,6 +346,37 @@ public partial class PaintToolbarWindow : Window
             _overlay.SetBoardColor(color);
             _overlay.SetBoardOpacity(255);
         }
+    }
+
+    public void SetBoardActive(bool active)
+    {
+        if (_boardActive == active)
+        {
+            return;
+        }
+        _initializing = true;
+        BoardButton.IsChecked = active;
+        _initializing = false;
+        _boardActive = active;
+        ApplyBoardState();
+    }
+
+    private void ApplyBoardState()
+    {
+        if (_overlay != null)
+        {
+            if (_boardActive)
+            {
+                _overlay.SetBoardColor(_boardColor);
+                _overlay.SetBoardOpacity(255);
+            }
+            else
+            {
+                _overlay.SetBoardColor(Colors.Transparent);
+                _overlay.SetBoardOpacity(0);
+            }
+        }
+        WhiteboardToggled?.Invoke(_boardActive);
     }
 
     private void OpenQuickColorDialog(int index)
@@ -542,13 +577,17 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // 只在光标模式下转发键盘事件到演示文稿
-        if (_currentMode != PaintToolMode.Cursor)
+        var key = e.Key;
+        if (_overlay != null && _overlay.TryHandlePhotoKey(key))
+        {
+            e.Handled = true;
+            return;
+        }
+        if (_overlay != null && (_overlay.IsPhotoModeActive || _overlay.IsWhiteboardActive))
         {
             return;
         }
         // 只转发演示文稿导航键
-        var key = e.Key;
         bool isNavigationKey = key == System.Windows.Input.Key.Left ||
                                key == System.Windows.Input.Key.Right ||
                                key == System.Windows.Input.Key.Up ||
@@ -575,13 +614,8 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        var exStyle = GetWindowLong(_hwnd, GwlExstyle);
-        SetWindowLong(_hwnd, GwlExstyle, exStyle | WsExNoActivate);
+        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
+        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle | NativeMethods.WsExNoActivate);
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

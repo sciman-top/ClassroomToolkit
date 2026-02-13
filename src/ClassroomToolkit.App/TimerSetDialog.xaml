@@ -10,9 +10,9 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="White" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect Color="#8899AA" BlurRadius="30" ShadowDepth="8" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -27,7 +27,7 @@
             <Grid Grid.Row="0" Margin="0,0,0,0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="设定时间" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="24,0,0,0"/>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Background_L2}"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 分钟设置 -->
             <Grid Grid.Row="1" Margin="24,20,24,10">
@@ -35,14 +35,47 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
+
                 <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="分钟" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
-                    <TextBox x:Name="MinutesBox" Width="60" HorizontalAlignment="Right" TextAlignment="Center" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}" TextChanged="OnMinutesTextChanged"/>
+                    <TextBlock Text="分钟(最大150分钟)" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="MinutesDownButton" Content="−" Width="28" Height="28" Margin="0,0,2,0"
+                                FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"
+                                Background="Transparent" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+                                Cursor="Hand" Click="OnMinutesDownClick"
+                                PreviewMouseLeftButtonDown="OnMinutesDownMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4"
+                                            Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <TextBox x:Name="MinutesBox" Width="60" TextAlignment="Center" FontWeight="Bold"
+                                Foreground="{StaticResource Brush_Primary}" TextChanged="OnMinutesTextChanged"/>
+                        <Button x:Name="MinutesUpButton" Content="+" Width="28" Height="28" Margin="2,0,0,0"
+                                FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"
+                                Background="Transparent" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+                                Cursor="Hand" Click="OnMinutesUpClick"
+                                PreviewMouseLeftButtonDown="OnMinutesUpMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4"
+                                            Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
                 </Grid>
                 
                 <Slider Grid.Row="1" x:Name="MinutesSlider" Minimum="0" Maximum="25"
-                        ValueChanged="OnMinutesSliderChanged" 
+                        ValueChanged="OnMinutesSliderChanged"
                         IsSnapToTickEnabled="True" TickFrequency="1"/>
             </Grid>
 

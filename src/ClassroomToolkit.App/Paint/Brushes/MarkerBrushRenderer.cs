@@ -8,6 +8,94 @@ using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
+public sealed class MarkerBrushConfig
+{
+    public double SpeedWidthFactor { get; set; }
+    public double MinWidthFactor { get; set; }
+    public double PositionSmoothing { get; set; }
+    public double WidthSmoothing { get; set; }
+    public double MinMoveDistance { get; set; }
+    public double VelocityDecay { get; set; }
+    public double SplineTargetSpacing { get; set; }
+    public double MinSampleSpacing { get; set; }
+    public double StartTaperFactor { get; set; }
+    public double EndTaperFactor { get; set; }
+    public double TaperLengthRatio { get; set; }
+    public double MaxTaperLengthFactor { get; set; }
+    public double RibbonEndCapScale { get; set; }
+    public double RibbonJoinScale { get; set; }
+    public double RibbonQuadOverlap { get; set; }
+    public double RibbonMiterLimit { get; set; }
+    public double RibbonNormalSmoothing { get; set; }
+    public int RibbonCapSegments { get; set; }
+
+    public static MarkerBrushConfig Smooth => new MarkerBrushConfig
+    {
+        SpeedWidthFactor = 0.006,
+        MinWidthFactor = 0.99,
+        PositionSmoothing = 0.56,
+        WidthSmoothing = 0.16,
+        MinMoveDistance = 0.34,
+        VelocityDecay = 0.999,
+        SplineTargetSpacing = 1.3,
+        MinSampleSpacing = 0.09,
+        StartTaperFactor = 0.98,
+        EndTaperFactor = 0.94,
+        TaperLengthRatio = 0.03,
+        MaxTaperLengthFactor = 1.7,
+        RibbonEndCapScale = 1.05,
+        RibbonJoinScale = 1.02,
+        RibbonQuadOverlap = 1.07,
+        RibbonMiterLimit = 1.8,
+        RibbonNormalSmoothing = 0.45,
+        RibbonCapSegments = 20
+    };
+
+    public static MarkerBrushConfig Balanced => new MarkerBrushConfig
+    {
+        SpeedWidthFactor = 0.07,
+        MinWidthFactor = 0.86,
+        PositionSmoothing = 0.72,
+        WidthSmoothing = 0.32,
+        MinMoveDistance = 0.5,
+        VelocityDecay = 0.988,
+        SplineTargetSpacing = 2.2,
+        MinSampleSpacing = 0.22,
+        StartTaperFactor = 0.84,
+        EndTaperFactor = 0.7,
+        TaperLengthRatio = 0.09,
+        MaxTaperLengthFactor = 2.7,
+        RibbonEndCapScale = 0.9,
+        RibbonJoinScale = 0.9,
+        RibbonQuadOverlap = 1.01,
+        RibbonMiterLimit = 2.8,
+        RibbonNormalSmoothing = 0.78,
+        RibbonCapSegments = 10
+    };
+
+    public static MarkerBrushConfig Sharp => new MarkerBrushConfig
+    {
+        SpeedWidthFactor = 0.14,
+        MinWidthFactor = 0.72,
+        PositionSmoothing = 0.92,
+        WidthSmoothing = 0.6,
+        MinMoveDistance = 0.8,
+        VelocityDecay = 0.97,
+        SplineTargetSpacing = 3.4,
+        MinSampleSpacing = 0.48,
+        StartTaperFactor = 0.6,
+        EndTaperFactor = 0.42,
+        TaperLengthRatio = 0.18,
+        MaxTaperLengthFactor = 3.6,
+        RibbonEndCapScale = 0.82,
+        RibbonJoinScale = 0.82,
+        RibbonQuadOverlap = 0.96,
+        RibbonMiterLimit = 4.2,
+        RibbonNormalSmoothing = 0.93,
+        RibbonCapSegments = 6
+    };
+}
+
 public enum MarkerRenderMode
 {
     SegmentUnion = 0,
@@ -16,25 +104,7 @@ public enum MarkerRenderMode
 
 public class MarkerBrushRenderer : IBrushRenderer
 {
-    private const double SpeedWidthFactor = 0.08;
-    private const double MinWidthFactor = 0.85;
-    private const double PositionSmoothing = 0.75;
-    private const double WidthSmoothing = 0.45;
-    private const double MinMoveDistance = 0.5;
-    private const double VelocityDecay = 0.985;
-    private const double SplineTargetSpacing = 2.0;
-    private const double MinSampleSpacing = 0.2;
-    private const double StartTaperFactor = 0.8;
-    private const double EndTaperFactor = 0.6;
-    private const double TaperLengthRatio = 0.1;
-    private const double MaxTaperLengthFactor = 2.8;
-    private const double RibbonEndCapScale = 0.9;
-    private const double RibbonJoinScale = 0.9;
-    private const double RibbonQuadOverlap = 1.02;
-    private const double RibbonMiterLimit = 2.5;
-    private const double RibbonNormalSmoothing = 0.8;
-    private const int RibbonCapSegments = 10;
-
+    private readonly MarkerBrushConfig _config;
     private struct MarkerPoint
     {
         public WpfPoint Position;
@@ -61,13 +131,19 @@ public class MarkerBrushRenderer : IBrushRenderer
     public MarkerRenderMode RenderMode => _renderMode;
 
     public MarkerBrushRenderer()
-        : this(MarkerRenderMode.SegmentUnion)
+        : this(MarkerRenderMode.SegmentUnion, MarkerBrushConfig.Smooth)
     {
     }
 
     public MarkerBrushRenderer(MarkerRenderMode renderMode)
+        : this(renderMode, MarkerBrushConfig.Smooth)
+    {
+    }
+
+    public MarkerBrushRenderer(MarkerRenderMode renderMode, MarkerBrushConfig config)
     {
         _renderMode = renderMode;
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     public void Initialize(WpfColor color, double baseSize, double opacity)
@@ -95,27 +171,27 @@ public class MarkerBrushRenderer : IBrushRenderer
         if (!_isActive) return;
 
         _smoothedPos = new WpfPoint(
-            _smoothedPos.X * (1 - PositionSmoothing) + point.X * PositionSmoothing,
-            _smoothedPos.Y * (1 - PositionSmoothing) + point.Y * PositionSmoothing
+            _smoothedPos.X * (1 - _config.PositionSmoothing) + point.X * _config.PositionSmoothing,
+            _smoothedPos.Y * (1 - _config.PositionSmoothing) + point.Y * _config.PositionSmoothing
         );
 
         var lastPt = _points[_points.Count - 1].Position;
         var dist = (_smoothedPos - lastPt).Length;
-        if (dist < MinMoveDistance) return;
+        if (dist < _config.MinMoveDistance) return;
 
         var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
         var dt = now - _lastTimestamp;
         if (dt < 1) dt = 1;
 
         double velocity = dist / dt;
-        _velocityPeak = Math.Max(_velocityPeak * VelocityDecay, velocity);
+        _velocityPeak = Math.Max(_velocityPeak * _config.VelocityDecay, velocity);
         double normSpeed = Math.Clamp(velocity / (_velocityPeak + 0.0001), 0, 1);
 
-        double targetWidth = _baseSize * (1.0 - (SpeedWidthFactor * normSpeed));
-        double minWidth = _baseSize * MinWidthFactor;
+        double targetWidth = _baseSize * (1.0 - (_config.SpeedWidthFactor * normSpeed));
+        double minWidth = _baseSize * _config.MinWidthFactor;
         targetWidth = Math.Max(targetWidth, minWidth);
 
-        _smoothedWidth = Lerp(_smoothedWidth, targetWidth, WidthSmoothing);
+        _smoothedWidth = Lerp(_smoothedWidth, targetWidth, _config.WidthSmoothing);
         _points.Add(new MarkerPoint(_smoothedPos, _smoothedWidth));
         _lastTimestamp = now;
     }
@@ -310,7 +386,7 @@ public class MarkerBrushRenderer : IBrushRenderer
             }
             if (lastNormal.LengthSquared > 0.0001)
             {
-                normal = LerpVector(lastNormal, normal, RibbonNormalSmoothing);
+                normal = LerpVector(lastNormal, normal, _config.RibbonNormalSmoothing);
             }
             if (normal.LengthSquared < 0.0001)
             {
@@ -322,16 +398,16 @@ public class MarkerBrushRenderer : IBrushRenderer
             double width = samples[i].Width;
             if (i == 0 || i == samples.Count - 1)
             {
-                width *= RibbonEndCapScale;
+                width *= _config.RibbonEndCapScale;
             }
             else
             {
                 width = Math.Max(width, samples[i - 1].Width);
                 width = Math.Max(width, samples[i + 1].Width);
-                width *= RibbonJoinScale;
+                width *= _config.RibbonJoinScale;
             }
 
-            double halfWidth = Math.Max(width * 0.5, 0.1) * RibbonQuadOverlap;
+            double halfWidth = Math.Max(width * 0.5, 0.1) * _config.RibbonQuadOverlap;
             left.Add(samples[i].Position + (normal * halfWidth));
             right.Add(samples[i].Position - (normal * halfWidth));
         }
@@ -404,14 +480,14 @@ public class MarkerBrushRenderer : IBrushRenderer
 
             var segment = p2.Position - p1.Position;
             double length = segment.Length;
-            int steps = Math.Max(1, (int)Math.Ceiling(length / SplineTargetSpacing));
+            int steps = Math.Max(1, (int)Math.Ceiling(length / _config.SplineTargetSpacing));
             int startStep = i == 0 ? 0 : 1;
             for (int s = startStep; s <= steps; s++)
             {
                 double t = steps == 0 ? 0 : s / (double)steps;
                 var pos = CatmullRomCentripetal(p0.Position, p1.Position, p2.Position, p3.Position, t);
                 double width = Lerp(p1.Width, p2.Width, t);
-                if (samples.Count > 0 && (pos - samples[^1].Position).Length < MinSampleSpacing)
+                if (samples.Count > 0 && (pos - samples[^1].Position).Length < _config.MinSampleSpacing)
                 {
                     continue;
                 }
@@ -482,8 +558,8 @@ public class MarkerBrushRenderer : IBrushRenderer
         {
             return;
         }
-        double maxTaper = _baseSize * MaxTaperLengthFactor;
-        double taperLength = Math.Min(total * TaperLengthRatio, maxTaper);
+        double maxTaper = _baseSize * _config.MaxTaperLengthFactor;
+        double taperLength = Math.Min(total * _config.TaperLengthRatio, maxTaper);
         if (taperLength <= 0.1)
         {
             return;
@@ -507,12 +583,12 @@ public class MarkerBrushRenderer : IBrushRenderer
             if (startDist < taperLength)
             {
                 double t = Smoothstep(startDist / taperLength);
-                width *= Lerp(StartTaperFactor, 1.0, t);
+                width *= Lerp(_config.StartTaperFactor, 1.0, t);
             }
             if (endDist < taperLength)
             {
                 double t = Smoothstep(endDist / taperLength);
-                width *= Lerp(EndTaperFactor, 1.0, t);
+                width *= Lerp(_config.EndTaperFactor, 1.0, t);
             }
             samples[i] = new MarkerPoint(samples[i].Position, width);
         }
@@ -556,9 +632,9 @@ public class MarkerBrushRenderer : IBrushRenderer
             start.Y + ((end.Y - start.Y) * t));
     }
 
-    private static void AppendCircleFigure(StreamGeometryContext ctx, WpfPoint center, double radius, bool clockwise)
+    private void AppendCircleFigure(StreamGeometryContext ctx, WpfPoint center, double radius, bool clockwise)
     {
-        int segments = Math.Max(6, RibbonCapSegments * 2);
+        int segments = Math.Max(6, _config.RibbonCapSegments * 2);
         double step = (Math.PI * 2.0 / segments) * (clockwise ? 1 : -1);
 
         var start = new WpfPoint(center.X + radius, center.Y);
@@ -613,7 +689,7 @@ public class MarkerBrushRenderer : IBrushRenderer
             double width = samples[i].Width;
             width = Math.Max(width, samples[i - 1].Width);
             width = Math.Max(width, samples[i + 1].Width);
-            width *= RibbonJoinScale;
+            width *= _config.RibbonJoinScale;
 
             double halfWidth = Math.Max(width * 0.5, 0.1);
             double angle = Math.Acos(Math.Clamp(Vector.Multiply(-tPrev, tNext), -1.0, 1.0));
@@ -623,7 +699,7 @@ public class MarkerBrushRenderer : IBrushRenderer
                 continue;
             }
             double miterLength = halfWidth / sinHalf;
-            double maxMiter = halfWidth * RibbonMiterLimit;
+            double maxMiter = halfWidth * _config.RibbonMiterLimit;
             if (miterLength <= maxMiter)
             {
                 continue;

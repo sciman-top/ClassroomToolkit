@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -24,6 +25,13 @@ public static class CustomCursors
     private static MediaColor _currentBrushColor = Colors.Red;
     private static WpfCursor? _eraserCursor;
     private static WpfCursor? _regionEraseCursor;
+    private static readonly List<string> TempCursorFiles = new();
+    private static readonly object TempCursorLock = new();
+
+    static CustomCursors()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => CleanupTempCursorFiles();
+    }
 
     /// <summary>
     /// 获取指定颜色的画笔光标
@@ -204,78 +212,75 @@ public static class CustomCursors
     }
 
     /// <summary>
-    /// 创建橡皮擦光标 - 立体橡皮擦设计，带擦除效果
+    /// 创建橡皮擦光标 - 使用矢量图标渲染，更加形象直观
     /// </summary>
     private static WpfCursor CreateEraserCursor()
     {
         const int cursorSize = 32;
-        const int eraserWidth = 18;
-        const int eraserHeight = 22;
-        const int offsetX = (cursorSize - eraserWidth) / 2;
-        const int offsetY = (cursorSize - eraserHeight) / 2;
+        const int iconSize = 24;
+        const int offset = (cursorSize - iconSize) / 2;
 
         var drawingVisual = new DrawingVisual();
         using (var context = drawingVisual.RenderOpen())
         {
-            // 橡皮擦主体 - 粉红色渐变
-            var eraserBrush = new LinearGradientBrush(
-                MediaColor.FromRgb(255, 182, 193), // 浅粉色
-                MediaColor.FromRgb(255, 105, 180), // 深粉色
-                new System.Windows.Point(0, 0),
-                new System.Windows.Point(1, 1));
-            eraserBrush.Freeze();
-
-            // 金属夹子 - 银色渐变
-            var clipBrush = new LinearGradientBrush(
-                MediaColor.FromRgb(192, 192, 192), // 浅银色
-                MediaColor.FromRgb(128, 128, 128), // 深银色
-                new System.Windows.Point(0, 0),
-                new System.Windows.Point(0, 1));
-            clipBrush.Freeze();
-
-            // 橡皮擦主体形状（圆角矩形）
-            var eraserRect = new Rect(offsetX, offsetY + 4, eraserWidth, eraserHeight - 4);
-            var eraserGeom = new RectangleGeometry(eraserRect, 3, 3);
-            context.DrawGeometry(eraserBrush, new WpfPen(System.Windows.Media.Brushes.Gray, 1), eraserGeom);
-
-            // 金属夹子
-            var clipRect = new Rect(offsetX + 2, offsetY - 2, eraserWidth - 4, 8);
-            var clipGeom = new RectangleGeometry(clipRect, 2, 2);
-            context.DrawGeometry(clipBrush, new WpfPen(System.Windows.Media.Brushes.DarkGray, 1), clipGeom);
-
-            // 擦除痕迹效果（半透明白色）
-            var eraseEffectBrush = new SolidColorBrush(MediaColor.FromArgb(100, 255, 255, 255));
-            eraseEffectBrush.Freeze();
+            // 1. 从 XAML 资源加载橡皮擦图标几何形状（避免 Geometry.Parse 的区域设置问题）
+            var resourceGeometry = (Geometry)System.Windows.Application.Current.FindResource("Icon_Eraser");
+            var eraserGeometry = resourceGeometry.Clone();
             
-            // 擦除线条
-            var erasePen = new WpfPen(eraseEffectBrush, 2);
-            erasePen.Freeze();
-            
-            // 模拟擦除的轨迹
-            context.DrawLine(erasePen,
-                new WpfPoint(offsetX - 2, offsetY + eraserHeight - 2),
-                new WpfPoint(offsetX + eraserWidth + 2, offsetY + eraserHeight + 4));
-            
-            context.DrawLine(erasePen,
-                new WpfPoint(offsetX - 1, offsetY + eraserHeight),
-                new WpfPoint(offsetX + eraserWidth + 1, offsetY + eraserHeight + 2));
+            // 2. 变换：居中显示
+            var transform = new TranslateTransform(offset, offset);
+            eraserGeometry.Transform = transform;
 
-            // 中心十字准星（精确定位）
-            var crossPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
-            crossPen.Freeze();
+            // 3. 绘制阴影（增强立体感）
+            var shadowBrush = new SolidColorBrush(MediaColor.FromArgb(60, 0, 0, 0));
+            shadowBrush.Freeze();
+            var shadowPen = new WpfPen(shadowBrush, 2);
+            shadowPen.Freeze();
+            var shadowTransform = new TranslateTransform(offset + 1, offset + 1);
+            var shadowGeometry = eraserGeometry.Clone();
+            shadowGeometry.Transform = shadowTransform;
+            context.DrawGeometry(shadowBrush, null, shadowGeometry);
+
+            // 4. 定义画笔
+            // 主体填充：白色 (高对比度)
+            var fillBrush = new SolidColorBrush(Colors.White);
+            fillBrush.Freeze();
             
-            int centerX = cursorSize / 2;
-            int centerY = cursorSize / 2;
+            // 描边：深灰色 (清晰轮廓)
+            var outlinePen = new WpfPen(new SolidColorBrush(MediaColor.FromRgb(30, 30, 30)), 1.0);
+            outlinePen.LineJoin = PenLineJoin.Round;
+            outlinePen.Freeze();
+
+            // 5. 绘制主体
+            context.DrawGeometry(fillBrush, outlinePen, eraserGeometry);
+
+            // 6. 绘制装饰/细节 (橡皮擦套筒部分 - 蓝色)
+            // 通过裁剪或重绘部分区域来模拟套筒颜色
+            // 简单的做法是：绘制一个覆盖在中间的蓝色带子，或者直接用几何路径的第二部分
+            // 观察 geometry, M4.22,15.58... 是下面的部分(橡皮头), M16.24... 是整体?
+            // Material Icon path 通常是一个整体。为了简单且好看，我们在中间加一个装饰带。
             
-            context.DrawLine(crossPen,
-                new WpfPoint(centerX - 3, centerY),
-                new WpfPoint(centerX + 3, centerY));
-            context.DrawLine(crossPen,
-                new WpfPoint(centerX, centerY - 3),
-                new WpfPoint(centerX, centerY + 3));
+            var bandBrush = new SolidColorBrush(MediaColor.FromRgb(59, 130, 246)); // Electric Blue
+            bandBrush.Freeze();
+            
+            // 创建一个裁剪区域来绘制蓝色的"手柄"部分 (右上部分)
+            // 简单的近似：用一个旋转矩形覆盖右上半部分
+            context.PushClip(eraserGeometry);
+            
+            // 绘制蓝色矩形覆盖上半部分 (模拟手柄)
+            var bandRect = new Rect(offset + 8, offset - 5, 20, 20);
+            context.PushTransform(new RotateTransform(45, offset + 12, offset + 12));
+            context.DrawRectangle(bandBrush, null, bandRect);
+            context.Pop(); // Pop Rotate
+            
+            context.Pop(); // Pop Clip
+
+            // 重新描边以确保轮廓清晰（因为Clip可能切断了描边）
+            context.DrawGeometry(null, outlinePen, eraserGeometry);
         }
 
-        return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "eraser");
+        // 热点设为中心
+        return CreateCursorFromVisual(drawingVisual, cursorSize, cursorSize / 2, cursorSize / 2, "icon_eraser");
     }
 
     /// <summary>
@@ -389,6 +394,7 @@ public static class CustomCursors
             $"{name}_{Guid.NewGuid():N}.cur");
 
         CreateCursorFile(renderBitmap, hotSpotX, hotSpotY, cursorPath);
+        TrackTempCursorFile(cursorPath);
 
         // 加载光标
         return new WpfCursor(cursorPath);
@@ -400,5 +406,41 @@ public static class CustomCursors
     private static bool AreColorsEqual(MediaColor a, MediaColor b)
     {
         return a.A == b.A && a.R == b.R && a.G == b.G && a.B == b.B;
+    }
+
+    private static void TrackTempCursorFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        lock (TempCursorLock)
+        {
+            TempCursorFiles.Add(path);
+        }
+    }
+
+    private static void CleanupTempCursorFiles()
+    {
+        List<string> files;
+        lock (TempCursorLock)
+        {
+            files = new List<string>(TempCursorFiles);
+            TempCursorFiles.Clear();
+        }
+        foreach (var path in files)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+                // Ignore cleanup failures.
+            }
+        }
     }
 }

@@ -25,9 +25,20 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
     {
-        ("白板笔（兼容）", PaintBrushStyle.Standard),
         ("白板笔", PaintBrushStyle.StandardRibbon),
         ("毛笔", PaintBrushStyle.Calligraphy)
+    };
+    private static readonly (string Label, WhiteboardBrushPreset Preset)[] WhiteboardPresetChoices =
+    {
+        ("顺滑", WhiteboardBrushPreset.Smooth),
+        ("平衡", WhiteboardBrushPreset.Balanced),
+        ("锋利", WhiteboardBrushPreset.Sharp)
+    };
+    private static readonly (string Label, CalligraphyBrushPreset Preset)[] CalligraphyPresetChoices =
+    {
+        ("锋利", CalligraphyBrushPreset.Sharp),
+        ("平衡", CalligraphyBrushPreset.Balanced),
+        ("柔和", CalligraphyBrushPreset.Soft)
     };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
@@ -44,13 +55,19 @@ public partial class PaintSettingsDialog : Window
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
-    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.Standard;
+    public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.StandardRibbon;
+    public WhiteboardBrushPreset WhiteboardPreset { get; private set; } = WhiteboardBrushPreset.Smooth;
+    public CalligraphyBrushPreset CalligraphyPreset { get; private set; } = CalligraphyBrushPreset.Sharp;
     public bool CalligraphyInkBloomEnabled { get; private set; }
     public bool CalligraphySealEnabled { get; private set; }
+    public byte CalligraphyOverlayOpacityThreshold { get; private set; }
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
     public double ToolbarScale { get; private set; } = 1.0;
+    public bool InkCacheEnabled { get; private set; }
+    public bool PhotoRememberTransform { get; private set; }
+    public bool PhotoCrossPageDisplay { get; private set; }
 
     public PaintSettingsDialog(AppSettings settings)
     {
@@ -75,6 +92,9 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
+        InkCacheCheck.IsChecked = settings.InkCacheEnabled;
+        PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
+        PhotoCrossPageDisplayCheck.IsChecked = settings.PhotoCrossPageDisplay;
 
         foreach (var (label, style) in BrushStyleChoices)
         {
@@ -82,6 +102,16 @@ public partial class PaintSettingsDialog : Window
             BrushStyleCombo.Items.Add(item);
         }
         SelectBrushStyle(settings.BrushStyle);
+        foreach (var (label, preset) in WhiteboardPresetChoices)
+        {
+            WhiteboardPresetCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = preset });
+        }
+        SelectWhiteboardPreset(settings.WhiteboardPreset);
+        foreach (var (label, preset) in CalligraphyPresetChoices)
+        {
+            CalligraphyPresetCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = preset });
+        }
+        SelectCalligraphyPreset(settings.CalligraphyPreset);
         CalligraphyInkBloomCheck.IsChecked = settings.CalligraphyInkBloomEnabled;
         CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
         UpdateCalligraphyOptionState();
@@ -89,6 +119,7 @@ public partial class PaintSettingsDialog : Window
         BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
         BrushOpacitySlider.Value = ToPercent(settings.BrushOpacity);
+        CalligraphyOverlayThresholdSlider.Value = ToPercent(settings.CalligraphyOverlayOpacityThreshold);
 
         foreach (var (label, type) in ShapeChoices)
         {
@@ -108,6 +139,7 @@ public partial class PaintSettingsDialog : Window
         UpdateBrushSizeLabel();
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
+        UpdateCalligraphyOverlayThresholdLabel();
         HighlightTempColorByValue(BrushColor);
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
@@ -123,10 +155,16 @@ public partial class PaintSettingsDialog : Window
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BrushStyle = ResolveBrushStyle();
+        WhiteboardPreset = ResolveWhiteboardPreset();
+        CalligraphyPreset = ResolveCalligraphyPreset();
         CalligraphyInkBloomEnabled = CalligraphyInkBloomCheck.IsChecked == true;
         CalligraphySealEnabled = CalligraphySealCheck.IsChecked == true;
+        CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
+        InkCacheEnabled = InkCacheCheck.IsChecked == true;
+        PhotoRememberTransform = PhotoRememberTransformCheck.IsChecked == true;
+        PhotoCrossPageDisplay = PhotoCrossPageDisplayCheck.IsChecked == true;
         DialogResult = true;
     }
 
@@ -143,6 +181,11 @@ public partial class PaintSettingsDialog : Window
     private void OnBrushOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateBrushOpacityLabel();
+    }
+
+    private void OnCalligraphyOverlayThresholdChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateCalligraphyOverlayThresholdLabel();
     }
 
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -183,12 +226,27 @@ public partial class PaintSettingsDialog : Window
         EraserSizeValue.Text = $"{Math.Round(EraserSizeSlider.Value)}px";
     }
 
+    private void UpdateCalligraphyOverlayThresholdLabel()
+    {
+        if (CalligraphyOverlayThresholdValue == null)
+        {
+            return;
+        }
+        CalligraphyOverlayThresholdValue.Text = $"{Math.Round(CalligraphyOverlayThresholdSlider.Value)}%";
+    }
+
     private void UpdateCalligraphyOptionState()
     {
         bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
+        CalligraphyPresetCombo.IsEnabled = isCalligraphy;
+        WhiteboardPresetCombo.IsEnabled = !isCalligraphy;
         CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
         CalligraphySealCheck.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdLabel.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdSlider.IsEnabled = isCalligraphy;
+        CalligraphyOverlayThresholdValue.IsEnabled = isCalligraphy;
     }
+
 
 
     private void OnTempColorClick(object sender, RoutedEventArgs e)
@@ -379,7 +437,51 @@ public partial class PaintSettingsDialog : Window
         {
             return style;
         }
-        return PaintBrushStyle.Standard;
+        return PaintBrushStyle.StandardRibbon;
+    }
+
+    private void SelectWhiteboardPreset(WhiteboardBrushPreset preset)
+    {
+        foreach (var item in WhiteboardPresetCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is WhiteboardBrushPreset tagged && tagged == preset)
+            {
+                WhiteboardPresetCombo.SelectedItem = item;
+                return;
+            }
+        }
+        WhiteboardPresetCombo.SelectedIndex = 0;
+    }
+
+    private void SelectCalligraphyPreset(CalligraphyBrushPreset preset)
+    {
+        foreach (var item in CalligraphyPresetCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is CalligraphyBrushPreset tagged && tagged == preset)
+            {
+                CalligraphyPresetCombo.SelectedItem = item;
+                return;
+            }
+        }
+        CalligraphyPresetCombo.SelectedIndex = 0;
+    }
+
+    private WhiteboardBrushPreset ResolveWhiteboardPreset()
+    {
+        if (WhiteboardPresetCombo.SelectedItem is WpfComboBoxItem item && item.Tag is WhiteboardBrushPreset preset)
+        {
+            return preset;
+        }
+        return WhiteboardBrushPreset.Smooth;
+    }
+
+    private CalligraphyBrushPreset ResolveCalligraphyPreset()
+    {
+        if (CalligraphyPresetCombo.SelectedItem is WpfComboBoxItem item && item.Tag is CalligraphyBrushPreset preset)
+        {
+            return preset;
+        }
+        return CalligraphyBrushPreset.Sharp;
     }
 
     private static double FindNearestScale(double value)

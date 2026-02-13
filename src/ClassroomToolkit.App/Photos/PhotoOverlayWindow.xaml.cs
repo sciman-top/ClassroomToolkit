@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -15,8 +16,7 @@ namespace ClassroomToolkit.App.Photos;
 
 public partial class PhotoOverlayWindow : Window
 {
-    private const int GwlExstyle = -20;
-    private const int WsExNoActivate = 0x08000000;
+
     private readonly DispatcherTimer _autoCloseTimer;
     private string? _currentStudentId;
     private string? _currentPhotoPath;
@@ -55,15 +55,12 @@ public partial class PhotoOverlayWindow : Window
         NameText.Text = string.Empty;
         PhotoImage.Visibility = Visibility.Collapsed;
         LoadingMask.Visibility = Visibility.Collapsed;
-        
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
 
         _currentPhotoPath = path;
         _currentStudentId = studentId?.Trim();
         NameText.Text = studentName ?? string.Empty;
-        NameText.Visibility = string.IsNullOrWhiteSpace(NameText.Text) ? Visibility.Collapsed : Visibility.Visible;
+        // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
+        NameText.Visibility = Visibility.Collapsed;
 
         // 设置照片源
         PhotoImage.Source = bitmap;
@@ -74,6 +71,13 @@ public partial class PhotoOverlayWindow : Window
 
         // 强制更新布局以触发 SizeChanged
         UpdateLayout();
+
+        // 在照片定位完成后再显示姓名，并重新定位到照片上方
+        if (!string.IsNullOrWhiteSpace(studentName))
+        {
+            NameText.Visibility = Visibility.Visible;
+            UpdateOverlayPositions();
+        }
 
         if (durationSeconds > 0)
         {
@@ -194,19 +198,15 @@ public partial class PhotoOverlayWindow : Window
             bitmap.EndInit();
             bitmap.Freeze();
             
-            GC.Collect();
+            // GC.Collect(); // Removed aggressive GC
             
             return bitmap;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap: {path}. Error: {ex.Message}");
             return null;
         }
     }
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 }

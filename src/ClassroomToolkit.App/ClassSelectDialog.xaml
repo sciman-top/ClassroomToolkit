@@ -10,9 +10,10 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="White" CornerRadius="8" Margin="10" BorderBrush="Transparent">
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
-            <DropShadowEffect Color="Black" BlurRadius="15" ShadowDepth="5" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
         </Border.Effect>
 
         <Grid>
@@ -30,7 +31,7 @@
                            Margin="16,0" 
                            FontSize="14" 
                            FontWeight="Bold" 
-                           Foreground="#444444"/>
+                           Foreground="{StaticResource Brush_Text_Primary}"/>
                 
                 <!-- 关闭按钮 (其实也是取消) -->
                 <Button Style="{StaticResource Style_IconButton}" 
@@ -38,12 +39,12 @@
                         HorizontalAlignment="Right" 
                         Margin="0,0,8,0"
                         Width="32" Height="32">
-                    <Path Data="{StaticResource Icon_Close}" Fill="#888888" Stretch="Uniform" Width="10" Height="10"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
                 </Button>
             </Grid>
 
             <!-- 分割线 -->
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="#F0F0F0"/>
+            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
 
             <!-- 2. 班级列表 -->
             <ListBox x:Name="ClassList" Grid.Row="1" 

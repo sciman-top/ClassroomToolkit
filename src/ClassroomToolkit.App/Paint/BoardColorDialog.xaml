@@ -11,10 +11,10 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="White" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
             MouseLeftButtonDown="OnTitleBarDrag">
         <Border.Effect>
-            <DropShadowEffect Color="#8899AA" BlurRadius="20" ShadowDepth="5" Opacity="0.2"/>
+            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
         </Border.Effect>
 
         <StackPanel Margin="16">

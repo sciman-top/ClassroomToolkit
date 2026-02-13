@@ -13,17 +13,17 @@
         <Style x:Key="Style_ModernCloseButton" TargetType="Button">
             <Setter Property="Width" Value="56"/>
             <Setter Property="Height" Value="56"/>
-            <Setter Property="Background" Value="#40000000"/>
+            <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="28" Background="{TemplateBinding Background}" BorderBrush="#20FFFFFF" BorderThickness="1">
+                        <Border x:Name="bd" CornerRadius="28" Background="{TemplateBinding Background}" BorderBrush="{StaticResource Brush_Border_Light}" BorderThickness="1">
                             <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="20" Height="20" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#80000000"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Primary}"/>
                                 <Setter Property="Cursor" Value="Hand"/>
                             </Trigger>
                         </ControlTemplate.Triggers>

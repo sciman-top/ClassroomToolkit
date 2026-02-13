@@ -25,4 +25,24 @@ public sealed class PresentationCommandMapperTests
         binding.Key.Should().Be(VirtualKey.PageUp);
         binding.Modifiers.Should().Be(KeyModifiers.None);
     }
+
+    [Fact]
+    public void MapFirst_ShouldReturnHome()
+    {
+        var mapper = new PresentationCommandMapper();
+        var binding = mapper.Map(PresentationType.Office, PresentationCommand.First);
+
+        binding.Key.Should().Be(VirtualKey.Home);
+        binding.Modifiers.Should().Be(KeyModifiers.None);
+    }
+
+    [Fact]
+    public void MapLast_ShouldReturnEnd()
+    {
+        var mapper = new PresentationCommandMapper();
+        var binding = mapper.Map(PresentationType.Wps, PresentationCommand.Last);
+
+        binding.Key.Should().Be(VirtualKey.End);
+        binding.Modifiers.Should().Be(KeyModifiers.None);
+    }
 }

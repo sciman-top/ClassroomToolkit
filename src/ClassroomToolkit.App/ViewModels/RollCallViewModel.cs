@@ -9,6 +9,7 @@ using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.Infra.Storage;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -16,6 +17,11 @@ namespace ClassroomToolkit.App.ViewModels;
 
 public sealed class RollCallViewModel : INotifyPropertyChanged
 {
+    private static readonly object PreloadLock = new();
+    private static Task<RollCallLoadResult>? _preloadTask;
+    private static RollCallLoadResult? _preloadedResult;
+    private static string? _preloadedPath;
+    private static DateTime _preloadedWriteTimeUtc;
     private readonly string _dataPath;
     private StudentWorkbook? _workbook;
     private RollCallEngine? _engine;
@@ -46,6 +52,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _speechVoiceId = string.Empty;
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
+    private bool _canPersistWorkbook = true;
+    private bool _persistBlockedNotified;
 
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
@@ -65,6 +73,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action? TimerCompleted;
     public event Action? ReminderTriggered;
+    public event Action<string>? DataLoadFailed;
+    public event Action<string>? DataSaveFailed;
 
     public ObservableCollection<string> Groups { get; }
 
@@ -73,7 +83,23 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     public string CurrentGroup
     {
         get => _currentGroup;
-        private set => SetField(ref _currentGroup, value);
+        private set
+        {
+            if (SetField(ref _currentGroup, value))
+            {
+                UpdateGroupSelection();
+            }
+        }
+    }
+
+    private void UpdateGroupSelection()
+    {
+        if (GroupButtons == null) return;
+        foreach (var btn in GroupButtons)
+        {
+            if (btn.IsReset) continue;
+            btn.IsSelected = string.Equals(btn.Label, _currentGroup, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     public string CurrentStudentId
@@ -223,6 +249,8 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         private set => SetField(ref _availableClasses, value ?? Array.Empty<string>());
     }
 
+    public bool CanPersistWorkbook => _canPersistWorkbook;
+
     public bool TimerSoundEnabled
     {
         get => _timerSoundEnabled;
@@ -290,9 +318,87 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         set => SetField(ref _speechOutputId, value ?? string.Empty);
     }
 
+    private string _remoteGroupSwitchKey = "b";
+    private bool _remoteGroupSwitchEnabled = false;
+
+    public string RemoteGroupSwitchKey
+    {
+        get => _remoteGroupSwitchKey;
+        set => SetField(ref _remoteGroupSwitchKey, value ?? "b");
+    }
+
+    public bool RemoteGroupSwitchEnabled
+    {
+        get => _remoteGroupSwitchEnabled;
+        set => SetField(ref _remoteGroupSwitchEnabled, value);
+    }
+
     public int TimerMinutes => _timerMinutes;
 
     public int TimerSeconds => _timerSeconds;
+
+    public static void WarmupData(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+        if (!File.Exists(path))
+        {
+            return;
+        }
+        DateTime writeTimeUtc;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+        }
+        catch
+        {
+            return;
+        }
+        lock (PreloadLock)
+        {
+            if (_preloadedResult != null
+                && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                    || _preloadedWriteTimeUtc != writeTimeUtc))
+            {
+                _preloadedResult = null;
+            }
+            if (_preloadedResult != null
+                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                && _preloadedWriteTimeUtc == writeTimeUtc)
+            {
+                return;
+            }
+            if (_preloadTask != null
+                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                && _preloadedWriteTimeUtc == writeTimeUtc)
+            {
+                return;
+            }
+            _preloadedPath = path;
+            _preloadedWriteTimeUtc = writeTimeUtc;
+            var expectedPath = path;
+            var expectedWriteTimeUtc = writeTimeUtc;
+            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath));
+            _preloadTask.ContinueWith(task =>
+            {
+                lock (PreloadLock)
+                {
+                    if (task.Status == TaskStatus.RanToCompletion
+                        && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
+                    {
+                        if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase)
+                            && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
+                        {
+                            _preloadedResult = task.Result;
+                        }
+                    }
+                    _preloadTask = null;
+                }
+            }, TaskScheduler.Default);
+        }
+    }
 
     public void LoadData(string? preferredClass = null)
     {
@@ -302,28 +408,122 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
 
     public async Task LoadDataAsync(string? preferredClass, Dispatcher dispatcher)
     {
+        var preload = TryConsumePreloadedResult(_dataPath);
+        if (preload != null)
+        {
+            await dispatcher.InvokeAsync(() =>
+            {
+                ApplyLoadResult(preload, preferredClass);
+            }, DispatcherPriority.Render);
+            return;
+        }
         var result = await Task.Run(LoadDataCore).ConfigureAwait(false);
         await dispatcher.InvokeAsync(() =>
         {
             ApplyLoadResult(result, preferredClass);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.Render);
     }
 
     private RollCallLoadResult LoadDataCore()
     {
-        var store = new StudentWorkbookStore();
-        var result = store.LoadOrCreate(_dataPath);
-        var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+        var preload = TryConsumePreloadedResult(_dataPath);
+        if (preload != null)
         {
-            states[pair.Key] = pair.Value;
+            return preload;
         }
-        return new RollCallLoadResult(result.Workbook, states);
+        return LoadDataFromPath(_dataPath);
+    }
+
+    private static RollCallLoadResult? TryConsumePreloadedResult(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return null;
+        }
+        DateTime writeTimeUtc;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+        }
+        catch
+        {
+            return null;
+        }
+        Task<RollCallLoadResult>? preloadTask = null;
+        bool consumeTask = false;
+        lock (PreloadLock)
+        {
+            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                || _preloadedWriteTimeUtc != writeTimeUtc)
+            {
+                _preloadedResult = null;
+                return null;
+            }
+            if (_preloadedResult != null)
+            {
+                var result = _preloadedResult;
+                _preloadedResult = null;
+                return result;
+            }
+            if (_preloadTask != null && _preloadTask.IsCompleted)
+            {
+                preloadTask = _preloadTask;
+                _preloadTask = null;
+                consumeTask = true;
+            }
+        }
+        if (preloadTask != null && consumeTask)
+        {
+            try
+            {
+                if (!preloadTask.IsCompletedSuccessfully)
+                {
+                    return null;
+                }
+                var result = preloadTask.Result;
+                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                {
+                    return null;
+                }
+                return result;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static RollCallLoadResult LoadDataFromPath(string path)
+    {
+        try
+        {
+            var store = new StudentWorkbookStore();
+            var result = store.LoadOrCreate(path);
+            var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
+            {
+                states[pair.Key] = pair.Value;
+            }
+            return new RollCallLoadResult(result.Workbook, states, null);
+        }
+        catch (Exception ex)
+        {
+            var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
+            var fallbackWorkbook = new StudentWorkbook(
+                new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster },
+                "班级1");
+            var message = $"学生名册读取失败：{ex.Message}";
+            return new RollCallLoadResult(fallbackWorkbook, new Dictionary<string, ClassRollState>(), message);
+        }
     }
 
     private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
     {
         _workbook = result.Workbook;
+        _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
+        _persistBlockedNotified = false;
         _classStates.Clear();
         foreach (var pair in result.ClassStates)
         {
@@ -347,11 +547,22 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RefreshGroups();
         CurrentGroup = _engine.CurrentGroup;
         UpdateCurrentStudent();
+
+        // 预热照片缓存，提升首次查询性能
+        _photoResolver.WarmupCache(_workbook.ClassNames);
+
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            DataLoadFailed?.Invoke(result.ErrorMessage);
+        }
     }
 
-    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates);
+    private sealed record RollCallLoadResult(
+        StudentWorkbook Workbook,
+        Dictionary<string, ClassRollState> ClassStates,
+        string? ErrorMessage);
 
-    public bool SwitchClass(string className)
+    public bool SwitchClass(string className, bool updatePhoto = true)
     {
         if (_engine == null || _workbook == null)
         {
@@ -381,7 +592,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         RefreshGroups();
         CurrentGroup = _engine.CurrentGroup;
-        UpdateCurrentStudent();
+        UpdateCurrentStudent(updatePhoto);
         return true;
     }
 
@@ -590,6 +801,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
         _timerEngine.Toggle();
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void ResetTimer()
@@ -601,6 +813,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         _timerEngine.Reset();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(StartPauseLabel));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void SetCountdown(int minutes, int seconds)
@@ -627,6 +840,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         RaisePropertyChanged(nameof(TimerModeLabel));
         RaisePropertyChanged(nameof(StartPauseLabel));
         RaisePropertyChanged(nameof(CurrentTimerMode));
+        RaisePropertyChanged(nameof(TimerRunning));
     }
 
     public void TickTimer(TimeSpan elapsed)
@@ -663,21 +877,58 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         SetPlaceholderStudent();
     }
 
+    public void SwitchToNextGroup()
+    {
+        if (_engine == null || Groups.Count <= 1)
+        {
+            return;
+        }
+
+        var currentIndex = Groups.IndexOf(CurrentGroup);
+        var nextIndex = (currentIndex + 1) % Groups.Count;
+        var nextGroup = Groups[nextIndex];
+        
+        SetCurrentGroup(nextGroup);
+        UpdateGroupSelection();
+    }
+
     public void SaveState()
     {
         if (_engine == null || _workbook == null)
         {
             return;
         }
-        StoreCurrentState();
-        var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase));
-        var store = new StudentWorkbookStore();
-        store.Save(_workbook, _dataPath, json);
+        if (!CanPersistWorkbook)
+        {
+            if (!_persistBlockedNotified)
+            {
+                _persistBlockedNotified = true;
+                DataSaveFailed?.Invoke("学生名册当前处于恢复只读模式，本次会话已禁用保存以避免覆盖原始数据。");
+            }
+            return;
+        }
+        try
+        {
+            StoreCurrentState();
+            var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase));
+            var store = new StudentWorkbookStore();
+            store.Save(_workbook, _dataPath, json);
+        }
+        catch (Exception ex)
+        {
+            var message = $"学生名册保存失败：{ex.Message}";
+            DataSaveFailed?.Invoke(message);
+        }
     }
 
     public void SetRemotePresenterKey(string value)
     {
         RemotePresenterKey = string.IsNullOrWhiteSpace(value) ? "tab" : value.Trim().ToLowerInvariant();
+    }
+
+    public void ResetCurrentStudentDisplay()
+    {
+        SetPlaceholderStudent();
     }
 
     private void RefreshGroups()
@@ -694,9 +945,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             GroupButtons.Add(new GroupButtonItem(group, isReset: false));
         }
         GroupButtons.Add(new GroupButtonItem("重置", isReset: true));
+        UpdateGroupSelection();
     }
 
-    private void UpdateCurrentStudent()
+    private void UpdateCurrentStudent(bool updatePhoto = true)
     {
         if (_engine == null || !_engine.CurrentStudentIndex.HasValue)
         {
@@ -707,9 +959,15 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
         CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
         
-        // Resolve photo
-        var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
-        CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+        if (updatePhoto)
+        {
+            var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
+            CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+        }
+        else
+        {
+            CurrentStudentPhotoPath = null;
+        }
     }
 
     private void SetPlaceholderStudent()

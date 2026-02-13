@@ -1,46 +1,79 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
-using System.Threading.Tasks;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
-using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
+/// <summary>
+/// MainWindow core: fields, constructor, lifecycle, roll-call, Z-order policy, and settings persistence.
+/// Paint/Ink logic → MainWindow.Paint.cs
+/// Photo/Presentation logic → MainWindow.Photo.cs
+/// Launcher UI logic → MainWindow.Launcher.cs
+/// </summary>
 public partial class MainWindow : Window
 {
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow;
+    private Photos.ImageManagerWindow? _imageManagerWindow;
+    private readonly List<ZOrderSurface> _surfaceStack = new();
+    private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
+    private IDisposable? _presentationForegroundSuppression;
+    private bool _zOrderPolicyApplying;
+    private List<string> _photoSequence = new();
+    private int _photoSequenceIndex = -1;
     private LauncherBubbleWindow? _bubbleWindow;
     private readonly DispatcherTimer _autoExitTimer;
+    private readonly CancellationTokenSource _backgroundTasksCancellation = new();
     private bool _allowClose;
+    private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
-    public ICommand OpenRollCallSettingsCommand { get; }
-    public ICommand OpenPaintSettingsCommand { get; }
-
-    public MainWindow()
+    private readonly MainViewModel _mainViewModel;
+    private readonly IRollCallWindowFactory _rollCallWindowFactory;
+    private readonly Paint.IPaintWindowFactory _paintWindowFactory;
+    private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
+    private readonly IWindowOrchestrator _windowOrchestrator;
+    public MainWindow(
+        AppSettingsService settingsService,
+        AppSettings settings,
+        MainViewModel mainViewModel,
+        IRollCallWindowFactory rollCallWindowFactory,
+        Paint.IPaintWindowFactory paintWindowFactory,
+        Photos.IImageManagerWindowFactory imageManagerWindowFactory,
+        IWindowOrchestrator windowOrchestrator)
     {
         InitializeComponent();
-        _settingsService = new AppSettingsService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini"));
-        _settings = _settingsService.Load();
+        _settingsService = settingsService;
+        _settings = settings;
+        _mainViewModel = mainViewModel;
+        _rollCallWindowFactory = rollCallWindowFactory;
+        _paintWindowFactory = paintWindowFactory;
+        _imageManagerWindowFactory = imageManagerWindowFactory;
+        _windowOrchestrator = windowOrchestrator;
         _autoExitTimer = new DispatcherTimer();
         _autoExitTimer.Tick += (_, _) =>
         {
             _autoExitTimer.Stop();
             RequestExit();
         };
-        OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
-        OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
-        DataContext = this;
+        _presentationForegroundSuppressionTimer = new DispatcherTimer();
+        _presentationForegroundSuppressionTimer.Tick += (_, _) => ReleasePresentationForegroundSuppression();
+        _mainViewModel.OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
+        _mainViewModel.OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
+        DataContext = _mainViewModel;
         Loaded += OnLoaded;
         IsVisibleChanged += (_, _) =>
         {
@@ -57,6 +90,8 @@ public partial class MainWindow : Window
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
         ScheduleAutoExitTimer();
+        ScheduleInkCleanup();
+        WarmupRollCallData();
         if (_settings.LauncherMinimized)
         {
             MinimizeLauncher(fromSettings: true);
@@ -67,6 +102,21 @@ public partial class MainWindow : Window
         }
         RunStartupDiagnostics();
     }
+
+    private void WarmupRollCallData()
+    {
+        try
+        {
+            var path = ResolveStudentWorkbookPath();
+            ClassroomToolkit.App.ViewModels.RollCallViewModel.WarmupData(path);
+        }
+        catch
+        {
+            // Ignore warmup failures.
+        }
+    }
+
+    // ── Roll-call ──
 
     private void OnRollCallClick(object sender, RoutedEventArgs e)
     {
@@ -89,200 +139,8 @@ public partial class MainWindow : Window
                 _rollCallWindow.Owner = _overlayWindow;
             }
         }
+        ApplyZOrderPolicy();
         UpdateToggleButtons();
-    }
-
-    private void OnPaintClick(object sender, RoutedEventArgs e)
-    {
-        EnsurePaintWindows();
-        if (_overlayWindow == null || _toolbarWindow == null)
-        {
-            return;
-        }
-        if (_overlayWindow.IsVisible)
-        {
-            CapturePaintToolbarPosition(save: true);
-            _overlayWindow.Hide();
-            _toolbarWindow.Hide();
-            if (_rollCallWindow != null)
-            {
-                _rollCallWindow.Owner = null;
-                _rollCallWindow.SyncTopmost(true);
-            }
-        }
-        else
-        {
-            _overlayWindow.Show();
-            if (_toolbarWindow.Owner != _overlayWindow && _overlayWindow.IsVisible)
-            {
-                _toolbarWindow.Owner = _overlayWindow;
-            }
-            _toolbarWindow.Show();
-            WindowPlacementHelper.EnsureVisible(_toolbarWindow);
-            _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
-            _overlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
-            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-            {
-                _rollCallWindow.Owner = _overlayWindow;
-                _rollCallWindow.SyncTopmost(true);
-            }
-        }
-        UpdateToggleButtons();
-    }
-
-    private void EnsurePaintWindows()
-    {
-        if (_overlayWindow != null && _toolbarWindow != null)
-        {
-            return;
-        }
-        _overlayWindow = new Paint.PaintOverlayWindow();
-        _toolbarWindow = new Paint.PaintToolbarWindow();
-        _toolbarWindow.AttachOverlay(_overlayWindow);
-        _overlayWindow.Closed += (_, _) =>
-        {
-            _overlayWindow = null;
-            UpdateToggleButtons();
-        };
-        _toolbarWindow.Closed += (_, _) =>
-        {
-            CapturePaintToolbarPosition(save: true);
-            _toolbarWindow = null;
-            UpdateToggleButtons();
-        };
-        _toolbarWindow.LocationChanged += (_, _) => CapturePaintToolbarPosition(save: false);
-        ApplyPaintToolbarPosition();
-        _toolbarWindow.ApplySettings(_settings);
-        _toolbarWindow.ModeChanged += mode =>
-        {
-            if (_toolbarWindow.HasOverlay)
-            {
-                return;
-            }
-            _overlayWindow.SetMode(mode);
-        };
-        _toolbarWindow.BrushColorChanged += color =>
-        {
-            if (!_toolbarWindow.HasOverlay)
-            {
-                _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
-            }
-            _settings.BrushColor = color;
-            SaveSettings();
-        };
-        _toolbarWindow.BoardColorChanged += color =>
-        {
-            _settings.BoardColor = color;
-            SaveSettings();
-            if (_toolbarWindow.BoardActive && !_toolbarWindow.HasOverlay)
-            {
-                _overlayWindow.SetBoardColor(color);
-                _overlayWindow.SetBoardOpacity(255);
-            }
-        };
-        _toolbarWindow.ClearRequested += () => _overlayWindow.ClearAll();
-        _toolbarWindow.UndoRequested += () => _overlayWindow.Undo();
-        _toolbarWindow.QuickColorSlotChanged += (index, color) =>
-        {
-            switch (index)
-            {
-                case 0:
-                    _settings.QuickColor1 = color;
-                    break;
-                case 1:
-                    _settings.QuickColor2 = color;
-                    break;
-                case 2:
-                    _settings.QuickColor3 = color;
-                    break;
-            }
-            SaveSettings();
-        };
-        _toolbarWindow.ShapeTypeChanged += type =>
-        {
-            _settings.ShapeType = type;
-            SaveSettings();
-            if (_overlayWindow != null)
-            {
-                _overlayWindow.SetShapeType(type);
-            }
-        };
-        _toolbarWindow.WhiteboardToggled += active =>
-        {
-            if (!_toolbarWindow.HasOverlay)
-            {
-                if (active)
-                {
-                    _overlayWindow.SetBoardColor(_settings.BoardColor);
-                    _overlayWindow.SetBoardOpacity(255);
-                }
-                else
-                {
-                    _overlayWindow.SetBoardColor(Colors.Transparent);
-                    _overlayWindow.SetBoardOpacity(0);
-                }
-            }
-            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-            {
-                _rollCallWindow.Owner = _overlayWindow;
-                _rollCallWindow.SyncTopmost(true);
-            }
-        };
-        _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
-
-        _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
-        _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
-        _overlayWindow.SetBrushStyle(_settings.BrushStyle);
-        _overlayWindow.SetCalligraphyOptions(
-            _settings.CalligraphyInkBloomEnabled,
-            _settings.CalligraphySealEnabled);
-        _overlayWindow.SetEraserSize(_settings.EraserSize);
-        _overlayWindow.SetShapeType(_settings.ShapeType);
-        if (_toolbarWindow.BoardActive)
-        {
-            _overlayWindow.SetBoardColor(_settings.BoardColor);
-            _overlayWindow.SetBoardOpacity(255);
-        }
-        else
-        {
-            _overlayWindow.SetBoardColor(Colors.Transparent);
-            _overlayWindow.SetBoardOpacity(0);
-        }
-        _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
-        _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
-        _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
-        _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
-    }
-
-    private void ApplyPaintToolbarPosition()
-    {
-        if (_toolbarWindow == null)
-        {
-            return;
-        }
-        _toolbarWindow.Left = _settings.PaintToolbarX;
-        _toolbarWindow.Top = _settings.PaintToolbarY;
-        if (_settings.PaintToolbarX == AppSettings.UnsetPosition
-            && _settings.PaintToolbarY == AppSettings.UnsetPosition)
-        {
-            WindowPlacementHelper.CenterOnVirtualScreen(_toolbarWindow);
-            return;
-        }
-        WindowPlacementHelper.EnsureVisible(_toolbarWindow);
-    }
-
-    private void CapturePaintToolbarPosition(bool save)
-    {
-        if (_toolbarWindow == null)
-        {
-            return;
-        }
-        _settings.PaintToolbarX = (int)Math.Round(_toolbarWindow.Left);
-        _settings.PaintToolbarY = (int)Math.Round(_toolbarWindow.Top);
-        if (save)
-        {
-            SaveSettings();
-        }
     }
 
     private void EnsureRollCallWindow()
@@ -292,7 +150,7 @@ public partial class MainWindow : Window
             return;
         }
         var path = ResolveStudentWorkbookPath();
-        _rollCallWindow = new RollCallWindow(path, _settingsService, _settings);
+        _rollCallWindow = _rollCallWindowFactory.Create(path);
         _rollCallWindow.IsVisibleChanged += (_, _) => UpdateToggleButtons();
         _rollCallWindow.Closed += (_, _) =>
         {
@@ -303,23 +161,8 @@ public partial class MainWindow : Window
 
     private void UpdateToggleButtons()
     {
-        if (_overlayWindow != null && _overlayWindow.IsVisible)
-        {
-            PaintButton.Content = "隐藏画笔";
-        }
-        else
-        {
-            PaintButton.Content = "画笔";
-        }
-
-        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-        {
-            RollCallButton.Content = "隐藏点名";
-        }
-        else
-        {
-            RollCallButton.Content = "点名";
-        }
+        _mainViewModel.IsPaintActive = _overlayWindow != null && _overlayWindow.IsVisible;
+        _mainViewModel.IsRollCallVisible = _rollCallWindow != null && _rollCallWindow.IsVisible;
     }
 
     private void OnOpenRollCallSettings()
@@ -332,22 +175,26 @@ public partial class MainWindow : Window
         {
             return;
         }
-        _settings.RollCallShowId = dialog.RollCallShowId;
-        _settings.RollCallShowName = dialog.RollCallShowName;
-        _settings.RollCallShowPhoto = dialog.RollCallShowPhoto;
-        _settings.RollCallPhotoDurationSeconds = dialog.RollCallPhotoDurationSeconds;
-        _settings.RollCallPhotoSharedClass = dialog.RollCallPhotoSharedClass;
-        _settings.RollCallTimerSoundEnabled = dialog.RollCallTimerSoundEnabled;
-        _settings.RollCallTimerReminderEnabled = dialog.RollCallTimerReminderEnabled;
-        _settings.RollCallTimerReminderIntervalMinutes = dialog.RollCallTimerReminderIntervalMinutes;
-        _settings.RollCallTimerSoundVariant = dialog.RollCallTimerSoundVariant;
-        _settings.RollCallTimerReminderSoundVariant = dialog.RollCallTimerReminderSoundVariant;
-        _settings.RollCallSpeechEnabled = dialog.RollCallSpeechEnabled;
-        _settings.RollCallSpeechEngine = dialog.RollCallSpeechEngine;
-        _settings.RollCallSpeechVoiceId = dialog.RollCallSpeechVoiceId;
-        _settings.RollCallSpeechOutputId = dialog.RollCallSpeechOutputId;
-        _settings.RollCallRemoteEnabled = dialog.RollCallRemoteEnabled;
-        _settings.RemotePresenterKey = dialog.RemotePresenterKey;
+        var patch = new RollCallSettingsPatch(
+            dialog.RollCallShowId,
+            dialog.RollCallShowName,
+            dialog.RollCallShowPhoto,
+            dialog.RollCallPhotoDurationSeconds,
+            dialog.RollCallPhotoSharedClass,
+            dialog.RollCallTimerSoundEnabled,
+            dialog.RollCallTimerReminderEnabled,
+            dialog.RollCallTimerReminderIntervalMinutes,
+            dialog.RollCallTimerSoundVariant,
+            dialog.RollCallTimerReminderSoundVariant,
+            dialog.RollCallSpeechEnabled,
+            dialog.RollCallSpeechEngine,
+            dialog.RollCallSpeechVoiceId,
+            dialog.RollCallSpeechOutputId,
+            dialog.RollCallRemoteEnabled,
+            dialog.RollCallRemoteGroupSwitchEnabled,
+            dialog.RemotePresenterKey,
+            dialog.RemoteGroupSwitchKey);
+        RollCallSettingsApplier.Apply(_settings, patch);
         SaveSettings();
         _rollCallWindow?.ApplySettings(_settings);
     }
@@ -357,355 +204,102 @@ public partial class MainWindow : Window
         return _rollCallWindow?.AvailableClasses ?? Array.Empty<string>();
     }
 
-    private void OnOpenPaintSettings()
-    {
-        var dialog = new Paint.PaintSettingsDialog(_settings)
-        {
-            Owner = _toolbarWindow != null ? (Window)_toolbarWindow : this
-        };
-        
-        // 先修复当前窗口
-        try
-        {
-            BorderFixHelper.FixAllBorders(this);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
-        }
-        
-        // 立即修复新创建的对话框
-        try
-        {
-            BorderFixHelper.FixAllBorders(dialog);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复 PaintSettingsDialog 完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复 PaintSettingsDialog 失败: {ex.Message}");
-        }
-        
-        // 使用安全显示方法
-        bool? result = null;
-        try
-        {
-            result = dialog.SafeShowDialog();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 显示失败: {ex.Message}");
-            throw;
-        }
-        
-        var applied = result == true;
-        if (applied)
-        {
-            _settings.ControlMsPpt = dialog.ControlMsPpt;
-            _settings.ControlWpsPpt = dialog.ControlWpsPpt;
-            _settings.WpsInputMode = dialog.WpsInputMode;
-            _settings.WpsWheelForward = dialog.WpsWheelForward;
-            _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
-            _settings.BrushSize = dialog.BrushSize;
-            _settings.BrushOpacity = dialog.BrushOpacity;
-            _settings.BrushStyle = dialog.BrushStyle;
-            _settings.CalligraphyInkBloomEnabled = dialog.CalligraphyInkBloomEnabled;
-            _settings.CalligraphySealEnabled = dialog.CalligraphySealEnabled;
-            _settings.EraserSize = dialog.EraserSize;
-            _settings.BoardOpacity = 255;
-            _settings.ShapeType = dialog.ShapeType;
-            _settings.BrushColor = dialog.BrushColor;
-            _settings.PaintToolbarScale = dialog.ToolbarScale;
-            SaveSettings();
+    // ── Z-order policy ──
 
-            if (_overlayWindow != null)
+    private void TouchSurface(ZOrderSurface surface, bool applyPolicy = true)
+    {
+        _windowOrchestrator.TouchSurface(_surfaceStack, surface);
+        if (applyPolicy)
+        {
+            ApplyZOrderPolicy();
+        }
+    }
+
+    private void ApplyZOrderPolicy()
+    {
+        if (_zOrderPolicyApplying)
+        {
+            return;
+        }
+        _zOrderPolicyApplying = true;
+        try
+        {
+            var overlayVisible = _overlayWindow?.IsVisible == true;
+            var photoActive = _overlayWindow?.IsPhotoModeActive == true;
+            var presentationFullscreen = _overlayWindow?.IsPresentationFullscreenActive == true;
+            var whiteboardActive = _toolbarWindow?.BoardActive == true;
+            var imageManagerVisible = _imageManagerWindow?.IsVisible == true
+                && _imageManagerWindow.WindowState != WindowState.Minimized;
+
+            _windowOrchestrator.PruneSurfaceStack(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            var frontSurface = _windowOrchestrator.ResolveFrontSurface(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            SyncFloatingWindowOwners(overlayVisible);
+
+            if (_imageManagerWindow != null && imageManagerVisible)
             {
-                _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
-                _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
-                _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
-                _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
-                _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
-                _overlayWindow.SetBrushStyle(_settings.BrushStyle);
-                _overlayWindow.SetCalligraphyOptions(
-                    _settings.CalligraphyInkBloomEnabled,
-                    _settings.CalligraphySealEnabled);
-                _overlayWindow.SetEraserSize(_settings.EraserSize);
-                _overlayWindow.SetShapeType(_settings.ShapeType);
-                _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
-                    ? Paint.PaintToolMode.Brush
-                    : Paint.PaintToolMode.Shape);
-                if (_toolbarWindow?.BoardActive == true)
+                _imageManagerWindow.SyncTopmost(true);
+                if (frontSurface == ZOrderSurface.ImageManager && !_imageManagerWindow.IsActive)
                 {
-                    _overlayWindow.SetBoardColor(_settings.BoardColor);
-                    _overlayWindow.SetBoardOpacity(255);
+                    _imageManagerWindow.Activate();
                 }
             }
-            _toolbarWindow?.ApplySettings(_settings);
-        }
-        _overlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
-    }
 
-    private void OnMinimizeClick(object sender, RoutedEventArgs e)
-    {
-        MinimizeLauncher(fromSettings: false);
-    }
-
-    private void OnAboutClick(object sender, RoutedEventArgs e)
-    {
-        var dialog = new AboutDialog
-        {
-            Owner = this
-        };
-        dialog.ShowDialog();
-    }
-
-    private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
-    {
-        var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / 60);
-        var dialog = new AutoExitDialog(currentMinutes, _settings)
-        {
-            Owner = this
-        };
-        
-        // 先修复当前窗口
-        try
-        {
-            BorderFixHelper.FixAllBorders(this);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
-        }
-        
-        // 立即修复新创建的对话框
-        try
-        {
-            BorderFixHelper.FixAllBorders(dialog);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复对话框完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复对话框失败: {ex.Message}");
-        }
-        
-        // 使用安全显示方法
-        bool? result = null;
-        try
-        {
-            result = dialog.SafeShowDialog();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"对话框显示失败: {ex.Message}");
-            throw;
-        }
-        
-        if (result != true)
-        {
-            return;
-        }
-        _settings.LauncherAutoExitSeconds = Math.Max(0, dialog.Minutes) * 60;
-        ScheduleAutoExitTimer();
-        SaveLauncherSettings();
-    }
-
-    private void OnExitClick(object sender, RoutedEventArgs e)
-    {
-        RequestExit();
-    }
-
-    private void OnDragAreaMouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left)
-        {
-            return;
-        }
-        if (IsDragBlocked(e.OriginalSource))
-        {
-            return;
-        }
-        try
-        {
-            DragMove();
-        }
-        catch
-        {
-            return;
-        }
-        EnsureWithinWorkArea();
-        SaveLauncherSettings();
-    }
-
-    private bool IsDragBlocked(object? source)
-    {
-        return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source as DependencyObject) != null;
-    }
-
-    private static T? FindAncestor<T>(DependencyObject? obj) where T : DependencyObject
-    {
-        while (obj != null)
-        {
-            if (obj is T match)
+            if (_overlayWindow != null && overlayVisible)
             {
-                return match;
-            }
-            obj = GetParent(obj);
-        }
-        return null;
-    }
-
-    private static DependencyObject? GetParent(DependencyObject obj)
-    {
-        if (obj is System.Windows.Documents.TextElement textElement)
-        {
-            return textElement.Parent;
-        }
-        if (obj is FrameworkContentElement contentElement)
-        {
-            return contentElement.Parent;
-        }
-        var parent = VisualTreeHelper.GetParent(obj);
-        if (parent == null && obj is FrameworkElement element)
-        {
-            parent = element.Parent as DependencyObject;
-        }
-        return parent ?? LogicalTreeHelper.GetParent(obj);
-    }
-
-    private static string ResolveStudentWorkbookPath()
-    {
-        return ClassroomToolkit.App.Helpers.StudentResourceLocator.ResolveStudentWorkbookPath();
-    }
-
-    private void ApplyLauncherPosition()
-    {
-        Left = _settings.LauncherX;
-        Top = _settings.LauncherY;
-        EnsureWithinWorkArea();
-    }
-
-    private void EnsureWithinWorkArea()
-    {
-        var area = SystemParameters.WorkArea;
-        if (Left < area.Left)
-        {
-            Left = area.Left;
-        }
-        if (Top < area.Top)
-        {
-            Top = area.Top;
-        }
-        if (Left + Width > area.Right)
-        {
-            Left = area.Right - Width;
-        }
-        if (Top + Height > area.Bottom)
-        {
-            Top = area.Bottom - Height;
-        }
-    }
-
-    private void EnsureBubbleWindow()
-    {
-        if (_bubbleWindow != null)
-        {
-            return;
-        }
-        _bubbleWindow = new LauncherBubbleWindow();
-        _bubbleWindow.RestoreRequested += RestoreLauncher;
-        _bubbleWindow.PositionChanged += OnBubblePositionChanged;
-    }
-
-    private void MinimizeLauncher(bool fromSettings)
-    {
-        EnsureBubbleWindow();
-        if (_bubbleWindow == null)
-        {
-            return;
-        }
-        var target = fromSettings
-            ? new System.Windows.Point(_settings.LauncherBubbleX, _settings.LauncherBubbleY)
-            : new System.Windows.Point(Left + Width / 2, Top + Height / 2);
-        _bubbleWindow.PlaceNear(target);
-        _bubbleWindow.Show();
-        Hide();
-        _settings.LauncherMinimized = true;
-        SaveLauncherSettings();
-    }
-
-    private void RestoreLauncher()
-    {
-        _settings.LauncherMinimized = false;
-        _bubbleWindow?.Hide();
-        Show();
-        Activate();
-        EnsureWithinWorkArea();
-        SaveLauncherSettings();
-        UpdateToggleButtons();
-    }
-
-    private void OnBubblePositionChanged(System.Windows.Point position)
-    {
-        _settings.LauncherBubbleX = (int)Math.Round(position.X);
-        _settings.LauncherBubbleY = (int)Math.Round(position.Y);
-        if (_settings.LauncherMinimized)
-        {
-            SaveLauncherSettings();
-        }
-    }
-
-    private void ScheduleAutoExitTimer()
-    {
-        _autoExitTimer.Stop();
-        if (_settings.LauncherAutoExitSeconds > 0)
-        {
-            _autoExitTimer.Interval = TimeSpan.FromSeconds(_settings.LauncherAutoExitSeconds);
-            _autoExitTimer.Start();
-        }
-    }
-
-    private void RunStartupDiagnostics()
-    {
-        var flag = Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG");
-        if (string.Equals(flag, "1", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-        var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
-        _ = Task.Run(() =>
-        {
-            var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);
-            if (!result.HasIssues)
-            {
-                return;
-            }
-            Dispatcher.Invoke(() =>
-            {
-                if (!IsLoaded)
+                if (frontSurface is ZOrderSurface.PhotoFullscreen or ZOrderSurface.Whiteboard)
                 {
-                    return;
+                    _overlayWindow.Activate();
                 }
-                var dialog = new DiagnosticsDialog(result)
+            }
+
+            if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+            {
+                _toolbarWindow.SyncTopmost(true);
+            }
+            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+            {
+                _rollCallWindow.SyncTopmost(true);
+            }
+        }
+        finally
+        {
+            _zOrderPolicyApplying = false;
+        }
+    }
+    private void SyncFloatingWindowOwners(bool overlayVisible)
+    {
+        var overlay = _overlayWindow;
+        if (_toolbarWindow != null && _toolbarWindow.IsVisible)
+        {
+            if (overlayVisible && overlay != null)
+            {
+                if (_toolbarWindow.Owner != overlay)
                 {
-                    Owner = this
-                };
-                dialog.ShowDialog();
-            });
-        });
+                    _toolbarWindow.Owner = overlay;
+                }
+            }
+            else if (_toolbarWindow.Owner != null)
+            {
+                _toolbarWindow.Owner = null;
+            }
+        }
+        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
+        {
+            if (overlayVisible && overlay != null)
+            {
+                if (_rollCallWindow.Owner != overlay)
+                {
+                    _rollCallWindow.Owner = overlay;
+                }
+            }
+            else if (_rollCallWindow.Owner != null)
+            {
+                _rollCallWindow.Owner = null;
+            }
+        }
     }
 
-    private void SaveLauncherSettings()
-    {
-        _settings.LauncherX = (int)Math.Round(Left);
-        _settings.LauncherY = (int)Math.Round(Top);
-        if (_bubbleWindow != null)
-        {
-            _settings.LauncherBubbleX = (int)Math.Round(_bubbleWindow.Left);
-            _settings.LauncherBubbleY = (int)Math.Round(_bubbleWindow.Top);
-        }
-        SaveSettings();
-    }
+    // ── Lifecycle & settings ──
 
     private void RequestExit()
     {
@@ -714,6 +308,11 @@ public partial class MainWindow : Window
             return;
         }
         _allowClose = true;
+        if (!_backgroundTasksCancellation.IsCancellationRequested)
+        {
+            _backgroundTasksCancellation.Cancel();
+        }
+        TriggerInkCleanup();
         CapturePaintToolbarPosition(save: true);
         SaveLauncherSettings();
         if (_bubbleWindow != null)
@@ -728,12 +327,12 @@ public partial class MainWindow : Window
         }
         if (_overlayWindow != null)
         {
-            _overlayWindow.Close();
+            try { _overlayWindow.Close(); } catch { /* ignore during shutdown */ }
             _overlayWindow = null;
         }
         if (_toolbarWindow != null)
         {
-            _toolbarWindow.Close();
+            try { _toolbarWindow.Close(); } catch { /* ignore during shutdown */ }
             _toolbarWindow = null;
         }
         System.Windows.Application.Current.Shutdown();
@@ -741,7 +340,31 @@ public partial class MainWindow : Window
 
     private void SaveSettings()
     {
-        _settingsService.Save(_settings);
+        try
+        {
+            _settingsService.Save(_settings);
+            _settingsSaveFailedNotified = false;
+        }
+        catch (Exception ex)
+        {
+            if (_settingsSaveFailedNotified)
+            {
+                return;
+            }
+            _settingsSaveFailedNotified = true;
+            var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
+            System.Windows.MessageBox.Show(this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void ScheduleInkCleanup()
+    {
+        // Ink persistence is disabled; no cleanup needed.
+    }
+
+    private void TriggerInkCleanup()
+    {
+        // Ink persistence is disabled; no cleanup needed.
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)
@@ -754,3 +377,22 @@ public partial class MainWindow : Window
         RequestExit();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -5,6 +5,8 @@ public enum VirtualKey : ushort
     Tab = 0x09,
     Escape = 0x1B,
     Space = 0x20,
+    Home = 0x24,
+    End = 0x23,
     PageUp = 0x21,
     PageDown = 0x22,
     Left = 0x25,

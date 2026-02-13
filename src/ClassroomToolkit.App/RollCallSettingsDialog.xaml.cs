@@ -22,7 +22,9 @@ public partial class RollCallSettingsDialog : Window
     public bool RollCallShowId { get; private set; }
     public bool RollCallShowName { get; private set; }
     public bool RollCallRemoteEnabled { get; private set; }
+    public bool RollCallRemoteGroupSwitchEnabled { get; private set; }
     public string RemotePresenterKey { get; private set; } = "tab";
+    public string RemoteGroupSwitchKey { get; private set; } = "b";
     public bool RollCallShowPhoto { get; private set; }
     public int RollCallPhotoDurationSeconds { get; private set; }
     public string RollCallPhotoSharedClass { get; private set; } = string.Empty;
@@ -54,11 +56,11 @@ public partial class RollCallSettingsDialog : Window
 
         TimerSoundCheck.IsChecked = settings.RollCallTimerSoundEnabled;
         BuildTimerSoundCombo(settings.RollCallTimerSoundVariant);
-        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "gentle";
+        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "bell";
 
         ReminderSoundCheck.IsChecked = settings.RollCallTimerReminderEnabled;
         BuildReminderSoundCombo(settings.RollCallTimerReminderSoundVariant);
-        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "soft_beep";
+        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "short_bell";
         var interval = settings.RollCallTimerReminderIntervalMinutes;
         if (interval <= 0)
         {
@@ -68,12 +70,16 @@ public partial class RollCallSettingsDialog : Window
         RemoteEnabledCheck.IsChecked = settings.RollCallRemoteEnabled;
         BuildRemoteKeyCombo(settings.RemotePresenterKey);
 
+        RemoteGroupSwitchCheck.IsChecked = settings.RollCallRemoteGroupSwitchEnabled;
+        BuildRemoteGroupSwitchKeyCombo(settings.RemoteGroupSwitchKey);
+
         UpdatePhotoDurationLabel();
         UpdatePhotoControls();
         UpdateTimerControls();
         UpdateReminderIntervalLabel();
         UpdateSpeechControls();
         UpdateRemoteKeyEnabled();
+        UpdateRemoteGroupSwitchEnabled();
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
@@ -81,6 +87,12 @@ public partial class RollCallSettingsDialog : Window
     {
         UpdateRemoteKeyEnabled();
     }
+
+    private void OnRemoteGroupSwitchChanged(object sender, RoutedEventArgs e)
+    {
+        UpdateRemoteGroupSwitchEnabled();
+    }
+
 
     private void OnShowPhotoChanged(object sender, RoutedEventArgs e)
     {
@@ -113,6 +125,12 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
+    }
+
+    private void UpdateRemoteGroupSwitchEnabled()
+    {
+        var enabled = RemoteGroupSwitchCheck.IsChecked == true;
+        RemoteGroupSwitchKeyCombo.IsEnabled = enabled;
     }
 
     private void UpdatePhotoControls()
@@ -159,35 +177,56 @@ public partial class RollCallSettingsDialog : Window
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
         var keyText = GetRemoteKey();
-        if (string.IsNullOrWhiteSpace(keyText))
-        {
-            keyText = "tab";
-        }
+        var groupKeyText = GetRemoteGroupSwitchKey();
+
+        if (string.IsNullOrWhiteSpace(keyText)) keyText = "tab";
+        if (string.IsNullOrWhiteSpace(groupKeyText)) groupKeyText = "b";
+
         if (RemoteEnabledCheck.IsChecked == true)
         {
             if (!KeyBindingParser.TryParse(keyText, out var binding) || binding == null)
             {
-                System.Windows.MessageBox.Show("请输入有效的按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("请输入有效的点名按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
             keyText = binding.ToString();
         }
+
+        if (RemoteGroupSwitchCheck.IsChecked == true)
+        {
+            if (!KeyBindingParser.TryParse(groupKeyText, out var binding) || binding == null)
+            {
+                System.Windows.MessageBox.Show("请输入有效的分组切换按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            groupKeyText = binding.ToString();
+        }
+
+        if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true && 
+            string.Equals(keyText, groupKeyText, StringComparison.OrdinalIgnoreCase))
+        {
+            System.Windows.MessageBox.Show("点名按键与分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
         RollCallShowId = ShowIdCheck.IsChecked == true;
         RollCallShowName = ShowNameCheck.IsChecked == true;
         RollCallShowPhoto = ShowPhotoCheck.IsChecked == true;
         RollCallPhotoDurationSeconds = (int)Math.Round(PhotoDurationSlider.Value);
         RollCallPhotoSharedClass = GetSelectedValue(PhotoSharedCombo, string.Empty);
         RollCallTimerSoundEnabled = TimerSoundCheck.IsChecked == true;
-        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "gentle");
+        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "bell");
         RollCallTimerReminderEnabled = ReminderSoundCheck.IsChecked == true;
         RollCallTimerReminderIntervalMinutes = (int)Math.Round(ReminderIntervalSlider.Value);
-        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "soft_beep");
+        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "short_bell");
         RollCallSpeechEnabled = SpeechCheck.IsChecked == true;
         RollCallSpeechEngine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
         RollCallSpeechVoiceId = GetSelectedValue(SpeechVoiceCombo, _initialVoiceId);
         RollCallSpeechOutputId = GetSelectedValue(SpeechOutputCombo, _initialOutputId);
         RollCallRemoteEnabled = RemoteEnabledCheck.IsChecked == true;
+        RollCallRemoteGroupSwitchEnabled = RemoteGroupSwitchCheck.IsChecked == true;
         RemotePresenterKey = keyText;
+        RemoteGroupSwitchKey = groupKeyText;
         DialogResult = true;
     }
 
@@ -221,24 +260,7 @@ public partial class RollCallSettingsDialog : Window
 
     private void BuildRemoteKeyCombo(string? current)
     {
-        var items = new[]
-        {
-            new ComboOption("tab", "Tab键（切换超链接）"),
-            new ComboOption("enter", "Enter键"),
-            new ComboOption("space", "Space键"),
-            new ComboOption("pageup", "PageUp键"),
-            new ComboOption("pagedown", "PageDown键"),
-            new ComboOption("left", "方向键←"),
-            new ComboOption("right", "方向键→"),
-            new ComboOption("up", "方向键↑"),
-            new ComboOption("down", "方向键↓"),
-            new ComboOption("f5", "F5键"),
-            new ComboOption("shift+f5", "Shift+F5键（从当前页放映）"),
-            new ComboOption("esc", "Esc键（退出放映）"),
-            new ComboOption("b", "B键（黑屏）"),
-            new ComboOption("w", "W键（白屏）"),
-            new ComboOption("shift+b", "Shift+B键（黑屏）")
-        };
+        var items = GetRemoteKeyOptions();
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
@@ -248,6 +270,31 @@ public partial class RollCallSettingsDialog : Window
             selected = "tab";
         }
         RemoteKeyCombo.SelectedValue = selected;
+    }
+
+    private void BuildRemoteGroupSwitchKeyCombo(string? current)
+    {
+        var items = GetRemoteKeyOptions();
+        RemoteGroupSwitchKeyCombo.ItemsSource = items;
+        RemoteGroupSwitchKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
+        RemoteGroupSwitchKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
+        var selected = string.IsNullOrWhiteSpace(current) ? "b" : current;
+        if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "b";
+        }
+        RemoteGroupSwitchKeyCombo.SelectedValue = selected;
+    }
+
+    private static IReadOnlyList<ComboOption> GetRemoteKeyOptions()
+    {
+        return new[]
+        {
+            new ComboOption("tab", "Tab键（切换超链接）"),
+            new ComboOption("enter", "Enter键（确认打开超链接）"),
+            new ComboOption("f5", "F5/Shift+F5/Esc键（全屏/退出全屏）"),
+            new ComboOption("b", "B/b键（黑屏）")
+        };
     }
 
     private void BuildSpeechEngineCombo(string? current)
@@ -269,43 +316,22 @@ public partial class RollCallSettingsDialog : Window
         var allVoices = synth.GetInstalledVoices().ToList();
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 暂时显示所有语音，不做任何过滤或分类
-        System.Diagnostics.Debug.WriteLine($"=== 语音检测报告 ===");
-        System.Diagnostics.Debug.WriteLine($"总共检测到 {allVoices.Count} 个语音");
-        
         foreach (var voice in allVoices)
         {
             var info = voice.VoiceInfo;
-            existing.Add(info.Name);
-            System.Diagnostics.Debug.WriteLine($"语音 {allVoices.IndexOf(voice) + 1}:");
-            System.Diagnostics.Debug.WriteLine($"  名称: {info.Name}");
-            System.Diagnostics.Debug.WriteLine($"  文化: {info.Culture.Name}");
-            System.Diagnostics.Debug.WriteLine($"  性别: {info.Gender}");
-            System.Diagnostics.Debug.WriteLine($"  启用: {voice.Enabled}");
-            System.Diagnostics.Debug.WriteLine($"  ID: {info.Id}");
-            
-            // 直接添加到列表，不做任何过滤
-            var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
-            voices.Add(new ComboOption(info.Name, label));
-            System.Diagnostics.Debug.WriteLine($"  -> 已添加到下拉框");
-            System.Diagnostics.Debug.WriteLine("");
-        }
-
-        // Include registry voices to cover OneCore and disabled entries.
-        var registryVoices = ReadRegistryVoices();
-        foreach (var registryVoice in registryVoices)
-        {
-            if (!existing.Add(registryVoice.Name))
+            if (!voice.Enabled)
             {
                 continue;
             }
-            var label = FormatRegistryVoiceLabel(registryVoice);
-            voices.Add(new ComboOption(registryVoice.Name, label));
-            System.Diagnostics.Debug.WriteLine($"  -> 追加注册表语音: {registryVoice.Name}");
+            existing.Add(info.Name);
+            var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
+            voices.Add(new ComboOption(info.Name, label));
         }
-        
-        System.Diagnostics.Debug.WriteLine($"=== 最终结果 ===");
-        System.Diagnostics.Debug.WriteLine($"下拉框中将显示 {voices.Count} 个语音选项");
+
+        if (voices.Count == 0)
+        {
+            voices.Add(new ComboOption(string.Empty, "暂无可用发音人"));
+        }
     }
 
     private void BuildVoiceCombo(string? current)
@@ -550,32 +576,29 @@ public partial class RollCallSettingsDialog : Window
     {
         var items = new[]
         {
-            new ComboOption("gentle", "柔和铃声"),
             new ComboOption("bell", "上课铃"),
-            new ComboOption("digital", "电子滴答"),
-            new ComboOption("buzz", "蜂鸣器"),
-            new ComboOption("urgent", "紧张倒计时")
+            new ComboOption("gentle", "下课铃"),
+            new ComboOption("digital", "闹钟"),
+            new ComboOption("buzz", "门铃")
         };
         TimerSoundCombo.ItemsSource = items;
         TimerSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         TimerSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        TimerSoundCombo.SelectedValue = current ?? "gentle";
+        TimerSoundCombo.SelectedValue = current ?? "bell";
     }
 
     private void BuildReminderSoundCombo(string? current)
     {
         var items = new[]
         {
-            new ComboOption("soft_beep", "轻柔提示"),
-            new ComboOption("ping", "清脆提示"),
-            new ComboOption("chime", "简洁钟声"),
-            new ComboOption("pulse", "节奏哔哔"),
-            new ComboOption("short_bell", "短铃提示")
+            new ComboOption("short_bell", "轻柔铃声"),
+            new ComboOption("chime", "提醒钟"),
+            new ComboOption("soft_beep", "短提示音")
         };
         ReminderSoundCombo.ItemsSource = items;
         ReminderSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         ReminderSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        ReminderSoundCombo.SelectedValue = current ?? "soft_beep";
+        ReminderSoundCombo.SelectedValue = current ?? "short_bell";
     }
 
     private void UpdateReminderIntervalLabel()
@@ -595,7 +618,17 @@ public partial class RollCallSettingsDialog : Window
         {
             return selected;
         }
-        return (RemoteKeyCombo.Text ?? string.Empty).Trim().ToLowerInvariant();
+        return (RemoteKeyCombo.Text ?? string.Empty).Trim();
+    }
+
+    private string GetRemoteGroupSwitchKey()
+    {
+        var selected = GetSelectedValue(RemoteGroupSwitchKeyCombo, string.Empty);
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+        return (RemoteGroupSwitchKeyCombo.Text ?? string.Empty).Trim();
     }
 
     private static string GetSelectedValue(System.Windows.Controls.ComboBox combo, string fallback)

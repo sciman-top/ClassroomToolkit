@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
@@ -13,6 +14,7 @@ public sealed class AppSettings
     public bool RollCallShowId { get; set; } = true;
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; } = false;
+    public bool RollCallRemoteGroupSwitchEnabled { get; set; } = false;
     public bool RollCallShowPhoto { get; set; } = false;
     public int RollCallPhotoDurationSeconds { get; set; } = 0;
     public string RollCallPhotoSharedClass { get; set; } = string.Empty;
@@ -40,6 +42,7 @@ public sealed class AppSettings
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
     public string RemotePresenterKey { get; set; } = "tab";
+    public string RemoteGroupSwitchKey { get; set; } = "b";
     public string RollCallCurrentClass { get; set; } = string.Empty;
     public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;
@@ -56,14 +59,31 @@ public sealed class AppSettings
     public int PaintToolbarX { get; set; } = 260;
     public int PaintToolbarY { get; set; } = 260;
     public double PaintToolbarScale { get; set; } = 1.0;
+    public bool InkCacheEnabled { get; set; } = true;
+    public bool InkRecordEnabled { get; set; } = false;
+    public bool InkReplayPreviousEnabled { get; set; } = false;
+    public int InkRetentionDays { get; set; } = 30;
+    public string InkPhotoRootPath { get; set; } = @"D:\ClassroomToolkit\Ink\Photos";
+    public List<string> PhotoFavoriteFolders { get; set; } = new();
+    public List<string> PhotoRecentFolders { get; set; } = new();
+    public bool PhotoRememberTransform { get; set; } = false;
+    public bool PhotoCrossPageDisplay { get; set; } = false;
+    public bool PhotoUnifiedTransformEnabled { get; set; } = false;
+    public double PhotoUnifiedScaleX { get; set; } = 1.0;
+    public double PhotoUnifiedScaleY { get; set; } = 1.0;
+    public double PhotoUnifiedTranslateX { get; set; } = 0.0;
+    public double PhotoUnifiedTranslateY { get; set; } = 0.0;
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 255;
     public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
+    public WhiteboardBrushPreset WhiteboardPreset { get; set; } = WhiteboardBrushPreset.Smooth;
+    public CalligraphyBrushPreset CalligraphyPreset { get; set; } = CalligraphyBrushPreset.Sharp;
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;
+    public byte CalligraphyOverlayOpacityThreshold { get; set; } = 230;
     public MediaColor BrushColor { get; set; } = MediaColors.Red;
     public MediaColor BoardColor { get; set; } = MediaColors.White;
     public MediaColor QuickColor1 { get; set; } = MediaColors.Black;

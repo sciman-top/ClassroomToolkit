@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
-
-namespace ClassroomToolkit.Interop.Presentation;
+using System.Diagnostics;
+using System.Threading;
+using ClassroomToolkit.Interop.Presentation;
 
 public sealed class KeyboardHook : IDisposable
 {
@@ -9,6 +10,10 @@ public sealed class KeyboardHook : IDisposable
     private const int WmKeyUp = 0x0101;
     private const int WmSysKeyDown = 0x0104;
     private const int WmSysKeyUp = 0x0105;
+    
+    // Performance monitoring
+    private const int HookCallbackTimeoutMs = 50;
+    private const int ExceptionLogIntervalMs = 30000;
 
     private readonly HookProc _hookProc;
     private IntPtr _hookId;
@@ -18,6 +23,8 @@ public sealed class KeyboardHook : IDisposable
     private bool _rightCtrlDown;
     private bool _leftAltDown;
     private bool _rightAltDown;
+    private int _callbackExceptionCount;
+    private long _lastExceptionLogTick;
 
     public bool IsActive => _hookId != IntPtr.Zero;
 
@@ -36,6 +43,16 @@ public sealed class KeyboardHook : IDisposable
 
     public void Start()
     {
+        StartCore(async: false).GetAwaiter().GetResult();
+    }
+
+    public Task StartAsync()
+    {
+        return StartCore(async: true);
+    }
+
+    private async Task StartCore(bool async)
+    {
         if (!OperatingSystem.IsWindows())
         {
             return;
@@ -44,14 +61,26 @@ public sealed class KeyboardHook : IDisposable
         {
             return;
         }
-        _hookId = SetHook(_hookProc);
-        if (_hookId == IntPtr.Zero)
+
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
+            _hookId = SetHook(_hookProc);
+            if (_hookId != IntPtr.Zero)
+            {
+                LastError = 0;
+                RefreshModifierState();
+                return;
+            }
             LastError = Marshal.GetLastWin32Error();
-        }
-        else
-        {
-            LastError = 0;
+            if (attempt < maxRetries - 1)
+            {
+                var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200ms
+                if (async)
+                    await Task.Delay(delayMs);
+                else
+                    Thread.Sleep(delayMs);
+            }
         }
     }
 
@@ -65,26 +94,45 @@ public sealed class KeyboardHook : IDisposable
         _hookId = IntPtr.Zero;
     }
 
+    ~KeyboardHook()
+    {
+        var hook = _hookId;
+        if (hook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(hook);
+        }
+    }
+
     public void Dispose()
     {
         Stop();
+        GC.SuppressFinalize(this);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0)
+        var startTime = Stopwatch.GetTimestamp();
+        try
         {
+            if (nCode < 0 || lParam == IntPtr.Zero)
+            {
+                return CallNextHookEx(_hookId, nCode, wParam, lParam);
+            }
+
             var msg = wParam.ToInt32();
             var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
             var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
             var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+            var virtualKey = (VirtualKey)data.VirtualKeyCode;
+
             if (isDown || isUp)
             {
-                UpdateModifiers((VirtualKey)data.VirtualKeyCode, isDown);
+                UpdateModifiers(virtualKey, isDown);
             }
+
             if (isDown)
             {
-                var key = MapKey((VirtualKey)data.VirtualKeyCode);
+                var key = MapKey(virtualKey);
                 if (key.HasValue)
                 {
                     var modifiers = CurrentModifiers();
@@ -99,8 +147,21 @@ public sealed class KeyboardHook : IDisposable
                     }
                 }
             }
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
-        return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        catch (Exception ex)
+        {
+            RecordCallbackException("keyboard", ex);
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+        finally
+        {
+             var elapsedMs = (Stopwatch.GetTimestamp() - startTime) * 1000.0 / Stopwatch.Frequency;
+             if (elapsedMs > HookCallbackTimeoutMs)
+             {
+                 Debug.WriteLine($"[KeyboardHook] Callback took {elapsedMs:F1}ms");
+             }
+        }
     }
 
     private void UpdateModifiers(VirtualKey key, bool isDown)
@@ -108,8 +169,7 @@ public sealed class KeyboardHook : IDisposable
         switch (key)
         {
             case VirtualKey.Shift:
-                _leftShiftDown = isDown;
-                _rightShiftDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftShift:
                 _leftShiftDown = isDown;
@@ -118,8 +178,7 @@ public sealed class KeyboardHook : IDisposable
                 _rightShiftDown = isDown;
                 break;
             case VirtualKey.Control:
-                _leftCtrlDown = isDown;
-                _rightCtrlDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftControl:
                 _leftCtrlDown = isDown;
@@ -128,8 +187,7 @@ public sealed class KeyboardHook : IDisposable
                 _rightCtrlDown = isDown;
                 break;
             case VirtualKey.Alt:
-                _leftAltDown = isDown;
-                _rightAltDown = isDown;
+                RefreshModifierState();
                 break;
             case VirtualKey.LeftAlt:
                 _leftAltDown = isDown;
@@ -140,8 +198,39 @@ public sealed class KeyboardHook : IDisposable
         }
     }
 
+    private void RefreshModifierState()
+    {
+        _leftShiftDown = IsKeyDown(VirtualKey.LeftShift);
+        _rightShiftDown = IsKeyDown(VirtualKey.RightShift);
+        _leftCtrlDown = IsKeyDown(VirtualKey.LeftControl);
+        _rightCtrlDown = IsKeyDown(VirtualKey.RightControl);
+        _leftAltDown = IsKeyDown(VirtualKey.LeftAlt);
+        _rightAltDown = IsKeyDown(VirtualKey.RightAlt);
+    }
+
+    private static bool IsKeyDown(VirtualKey key)
+    {
+        return (GetKeyState((int)key) & 0x8000) != 0;
+    }
+
     private KeyModifiers CurrentModifiers()
     {
+        // Consistency check: Verified against actual system state
+        // This prevents "stuck" modifiers if a Up event was missed
+        bool inconsistent = 
+            (_leftShiftDown != IsKeyDown(VirtualKey.LeftShift)) ||
+            (_rightShiftDown != IsKeyDown(VirtualKey.RightShift)) ||
+            (_leftCtrlDown != IsKeyDown(VirtualKey.LeftControl)) ||
+            (_rightCtrlDown != IsKeyDown(VirtualKey.RightControl)) ||
+            (_leftAltDown != IsKeyDown(VirtualKey.LeftAlt)) ||
+            (_rightAltDown != IsKeyDown(VirtualKey.RightAlt));
+
+        if (inconsistent)
+        {
+             Debug.WriteLine("[KeyboardHook] Modifier state inconsistency detected. Forcing refresh.");
+             RefreshModifierState();
+        }
+
         var modifiers = KeyModifiers.None;
         if (_leftShiftDown || _rightShiftDown)
         {
@@ -168,6 +257,19 @@ public sealed class KeyboardHook : IDisposable
             return null;
         }
         return Enum.IsDefined(typeof(VirtualKey), key) ? key : null;
+    }
+
+    private void RecordCallbackException(string source, Exception ex)
+    {
+        var count = Interlocked.Increment(ref _callbackExceptionCount);
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastExceptionLogTick);
+        if (now - last < ExceptionLogIntervalMs)
+        {
+            return;
+        }
+        Interlocked.Exchange(ref _lastExceptionLogTick, now);
+        Debug.WriteLine($"[KeyboardHook][{source}] callback exception count={count}, type={ex.GetType().Name}, message={ex.Message}");
     }
 
     private static IntPtr SetHook(HookProc proc)
@@ -198,6 +300,9 @@ public sealed class KeyboardHook : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern short GetKeyState(int nVirtKey);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
