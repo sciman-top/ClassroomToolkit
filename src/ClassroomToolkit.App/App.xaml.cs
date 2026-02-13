@@ -52,6 +52,7 @@ public partial class App : WpfApplication
 
         services.AddSingleton(_ => new AppSettingsService(settingsPath));
         services.AddSingleton(provider => provider.GetRequiredService<AppSettingsService>().Load());
+        services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
         services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
         services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
         services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();

@@ -191,7 +191,7 @@
                 <!-- 屏幕画笔 -->
                 <Button x:Name="PaintButton" 
                         Style="{StaticResource Style_HeroTile}"
-                        Content="屏幕画笔"
+                        Content="{Binding PaintButtonText}"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
                         ToolTip="开启画笔 (长按设置)"
@@ -200,7 +200,7 @@
                 <!-- 点名/计时 -->
                 <Button x:Name="RollCallButton" 
                         Style="{StaticResource Style_HeroTile}"
-                        Content="课堂互动"
+                        Content="{Binding RollCallButtonText}"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
                         ToolTip="开启点名 (长按设置)"

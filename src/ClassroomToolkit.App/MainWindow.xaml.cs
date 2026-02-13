@@ -11,6 +11,7 @@ using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.ViewModels;
 
 namespace ClassroomToolkit.App;
 
@@ -48,15 +49,14 @@ public partial class MainWindow : Window
     private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly MainViewModel _mainViewModel;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
     private readonly Paint.IPaintWindowFactory _paintWindowFactory;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
-    public ICommand OpenRollCallSettingsCommand { get; }
-    public ICommand OpenPaintSettingsCommand { get; }
-
     public MainWindow(
         AppSettingsService settingsService,
         AppSettings settings,
+        MainViewModel mainViewModel,
         IRollCallWindowFactory rollCallWindowFactory,
         Paint.IPaintWindowFactory paintWindowFactory,
         Photos.IImageManagerWindowFactory imageManagerWindowFactory)
@@ -64,6 +64,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settingsService = settingsService;
         _settings = settings;
+        _mainViewModel = mainViewModel;
         _rollCallWindowFactory = rollCallWindowFactory;
         _paintWindowFactory = paintWindowFactory;
         _imageManagerWindowFactory = imageManagerWindowFactory;
@@ -75,9 +76,9 @@ public partial class MainWindow : Window
         };
         _presentationForegroundSuppressionTimer = new DispatcherTimer();
         _presentationForegroundSuppressionTimer.Tick += (_, _) => ReleasePresentationForegroundSuppression();
-        OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
-        OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
-        DataContext = this;
+        _mainViewModel.OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
+        _mainViewModel.OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
+        DataContext = _mainViewModel;
         Loaded += OnLoaded;
         IsVisibleChanged += (_, _) =>
         {
@@ -165,23 +166,8 @@ public partial class MainWindow : Window
 
     private void UpdateToggleButtons()
     {
-        if (_overlayWindow != null && _overlayWindow.IsVisible)
-        {
-            PaintButton.Content = "隐藏画笔";
-        }
-        else
-        {
-            PaintButton.Content = "画笔";
-        }
-
-        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-        {
-            RollCallButton.Content = "隐藏点名";
-        }
-        else
-        {
-            RollCallButton.Content = "点名";
-        }
+        _mainViewModel.IsPaintActive = _overlayWindow != null && _overlayWindow.IsVisible;
+        _mainViewModel.IsRollCallVisible = _rollCallWindow != null && _rollCallWindow.IsVisible;
     }
 
     private void OnOpenRollCallSettings()
@@ -467,5 +453,20 @@ public partial class MainWindow : Window
         RequestExit();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
