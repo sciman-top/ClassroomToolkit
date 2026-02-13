@@ -6,6 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassroomToolkit.Domain\ClassroomToolkit.Domain.csproj" />
@@ -27,3 +28,5 @@
     </Content>
   </ItemGroup>
 </Project>
+
+

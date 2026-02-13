@@ -33,3 +33,7 @@
 ## 7. 回滚预案
 - [ ] 每个任务有独立提交可回滚
 - [ ] 出现异常时可按任务粒度快速回退
+
+## 8. 本轮执行记录
+- [x] 已配置 ApplicationManifest=app.manifest
+- [x] app.manifest 已启用 PerMonitorV2
