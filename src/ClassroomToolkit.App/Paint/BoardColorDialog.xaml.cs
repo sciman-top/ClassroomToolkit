@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using MediaColor = System.Windows.Media.Color;
 using WpfButton = System.Windows.Controls.Button;
@@ -93,3 +94,4 @@ public partial class BoardColorDialog : Window
         return luminance >= 160 ? Colors.Black : Colors.White;
     }
 }
+
