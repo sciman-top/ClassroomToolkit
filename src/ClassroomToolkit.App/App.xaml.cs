@@ -1,10 +1,12 @@
 using WpfApplication = System.Windows.Application;
+using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 using System.Windows.Threading;
 using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App;
 
@@ -12,14 +14,23 @@ public partial class App : WpfApplication
 {
     private static readonly object LogWriteLock = new();
     private int _criticalDialogShowing;
+    private IServiceProvider? _services;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         // 注册全局异常处理
         RegisterGlobalExceptionHandlers();
+        ConfigureServices();
 
         base.OnStartup(e);
-        
+
+        if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
+        {
+            throw new InvalidOperationException("MainWindow service is not configured.");
+        }
+        MainWindow = mainWindow;
+        mainWindow.Show();
+
         // 在启动时立即修复所有 BorderBrush 问题
         try
         {
@@ -29,9 +40,24 @@ public partial class App : WpfApplication
         {
             LogException(ex, "GlobalBorderFixer Initial Fix");
         }
-        
+
         // 注册全局 Border 修复
         BorderFixHelper.RegisterGlobalFix();
+    }
+
+    private void ConfigureServices()
+    {
+        var services = new ServiceCollection();
+        var settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini");
+
+        services.AddSingleton(_ => new AppSettingsService(settingsPath));
+        services.AddSingleton(provider => provider.GetRequiredService<AppSettingsService>().Load());
+        services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
+        services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
+        services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
+        services.AddSingleton<MainWindow>();
+
+        _services = services.BuildServiceProvider();
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -109,7 +135,7 @@ public partial class App : WpfApplication
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             var logContent = $"[{timestamp}] [{source}] {ex}\n" +
                              $"--------------------------------------------------------------------------------\n";
-            
+
             lock (LogWriteLock)
             {
                 File.AppendAllText(logFile, logContent);

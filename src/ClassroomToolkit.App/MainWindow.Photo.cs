@@ -18,7 +18,7 @@ public partial class MainWindow
     {
         if (_imageManagerWindow == null)
         {
-            _imageManagerWindow = new ImageManagerWindow(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders);
+            _imageManagerWindow = _imageManagerWindowFactory.Create(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders);
             _imageManagerWindow.ImageSelected += OnImageSelected;
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
@@ -269,3 +269,4 @@ public partial class MainWindow
         return Math.Abs(left - right) < 0.0001;
     }
 }
+

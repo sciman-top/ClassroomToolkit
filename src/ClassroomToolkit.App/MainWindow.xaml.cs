@@ -48,14 +48,25 @@ public partial class MainWindow : Window
     private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly IRollCallWindowFactory _rollCallWindowFactory;
+    private readonly Paint.IPaintWindowFactory _paintWindowFactory;
+    private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
     public ICommand OpenRollCallSettingsCommand { get; }
     public ICommand OpenPaintSettingsCommand { get; }
 
-    public MainWindow()
+    public MainWindow(
+        AppSettingsService settingsService,
+        AppSettings settings,
+        IRollCallWindowFactory rollCallWindowFactory,
+        Paint.IPaintWindowFactory paintWindowFactory,
+        Photos.IImageManagerWindowFactory imageManagerWindowFactory)
     {
         InitializeComponent();
-        _settingsService = new AppSettingsService(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.ini"));
-        _settings = _settingsService.Load();
+        _settingsService = settingsService;
+        _settings = settings;
+        _rollCallWindowFactory = rollCallWindowFactory;
+        _paintWindowFactory = paintWindowFactory;
+        _imageManagerWindowFactory = imageManagerWindowFactory;
         _autoExitTimer = new DispatcherTimer();
         _autoExitTimer.Tick += (_, _) =>
         {
@@ -143,7 +154,7 @@ public partial class MainWindow : Window
             return;
         }
         var path = ResolveStudentWorkbookPath();
-        _rollCallWindow = new RollCallWindow(path, _settingsService, _settings);
+        _rollCallWindow = _rollCallWindowFactory.Create(path);
         _rollCallWindow.IsVisibleChanged += (_, _) => UpdateToggleButtons();
         _rollCallWindow.Closed += (_, _) =>
         {
@@ -456,3 +467,5 @@ public partial class MainWindow : Window
         RequestExit();
     }
 }
+
+

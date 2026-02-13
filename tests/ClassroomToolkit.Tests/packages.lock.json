@@ -90,6 +90,19 @@
         "resolved": "17.6.0",
         "contentHash": "5v2GwzpR7JEuQUzupjx3zLwn2FutADW/weLzLt726DR3WXxsM+ICPoJG6pxuKFsumtZp890UrVuudTUhsE8Qyg=="
       },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "8.0.1",
+        "contentHash": "BmANAnR5Xd4Oqw7yQ75xOAYODybZQRzdeNucg7kS5wWKd2PNnMdYtJ2Vciy0QLylRmv42DGl5+AFL9izA6F1Rw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.2",
+        "contentHash": "3iE7UF7MQkCv1cxzCahz+Y/guQbTqieyxyaWKhrRO91itI9cOKO76OHeQDahqG4MmW5umr3CcCvGmK92lWNlbg=="
+      },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
         "resolved": "1.1.1",
@@ -1120,6 +1133,7 @@
           "ClassroomToolkit.Infra": "[1.0.0, )",
           "ClassroomToolkit.Interop": "[1.0.0, )",
           "ClassroomToolkit.Services": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection": "[8.0.1, )",
           "PdfiumViewer.Core": "[1.0.4, )",
           "PdfiumViewer.Native.x86_64.no_v8-no_xfa": "[2018.4.8.256, )",
           "System.Speech": "[8.0.0, )"

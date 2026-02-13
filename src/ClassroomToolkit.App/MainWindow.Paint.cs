@@ -55,8 +55,9 @@ public partial class MainWindow
         {
             return;
         }
-        _overlayWindow = new Paint.PaintOverlayWindow();
-        _toolbarWindow = new Paint.PaintToolbarWindow();
+        var windows = _paintWindowFactory.Create();
+        _overlayWindow = windows.overlay;
+        _toolbarWindow = windows.toolbar;
         _toolbarWindow.AttachOverlay(_overlayWindow);
         _overlayWindow.PhotoModeChanged += OnPhotoModeChanged;
         _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
@@ -403,3 +404,5 @@ public partial class MainWindow
         }
     }
 }
+
+
