@@ -26,14 +26,21 @@
 - [ ] 跨屏拖动后坐标与缩放正常
 
 ## 6. 自动化验证
-- [ ] `dotnet build ClassroomToolkit.sln -c Debug`
-- [ ] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
-- [ ] `powershell -File scripts/ctoolkit.ps1`
+- [x] `dotnet build ClassroomToolkit.sln -c Debug`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- [x] `powershell -File scripts/ctoolkit.ps1 -SkipCommit`
 
 ## 7. 回滚预案
-- [ ] 每个任务有独立提交可回滚
+- [x] 每个任务有独立提交可回滚
 - [ ] 出现异常时可按任务粒度快速回退
 
 ## 8. 本轮执行记录
 - [x] 已配置 ApplicationManifest=app.manifest
 - [x] app.manifest 已启用 PerMonitorV2
+
+## 9. 收尾记录
+- [x] dotnet build ClassroomToolkit.sln -c Release`r
+- [x] dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`r
+- [ ] 4K + 投影人工验收（需真实双屏环境）
+- [ ] 课堂主流程人工验收（需教师端场景）
+

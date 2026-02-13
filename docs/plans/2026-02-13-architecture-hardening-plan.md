@@ -136,3 +136,18 @@ git commit -m "refactor(app): 用工厂与 DI 接管窗口创建"
 ### Task 5: 抽离窗口编排（Z-Order/Owner/Topmost）协调器
 
 ### Task 6: 收尾、发布前验证与回滚预案
+
+## 执行结果（2026-02-13）
+- 已完成 Task 1~Task 6 的代码与自动化验证。
+- Debug: `dotnet build`/`dotnet test` 均通过。
+- Release: `dotnet build`/`dotnet test` 均通过。
+- 脚本验证: `powershell -File scripts/ctoolkit.ps1 -SkipCommit` 通过。
+- 未完成项: 4K+投影及课堂真实流程人工验收需在线下设备执行。
+
+## 回滚锚点（按任务粒度）
+- Task 6 之前: `996bf98`
+- Task 5 之前: `5c3c969`
+- Task 4 之前: `ab808a2`
+- Task 3 之前: `04347c1`
+- Task 2 之前: `0bb793a`
+- Task 1 之前: `820c6d8`
