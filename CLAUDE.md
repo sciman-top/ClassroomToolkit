@@ -3,10 +3,11 @@
 **类型**: Windows WPF (.NET 8)  
 **适用范围**: 项目级（仓库根）  
 **上下文**: 项目根目录  
-**版本**: 1.41  
-**最后更新**: 2026-01-25
+**版本**: 1.42  
+**最后更新**: 2026-02-13
 
 ## 0. 变更记录
+- 2026-02-13 v1.42：同步架构改造落地（DI 启动链、MainViewModel、Windowing 协调器、PerMonitorV2、新增测试与 Release 验证命令）。
 - 2026-01-25 v1.41：移除首句模板要求，保持中文默认优先。
 - 2026-01-25 v1.40：平台差异模板化为“最小摘要/操作/风险提示”；说明触发移至 A.2。
 - 2026-01-25 v1.39：补充阅读指引；修正变更记录表述以匹配实际修改。
@@ -96,10 +97,11 @@
 
 ## C. 项目差异（领域/技术）
 ### 1. 目录与模块
-- `src/ClassroomToolkit.App` — WPF UI (MVVM)
+- `src/ClassroomToolkit.App` — WPF UI (MVVM，含 MainViewModel、窗口工厂与启动 DI 入口)
 - `src/ClassroomToolkit.Domain` — 纯业务逻辑
 - `src/ClassroomToolkit.Services` — 应用服务编排
 - `src/ClassroomToolkit.Interop` — Win32/COM 高风险区
+- `src/ClassroomToolkit.App/Windowing` — 多窗口编排策略（Z-Order/Owner/Topmost）
 - `src/ClassroomToolkit.Infra` — 配置/持久化
 - `tests/ClassroomToolkit.Tests` — xUnit + FluentAssertions
 - `scripts/ctoolkit.ps1` — 构建/测试脚本
@@ -111,9 +113,12 @@
 - `dotnet build ClassroomToolkit.sln -c Debug`
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
 - `dotnet test --filter "FullyQualifiedName~PresentationControlServiceTests"`
+- `dotnet test --filter "FullyQualifiedName~MainViewModelTests"`
+- `dotnet test --filter "FullyQualifiedName~WindowOrchestratorTests"`
 - `dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`
+- `dotnet build ClassroomToolkit.sln -c Release`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`
 - `powershell -File scripts/ctoolkit.ps1`（可加 `-SkipTests`/`-SkipCommit`）
-
 ### 3. 代码规范
 - 4 spaces 缩进，使用 file-scoped namespaces
 - 类型/方法 PascalCase，局部/参数 camelCase，接口 `I` 前缀
@@ -139,14 +144,15 @@
 ### 7. 调试与技术债（概要）
 - 调试标签：`[WpsTracker]`、`[InkCache]`、`[PresentationControl]`、`[UIAutomation]`
 - 技术债：F5 拦截（需 `RegisterHotKey`）、Ink 序列化性能、WPS COM 重试、High DPI 模糊
+- DPI 说明：已启用 `app.manifest` + `PerMonitorV2`，跨屏场景需做人工验收（4K + 投影）
 
 ### 8. 验证与测试
 - 框架：xUnit + FluentAssertions（coverlet 已启用）
-- 轻量验证：按需跑单测或特定类；完整验证：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- 轻量验证：按需跑单测或特定类（含 `MainViewModelTests`、`WindowOrchestratorTests`）；完整验证：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
 - Interop 难以单测，优先覆盖 Domain 逻辑
 - 仅文档/规则/注释调整可不运行测试，但需说明未运行原因与风险。
 - 若未运行测试，需在回复中说明原因与风险
-
+- 发布前应执行 Release 验证：`dotnet build ClassroomToolkit.sln -c Release` 与 `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`
 ### 9. 变更影响模板
 - 多文件/规则改写必须填写本模板，其他变更建议填写。
 - 模板：影响模块=；影响数据/配置=；UI/交互=；Interop/外部依赖=；验证与回滚=。
@@ -165,3 +171,5 @@
 - 自包含：项目级文件在 B 节提供最小复述并指向 GlobalUser 文件。
 - 一致性：项目级 A/C/D 内容三文件保持一致；仅 B 节允许平台差异。
 - 验证：变更后补充验证命令或未执行原因与风险。
+
+
