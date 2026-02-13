@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -404,5 +405,7 @@ public partial class MainWindow
         }
     }
 }
+
+
 
 

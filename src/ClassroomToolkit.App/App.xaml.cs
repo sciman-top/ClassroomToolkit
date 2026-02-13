@@ -56,6 +56,7 @@ public partial class App : WpfApplication
         services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
         services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
         services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
+        services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
         services.AddSingleton<MainWindow>();
 
         _services = services.BuildServiceProvider();

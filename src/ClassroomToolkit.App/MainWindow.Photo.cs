@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App;
@@ -269,4 +270,6 @@ public partial class MainWindow
         return Math.Abs(left - right) < 0.0001;
     }
 }
+
+
 

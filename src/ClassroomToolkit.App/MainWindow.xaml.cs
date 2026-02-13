@@ -12,6 +12,7 @@ using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -23,15 +24,6 @@ namespace ClassroomToolkit.App;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private enum ZOrderSurface
-    {
-        None,
-        PresentationFullscreen,
-        PhotoFullscreen,
-        Whiteboard,
-        ImageManager
-    }
-
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow;
@@ -53,13 +45,15 @@ public partial class MainWindow : Window
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
     private readonly Paint.IPaintWindowFactory _paintWindowFactory;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
+    private readonly IWindowOrchestrator _windowOrchestrator;
     public MainWindow(
         AppSettingsService settingsService,
         AppSettings settings,
         MainViewModel mainViewModel,
         IRollCallWindowFactory rollCallWindowFactory,
         Paint.IPaintWindowFactory paintWindowFactory,
-        Photos.IImageManagerWindowFactory imageManagerWindowFactory)
+        Photos.IImageManagerWindowFactory imageManagerWindowFactory,
+        IWindowOrchestrator windowOrchestrator)
     {
         InitializeComponent();
         _settingsService = settingsService;
@@ -68,6 +62,7 @@ public partial class MainWindow : Window
         _rollCallWindowFactory = rollCallWindowFactory;
         _paintWindowFactory = paintWindowFactory;
         _imageManagerWindowFactory = imageManagerWindowFactory;
+        _windowOrchestrator = windowOrchestrator;
         _autoExitTimer = new DispatcherTimer();
         _autoExitTimer.Tick += (_, _) =>
         {
@@ -213,12 +208,7 @@ public partial class MainWindow : Window
 
     private void TouchSurface(ZOrderSurface surface, bool applyPolicy = true)
     {
-        if (surface == ZOrderSurface.None)
-        {
-            return;
-        }
-        _surfaceStack.Remove(surface);
-        _surfaceStack.Add(surface);
+        _windowOrchestrator.TouchSurface(_surfaceStack, surface);
         if (applyPolicy)
         {
             ApplyZOrderPolicy();
@@ -241,8 +231,8 @@ public partial class MainWindow : Window
             var imageManagerVisible = _imageManagerWindow?.IsVisible == true
                 && _imageManagerWindow.WindowState != WindowState.Minimized;
 
-            PruneSurfaceStack(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
-            var frontSurface = ResolveFrontSurface(photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            _windowOrchestrator.PruneSurfaceStack(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
+            var frontSurface = _windowOrchestrator.ResolveFrontSurface(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
             SyncFloatingWindowOwners(overlayVisible);
 
             if (_imageManagerWindow != null && imageManagerVisible)
@@ -276,72 +266,6 @@ public partial class MainWindow : Window
             _zOrderPolicyApplying = false;
         }
     }
-
-    private ZOrderSurface ResolveFrontSurface(
-        bool photoActive,
-        bool presentationFullscreen,
-        bool whiteboardActive,
-        bool imageManagerVisible)
-    {
-        for (int i = _surfaceStack.Count - 1; i >= 0; i--)
-        {
-            var surface = _surfaceStack[i];
-            if (IsSurfaceActive(surface, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible))
-            {
-                return surface;
-            }
-        }
-        if (imageManagerVisible)
-        {
-            return ZOrderSurface.ImageManager;
-        }
-        if (photoActive)
-        {
-            return ZOrderSurface.PhotoFullscreen;
-        }
-        if (presentationFullscreen)
-        {
-            return ZOrderSurface.PresentationFullscreen;
-        }
-        if (whiteboardActive)
-        {
-            return ZOrderSurface.Whiteboard;
-        }
-        return ZOrderSurface.None;
-    }
-
-    private void PruneSurfaceStack(
-        bool photoActive,
-        bool presentationFullscreen,
-        bool whiteboardActive,
-        bool imageManagerVisible)
-    {
-        for (int i = _surfaceStack.Count - 1; i >= 0; i--)
-        {
-            if (!IsSurfaceActive(_surfaceStack[i], photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible))
-            {
-                _surfaceStack.RemoveAt(i);
-            }
-        }
-    }
-
-    private static bool IsSurfaceActive(
-        ZOrderSurface surface,
-        bool photoActive,
-        bool presentationFullscreen,
-        bool whiteboardActive,
-        bool imageManagerVisible)
-    {
-        return surface switch
-        {
-            ZOrderSurface.PhotoFullscreen => photoActive,
-            ZOrderSurface.PresentationFullscreen => presentationFullscreen,
-            ZOrderSurface.Whiteboard => whiteboardActive,
-            ZOrderSurface.ImageManager => imageManagerVisible,
-            _ => false
-        };
-    }
-
     private void SyncFloatingWindowOwners(bool overlayVisible)
     {
         var overlay = _overlayWindow;
@@ -453,6 +377,8 @@ public partial class MainWindow : Window
         RequestExit();
     }
 }
+
+
 
 
 
