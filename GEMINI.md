@@ -148,16 +148,15 @@
 - 不提交真实学生数据；`students.xlsx` 与 `student_photos/` 仅为示例资产
 - Interop 大幅重构需先沟通确认
 
-### 6. 关键技术要点（高风险区）
-- COM 对象需释放（`Marshal.ReleaseComObject`/`try/finally`）
-- 处理 `RPC_E_CALL_REJECTED`（COM 忙）并降级
-- P/Invoke 通常使用 `CharSet.Auto` 与 `SetLastError = true`
-- WPS 幻灯片：手动 F5 时 `SlideShowWindows.Count` 可能为 0；`SlideShowSettings.Run()` 可跟踪页码；无法跟踪时降级为“会话级画布”
-- WPS ProgIDs：优先 `KWPP.Application`，退化 `WPP.Application`
+### 6. 关键技术要点 (Input Simulation)
+- **控制策略**：优先使用 Input Simulation (Keyboard/Mouse Hooks) 控制 PowerPoint/WPS，而非 COM Automation。
+- **WPS 兼容性**：在 WPS 演示模式下，通过模拟滚轮或键盘方向键翻页；检测窗口类名 `kwpp*` 以识别 WPS。
+- **降级策略**：若 Input Simulation 无效（如权限拦截），降级为提示用户手动操作或检查权限。
+- **窗口识别**：结合 `GetForegroundWindow` 与窗口类名扫描 (`PresentationClassifier`) 定位演示窗口。
 
 ### 7. 调试与技术债（概要）
 - 调试标签：`[WpsTracker]`、`[InkCache]`、`[PresentationControl]`、`[UIAutomation]`
-- 技术债：F5 拦截（需 `RegisterHotKey`）、Ink 序列化性能、WPS COM 重试、High DPI 模糊
+- 技术债：F5 拦截（需 `RegisterHotKey`）、Ink 序列化性能、WPS 窗口焦点抢占、High DPI 模糊
 - DPI 说明：已启用 `app.manifest` + `PerMonitorV2`，跨屏场景需做人工验收（4K + 投影）
 
 ### 8. 验证与测试
