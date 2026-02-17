@@ -145,36 +145,44 @@ public partial class RollCallWindow
 
     private async Task StartKeyboardHookCoreAsync(Func<bool> isCurrent)
     {
-        if (!ShouldEnableRemotePresenterHook()) return;
-
-        var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.Tab, KeyModifiers.None);
-        var bindings = ResolveRemoteBindings(_viewModel.RemotePresenterKey, fallback);
-        
-        Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+        try
         {
-             Dispatcher.Invoke(() =>
-             {
-                 if (!_viewModel.IsRollCallMode) return;
-                 
-                 if (_viewModel.TryRollNext(out var message))
-                 {
-                     UpdatePhotoDisplay();
-                     SpeakStudentName();
-                     ScheduleRollStateSave();
-                     return;
-                 }
-                 if (!string.IsNullOrWhiteSpace(message))
-                 {
-                     ShowRollCallMessage(message);
-                 }
-             });
-        };
+            if (!ShouldEnableRemotePresenterHook()) return;
 
-        bool result = await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableRemotePresenterHook());
-        
-        if (!result && !_remoteHookUnavailableNotified && isCurrent() && ShouldEnableRemotePresenterHook())
+            var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+            var bindings = ResolveRemoteBindings(_viewModel.RemotePresenterKey, fallback);
+            
+            Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+            {
+                 Dispatcher.Invoke(() =>
+                 {
+                     if (!_viewModel.IsRollCallMode) return;
+                     
+                     if (_viewModel.TryRollNext(out var message))
+                     {
+                         UpdatePhotoDisplay();
+                         SpeakStudentName();
+                         ScheduleRollStateSave();
+                         return;
+                     }
+                     if (!string.IsNullOrWhiteSpace(message))
+                     {
+                         ShowRollCallMessage(message);
+                     }
+                 });
+            };
+
+            bool result = await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableRemotePresenterHook());
+            
+            if (!result && !_remoteHookUnavailableNotified && isCurrent() && ShouldEnableRemotePresenterHook())
+            {
+                 NotifyRemoteHookError();
+            }
+        }
+        catch (Exception ex)
         {
-             NotifyRemoteHookError();
+            System.Diagnostics.Debug.WriteLine($"StartKeyboardHookCoreAsync failed: {ex}");
+            NotifyRemoteHookError();
         }
     }
 
@@ -185,24 +193,31 @@ public partial class RollCallWindow
 
     private async Task StartGroupSwitchHookCoreAsync(Func<bool> isCurrent)
     {
-        if (!ShouldEnableGroupSwitchHook()) return;
-
-        var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.B, KeyModifiers.None);
-        var bindings = ResolveRemoteBindings(_viewModel.RemoteGroupSwitchKey, fallback);
-        
-        Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+        try
         {
-            Dispatcher.Invoke(() =>
-            {
-                if (!_viewModel.IsRollCallMode) return;
-                
-                _viewModel.SwitchToNextGroup();
-                ShowGroupOverlay();
-                ScheduleRollStateSave();
-            });
-        };
+            if (!ShouldEnableGroupSwitchHook()) return;
 
-        await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableGroupSwitchHook());
+            var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.B, KeyModifiers.None);
+            var bindings = ResolveRemoteBindings(_viewModel.RemoteGroupSwitchKey, fallback);
+            
+            Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!_viewModel.IsRollCallMode) return;
+                    
+                    _viewModel.SwitchToNextGroup();
+                    ShowGroupOverlay();
+                    ScheduleRollStateSave();
+                });
+            };
+
+            await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableGroupSwitchHook());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartGroupSwitchHookCoreAsync failed: {ex}");
+        }
     }
 
     private void NotifyRemoteHookError()

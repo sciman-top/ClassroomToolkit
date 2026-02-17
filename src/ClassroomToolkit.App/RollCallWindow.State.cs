@@ -260,12 +260,20 @@ public partial class RollCallWindow
     
     private async void SpeakStudentName()
     {
-        if (!_viewModel.SpeechEnabled) return;
-        
-        var name = _viewModel.CurrentStudentName;
-        if (string.IsNullOrWhiteSpace(name)) return;
+        try
+        {
+            if (!_viewModel.SpeechEnabled) return;
+            
+            var name = _viewModel.CurrentStudentName;
+            if (string.IsNullOrWhiteSpace(name)) return;
 
-        await _speechService.SpeakAsync(name, _viewModel.SpeechVoiceId);
+            await _speechService.SpeakAsync(name, _viewModel.SpeechVoiceId);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"SpeakStudentName failed: {ex.Message}");
+            NotifySpeechError();
+        }
     }
 
     private void NotifySpeechError()
