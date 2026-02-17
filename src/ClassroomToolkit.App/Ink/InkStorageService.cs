@@ -78,8 +78,7 @@ public sealed class InkStorageService
         }
         var jsonPath = GetPageJsonPath(date, page.DocumentName, page.PageIndex);
         var json = JsonSerializer.Serialize(page, _options);
-        Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-        File.WriteAllText(jsonPath, json);
+        WriteAllTextAtomically(jsonPath, json);
     }
 
     public InkPageData? LoadPage(DateTime date, string documentName, int pageIndex)
@@ -89,8 +88,19 @@ public sealed class InkStorageService
         {
             return null;
         }
-        var json = File.ReadAllText(jsonPath);
-        return JsonSerializer.Deserialize<InkPageData>(json, _options);
+        try
+        {
+            var json = File.ReadAllText(jsonPath);
+            return JsonSerializer.Deserialize<InkPageData>(json, _options);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
     }
 
     public IReadOnlyList<DateTime> ListDates()
@@ -139,11 +149,22 @@ public sealed class InkStorageService
         var result = new List<InkPageData>();
         foreach (var file in Directory.GetFiles(pagesFolder, "slide_*.json"))
         {
-            var json = File.ReadAllText(file);
-            var page = JsonSerializer.Deserialize<InkPageData>(json, _options);
-            if (page != null)
+            try
             {
-                result.Add(page);
+                var json = File.ReadAllText(file);
+                var page = JsonSerializer.Deserialize<InkPageData>(json, _options);
+                if (page != null)
+                {
+                    result.Add(page);
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore malformed page files and keep loading other pages.
+            }
+            catch (IOException)
+            {
+                // Ignore transient IO failures on individual files.
             }
         }
         return result.OrderBy(page => page.PageIndex).ToList();
@@ -253,5 +274,35 @@ public sealed class InkStorageService
         var invalid = Path.GetInvalidFileNameChars();
         var safe = new string(name.Where(ch => !invalid.Contains(ch)).ToArray());
         return string.IsNullOrWhiteSpace(safe) ? "unknown" : safe;
+    }
+
+    private static void WriteAllTextAtomically(string path, string content)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(tempPath, content);
+            if (File.Exists(path))
+            {
+                File.Replace(tempPath, path, null);
+            }
+            else
+            {
+                File.Move(tempPath, path);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
     }
 }

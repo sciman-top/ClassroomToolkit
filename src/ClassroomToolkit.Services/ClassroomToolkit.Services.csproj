@@ -5,6 +5,10 @@
     <ProjectReference Include="..\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

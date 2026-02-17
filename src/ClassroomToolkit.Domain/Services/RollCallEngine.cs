@@ -207,25 +207,31 @@ public sealed class RollCallEngine
         {
             return;
         }
+        var stateGroupRemaining = state.GroupRemaining
+            ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var stateGroupLast = state.GroupLast
+            ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var stateGlobalDrawn = state.GlobalDrawn ?? new List<string>();
+
         var lookup = BuildIndexLookup();
         _groupRemaining = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         _groupDrawnHistory = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
         _groupLastStudent = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
         _globalDrawn = new HashSet<int>();
 
-        foreach (var pair in state.GroupRemaining)
+        foreach (var pair in stateGroupRemaining)
         {
             var resolved = ResolveIndexList(pair.Value, lookup);
             _groupRemaining[pair.Key] = resolved;
         }
 
-        foreach (var pair in state.GroupLast)
+        foreach (var pair in stateGroupLast)
         {
             var resolved = ResolveIndex(pair.Value, lookup);
             _groupLastStudent[pair.Key] = resolved;
         }
 
-        foreach (var key in state.GlobalDrawn)
+        foreach (var key in stateGlobalDrawn)
         {
             var idx = ResolveIndex(key, lookup);
             if (idx.HasValue)
@@ -884,9 +890,13 @@ public sealed class RollCallEngine
         return null;
     }
 
-    private List<int> ResolveIndexList(IEnumerable<string> keys, (Dictionary<string, int> RowIdMap, Dictionary<string, int> RowKeyMap) lookup)
+    private List<int> ResolveIndexList(IEnumerable<string>? keys, (Dictionary<string, int> RowIdMap, Dictionary<string, int> RowKeyMap) lookup)
     {
         var list = new List<int>();
+        if (keys == null)
+        {
+            return list;
+        }
         foreach (var key in keys)
         {
             var idx = ResolveIndex(key, lookup);

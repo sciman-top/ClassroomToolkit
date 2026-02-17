@@ -6,6 +6,14 @@ namespace ClassroomToolkit.Tests;
 public sealed class SettingsMigratorTests
 {
     [Fact]
+    public void Migrate_ShouldThrow_WhenDataIsNull()
+    {
+        Action act = () => SettingsMigrator.Migrate(null!, null);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Migrate_ShouldNormalizeManualModeToRaw()
     {
         var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)

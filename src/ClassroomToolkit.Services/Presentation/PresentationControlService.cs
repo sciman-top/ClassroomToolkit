@@ -26,6 +26,12 @@ public sealed class PresentationControlService
         IPresentationWindowValidator validator,
         IForegroundWindowController? foregroundController = null)
     {
+        ArgumentNullException.ThrowIfNull(planner);
+        ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(inputSender);
+        ArgumentNullException.ThrowIfNull(resolver);
+        ArgumentNullException.ThrowIfNull(validator);
+
         _planner = planner;
         _mapper = mapper;
         _inputSender = inputSender;
@@ -50,6 +56,8 @@ public sealed class PresentationControlService
 
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var target = _resolver.ResolveForeground();
         if (!IsForegroundCandidate(target, options))
         {
@@ -111,6 +119,8 @@ public sealed class PresentationControlService
 
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         if (!IsTargetHandleValid(target))
         {
             return false;

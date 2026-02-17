@@ -9,8 +9,15 @@ public sealed class ConfigurationService : IConfigurationService
     private const string DefaultSettingsIniName = "settings.ini";
 
     public ConfigurationService()
+        : this(null)
     {
-        BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+    }
+
+    public ConfigurationService(string? baseDirectory)
+    {
+        BaseDirectory = string.IsNullOrWhiteSpace(baseDirectory)
+            ? AppDomain.CurrentDomain.BaseDirectory
+            : baseDirectory;
         SettingsIniPath = ResolveSettingsIniPath();
     }
 
@@ -23,7 +30,7 @@ public sealed class ConfigurationService : IConfigurationService
         var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
         if (!File.Exists(appSettingsPath))
         {
-            return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+            return GetDefaultSettingsIniPath();
         }
 
         try
@@ -43,12 +50,20 @@ public sealed class ConfigurationService : IConfigurationService
                 return nested;
             }
         }
-        catch
+        catch (JsonException)
         {
             // Fall back to default settings.ini when appsettings.json is malformed.
         }
+        catch (IOException)
+        {
+            // Fall back to default settings.ini when appsettings.json cannot be read.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Fall back to default settings.ini when appsettings.json cannot be accessed.
+        }
 
-        return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+        return GetDefaultSettingsIniPath();
     }
 
     private bool TryReadSettingPath(JsonElement element, string key, out string resolvedPath)
@@ -69,5 +84,10 @@ public sealed class ConfigurationService : IConfigurationService
             ? configured
             : Path.GetFullPath(Path.Combine(BaseDirectory, configured));
         return true;
+    }
+
+    private string GetDefaultSettingsIniPath()
+    {
+        return Path.Combine(BaseDirectory, DefaultSettingsIniName);
     }
 }

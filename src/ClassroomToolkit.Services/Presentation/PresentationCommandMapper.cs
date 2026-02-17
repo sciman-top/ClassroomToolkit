@@ -8,23 +8,13 @@ public sealed class PresentationCommandMapper
     {
         return command switch
         {
-            PresentationCommand.Next => MapNext(),
-            PresentationCommand.Previous => MapPrevious(),
+            PresentationCommand.Next => new KeyBinding(VirtualKey.PageDown, KeyModifiers.None),
+            PresentationCommand.Previous => new KeyBinding(VirtualKey.PageUp, KeyModifiers.None),
             PresentationCommand.First => new KeyBinding(VirtualKey.Home, KeyModifiers.None),
             PresentationCommand.Last => new KeyBinding(VirtualKey.End, KeyModifiers.None),
             PresentationCommand.BlackScreenToggle => new KeyBinding(VirtualKey.B, KeyModifiers.None),
             PresentationCommand.WhiteScreenToggle => new KeyBinding(VirtualKey.W, KeyModifiers.None),
             _ => new KeyBinding(VirtualKey.Tab, KeyModifiers.None)
         };
-    }
-
-    private static KeyBinding MapNext()
-    {
-        return new KeyBinding(VirtualKey.PageDown, KeyModifiers.None);
-    }
-
-    private static KeyBinding MapPrevious()
-    {
-        return new KeyBinding(VirtualKey.PageUp, KeyModifiers.None);
     }
 }

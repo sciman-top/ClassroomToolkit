@@ -12,6 +12,8 @@ public static class SettingsMigrator
         Dictionary<string, Dictionary<string, string>> data,
         string? settingsPath)
     {
+        ArgumentNullException.ThrowIfNull(data);
+
         if (!data.TryGetValue(MetaSection, out var meta))
         {
             meta = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -80,7 +82,11 @@ public static class SettingsMigrator
         {
             File.Copy(path, backupPath, overwrite: false);
         }
-        catch
+        catch (IOException)
+        {
+            // 备份失败不阻塞主流程。
+        }
+        catch (UnauthorizedAccessException)
         {
             // 备份失败不阻塞主流程。
         }

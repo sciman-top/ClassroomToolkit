@@ -6,6 +6,17 @@ namespace ClassroomToolkit.Tests;
 public sealed class TimerEngineTests
 {
     [Fact]
+    public void SetCountdown_ShouldClampToIntMax_WhenInputWouldOverflow()
+    {
+        var engine = new TimerEngine();
+
+        engine.SetCountdown(int.MaxValue, 59);
+
+        engine.CountdownSeconds.Should().Be(int.MaxValue);
+        engine.SecondsLeft.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
     public void Countdown_ShouldReachZeroAndStop()
     {
         var engine = new TimerEngine();

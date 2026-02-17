@@ -20,6 +20,17 @@ jobs:
       - name: Restore (locked mode)
         run: dotnet restore ClassroomToolkit.sln --locked-mode
 
+      - name: Vulnerability Gate
+        shell: pwsh
+        run: |
+          $report = dotnet list ClassroomToolkit.sln package --vulnerable --include-transitive
+          $report
+          $hasVuln = $report | Select-String -Pattern "has the following vulnerable packages|具有下列易受攻击的包" -SimpleMatch
+          if ($hasVuln) {
+            Write-Error "Vulnerable NuGet packages detected."
+            exit 1
+          }
+
       - name: Build
         run: dotnet build ClassroomToolkit.sln -c Debug --no-restore
 

@@ -6,6 +6,27 @@ namespace ClassroomToolkit.Tests;
 public sealed class SettingsRepositoryTests
 {
     [Fact]
+    public void Save_ShouldThrow_WhenDataIsNull()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ctool_settings_null_{Guid.NewGuid():N}.ini");
+        try
+        {
+            var repo = new SettingsRepository(path);
+
+            Action act = () => repo.Save(null!);
+
+            act.Should().Throw<ArgumentNullException>();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Save_ShouldThrow_WhenLastLoadFailedAndSettingsFileExists()
     {
         var path = Path.Combine(Path.GetTempPath(), $"ctool_settings_{Guid.NewGuid():N}.ini");

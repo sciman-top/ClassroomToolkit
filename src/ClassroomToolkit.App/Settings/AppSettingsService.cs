@@ -9,15 +9,20 @@ namespace ClassroomToolkit.App.Settings;
 
 public sealed class AppSettingsService
 {
+    private static readonly Regex GeometryRegex = new(
+        @"^(?<w>\d+)x(?<h>\d+)(?<x>[+-]\d+)(?<y>[+-]\d+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private readonly SettingsRepository _repository;
 
     public AppSettingsService(IConfigurationService configurationService)
-        : this(configurationService.SettingsIniPath)
+        : this((configurationService ?? throw new ArgumentNullException(nameof(configurationService))).SettingsIniPath)
     {
     }
 
     public AppSettingsService(string settingsPath)
     {
+        ArgumentNullException.ThrowIfNull(settingsPath);
         _repository = new SettingsRepository(settingsPath);
     }
 
@@ -177,7 +182,6 @@ public sealed class AppSettingsService
         roll["speech_engine"] = settings.RollCallSpeechEngine ?? "pyttsx3";
         roll["speech_voice_id"] = settings.RollCallSpeechVoiceId ?? string.Empty;
         roll["speech_output_id"] = settings.RollCallSpeechOutputId ?? string.Empty;
-        roll["remote_roll_enabled"] = settings.RollCallRemoteEnabled ? "True" : "False";
         roll["remote_roll_key"] = settings.RemotePresenterKey;
         roll["remote_group_switch_enabled"] = settings.RollCallRemoteGroupSwitchEnabled ? "True" : "False";
         roll["remote_group_switch_key"] = settings.RemoteGroupSwitchKey;
@@ -309,7 +313,15 @@ public sealed class AppSettingsService
         {
             return true;
         }
+        if (normalized.Equals("yes", StringComparison.OrdinalIgnoreCase) || normalized.Equals("on", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
         if (normalized.Equals("false", StringComparison.OrdinalIgnoreCase) || normalized.Equals("0", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        if (normalized.Equals("no", StringComparison.OrdinalIgnoreCase) || normalized.Equals("off", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -355,7 +367,7 @@ public sealed class AppSettingsService
             return WhiteboardBrushPreset.Sharp;
         }
 
-        if (section.TryGetValue("whiteboard_smooth_mode", out var legacyRaw))
+        if (section.ContainsKey("whiteboard_smooth_mode"))
         {
             bool legacy = GetBool(section, "whiteboard_smooth_mode", true);
             return legacy ? WhiteboardBrushPreset.Smooth : WhiteboardBrushPreset.Sharp;
@@ -372,7 +384,7 @@ public sealed class AppSettingsService
             return parsed;
         }
 
-        if (section.TryGetValue("calligraphy_sharp_mode", out var legacyRaw))
+        if (section.ContainsKey("calligraphy_sharp_mode"))
         {
             bool legacy = GetBool(section, "calligraphy_sharp_mode", true);
             return legacy ? CalligraphyBrushPreset.Sharp : CalligraphyBrushPreset.Soft;
@@ -399,7 +411,7 @@ public sealed class AppSettingsService
         {
             return false;
         }
-        var match = Regex.Match(value.Trim(), @"^(?<w>\d+)x(?<h>\d+)(?<x>[+-]\d+)(?<y>[+-]\d+)$");
+        var match = GeometryRegex.Match(value.Trim());
         if (!match.Success)
         {
             return false;

@@ -29,7 +29,11 @@ public static class RollStateSerializer
         {
             return JsonSerializer.Deserialize<ClassRollState>(json, Options);
         }
-        catch
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
         {
             return null;
         }
@@ -57,7 +61,11 @@ public static class RollStateSerializer
             var result = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(json, Options);
             return result ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (JsonException)
+        {
+            return new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (NotSupportedException)
         {
             return new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
         }

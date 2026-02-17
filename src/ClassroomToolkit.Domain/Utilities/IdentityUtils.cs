@@ -58,7 +58,7 @@ public static class IdentityUtils
             NormalizeText(name),
             NormalizeText(className),
             NormalizeGroupName(groupName));
-        if (string.IsNullOrWhiteSpace(parts.Replace("|", string.Empty, StringComparison.Ordinal)))
+        if (!HasNonDelimiterContent(parts))
         {
             return string.Empty;
         }
@@ -71,5 +71,17 @@ public static class IdentityUtils
             builder.Append(b.ToString("x2", CultureInfo.InvariantCulture));
         }
         return $"rk:{builder}";
+    }
+
+    private static bool HasNonDelimiterContent(string value)
+    {
+        foreach (var ch in value)
+        {
+            if (ch != '|')
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

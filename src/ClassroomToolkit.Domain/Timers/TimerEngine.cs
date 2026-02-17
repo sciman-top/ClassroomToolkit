@@ -49,7 +49,19 @@ public sealed class TimerEngine
 
     public void SetCountdown(int minutes, int seconds)
     {
-        _countdownSeconds = Math.Max(0, minutes * 60 + seconds);
+        var total = (long)minutes * 60L + seconds;
+        if (total <= 0)
+        {
+            _countdownSeconds = 0;
+        }
+        else if (total >= int.MaxValue)
+        {
+            _countdownSeconds = int.MaxValue;
+        }
+        else
+        {
+            _countdownSeconds = (int)total;
+        }
         _secondsLeft = _countdownSeconds;
         _reminderCounter = 0;
     }

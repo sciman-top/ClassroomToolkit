@@ -31,6 +31,12 @@ internal static class SafeTaskRunner
     {
         ArgumentNullException.ThrowIfNull(action);
         var normalizedSource = string.IsNullOrWhiteSpace(source) ? "unknown" : source.Trim();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            Debug.WriteLine($"[SafeTaskRunner][{normalizedSource}] canceled before scheduling.");
+            return Task.CompletedTask;
+        }
+
         return Task.Run(async () =>
         {
             try

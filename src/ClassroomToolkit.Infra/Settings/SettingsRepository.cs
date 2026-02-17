@@ -21,6 +21,8 @@ public sealed class SettingsRepository
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
+        ArgumentNullException.ThrowIfNull(data);
+
         if (!LastLoadSucceeded && File.Exists(_store.Path))
         {
             throw new InvalidOperationException("设置文件读取失败，已阻止写入以避免覆盖原有配置。");

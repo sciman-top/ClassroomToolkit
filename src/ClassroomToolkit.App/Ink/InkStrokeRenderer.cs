@@ -43,10 +43,16 @@ public sealed class InkStrokeRenderer
 
     private void RenderStroke(DrawingContext dc, InkStrokeData stroke)
     {
-        var geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+        var geometry = stroke.CachedGeometry;
         if (geometry == null)
         {
-            return;
+            geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+            if (geometry == null)
+            {
+                return;
+            }
+            geometry.Freeze();
+            stroke.CachedGeometry = geometry;
         }
         var color = (MediaColor)MediaColorConverter.ConvertFromString(stroke.ColorHex);
         color.A = stroke.Opacity;

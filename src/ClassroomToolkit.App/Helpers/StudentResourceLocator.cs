@@ -25,7 +25,7 @@ public static class StudentResourceLocator
 
     private static string ResolveResourceRoot()
     {
-        var solutionDir = FindSolutionDirectory();
+        var solutionDir = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory, Environment.CurrentDirectory);
         if (!string.IsNullOrWhiteSpace(solutionDir))
         {
             return solutionDir;
@@ -33,16 +33,33 @@ public static class StudentResourceLocator
         return Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
     }
 
-    private static string? FindSolutionDirectory()
+    internal static string? FindSolutionDirectory(params string?[] starts)
     {
-        var starts = new[]
-        {
-            AppDomain.CurrentDomain.BaseDirectory,
-            Environment.CurrentDirectory
-        };
         foreach (var start in starts)
         {
-            var current = new DirectoryInfo(Path.GetFullPath(start));
+            if (string.IsNullOrWhiteSpace(start))
+            {
+                continue;
+            }
+
+            DirectoryInfo? current;
+            try
+            {
+                current = new DirectoryInfo(Path.GetFullPath(start));
+            }
+            catch (ArgumentException)
+            {
+                continue;
+            }
+            catch (NotSupportedException)
+            {
+                continue;
+            }
+            catch (PathTooLongException)
+            {
+                continue;
+            }
+
             while (current != null)
             {
                 var slnPath = Path.Combine(current.FullName, SolutionFileName);
@@ -66,7 +83,11 @@ public static class StudentResourceLocator
         {
             Directory.CreateDirectory(path);
         }
-        catch
+        catch (IOException)
+        {
+            return;
+        }
+        catch (UnauthorizedAccessException)
         {
             return;
         }

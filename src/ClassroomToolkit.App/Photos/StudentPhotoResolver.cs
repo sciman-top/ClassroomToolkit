@@ -74,15 +74,16 @@ public sealed class StudentPhotoResolver
         {
             return null;
         }
-        var normalizedClass = SanitizeSegment(className);
-        if (!string.Equals(normalizedClass, (className ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase))
+        var normalizedStudentId = SanitizeSegment(studentId);
+        if (!string.Equals(normalizedStudentId, studentId.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            Debug.WriteLine($"StudentPhotoResolver: 班级名包含非法字符或空值，已规范化为 '{normalizedClass}'。");
+            Debug.WriteLine($"StudentPhotoResolver: 学号包含非法字符或路径片段，已规范化为 '{normalizedStudentId}'。");
         }
-        if (string.IsNullOrWhiteSpace(normalizedClass))
+        if (string.IsNullOrWhiteSpace(normalizedStudentId))
         {
-            normalizedClass = "default";
+            return null;
         }
+        var normalizedClass = NormalizeClassName(className);
         var directory = Path.Combine(_rootPath, normalizedClass);
         if (!Directory.Exists(directory))
         {
@@ -90,19 +91,14 @@ public sealed class StudentPhotoResolver
         }
         foreach (var ext in Extensions)
         {
-            var candidate = Path.Combine(directory, studentId + ext);
+            var candidate = Path.Combine(directory, normalizedStudentId + ext);
             if (File.Exists(candidate))
             {
                 return candidate;
             }
-            var upper = Path.Combine(directory, studentId + ext.ToUpperInvariant());
-            if (File.Exists(upper))
-            {
-                return upper;
-            }
         }
         var index = GetIndex(directory);
-        var key = studentId.Trim().ToLowerInvariant();
+        var key = normalizedStudentId.ToLowerInvariant();
         return index.TryGetValue(key, out var path) ? path : null;
     }
 
@@ -112,11 +108,7 @@ public sealed class StudentPhotoResolver
         {
             return;
         }
-        var normalizedClass = SanitizeSegment(className);
-        if (string.IsNullOrWhiteSpace(normalizedClass))
-        {
-            normalizedClass = "default";
-        }
+        var normalizedClass = NormalizeClassName(className);
         var directory = Path.Combine(_rootPath, normalizedClass);
         _cache.TryRemove(directory, out _);
     }
@@ -201,6 +193,16 @@ public sealed class StudentPhotoResolver
             _warmupCancellation = new CancellationTokenSource();
             return _warmupCancellation.Token;
         }
+    }
+
+    private static string NormalizeClassName(string className)
+    {
+        var normalizedClass = SanitizeSegment(className);
+        if (!string.Equals(normalizedClass, (className ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.WriteLine($"StudentPhotoResolver: 班级名包含非法字符或空值，已规范化为 '{normalizedClass}'。");
+        }
+        return string.IsNullOrWhiteSpace(normalizedClass) ? "default" : normalizedClass;
     }
 
     private sealed record DirectoryCache(DateTime Timestamp, Dictionary<string, string> Index);

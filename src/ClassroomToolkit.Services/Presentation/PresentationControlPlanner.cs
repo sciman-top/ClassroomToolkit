@@ -6,6 +6,7 @@ public sealed class PresentationControlPlanner
 {
     public PresentationControlPlanner(PresentationClassifier classifier)
     {
+        ArgumentNullException.ThrowIfNull(classifier);
         Classifier = classifier;
     }
 

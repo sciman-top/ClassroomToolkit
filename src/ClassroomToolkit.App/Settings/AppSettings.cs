@@ -104,7 +104,11 @@ public sealed class AppSettings
             var parsed = (MediaColor)MediaColorConverter.ConvertFromString(value);
             return parsed;
         }
-        catch
+        catch (FormatException)
+        {
+            return fallback;
+        }
+        catch (NotSupportedException)
         {
             return fallback;
         }

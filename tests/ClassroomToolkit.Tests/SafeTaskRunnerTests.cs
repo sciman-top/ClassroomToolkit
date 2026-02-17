@@ -47,4 +47,34 @@ public sealed class SafeTaskRunnerTests
 
         invoked.Should().BeFalse();
     }
+
+    [Fact]
+    public void Run_ShouldReturnCompletedTaskImmediately_WhenCancellationAlreadyRequested()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var task = SafeTaskRunner.Run(
+            "test.run.canceled.immediate",
+            _ => throw new InvalidOperationException("should not run"),
+            cancellation.Token);
+
+        task.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Run_ShouldNotInvokeOnError_WhenOperationCanceled()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var onErrorCalled = false;
+
+        await SafeTaskRunner.Run(
+            "test.run.canceled.noerror",
+            _ => throw new OperationCanceledException(cancellation.Token),
+            cancellation.Token,
+            _ => onErrorCalled = true);
+
+        onErrorCalled.Should().BeFalse();
+    }
 }

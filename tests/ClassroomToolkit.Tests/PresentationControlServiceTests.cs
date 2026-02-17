@@ -7,6 +7,102 @@ namespace ClassroomToolkit.Tests;
 public sealed class PresentationControlServiceTests
 {
     [Fact]
+    public void Constructor_ShouldThrow_WhenPlannerIsNull()
+    {
+        Action act = () => new PresentationControlService(
+            null!,
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new MockValidator());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenMapperIsNull()
+    {
+        Action act = () => new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            null!,
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new MockValidator());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenInputSenderIsNull()
+    {
+        Action act = () => new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            null!,
+            new Win32PresentationResolver(),
+            new MockValidator());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenResolverIsNull()
+    {
+        Action act = () => new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            null!,
+            new MockValidator());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenValidatorIsNull()
+    {
+        Action act = () => new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void TrySendForeground_ShouldThrow_WhenOptionsIsNull()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new MockValidator());
+
+        Action act = () => service.TrySendForeground(PresentationCommand.Next, null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void TrySendToTarget_ShouldThrow_WhenOptionsIsNull()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new MockValidator());
+        var target = new PresentationTarget(new IntPtr(1234), new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+
+        Action act = () => service.TrySendToTarget(target, PresentationCommand.Next, null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void WpsWheelForwardDisabled_ShouldSendWheel()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());

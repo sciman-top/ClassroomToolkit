@@ -57,6 +57,8 @@ public partial class App : WpfApplication
         services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
         services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
         services.AddSingleton<MainWindow>();
+        services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
+        services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
         _services = services.BuildServiceProvider();
     }
 

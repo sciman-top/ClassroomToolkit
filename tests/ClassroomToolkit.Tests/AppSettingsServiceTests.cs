@@ -6,6 +6,48 @@ namespace ClassroomToolkit.Tests;
 public sealed class AppSettingsServiceTests
 {
     [Fact]
+    public void Constructor_ShouldThrow_WhenConfigurationServiceIsNull()
+    {
+        Action act = () => new AppSettingsService((IConfigurationService)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenSettingsPathIsNull()
+    {
+        Action act = () => new AppSettingsService((string)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Theory]
+    [InlineData("yes", true)]
+    [InlineData("on", true)]
+    [InlineData("no", false)]
+    [InlineData("off", false)]
+    public void Load_ShouldParseBooleanAliases(string raw, bool expected)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_bool_{Guid.NewGuid():N}.ini");
+        try
+        {
+            File.WriteAllText(path, $"[Paint]\ncontrol_ms_ppt={raw}\n");
+            var service = new AppSettingsService(path);
+
+            var settings = service.Load();
+
+            settings.ControlMsPpt.Should().Be(expected);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Load_ShouldFallbackForInvalidBooleanText()
     {
         var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");

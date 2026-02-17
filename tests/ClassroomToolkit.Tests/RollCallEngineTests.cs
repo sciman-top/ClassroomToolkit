@@ -8,6 +8,54 @@ namespace ClassroomToolkit.Tests;
 public sealed class RollCallEngineTests
 {
     [Fact]
+    public void RestoreState_ShouldNotThrow_WhenStateCollectionsAreNull()
+    {
+        var students = new List<StudentRecord>
+        {
+            StudentRecord.Create("1", "张三", "一班", "一组"),
+            StudentRecord.Create("2", "李四", "一班", "二组"),
+        };
+        var roster = new ClassRoster("一班", students);
+        var engine = new RollCallEngine(roster);
+        var malformed = new ClassRollState
+        {
+            CurrentGroup = null!,
+            GroupRemaining = null!,
+            GroupLast = null!,
+            GlobalDrawn = null!
+        };
+
+        Action act = () => engine.RestoreState(malformed);
+
+        act.Should().NotThrow();
+        engine.CurrentGroup.Should().Be(IdentityUtils.AllGroupName);
+    }
+
+    [Fact]
+    public void RestoreState_ShouldNotThrow_WhenGroupRemainingContainsNullList()
+    {
+        var students = new List<StudentRecord>
+        {
+            StudentRecord.Create("1", "张三", "一班", "一组"),
+            StudentRecord.Create("2", "李四", "一班", "一组"),
+        };
+        var roster = new ClassRoster("一班", students);
+        var engine = new RollCallEngine(roster);
+        var malformed = new ClassRollState
+        {
+            CurrentGroup = "一组",
+            GroupRemaining = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["一组"] = null!
+            }
+        };
+
+        Action act = () => engine.RestoreState(malformed);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void RollNext_ShouldNotRepeatWithinGroup()
     {
         var students = new List<StudentRecord>

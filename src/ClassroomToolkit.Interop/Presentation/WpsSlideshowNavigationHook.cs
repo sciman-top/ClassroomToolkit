@@ -116,20 +116,12 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             _mouseHook = IntPtr.Zero;
         }
         _interceptEnabled = false;
+
+
         _blockOnly = false;
         _interceptKeyboard = true;
         _interceptWheel = true;
         _emitWheelOnBlock = true;
-    }
-
-    ~WpsSlideshowNavigationHook()
-    {
-        // Finalizer runs on GC thread — only do minimal unhook,
-        // avoid calling Stop() which modifies non-thread-safe state.
-        var kbHook = _keyboardHook;
-        var msHook = _mouseHook;
-        if (kbHook != IntPtr.Zero) UnhookWindowsHookEx(kbHook);
-        if (msHook != IntPtr.Zero) UnhookWindowsHookEx(msHook);
     }
 
     public void Dispose()

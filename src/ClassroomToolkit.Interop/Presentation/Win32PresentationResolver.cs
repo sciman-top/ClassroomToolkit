@@ -51,7 +51,7 @@ public sealed class Win32PresentationResolver
                 // Log ALL PowerPoint windows (before check filtering)
                 if (info.ProcessName.Contains("powerpnt", StringComparison.OrdinalIgnoreCase))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Resolver] PPT window BEFORE check: classes={string.Join(",", info.ClassNames)}");
+                    DebugPptWindowBeforeCheck(info.ClassNames);
                 }
                 var check = BuildWindowCheck(hwnd, info, classifier);
                 if (check == null)
@@ -61,7 +61,7 @@ public sealed class Win32PresentationResolver
                 // Log all Office candidate windows
                 if (check.Type == PresentationType.Office && allowOffice)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Resolver] Office candidate: process={info.ProcessName}, classes={string.Join(",", info.ClassNames)}, score={check.Score}, classMatch={check.ClassMatch}, fullscreen={check.IsFullscreen}");
+                    DebugOfficeCandidate(info.ProcessName, info.ClassNames, check.Score, check.ClassMatch, check.IsFullscreen);
                 }
                 if (check.Type == PresentationType.Wps && allowWps && check.Score > wpsScore)
                 {
@@ -77,7 +77,7 @@ public sealed class Win32PresentationResolver
             },
             IntPtr.Zero);
 
-        System.Diagnostics.Debug.WriteLine($"[Resolver] Final: wpsValid={wpsTarget.IsValid}, officeValid={officeTarget.IsValid}, officeScore={officeScore}");
+        DebugFinalSelection(wpsTarget.IsValid, officeTarget.IsValid, officeScore);
         if (wpsTarget.IsValid)
         {
             return wpsTarget;
@@ -183,10 +183,6 @@ public sealed class Win32PresentationResolver
         PresentationWindowInfo info,
         PresentationClassifier classifier)
     {
-        if (info == null)
-        {
-            return null;
-        }
         var type = classifier.Classify(info);
         if (type is PresentationType.None or PresentationType.Other)
         {
@@ -197,7 +193,7 @@ public sealed class Win32PresentationResolver
         var hasCaption = HasCaption(hwnd);
         var isFullscreen = IsFullscreenWindow(hwnd);
         // Filter: require slideshow class match or fullscreen; caption only affects score.
-        if (type == PresentationType.None || (!classMatch && !isFullscreen))
+        if (!classMatch && !isFullscreen)
         {
             return null;
         }
@@ -302,5 +298,29 @@ public sealed class Win32PresentationResolver
         {
             return string.Empty;
         }
+    }
+
+    [Conditional("DEBUG")]
+    private static void DebugPptWindowBeforeCheck(IReadOnlyList<string> classNames)
+    {
+        Debug.WriteLine($"[Resolver] PPT window BEFORE check: classes={string.Join(",", classNames)}");
+    }
+
+    [Conditional("DEBUG")]
+    private static void DebugOfficeCandidate(
+        string processName,
+        IReadOnlyList<string> classNames,
+        int score,
+        bool classMatch,
+        bool isFullscreen)
+    {
+        Debug.WriteLine(
+            $"[Resolver] Office candidate: process={processName}, classes={string.Join(",", classNames)}, score={score}, classMatch={classMatch}, fullscreen={isFullscreen}");
+    }
+
+    [Conditional("DEBUG")]
+    private static void DebugFinalSelection(bool wpsValid, bool officeValid, int officeScore)
+    {
+        Debug.WriteLine($"[Resolver] Final: wpsValid={wpsValid}, officeValid={officeValid}, officeScore={officeScore}");
     }
 }

@@ -7,6 +7,14 @@ namespace ClassroomToolkit.Tests;
 public sealed class PresentationControlPlannerTests
 {
     [Fact]
+    public void Constructor_ShouldThrow_WhenClassifierIsNull()
+    {
+        Action act = () => new PresentationControlPlanner(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void AutoStrategy_ShouldPreferWpsRawMode()
     {
         var classifier = new PresentationClassifier();
