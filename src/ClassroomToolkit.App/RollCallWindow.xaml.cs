@@ -40,8 +40,8 @@ public partial class RollCallWindow : Window
     private readonly RollCallViewModel _viewModel;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
-    private readonly Services.Input.GlobalHookService _hookService;
-    private readonly Services.Speech.SpeechService _speechService;
+    private readonly ClassroomToolkit.Services.Input.GlobalHookService _hookService;
+    private readonly ClassroomToolkit.Services.Speech.SpeechService _speechService;
     private readonly string _dataPath;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _rollStateSaveTimer;
@@ -80,8 +80,8 @@ public partial class RollCallWindow : Window
         string dataPath, 
         AppSettingsService settingsService, 
         AppSettings settings,
-        Services.Input.GlobalHookService hookService,
-        Services.Speech.SpeechService speechService)
+        ClassroomToolkit.Services.Input.GlobalHookService hookService,
+        ClassroomToolkit.Services.Speech.SpeechService speechService)
     {
         InitializeComponent();
         _dataPath = dataPath;

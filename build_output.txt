@@ -1,0 +1,21 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ClassroomToolkit.Domain -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net8.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Infra -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net8.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.Interop -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net8.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Services -> E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net8.0-windows\ClassroomToolkit.Services.dll
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(43,31): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Input”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(44,31): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Speech”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(83,18): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Input”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(84,18): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Speech”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+
+生成失败。
+
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(43,31): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Input”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(44,31): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Speech”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(83,18): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Input”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs(84,18): error CS0234: 命名空间“ClassroomToolkit.App.Services”中不存在类型或命名空间名“Speech”(是否缺少程序集引用?) [E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\ClassroomToolkit.App_fvic1cer_wpftmp.csproj]
+    0 个警告
+    4 个错误
+
+已用时间 00:00:02.20

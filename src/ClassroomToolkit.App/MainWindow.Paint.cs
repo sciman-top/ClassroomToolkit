@@ -15,15 +15,19 @@ public partial class MainWindow
     private void OnPaintClick(object sender, RoutedEventArgs e)
     {
         EnsurePaintWindows();
-        if (_overlayWindow == null || _toolbarWindow == null)
+        var overlay = _paintWindowOrchestrator.OverlayWindow;
+        var toolbar = _paintWindowOrchestrator.ToolbarWindow;
+        
+        if (overlay == null || toolbar == null)
         {
             return;
         }
-        if (_overlayWindow.IsVisible)
+        
+        if (overlay.IsVisible)
         {
-            CapturePaintToolbarPosition(save: true);
-            _overlayWindow.Hide();
-            _toolbarWindow.Hide();
+            _paintWindowOrchestrator.CaptureToolbarPosition(_settings, save: true);
+            _paintWindowOrchestrator.Hide();
+            
             if (_rollCallWindow != null)
             {
                 _rollCallWindow.Owner = null;
@@ -32,18 +36,11 @@ public partial class MainWindow
         }
         else
         {
-            _overlayWindow.Show();
-            if (_toolbarWindow.Owner != _overlayWindow && _overlayWindow.IsVisible)
-            {
-                _toolbarWindow.Owner = _overlayWindow;
-            }
-            _toolbarWindow.Show();
-            WindowPlacementHelper.EnsureVisible(_toolbarWindow);
-            _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
-            _overlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+            _paintWindowOrchestrator.Show();
+            
             if (_rollCallWindow != null && _rollCallWindow.IsVisible)
             {
-                _rollCallWindow.Owner = _overlayWindow;
+                _rollCallWindow.Owner = overlay;
                 _rollCallWindow.SyncTopmost(true);
             }
         }
@@ -52,216 +49,66 @@ public partial class MainWindow
 
     private void EnsurePaintWindows()
     {
-        if (_overlayWindow != null && _toolbarWindow != null)
+        if (_paintWindowOrchestrator.OverlayWindow != null)
         {
             return;
         }
-        var windows = _paintWindowFactory.Create();
-        _overlayWindow = windows.overlay;
-        _toolbarWindow = windows.toolbar;
-        _toolbarWindow.AttachOverlay(_overlayWindow);
-        _overlayWindow.PhotoModeChanged += OnPhotoModeChanged;
-        _overlayWindow.PhotoNavigationRequested += OnPhotoNavigateRequested;
-        _overlayWindow.PhotoUnifiedTransformChanged += OnPhotoUnifiedTransformChanged;
-        _overlayWindow.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
-        _overlayWindow.PresentationForegroundDetected += OnPresentationForegroundDetected;
-        _overlayWindow.PhotoForegroundDetected += OnPhotoForegroundDetected;
-        _overlayWindow.PhotoCloseRequested += OnPhotoCloseRequested;
-        _overlayWindow.FloatingZOrderRequested += () =>
+
+        _paintWindowOrchestrator.EnsureWindows(_settings);
+
+        // Re-wire events for Z-Order and other MainWindow specific logic
+        _paintWindowOrchestrator.PhotoModeChanged += OnPhotoModeChanged;
+        _paintWindowOrchestrator.PhotoNavigationRequested += OnPhotoNavigateRequested;
+        _paintWindowOrchestrator.PhotoUnifiedTransformChanged += OnPhotoUnifiedTransformChanged;
+        _paintWindowOrchestrator.PresentationFullscreenDetected += OnPresentationFullscreenDetected;
+        _paintWindowOrchestrator.PresentationForegroundDetected += OnPresentationForegroundDetected;
+        _paintWindowOrchestrator.PhotoForegroundDetected += OnPhotoForegroundDetected;
+        _paintWindowOrchestrator.PhotoCloseRequested += OnPhotoCloseRequested;
+        _paintWindowOrchestrator.FloatingZOrderRequested += () =>
             Dispatcher.BeginInvoke(EnsureFloatingWindowsOnTop, System.Windows.Threading.DispatcherPriority.Background);
-        _overlayWindow.Activated += (_, _) => OnOverlayActivated();
-        _overlayWindow.Closed += (_, _) =>
+        _paintWindowOrchestrator.OverlayActivated += OnOverlayActivated;
+        _paintWindowOrchestrator.SettingsRequested += OnOpenPaintSettings;
+        _paintWindowOrchestrator.PhotoOpenRequested += OnOpenPhotoTeaching;
+        
+        // Note: Closed events are handled by Orchestrator internally for its own cleanup, 
+        // but we might need to know when they close to update toggle buttons.
+        // The Orchestrator property OverlayWindow becomes null when closed.
+        // We can hook into Orchestrator events if we added 'Closed' event there, or just rely on the fact 
+        // that MainWindow polls properties in UpdateToggleButtons.
+        // Actually, Orchestrator doesn't expose a generic 'Closed' event for MainWindow to update UI.
+        // I should add that to Orchestrator or just hook the window events via the property (which is null checked).
+        // BUT, since we just created them, we know they are not null.
+        
+        if (_paintWindowOrchestrator.OverlayWindow != null)
         {
-            _overlayWindow = null;
-            UpdateToggleButtons();
-        };
-        _toolbarWindow.Closed += (_, _) =>
-        {
-            CapturePaintToolbarPosition(save: true);
-            _toolbarWindow = null;
-            UpdateToggleButtons();
-        };
-        _toolbarWindow.LocationChanged += (_, _) => CapturePaintToolbarPosition(save: false);
-        ApplyPaintToolbarPosition();
-        _toolbarWindow.ApplySettings(_settings);
-        _toolbarWindow.ModeChanged += mode =>
-        {
-            if (_toolbarWindow.HasOverlay)
-            {
-                return;
-            }
-            _overlayWindow.SetMode(mode);
-        };
-        _toolbarWindow.BrushColorChanged += color =>
-        {
-            if (!_toolbarWindow.HasOverlay)
-            {
-                _overlayWindow.SetBrush(color, _toolbarWindow.BrushSize, _overlayWindow.CurrentBrushOpacity);
-            }
-            _settings.BrushColor = color;
-            SaveSettings();
-        };
-        _toolbarWindow.BoardColorChanged += color =>
-        {
-            _settings.BoardColor = color;
-            SaveSettings();
-            if (_toolbarWindow.BoardActive && !_toolbarWindow.HasOverlay)
-            {
-                _overlayWindow.SetBoardColor(color);
-                _overlayWindow.SetBoardOpacity(255);
-            }
-        };
-        _toolbarWindow.ClearRequested += () => _overlayWindow.ClearAll();
-        _toolbarWindow.UndoRequested += () => _overlayWindow.Undo();
-        _toolbarWindow.QuickColorSlotChanged += (index, color) =>
-        {
-            switch (index)
-            {
-                case 0:
-                    _settings.QuickColor1 = color;
-                    break;
-                case 1:
-                    _settings.QuickColor2 = color;
-                    break;
-                case 2:
-                    _settings.QuickColor3 = color;
-                    break;
-            }
-            SaveSettings();
-        };
-        _toolbarWindow.ShapeTypeChanged += type =>
-        {
-            _settings.ShapeType = type;
-            SaveSettings();
-            if (_overlayWindow != null)
-            {
-                _overlayWindow.SetShapeType(type);
-            }
-        };
-        _toolbarWindow.WhiteboardToggled += active =>
-        {
-            if (!_toolbarWindow.HasOverlay)
-            {
-                if (active)
-                {
-                    if (_overlayWindow.IsPhotoModeActive)
-                    {
-                        _overlayWindow.ExitPhotoMode();
-                    }
-                    _overlayWindow.SetBoardColor(_settings.BoardColor);
-                    _overlayWindow.SetBoardOpacity(255);
-                }
-                else
-                {
-                    _overlayWindow.SetBoardColor(Colors.Transparent);
-                    _overlayWindow.SetBoardOpacity(0);
-                }
-            }
-            if (active)
-            {
-                TouchSurface(ZOrderSurface.Whiteboard, applyPolicy: false);
-            }
-            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-            {
-                _rollCallWindow.Owner = _overlayWindow;
-                _rollCallWindow.SyncTopmost(true);
-            }
-            ApplyZOrderPolicy();
-        };
-        _toolbarWindow.SettingsRequested += OnOpenPaintSettings;
-        _toolbarWindow.PhotoOpenRequested += OnOpenPhotoTeaching;
-
-        _overlayWindow.SetMode(Paint.PaintToolMode.Brush);
-        _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
-        _overlayWindow.SetBrushStyle(_settings.BrushStyle);
-        _overlayWindow.SetBrushTuning(_settings.WhiteboardPreset, _settings.CalligraphyPreset);
-        _overlayWindow.SetCalligraphyOptions(
-            _settings.CalligraphyInkBloomEnabled,
-            _settings.CalligraphySealEnabled);
-        _overlayWindow.SetCalligraphyOverlayOpacityThreshold(_settings.CalligraphyOverlayOpacityThreshold);
-        _overlayWindow.SetEraserSize(_settings.EraserSize);
-        _overlayWindow.SetShapeType(_settings.ShapeType);
-        if (_toolbarWindow.BoardActive)
-        {
-            _overlayWindow.SetBoardColor(_settings.BoardColor);
-            _overlayWindow.SetBoardOpacity(255);
+             _paintWindowOrchestrator.OverlayWindow.Closed += (_, _) => UpdateToggleButtons();
         }
-        else
+        if (_paintWindowOrchestrator.ToolbarWindow != null)
         {
-            _overlayWindow.SetBoardColor(Colors.Transparent);
-            _overlayWindow.SetBoardOpacity(0);
+             _paintWindowOrchestrator.ToolbarWindow.Closed += (_, _) => UpdateToggleButtons();
         }
-        _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
-        _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
-        _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
-        _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
-        _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
-        _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
-        _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
-        _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
-        _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
-        _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
-        _overlayWindow.UpdateCrossPageDisplayEnabled(_settings.PhotoCrossPageDisplay);
-        _overlayWindow.SetPhotoUnifiedTransformState(
-            _settings.PhotoUnifiedTransformEnabled,
-            _settings.PhotoUnifiedScaleX,
-            _settings.PhotoUnifiedScaleY,
-            _settings.PhotoUnifiedTranslateX,
-            _settings.PhotoUnifiedTranslateY);
     }
 
-    private void ApplyPaintToolbarPosition()
-    {
-        if (_toolbarWindow == null)
-        {
-            return;
-        }
-        _toolbarWindow.Left = _settings.PaintToolbarX;
-        _toolbarWindow.Top = _settings.PaintToolbarY;
-        if (_settings.PaintToolbarX == AppSettings.UnsetPosition
-            && _settings.PaintToolbarY == AppSettings.UnsetPosition)
-        {
-            WindowPlacementHelper.CenterOnVirtualScreen(_toolbarWindow);
-            return;
-        }
-        WindowPlacementHelper.EnsureVisible(_toolbarWindow);
-    }
+    // ApplyPaintToolbarPosition moved to Orchestrator
 
     private void CapturePaintToolbarPosition(bool save)
     {
-        if (_toolbarWindow == null)
-        {
-            return;
-        }
-        _settings.PaintToolbarX = (int)Math.Round(_toolbarWindow.Left);
-        _settings.PaintToolbarY = (int)Math.Round(_toolbarWindow.Top);
-        if (save)
-        {
-            SaveSettings();
-        }
+        _paintWindowOrchestrator.CaptureToolbarPosition(_settings, save);
     }
 
     private void ShowPaintOverlayIfNeeded()
     {
-        if (_overlayWindow == null || _toolbarWindow == null)
+        if (_paintWindowOrchestrator.OverlayWindow == null)
         {
             return;
         }
-        if (_overlayWindow.IsVisible)
-        {
-            return;
-        }
-        _overlayWindow.Show();
-        if (_toolbarWindow.Owner != _overlayWindow && _overlayWindow.IsVisible)
-        {
-            _toolbarWindow.Owner = _overlayWindow;
-        }
-        _toolbarWindow.Show();
-        WindowPlacementHelper.EnsureVisible(_toolbarWindow);
-        _overlayWindow.SetMode(_toolbarWindow.CurrentMode);
+        
+        _paintWindowOrchestrator.Show();
+
+        // Ensure Z-Order linkage
         if (_rollCallWindow != null && _rollCallWindow.IsVisible)
         {
-            _rollCallWindow.Owner = _overlayWindow;
+            _rollCallWindow.Owner = _paintWindowOrchestrator.OverlayWindow;
             _rollCallWindow.SyncTopmost(true);
         }
     }
@@ -333,40 +180,9 @@ public partial class MainWindow
             _settings.PhotoCrossPageDisplay = dialog.PhotoCrossPageDisplay;
             SaveSettings();
 
-            if (_overlayWindow != null)
-            {
-                _overlayWindow.UpdateWpsMode(_settings.WpsInputMode);
-                _overlayWindow.UpdateWpsWheelMapping(_settings.WpsWheelForward);
-                _overlayWindow.UpdatePresentationTargets(_settings.ControlMsPpt, _settings.ControlWpsPpt);
-                _overlayWindow.UpdatePresentationForegroundPolicy(_settings.ForcePresentationForegroundOnFullscreen);
-                _overlayWindow.UpdateInkCacheEnabled(_settings.InkCacheEnabled);
-                _overlayWindow.UpdateInkRecordEnabled(_settings.InkRecordEnabled);
-                _overlayWindow.UpdateInkReplayPreviousEnabled(_settings.InkReplayPreviousEnabled);
-                _overlayWindow.UpdateInkRetentionDays(_settings.InkRetentionDays);
-                _overlayWindow.UpdateInkPhotoRootPath(_settings.InkPhotoRootPath);
-                _overlayWindow.UpdatePhotoTransformMemoryEnabled(_settings.PhotoRememberTransform);
-                _overlayWindow.UpdateCrossPageDisplayEnabled(_settings.PhotoCrossPageDisplay);
-                _overlayWindow.SetBrush(_settings.BrushColor, _settings.BrushSize, _settings.BrushOpacity);
-                _overlayWindow.SetBrushStyle(_settings.BrushStyle);
-                _overlayWindow.SetBrushTuning(_settings.WhiteboardPreset, _settings.CalligraphyPreset);
-                _overlayWindow.SetCalligraphyOptions(
-                    _settings.CalligraphyInkBloomEnabled,
-                    _settings.CalligraphySealEnabled);
-                _overlayWindow.SetCalligraphyOverlayOpacityThreshold(_settings.CalligraphyOverlayOpacityThreshold);
-                _overlayWindow.SetEraserSize(_settings.EraserSize);
-                _overlayWindow.SetShapeType(_settings.ShapeType);
-                _overlayWindow.SetMode(_settings.ShapeType == Paint.PaintShapeType.None
-                    ? Paint.PaintToolMode.Brush
-                    : Paint.PaintToolMode.Shape);
-                if (_toolbarWindow?.BoardActive == true)
-                {
-                    _overlayWindow.SetBoardColor(_settings.BoardColor);
-                    _overlayWindow.SetBoardOpacity(255);
-                }
-            }
-            _toolbarWindow?.ApplySettings(_settings);
+            _paintWindowOrchestrator.ApplySettings(_settings);
         }
-        _overlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+        _paintWindowOrchestrator.OverlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
     }
 
     private void OnPhotoCloseRequested()

@@ -26,8 +26,8 @@ namespace ClassroomToolkit.App;
 public partial class MainWindow : Window
 {
     private RollCallWindow? _rollCallWindow;
-    private Paint.PaintOverlayWindow? _overlayWindow;
-    private Paint.PaintToolbarWindow? _toolbarWindow;
+    private Paint.PaintOverlayWindow? _overlayWindow => _paintWindowOrchestrator.OverlayWindow;
+    private Paint.PaintToolbarWindow? _toolbarWindow => _paintWindowOrchestrator.ToolbarWindow;
     private Photos.ImageManagerWindow? _imageManagerWindow;
     private readonly List<ZOrderSurface> _surfaceStack = new();
     private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
@@ -44,7 +44,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _mainViewModel;
     private readonly IConfigurationService _configurationService;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
-    private readonly Paint.IPaintWindowFactory _paintWindowFactory;
+    private readonly Services.IPaintWindowOrchestrator _paintWindowOrchestrator;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
     private readonly IWindowOrchestrator _windowOrchestrator;
     public MainWindow(
@@ -53,7 +53,7 @@ public partial class MainWindow : Window
         MainViewModel mainViewModel,
         IConfigurationService configurationService,
         IRollCallWindowFactory rollCallWindowFactory,
-        Paint.IPaintWindowFactory paintWindowFactory,
+        Services.IPaintWindowOrchestrator paintWindowOrchestrator,
         Photos.IImageManagerWindowFactory imageManagerWindowFactory,
         IWindowOrchestrator windowOrchestrator)
     {
@@ -63,7 +63,7 @@ public partial class MainWindow : Window
         _mainViewModel = mainViewModel;
         _configurationService = configurationService;
         _rollCallWindowFactory = rollCallWindowFactory;
-        _paintWindowFactory = paintWindowFactory;
+        _paintWindowOrchestrator = paintWindowOrchestrator;
         _imageManagerWindowFactory = imageManagerWindowFactory;
         _windowOrchestrator = windowOrchestrator;
         _autoExitTimer = new DispatcherTimer();
@@ -329,16 +329,20 @@ public partial class MainWindow : Window
             _rollCallWindow.RequestClose();
             _rollCallWindow = null;
         }
+        
+        _paintWindowOrchestrator.Close();
+        /*
         if (_overlayWindow != null)
         {
-            try { _overlayWindow.Close(); } catch { /* ignore during shutdown */ }
-            _overlayWindow = null;
+            try { _overlayWindow.Close(); } catch { }
+            // _overlayWindow = null; // Property now
         }
         if (_toolbarWindow != null)
         {
-            try { _toolbarWindow.Close(); } catch { /* ignore during shutdown */ }
-            _toolbarWindow = null;
+            try { _toolbarWindow.Close(); } catch { }
+            // _toolbarWindow = null; // Property now
         }
+        */
         System.Windows.Application.Current.Shutdown();
     }
 

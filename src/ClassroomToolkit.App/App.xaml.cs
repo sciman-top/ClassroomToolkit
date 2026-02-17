@@ -7,6 +7,7 @@ using System.Threading;
 using System.IO;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace ClassroomToolkit.App;
 
@@ -56,9 +57,23 @@ public partial class App : WpfApplication
         services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
         services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
         services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
+        services.AddSingleton<Services.IPaintWindowOrchestrator, Services.PaintWindowOrchestrator>();
         services.AddSingleton<MainWindow>();
         services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
         services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
+        
+        // Logging
+        services.AddLogging(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Debug);
+            // Console logger for development
+            builder.AddConsole();
+            
+            // File logger for production/persistence
+            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(logPath));
+        });
+
         _services = services.BuildServiceProvider();
     }
 
