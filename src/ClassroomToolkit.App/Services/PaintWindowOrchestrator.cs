@@ -213,12 +213,14 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.UpdatePresentationTargets(settings.ControlMsPpt, settings.ControlWpsPpt);
         OverlayWindow.UpdatePresentationForegroundPolicy(settings.ForcePresentationForegroundOnFullscreen);
         OverlayWindow.UpdateInkCacheEnabled(settings.InkCacheEnabled);
+        OverlayWindow.UpdateInkSaveEnabled(settings.InkSaveEnabled);
         OverlayWindow.UpdateInkRecordEnabled(settings.InkRecordEnabled);
         OverlayWindow.UpdateInkReplayPreviousEnabled(settings.InkReplayPreviousEnabled);
         OverlayWindow.UpdateInkRetentionDays(settings.InkRetentionDays);
         OverlayWindow.UpdateInkPhotoRootPath(settings.InkPhotoRootPath);
         OverlayWindow.UpdatePhotoTransformMemoryEnabled(settings.PhotoRememberTransform);
         OverlayWindow.UpdateCrossPageDisplayEnabled(settings.PhotoCrossPageDisplay);
+        OverlayWindow.UpdateNeighborPrefetchRadiusMax(settings.PhotoNeighborPrefetchRadiusMax);
         OverlayWindow.SetPhotoUnifiedTransformState(
             settings.PhotoUnifiedTransformEnabled,
             settings.PhotoUnifiedScaleX,

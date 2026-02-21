@@ -4,6 +4,7 @@ using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using MediaColors = System.Windows.Media.Colors;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Settings;
 
@@ -60,6 +61,9 @@ public sealed class AppSettings
     public int PaintToolbarY { get; set; } = 260;
     public double PaintToolbarScale { get; set; } = 1.0;
     public bool InkCacheEnabled { get; set; } = true;
+    public bool InkSaveEnabled { get; set; } = false;
+    public InkExportScope InkExportScope { get; set; } = InkExportScope.AllPersistedAndSession;
+    public int InkExportMaxParallelFiles { get; set; } = 2;
     public bool InkRecordEnabled { get; set; } = false;
     public bool InkReplayPreviousEnabled { get; set; } = false;
     public int InkRetentionDays { get; set; } = 30;
@@ -68,6 +72,8 @@ public sealed class AppSettings
     public List<string> PhotoRecentFolders { get; set; } = new();
     public bool PhotoRememberTransform { get; set; } = false;
     public bool PhotoCrossPageDisplay { get; set; } = false;
+    public int PhotoNeighborPrefetchRadiusMax { get; set; } = 4;
+    public bool PhotoShowInkOverlay { get; set; } = true;
     public bool PhotoUnifiedTransformEnabled { get; set; } = false;
     public double PhotoUnifiedScaleX { get; set; } = 1.0;
     public double PhotoUnifiedScaleY { get; set; } = 1.0;

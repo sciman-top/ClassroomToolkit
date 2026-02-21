@@ -1,4 +1,5 @@
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Ink;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -91,6 +92,58 @@ public sealed class AppSettingsServiceTests
             reloaded.PhotoUnifiedScaleY.Should().BeApproximately(1.1, 0.0001);
             reloaded.PhotoUnifiedTranslateX.Should().BeApproximately(42.5, 0.0001);
             reloaded.PhotoUnifiedTranslateY.Should().BeApproximately(-18.0, 0.0001);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistPhotoShowInkOverlayState()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        try
+        {
+            var service = new AppSettingsService(path);
+            var initial = service.Load();
+            initial.PhotoShowInkOverlay = false;
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.PhotoShowInkOverlay.Should().BeFalse();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistInkExportScope()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        try
+        {
+            var service = new AppSettingsService(path);
+            var initial = service.Load();
+            initial.InkExportScope = InkExportScope.SessionChangesOnly;
+            initial.InkExportMaxParallelFiles = 3;
+            initial.PhotoNeighborPrefetchRadiusMax = 2;
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.InkExportScope.Should().Be(InkExportScope.SessionChangesOnly);
+            reloaded.InkExportMaxParallelFiles.Should().Be(3);
+            reloaded.PhotoNeighborPrefetchRadiusMax.Should().Be(2);
         }
         finally
         {

@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Domain.Models;
@@ -9,19 +7,11 @@ using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.Infra.Storage;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Threading;
 
 namespace ClassroomToolkit.App.ViewModels;
 
-public sealed class RollCallViewModel : INotifyPropertyChanged
+public sealed partial class RollCallViewModel : ViewModelBase
 {
-    private static readonly object PreloadLock = new();
-    private static Task<RollCallLoadResult>? _preloadTask;
-    private static RollCallLoadResult? _preloadedResult;
-    private static string? _preloadedPath;
-    private static DateTime _preloadedWriteTimeUtc;
     private readonly string _dataPath;
     private StudentWorkbook? _workbook;
     private RollCallEngine? _engine;
@@ -53,7 +43,6 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
     private bool _canPersistWorkbook = true;
-    private bool _persistBlockedNotified;
 
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
@@ -70,14 +59,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         UpdateTimeDisplay();
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
     public event Action? TimerCompleted;
     public event Action? ReminderTriggered;
     public event Action<string>? DataLoadFailed;
     public event Action<string>? DataSaveFailed;
 
     public ObservableCollection<string> Groups { get; }
-
     public ObservableCollection<GroupButtonItem> GroupButtons { get; }
 
     public string CurrentGroup
@@ -89,16 +76,6 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
             {
                 UpdateGroupSelection();
             }
-        }
-    }
-
-    private void UpdateGroupSelection()
-    {
-        if (GroupButtons == null) return;
-        foreach (var btn in GroupButtons)
-        {
-            if (btn.IsReset) continue;
-            btn.IsSelected = string.Equals(btn.Label, _currentGroup, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -127,14 +104,12 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         {
             if (SetField(ref _isRollCallMode, value))
             {
-                RaisePropertyChanged(nameof(ModeToggleLabel));
-                RaisePropertyChanged(nameof(ModeTitle));
+                RaisePropertyChanged(nameof(ModeToggleLabel), nameof(ModeTitle));
             }
         }
     }
 
     public string ModeToggleLabel => IsRollCallMode ? "切换到计时" : "切换到点名";
-
     public string ModeTitle => IsRollCallMode ? "点名" : "计时";
 
     public string TimerModeLabel => _timerEngine.Mode switch
@@ -145,15 +120,10 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     };
 
     public string StartPauseLabel => _timerEngine.Mode == TimerMode.Clock ? "开始" : (_timerEngine.Running ? "暂停" : "开始");
-
     public TimerMode CurrentTimerMode => _timerEngine.Mode;
-
     public bool TimerRunning => _timerEngine.Running;
-
     public int TimerSecondsLeft => _timerEngine.SecondsLeft;
-
     public int TimerStopwatchSeconds => _timerEngine.StopwatchSeconds;
-
     public int TimerCountdownSeconds => _timerEngine.CountdownSeconds;
 
     public string TimeDisplay
@@ -194,14 +164,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         }
     }
 
-    public int InfoColumnCount
-    {
-        get
-        {
-            var count = (ShowId ? 1 : 0) + (ShowName ? 1 : 0);
-            return Math.Max(1, count);
-        }
-    }
+    public int InfoColumnCount => Math.Max(1, (ShowId ? 1 : 0) + (ShowName ? 1 : 0));
 
     public bool RemotePresenterEnabled
     {
@@ -240,7 +203,6 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     }
 
     public string ClassButtonLabel => string.IsNullOrWhiteSpace(ActiveClassName) ? "班级" : ActiveClassName;
-
     public bool HasStudentData => _engine?.Roster.Students.Count > 0;
 
     public IReadOnlyList<string> AvailableClasses
@@ -274,8 +236,7 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
         get => _timerReminderIntervalMinutes;
         set
         {
-            var minutes = Math.Max(0, value);
-            if (SetField(ref _timerReminderIntervalMinutes, minutes))
+            if (SetField(ref _timerReminderIntervalMinutes, Math.Max(0, value)))
             {
                 ApplyReminderInterval();
             }
@@ -334,759 +295,9 @@ public sealed class RollCallViewModel : INotifyPropertyChanged
     }
 
     public int TimerMinutes => _timerMinutes;
-
     public int TimerSeconds => _timerSeconds;
 
-    public static void WarmupData(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-        if (!File.Exists(path))
-        {
-            return;
-        }
-        DateTime writeTimeUtc;
-        try
-        {
-            writeTimeUtc = File.GetLastWriteTimeUtc(path);
-        }
-        catch
-        {
-            return;
-        }
-        lock (PreloadLock)
-        {
-            if (_preloadedResult != null
-                && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
-                    || _preloadedWriteTimeUtc != writeTimeUtc))
-            {
-                _preloadedResult = null;
-            }
-            if (_preloadedResult != null
-                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
-                && _preloadedWriteTimeUtc == writeTimeUtc)
-            {
-                return;
-            }
-            if (_preloadTask != null
-                && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
-                && _preloadedWriteTimeUtc == writeTimeUtc)
-            {
-                return;
-            }
-            _preloadedPath = path;
-            _preloadedWriteTimeUtc = writeTimeUtc;
-            var expectedPath = path;
-            var expectedWriteTimeUtc = writeTimeUtc;
-            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath));
-            _preloadTask.ContinueWith(task =>
-            {
-                lock (PreloadLock)
-                {
-                    if (task.Status == TaskStatus.RanToCompletion
-                        && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
-                    {
-                        if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase)
-                            && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
-                        {
-                            _preloadedResult = task.Result;
-                        }
-                    }
-                    _preloadTask = null;
-                }
-            }, TaskScheduler.Default);
-        }
-    }
-
-    public void LoadData(string? preferredClass = null)
-    {
-        var result = LoadDataCore();
-        ApplyLoadResult(result, preferredClass);
-    }
-
-    public async Task LoadDataAsync(string? preferredClass, Dispatcher dispatcher)
-    {
-        var preload = TryConsumePreloadedResult(_dataPath);
-        if (preload != null)
-        {
-            await dispatcher.InvokeAsync(() =>
-            {
-                ApplyLoadResult(preload, preferredClass);
-            }, DispatcherPriority.Render);
-            return;
-        }
-        var result = await Task.Run(LoadDataCore).ConfigureAwait(false);
-        await dispatcher.InvokeAsync(() =>
-        {
-            ApplyLoadResult(result, preferredClass);
-        }, DispatcherPriority.Render);
-    }
-
-    private RollCallLoadResult LoadDataCore()
-    {
-        var preload = TryConsumePreloadedResult(_dataPath);
-        if (preload != null)
-        {
-            return preload;
-        }
-        return LoadDataFromPath(_dataPath);
-    }
-
-    private static RollCallLoadResult? TryConsumePreloadedResult(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-        {
-            return null;
-        }
-        DateTime writeTimeUtc;
-        try
-        {
-            writeTimeUtc = File.GetLastWriteTimeUtc(path);
-        }
-        catch
-        {
-            return null;
-        }
-        Task<RollCallLoadResult>? preloadTask = null;
-        bool consumeTask = false;
-        lock (PreloadLock)
-        {
-            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
-                || _preloadedWriteTimeUtc != writeTimeUtc)
-            {
-                _preloadedResult = null;
-                return null;
-            }
-            if (_preloadedResult != null)
-            {
-                var result = _preloadedResult;
-                _preloadedResult = null;
-                return result;
-            }
-            if (_preloadTask != null && _preloadTask.IsCompleted)
-            {
-                preloadTask = _preloadTask;
-                _preloadTask = null;
-                consumeTask = true;
-            }
-        }
-        if (preloadTask != null && consumeTask)
-        {
-            try
-            {
-                if (!preloadTask.IsCompletedSuccessfully)
-                {
-                    return null;
-                }
-                var result = preloadTask.Result;
-                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
-                {
-                    return null;
-                }
-                return result;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private static RollCallLoadResult LoadDataFromPath(string path)
-    {
-        try
-        {
-            var store = new StudentWorkbookStore();
-            var result = store.LoadOrCreate(path);
-            var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
-            {
-                states[pair.Key] = pair.Value;
-            }
-            return new RollCallLoadResult(result.Workbook, states, null);
-        }
-        catch (Exception ex)
-        {
-            var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
-            var fallbackWorkbook = new StudentWorkbook(
-                new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster },
-                "班级1");
-            var message = $"学生名册读取失败：{ex.Message}";
-            return new RollCallLoadResult(fallbackWorkbook, new Dictionary<string, ClassRollState>(), message);
-        }
-    }
-
-    private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
-    {
-        _workbook = result.Workbook;
-        _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
-        _persistBlockedNotified = false;
-        _classStates.Clear();
-        foreach (var pair in result.ClassStates)
-        {
-            _classStates[pair.Key] = pair.Value;
-        }
-        if (!string.IsNullOrWhiteSpace(preferredClass) &&
-            _workbook.ClassNames.Any(name => name.Equals(preferredClass.Trim(), StringComparison.OrdinalIgnoreCase)))
-        {
-            _workbook.SetActiveClass(preferredClass.Trim());
-        }
-        _engine = new RollCallEngine(_workbook.GetActiveRoster());
-        ActiveClassName = _workbook.ActiveClass;
-        AvailableClasses = _workbook.ClassNames;
-        RaisePropertyChanged(nameof(HasStudentData));
-
-        if (_classStates.TryGetValue(_workbook.ActiveClass, out var state))
-        {
-            _engine.RestoreState(state);
-        }
-
-        RefreshGroups();
-        CurrentGroup = _engine.CurrentGroup;
-        UpdateCurrentStudent();
-
-        // 预热照片缓存，提升首次查询性能
-        _photoResolver.WarmupCache(_workbook.ClassNames);
-
-        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
-        {
-            DataLoadFailed?.Invoke(result.ErrorMessage);
-        }
-    }
-
-    private sealed record RollCallLoadResult(
-        StudentWorkbook Workbook,
-        Dictionary<string, ClassRollState> ClassStates,
-        string? ErrorMessage);
-
-    public bool SwitchClass(string className, bool updatePhoto = true)
-    {
-        if (_engine == null || _workbook == null)
-        {
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(className))
-        {
-            return false;
-        }
-        var trimmed = className.Trim();
-        if (!_workbook.ClassNames.Any(name => name.Equals(trimmed, StringComparison.OrdinalIgnoreCase)))
-        {
-            return false;
-        }
-        if (trimmed.Equals(_workbook.ActiveClass, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-        StoreCurrentState();
-        _workbook.SetActiveClass(trimmed);
-        _engine.SetRoster(_workbook.GetActiveRoster());
-        ActiveClassName = _workbook.ActiveClass;
-        RaisePropertyChanged(nameof(HasStudentData));
-        if (_classStates.TryGetValue(_workbook.ActiveClass, out var state))
-        {
-            _engine.RestoreState(state);
-        }
-        RefreshGroups();
-        CurrentGroup = _engine.CurrentGroup;
-        UpdateCurrentStudent(updatePhoto);
-        return true;
-    }
-
-    public bool TryBuildStudentList(out IReadOnlyList<StudentListItem> students, out string? message)
-    {
-        students = Array.Empty<StudentListItem>();
-        message = null;
-        if (_engine == null)
-        {
-            message = "暂无学生数据，无法显示名单。";
-            return false;
-        }
-        var roster = _engine.Roster;
-        if (roster.Students.Count == 0)
-        {
-            message = "暂无学生数据，无法显示名单。";
-            return false;
-        }
-
-        var groupKey = ResolveGroupKey(CurrentGroup);
-        if (!_engine.GroupAll.TryGetValue(groupKey, out var indices))
-        {
-            _engine.GroupAll.TryGetValue(IdentityUtils.AllGroupName, out indices);
-        }
-        indices ??= new List<int>();
-        if (indices.Count == 0)
-        {
-            message = CurrentGroup == IdentityUtils.AllGroupName
-                ? "当前没有可显示的学生名单。"
-                : "当前分组没有可显示的学生名单。";
-            return false;
-        }
-
-        var remaining = _engine.GroupRemaining.TryGetValue(groupKey, out var pool)
-            ? new HashSet<int>(pool)
-            : new HashSet<int>();
-        var list = new List<(StudentSortKey Key, StudentListItem Item)>();
-        foreach (var idx in indices)
-        {
-            if (idx < 0 || idx >= roster.Students.Count)
-            {
-                continue;
-            }
-            var student = roster.Students[idx];
-            var displayId = IdentityUtils.CompactText(student.StudentId);
-            var displayName = IdentityUtils.NormalizeText(student.Name);
-            var key = BuildStudentSortKey(displayId, displayName);
-            var item = new StudentListItem(displayId, displayName, idx, !remaining.Contains(idx));
-            list.Add((key, item));
-        }
-
-        if (list.Count == 0)
-        {
-            message = "当前没有可显示的学生名单。";
-            return false;
-        }
-
-        list.Sort((a, b) => a.Key.CompareTo(b.Key));
-        students = list.Select(item => item.Item).ToList();
-        return true;
-    }
-
-    private string ResolveGroupKey(string group)
-    {
-        if (_engine == null)
-        {
-            return group;
-        }
-        var normalized = IdentityUtils.NormalizeGroupName(group);
-        if (_engine.GroupAll.ContainsKey(normalized))
-        {
-            return normalized;
-        }
-        var trimmed = normalized.Trim();
-        if (trimmed.EndsWith("组", StringComparison.Ordinal))
-        {
-            var stripped = trimmed[..^1];
-            if (_engine.GroupAll.ContainsKey(stripped))
-            {
-                return stripped;
-            }
-        }
-        else
-        {
-            var withSuffix = $"{trimmed}组";
-            if (_engine.GroupAll.ContainsKey(withSuffix))
-            {
-                return withSuffix;
-            }
-        }
-        foreach (var key in _engine.GroupAll.Keys)
-        {
-            if (NormalizeGroupKey(key) == NormalizeGroupKey(trimmed))
-            {
-                return key;
-            }
-        }
-        return normalized;
-    }
-
-    private static string NormalizeGroupKey(string group)
-    {
-        var normalized = IdentityUtils.NormalizeGroupName(group);
-        if (normalized.EndsWith("组", StringComparison.Ordinal))
-        {
-            normalized = normalized[..^1];
-        }
-        return normalized;
-    }
-
-    public bool SetCurrentStudentByIndex(int index)
-    {
-        if (_engine == null)
-        {
-            return false;
-        }
-        if (index < 0 || index >= _engine.Roster.Students.Count)
-        {
-            return false;
-        }
-        _engine.SetCurrentStudentIndex(index);
-        UpdateCurrentStudent();
-        return true;
-    }
-
-    public bool TryRollNext(out string? message)
-    {
-        message = null;
-        if (_engine == null)
-        {
-            message = "暂无学生数据，无法点名。";
-            SetPlaceholderStudent();
-            return false;
-        }
-        if (_engine.Roster.Students.Count == 0)
-        {
-            message = "当前没有可点名的学生。";
-            SetPlaceholderStudent();
-            return false;
-        }
-        var groupKey = ResolveGroupKey(CurrentGroup);
-        if (!_engine.GroupRemaining.TryGetValue(groupKey, out var remaining) || remaining.Count == 0)
-        {
-            if (!_engine.GroupAll.TryGetValue(groupKey, out var baseList) || baseList.Count == 0)
-            {
-                message = $"'{CurrentGroup}' 分组当前没有可点名的学生。";
-                SetPlaceholderStudent();
-                return false;
-            }
-            if (_engine.AllGroupsCompleted())
-            {
-                message = "所有学生都已完成点名，请点击“重置”按钮重新开始。";
-            }
-            else
-            {
-                message = $"'{CurrentGroup}' 的同学已经全部点到，请切换其他分组或点击“重置”按钮。";
-            }
-            return false;
-        }
-        var student = _engine.RollNext();
-        if (student == null)
-        {
-            SetPlaceholderStudent();
-            return false;
-        }
-        CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
-        CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
-        return true;
-    }
-
-    public void ToggleMode()
-    {
-        IsRollCallMode = !IsRollCallMode;
-    }
-
-    public void ToggleTimerMode()
-    {
-        if (_timerEngine.Running)
-        {
-            return;
-        }
-        var nextMode = _timerEngine.Mode switch
-        {
-            TimerMode.Countdown => TimerMode.Stopwatch,
-            TimerMode.Stopwatch => TimerMode.Clock,
-            _ => TimerMode.Countdown
-        };
-        _timerEngine.SetMode(nextMode);
-        ApplyReminderInterval();
-        UpdateTimeDisplay();
-        RaisePropertyChanged(nameof(TimerModeLabel));
-        RaisePropertyChanged(nameof(StartPauseLabel));
-        RaisePropertyChanged(nameof(CurrentTimerMode));
-    }
-
-    public void ToggleTimer()
-    {
-        if (_timerEngine.Mode == TimerMode.Clock)
-        {
-            return;
-        }
-        if (!_timerEngine.Running && _timerEngine.Mode == TimerMode.Countdown && _timerEngine.SecondsLeft <= 0)
-        {
-            _timerEngine.Reset();
-            UpdateTimeDisplay();
-        }
-        _timerEngine.Toggle();
-        RaisePropertyChanged(nameof(StartPauseLabel));
-        RaisePropertyChanged(nameof(TimerRunning));
-    }
-
-    public void ResetTimer()
-    {
-        if (_timerEngine.Mode == TimerMode.Clock)
-        {
-            return;
-        }
-        _timerEngine.Reset();
-        UpdateTimeDisplay();
-        RaisePropertyChanged(nameof(StartPauseLabel));
-        RaisePropertyChanged(nameof(TimerRunning));
-    }
-
-    public void SetCountdown(int minutes, int seconds)
-    {
-        _timerMinutes = Math.Max(0, minutes);
-        _timerSeconds = Math.Clamp(seconds, 0, 59);
-        _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
-        UpdateTimeDisplay();
-    }
-
-    public void ApplyTimerState(bool isRollCallMode, TimerMode timerMode, int minutes, int seconds, int secondsLeft, int stopwatchSeconds, bool running)
-    {
-        IsRollCallMode = isRollCallMode;
-        _timerMinutes = Math.Max(0, minutes);
-        _timerSeconds = Math.Clamp(seconds, 0, 59);
-        var countdownTotal = Math.Max(0, _timerMinutes * 60 + _timerSeconds);
-        if (secondsLeft <= 0)
-        {
-            secondsLeft = countdownTotal;
-        }
-        _timerEngine.SetState(timerMode, countdownTotal, secondsLeft, stopwatchSeconds, running);
-        ApplyReminderInterval();
-        UpdateTimeDisplay();
-        RaisePropertyChanged(nameof(TimerModeLabel));
-        RaisePropertyChanged(nameof(StartPauseLabel));
-        RaisePropertyChanged(nameof(CurrentTimerMode));
-        RaisePropertyChanged(nameof(TimerRunning));
-    }
-
-    public void TickTimer(TimeSpan elapsed)
-    {
-        if (_timerEngine.Mode == TimerMode.Clock)
-        {
-            UpdateTimeDisplay();
-            return;
-        }
-        _timerEngine.Tick(elapsed);
-        UpdateTimeDisplay();
-        RaisePropertyChanged(nameof(StartPauseLabel));
-    }
-
-    public void ResetCurrentGroup()
-    {
-        if (_engine == null)
-        {
-            return;
-        }
-        _engine.ResetGroup(CurrentGroup);
-        _engine.SetCurrentStudentIndex(null);
-        SetPlaceholderStudent();
-    }
-
-    public void SetCurrentGroup(string group)
-    {
-        if (_engine == null)
-        {
-            return;
-        }
-        _engine.SetCurrentGroup(group);
-        CurrentGroup = _engine.CurrentGroup;
-        SetPlaceholderStudent();
-    }
-
-    public void SwitchToNextGroup()
-    {
-        if (_engine == null || Groups.Count <= 1)
-        {
-            return;
-        }
-
-        var currentIndex = Groups.IndexOf(CurrentGroup);
-        var nextIndex = (currentIndex + 1) % Groups.Count;
-        var nextGroup = Groups[nextIndex];
-        
-        SetCurrentGroup(nextGroup);
-        UpdateGroupSelection();
-    }
-
-    public void SaveState()
-    {
-        if (_engine == null || _workbook == null)
-        {
-            return;
-        }
-        if (!CanPersistWorkbook)
-        {
-            if (!_persistBlockedNotified)
-            {
-                _persistBlockedNotified = true;
-                DataSaveFailed?.Invoke("学生名册当前处于恢复只读模式，本次会话已禁用保存以避免覆盖原始数据。");
-            }
-            return;
-        }
-        try
-        {
-            StoreCurrentState();
-            var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase));
-            var store = new StudentWorkbookStore();
-            store.Save(_workbook, _dataPath, json);
-        }
-        catch (Exception ex)
-        {
-            var message = $"学生名册保存失败：{ex.Message}";
-            DataSaveFailed?.Invoke(message);
-        }
-    }
-
-    public void SetRemotePresenterKey(string value)
-    {
-        RemotePresenterKey = string.IsNullOrWhiteSpace(value) ? "tab" : value.Trim().ToLowerInvariant();
-    }
-
-    public void ResetCurrentStudentDisplay()
-    {
-        SetPlaceholderStudent();
-    }
-
-    private void RefreshGroups()
-    {
-        Groups.Clear();
-        GroupButtons.Clear();
-        if (_engine == null)
-        {
-            return;
-        }
-        foreach (var group in _engine.Roster.Groups)
-        {
-            Groups.Add(group);
-            GroupButtons.Add(new GroupButtonItem(group, isReset: false));
-        }
-        GroupButtons.Add(new GroupButtonItem("重置", isReset: true));
-        UpdateGroupSelection();
-    }
-
-    private void UpdateCurrentStudent(bool updatePhoto = true)
-    {
-        if (_engine == null || !_engine.CurrentStudentIndex.HasValue)
-        {
-            SetPlaceholderStudent();
-            return;
-        }
-        var student = _engine.Roster.Students[_engine.CurrentStudentIndex.Value];
-        CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
-        CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
-        
-        if (updatePhoto)
-        {
-            var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
-            CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
-        }
-        else
-        {
-            CurrentStudentPhotoPath = null;
-        }
-    }
-
-    private void SetPlaceholderStudent()
-    {
-        CurrentStudentId = ShowId ? "学号" : string.Empty;
-        CurrentStudentName = ShowName ? "学生" : string.Empty;
-        CurrentStudentPhotoPath = null;
-    }
-
-    private void UpdateTimeDisplay()
-    {
-        if (_timerEngine.Mode == TimerMode.Clock)
-        {
-            TimeDisplay = DateTime.Now.ToString("HH:mm:ss");
-        }
-        else if (_timerEngine.Mode == TimerMode.Countdown)
-        {
-            TimeDisplay = FormatTime(_timerEngine.SecondsLeft);
-        }
-        else
-        {
-            TimeDisplay = FormatTime(_timerEngine.StopwatchSeconds);
-        }
-        RaisePropertyChanged(nameof(TimerModeLabel));
-    }
-
-    private static string FormatTime(int totalSeconds)
-    {
-        totalSeconds = Math.Max(0, totalSeconds);
-        var span = TimeSpan.FromSeconds(totalSeconds);
-        if (span.TotalHours >= 1)
-        {
-            return $"{(int)span.TotalHours:00}:{span.Minutes:00}:{span.Seconds:00}";
-        }
-        return $"{span.Minutes:00}:{span.Seconds:00}";
-    }
-
-    private void ApplyReminderInterval()
-    {
-        if (_timerEngine.Mode != TimerMode.Countdown || !TimerReminderEnabled || TimerReminderIntervalMinutes <= 0)
-        {
-            _timerEngine.ReminderIntervalSeconds = 0;
-            return;
-        }
-        _timerEngine.ReminderIntervalSeconds = TimerReminderIntervalMinutes * 60;
-    }
-
-    private void StoreCurrentState()
-    {
-        if (_engine == null || _workbook == null)
-        {
-            return;
-        }
-        _classStates[_workbook.ActiveClass] = _engine.CaptureState();
-    }
-
-    private static StudentSortKey BuildStudentSortKey(string studentId, string studentName)
-    {
-        var id = IdentityUtils.CompactText(studentId);
-        var nameKey = (studentName ?? string.Empty).Trim().ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(id) && int.TryParse(id, out var numeric))
-        {
-            return new StudentSortKey(0, numeric, string.Empty, nameKey, id);
-        }
-        if (!string.IsNullOrWhiteSpace(id))
-        {
-            return new StudentSortKey(1, 0, id.ToLowerInvariant(), nameKey, id);
-        }
-        return new StudentSortKey(2, 0, string.Empty, nameKey, string.Empty);
-    }
-
-    private readonly record struct StudentSortKey(int Category, int NumericId, string TextId, string NameKey, string RawId)
-        : IComparable<StudentSortKey>
-    {
-        public int CompareTo(StudentSortKey other)
-        {
-            var cmp = Category.CompareTo(other.Category);
-            if (cmp != 0)
-            {
-                return cmp;
-            }
-            if (Category == 0)
-            {
-                cmp = NumericId.CompareTo(other.NumericId);
-                if (cmp != 0)
-                {
-                    return cmp;
-                }
-            }
-            else if (Category == 1)
-            {
-                cmp = string.Compare(TextId, other.TextId, StringComparison.OrdinalIgnoreCase);
-                if (cmp != 0)
-                {
-                    return cmp;
-                }
-            }
-            cmp = string.Compare(NameKey, other.NameKey, StringComparison.OrdinalIgnoreCase);
-            if (cmp != 0)
-            {
-                return cmp;
-            }
-            return string.Compare(RawId, other.RawId, StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value))
-        {
-            return false;
-        }
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        return true;
-    }
-
-    private void RaisePropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
+    public void ToggleMode() => IsRollCallMode = !IsRollCallMode;
+    public void SetRemotePresenterKey(string key) => RemotePresenterKey = key;
+    public void ResetCurrentStudentDisplay() => UpdateCurrentStudent();
 }

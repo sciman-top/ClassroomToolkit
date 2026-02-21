@@ -7,6 +7,8 @@ public sealed class ConfigurationService : IConfigurationService
 {
     private const string AppSettingsFileName = "appsettings.json";
     private const string DefaultSettingsIniName = "settings.ini";
+    private const string SettingsIniOverrideEnv = "CTK_SETTINGS_INI";
+    private const string SolutionFileName = "ClassroomToolkit.sln";
 
     public ConfigurationService()
         : this(null)
@@ -27,6 +29,14 @@ public sealed class ConfigurationService : IConfigurationService
 
     private string ResolveSettingsIniPath()
     {
+        var envOverride = Environment.GetEnvironmentVariable(SettingsIniOverrideEnv);
+        if (!string.IsNullOrWhiteSpace(envOverride))
+        {
+            return Path.IsPathRooted(envOverride)
+                ? envOverride
+                : Path.GetFullPath(Path.Combine(BaseDirectory, envOverride));
+        }
+
         var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
         if (!File.Exists(appSettingsPath))
         {
@@ -88,6 +98,49 @@ public sealed class ConfigurationService : IConfigurationService
 
     private string GetDefaultSettingsIniPath()
     {
+        var solutionDirectory = FindSolutionDirectory(BaseDirectory);
+        if (!string.IsNullOrWhiteSpace(solutionDirectory))
+        {
+            return Path.Combine(solutionDirectory, DefaultSettingsIniName);
+        }
+
         return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+    }
+
+    private static string? FindSolutionDirectory(string start)
+    {
+        if (string.IsNullOrWhiteSpace(start))
+        {
+            return null;
+        }
+
+        DirectoryInfo? current;
+        try
+        {
+            current = new DirectoryInfo(Path.GetFullPath(start));
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+        catch (PathTooLongException)
+        {
+            return null;
+        }
+
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, SolutionFileName)))
+            {
+                return current.FullName;
+            }
+            current = current.Parent;
+        }
+
+        return null;
     }
 }

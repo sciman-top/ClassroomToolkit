@@ -7,13 +7,14 @@ namespace ClassroomToolkit.App;
 
 public partial class TimerSetDialog : Window
 {
+    private const int MaxMinutes = 150;
     private bool _updating;
     private DispatcherTimer? _repeatTimer;
 
     public TimerSetDialog(int minutes, int seconds)
     {
         InitializeComponent();
-        SetMinutes(Math.Clamp(minutes, 0, 150), updateSlider: true);
+        SetMinutes(Math.Clamp(minutes, 0, MaxMinutes), updateSlider: true);
         SetSeconds(Math.Clamp(seconds, 0, 59));
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
@@ -32,7 +33,7 @@ public partial class TimerSetDialog : Window
         {
             return;
         }
-        minutes = Math.Clamp(minutes, 0, 150);
+        minutes = Math.Clamp(minutes, 0, MaxMinutes);
         SetMinutes(minutes, updateSlider: minutes <= 25);
     }
 
@@ -55,7 +56,7 @@ public partial class TimerSetDialog : Window
         {
             minutes = 0;
         }
-        minutes = Math.Min(minutes + 1, 150);
+        minutes = Math.Min(minutes + 1, MaxMinutes);
         SetMinutes(minutes, updateSlider: minutes <= 25);
     }
 
@@ -173,9 +174,9 @@ public partial class TimerSetDialog : Window
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
-        if (!int.TryParse(MinutesBox.Text, out var minutes) || minutes < 0 || minutes > 150)
+        if (!int.TryParse(MinutesBox.Text, out var minutes) || minutes < 0 || minutes > MaxMinutes)
         {
-            System.Windows.MessageBox.Show("请输入有效的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show($"请输入 0-{MaxMinutes} 的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!int.TryParse(SecondsBox.Text, out var seconds) || seconds < 0 || seconds > 59)

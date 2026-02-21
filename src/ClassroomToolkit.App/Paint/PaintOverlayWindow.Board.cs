@@ -82,7 +82,7 @@ public partial class PaintOverlayWindow
             }
             if (_photoModeActive && _crossPageDisplayEnabled)
             {
-                RequestCrossPageDisplayUpdate();
+                RequestCrossPageDisplayUpdate("board-exit");
             }
             _refreshOrchestrator.RequestRefresh("board-exit");
         }

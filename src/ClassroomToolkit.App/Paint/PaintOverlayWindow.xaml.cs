@@ -161,6 +161,7 @@ public partial class PaintOverlayWindow : Window
     private int _pdfVisiblePrefetchToken;
     private int _photoLoadToken;
     private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _neighborInkSidecarLoadPending = new(StringComparer.OrdinalIgnoreCase);
     private bool _rememberPhotoTransform;
     private bool _photoUserTransformDirty;
     private double _lastPhotoScaleX = 1.0;
@@ -185,15 +186,26 @@ public partial class PaintOverlayWindow : Window
     private bool _crossPageDisplayEnabled;
     private bool _crossPageDragging;
     private bool _crossPageTranslateClamped;
+    private bool _crossPageUpdateDeferredByInkInput;
+    private DateTime _lastCrossPagePointerUpUtc = DateTime.MinValue;
+    private int _crossPagePostInputRefreshToken;
+    private int _crossPageMissingBitmapRefreshToken;
+    private DateTime _lastCrossPageMissingBitmapRefreshUtc = DateTime.MinValue;
+    private long _crossPagePointerUpSequence;
+    private long _crossPagePostInputRefreshAppliedSequence = -1;
     private List<string> _photoSequencePaths = new();
     private int _photoSequenceIndex = -1;
     private readonly Dictionary<int, BitmapSource> _neighborImageCache = new();
+    private readonly Dictionary<int, double> _neighborPageHeightCache = new();
     private readonly HashSet<int> _neighborImagePrefetchPending = new();
     private System.Windows.Controls.Canvas? _neighborPagesCanvas;
     private readonly List<WpfImage> _neighborPageImages = new();
     private readonly List<WpfImage> _neighborInkImages = new();
+    private DateTime _lastNeighborPagesNonEmptyUtc = DateTime.MinValue;
     private readonly Dictionary<string, InkBitmapCacheEntry> _neighborInkCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, InkBitmapCacheEntry> _interactiveSwitchInkCache = new(StringComparer.OrdinalIgnoreCase);
     private double _crossPageNormalizedWidthDip;
+    private TransformGroup? _photoContentTransform;
 
 
     public event Action<string, DateTime>? InkContextChanged;
@@ -216,11 +228,12 @@ public partial class PaintOverlayWindow : Window
         _neighborPagesCanvas = FindName("NeighborPagesCanvas") as System.Windows.Controls.Canvas;
         _visualHost = new DrawingVisualHost();
         CustomDrawHost.Child = _visualHost;
-        var photoTransform = new TransformGroup();
-        photoTransform.Children.Add(_photoPageScale);
-        photoTransform.Children.Add(_photoScale);
-        photoTransform.Children.Add(_photoTranslate);
-        PhotoBackground.RenderTransform = photoTransform;
+        _photoContentTransform = new TransformGroup();
+        _photoContentTransform.Children.Add(_photoPageScale);
+        _photoContentTransform.Children.Add(_photoScale);
+        _photoContentTransform.Children.Add(_photoTranslate);
+        PhotoBackground.RenderTransform = _photoContentTransform;
+        RasterImage.RenderTransform = Transform.Identity;
         
         WindowState = WindowState.Maximized;
         _refreshOrchestrator = new RefreshOrchestrator(Dispatcher, MonitorInkContext);
@@ -234,6 +247,25 @@ public partial class PaintOverlayWindow : Window
             Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
         };
         _inkMonitor.Tick += (_, _) => _refreshOrchestrator.RequestRefresh("poll");
+        _inkSidecarAutoSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(InkSidecarAutoSaveDelayMs)
+        };
+        _inkSidecarAutoSaveTimer.Tick += (_, _) =>
+        {
+            _inkSidecarAutoSaveTimer?.Stop();
+            if (IsInkOperationActive())
+            {
+                _inkDiagnostics?.OnAutoSaveDeferred("timer-active-operation");
+                ScheduleSidecarAutoSave();
+                return;
+            }
+            if (!TryCaptureSidecarPersistSnapshot(requireDirty: true, out var snapshot) || snapshot == null)
+            {
+                return;
+            }
+            QueueSidecarAutoSave(snapshot);
+        };
         _perfMonitor = new PerfStats("MonitorInkContext");
         _perfSavePage = new PerfStats("SavePage");
         _perfLoadPage = new PerfStats("LoadPage");
@@ -298,6 +330,7 @@ public partial class PaintOverlayWindow : Window
         Closed += (_, _) =>
         {
             SaveCurrentPageIfNeeded();
+            _inkSidecarAutoSaveTimer?.Stop();
             _wpsNavHookStateGate.NextGeneration();
             StopWpsNavHook();
             _presentationFocusMonitor.Stop();
@@ -424,7 +457,7 @@ public partial class PaintOverlayWindow : Window
         if (_inkRecordEnabled)
         {
             _inkStrokes.Clear();
-            MarkInkCacheDirty();
+            NotifyInkStateChanged(updateActiveSnapshot: true);
         }
     }
 
@@ -443,6 +476,13 @@ public partial class PaintOverlayWindow : Window
     // 杈呭姪灞炴€э細绠€鍖栭噸澶嶇殑澶嶅悎鍒ゆ柇閫昏緫锛堟浛浠?30+ 澶勯噸澶嶄唬鐮侊級
     public void Undo()
     {
+        if (_inkRecordEnabled && _photoModeActive && _globalInkHistory.Count > 0)
+        {
+            if (TryUndoAcrossPages())
+            {
+                return;
+            }
+        }
         if (_inkRecordEnabled && _inkHistory.Count > 0)
         {
             var snapshot = _inkHistory[^1];
@@ -450,7 +490,7 @@ public partial class PaintOverlayWindow : Window
             _inkStrokes.Clear();
             _inkStrokes.AddRange(CloneInkStrokes(snapshot.Strokes));
             RedrawInkSurface();
-            MarkInkCacheDirty();
+            NotifyInkStateChanged(updateActiveSnapshot: true);
             return;
         }
         if (_history.Count == 0)
@@ -460,6 +500,66 @@ public partial class PaintOverlayWindow : Window
         var rasterSnapshot = _history[^1];
         _history.RemoveAt(_history.Count - 1);
         RestoreSnapshot(rasterSnapshot);
+    }
+
+    private bool TryUndoAcrossPages()
+    {
+        if (_globalInkHistory.Count == 0)
+        {
+            return false;
+        }
+
+        var snapshot = _globalInkHistory[^1];
+        _globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);
+
+        if (!TryApplyGlobalUndoSnapshot(snapshot))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private bool TryApplyGlobalUndoSnapshot(GlobalInkSnapshot snapshot)
+    {
+        if (!_photoModeActive || _currentCacheScope != InkCacheScope.Photo)
+        {
+            return false;
+        }
+
+        var snapshotStrokes = CloneInkStrokes(snapshot.Strokes);
+        var snapshotHash = ComputeInkHash(snapshotStrokes);
+        var cacheKey = snapshot.CacheKey ?? string.Empty;
+
+        if (string.Equals(_currentCacheKey, snapshot.CacheKey, StringComparison.OrdinalIgnoreCase))
+        {
+            _inkStrokes.Clear();
+            _inkStrokes.AddRange(snapshotStrokes);
+            RedrawInkSurface();
+            _inkDirtyPages.MarkModified(_currentDocumentPath, _currentPageIndex, snapshotHash);
+            NotifyInkStateChanged(updateActiveSnapshot: true);
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(cacheKey))
+        {
+            return false;
+        }
+
+        if (_inkCacheEnabled)
+        {
+            if (snapshotStrokes.Count == 0)
+            {
+                _photoCache.Remove(cacheKey);
+            }
+            else
+            {
+                _photoCache.Set(cacheKey, snapshotStrokes);
+            }
+        }
+
+        _inkDirtyPages.MarkModified(snapshot.SourcePath, snapshot.PageIndex, snapshotHash);
+        RequestCrossPageDisplayUpdate("undo-snapshot");
+        return true;
     }
 
     public void SetBrushOpacity(byte opacity)
@@ -652,6 +752,43 @@ public partial class PaintOverlayWindow : Window
         _refreshOrchestrator.RequestRefresh("ink-cache");
     }
 
+    public void UpdateInkSaveEnabled(bool enabled)
+    {
+        _inkSaveEnabled = enabled;
+        if (!_inkSaveEnabled)
+        {
+            _inkSidecarAutoSaveTimer?.Stop();
+            return;
+        }
+        ScheduleSidecarAutoSave();
+    }
+
+    public void UpdateInkShowEnabled(bool enabled)
+    {
+        if (_inkShowEnabled == enabled)
+        {
+            return;
+        }
+        _inkShowEnabled = enabled;
+
+        if (!_photoModeActive)
+        {
+            return;
+        }
+
+        if (!_inkShowEnabled)
+        {
+            ClearInkSurfaceState();
+            _neighborInkCache.Clear();
+            _interactiveSwitchInkCache.Clear();
+            RequestCrossPageDisplayUpdate("ink-show-disabled");
+            return;
+        }
+
+        LoadCurrentPageIfExists();
+        RequestCrossPageDisplayUpdate("ink-show-enabled");
+    }
+
     public void UpdateInkRecordEnabled(bool enabled)
     {
         _inkRecordEnabled = enabled;
@@ -754,6 +891,11 @@ public partial class PaintOverlayWindow : Window
             ResetInkHistory();
             LoadCurrentPageIfExists();
         }
+    }
+
+    public void UpdateNeighborPrefetchRadiusMax(int maxRadius)
+    {
+        _neighborPrefetchRadiusMaxSetting = Math.Clamp(maxRadius, CrossPageNeighborPrefetchRadiusMin, CrossPageNeighborPrefetchRadiusMax);
     }
 
     public void SetPhotoUnifiedTransformState(bool enabled, double scaleX, double scaleY, double translateX, double translateY)

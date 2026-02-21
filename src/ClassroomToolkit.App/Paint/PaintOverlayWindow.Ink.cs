@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -75,6 +77,13 @@ public partial class PaintOverlayWindow
         _visualHost.Clear();
         _strokeInProgress = false;
         _lastCalligraphyPreviewPoint = null;
+        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+                _photoModeActive,
+                RasterImage.RenderTransform,
+                _photoContentTransform))
+        {
+            RequestInkRedraw();
+        }
         SetInkContextDirty();
     }
 
@@ -141,8 +150,14 @@ public partial class PaintOverlayWindow
         }
         _isErasing = false;
         _lastEraserPoint = null;
-        UpdateActiveCacheSnapshot();
-        SetInkContextDirty();
+        NotifyInkStateChanged(updateActiveSnapshot: true);
+        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+                _photoModeActive,
+                RasterImage.RenderTransform,
+                _photoContentTransform))
+        {
+            RequestInkRedraw();
+        }
     }
 
     private void BeginRegionSelection(WpfPoint position)
@@ -186,8 +201,7 @@ public partial class PaintOverlayWindow
         {
             EraseRect(region);
         }
-        UpdateActiveCacheSnapshot();
-        SetInkContextDirty();
+        NotifyInkStateChanged(updateActiveSnapshot: true);
     }
 
     private void BeginShape(WpfPoint position)
@@ -233,7 +247,14 @@ public partial class PaintOverlayWindow
             RecordShapeStroke(geometry, pen);
         }
         ClearShapePreview();
-        SetInkContextDirty();
+        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+                _photoModeActive,
+                RasterImage.RenderTransform,
+                _photoContentTransform))
+        {
+            RequestInkRedraw();
+        }
+        NotifyInkStateChanged(updateActiveSnapshot: false);
     }
     
     private void ClearShapePreview()
@@ -317,6 +338,11 @@ public partial class PaintOverlayWindow
             CalligraphySealEnabled = _calligraphySealEnabled,
             CalligraphyOverlayOpacityThreshold = _calligraphyOverlayOpacityThreshold
         };
+        if (TryGetCurrentPhotoReferenceSize(out var refWidth, out var refHeight))
+        {
+            stroke.ReferenceWidth = refWidth;
+            stroke.ReferenceHeight = refHeight;
+        }
         if (_brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
         {
             var core = calligraphyRenderer.GetLastCoreGeometry();
@@ -399,6 +425,11 @@ public partial class PaintOverlayWindow
             MaskSeed = _inkSeedRandom.Next(),
             GeometryPath = InkGeometrySerializer.Serialize(storeGeometry)
         };
+        if (TryGetCurrentPhotoReferenceSize(out var refWidth, out var refHeight))
+        {
+            stroke.ReferenceWidth = refWidth;
+            stroke.ReferenceHeight = refHeight;
+        }
         if (string.IsNullOrWhiteSpace(stroke.GeometryPath))
         {
             return;
@@ -406,39 +437,40 @@ public partial class PaintOverlayWindow
         CommitStroke(stroke);
     }
 
-    private void ApplyInkErase(Geometry geometry)
+    private bool ApplyInkErase(Geometry geometry)
     {
-        if (!_inkRecordEnabled || _inkStrokes.Count == 0 || geometry == null)
+        if (_inkStrokes.Count == 0 || geometry == null)
         {
-            return;
+            return false;
         }
-        var eraseGeometry = _photoModeActive ? ToPhotoGeometry(geometry) : geometry;
-        if (eraseGeometry == null)
+        var erasePrimary = _photoModeActive ? ToPhotoGeometry(geometry) : geometry;
+        var eraseFallback = _photoModeActive ? geometry : null;
+        if (erasePrimary == null)
         {
-            return;
+            return false;
         }
         bool changed = false;
         for (int i = _inkStrokes.Count - 1; i >= 0; i--)
         {
             var stroke = _inkStrokes[i];
-            var updatedPath = ExcludeGeometry(stroke.GeometryPath, eraseGeometry);
-            if (updatedPath == null)
+            var updatedPath = ExcludeGeometryWithFallback(stroke.GeometryPath, erasePrimary, eraseFallback);
+            if (!InkStrokeEraseUpdater.TryApplyUpdatedGeometryPath(stroke, updatedPath, out var strokeRemoved))
             {
                 continue;
             }
-            if (string.IsNullOrWhiteSpace(updatedPath))
+            if (strokeRemoved)
             {
                 _inkStrokes.RemoveAt(i);
                 changed = true;
                 continue;
             }
-            stroke.GeometryPath = updatedPath;
+
             if (stroke.Blooms.Count > 0)
             {
                 for (int j = stroke.Blooms.Count - 1; j >= 0; j--)
                 {
                     var bloom = stroke.Blooms[j];
-                    var bloomUpdated = ExcludeGeometry(bloom.GeometryPath, eraseGeometry);
+                    var bloomUpdated = ExcludeGeometryWithFallback(bloom.GeometryPath, erasePrimary, eraseFallback);
                     if (string.IsNullOrWhiteSpace(bloomUpdated))
                     {
                         stroke.Blooms.RemoveAt(j);
@@ -450,10 +482,21 @@ public partial class PaintOverlayWindow
             }
             changed = true;
         }
-        if (changed)
+        return changed;
+    }
+
+    private static string? ExcludeGeometryWithFallback(string geometryPath, Geometry primaryEraser, Geometry? fallbackEraser)
+    {
+        var primary = ExcludeGeometry(geometryPath, primaryEraser);
+        if (fallbackEraser == null)
         {
-            SetInkCacheDirty();
+            return primary;
         }
+        if (primary == null || string.Equals(primary, geometryPath, StringComparison.Ordinal))
+        {
+            return ExcludeGeometry(geometryPath, fallbackEraser);
+        }
+        return primary;
     }
 
     private void CaptureStrokeContext()
@@ -463,11 +506,7 @@ public partial class PaintOverlayWindow
     private void CommitStroke(InkStrokeData stroke)
     {
         _inkStrokes.Add(stroke);
-        if (_currentCacheScope == InkCacheScope.Photo)
-        {
-            SetInkCacheDirty();
-            UpdateActiveCacheSnapshot();
-        }
+        NotifyInkStateChanged(updateActiveSnapshot: true, notifyContext: false);
     }
 
     private void UpdateActiveCacheSnapshot()
@@ -489,9 +528,11 @@ public partial class PaintOverlayWindow
         if (strokes.Count == 0)
         {
             _photoCache.Remove(cacheKey);
+            InvalidateNeighborInkCache(cacheKey);
             return;
         }
         _photoCache.Set(cacheKey, strokes);
+        InvalidateNeighborInkCache(cacheKey);
     }
 
     private List<InkStrokeData> CloneCommittedInkStrokes()
@@ -507,12 +548,176 @@ public partial class PaintOverlayWindow
 
     private void SetInkCacheDirty()
     {
-        _inkCacheDirty = true;
+        MarkCurrentInkPageModified();
+        ScheduleSidecarAutoSave();
+    }
+
+    private bool IsCurrentPageDirty()
+    {
+        return _inkDirtyPages.IsDirty(_currentDocumentPath, _currentPageIndex);
+    }
+
+    private bool IsInkOperationActive()
+    {
+        return _strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting;
+    }
+
+    private void NotifyInkStateChanged(bool updateActiveSnapshot, bool notifyContext = true)
+    {
+        if (updateActiveSnapshot)
+        {
+            UpdateActiveCacheSnapshot();
+        }
+        SetInkCacheDirty();
+        if (notifyContext)
+        {
+            SetInkContextDirty();
+        }
+    }
+
+    private void MarkCurrentInkPageLoaded(IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (string.IsNullOrWhiteSpace(_currentDocumentPath) || _currentPageIndex <= 0)
+        {
+            return;
+        }
+        MarkInkPageLoaded(_currentDocumentPath, _currentPageIndex, strokes);
+    }
+
+    private void MarkInkPageLoaded(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return;
+        }
+        _inkDirtyPages.MarkLoaded(sourcePath, pageIndex, ComputeInkHash(strokes));
+        ClearInkWalSnapshot(sourcePath, pageIndex);
+    }
+
+    private void MarkCurrentInkPageModified()
+    {
+        if (string.IsNullOrWhiteSpace(_currentDocumentPath) || _currentPageIndex <= 0)
+        {
+            return;
+        }
+        var hash = ComputeInkHash(_inkStrokes);
+        _inkDirtyPages.MarkModified(_currentDocumentPath, _currentPageIndex, hash);
+        TrackInkWalSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes, hash);
+    }
+
+    private void MarkInkPagePersisted(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return;
+        }
+        _inkDirtyPages.MarkPersistedIfUnchanged(sourcePath, pageIndex, ComputeInkHash(strokes));
+        ClearInkWalSnapshot(sourcePath, pageIndex);
+    }
+
+    private void TrackInkWalSnapshot(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes, string hash)
+    {
+        try
+        {
+            _inkWal.Upsert(sourcePath, pageIndex, CloneInkStrokes(strokes), hash);
+        }
+        catch
+        {
+            // Ignore WAL write failures; main flow should continue.
+        }
+    }
+
+    private void ClearInkWalSnapshot(string sourcePath, int pageIndex)
+    {
+        try
+        {
+            _inkWal.Remove(sourcePath, pageIndex);
+        }
+        catch
+        {
+            // Ignore WAL cleanup failures.
+        }
+    }
+
+    private void RecoverInkWalForDirectory(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || _inkPersistence == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var directoryPath = System.IO.Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return;
+            }
+            var recovered = _inkWal.RecoverDirectory(directoryPath, _inkPersistence, ComputeInkHash);
+            if (recovered > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[InkWAL] Recovered {recovered} pending pages in {directoryPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InkWAL] Recover failed: {ex.Message}");
+        }
+    }
+
+    private bool WasPageModifiedInSession(string sourcePath, int pageIndex)
+    {
+        return _inkDirtyPages.WasModifiedInSession(sourcePath, pageIndex);
+    }
+
+    private IEnumerable<string> EnumerateSessionModifiedSourcesInDirectory(string directoryPath)
+    {
+        return _inkDirtyPages.EnumerateSessionModifiedSourcesInDirectory(directoryPath);
+    }
+
+    private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (strokes == null || strokes.Count == 0)
+        {
+            return "empty";
+        }
+
+        var builder = new StringBuilder(strokes.Count * 64);
+        foreach (var stroke in strokes)
+        {
+            builder.Append(stroke.Type).Append('|')
+                .Append(stroke.BrushStyle).Append('|')
+                .Append(stroke.ColorHex).Append('|')
+                .Append(stroke.Opacity).Append('|')
+                .Append(stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
+                .Append(stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
+                .Append(stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
+                .Append(stroke.GeometryPath ?? string.Empty).Append('\n');
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(builder.ToString());
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash);
+    }
+
+    private bool TryGetCurrentPhotoReferenceSize(out double width, out double height)
+    {
+        width = 0;
+        height = 0;
+        if (!_photoModeActive || PhotoBackground.Source is not BitmapSource bitmap)
+        {
+            return false;
+        }
+
+        width = GetBitmapDisplayWidthInDip(bitmap);
+        height = GetBitmapDisplayHeightInDip(bitmap);
+        return width > 0.5 && height > 0.5;
     }
 
     private void MarkInkInput()
     {
         _lastInkInputUtc = DateTime.UtcNow;
+        _inkDiagnostics?.OnInkInput();
         UpdateInkMonitorInterval();
     }
 

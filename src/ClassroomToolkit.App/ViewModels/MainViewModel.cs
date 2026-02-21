@@ -4,12 +4,10 @@ using System.Windows.Input;
 
 namespace ClassroomToolkit.App.ViewModels;
 
-public sealed class MainViewModel : INotifyPropertyChanged
+public sealed class MainViewModel : ViewModelBase
 {
     private bool _isPaintActive;
     private bool _isRollCallVisible;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public ICommand? OpenRollCallSettingsCommand { get; set; }
 
@@ -20,14 +18,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _isPaintActive;
         set
         {
-            if (_isPaintActive == value)
+            if (SetField(ref _isPaintActive, value))
             {
-                return;
+                OnPropertyChanged(nameof(PaintButtonText));
             }
-
-            _isPaintActive = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(PaintButtonText));
         }
     }
 
@@ -36,23 +30,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _isRollCallVisible;
         set
         {
-            if (_isRollCallVisible == value)
+            if (SetField(ref _isRollCallVisible, value))
             {
-                return;
+                OnPropertyChanged(nameof(RollCallButtonText));
             }
-
-            _isRollCallVisible = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(RollCallButtonText));
         }
     }
 
     public string PaintButtonText => IsPaintActive ? "隐藏画笔" : "画笔";
 
     public string RollCallButtonText => IsRollCallVisible ? "隐藏点名" : "点名";
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }
+

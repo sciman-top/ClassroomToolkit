@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.Infra.Settings;
 
@@ -111,6 +112,9 @@ public sealed class AppSettingsService
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
             settings.PaintToolbarScale = GetDouble(paint, "toolbar_scale", settings.PaintToolbarScale);
             settings.InkCacheEnabled = GetBool(paint, "ink_cache_enabled", settings.InkCacheEnabled);
+            settings.InkSaveEnabled = GetBool(paint, "ink_save_enabled", settings.InkSaveEnabled);
+            settings.InkExportScope = GetInkExportScope(GetString(paint, "ink_export_scope", settings.InkExportScope.ToString()));
+            settings.InkExportMaxParallelFiles = GetInt(paint, "ink_export_max_parallel_files", settings.InkExportMaxParallelFiles);
             settings.InkRecordEnabled = GetBool(paint, "ink_record_enabled", settings.InkRecordEnabled);
             settings.InkReplayPreviousEnabled = GetBool(paint, "ink_replay_previous_enabled", settings.InkReplayPreviousEnabled);
             settings.InkRetentionDays = GetInt(paint, "ink_retention_days", settings.InkRetentionDays);
@@ -119,6 +123,8 @@ public sealed class AppSettingsService
             settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
             settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
             settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
+            settings.PhotoNeighborPrefetchRadiusMax = GetInt(paint, "photo_neighbor_prefetch_radius_max", settings.PhotoNeighborPrefetchRadiusMax);
+            settings.PhotoShowInkOverlay = GetBool(paint, "photo_show_ink_overlay", settings.PhotoShowInkOverlay);
             settings.PhotoUnifiedTransformEnabled = GetBool(
                 paint,
                 "photo_unified_transform_enabled",
@@ -224,6 +230,9 @@ public sealed class AppSettingsService
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
         paint["toolbar_scale"] = settings.PaintToolbarScale.ToString(CultureInfo.InvariantCulture);
         paint["ink_cache_enabled"] = settings.InkCacheEnabled ? "True" : "False";
+        paint["ink_save_enabled"] = settings.InkSaveEnabled ? "True" : "False";
+        paint["ink_export_scope"] = settings.InkExportScope.ToString();
+        paint["ink_export_max_parallel_files"] = settings.InkExportMaxParallelFiles.ToString(CultureInfo.InvariantCulture);
         paint["ink_record_enabled"] = settings.InkRecordEnabled ? "True" : "False";
         paint["ink_replay_previous_enabled"] = settings.InkReplayPreviousEnabled ? "True" : "False";
         paint["ink_retention_days"] = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
@@ -232,6 +241,8 @@ public sealed class AppSettingsService
         paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
         paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
         paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
+        paint["photo_neighbor_prefetch_radius_max"] = settings.PhotoNeighborPrefetchRadiusMax.ToString(CultureInfo.InvariantCulture);
+        paint["photo_show_ink_overlay"] = settings.PhotoShowInkOverlay ? "True" : "False";
         paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
         paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
         paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
@@ -352,6 +363,15 @@ public sealed class AppSettingsService
             return parsed;
         }
         return PaintBrushStyle.StandardRibbon;
+    }
+
+    private static InkExportScope GetInkExportScope(string raw)
+    {
+        if (Enum.TryParse<InkExportScope>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+        return InkExportScope.AllPersistedAndSession;
     }
 
     private static WhiteboardBrushPreset ResolveWhiteboardPreset(Dictionary<string, string> section, WhiteboardBrushPreset fallback)

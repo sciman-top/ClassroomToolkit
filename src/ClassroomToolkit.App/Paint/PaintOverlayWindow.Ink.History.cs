@@ -51,7 +51,8 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private sealed record InkSnapshot(List<InkStrokeData> Strokes);
+    private sealed record InkSnapshot(string SourcePath, int PageIndex, string Hash, List<InkStrokeData> Strokes);
+    private sealed record GlobalInkSnapshot(string SourcePath, int PageIndex, string CacheKey, List<InkStrokeData> Strokes);
 
     private void PushHistory()
     {
@@ -82,10 +83,40 @@ public partial class PaintOverlayWindow
 
         if (_inkRecordEnabled)
         {
-            _inkHistory.Add(new InkSnapshot(CloneInkStrokes(_inkStrokes)));
+            var strokeSnapshot = CloneInkStrokes(_inkStrokes);
+            var snapshotHash = ComputeInkHash(strokeSnapshot);
+            var sourcePath = _currentDocumentPath ?? string.Empty;
+            var pageIndex = _currentPageIndex;
+            if (_inkHistory.Count > 0)
+            {
+                var last = _inkHistory[^1];
+                if (string.Equals(last.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase)
+                    && last.PageIndex == pageIndex
+                    && string.Equals(last.Hash, snapshotHash, StringComparison.Ordinal))
+                {
+                    _currentHistoryMemoryBytes -= snapshot.Pixels.Length;
+                    snapshot.Dispose();
+                    _history.RemoveAt(_history.Count - 1);
+                    return;
+                }
+            }
+            _inkHistory.Add(new InkSnapshot(sourcePath, pageIndex, snapshotHash, strokeSnapshot));
             if (_inkHistory.Count > HistoryLimit)
             {
                 _inkHistory.RemoveAt(0);
+            }
+
+            if (_photoModeActive && _currentCacheScope == InkCacheScope.Photo && !string.IsNullOrWhiteSpace(_currentDocumentPath))
+            {
+                _globalInkHistory.Add(new GlobalInkSnapshot(
+                    _currentDocumentPath,
+                    _currentPageIndex,
+                    _currentCacheKey,
+                    CloneInkStrokes(strokeSnapshot)));
+                if (_globalInkHistory.Count > HistoryLimit)
+                {
+                    _globalInkHistory.RemoveAt(0);
+                }
             }
         }
     }
@@ -120,7 +151,7 @@ public partial class PaintOverlayWindow
         _inkStrokes.Clear();
         ResetInkHistory();
         RedrawInkSurface();
-        _inkCacheDirty = false;
+        MarkCurrentInkPageLoaded(_inkStrokes);
     }
 
     private void ClearInkSurfaceForPresentationExit()
@@ -135,7 +166,7 @@ public partial class PaintOverlayWindow
         _hasDrawing = false;
         ResetInkHistory();
         ClearSurface();
-        _inkCacheDirty = false;
+        MarkCurrentInkPageLoaded(_inkStrokes);
     }
 
     private void SaveAndClearInkSurface()

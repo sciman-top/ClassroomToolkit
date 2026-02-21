@@ -89,6 +89,47 @@ public sealed class ConfigurationServiceTests
         }
     }
 
+    [Fact]
+    public void Constructor_ShouldUseSolutionRootSettingsIni_WhenRunningFromBuildOutput()
+    {
+        var solutionRoot = CreateTempDirectory();
+        var outputDirectory = Path.Combine(solutionRoot, "src", "ClassroomToolkit.App", "bin", "Release", "net8.0-windows");
+        Directory.CreateDirectory(outputDirectory);
+        File.WriteAllText(Path.Combine(solutionRoot, "ClassroomToolkit.sln"), string.Empty);
+
+        try
+        {
+            var service = new ConfigurationService(outputDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(solutionRoot, "settings.ini"));
+        }
+        finally
+        {
+            Directory.Delete(solutionRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Constructor_ShouldUseEnvironmentOverride_WhenSet()
+    {
+        var baseDirectory = CreateTempDirectory();
+        var previous = Environment.GetEnvironmentVariable("CTK_SETTINGS_INI");
+        var expected = Path.Combine(baseDirectory, "custom", "settings.ini");
+        try
+        {
+            Environment.SetEnvironmentVariable("CTK_SETTINGS_INI", expected);
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(expected);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CTK_SETTINGS_INI", previous);
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), $"ctool_config_{Guid.NewGuid():N}");

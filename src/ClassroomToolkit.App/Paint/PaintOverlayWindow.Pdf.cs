@@ -129,9 +129,12 @@ public partial class PaintOverlayWindow
 
     #region PDF Rendering
 
-    private bool RenderPdfPage(int pageIndex)
+    private bool RenderPdfPage(int pageIndex, bool interactiveSwitch = false, BitmapSource? preloadedBitmap = null)
     {
-        var bitmap = GetPdfPageBitmap(pageIndex);
+        var bitmap = CrossPageSwitchBitmapResolver.ResolveForInteractiveSwitch(
+            interactiveSwitch,
+            preloadedBitmap,
+            () => GetPdfPageBitmap(pageIndex));
         if (bitmap == null)
         {
             PhotoBackground.Source = null;

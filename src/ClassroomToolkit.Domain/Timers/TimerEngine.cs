@@ -64,6 +64,7 @@ public sealed class TimerEngine
         }
         _secondsLeft = _countdownSeconds;
         _reminderCounter = 0;
+        Running = false;
     }
 
     public void SetState(TimerMode mode, int countdownSeconds, int secondsLeft, int stopwatchSeconds, bool running)

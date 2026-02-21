@@ -61,6 +61,9 @@ public partial class App : WpfApplication
         services.AddSingleton<MainWindow>();
         services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
         services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
+        services.AddSingleton<Ink.InkPersistenceService>();
+        services.AddSingleton<Ink.InkExportOptions>();
+        services.AddSingleton<Ink.InkExportService>();
         
         // Logging
         services.AddLogging(builder =>

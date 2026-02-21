@@ -59,6 +59,16 @@ public sealed class InkFinalCache
         _lru.Remove(node);
     }
 
+    public IReadOnlyList<(string Key, List<InkStrokeData> Strokes)> Snapshot()
+    {
+        var result = new List<(string Key, List<InkStrokeData> Strokes)>(_entries.Count);
+        foreach (var pair in _entries)
+        {
+            result.Add((pair.Key, pair.Value.Value.Strokes));
+        }
+        return result;
+    }
+
     private void TrimIfNeeded()
     {
         while (_entries.Count > _capacity && _lru.Last != null)

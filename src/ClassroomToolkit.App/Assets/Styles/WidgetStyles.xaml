@@ -784,7 +784,7 @@
     </Style>
 
     <!-- ListView/ListBox Style -->
-    <Style TargetType="ListBox">
+    <Style x:Key="Style_CleanListBox" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>

@@ -3,6 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using System.Globalization;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Photos;
 using WpfPoint = System.Windows.Point;
@@ -17,16 +20,9 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        return IsDescendantOf(source, PhotoTitleBar) ||
-               IsDescendantOf(source, PhotoCloseButton) ||
-               IsDescendantOf(source, PhotoCloseLeftButton) ||
-               IsDescendantOf(source, PhotoCloseRightButton) ||
-               IsDescendantOf(source, PhotoPrevButtonLeft) ||
-               IsDescendantOf(source, PhotoNextButtonLeft) ||
-               IsDescendantOf(source, PhotoFitButtonLeft) ||
-               IsDescendantOf(source, PhotoPrevButtonRight) ||
-               IsDescendantOf(source, PhotoNextButtonRight) ||
-               IsDescendantOf(source, PhotoFitButtonRight);
+        // Any visual under the photo control layer should not trigger drawing/panning hit logic.
+        return IsDescendantOf(source, PhotoControlLayer) ||
+               IsDescendantOf(source, PhotoLoadingOverlay);
     }
 
     private static bool IsDescendantOf(DependencyObject? source, DependencyObject? ancestor)
@@ -328,32 +324,190 @@ public partial class PaintOverlayWindow
     {
         MarkInkInput();
         _lastPointerPosition = position;
+        TrySwitchActiveImagePageForInput(position);
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("tool-dispatch", $"tool={_mode}");
+        }
         // 设置正在绘图状态
         PaintModeManager.Instance.IsDrawing = true;
         
         if (_mode == PaintToolMode.RegionErase)
         {
             BeginRegionSelection(position);
-            OverlayRoot.CaptureMouse();
+            CapturePointerInput();
             return;
         }
         if (_mode == PaintToolMode.Eraser)
         {
             BeginEraser(position);
-            OverlayRoot.CaptureMouse();
+            CapturePointerInput();
             return;
         }
         if (_mode == PaintToolMode.Shape)
         {
             BeginShape(position);
-            OverlayRoot.CaptureMouse();
+            CapturePointerInput();
             return;
         }
         if (_mode == PaintToolMode.Brush)
         {
             BeginBrushStroke(position);
-            OverlayRoot.CaptureMouse();
+            CapturePointerInput();
         }
+    }
+
+    private void TrySwitchActiveImagePageForInput(WpfPoint position)
+    {
+        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        {
+            return;
+        }
+        if (_mode != PaintToolMode.Brush && _mode != PaintToolMode.Shape && _mode != PaintToolMode.Eraser && _mode != PaintToolMode.RegionErase)
+        {
+            return;
+        }
+
+        var currentBitmap = PhotoBackground.Source as BitmapSource;
+        if (currentBitmap == null)
+        {
+            return;
+        }
+
+        var currentPage = GetCurrentPageIndexForCrossPage();
+        if (TryResolveVisibleImagePageFromPointer(position, currentPage, out var hitPage, out var preloadedBitmap))
+        {
+            SwitchToImagePageForInput(currentPage, hitPage, currentBitmap, preloadedBitmap);
+            return;
+        }
+
+        var targetPage = ResolveCrossPageTargetForInput(position.Y, currentPage, currentBitmap);
+        SwitchToImagePageForInput(currentPage, targetPage, currentBitmap, preloadedBitmap: null);
+    }
+
+    private void SwitchToImagePageForInput(
+        int currentPage,
+        int targetPage,
+        BitmapSource currentBitmap,
+        BitmapSource? preloadedBitmap)
+    {
+        if (targetPage == currentPage || targetPage <= 0)
+        {
+            return;
+        }
+
+        var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
+        var offset = CrossPageInputNavigation.ComputePageOffset(
+            currentPage,
+            targetPage,
+            page => GetScaledHeightForPage(page, normalizedWidthDip));
+
+        BeginCrossPageFirstInputTrace(currentPage, targetPage);
+        MarkCrossPageFirstInputStage("switch-resolved", $"offset={offset:F2}");
+
+        // Cross-page pointer-down must stay lightweight to avoid first-stroke stalls.
+        MarkCrossPageFirstInputStage("save-old-page-start");
+        SaveCurrentPageOnNavigate(forceBackground: false, persistToSidecar: false);
+        MarkCrossPageFirstInputStage("save-old-page-end");
+        var previousInkBitmap = TrySnapshotCurrentInkSurfaceForNeighbor();
+        MarkCrossPageFirstInputStage("navigate-start");
+        NavigateToPage(
+            targetPage,
+            _photoTranslate.Y + offset,
+            interactiveSwitch: true,
+            preloadedBitmap: preloadedBitmap,
+            deferCrossPageDisplayUpdate: true,
+            previousPageIndexForInteractiveSwitch: currentPage,
+            previousPageBitmapForInteractiveSwitch: currentBitmap,
+            previousPageInkBitmapForInteractiveSwitch: previousInkBitmap);
+        MarkCrossPageFirstInputStage("navigate-end", $"activePage={GetCurrentPageIndexForCrossPage()}");
+    }
+
+    private bool TryResolveVisibleImagePageFromPointer(
+        WpfPoint pointer,
+        int currentPage,
+        out int pageIndex,
+        out BitmapSource? resolvedBitmap)
+    {
+        pageIndex = currentPage;
+        resolvedBitmap = null;
+        if (!_crossPageDisplayEnabled)
+        {
+            return false;
+        }
+
+        if (PhotoBackground.Source is BitmapSource currentBitmap &&
+            TryBuildImageScreenRect(currentBitmap, _photoContentTransform, out var currentRect) &&
+            currentRect.Contains(pointer))
+        {
+            pageIndex = currentPage;
+            resolvedBitmap = currentBitmap;
+            return true;
+        }
+
+        foreach (var img in _neighborPageImages)
+        {
+            if (img.Visibility != Visibility.Visible || img.Source is not BitmapSource bitmap)
+            {
+                continue;
+            }
+            if (!int.TryParse(img.Uid, NumberStyles.Integer, CultureInfo.InvariantCulture, out var candidatePage))
+            {
+                continue;
+            }
+            if (!TryBuildImageScreenRect(bitmap, img.RenderTransform, out var rect))
+            {
+                continue;
+            }
+            if (rect.Contains(pointer))
+            {
+                pageIndex = candidatePage;
+                resolvedBitmap = bitmap;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryBuildImageScreenRect(BitmapSource bitmap, Transform? transform, out Rect rect)
+    {
+        rect = Rect.Empty;
+        if (bitmap == null || transform == null)
+        {
+            return false;
+        }
+
+        var width = GetBitmapDisplayWidthInDip(bitmap);
+        var height = GetBitmapDisplayHeightInDip(bitmap);
+        if (width <= 0.5 || height <= 0.5)
+        {
+            return false;
+        }
+
+        var logicalRect = new Rect(0, 0, width, height);
+        rect = Rect.Transform(logicalRect, transform.Value);
+        return !rect.IsEmpty;
+    }
+
+    private int ResolveCrossPageTargetForInput(double pointerY, int currentPage, BitmapSource currentBitmap)
+    {
+        var totalPages = GetTotalPageCount();
+        if (totalPages <= 1)
+        {
+            return currentPage;
+        }
+
+        var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
+        var currentHeight = GetScaledPageHeight(currentBitmap, normalizedWidthDip);
+        var currentTop = _photoTranslate.Y;
+        return CrossPageInputNavigation.ResolveTargetPage(
+            pointerY,
+            currentPage,
+            totalPages,
+            currentTop,
+            currentHeight,
+            page => GetScaledHeightForPage(page, normalizedWidthDip));
     }
 
     private void HandlePointerMove(WpfPoint position)
@@ -385,6 +539,10 @@ public partial class PaintOverlayWindow
     {
         MarkInkInput();
         _lastPointerPosition = position;
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("tool-end", $"tool={_mode}");
+        }
         if (_mode == PaintToolMode.Brush)
         {
             EndBrushStroke(position);
@@ -401,9 +559,29 @@ public partial class PaintOverlayWindow
         {
             EndShape(position);
         }
-        if (OverlayRoot.IsMouseCaptured)
+        ReleasePointerInput();
+        if (_photoModeActive && _crossPageDisplayEnabled)
         {
-            OverlayRoot.ReleaseMouseCapture();
+            _lastCrossPagePointerUpUtc = DateTime.UtcNow;
+            System.Threading.Interlocked.Increment(ref _crossPagePointerUpSequence);
+        }
+        if (_crossPageUpdateDeferredByInkInput)
+        {
+            _crossPageUpdateDeferredByInkInput = false;
+            if (_photoModeActive && _crossPageDisplayEnabled)
+            {
+                // Keep first-stroke path lightweight, but do not permanently skip the seam refresh.
+                // A short delayed refresh after pointer-up restores neighbor page/ink visibility.
+                _inkDiagnostics?.OnCrossPageUpdateEvent("defer", "pointer-up", "stable-recover-v3");
+                ScheduleCrossPageDisplayUpdateAfterInputSettles(
+                    source: "pointer-up",
+                    singlePerPointerUp: true,
+                    delayOverrideMs: 140);
+            }
+        }
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            EndCrossPageFirstInputTrace("pointer-up");
         }
         if (_pendingInkContextCheck)
         {
@@ -459,7 +637,7 @@ public partial class PaintOverlayWindow
         }
         if (_crossPageDisplayEnabled)
         {
-            RequestCrossPageDisplayUpdate();
+            RequestCrossPageDisplayUpdate("manipulation-delta");
         }
     }
 
@@ -480,8 +658,8 @@ public partial class PaintOverlayWindow
     {
         if (_photoLoading) return;
         if (!IsBoardActive() && _mode == PaintToolMode.Cursor) return;
-        
-        if (OverlayRoot.IsStylusCaptured)
+
+        if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
         {
             var position = e.GetPosition(OverlayRoot);
             HandlePointerMove(position);
@@ -494,11 +672,46 @@ public partial class PaintOverlayWindow
         if (_photoLoading) return;
         if (!IsBoardActive() && _mode == PaintToolMode.Cursor) return;
 
-        if (OverlayRoot.IsStylusCaptured)
+        if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
         {
             var position = e.GetPosition(OverlayRoot);
             HandlePointerUp(position);
             e.Handled = true;
         }
+    }
+
+    private void CapturePointerInput()
+    {
+        OverlayRoot.CaptureMouse();
+        Stylus.Capture(OverlayRoot);
+    }
+
+    private void ReleasePointerInput()
+    {
+        if (OverlayRoot.IsMouseCaptured)
+        {
+            OverlayRoot.ReleaseMouseCapture();
+        }
+        if (OverlayRoot.IsStylusCaptured)
+        {
+            Stylus.Capture(null);
+        }
+    }
+
+    private bool IsCrossPageFirstInputTraceActive()
+    {
+        return false;
+    }
+
+    private void BeginCrossPageFirstInputTrace(int fromPage, int toPage)
+    {
+    }
+
+    private void MarkCrossPageFirstInputStage(string stage, string? details = null)
+    {
+    }
+
+    private void EndCrossPageFirstInputTrace(string outcome)
+    {
     }
 }

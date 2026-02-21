@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.Interop;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
@@ -58,15 +59,19 @@ public partial class PaintOverlayWindow
     
     // Ink History & Cache
     private readonly List<InkStrokeData> _inkStrokes = new();
-    private bool _inkCacheDirty;
     private readonly List<InkSnapshot> _inkHistory = new();
+    private readonly List<GlobalInkSnapshot> _globalInkHistory = new();
     private readonly DispatcherTimer _inkMonitor;
+    private DispatcherTimer? _inkSidecarAutoSaveTimer;
+    private readonly LatestOnlyAsyncGate _inkSidecarAutoSaveGate = new();
     private readonly Random _inkSeedRandom = new Random();
     private bool _inkRecordEnabled = true;
     private bool _inkReplayPreviousEnabled;
     private int _inkRetentionDays = 30;
     private string _inkPhotoRootPath = string.Empty;
     private bool _inkCacheEnabled = true;
+    private bool _inkSaveEnabled;
+    private bool _inkShowEnabled = true;
     private DateTime _lastInkInputUtc = DateTime.MinValue;
     private bool _pendingInkContextCheck;
     
@@ -97,6 +102,10 @@ public partial class PaintOverlayWindow
     }
     
     private readonly InkFinalCache _photoCache = new(80);
+    private readonly InkDirtyPageCoordinator _inkDirtyPages = new();
+    private readonly InkWriteAheadLogService _inkWal = new();
+    private readonly InkRuntimeDiagnostics? _inkDiagnostics = InkRuntimeDiagnostics.CreateFromEnvironment();
+    private int _neighborPrefetchRadiusMaxSetting = CrossPageNeighborPrefetchRadiusMax;
 
     // Constants
     private const double CalligraphySealStrokeWidthFactor = 0.08;
@@ -107,6 +116,13 @@ public partial class PaintOverlayWindow
     private const int InkMonitorIdleIntervalMs = 1400;
     private const int InkIdleThresholdMs = 2500;
     private const int InkRedrawMinIntervalMs = 16;
+    private const int InkSidecarAutoSaveDelayMs = 600;
+    private const int InkSidecarAutoSaveRetryMax = 3;
+    private const int InkSidecarAutoSaveRetryDelayMs = 900;
+    private const int CrossPageNeighborPrefetchRadiusDefault = 2;
+    private const int CrossPageNeighborPrefetchRadiusMin = 1;
+    private const int CrossPageNeighborPrefetchRadiusMax = 4;
+    private const int NeighborInkCacheLimit = 10;
 
     private void EnsureRasterSurface()
     {

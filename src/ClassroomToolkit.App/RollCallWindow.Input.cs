@@ -134,6 +134,11 @@ public partial class RollCallWindow
     {
         if (e.Key != System.Windows.Input.Key.Escape)
         {
+            if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow
+                && mainWindow.TryHandleOverlayNavigationKeyFromAuxWindow(e.Key))
+            {
+                e.Handled = true;
+            }
             return;
         }
         if (_photoOverlay != null && _photoOverlay.IsVisible)

@@ -32,43 +32,228 @@ public partial class PaintOverlayWindow
         _inkHistory.Clear();
     }
 
-    private void LoadCurrentPageIfExists()
+    private void LoadCurrentPageIfExists(bool allowDiskFallback = true, bool preferInteractiveFastPath = false)
     {
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "load-enter",
+                $"allowDisk={allowDiskFallback} preferFast={preferInteractiveFastPath}");
+        }
         if (_currentCacheScope != InkCacheScope.Photo)
         {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-skip", "scope!=photo");
+            }
             return;
         }
         if (!_inkCacheEnabled)
         {
             ClearInkSurfaceState();
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-clear", "cache-disabled");
+            }
+            return;
+        }
+        // If "显示笔迹" is off, don't load previously saved ink
+        if (!_inkShowEnabled)
+        {
+            ClearInkSurfaceState();
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-clear", "ink-hidden");
+            }
             return;
         }
         if (string.IsNullOrWhiteSpace(_currentCacheKey))
         {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-skip", "empty-cache-key");
+            }
             return;
         }
         if (_photoCache.TryGet(_currentCacheKey, out var cached))
         {
             System.Diagnostics.Debug.WriteLine($"[InkCache] Loaded {cached.Count} strokes for key={_currentCacheKey}");
-            ApplyInkStrokes(cached);
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-cache-hit", $"strokes={cached.Count}");
+            }
+            ApplyInkStrokes(cached, preferInteractiveFastPath);
+            return;
+        }
+        // Method A fallback: try loading from sidecar file on disk
+        if (allowDiskFallback && _inkPersistence != null && TryLoadInkFromSidecar())
+        {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("load-sidecar-hit");
+            }
             return;
         }
         ClearInkSurfaceState();
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("load-clear", "cache-miss");
+        }
     }
 
-    private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes)
+    private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes, bool preferInteractiveFastPath = false)
     {
         var applySw = Stopwatch.StartNew();
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "apply-enter",
+                $"strokes={strokes.Count} preferFast={preferInteractiveFastPath}");
+        }
         _inkStrokes.Clear();
-        _inkStrokes.AddRange(CloneInkStrokes(strokes));
-        RedrawInkSurface();
-        _inkCacheDirty = false;
+        if (preferInteractiveFastPath)
+        {
+            _inkStrokes.AddRange(strokes);
+        }
+        else
+        {
+            _inkStrokes.AddRange(CloneInkStrokes(strokes));
+        }
+
+        var fastApplied = TryApplyNeighborInkBitmapForCurrentPage(strokes, preferInteractiveFastPath);
+        if (!fastApplied)
+        {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("apply-redraw");
+            }
+            RedrawInkSurface();
+        }
+        else if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("apply-fast-bitmap");
+        }
+
+        MarkCurrentInkPageLoaded(_inkStrokes);
         _perfApplyStrokes.Add(applySw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("apply-exit", $"ms={applySw.Elapsed.TotalMilliseconds:F2}");
+        }
     }
 
-    private void MarkInkCacheDirty()
+    private bool TryApplyNeighborInkBitmapForCurrentPage(IReadOnlyList<InkStrokeData> strokes, bool interactiveSwitch)
     {
-        _inkCacheDirty = true;
+        if (!interactiveSwitch || !_photoModeActive || strokes.Count == 0)
+        {
+            return false;
+        }
+
+        var currentPage = GetCurrentPageIndexForCrossPage();
+        var cacheKey = BuildNeighborInkCacheKey(currentPage);
+        if (string.IsNullOrWhiteSpace(cacheKey))
+        {
+            return false;
+        }
+
+        EnsureRasterSurface();
+        if (_rasterSurface == null)
+        {
+            return false;
+        }
+
+        var candidates = new List<(string Source, InkBitmapCacheEntry Entry)>(2);
+        if (_interactiveSwitchInkCache.TryGetValue(cacheKey, out var switchEntry))
+        {
+            candidates.Add(("switch-seed", switchEntry));
+        }
+        if (_neighborInkCache.TryGetValue(cacheKey, out var neighborEntry)
+            && !ReferenceEquals(switchEntry, neighborEntry))
+        {
+            candidates.Add(("neighbor-cache", neighborEntry));
+        }
+        if (candidates.Count == 0)
+        {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("apply-fast-skip", "cache-miss");
+            }
+            _inkDiagnostics?.OnCrossPageUpdateEvent("skip", "interactive-fastpath", "cache-miss");
+            return false;
+        }
+
+        string lastReason = "no-candidate";
+        foreach (var (source, entry) in candidates)
+        {
+            var bitmap = entry.Bitmap;
+            var decision = CrossPageInkFastPathSelector.EvaluateCandidateForRasterCopy(
+                interactiveSwitch,
+                strokes,
+                entry.Strokes,
+                bitmap.PixelWidth,
+                bitmap.PixelHeight,
+                bitmap.DpiX,
+                bitmap.DpiY,
+                _surfacePixelWidth,
+                _surfacePixelHeight,
+                _surfaceDpiX,
+                _surfaceDpiY);
+            if (!decision.ShouldApply)
+            {
+                lastReason = $"{source}:{decision.Reason}";
+                continue;
+            }
+            if (!TryCopyBitmapToRasterSurface(bitmap))
+            {
+                lastReason = $"{source}:copy-failed";
+                continue;
+            }
+
+            _hasDrawing = true;
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("apply-fast-hit", $"source={source}");
+            }
+            _inkDiagnostics?.OnCrossPageUpdateEvent("apply", "interactive-fastpath", $"source={source}");
+            return true;
+        }
+
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("apply-fast-skip", lastReason);
+        }
+        _inkDiagnostics?.OnCrossPageUpdateEvent("skip", "interactive-fastpath", lastReason);
+        return false;
+    }
+
+    private bool TryCopyBitmapToRasterSurface(BitmapSource source)
+    {
+        if (_rasterSurface == null)
+        {
+            return false;
+        }
+
+        var converted = source.Format == PixelFormats.Pbgra32
+            ? source
+            : new FormatConvertedBitmap(source, PixelFormats.Pbgra32, null, 0);
+        if (converted is Freezable freezable && freezable.CanFreeze && !freezable.IsFrozen)
+        {
+            freezable.Freeze();
+        }
+
+        var width = Math.Min(converted.PixelWidth, _surfacePixelWidth);
+        var height = Math.Min(converted.PixelHeight, _surfacePixelHeight);
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        ClearSurface();
+        var stride = width * 4;
+        var pixels = new byte[stride * height];
+        converted.CopyPixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+        _rasterSurface.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+        return true;
     }
 
     private void FinalizeActiveInkOperation()
@@ -94,10 +279,7 @@ public partial class PaintOverlayWindow
         {
             EndShape(position);
         }
-        if (OverlayRoot.IsMouseCaptured)
-        {
-            OverlayRoot.ReleaseMouseCapture();
-        }
+        ReleasePointerInput();
     }
 
     private static string BuildPhotoCacheKey(string sourcePath)
@@ -161,7 +343,7 @@ public partial class PaintOverlayWindow
         return BuildPhotoCacheKey(_photoSequencePaths[arrayIndex]);
     }
 
-    private sealed record InkBitmapCacheEntry(List<InkStrokeData> Strokes, BitmapSource Bitmap);
+    private sealed record InkBitmapCacheEntry(int PageIndex, List<InkStrokeData> Strokes, BitmapSource Bitmap);
     
 
 

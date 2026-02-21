@@ -33,6 +33,8 @@ public sealed class InkStrokeData
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;
     public byte CalligraphyOverlayOpacityThreshold { get; set; } = 230;
+    public double ReferenceWidth { get; set; }
+    public double ReferenceHeight { get; set; }
     public List<InkBloomData> Blooms { get; set; } = new();
 
     [JsonIgnore]

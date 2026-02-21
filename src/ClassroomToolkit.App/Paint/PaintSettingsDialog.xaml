@@ -193,8 +193,32 @@
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock Text="pdf、图片的设置" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
-                        <CheckBox x:Name="InkCacheCheck" Content="笔迹缓存" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="InkSaveCheck" Content="保存笔迹" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="导出范围" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                            <ComboBox Grid.Column="1" x:Name="InkExportScopeCombo" Height="34" FontSize="13"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="导出并发" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                            <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="34" FontSize="13"/>
+                        </Grid>
                         <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="邻页预取" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                            <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="34" FontSize="13"/>
+                        </Grid>
                         <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
                     </StackPanel>
                 </Border>

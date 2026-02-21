@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using MediaColor = System.Windows.Media.Color;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -47,6 +48,25 @@ public partial class PaintSettingsDialog : Window
         ("强制消息投递（PostMessage）", "message")
     };
     private static readonly double[] ToolbarScaleChoices = { 0.8, 1.0, 1.25, 1.5, 1.75, 2.0 };
+    private static readonly (string Label, InkExportScope Scope)[] InkExportScopeChoices =
+    {
+        ("全部历史与本次", InkExportScope.AllPersistedAndSession),
+        ("仅本次新增/修改", InkExportScope.SessionChangesOnly)
+    };
+    private static readonly (string Label, int Value)[] ExportParallelChoices =
+    {
+        ("自动", 0),
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4)
+    };
+    private static readonly (string Label, int Value)[] NeighborPrefetchChoices =
+    {
+        ("低", 2),
+        ("中", 3),
+        ("高", 4)
+    };
 
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
@@ -65,9 +85,12 @@ public partial class PaintSettingsDialog : Window
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
     public double ToolbarScale { get; private set; } = 1.0;
-    public bool InkCacheEnabled { get; private set; }
+    public bool InkSaveEnabled { get; private set; }
+    public InkExportScope InkExportScope { get; private set; } = InkExportScope.AllPersistedAndSession;
+    public int InkExportMaxParallelFiles { get; private set; } = 2;
     public bool PhotoRememberTransform { get; private set; }
     public bool PhotoCrossPageDisplay { get; private set; }
+    public int PhotoNeighborPrefetchRadiusMax { get; private set; } = 4;
 
     public PaintSettingsDialog(AppSettings settings)
     {
@@ -92,7 +115,22 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
-        InkCacheCheck.IsChecked = settings.InkCacheEnabled;
+        InkSaveCheck.IsChecked = settings.InkSaveEnabled;
+        foreach (var (label, scope) in InkExportScopeChoices)
+        {
+            InkExportScopeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = scope });
+        }
+        SelectInkExportScope(settings.InkExportScope);
+        foreach (var (label, value) in ExportParallelChoices)
+        {
+            ExportParallelCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        SelectIntCombo(ExportParallelCombo, settings.InkExportMaxParallelFiles, fallback: 2);
+        foreach (var (label, value) in NeighborPrefetchChoices)
+        {
+            NeighborPrefetchCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        SelectIntCombo(NeighborPrefetchCombo, settings.PhotoNeighborPrefetchRadiusMax, fallback: 4);
         PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
         PhotoCrossPageDisplayCheck.IsChecked = settings.PhotoCrossPageDisplay;
 
@@ -162,9 +200,12 @@ public partial class PaintSettingsDialog : Window
         CalligraphyOverlayOpacityThreshold = ToByte(CalligraphyOverlayThresholdSlider.Value);
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
-        InkCacheEnabled = InkCacheCheck.IsChecked == true;
+        InkSaveEnabled = InkSaveCheck.IsChecked == true;
+        InkExportScope = ResolveInkExportScope();
+        InkExportMaxParallelFiles = ResolveIntCombo(ExportParallelCombo, fallback: 2);
         PhotoRememberTransform = PhotoRememberTransformCheck.IsChecked == true;
         PhotoCrossPageDisplay = PhotoCrossPageDisplayCheck.IsChecked == true;
+        PhotoNeighborPrefetchRadiusMax = ResolveIntCombo(NeighborPrefetchCombo, fallback: 4);
         DialogResult = true;
     }
 
@@ -497,5 +538,57 @@ public partial class PaintSettingsDialog : Window
             return scale;
         }
         return 1.0;
+    }
+
+    private void SelectInkExportScope(InkExportScope scope)
+    {
+        foreach (var item in InkExportScopeCombo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is InkExportScope tagged && tagged == scope)
+            {
+                InkExportScopeCombo.SelectedItem = item;
+                return;
+            }
+        }
+        InkExportScopeCombo.SelectedIndex = 0;
+    }
+
+    private InkExportScope ResolveInkExportScope()
+    {
+        if (InkExportScopeCombo.SelectedItem is WpfComboBoxItem item && item.Tag is InkExportScope scope)
+        {
+            return scope;
+        }
+        return InkExportScope.AllPersistedAndSession;
+    }
+
+    private static void SelectIntCombo(WpfComboBox combo, int value, int fallback)
+    {
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is int tagged && tagged == value)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is int tagged && tagged == fallback)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        combo.SelectedIndex = 0;
+    }
+
+    private static int ResolveIntCombo(WpfComboBox combo, int fallback)
+    {
+        if (combo.SelectedItem is WpfComboBoxItem item && item.Tag is int value)
+        {
+            return value;
+        }
+        return fallback;
     }
 }

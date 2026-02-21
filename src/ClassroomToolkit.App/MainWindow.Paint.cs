@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 
@@ -175,10 +176,15 @@ public partial class MainWindow
             _settings.ShapeType = dialog.ShapeType;
             _settings.BrushColor = dialog.BrushColor;
             _settings.PaintToolbarScale = dialog.ToolbarScale;
-            _settings.InkCacheEnabled = dialog.InkCacheEnabled;
+            _settings.InkSaveEnabled = dialog.InkSaveEnabled;
+            _settings.InkExportScope = dialog.InkExportScope;
+            _settings.InkExportMaxParallelFiles = dialog.InkExportMaxParallelFiles;
             _settings.PhotoRememberTransform = dialog.PhotoRememberTransform;
             _settings.PhotoCrossPageDisplay = dialog.PhotoCrossPageDisplay;
+            _settings.PhotoNeighborPrefetchRadiusMax = dialog.PhotoNeighborPrefetchRadiusMax;
             SaveSettings();
+            _inkExportOptions.Scope = _settings.InkExportScope;
+            _inkExportOptions.MaxParallelFiles = _settings.InkExportMaxParallelFiles;
 
             _paintWindowOrchestrator.ApplySettings(_settings);
         }

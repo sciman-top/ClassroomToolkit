@@ -38,6 +38,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        RecoverInkWalForDirectory(sourcePath);
         _foregroundPhotoActive = false;
         if (WindowState == WindowState.Minimized)
         {
@@ -128,6 +129,7 @@ public partial class PaintOverlayWindow
             _photoTranslate.Y = 0;
         }
         _photoModeActive = true;
+        UpdatePhotoContentTransforms(enabled: true);
         _photoFullscreen = wasFullscreen;
         _photoRestoreFullscreenPending = false;
         _presentationFullscreenActive = false;
@@ -140,6 +142,7 @@ public partial class PaintOverlayWindow
         _currentCacheScope = InkCacheScope.Photo;
         _currentCacheKey = BuildPhotoModeCacheKey(sourcePath, _currentPageIndex, isPdf);
         _photoDocumentIsPdf = isPdf;
+        _globalInkHistory.Clear();
         SetPhotoWindowMode(_photoFullscreen);
         UpdateWpsNavHookState();
         UpdatePresentationFocusMonitor();
@@ -201,6 +204,7 @@ public partial class PaintOverlayWindow
             _photoUserTransformDirty = false;
         }
         _photoModeActive = false;
+        UpdatePhotoContentTransforms(enabled: false);
         _photoFullscreen = false;
         _photoRestoreFullscreenPending = false;
         _photoDocumentIsPdf = false;
@@ -220,6 +224,7 @@ public partial class PaintOverlayWindow
         _currentPageIndex = 1;
         _currentCacheScope = InkCacheScope.None;
         _currentCacheKey = string.Empty;
+        _globalInkHistory.Clear();
         ClearInkSurfaceState();
     }
 
@@ -325,6 +330,16 @@ public partial class PaintOverlayWindow
         Top = rect.Top;
         Width = rect.Width;
         Height = rect.Height;
+    }
+
+    private void UpdatePhotoContentTransforms(bool enabled)
+    {
+        if (_photoContentTransform == null)
+        {
+            RasterImage.RenderTransform = Transform.Identity;
+            return;
+        }
+        RasterImage.RenderTransform = enabled ? _photoContentTransform : Transform.Identity;
     }
 
     private IntPtr ResolveOverlayWindowHandle()
@@ -506,17 +521,54 @@ public partial class PaintOverlayWindow
         return false;
     }
 
-    private void NavigateToPage(int newPageIndex, double newTranslateY)
+    private void NavigateToPage(
+        int newPageIndex,
+        double newTranslateY,
+        bool interactiveSwitch = false,
+        BitmapSource? preloadedBitmap = null,
+        bool deferCrossPageDisplayUpdate = false,
+        int? previousPageIndexForInteractiveSwitch = null,
+        BitmapSource? previousPageBitmapForInteractiveSwitch = null,
+        BitmapSource? previousPageInkBitmapForInteractiveSwitch = null)
     {
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "navigate-enter",
+                $"targetPage={newPageIndex} interactive={interactiveSwitch}");
+        }
+        var beforeCurrentPage = GetCurrentPageIndexForCrossPage();
         if (_photoDocumentIsPdf)
         {
             _currentPageIndex = newPageIndex;
             _currentCacheKey = BuildPdfCacheKey(_currentDocumentPath, _currentPageIndex);
             ResetInkHistory();
-            LoadCurrentPageIfExists();
-            if (!RenderPdfPage(_currentPageIndex))
+            if (IsCrossPageFirstInputTraceActive())
             {
+                MarkCrossPageFirstInputStage("navigate-load-start", "doc=pdf");
+            }
+            LoadCurrentPageIfExists(
+                allowDiskFallback: !interactiveSwitch,
+                preferInteractiveFastPath: interactiveSwitch);
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("navigate-load-end", "doc=pdf");
+            }
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("navigate-render-start", "doc=pdf");
+            }
+            if (!RenderPdfPage(_currentPageIndex, interactiveSwitch, preloadedBitmap))
+            {
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("navigate-render-failed", "doc=pdf");
+                }
                 return;
+            }
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("navigate-render-end", "doc=pdf");
             }
         }
         else
@@ -529,13 +581,38 @@ public partial class PaintOverlayWindow
                 _currentDocumentPath = newPath;
                 _currentCacheKey = BuildPhotoCacheKey(newPath);
                 ResetInkHistory();
-                LoadCurrentPageIfExists();
-                var newBitmap = GetPageBitmap(newPageIndex);
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("navigate-image-switch-start");
+                }
+                var newBitmap = CrossPageSwitchBitmapResolver.ResolveForInteractiveSwitch(
+                    interactiveSwitch,
+                    preloadedBitmap,
+                    () => GetPageBitmap(newPageIndex));
                 if (newBitmap != null)
                 {
+                    // Put the target page bitmap in place first, so interactive ink fast-path
+                    // can reuse neighbor-rendered bitmap without forcing a full redraw.
                     PhotoBackground.Source = newBitmap;
                     PhotoBackground.Visibility = Visibility.Visible;
                     UpdateCurrentPageWidthNormalization(newBitmap);
+                }
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage(
+                        "navigate-image-switch-end",
+                        $"bitmap={(newBitmap != null ? "hit" : "miss")}");
+                }
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("navigate-load-start", "doc=image");
+                }
+                LoadCurrentPageIfExists(
+                    allowDiskFallback: !interactiveSwitch,
+                    preferInteractiveFastPath: interactiveSwitch);
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("navigate-load-end", "doc=image");
                 }
                 if (PhotoTitleText != null)
                 {
@@ -548,7 +625,23 @@ public partial class PaintOverlayWindow
 
         if (_crossPageDisplayEnabled)
         {
-            ApplyCrossPageBoundaryLimits();
+            if (interactiveSwitch)
+            {
+                // Keep pointer-down path lightweight: full boundary computation walks all pages and
+                // may synchronously load uncached bitmaps from disk, which causes first-stroke stalls.
+                if (beforeCurrentPage != GetCurrentPageIndexForCrossPage())
+                {
+                    UpdateNeighborTransformsForPan();
+                }
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("bounds-skip", "interactive-switch");
+                }
+            }
+            else
+            {
+                ApplyCrossPageBoundaryLimits();
+            }
         }
         else
         {
@@ -563,8 +656,40 @@ public partial class PaintOverlayWindow
             }
         }
         InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
-        RedrawInkSurface();
-        UpdateCrossPageDisplay();
+        if (interactiveSwitch)
+        {
+            if (deferCrossPageDisplayUpdate)
+            {
+                var previousPage = previousPageIndexForInteractiveSwitch.GetValueOrDefault(beforeCurrentPage);
+                TrySeedNeighborFrameForInteractiveSwitch(
+                    previousPage,
+                    previousPageBitmapForInteractiveSwitch,
+                    previousPageInkBitmapForInteractiveSwitch);
+                _crossPageUpdateDeferredByInkInput = true;
+            }
+            else
+            {
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("crosspage-update-request");
+                }
+                var scheduled = TryBeginInvoke(() => RequestCrossPageDisplayUpdate("navigate-interactive"), DispatcherPriority.Background);
+                if (!scheduled)
+                {
+                    RequestCrossPageDisplayUpdate("navigate-interactive-fallback");
+                }
+            }
+        }
+        else
+        {
+            UpdateCrossPageDisplay();
+        }
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "navigate-exit",
+                $"activePage={GetCurrentPageIndexForCrossPage()} bgVisible={PhotoBackground.Visibility}");
+        }
     }
 
     private void SaveCurrentPageIfNeeded()
@@ -572,32 +697,312 @@ public partial class PaintOverlayWindow
         SaveCurrentPageOnNavigate(forceBackground: false);
     }
 
-    private void SaveCurrentPageOnNavigate(bool forceBackground)
+    private void SaveCurrentPageOnNavigate(bool forceBackground, bool persistToSidecar = true)
     {
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "save-enter",
+                $"force={forceBackground} persist={persistToSidecar} dirty={IsCurrentPageDirty()}");
+        }
         if (_currentCacheScope != InkCacheScope.Photo)
         {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("save-skip", "scope!=photo");
+            }
             return;
         }
-        if (!forceBackground && !_inkCacheDirty)
+        if (!forceBackground && !IsCurrentPageDirty())
         {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("save-skip", "not-dirty");
+            }
             return;
         }
-        FinalizeActiveInkOperation();
         var cacheKey = _currentCacheKey;
-        if (!_inkCacheEnabled || string.IsNullOrWhiteSpace(cacheKey))
+        var hadActiveInkOperation = IsInkOperationActive();
+
+        // Interactive cross-page switching should avoid heavy clone/hash work on pointer-down.
+        // When no active operation exists and cache already has current page snapshot, rely on
+        // existing cache + delayed autosave to keep UI input path lightweight.
+        if (!persistToSidecar
+            && !forceBackground
+            && !hadActiveInkOperation
+            && _inkCacheEnabled
+            && !string.IsNullOrWhiteSpace(cacheKey)
+            && _photoCache.TryGet(cacheKey, out _))
+        {
+            ScheduleSidecarAutoSave();
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("save-fast-return", "cache-hit + autosave");
+            }
+            return;
+        }
+
+        FinalizeActiveInkOperation();
+        List<InkStrokeData> strokes;
+        var reusedCachedSnapshot = false;
+
+        if (!persistToSidecar
+            && !forceBackground
+            && !hadActiveInkOperation
+            && _inkCacheEnabled
+            && !string.IsNullOrWhiteSpace(cacheKey)
+            && _photoCache.TryGet(cacheKey, out var cachedStrokes))
+        {
+            strokes = cachedStrokes;
+            reusedCachedSnapshot = true;
+        }
+        else
+        {
+            strokes = CloneCommittedInkStrokes();
+        }
+
+        if (_inkCacheEnabled && !string.IsNullOrWhiteSpace(cacheKey))
+        {
+            if (strokes.Count == 0)
+            {
+                _photoCache.Remove(cacheKey);
+            }
+            else if (!reusedCachedSnapshot)
+            {
+                _photoCache.Set(cacheKey, strokes);
+                System.Diagnostics.Debug.WriteLine($"[InkCache] Saved {strokes.Count} strokes for key={cacheKey}");
+            }
+        }
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage(
+                "save-cache-updated",
+                $"strokes={strokes.Count} reused={reusedCachedSnapshot}");
+        }
+
+        if (persistToSidecar)
+        {
+            // Method A: also persist to sidecar file on disk
+            PersistInkToSidecar(strokes, _currentDocumentPath, _currentPageIndex);
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("save-sidecar-sync");
+            }
+        }
+        else
+        {
+            // Interactive cross-page input should avoid blocking IO on pointer down.
+            // Persist old page snapshot asynchronously to keep consistency without UI stalls.
+            if (_inkPersistence != null && _inkSaveEnabled && !string.IsNullOrWhiteSpace(_currentDocumentPath))
+            {
+                string snapshotHash = string.Empty;
+                if (reusedCachedSnapshot
+                    && _inkDirtyPages.TryGetRuntimeState(_currentDocumentPath, _currentPageIndex, out _, out var knownHash, out var dirty)
+                    && dirty
+                    && !string.IsNullOrWhiteSpace(knownHash))
+                {
+                    snapshotHash = knownHash;
+                }
+                else
+                {
+                    snapshotHash = ComputeInkHash(strokes);
+                }
+                var snapshot = new SidecarPersistSnapshot(
+                    _inkPersistence,
+                    _currentDocumentPath,
+                    _currentPageIndex,
+                    strokes,
+                    snapshotHash);
+                QueueSidecarAutoSave(snapshot);
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("save-sidecar-queued");
+                }
+            }
+            else
+            {
+                ScheduleSidecarAutoSave();
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage("save-sidecar-timer");
+                }
+            }
+        }
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("save-exit");
+        }
+    }
+
+    private BitmapSource? TrySnapshotCurrentInkSurfaceForNeighbor()
+    {
+        if (!_inkShowEnabled || !_hasDrawing)
+        {
+            return null;
+        }
+        EnsureRasterSurface();
+        if (_rasterSurface == null || _surfacePixelWidth <= 0 || _surfacePixelHeight <= 0)
+        {
+            return null;
+        }
+
+        var stride = _surfacePixelWidth * 4;
+        var bytes = stride * _surfacePixelHeight;
+        var pixels = PixelPool.Rent(bytes);
+        try
+        {
+            _rasterSurface.CopyPixels(pixels, stride, 0);
+            var snapshot = new WriteableBitmap(
+                _surfacePixelWidth,
+                _surfacePixelHeight,
+                _surfaceDpiX,
+                _surfaceDpiY,
+                PixelFormats.Pbgra32,
+                null);
+            snapshot.WritePixels(new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight), pixels, stride, 0);
+            if (snapshot.CanFreeze)
+            {
+                snapshot.Freeze();
+            }
+            return snapshot;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            PixelPool.Return(pixels, clearArray: false);
+        }
+    }
+
+    private void TrySeedNeighborFrameForInteractiveSwitch(
+        int previousPage,
+        BitmapSource? previousPageBitmap,
+        BitmapSource? previousPageInkBitmap)
+    {
+        if (!_photoModeActive || !_crossPageDisplayEnabled || previousPage <= 0)
         {
             return;
         }
-        var strokes = CloneCommittedInkStrokes();
-        if (strokes.Count == 0)
+        var currentPage = GetCurrentPageIndexForCrossPage();
+        if (previousPage == currentPage)
         {
-            _photoCache.Remove(cacheKey);
-            _inkCacheDirty = false;
             return;
         }
-        _photoCache.Set(cacheKey, strokes);
-        _inkCacheDirty = false;
-        System.Diagnostics.Debug.WriteLine($"[InkCache] Saved {strokes.Count} strokes for key={cacheKey}");
+        if (_neighborPagesCanvas == null || PhotoBackground.Source is not BitmapSource currentBitmap)
+        {
+            return;
+        }
+
+        var neighborBitmap = previousPageBitmap ?? GetNeighborPageBitmapForRender(previousPage);
+        if (neighborBitmap == null)
+        {
+            return;
+        }
+        if (!_photoDocumentIsPdf)
+        {
+            _neighborImageCache[previousPage] = neighborBitmap;
+        }
+
+        while (_neighborPageImages.Count < 1)
+        {
+            var img = new WpfImage
+            {
+                Stretch = Stretch.None,
+                SnapsToDevicePixels = true,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            _neighborPageImages.Add(img);
+            _neighborPagesCanvas.Children.Add(img);
+        }
+        while (_neighborInkImages.Count < 1)
+        {
+            var inkImg = new WpfImage
+            {
+                Stretch = Stretch.None,
+                SnapsToDevicePixels = true,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                IsHitTestVisible = false
+            };
+            _neighborInkImages.Add(inkImg);
+            _neighborPagesCanvas.Children.Add(inkImg);
+        }
+
+        var pageUid = previousPage.ToString(CultureInfo.InvariantCulture);
+        var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
+        var baseTop = CrossPageInputNavigation.ComputePageOffset(
+            currentPage,
+            previousPage,
+            page => GetScaledHeightForPage(page, normalizedWidthDip));
+        var pageScaleRatio = 1.0;
+        if (!_photoDocumentIsPdf && normalizedWidthDip > 0)
+        {
+            var pageWidth = GetBitmapDisplayWidthInDip(neighborBitmap);
+            if (pageWidth > 0)
+            {
+                pageScaleRatio = normalizedWidthDip / pageWidth;
+            }
+        }
+
+        var transform = new TransformGroup();
+        transform.Children.Add(new ScaleTransform(_photoScale.ScaleX * pageScaleRatio, _photoScale.ScaleY * pageScaleRatio));
+        transform.Children.Add(new TranslateTransform(_photoTranslate.X, _photoTranslate.Y + baseTop));
+
+        var pageImg = _neighborPageImages[0];
+        pageImg.Source = neighborBitmap;
+        pageImg.Visibility = Visibility.Visible;
+        pageImg.Uid = pageUid;
+        pageImg.Tag = baseTop;
+        pageImg.RenderTransform = transform;
+
+        BitmapSource? inkBitmap = previousPageInkBitmap;
+        var cacheKey = BuildNeighborInkCacheKey(previousPage);
+        if (previousPageInkBitmap != null
+            && !string.IsNullOrWhiteSpace(cacheKey))
+        {
+            RememberInteractiveSwitchInkBitmap(cacheKey, previousPage, previousPageInkBitmap);
+        }
+        if (inkBitmap == null
+            && !string.IsNullOrWhiteSpace(cacheKey)
+            && _neighborInkCache.TryGetValue(cacheKey, out var cachedEntry))
+        {
+            inkBitmap = cachedEntry.Bitmap;
+        }
+        if (inkBitmap == null
+            && !string.IsNullOrWhiteSpace(cacheKey)
+            && _inkShowEnabled
+            && _inkCacheEnabled
+            && _photoCache.TryGet(cacheKey, out var strokes)
+            && strokes.Count > 0)
+        {
+            ScheduleNeighborInkRender(cacheKey, previousPage, neighborBitmap, strokes);
+        }
+
+        var inkImgFirst = _neighborInkImages[0];
+        inkImgFirst.Source = _inkShowEnabled ? inkBitmap : null;
+        inkImgFirst.Visibility = inkImgFirst.Source != null ? Visibility.Visible : Visibility.Collapsed;
+        inkImgFirst.Uid = pageUid;
+        inkImgFirst.Tag = baseTop;
+        inkImgFirst.RenderTransform = transform;
+
+        for (int i = 1; i < _neighborPageImages.Count; i++)
+        {
+            _neighborPageImages[i].Visibility = Visibility.Collapsed;
+            if (i < _neighborInkImages.Count)
+            {
+                _neighborInkImages[i].Visibility = Visibility.Collapsed;
+            }
+        }
+
+        _neighborPagesCanvas.Visibility = Visibility.Visible;
+        _lastNeighborPagesNonEmptyUtc = DateTime.UtcNow;
+        _inkDiagnostics?.OnCrossPageUpdateEvent(
+            "seed",
+            "navigate-interactive",
+            $"page={previousPage} ink={(inkImgFirst.Source != null)}");
     }
 
     private void ApplyFullscreenBounds()

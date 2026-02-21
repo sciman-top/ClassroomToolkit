@@ -21,14 +21,17 @@ public partial class MainWindow
         if (_imageManagerWindow == null)
         {
             _imageManagerWindow = _imageManagerWindowFactory.Create(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders);
+            _imageManagerWindow.ViewModel.ShowInkOverlay = _settings.PhotoShowInkOverlay;
             _imageManagerWindow.ImageSelected += OnImageSelected;
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
             _imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
+            _imageManagerWindow.ShowInkOverlayChanged += OnImageManagerShowInkOverlayChanged;
             _imageManagerWindow.StateChanged += OnImageManagerStateChanged;
             _imageManagerWindow.Activated += (_, _) => TouchSurface(ZOrderSurface.ImageManager);
             _imageManagerWindow.Closed += (_, _) =>
             {
                 _imageManagerWindow.StateChanged -= OnImageManagerStateChanged;
+                _imageManagerWindow.ShowInkOverlayChanged -= OnImageManagerShowInkOverlayChanged;
                 _imageManagerWindow = null;
                 ApplyZOrderPolicy();
             };
@@ -82,6 +85,13 @@ public partial class MainWindow
             return;
         }
         var shouldCloseImageManager = _imageManagerWindow != null && _imageManagerWindow.IsVisible;
+        // Capture "显示笔迹" state before closing ImageManager (Closed handler nullifies the reference)
+        var showInk = _imageManagerWindow?.ViewModel?.ShowInkOverlay ?? _settings.PhotoShowInkOverlay;
+        if (_settings.PhotoShowInkOverlay != showInk)
+        {
+            _settings.PhotoShowInkOverlay = showInk;
+            SaveSettings();
+        }
         if (shouldCloseImageManager)
         {
             // 全屏展示时关闭管理窗口，避免其继续吃键盘事件。
@@ -102,6 +112,7 @@ public partial class MainWindow
         var selectedPath = _photoNavigationSession.GetCurrentPath();
         if (!string.IsNullOrWhiteSpace(selectedPath))
         {
+            _overlayWindow.UpdateInkShowEnabled(showInk);
             PhotoNavigationDiagnostics.Log("MainWindow.Select", $"enter path={selectedPath}");
             _overlayWindow.EnterPhotoMode(selectedPath);
             TouchSurface(ZOrderSurface.PhotoFullscreen);
@@ -119,6 +130,18 @@ public partial class MainWindow
     {
         _settings.PhotoRecentFolders = recents.ToList();
         SaveSettings();
+    }
+
+    private void OnImageManagerShowInkOverlayChanged(bool enabled)
+    {
+        if (_settings.PhotoShowInkOverlay == enabled)
+        {
+            return;
+        }
+
+        _settings.PhotoShowInkOverlay = enabled;
+        SaveSettings();
+        _overlayWindow?.UpdateInkShowEnabled(enabled);
     }
 
     private void OnPhotoNavigateRequested(int direction)
@@ -151,6 +174,7 @@ public partial class MainWindow
         // 切换到序列中的下一个文件（由统一策略决策）
         // Update overlay's sequence index for cross-page display
         _overlayWindow.SetPhotoSequence(_photoNavigationSession.Sequence, _photoNavigationSession.CurrentIndex);
+        _overlayWindow.UpdateInkShowEnabled(_settings.PhotoShowInkOverlay);
         _overlayWindow.EnterPhotoMode(nextPath);
         PhotoNavigationDiagnostics.Log("MainWindow.FileNav", $"enter nextPath={nextPath}");
         FocusOverlayForPhotoNavigation(defer: true);
@@ -315,6 +339,46 @@ public partial class MainWindow
     private static bool AreClose(double left, double right)
     {
         return Math.Abs(left - right) < 0.0001;
+    }
+
+    internal bool TryHandleOverlayNavigationKeyFromAuxWindow(Key key)
+    {
+        if (_overlayWindow == null || !_overlayWindow.IsVisible)
+        {
+            return false;
+        }
+
+        if (_overlayWindow.TryHandlePhotoKey(key))
+        {
+            return true;
+        }
+
+        if (_overlayWindow.IsPhotoModeActive || _overlayWindow.IsWhiteboardActive)
+        {
+            return false;
+        }
+
+        if (!IsPresentationNavigationKey(key))
+        {
+            return false;
+        }
+
+        _overlayWindow.ForwardKeyboardToPresentation(key);
+        return true;
+    }
+
+    private static bool IsPresentationNavigationKey(Key key)
+    {
+        return key == Key.Left
+            || key == Key.Right
+            || key == Key.Up
+            || key == Key.Down
+            || key == Key.PageUp
+            || key == Key.PageDown
+            || key == Key.Space
+            || key == Key.Enter
+            || key == Key.Home
+            || key == Key.End;
     }
 }
 

@@ -128,7 +128,7 @@
                     <ToggleButton x:Name="RegionEraseButton" Style="{StaticResource Style_IconButton_Active}" Checked="OnModeChecked" Unchecked="OnModeUnchecked" ToolTip="区域删除" Foreground="{StaticResource Brush_Warning}">
                         <Path Data="{StaticResource Icon_RegionErase}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="20" Height="20"/>
                     </ToggleButton>
-                    <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="一键清屏">
+                    <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="清空当前页笔迹">
                         <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
@@ -137,7 +137,7 @@
             <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="10,0"/>
 
             <!-- 5. 常用操作 -->
-            <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
+            <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销（PDF/图片支持跨页）">
                 <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="20" Height="20"/>
             </Button>
 

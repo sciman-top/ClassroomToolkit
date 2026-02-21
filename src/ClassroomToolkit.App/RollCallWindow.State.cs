@@ -84,7 +84,7 @@ public partial class RollCallWindow
                 settings.RollCallTimerSeconds,
                 settings.RollCallTimerSecondsLeft,
                 settings.RollCallStopwatchSeconds,
-                settings.RollCallTimerRunning);
+                running: false);
             _timerStateApplied = true;
         }
         

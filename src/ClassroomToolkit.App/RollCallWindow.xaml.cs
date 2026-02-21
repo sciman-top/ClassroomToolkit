@@ -175,7 +175,8 @@ public partial class RollCallWindow : Window
             ApplySettings(_settings, updatePhoto: false);
             await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
             RestoreGroupSelection();
-            UpdatePhotoDisplay();
+            // 启动时不显示之前点名状态的学生照片，避免意外显示
+            UpdatePhotoDisplay(forceHide: true);
             WindowPlacementHelper.EnsureVisible(this);
             _stopwatch.Restart();
             _timer.Start();

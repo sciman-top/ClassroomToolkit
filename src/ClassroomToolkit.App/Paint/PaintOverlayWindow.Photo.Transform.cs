@@ -38,7 +38,7 @@ public partial class PaintOverlayWindow
         {
             ApplyCrossPageBoundaryLimits(includeSlack: false);
             SyncCurrentPageToViewportCenter();
-            RequestCrossPageDisplayUpdate();
+            RequestCrossPageDisplayUpdate("step-viewport");
         }
         else
         {
@@ -51,7 +51,6 @@ public partial class PaintOverlayWindow
             return false;
         }
         SchedulePhotoTransformSave(userAdjusted: true);
-        RequestInkRedraw();
         return true;
     }
 
@@ -59,14 +58,12 @@ public partial class PaintOverlayWindow
     {
         double scaleFactor = Math.Pow(PhotoWheelZoomBase, delta);
         ApplyPhotoScale(scaleFactor, center);
-        RequestInkRedraw();
     }
 
     private void ZoomPhotoByFactor(double scaleFactor)
     {
         var center = new WpfPoint(OverlayRoot.ActualWidth / 2.0, OverlayRoot.ActualHeight / 2.0);
         ApplyPhotoScale(scaleFactor, center);
-        RequestInkRedraw();
     }
 
     private void ApplyPhotoScale(double scaleFactor, WpfPoint center)
@@ -89,7 +86,7 @@ public partial class PaintOverlayWindow
         SchedulePhotoTransformSave(userAdjusted: true);
         if (_crossPageDisplayEnabled)
         {
-            RequestCrossPageDisplayUpdate();
+            RequestCrossPageDisplayUpdate("apply-scale");
         }
     }
 
@@ -195,10 +192,9 @@ public partial class PaintOverlayWindow
         UpdateNeighborTransformsForPan();
         if (_crossPageDisplayEnabled)
         {
-            RequestCrossPageDisplayUpdate();
+            RequestCrossPageDisplayUpdate("photo-pan");
         }
         SchedulePhotoTransformSave(userAdjusted: true);
-        RequestInkRedraw();
     }
 
     private void EndPhotoPan()
@@ -511,10 +507,9 @@ public partial class PaintOverlayWindow
         {
             ApplyCrossPageBoundaryLimits(includeSlack: false);
             SyncCurrentPageToViewportCenter();
-            RequestCrossPageDisplayUpdate();
+            RequestCrossPageDisplayUpdate("fit-width");
         }
         SchedulePhotoTransformSave(userAdjusted: true);
-        RequestInkRedraw();
     }
 
     private double ResolvePhotoViewportHeight()
@@ -590,6 +585,6 @@ public partial class PaintOverlayWindow
         _photoTranslate.X = (viewportWidth - scaledWidth) / 2.0;
         _photoTranslate.Y = (viewportHeight - scaledHeight) / 2.0;
         SavePhotoTransformState(userAdjusted: false);
-        RequestInkRedraw();
     }
 }
+

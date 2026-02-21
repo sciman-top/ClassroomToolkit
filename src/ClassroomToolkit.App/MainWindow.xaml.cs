@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.ViewModels;
@@ -41,6 +42,9 @@ public partial class MainWindow : Window
     private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly InkExportOptions _inkExportOptions;
+    private readonly InkPersistenceService _inkPersistenceService;
+    private readonly InkExportService _inkExportService;
     private readonly MainViewModel _mainViewModel;
     private readonly IConfigurationService _configurationService;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
@@ -50,6 +54,9 @@ public partial class MainWindow : Window
     public MainWindow(
         AppSettingsService settingsService,
         AppSettings settings,
+        InkExportOptions inkExportOptions,
+        InkPersistenceService inkPersistenceService,
+        InkExportService inkExportService,
         MainViewModel mainViewModel,
         IConfigurationService configurationService,
         IRollCallWindowFactory rollCallWindowFactory,
@@ -60,6 +67,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settingsService = settingsService;
         _settings = settings;
+        _inkExportOptions = inkExportOptions;
+        _inkPersistenceService = inkPersistenceService;
+        _inkExportService = inkExportService;
+        _inkExportOptions.Scope = settings.InkExportScope;
+        _inkExportOptions.MaxParallelFiles = settings.InkExportMaxParallelFiles;
         _mainViewModel = mainViewModel;
         _configurationService = configurationService;
         _rollCallWindowFactory = rollCallWindowFactory;
@@ -367,12 +379,55 @@ public partial class MainWindow : Window
 
     private void ScheduleInkCleanup()
     {
-        // Ink persistence is disabled; no cleanup needed.
+        _ = System.Threading.Tasks.Task.Run(TriggerInkCleanup);
     }
 
     private void TriggerInkCleanup()
     {
-        // Ink persistence is disabled; no cleanup needed.
+        try
+        {
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void AddIfValid(string? path)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return;
+                }
+                if (Directory.Exists(path))
+                {
+                    candidates.Add(path);
+                }
+            }
+
+            AddIfValid(AppDomain.CurrentDomain.BaseDirectory);
+            AddIfValid(_settings.InkPhotoRootPath);
+            foreach (var folder in _settings.PhotoRecentFolders ?? new List<string>())
+            {
+                AddIfValid(folder);
+            }
+            foreach (var folder in _settings.PhotoFavoriteFolders ?? new List<string>())
+            {
+                AddIfValid(folder);
+            }
+
+            var totalSidecars = 0;
+            var totalComposites = 0;
+            foreach (var directory in candidates)
+            {
+                totalSidecars += _inkPersistenceService.CleanupOrphanSidecarsInDirectory(directory);
+                totalComposites += _inkExportService.CleanupOrphanCompositeOutputsInDirectory(directory);
+            }
+
+            if (totalSidecars > 0 || totalComposites > 0)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[InkStartupCleanup] deleted orphan sidecars={totalSidecars}, composites={totalComposites}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InkStartupCleanup] failed: {ex.Message}");
+        }
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)

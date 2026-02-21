@@ -102,9 +102,9 @@
                     <StackPanel Orientation="Horizontal">
                         <!-- 增加高度到 30，统一字体 13 -->
                         <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
-                                Click="OnBackClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                                Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
                         <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,6,0"
-                                Click="OnForwardClick" IsEnabled="False" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                                Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
                         <Button x:Name="UpButton" Content="向上" Width="60" Height="30" Margin="0,0,12,0"
                                 Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
                         <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
@@ -114,7 +114,12 @@
                         <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
-                                ValueChanged="OnThumbnailSizeChanged"/>
+                                ValueChanged="OnThumbnailSizeChanged" IsEnabled="{Binding IsThumbnailSizeSliderEnabled}"/>
+                        <CheckBox x:Name="ShowInkCheckBox" Content="显示笔迹" Margin="12,0,0,0"
+                                  Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
+                                  Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
                     </StackPanel>
                 </DockPanel>
 
