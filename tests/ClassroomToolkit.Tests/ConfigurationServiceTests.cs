@@ -13,6 +13,7 @@ public sealed class ConfigurationServiceTests
         {
             var service = new ConfigurationService(baseDirectory);
 
+            service.BaseDirectory.Should().Be(Path.GetFullPath(baseDirectory));
             service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
         }
         finally
@@ -101,6 +102,7 @@ public sealed class ConfigurationServiceTests
         {
             var service = new ConfigurationService(outputDirectory);
 
+            service.BaseDirectory.Should().Be(solutionRoot);
             service.SettingsIniPath.Should().Be(Path.Combine(solutionRoot, "settings.ini"));
         }
         finally
@@ -110,23 +112,19 @@ public sealed class ConfigurationServiceTests
     }
 
     [Fact]
-    public void Constructor_ShouldUseEnvironmentOverride_WhenSet()
+    public void Constructor_ShouldUseExecutableDirectory_WhenSolutionFileNotFound()
     {
-        var baseDirectory = CreateTempDirectory();
-        var previous = Environment.GetEnvironmentVariable("CTK_SETTINGS_INI");
-        var expected = Path.Combine(baseDirectory, "custom", "settings.ini");
+        var executableDirectory = CreateTempDirectory();
         try
         {
-            Environment.SetEnvironmentVariable("CTK_SETTINGS_INI", expected);
+            var service = new ConfigurationService(executableDirectory);
 
-            var service = new ConfigurationService(baseDirectory);
-
-            service.SettingsIniPath.Should().Be(expected);
+            service.BaseDirectory.Should().Be(Path.GetFullPath(executableDirectory));
+            service.SettingsIniPath.Should().Be(Path.Combine(executableDirectory, "settings.ini"));
         }
         finally
         {
-            Environment.SetEnvironmentVariable("CTK_SETTINGS_INI", previous);
-            Directory.Delete(baseDirectory, recursive: true);
+            Directory.Delete(executableDirectory, recursive: true);
         }
     }
 

@@ -28,8 +28,9 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    private void BeginBrushStroke(WpfPoint position)
+    private void BeginBrushStroke(BrushInputSample input)
     {
+        var position = input.Position;
         EnsureActiveRenderer();
         if (_activeRenderer == null)
         {
@@ -40,33 +41,43 @@ public partial class PaintOverlayWindow
         _strokeInProgress = true;
         var color = EffectiveBrushColor();
         _activeRenderer.Initialize(color, _brushSize, color.A);
-        _activeRenderer.OnDown(position);
-        _visualHost.UpdateVisual(_activeRenderer.Render);
+        _activeRenderer.OnDown(input);
+        _lastBrushInputSample = input;
+        _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        RenderBrushPreview();
         _lastCalligraphyPreviewUtc = DateTime.UtcNow;
         _lastCalligraphyPreviewPoint = position;
     }
 
-    private void UpdateBrushStroke(WpfPoint position)
+    private void UpdateBrushStroke(BrushInputSample input)
     {
         if (!_strokeInProgress || _activeRenderer == null)
         {
             return;
         }
-        _activeRenderer.OnMove(position);
+        var position = input.Position;
+        var versionBeforeMove = _activeRenderer.GeometryVersion;
+        _activeRenderer.OnMove(input);
+        if (_activeRenderer.GeometryVersion == versionBeforeMove)
+        {
+            return;
+        }
         if (_brushStyle == PaintBrushStyle.Calligraphy && ShouldThrottleCalligraphyPreview(position))
         {
             return;
         }
-        _visualHost.UpdateVisual(_activeRenderer.Render);
+        UpdateBrushPrediction(input);
+        RenderBrushPreview();
     }
 
-    private void EndBrushStroke(WpfPoint position)
+    private void EndBrushStroke(BrushInputSample input)
     {
         if (!_strokeInProgress || _activeRenderer == null)
         {
             return;
         }
-        _activeRenderer.OnUp(position);
+        var position = input.Position;
+        _activeRenderer.OnUp(input);
         var geometry = _activeRenderer.GetLastStrokeGeometry();
         if (geometry != null)
         {
@@ -76,6 +87,8 @@ public partial class PaintOverlayWindow
         _activeRenderer.Reset();
         _visualHost.Clear();
         _strokeInProgress = false;
+        _lastBrushInputSample = null;
+        _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _lastCalligraphyPreviewPoint = null;
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
                 _photoModeActive,
@@ -87,12 +100,27 @@ public partial class PaintOverlayWindow
         SetInkContextDirty();
     }
 
+    private void BeginBrushStroke(WpfPoint position)
+    {
+        BeginBrushStroke(BrushInputSample.CreatePointer(position));
+    }
+
+    private void UpdateBrushStroke(WpfPoint position)
+    {
+        UpdateBrushStroke(BrushInputSample.CreatePointer(position));
+    }
+
+    private void EndBrushStroke(WpfPoint position)
+    {
+        EndBrushStroke(BrushInputSample.CreatePointer(position));
+    }
+
     private bool ShouldThrottleCalligraphyPreview(WpfPoint position)
     {
         if (_lastCalligraphyPreviewPoint.HasValue)
         {
             var delta = position - _lastCalligraphyPreviewPoint.Value;
-            if (delta.Length >= CalligraphyPreviewMinDistance)
+            if (delta.Length >= _calligraphyPreviewMinDistance)
             {
                 _lastCalligraphyPreviewPoint = position;
                 _lastCalligraphyPreviewUtc = DateTime.UtcNow;
@@ -158,6 +186,147 @@ public partial class PaintOverlayWindow
         {
             RequestInkRedraw();
         }
+    }
+
+    private void UpdateBrushPrediction(BrushInputSample input)
+    {
+        if (!_lastBrushInputSample.HasValue)
+        {
+            _lastBrushInputSample = input;
+            return;
+        }
+
+        var previous = _lastBrushInputSample.Value;
+        var dtMs = (input.TimestampTicks - previous.TimestampTicks) * 1000.0 / Math.Max(Stopwatch.Frequency, 1);
+        if (dtMs < 0.5)
+        {
+            _lastBrushInputSample = input;
+            return;
+        }
+
+        var dtSeconds = dtMs / 1000.0;
+        var v = (input.Position - previous.Position) / Math.Max(dtSeconds, 1e-6);
+        _lastBrushVelocityDipPerSec = new Vector(
+            (_lastBrushVelocityDipPerSec.X * 0.68) + (v.X * 0.32),
+            (_lastBrushVelocityDipPerSec.Y * 0.68) + (v.Y * 0.32));
+        _lastBrushInputSample = input;
+    }
+
+    private void RenderBrushPreview()
+    {
+        if (_activeRenderer == null)
+        {
+            return;
+        }
+
+        _visualHost.UpdateVisual(dc =>
+        {
+            _activeRenderer.Render(dc);
+            if (TryResolvePredictedBrushSegment(
+                    out var p0,
+                    out var p1,
+                    out var p2,
+                    out var w0,
+                    out var w1,
+                    out var w2))
+            {
+                var previewColor = EffectiveBrushColor();
+                DrawPredictedBrushSegment(dc, previewColor, p0, p1, p2, w0, w1, w2);
+            }
+        });
+    }
+
+    private bool TryResolvePredictedBrushSegment(
+        out WpfPoint p0,
+        out WpfPoint p1,
+        out WpfPoint p2,
+        out double w0,
+        out double w1,
+        out double w2)
+    {
+        p0 = new WpfPoint();
+        p1 = new WpfPoint();
+        p2 = new WpfPoint();
+        w0 = Math.Max(0.9, _brushSize * 0.2);
+        w1 = Math.Max(0.8, w0 * 0.82);
+        w2 = Math.Max(0.7, w1 * 0.78);
+
+        if (!_strokeInProgress || !_lastBrushInputSample.HasValue)
+        {
+            return false;
+        }
+
+        var speed = _lastBrushVelocityDipPerSec.Length;
+        if (speed < 12.0)
+        {
+            return false;
+        }
+
+        double horizonMs = Math.Clamp(_brushPredictionHorizonMs, 4, 16);
+        var damping = Math.Clamp(1.0 - (speed / 2600.0), 0.72, 1.0);
+        var lead1 = _lastBrushVelocityDipPerSec * ((horizonMs * 0.45) / 1000.0) * damping;
+        var lead2 = _lastBrushVelocityDipPerSec * ((horizonMs * 0.95) / 1000.0) * damping;
+
+        if (lead1.Length > BrushPredictionMaxDistanceDip * 0.7)
+        {
+            lead1 *= (BrushPredictionMaxDistanceDip * 0.7) / lead1.Length;
+        }
+        if (lead2.Length > BrushPredictionMaxDistanceDip)
+        {
+            lead2 *= BrushPredictionMaxDistanceDip / lead2.Length;
+        }
+
+        var origin = _lastBrushInputSample.Value.Position;
+        p0 = origin;
+        p1 = origin + lead1;
+        p2 = origin + lead2;
+        double speedFactor = Math.Clamp((speed - 12.0) / 620.0, 0.0, 1.0);
+        var baseWidth = Math.Max(0.95, _brushSize * (0.17 + speedFactor * 0.09));
+        w0 = baseWidth;
+        w1 = Math.Max(0.8, baseWidth * 0.82);
+        w2 = Math.Max(0.7, baseWidth * 0.68);
+        return true;
+    }
+
+    private static void DrawPredictedBrushSegment(
+        DrawingContext dc,
+        MediaColor color,
+        WpfPoint p0,
+        WpfPoint p1,
+        WpfPoint p2,
+        double w0,
+        double w1,
+        double w2)
+    {
+        byte a0 = (byte)Math.Clamp(color.A * 0.34, 24, 136);
+        byte a1 = (byte)Math.Clamp(color.A * 0.24, 18, 110);
+        byte a2 = (byte)Math.Clamp(color.A * 0.18, 14, 92);
+
+        var c0 = MediaColor.FromArgb(a0, color.R, color.G, color.B);
+        var c1 = MediaColor.FromArgb(a1, color.R, color.G, color.B);
+        var c2 = MediaColor.FromArgb(a2, color.R, color.G, color.B);
+
+        var pen0 = new MediaPen(new SolidColorBrush(c0), w0)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
+        if (pen0.CanFreeze) pen0.Freeze();
+        dc.DrawLine(pen0, p0, p1);
+
+        var pen1 = new MediaPen(new SolidColorBrush(c1), w1)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
+        if (pen1.CanFreeze) pen1.Freeze();
+        dc.DrawLine(pen1, p1, p2);
+
+        var tipBrush = new SolidColorBrush(c2);
+        if (tipBrush.CanFreeze) tipBrush.Freeze();
+        dc.DrawEllipse(tipBrush, null, p2, Math.Max(0.7, w2 * 0.5), Math.Max(0.7, w2 * 0.5));
     }
 
     private void BeginRegionSelection(WpfPoint position)
@@ -333,7 +502,7 @@ public partial class PaintOverlayWindow
             ColorHex = ToHex(EffectiveBrushColor()),
             Opacity = _brushOpacity,
             BrushSize = _brushSize,
-            MaskSeed = _inkSeedRandom.Next(),
+            CalligraphyRenderMode = _calligraphyRenderMode,
             CalligraphyInkBloomEnabled = _calligraphyInkBloomEnabled,
             CalligraphySealEnabled = _calligraphySealEnabled,
             CalligraphyOverlayOpacityThreshold = _calligraphyOverlayOpacityThreshold
@@ -346,14 +515,26 @@ public partial class PaintOverlayWindow
         if (_brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
         {
             var core = calligraphyRenderer.GetLastCoreGeometry();
-            var ribbons = calligraphyRenderer.GetLastRibbonGeometries();
             var strokeGeometry = core ?? geometry;
-            if (ribbons != null && ribbons.Count > 0)
+            if (!CalligraphySinglePassCompositeEnabled)
             {
-                var union = UnionGeometries(ribbons.Select(item => item.Geometry).ToList());
-                if (union != null)
+                var ribbons = calligraphyRenderer.GetLastRibbonGeometries();
+                if (ribbons != null && ribbons.Count > 0)
                 {
-                    strokeGeometry = union;
+                    foreach (var ribbon in ribbons)
+                    {
+                        var ribbonGeometry = _photoModeActive ? ToPhotoGeometry(ribbon.Geometry) : ribbon.Geometry;
+                        if (ribbonGeometry == null)
+                        {
+                            continue;
+                        }
+                        stroke.Ribbons.Add(new InkRibbonData
+                        {
+                            GeometryPath = InkGeometrySerializer.Serialize(ribbonGeometry),
+                            Opacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT),
+                            RibbonT = ribbon.RibbonT
+                        });
+                    }
                 }
             }
             var storeGeometry = _photoModeActive ? ToPhotoGeometry(strokeGeometry) : strokeGeometry;
@@ -365,21 +546,24 @@ public partial class PaintOverlayWindow
             stroke.InkFlow = calligraphyRenderer.LastInkFlow;
             stroke.StrokeDirectionX = calligraphyRenderer.LastStrokeDirection.X;
             stroke.StrokeDirectionY = calligraphyRenderer.LastStrokeDirection.Y;
-            var blooms = calligraphyRenderer.GetInkBloomGeometries();
-            if (blooms != null)
+            if (!CalligraphySinglePassCompositeEnabled)
             {
-                foreach (var bloom in blooms)
+                var blooms = calligraphyRenderer.GetInkBloomGeometries();
+                if (blooms != null)
                 {
-                    var bloomGeometry = _photoModeActive ? ToPhotoGeometry(bloom.Geometry) : bloom.Geometry;
-                    if (bloomGeometry == null)
+                    foreach (var bloom in blooms)
                     {
-                        continue;
+                        var bloomGeometry = _photoModeActive ? ToPhotoGeometry(bloom.Geometry) : bloom.Geometry;
+                        if (bloomGeometry == null)
+                        {
+                            continue;
+                        }
+                        stroke.Blooms.Add(new InkBloomData
+                        {
+                            GeometryPath = InkGeometrySerializer.Serialize(bloomGeometry),
+                            Opacity = bloom.Opacity
+                        });
                     }
-                    stroke.Blooms.Add(new InkBloomData
-                    {
-                        GeometryPath = InkGeometrySerializer.Serialize(bloomGeometry),
-                        Opacity = bloom.Opacity
-                    });
                 }
             }
         }
@@ -396,6 +580,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        stroke.MaskSeed = ComputeDeterministicMaskSeed(stroke);
         CommitStroke(stroke);
     }
 
@@ -422,7 +607,7 @@ public partial class PaintOverlayWindow
             ColorHex = ToHex(EffectiveBrushColor()),
             Opacity = _brushOpacity,
             BrushSize = _brushSize,
-            MaskSeed = _inkSeedRandom.Next(),
+            CalligraphyRenderMode = CalligraphyRenderMode.Clarity,
             GeometryPath = InkGeometrySerializer.Serialize(storeGeometry)
         };
         if (TryGetCurrentPhotoReferenceSize(out var refWidth, out var refHeight))
@@ -434,7 +619,74 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        stroke.MaskSeed = ComputeDeterministicMaskSeed(stroke);
         CommitStroke(stroke);
+    }
+
+    private static int ComputeDeterministicMaskSeed(InkStrokeData stroke)
+    {
+        uint hash = 2166136261u;
+        hash = Fnv1a(hash, stroke.Type);
+        hash = Fnv1a(hash, stroke.BrushStyle);
+        hash = Fnv1a(hash, stroke.CalligraphyRenderMode);
+        hash = Fnv1a(hash, stroke.ColorHex);
+        hash = Fnv1a(hash, Quantize(stroke.BrushSize, 1000.0));
+        hash = Fnv1a(hash, stroke.GeometryPath);
+        int seed = unchecked((int)hash);
+        return seed == 0 ? 17 : seed;
+    }
+
+    private static uint Fnv1a(uint hash, PaintBrushStyle value)
+    {
+        return Fnv1a(hash, (int)value);
+    }
+
+    private static uint Fnv1a(uint hash, InkStrokeType value)
+    {
+        return Fnv1a(hash, (int)value);
+    }
+
+    private static uint Fnv1a(uint hash, CalligraphyRenderMode value)
+    {
+        return Fnv1a(hash, (int)value);
+    }
+
+    private static uint Fnv1a(uint hash, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return Fnv1a(hash, 0);
+        }
+
+        unchecked
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                hash ^= value[i];
+                hash *= 16777619u;
+            }
+        }
+        return hash;
+    }
+
+    private static uint Fnv1a(uint hash, int value)
+    {
+        unchecked
+        {
+            hash ^= (uint)value;
+            hash *= 16777619u;
+        }
+        return hash;
+    }
+
+    private static int Quantize(double value, double scale)
+    {
+        if (!double.IsFinite(value))
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(value * scale);
     }
 
     private bool ApplyInkErase(Geometry geometry)
@@ -478,6 +730,32 @@ public partial class PaintOverlayWindow
                         continue;
                     }
                     bloom.GeometryPath = bloomUpdated;
+                }
+            }
+            if (stroke.Ribbons.Count > 0)
+            {
+                bool ribbonsChanged = false;
+                for (int j = stroke.Ribbons.Count - 1; j >= 0; j--)
+                {
+                    var ribbon = stroke.Ribbons[j];
+                    var ribbonUpdated = ExcludeGeometryWithFallback(ribbon.GeometryPath, erasePrimary, eraseFallback);
+                    if (string.IsNullOrWhiteSpace(ribbonUpdated))
+                    {
+                        stroke.Ribbons.RemoveAt(j);
+                        ribbonsChanged = true;
+                        changed = true;
+                        continue;
+                    }
+                    if (!string.Equals(ribbonUpdated, ribbon.GeometryPath, StringComparison.Ordinal))
+                    {
+                        ribbon.GeometryPath = ribbonUpdated;
+                        ribbonsChanged = true;
+                        changed = true;
+                    }
+                }
+                if (ribbonsChanged)
+                {
+                    stroke.CachedRibbonGeometries = null;
                 }
             }
             changed = true;
@@ -692,7 +970,15 @@ public partial class PaintOverlayWindow
                 .Append(stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
                 .Append(stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
                 .Append(stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
-                .Append(stroke.GeometryPath ?? string.Empty).Append('\n');
+                .Append(stroke.GeometryPath ?? string.Empty).Append('|')
+                .Append(stroke.Ribbons.Count).Append('|');
+            foreach (var ribbon in stroke.Ribbons)
+            {
+                builder.Append(ribbon.GeometryPath ?? string.Empty).Append('@')
+                    .Append(ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append('@')
+                    .Append(ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture)).Append(';');
+            }
+            builder.Append('\n');
         }
 
         var bytes = Encoding.UTF8.GetBytes(builder.ToString());

@@ -2,6 +2,7 @@
     [string]$CommitMessage = "模块迁移：本地自动提交",
     [switch]$SkipCommit,
     [switch]$SkipTests,
+    [switch]$BrushBaseline,
     [switch]$SmokeZOrder,
     [switch]$SmokeZOrderAuto,
     [switch]$SmokeNonInteractive
@@ -47,6 +48,19 @@ dotnet build .\ClassroomToolkit.sln -c Debug
 if (-not $SkipTests) {
     Write-Host "==> 测试" -ForegroundColor Cyan
     dotnet test .\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj -c Debug
+}
+
+if ($BrushBaseline) {
+    Write-Host "==> 画笔质量基线采集" -ForegroundColor Cyan
+    $baselineScript = Join-Path $PSScriptRoot "collect-brush-quality-baseline.ps1"
+    if (-not (Test-Path $baselineScript)) {
+        throw "未找到基线脚本: $baselineScript"
+    }
+
+    & powershell -ExecutionPolicy Bypass -File $baselineScript -Configuration Debug -SkipRestore -SkipBuild
+    if ($LASTEXITCODE -ne 0) {
+        throw "画笔质量基线采集失败，退出码: $LASTEXITCODE"
+    }
 }
 
 if ($SmokeZOrder) {

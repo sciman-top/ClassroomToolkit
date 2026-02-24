@@ -35,7 +35,9 @@
       "Bash(git reset:*)",
       "Bash(Select-String:*)",
       "Bash(Select-Object -First 20)",
-      "Bash(Select-Object -First 5)"
+      "Bash(Select-Object -First 5)",
+      "Bash(dotnet msbuild:*)",
+      "Bash(ls:*)"
     ]
   }
 }

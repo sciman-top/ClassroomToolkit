@@ -130,8 +130,15 @@ public partial class PaintOverlayWindow
             InkFlow = stroke.InkFlow,
             StrokeDirectionX = stroke.StrokeDirectionX,
             StrokeDirectionY = stroke.StrokeDirectionY,
+            CalligraphyRenderMode = stroke.CalligraphyRenderMode,
             ReferenceWidth = stroke.ReferenceWidth,
             ReferenceHeight = stroke.ReferenceHeight,
+            Ribbons = stroke.Ribbons.Select(ribbon => new InkRibbonData
+            {
+                GeometryPath = ribbon.GeometryPath,
+                Opacity = ribbon.Opacity,
+                RibbonT = ribbon.RibbonT
+            }).ToList(),
             CalligraphyInkBloomEnabled = stroke.CalligraphyInkBloomEnabled,
             CalligraphySealEnabled = stroke.CalligraphySealEnabled,
             CalligraphyOverlayOpacityThreshold = stroke.CalligraphyOverlayOpacityThreshold,

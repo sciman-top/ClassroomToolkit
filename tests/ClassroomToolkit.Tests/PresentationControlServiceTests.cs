@@ -339,6 +339,68 @@ public sealed class PresentationControlServiceTests
         sender.WheelCalls.Should().Be(0);
     }
 
+    [Fact]
+    public void WpsDebounceMs_Zero_ShouldAllowImmediateRepeatedNavigation()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new RecordingInputSender();
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(planner, mapper, sender, resolver, validator);
+        var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
+        var target = new PresentationTarget(new IntPtr(1234), info);
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Auto,
+            WheelAsKey = true,
+            AllowWps = true,
+            WpsDebounceMs = 0
+        };
+
+        var first = service.TrySendToTarget(target, PresentationCommand.Next, options);
+        var second = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        first.Should().BeTrue();
+        second.Should().BeTrue();
+        sender.KeyCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void WpsRawFallback_WhenLockDisabled_ShouldRetryRawOnNextCommand()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new StrategyAwareInputSender();
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
+        var target = new PresentationTarget(new IntPtr(1234), info);
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = false,
+            WpsDebounceMs = 0
+        };
+
+        var first = service.TrySendToTarget(target, PresentationCommand.Next, options);
+        var second = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        first.Should().BeTrue();
+        second.Should().BeTrue();
+        sender.RawKeyAttempts.Should().Be(2);
+        sender.MessageKeyAttempts.Should().Be(2);
+    }
+
     private sealed class RecordingInputSender : IInputSender
     {
         public int KeyCalls { get; private set; }
@@ -372,6 +434,29 @@ public sealed class PresentationControlServiceTests
     private sealed class MockValidator : IPresentationWindowValidator
     {
         public bool IsWindowValid(IntPtr hwnd) => true;
+    }
+
+    private sealed class StrategyAwareInputSender : IInputSender
+    {
+        public int RawKeyAttempts { get; private set; }
+        public int MessageKeyAttempts { get; private set; }
+
+        public bool SendKey(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, InputStrategy strategy, bool keyDownOnly)
+        {
+            if (strategy == InputStrategy.Raw)
+            {
+                RawKeyAttempts++;
+                return false;
+            }
+
+            MessageKeyAttempts++;
+            return true;
+        }
+
+        public bool SendWheel(IntPtr hwnd, int delta, InputStrategy strategy)
+        {
+            return false;
+        }
     }
 
     private sealed class StubForegroundController : IForegroundWindowController

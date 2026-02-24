@@ -27,6 +27,7 @@ internal static class InkStrokeEraseUpdater
         stroke.GeometryPath = updatedPath;
         stroke.CachedGeometry = null;
         stroke.CachedBounds = null;
+        stroke.CachedRibbonGeometries = null;
         return true;
     }
 }

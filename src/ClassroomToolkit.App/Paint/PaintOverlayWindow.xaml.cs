@@ -65,10 +65,14 @@ public partial class PaintOverlayWindow : Window
     private const int CrossPageUpdateMinIntervalMs = 24;
     
     /// <summary>鐓х墖婊氳疆缂╂斁鍩烘暟 - 姣忔婊氳疆鍒诲害鐨勭缉鏀剧郴鏁帮紙鎺ヨ繎 1.0 浣跨缉鏀惧钩婊戯級</summary>
-    private const double PhotoWheelZoomBase = 1.0008;
+    private const double PhotoWheelZoomBaseDefault = 1.0008;
     
     /// <summary>鐓х墖鎸夐敭缂╂斁姝ヨ繘 - 浣跨敤 +/- 閿椂鐨勭缉鏀惧箙搴?/summary>
     private const double PhotoKeyZoomStep = 1.06;
+    private const double PhotoGestureZoomNoiseThreshold = 0.01;
+    private const double PhotoZoomMinEventFactor = 0.85;
+    private const double PhotoZoomMaxEventFactor = 1.18;
+    private const int PhotoWheelSuppressAfterGestureMs = 180;
 
     private IntPtr _hwnd;
     private bool _inputPassthroughEnabled;
@@ -107,6 +111,7 @@ public partial class PaintOverlayWindow : Window
 
 
     private WpfPoint? _lastPointerPosition;
+    private DateTime _lastPhotoGestureInputUtc = DateTime.MinValue;
     private bool _presentationFocusRestoreEnabled = false;
 
     private readonly RefreshOrchestrator _refreshOrchestrator;
@@ -129,6 +134,7 @@ public partial class PaintOverlayWindow : Window
     private const double PdfDefaultDpi = 96;
     private const int PdfCacheLimit = 6;
     private bool _photoModeActive;
+    private bool _photoInputTelemetryEnabled;
     private bool _photoFullscreen;
     private bool _photoLoading;
     private bool _photoCrossPageDisplayEnabled;
@@ -160,6 +166,8 @@ public partial class PaintOverlayWindow : Window
     private int _pdfVisiblePrefetchInFlight;
     private int _pdfVisiblePrefetchToken;
     private int _photoLoadToken;
+    private double _photoWheelZoomBase = PhotoWheelZoomBaseDefault;
+    private double _photoGestureZoomSensitivity = 1.0;
     private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _neighborInkSidecarLoadPending = new(StringComparer.OrdinalIgnoreCase);
     private bool _rememberPhotoTransform;
@@ -187,6 +195,7 @@ public partial class PaintOverlayWindow : Window
     private bool _crossPageDragging;
     private bool _crossPageTranslateClamped;
     private bool _crossPageUpdateDeferredByInkInput;
+    private int _photoPostInputRefreshDelayMs = 120;
     private DateTime _lastCrossPagePointerUpUtc = DateTime.MinValue;
     private int _crossPagePostInputRefreshToken;
     private int _crossPageMissingBitmapRefreshToken;
@@ -319,6 +328,8 @@ public partial class PaintOverlayWindow : Window
         {
             Strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Auto,
             WheelAsKey = false,
+            WpsDebounceMs = 200,
+            LockStrategyWhenDegraded = true,
             AllowOffice = true,
             AllowWps = true
         };
@@ -578,6 +589,66 @@ public partial class PaintOverlayWindow : Window
         _calligraphyOverlayOpacityThreshold = threshold;
     }
 
+    public void SetClassroomWritingMode(ClassroomWritingMode mode)
+    {
+        _classroomWritingMode = mode;
+        _stylusPressureAnalyzer.Reset();
+        _stylusPressureCalibrator.Reset();
+        _stylusDeviceAdaptiveProfiler.Reset();
+        ApplyClassroomRuntimeProfile();
+        EnsureActiveRenderer(force: true);
+    }
+
+    public void RestoreStylusAdaptiveState(
+        int pressureProfile,
+        int sampleRateTier,
+        int predictionHorizonMs,
+        double calibratedLow,
+        double calibratedHigh)
+    {
+        StylusPressureDeviceProfile resolvedPressure = StylusPressureDeviceProfile.Unknown;
+        StylusSampleRateTier resolvedRate = StylusSampleRateTier.Unknown;
+
+        if (Enum.IsDefined(typeof(StylusPressureDeviceProfile), pressureProfile))
+        {
+            resolvedPressure = (StylusPressureDeviceProfile)pressureProfile;
+        }
+        if (Enum.IsDefined(typeof(StylusSampleRateTier), sampleRateTier))
+        {
+            resolvedRate = (StylusSampleRateTier)sampleRateTier;
+        }
+
+        _stylusDeviceAdaptiveProfiler.Seed(resolvedPressure, resolvedRate, predictionHorizonMs);
+        if (calibratedHigh - calibratedLow >= 0.01)
+        {
+            _stylusPressureCalibrator.SeedRange(calibratedLow, calibratedHigh);
+        }
+        ApplyClassroomRuntimeProfile();
+        EnsureActiveRenderer(force: true);
+    }
+
+    public bool TryGetStylusAdaptiveState(
+        out int pressureProfile,
+        out int sampleRateTier,
+        out int predictionHorizonMs,
+        out double calibratedLow,
+        out double calibratedHigh)
+    {
+        var profile = _stylusDeviceAdaptiveProfiler.CurrentProfile;
+        pressureProfile = (int)profile.PressureProfile;
+        sampleRateTier = (int)profile.SampleRateTier;
+        predictionHorizonMs = profile.PredictionHorizonMs;
+
+        if (_stylusPressureCalibrator.TryExportRange(out calibratedLow, out calibratedHigh))
+        {
+            return true;
+        }
+
+        calibratedLow = 0.0;
+        calibratedHigh = 1.0;
+        return pressureProfile != 0 || sampleRateTier != 0;
+    }
+
     public void SetBrushTuning(WhiteboardBrushPreset whiteboardPreset, CalligraphyBrushPreset calligraphyPreset)
     {
         _whiteboardPreset = whiteboardPreset;
@@ -594,18 +665,60 @@ public partial class PaintOverlayWindow : Window
         SetMode(_mode);
     }
 
+    private void ApplyClassroomRuntimeProfile()
+    {
+        var runtime = ClassroomWritingModeTuner.ResolveRuntimeSettings(_classroomWritingMode);
+        _stylusPseudoPressureLowThreshold = runtime.PseudoPressureLowThreshold;
+        _stylusPseudoPressureHighThreshold = runtime.PseudoPressureHighThreshold;
+        _calligraphyPreviewMinDistance = runtime.CalligraphyPreviewMinDistance;
+        _brushPredictionHorizonMs = _stylusDeviceAdaptiveProfiler.CurrentProfile.PredictionHorizonMs;
+    }
+
+    private MarkerBrushConfig BuildMarkerConfig()
+    {
+        var config = _whiteboardPreset switch
+        {
+            WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
+            WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
+            _ => MarkerBrushConfig.Smooth
+        };
+
+        ClassroomWritingModeTuner.ApplyToMarkerConfig(config, _classroomWritingMode);
+        StylusDeviceAdaptiveProfiler.ApplyToMarkerConfig(config, _stylusDeviceAdaptiveProfiler.CurrentProfile);
+        return config;
+    }
+
+    private BrushPhysicsConfig BuildCalligraphyConfig()
+    {
+        _calligraphyRenderMode = ResolveCalligraphyRenderMode(_calligraphyPreset);
+        var config = _calligraphyPreset switch
+        {
+            CalligraphyBrushPreset.Sharp => BrushPhysicsConfig.CreateCalligraphySharp(),
+            CalligraphyBrushPreset.Soft => BrushPhysicsConfig.CreateCalligraphyInkFeel(),
+            _ => BrushPhysicsConfig.CreateCalligraphyClarity()
+        };
+
+        ClassroomWritingModeTuner.ApplyToCalligraphyConfig(config, _classroomWritingMode);
+        StylusDeviceAdaptiveProfiler.ApplyToCalligraphyConfig(config, _stylusDeviceAdaptiveProfiler.CurrentProfile);
+        return config;
+    }
+
+    private static CalligraphyRenderMode ResolveCalligraphyRenderMode(CalligraphyBrushPreset preset)
+    {
+        return preset == CalligraphyBrushPreset.Soft
+            ? CalligraphyRenderMode.Ink
+            : CalligraphyRenderMode.Clarity;
+    }
+
     private void EnsureActiveRenderer(bool force = false)
     {
+        ApplyClassroomRuntimeProfile();
+
         if (_brushStyle == PaintBrushStyle.Calligraphy)
         {
             if (force || _activeRenderer is not VariableWidthBrushRenderer)
             {
-                var config = _calligraphyPreset switch
-                {
-                    CalligraphyBrushPreset.Sharp => BrushPhysicsConfig.CreateCalligraphySharp(),
-                    CalligraphyBrushPreset.Soft => BrushPhysicsConfig.CreateCalligraphySoft(),
-                    _ => BrushPhysicsConfig.CreateCalligraphyBalanced()
-                };
+                var config = BuildCalligraphyConfig();
                 _activeRenderer = new VariableWidthBrushRenderer(config);
             }
             return;
@@ -614,24 +727,14 @@ public partial class PaintOverlayWindow : Window
         {
             if (force || _activeRenderer is not MarkerBrushRenderer marker || marker.RenderMode != MarkerRenderMode.Ribbon)
             {
-                var config = _whiteboardPreset switch
-                {
-                    WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
-                    WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
-                    _ => MarkerBrushConfig.Smooth
-                };
+                var config = BuildMarkerConfig();
                 _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon, config);
             }
             return;
         }
         if (force || _activeRenderer is not MarkerBrushRenderer)
         {
-            var config = _whiteboardPreset switch
-            {
-                WhiteboardBrushPreset.Sharp => MarkerBrushConfig.Sharp,
-                WhiteboardBrushPreset.Balanced => MarkerBrushConfig.Balanced,
-                _ => MarkerBrushConfig.Smooth
-            };
+            var config = BuildMarkerConfig();
             _activeRenderer = new MarkerBrushRenderer(MarkerRenderMode.SegmentUnion, config);
         }
     }

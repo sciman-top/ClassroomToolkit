@@ -190,6 +190,13 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         
         OverlayWindow.SetMode(PaintToolMode.Brush);
         OverlayWindow.SetBrush(settings.BrushColor, settings.BrushSize, settings.BrushOpacity);
+        OverlayWindow.SetClassroomWritingMode(settings.ClassroomWritingMode);
+        OverlayWindow.RestoreStylusAdaptiveState(
+            settings.StylusAdaptivePressureProfile,
+            settings.StylusAdaptiveSampleRateTier,
+            settings.StylusAdaptivePredictionHorizonMs,
+            settings.StylusPressureCalibratedLow,
+            settings.StylusPressureCalibratedHigh);
         OverlayWindow.SetBrushStyle(settings.BrushStyle);
         OverlayWindow.SetBrushTuning(settings.WhiteboardPreset, settings.CalligraphyPreset);
         OverlayWindow.SetCalligraphyOptions(settings.CalligraphyInkBloomEnabled, settings.CalligraphySealEnabled);
@@ -210,6 +217,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         OverlayWindow.UpdateWpsMode(settings.WpsInputMode);
         OverlayWindow.UpdateWpsWheelMapping(settings.WpsWheelForward);
+        OverlayWindow.UpdateWpsDebounceMs(settings.WpsDebounceMs);
+        OverlayWindow.UpdatePresentationDegradeLock(settings.PresentationLockStrategyWhenDegraded);
         OverlayWindow.UpdatePresentationTargets(settings.ControlMsPpt, settings.ControlWpsPpt);
         OverlayWindow.UpdatePresentationForegroundPolicy(settings.ForcePresentationForegroundOnFullscreen);
         OverlayWindow.UpdateInkCacheEnabled(settings.InkCacheEnabled);
@@ -220,7 +229,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.UpdateInkPhotoRootPath(settings.InkPhotoRootPath);
         OverlayWindow.UpdatePhotoTransformMemoryEnabled(settings.PhotoRememberTransform);
         OverlayWindow.UpdateCrossPageDisplayEnabled(settings.PhotoCrossPageDisplay);
+        OverlayWindow.UpdatePhotoInputTelemetryEnabled(settings.PhotoInputTelemetryEnabled);
         OverlayWindow.UpdateNeighborPrefetchRadiusMax(settings.PhotoNeighborPrefetchRadiusMax);
+        OverlayWindow.UpdatePhotoPostInputRefreshDelayMs(settings.PhotoPostInputRefreshDelayMs);
+        OverlayWindow.UpdatePhotoZoomTuning(settings.PhotoWheelZoomBase, settings.PhotoGestureZoomSensitivity);
         OverlayWindow.SetPhotoUnifiedTransformState(
             settings.PhotoUnifiedTransformEnabled,
             settings.PhotoUnifiedScaleX,

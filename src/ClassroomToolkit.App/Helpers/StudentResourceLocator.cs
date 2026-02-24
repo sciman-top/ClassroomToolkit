@@ -25,7 +25,7 @@ public static class StudentResourceLocator
 
     private static string ResolveResourceRoot()
     {
-        var solutionDir = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory, Environment.CurrentDirectory);
+        var solutionDir = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory);
         if (!string.IsNullOrWhiteSpace(solutionDir))
         {
             return solutionDir;

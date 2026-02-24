@@ -284,6 +284,21 @@ public partial class PaintOverlayWindow
         UpdateFocusAcceptance();
     }
 
+    public void UpdateWpsDebounceMs(int debounceMs)
+    {
+        _presentationOptions.WpsDebounceMs = Math.Max(0, debounceMs);
+    }
+
+    public void UpdatePresentationDegradeLock(bool enabled)
+    {
+        _presentationOptions.LockStrategyWhenDegraded = enabled;
+        if (!enabled)
+        {
+            _presentationService.ResetWpsAutoFallback();
+            _presentationService.ResetOfficeAutoFallback();
+        }
+    }
+
     public void UpdatePresentationTargets(bool allowOffice, bool allowWps)
     {
         _presentationOptions.AllowOffice = allowOffice;
@@ -522,6 +537,8 @@ public partial class PaintOverlayWindow
         {
             Strategy = _presentationOptions.Strategy,
             WheelAsKey = _presentationOptions.WheelAsKey,
+            WpsDebounceMs = _presentationOptions.WpsDebounceMs,
+            LockStrategyWhenDegraded = _presentationOptions.LockStrategyWhenDegraded,
             AllowOffice = true,
             AllowWps = false
         };
@@ -590,6 +607,8 @@ public partial class PaintOverlayWindow
         {
             Strategy = strategy,
             WheelAsKey = _presentationOptions.WheelAsKey,
+            WpsDebounceMs = _presentationOptions.WpsDebounceMs,
+            LockStrategyWhenDegraded = _presentationOptions.LockStrategyWhenDegraded,
             AllowOffice = false,
             AllowWps = true
         };
@@ -911,6 +930,7 @@ public partial class PaintOverlayWindow
         Debug.WriteLine(
             $"[PresentationState] reason={reason}; allowWps={_presentationOptions.AllowWps}; allowOffice={_presentationOptions.AllowOffice}; " +
             $"mode={_presentationOptions.Strategy}; wheelAsKey={_presentationOptions.WheelAsKey}; " +
+            $"wpsDebounceMs={_presentationOptions.WpsDebounceMs}; lockOnDegrade={_presentationOptions.LockStrategyWhenDegraded}; " +
             $"hookActive={_wpsNavHookActive}; hookKeyboard={_wpsHookInterceptKeyboard}; hookWheel={_wpsHookInterceptWheel}; " +
             $"forceMessage={_wpsForceMessageFallback}; photoMode={_photoModeActive}; boardMode={IsBoardActive()}; " +
             $"fullscreen={_presentationFullscreenActive}; fgType={_foregroundPresentationType}; currentType={_currentPresentationType}");

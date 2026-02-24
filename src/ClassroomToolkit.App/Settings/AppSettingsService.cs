@@ -81,6 +81,28 @@ public sealed class AppSettingsService
             settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
             settings.WhiteboardPreset = ResolveWhiteboardPreset(paint, settings.WhiteboardPreset);
             settings.CalligraphyPreset = ResolveCalligraphyPreset(paint, settings.CalligraphyPreset);
+            settings.PresetScheme = GetString(paint, "preset_scheme", settings.PresetScheme);
+            settings.ClassroomWritingMode = ResolveClassroomWritingMode(paint, settings.ClassroomWritingMode);
+            settings.StylusAdaptivePressureProfile = GetInt(
+                paint,
+                "stylus_adaptive_pressure_profile",
+                settings.StylusAdaptivePressureProfile);
+            settings.StylusAdaptiveSampleRateTier = GetInt(
+                paint,
+                "stylus_adaptive_sample_rate_tier",
+                settings.StylusAdaptiveSampleRateTier);
+            settings.StylusAdaptivePredictionHorizonMs = GetInt(
+                paint,
+                "stylus_adaptive_prediction_horizon_ms",
+                settings.StylusAdaptivePredictionHorizonMs);
+            settings.StylusPressureCalibratedLow = GetDouble(
+                paint,
+                "stylus_pressure_calibrated_low",
+                settings.StylusPressureCalibratedLow);
+            settings.StylusPressureCalibratedHigh = GetDouble(
+                paint,
+                "stylus_pressure_calibrated_high",
+                settings.StylusPressureCalibratedHigh);
             settings.CalligraphyInkBloomEnabled = GetBool(
                 paint,
                 "calligraphy_ink_bloom_enabled",
@@ -107,6 +129,11 @@ public sealed class AppSettingsService
                 paint,
                 "force_presentation_foreground_on_fullscreen",
                 settings.ForcePresentationForegroundOnFullscreen);
+            settings.WpsDebounceMs = GetInt(paint, "wps_debounce_ms", settings.WpsDebounceMs);
+            settings.PresentationLockStrategyWhenDegraded = GetBool(
+                paint,
+                "presentation_lock_strategy_when_degraded",
+                settings.PresentationLockStrategyWhenDegraded);
             settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
             settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
             settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
@@ -123,8 +150,21 @@ public sealed class AppSettingsService
             settings.PhotoRecentFolders = ParseList(GetString(paint, "photo_recent_folders", string.Empty));
             settings.PhotoRememberTransform = GetBool(paint, "photo_remember_transform", settings.PhotoRememberTransform);
             settings.PhotoCrossPageDisplay = GetBool(paint, "photo_cross_page_display", settings.PhotoCrossPageDisplay);
+            settings.PhotoInputTelemetryEnabled = GetBool(paint, "photo_input_telemetry_enabled", settings.PhotoInputTelemetryEnabled);
             settings.PhotoNeighborPrefetchRadiusMax = GetInt(paint, "photo_neighbor_prefetch_radius_max", settings.PhotoNeighborPrefetchRadiusMax);
+            settings.PhotoPostInputRefreshDelayMs = GetInt(
+                paint,
+                "photo_post_input_refresh_delay_ms",
+                settings.PhotoPostInputRefreshDelayMs);
+            settings.PhotoWheelZoomBase = GetDouble(paint, "photo_wheel_zoom_base", settings.PhotoWheelZoomBase);
+            settings.PhotoGestureZoomSensitivity = GetDouble(
+                paint,
+                "photo_gesture_zoom_sensitivity",
+                settings.PhotoGestureZoomSensitivity);
             settings.PhotoShowInkOverlay = GetBool(paint, "photo_show_ink_overlay", settings.PhotoShowInkOverlay);
+            settings.PhotoManagerWindowWidth = GetInt(paint, "photo_manager_window_width", settings.PhotoManagerWindowWidth);
+            settings.PhotoManagerWindowHeight = GetInt(paint, "photo_manager_window_height", settings.PhotoManagerWindowHeight);
+            settings.PhotoManagerLeftPanelRatio = GetDouble(paint, "photo_manager_left_panel_ratio", settings.PhotoManagerLeftPanelRatio);
             settings.PhotoUnifiedTransformEnabled = GetBool(
                 paint,
                 "photo_unified_transform_enabled",
@@ -207,6 +247,13 @@ public sealed class AppSettingsService
         paint["brush_style"] = settings.BrushStyle.ToString();
         paint["whiteboard_preset"] = settings.WhiteboardPreset.ToString();
         paint["calligraphy_preset"] = settings.CalligraphyPreset.ToString();
+        paint["preset_scheme"] = string.IsNullOrWhiteSpace(settings.PresetScheme) ? "custom" : settings.PresetScheme;
+        paint["classroom_writing_mode"] = settings.ClassroomWritingMode.ToString();
+        paint["stylus_adaptive_pressure_profile"] = settings.StylusAdaptivePressureProfile.ToString(CultureInfo.InvariantCulture);
+        paint["stylus_adaptive_sample_rate_tier"] = settings.StylusAdaptiveSampleRateTier.ToString(CultureInfo.InvariantCulture);
+        paint["stylus_adaptive_prediction_horizon_ms"] = settings.StylusAdaptivePredictionHorizonMs.ToString(CultureInfo.InvariantCulture);
+        paint["stylus_pressure_calibrated_low"] = settings.StylusPressureCalibratedLow.ToString("0.####", CultureInfo.InvariantCulture);
+        paint["stylus_pressure_calibrated_high"] = settings.StylusPressureCalibratedHigh.ToString("0.####", CultureInfo.InvariantCulture);
         paint["calligraphy_ink_bloom_enabled"] = settings.CalligraphyInkBloomEnabled ? "True" : "False";
         paint["calligraphy_seal_enabled"] = settings.CalligraphySealEnabled ? "True" : "False";
         paint["calligraphy_overlay_opacity_threshold"] =
@@ -225,6 +272,9 @@ public sealed class AppSettingsService
         paint["wps_wheel_forward"] = settings.WpsWheelForward ? "True" : "False";
         paint["force_presentation_foreground_on_fullscreen"] =
             settings.ForcePresentationForegroundOnFullscreen ? "True" : "False";
+        paint["wps_debounce_ms"] = settings.WpsDebounceMs.ToString(CultureInfo.InvariantCulture);
+        paint["presentation_lock_strategy_when_degraded"] =
+            settings.PresentationLockStrategyWhenDegraded ? "True" : "False";
         paint["shape_type"] = settings.ShapeType.ToString();
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);
@@ -241,8 +291,15 @@ public sealed class AppSettingsService
         paint["photo_recent_folders"] = JoinList(settings.PhotoRecentFolders);
         paint["photo_remember_transform"] = settings.PhotoRememberTransform ? "True" : "False";
         paint["photo_cross_page_display"] = settings.PhotoCrossPageDisplay ? "True" : "False";
+        paint["photo_input_telemetry_enabled"] = settings.PhotoInputTelemetryEnabled ? "True" : "False";
         paint["photo_neighbor_prefetch_radius_max"] = settings.PhotoNeighborPrefetchRadiusMax.ToString(CultureInfo.InvariantCulture);
+        paint["photo_post_input_refresh_delay_ms"] = settings.PhotoPostInputRefreshDelayMs.ToString(CultureInfo.InvariantCulture);
+        paint["photo_wheel_zoom_base"] = settings.PhotoWheelZoomBase.ToString("0.####", CultureInfo.InvariantCulture);
+        paint["photo_gesture_zoom_sensitivity"] = settings.PhotoGestureZoomSensitivity.ToString("0.###", CultureInfo.InvariantCulture);
         paint["photo_show_ink_overlay"] = settings.PhotoShowInkOverlay ? "True" : "False";
+        paint["photo_manager_window_width"] = settings.PhotoManagerWindowWidth.ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_window_height"] = settings.PhotoManagerWindowHeight.ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_left_panel_ratio"] = settings.PhotoManagerLeftPanelRatio.ToString("0.####", CultureInfo.InvariantCulture);
         paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
         paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
         paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
@@ -408,6 +465,17 @@ public sealed class AppSettingsService
         {
             bool legacy = GetBool(section, "calligraphy_sharp_mode", true);
             return legacy ? CalligraphyBrushPreset.Sharp : CalligraphyBrushPreset.Soft;
+        }
+
+        return fallback;
+    }
+
+    private static ClassroomWritingMode ResolveClassroomWritingMode(Dictionary<string, string> section, ClassroomWritingMode fallback)
+    {
+        if (section.TryGetValue("classroom_writing_mode", out var raw) &&
+            Enum.TryParse<ClassroomWritingMode>(raw, true, out var parsed))
+        {
+            return parsed;
         }
 
         return fallback;

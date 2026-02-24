@@ -74,9 +74,24 @@ public partial class RollCallWindow
         }
     }
 
+    /// <summary>
+    /// 统一的隐藏点名窗口操作：保存状态、隐藏照片叠加、更新组名显示。
+    /// 用于关闭按钮和启动器"隐藏点名"按钮的归一处理。
+    /// </summary>
+    public void HideRollCall()
+    {
+        Hide();
+        HidePhotoOverlay();
+        UpdateGroupNameDisplay();
+        PersistSettings();
+        _viewModel.SaveState();
+        _rollStateSaveTimer.Stop();
+        _rollStateDirty = false;
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
-        Close();
+        HideRollCall();
     }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -84,13 +99,7 @@ public partial class RollCallWindow
         if (!_allowClose)
         {
             e.Cancel = true;
-            Hide();
-            HidePhotoOverlay();
-            UpdateGroupNameDisplay();
-            PersistSettings();
-            _viewModel.SaveState();
-            _rollStateSaveTimer.Stop();
-            _rollStateDirty = false;
+            HideRollCall();
             return;
         }
         _timer.Stop();

@@ -56,14 +56,37 @@ public partial class PaintOverlayWindow
 
     private void ZoomPhoto(int delta, WpfPoint center)
     {
-        double scaleFactor = Math.Pow(PhotoWheelZoomBase, delta);
-        ApplyPhotoScale(scaleFactor, center);
+        ApplyPhotoZoomInput(PhotoZoomInputSource.Wheel, delta, center);
     }
 
     private void ZoomPhotoByFactor(double scaleFactor)
     {
         var center = new WpfPoint(OverlayRoot.ActualWidth / 2.0, OverlayRoot.ActualHeight / 2.0);
+        ApplyPhotoZoomInput(PhotoZoomInputSource.Keyboard, scaleFactor, center);
+    }
+
+    private void ApplyPhotoZoomInput(PhotoZoomInputSource source, double rawValue, WpfPoint center)
+    {
+        if (!PhotoZoomNormalizer.TryNormalizeFactor(
+                source,
+                rawValue,
+                _photoWheelZoomBase,
+                _photoGestureZoomSensitivity,
+                PhotoGestureZoomNoiseThreshold,
+                PhotoZoomMinEventFactor,
+                PhotoZoomMaxEventFactor,
+                out var scaleFactor))
+        {
+            return;
+        }
+        LogPhotoInputTelemetry("zoom", $"source={source}; raw={rawValue:0.####}; factor={scaleFactor:0.####}");
         ApplyPhotoScale(scaleFactor, center);
+    }
+
+    public void UpdatePhotoZoomTuning(double wheelBase, double gestureSensitivity)
+    {
+        _photoWheelZoomBase = Math.Clamp(wheelBase, 1.0002, 1.0020);
+        _photoGestureZoomSensitivity = Math.Clamp(gestureSensitivity, 0.5, 1.8);
     }
 
     private void ApplyPhotoScale(double scaleFactor, WpfPoint center)
@@ -161,13 +184,26 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        _photoPanning = true;
-        _photoPanStart = e.GetPosition(OverlayRoot);
-        _photoPanOriginX = _photoTranslate.X;
-        _photoPanOriginY = _photoTranslate.Y;
-        OverlayRoot.CaptureMouse();
+        BeginPhotoPan(e.GetPosition(OverlayRoot), captureStylus: false);
         e.Handled = true;
         return true;
+    }
+
+    private void BeginPhotoPan(WpfPoint position, bool captureStylus)
+    {
+        _photoPanning = true;
+        _photoPanStart = position;
+        _photoPanOriginX = _photoTranslate.X;
+        _photoPanOriginY = _photoTranslate.Y;
+        LogPhotoInputTelemetry("pan-start", $"stylus={captureStylus}");
+        if (captureStylus)
+        {
+            Stylus.Capture(OverlayRoot);
+        }
+        else
+        {
+            OverlayRoot.CaptureMouse();
+        }
     }
 
     private void UpdatePhotoPan(WpfPoint point)
@@ -180,6 +216,7 @@ public partial class PaintOverlayWindow
         var delta = point - _photoPanStart;
         _photoTranslate.X = _photoPanOriginX + delta.X;
         _photoTranslate.Y = _photoPanOriginY + delta.Y;
+        ApplyPhotoPanBounds(allowResistance: true);
         // Enable cross-page display when dragging vertically
         if (_crossPageDisplayEnabled)
         {
@@ -187,7 +224,6 @@ public partial class PaintOverlayWindow
             {
                 _crossPageDragging = true;
             }
-            ApplyCrossPageBoundaryLimits();
         }
         UpdateNeighborTransformsForPan();
         if (_crossPageDisplayEnabled)
@@ -208,14 +244,112 @@ public partial class PaintOverlayWindow
         {
             OverlayRoot.ReleaseMouseCapture();
         }
+        if (OverlayRoot.IsStylusCaptured)
+        {
+            Stylus.Capture(null);
+        }
+        ApplyPhotoPanBounds(allowResistance: false);
         if (_crossPageDragging && _crossPageDisplayEnabled)
         {
             _crossPageDragging = false;
             _crossPageTranslateClamped = false;
             FinalizeCurrentPageFromScroll();
         }
+        LogPhotoInputTelemetry("pan-end", "commit");
         FlushPhotoTransformSave();
         RequestInkRedraw();
+    }
+
+    private void ApplyPhotoPanBounds(bool allowResistance)
+    {
+        if (!_photoModeActive || PhotoBackground.Source is not BitmapSource currentBitmap)
+        {
+            return;
+        }
+
+        if (_crossPageDisplayEnabled)
+        {
+            if (TryGetCrossPageBounds(
+                    currentBitmap,
+                    out var minX,
+                    out var maxX,
+                    out var minY,
+                    out var maxY,
+                    out _,
+                    includeSlack: allowResistance))
+            {
+                var originalX = _photoTranslate.X;
+                var originalY = _photoTranslate.Y;
+                _photoTranslate.X = PhotoPanLimiter.ApplyAxis(_photoTranslate.X, minX, maxX, allowResistance);
+                _photoTranslate.Y = PhotoPanLimiter.ApplyAxis(_photoTranslate.Y, minY, maxY, allowResistance);
+                _crossPageTranslateClamped = Math.Abs(originalX - _photoTranslate.X) > 0.5
+                    || Math.Abs(originalY - _photoTranslate.Y) > 0.5;
+            }
+            return;
+        }
+
+        if (TryGetSinglePagePanBounds(currentBitmap, out var singleMinX, out var singleMaxX, out var singleMinY, out var singleMaxY))
+        {
+            _photoTranslate.X = PhotoPanLimiter.ApplyAxis(_photoTranslate.X, singleMinX, singleMaxX, allowResistance);
+            _photoTranslate.Y = PhotoPanLimiter.ApplyAxis(_photoTranslate.Y, singleMinY, singleMaxY, allowResistance);
+        }
+    }
+
+    private bool TryGetSinglePagePanBounds(
+        BitmapSource bitmap,
+        out double minX,
+        out double maxX,
+        out double minY,
+        out double maxY)
+    {
+        minX = maxX = minY = maxY = 0;
+        var viewportWidth = OverlayRoot.ActualWidth;
+        if (viewportWidth <= 0)
+        {
+            viewportWidth = ActualWidth;
+        }
+        var viewportHeight = OverlayRoot.ActualHeight;
+        if (viewportHeight <= 0)
+        {
+            viewportHeight = ActualHeight;
+        }
+        if (viewportWidth <= 0 || viewportHeight <= 0)
+        {
+            return false;
+        }
+
+        var pageWidth = GetBitmapDisplayWidthInDip(bitmap) * _photoPageScale.ScaleX * _photoScale.ScaleX;
+        var pageHeight = GetBitmapDisplayHeightInDip(bitmap) * _photoPageScale.ScaleY * _photoScale.ScaleY;
+        if (pageWidth <= 0 || pageHeight <= 0)
+        {
+            return false;
+        }
+
+        if (pageWidth <= viewportWidth)
+        {
+            var centerX = (viewportWidth - pageWidth) * 0.5;
+            minX = centerX;
+            maxX = centerX;
+        }
+        else
+        {
+            minX = viewportWidth - pageWidth;
+            maxX = 0;
+        }
+
+        if (pageHeight <= viewportHeight)
+        {
+            var centerY = (viewportHeight - pageHeight) * 0.5;
+            minY = centerY;
+            maxY = centerY;
+        }
+        else
+        {
+            minY = viewportHeight - pageHeight;
+            maxY = 0;
+        }
+
+        return true;
     }
 
     private void EnsurePhotoTransformsWritable()

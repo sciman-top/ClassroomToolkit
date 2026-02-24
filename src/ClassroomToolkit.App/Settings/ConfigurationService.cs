@@ -7,7 +7,6 @@ public sealed class ConfigurationService : IConfigurationService
 {
     private const string AppSettingsFileName = "appsettings.json";
     private const string DefaultSettingsIniName = "settings.ini";
-    private const string SettingsIniOverrideEnv = "CTK_SETTINGS_INI";
     private const string SolutionFileName = "ClassroomToolkit.sln";
 
     public ConfigurationService()
@@ -17,9 +16,7 @@ public sealed class ConfigurationService : IConfigurationService
 
     public ConfigurationService(string? baseDirectory)
     {
-        BaseDirectory = string.IsNullOrWhiteSpace(baseDirectory)
-            ? AppDomain.CurrentDomain.BaseDirectory
-            : baseDirectory;
+        BaseDirectory = ResolveAppRootDirectory(baseDirectory);
         SettingsIniPath = ResolveSettingsIniPath();
     }
 
@@ -29,14 +26,6 @@ public sealed class ConfigurationService : IConfigurationService
 
     private string ResolveSettingsIniPath()
     {
-        var envOverride = Environment.GetEnvironmentVariable(SettingsIniOverrideEnv);
-        if (!string.IsNullOrWhiteSpace(envOverride))
-        {
-            return Path.IsPathRooted(envOverride)
-                ? envOverride
-                : Path.GetFullPath(Path.Combine(BaseDirectory, envOverride));
-        }
-
         var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
         if (!File.Exists(appSettingsPath))
         {
@@ -98,13 +87,24 @@ public sealed class ConfigurationService : IConfigurationService
 
     private string GetDefaultSettingsIniPath()
     {
-        var solutionDirectory = FindSolutionDirectory(BaseDirectory);
+        return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+    }
+
+    private static string ResolveAppRootDirectory(string? baseDirectory)
+    {
+        var start = string.IsNullOrWhiteSpace(baseDirectory)
+            ? AppDomain.CurrentDomain.BaseDirectory
+            : baseDirectory;
+
+        var normalizedStart = Path.GetFullPath(start);
+        var solutionDirectory = FindSolutionDirectory(normalizedStart);
         if (!string.IsNullOrWhiteSpace(solutionDirectory))
         {
-            return Path.Combine(solutionDirectory, DefaultSettingsIniName);
+            return solutionDirectory;
         }
 
-        return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+        // Publish/packaged mode: use executable directory as stable root.
+        return normalizedStart;
     }
 
     private static string? FindSolutionDirectory(string start)

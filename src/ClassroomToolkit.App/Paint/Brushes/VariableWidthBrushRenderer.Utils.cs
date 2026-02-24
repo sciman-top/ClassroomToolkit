@@ -76,6 +76,14 @@ public partial class VariableWidthBrushRenderer
         int count = _points.Count;
         var keep = new bool[count];
         var anchors = new List<int> { 0, 1, count - 2, count - 1 };
+        double cornerThreshold = Math.Clamp(_config.RdpCornerPreserveAngleDegrees, 12.0, 160.0);
+        for (int i = 1; i < count - 1; i++)
+        {
+            if (IsCornerCandidate(i, cornerThreshold))
+            {
+                anchors.Add(i);
+            }
+        }
         anchors = anchors.Where(index => index >= 0 && index < count).Distinct().OrderBy(index => index).ToList();
         foreach (var anchor in anchors)
         {
@@ -102,6 +110,35 @@ public partial class VariableWidthBrushRenderer
             _points.Clear();
             _points.AddRange(simplified);
         }
+    }
+
+    private bool IsCornerCandidate(int index, double thresholdDegrees)
+    {
+        if (index <= 0 || index >= _points.Count - 1)
+        {
+            return false;
+        }
+
+        var prev = _points[index - 1].Position;
+        var curr = _points[index].Position;
+        var next = _points[index + 1].Position;
+        var a = curr - prev;
+        var b = next - curr;
+        if (a.LengthSquared < 0.0001 || b.LengthSquared < 0.0001)
+        {
+            return false;
+        }
+
+        a.Normalize();
+        b.Normalize();
+        var angle = Math.Abs(Vector.AngleBetween(a, b));
+        if (angle < 1.0)
+        {
+            return false;
+        }
+
+        // Smaller interior angle should be preserved to avoid over-rounding corners.
+        return angle >= thresholdDegrees;
     }
 
     private void RdpRecursive(int start, int end, double epsSq, bool[] keep)

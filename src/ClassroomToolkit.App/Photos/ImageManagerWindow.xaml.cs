@@ -12,12 +12,18 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using ClassroomToolkit.Interop;
+using ClassroomToolkit.App.Settings;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
 
 namespace ClassroomToolkit.App.Photos;
 
 public partial class ImageManagerWindow : Window
 {
+    private const double DefaultLeftRatio = 2.0 / 7.0;
+    private const double MinLeftRatio = 0.22;
+    private const double MaxLeftRatio = 0.46;
+    private const double NarrowWindowThreshold = 1100.0;
+
     private IntPtr _hwnd;
     private readonly List<ImageItem> _navigableCache = new();
     private bool _navigableDirty = true;
@@ -26,6 +32,8 @@ public partial class ImageManagerWindow : Window
     private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
     private int _loadImagesRequestId;
     private bool _suppressKeyboardNavigation;
+    private bool _layoutApplying;
+    private double _preferredLeftRatio = DefaultLeftRatio;
 
     public ImageManagerViewModel ViewModel { get; }
 
@@ -50,8 +58,11 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
+        Loaded += (_, _) => ApplyAdaptiveLayout();
         PreviewKeyDown += OnPreviewKeyDown;
         Closing += (_, _) => BeginClose();
+        SizeChanged += (_, _) => ApplyAdaptiveLayout();
+        StateChanged += (_, _) => ApplyAdaptiveLayout();
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
@@ -62,6 +73,30 @@ public partial class ImageManagerWindow : Window
     public void SetKeyboardNavigationSuppressed(bool suppressed)
     {
         _suppressKeyboardNavigation = suppressed;
+    }
+
+    public void ApplyLayoutSettings(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (settings.PhotoManagerWindowWidth > 0)
+        {
+            Width = settings.PhotoManagerWindowWidth;
+        }
+        if (settings.PhotoManagerWindowHeight > 0)
+        {
+            Height = settings.PhotoManagerWindowHeight;
+        }
+
+        _preferredLeftRatio = NormalizeLeftRatio(settings.PhotoManagerLeftPanelRatio, DefaultLeftRatio);
+    }
+
+    public void CaptureLayoutSettings(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        settings.PhotoManagerWindowWidth = (int)Math.Round(ActualWidth > 0 ? ActualWidth : Width);
+        settings.PhotoManagerWindowHeight = (int)Math.Round(ActualHeight > 0 ? ActualHeight : Height);
+        settings.PhotoManagerLeftPanelRatio = NormalizeLeftRatio(CalculateCurrentLeftRatio(), _preferredLeftRatio);
     }
 
     private async void InitializeTree()
@@ -650,6 +685,75 @@ public partial class ImageManagerWindow : Window
         if (hwnd == IntPtr.Zero) return;
         var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
         NativeMethods.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
+    }
+
+    private void OnMainColumnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _preferredLeftRatio = NormalizeLeftRatio(CalculateCurrentLeftRatio(), _preferredLeftRatio);
+        ApplyAdaptiveLayout();
+    }
+
+    private void ApplyAdaptiveLayout()
+    {
+        if (_layoutApplying || !IsLoaded || RootGrid == null)
+        {
+            return;
+        }
+
+        var totalWidth = RootGrid.ActualWidth;
+        if (totalWidth <= 0)
+        {
+            return;
+        }
+
+        _layoutApplying = true;
+        try
+        {
+            var splitterWidth = Math.Max(0, SplitterColumn.ActualWidth > 0 ? SplitterColumn.ActualWidth : 6);
+            var available = Math.Max(1, totalWidth - splitterWidth);
+
+            var effectiveRatio = _preferredLeftRatio;
+            if (ActualWidth > 0 && ActualWidth < NarrowWindowThreshold)
+            {
+                effectiveRatio = Math.Min(effectiveRatio, 0.27);
+            }
+
+            var desiredLeft = available * effectiveRatio;
+            var boundedLeft = Math.Clamp(desiredLeft, LeftColumn.MinWidth, LeftColumn.MaxWidth);
+            var minRight = RightColumn.MinWidth > 0 ? RightColumn.MinWidth : 560.0;
+
+            if (available - boundedLeft < minRight)
+            {
+                boundedLeft = Math.Max(LeftColumn.MinWidth, available - minRight);
+            }
+
+            boundedLeft = Math.Clamp(boundedLeft, LeftColumn.MinWidth, LeftColumn.MaxWidth);
+            var boundedRight = Math.Max(minRight, available - boundedLeft);
+
+            LeftColumn.Width = new GridLength(Math.Round(boundedLeft), GridUnitType.Pixel);
+            RightColumn.Width = new GridLength(Math.Round(boundedRight), GridUnitType.Pixel);
+        }
+        finally
+        {
+            _layoutApplying = false;
+        }
+    }
+
+    private double CalculateCurrentLeftRatio()
+    {
+        var splitterWidth = Math.Max(0, SplitterColumn.ActualWidth > 0 ? SplitterColumn.ActualWidth : 6);
+        var total = Math.Max(1, RootGrid.ActualWidth - splitterWidth);
+        var left = LeftColumn.ActualWidth > 0 ? LeftColumn.ActualWidth : LeftColumn.Width.Value;
+        return left / total;
+    }
+
+    private static double NormalizeLeftRatio(double ratio, double fallback)
+    {
+        if (double.IsNaN(ratio) || double.IsInfinity(ratio) || ratio <= 0)
+        {
+            return fallback;
+        }
+        return Math.Clamp(ratio, MinLeftRatio, MaxLeftRatio);
     }
 }
 

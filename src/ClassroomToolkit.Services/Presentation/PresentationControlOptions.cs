@@ -8,4 +8,6 @@ public sealed class PresentationControlOptions
     public bool WheelAsKey { get; set; }
     public bool AllowWps { get; set; } = true;
     public bool AllowOffice { get; set; } = true;
+    public int WpsDebounceMs { get; set; } = 200;
+    public bool LockStrategyWhenDegraded { get; set; } = true;
 }

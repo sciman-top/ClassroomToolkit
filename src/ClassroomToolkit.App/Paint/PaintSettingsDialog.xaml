@@ -1,15 +1,25 @@
 <Window x:Class="ClassroomToolkit.App.Paint.PaintSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="画笔设置"
-        Height="Auto" Width="520"
-        SizeToContent="Height"
+        Height="Auto" Width="620"
+        MinHeight="560" MinWidth="560"
+        SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="{x:Null}"
+        AllowsTransparency="False"
+        Background="Transparent"
         Topmost="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="52"
+                            ResizeBorderThickness="8"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
         <!-- 临时颜色按钮样式 (Updated) -->
@@ -61,14 +71,20 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
-                <RowDefinition Height="Auto"/> <!-- Content -->
+                <RowDefinition Height="*"/> <!-- Content -->
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Height="52" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="画笔设置" FontWeight="Bold" Margin="24,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="18"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,16,0" Width="36" Height="36">
+                <Button Style="{StaticResource Style_IconButton}"
+                        Click="OnCancel"
+                        HorizontalAlignment="Right"
+                        Margin="0,0,16,0"
+                        Width="36"
+                        Height="36"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
                 </Button>
             </Grid>
@@ -76,7 +92,14 @@
             <Rectangle Grid.Row="0" VerticalAlignment="Bottom" Height="1" Fill="{StaticResource Brush_Border}" Margin="24,0"/>
 
             <!-- 2. 内容 -->
-            <StackPanel Grid.Row="1" Margin="24,20">
+            <ScrollViewer Grid.Row="1"
+                          Margin="24,20,24,16"
+                          Padding="0,0,12,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          CanContentScroll="False">
+                <Grid>
+                    <StackPanel>
 
                 <!-- 基础画笔参数 -->
                 <Grid Margin="0,0,0,16">
@@ -104,20 +127,55 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="毛笔预设" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0" FontWeight="Medium"/>
                     <StackPanel Grid.Column="1">
-                        <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,10"/>
-                        <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚，仅毛笔生效）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点，仅毛笔生效）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度弱化阈值" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,4,0,4"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="CalligraphyOverlayThresholdSlider" Minimum="0" Maximum="100" ValueChanged="OnCalligraphyOverlayThresholdChanged" Margin="0,0,8,0"/>
-                            <TextBlock Grid.Column="1" x:Name="CalligraphyOverlayThresholdValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
-                        </Grid>
+                        <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
+                        <Expander Header="毛笔高级（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                                <StackPanel>
+                                    <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
+                                    <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
+                                    <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度弱化阈值" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,4,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="CalligraphyOverlayThresholdSlider" Minimum="0" Maximum="100" ValueChanged="OnCalligraphyOverlayThresholdChanged" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" x:Name="CalligraphyOverlayThresholdValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
                     </StackPanel>
                 </Grid>
+
+                <Expander Header="书写模式（高级覆盖）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
+                    <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="10" Padding="12" Margin="0,8,0,0" Background="{StaticResource Brush_Background_L2}">
+                        <StackPanel>
+                            <TextBlock Text="预设方案会自动联动书写模式。仅在你需要手动覆盖时再修改。"
+                                       Foreground="{StaticResource Brush_Text_Secondary}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="书写模式" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                                <ComboBox Grid.Column="1" x:Name="ClassroomWritingModeCombo" Height="34"/>
+                            </Grid>
+                            <TextBlock x:Name="ClassroomWritingModeHint" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Expander>
+
+                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="{StaticResource Brush_Background_L3}">
+                    <StackPanel>
+                        <TextBlock Text="预设方案" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <ComboBox x:Name="PresetSchemeCombo" Height="34" SelectionChanged="OnPresetSchemeChanged"/>
+                        <TextBlock x:Name="PresetSchemeHintText" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
 
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
@@ -202,24 +260,56 @@
                             <TextBlock Text="导出范围" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                             <ComboBox Grid.Column="1" x:Name="InkExportScopeCombo" Height="34" FontSize="13"/>
                         </Grid>
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="导出并发" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                            <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="34" FontSize="13"/>
-                        </Grid>
                         <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="邻页预取" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                            <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="34" FontSize="13"/>
-                        </Grid>
-                        <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                        <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+
+                        <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="导出并发" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="邻页预取" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="抬笔后刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="PostInputRefreshDelayCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="滚轮缩放步进" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="WheelZoomBaseCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="手势缩放灵敏" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="GestureSensitivityCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入遥测日志（仅调试）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
                     </StackPanel>
                 </Border>
 
@@ -241,16 +331,40 @@
                             <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
                         </Grid>
                         <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                        <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                        <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+
+                        <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                        <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
+                                    </Grid>
+                                    <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定消息模式（更稳）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
                     </StackPanel>
                 </Border>
-            </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
 
             <!-- 3. 按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,0,24,24">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="96" Margin="0,0,12,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="96" Click="OnConfirm"/>
-            </StackPanel>
+            <Grid Grid.Row="2" Margin="24,0,24,24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="96" Margin="0,0,12,0" Click="OnCancel"/>
+                    <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="96" Click="OnConfirm"/>
+                </StackPanel>
+            </Grid>
         </Grid>
     </Border>
 </Window>

@@ -485,11 +485,20 @@ public sealed class InkPersistenceService
                 InkFlow = stroke.InkFlow,
                 StrokeDirectionX = stroke.StrokeDirectionX,
                 StrokeDirectionY = stroke.StrokeDirectionY,
+                CalligraphyRenderMode = stroke.CalligraphyRenderMode,
                 CalligraphyInkBloomEnabled = stroke.CalligraphyInkBloomEnabled,
                 CalligraphySealEnabled = stroke.CalligraphySealEnabled,
                 CalligraphyOverlayOpacityThreshold = stroke.CalligraphyOverlayOpacityThreshold,
                 ReferenceWidth = stroke.ReferenceWidth,
                 ReferenceHeight = stroke.ReferenceHeight,
+                Ribbons = stroke.Ribbons
+                    .Select(r => new InkRibbonData
+                    {
+                        GeometryPath = r.GeometryPath,
+                        Opacity = r.Opacity,
+                        RibbonT = r.RibbonT
+                    })
+                    .ToList(),
                 Blooms = stroke.Blooms
                     .Select(b => new InkBloomData
                     {

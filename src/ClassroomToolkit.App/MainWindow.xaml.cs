@@ -142,7 +142,7 @@ public partial class MainWindow : Window
         }
         if (_rollCallWindow.IsVisible)
         {
-            _rollCallWindow.Hide();
+            _rollCallWindow.HideRollCall();
         }
         else
         {
@@ -362,6 +362,20 @@ public partial class MainWindow : Window
     {
         try
         {
+            if (_overlayWindow != null &&
+                _overlayWindow.TryGetStylusAdaptiveState(
+                    out var pressureProfile,
+                    out var sampleRateTier,
+                    out var predictionHorizonMs,
+                    out var calibratedLow,
+                    out var calibratedHigh))
+            {
+                _settings.StylusAdaptivePressureProfile = pressureProfile;
+                _settings.StylusAdaptiveSampleRateTier = sampleRateTier;
+                _settings.StylusAdaptivePredictionHorizonMs = predictionHorizonMs;
+                _settings.StylusPressureCalibratedLow = calibratedLow;
+                _settings.StylusPressureCalibratedHigh = calibratedHigh;
+            }
             _settingsService.Save(_settings);
             _settingsSaveFailedNotified = false;
         }

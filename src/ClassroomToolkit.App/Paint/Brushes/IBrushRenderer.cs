@@ -23,12 +23,13 @@ public sealed class StrokePointData
 public interface IBrushRenderer
 {
     void Initialize(WpfColor color, double baseSize, double opacity);
-    void OnDown(WpfPoint point);
-    void OnMove(WpfPoint point);
-    void OnUp(WpfPoint point);
+    void OnDown(BrushInputSample input);
+    void OnMove(BrushInputSample input);
+    void OnUp(BrushInputSample input);
     void Render(DrawingContext dc);
     void Reset();
     bool IsActive { get; }
+    int GeometryVersion { get; }
     Geometry? GetLastStrokeGeometry();
 
     /// <summary>

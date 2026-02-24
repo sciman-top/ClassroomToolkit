@@ -1050,6 +1050,14 @@ public sealed class InkExportService
             scaled.BrushSize = Math.Max(0.1, scaled.BrushSize * brushScale);
             scaled.ReferenceWidth = targetWidth;
             scaled.ReferenceHeight = targetHeight;
+            if (scaled.Ribbons.Count > 0)
+            {
+                for (int i = 0; i < scaled.Ribbons.Count; i++)
+                {
+                    var ribbon = scaled.Ribbons[i];
+                    ribbon.GeometryPath = ScaleGeometryPath(ribbon.GeometryPath, scaleX, scaleY);
+                }
+            }
             if (scaled.Blooms.Count > 0)
             {
                 for (int i = 0; i < scaled.Blooms.Count; i++)
@@ -1131,8 +1139,17 @@ public sealed class InkExportService
             InkFlow = stroke.InkFlow,
             StrokeDirectionX = stroke.StrokeDirectionX,
             StrokeDirectionY = stroke.StrokeDirectionY,
+            CalligraphyRenderMode = stroke.CalligraphyRenderMode,
             ReferenceWidth = stroke.ReferenceWidth,
             ReferenceHeight = stroke.ReferenceHeight,
+            Ribbons = stroke.Ribbons
+                .Select(r => new InkRibbonData
+                {
+                    GeometryPath = r.GeometryPath,
+                    Opacity = r.Opacity,
+                    RibbonT = r.RibbonT
+                })
+                .ToList(),
             CalligraphyInkBloomEnabled = stroke.CalligraphyInkBloomEnabled,
             CalligraphySealEnabled = stroke.CalligraphySealEnabled,
             CalligraphyOverlayOpacityThreshold = stroke.CalligraphyOverlayOpacityThreshold,

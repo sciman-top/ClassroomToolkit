@@ -18,6 +18,13 @@ public sealed class InkBloomData
     public double Opacity { get; set; } = 1.0;
 }
 
+public sealed class InkRibbonData
+{
+    public string GeometryPath { get; set; } = string.Empty;
+    public double Opacity { get; set; } = 0.28;
+    public double RibbonT { get; set; } = 0.0;
+}
+
 public sealed class InkStrokeData
 {
     public InkStrokeType Type { get; set; } = InkStrokeType.Brush;
@@ -33,8 +40,10 @@ public sealed class InkStrokeData
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;
     public byte CalligraphyOverlayOpacityThreshold { get; set; } = 230;
+    public CalligraphyRenderMode CalligraphyRenderMode { get; set; } = CalligraphyRenderMode.Clarity;
     public double ReferenceWidth { get; set; }
     public double ReferenceHeight { get; set; }
+    public List<InkRibbonData> Ribbons { get; set; } = new();
     public List<InkBloomData> Blooms { get; set; } = new();
 
     [JsonIgnore]
@@ -45,6 +54,9 @@ public sealed class InkStrokeData
 
     [JsonIgnore]
     public System.Windows.Rect? CachedBounds { get; set; }
+
+    [JsonIgnore]
+    public List<System.Windows.Media.Geometry>? CachedRibbonGeometries { get; set; }
 }
 
 public sealed class InkPageData

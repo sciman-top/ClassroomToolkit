@@ -139,12 +139,30 @@ public sealed class PresentationControlService
             return false;
         }
 
+        if (!options.LockStrategyWhenDegraded)
+        {
+            if (targetType == PresentationType.Wps)
+            {
+                _wpsAutoForceMessage = false;
+            }
+            else if (targetType == PresentationType.Office)
+            {
+                _officeAutoForceMessage = false;
+            }
+        }
+
         var strategy = options.Strategy;
-        if (targetType == PresentationType.Wps && _wpsAutoForceMessage && strategy != InputStrategy.Message)
+        if (targetType == PresentationType.Wps
+            && options.LockStrategyWhenDegraded
+            && _wpsAutoForceMessage
+            && strategy != InputStrategy.Message)
         {
             strategy = InputStrategy.Message;
         }
-        if (targetType == PresentationType.Office && _officeAutoForceMessage && strategy != InputStrategy.Message)
+        if (targetType == PresentationType.Office
+            && options.LockStrategyWhenDegraded
+            && _officeAutoForceMessage
+            && strategy != InputStrategy.Message)
         {
             strategy = InputStrategy.Message;
         }
@@ -154,12 +172,18 @@ public sealed class PresentationControlService
         {
             if (effectiveType == PresentationType.Wps)
             {
-                _wpsAutoForceMessage = true;
+                if (options.LockStrategyWhenDegraded)
+                {
+                    _wpsAutoForceMessage = true;
+                }
                 sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
             }
             else if (effectiveType == PresentationType.Office)
             {
-                _officeAutoForceMessage = true;
+                if (options.LockStrategyWhenDegraded)
+                {
+                    _officeAutoForceMessage = true;
+                }
                 sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
             }
         }
@@ -197,7 +221,7 @@ public sealed class PresentationControlService
             return false;
         }
         targetType = plan.TargetType;
-        if (plan.TargetType == PresentationType.Wps && IsWpsDebounced(command, target.Handle))
+        if (plan.TargetType == PresentationType.Wps && IsWpsDebounced(command, target.Handle, options.WpsDebounceMs))
         {
             return false;
         }
@@ -234,7 +258,7 @@ public sealed class PresentationControlService
         return sent;
     }
 
-    private bool IsWpsDebounced(PresentationCommand command, IntPtr target)
+    private bool IsWpsDebounced(PresentationCommand command, IntPtr target, int debounceMs)
     {
         if (target == IntPtr.Zero || _lastWpsTarget != target)
         {
@@ -244,9 +268,14 @@ public sealed class PresentationControlService
         {
             return false;
         }
+        var thresholdMs = Math.Max(0, debounceMs);
+        if (thresholdMs == 0)
+        {
+            return false;
+        }
         var elapsedMs = (Stopwatch.GetTimestamp() - _lastWpsCommandTick)
             * 1000.0 / Stopwatch.Frequency;
-        return elapsedMs < 200;
+        return elapsedMs < thresholdMs;
     }
 
     private void RememberWpsCommand(PresentationCommand command, IntPtr target)

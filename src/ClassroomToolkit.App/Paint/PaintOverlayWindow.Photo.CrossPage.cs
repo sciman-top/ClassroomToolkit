@@ -1227,6 +1227,17 @@ public partial class PaintOverlayWindow
         });
     }
 
+    private void ApplyCrossPagePointerUpFastRefresh(string source = "pointer-up-fast")
+    {
+        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        {
+            return;
+        }
+        // Fast path: keep current/neighbor transforms coherent immediately.
+        UpdateNeighborTransformsForPan();
+        _inkDiagnostics?.OnCrossPageUpdateEvent("run", source, "mode=fast-current");
+    }
+
     private bool TryAcquirePostInputRefreshSlot(out long pointerUpSequence)
     {
         pointerUpSequence = Interlocked.Read(ref _crossPagePointerUpSequence);

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using ClassroomToolkit.App.Paint;
 using WpfPoint = System.Windows.Point;
 using WpfColor = System.Windows.Media.Color;
 using WpfPen = System.Windows.Media.Pen;
@@ -11,6 +13,7 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 public sealed class MarkerBrushConfig
 {
     public double SpeedWidthFactor { get; set; }
+    public double PressureWidthFactor { get; set; }
     public double MinWidthFactor { get; set; }
     public double PositionSmoothing { get; set; }
     public double WidthSmoothing { get; set; }
@@ -28,11 +31,15 @@ public sealed class MarkerBrushConfig
     public double RibbonMiterLimit { get; set; }
     public double RibbonNormalSmoothing { get; set; }
     public int RibbonCapSegments { get; set; }
+    public double CurvatureSmoothingMin { get; set; }
+    public double CurvatureSmoothingMax { get; set; }
+    public double CurvatureReferenceDegrees { get; set; }
 
     public static MarkerBrushConfig Smooth => new MarkerBrushConfig
     {
-        SpeedWidthFactor = 0.006,
-        MinWidthFactor = 0.99,
+        SpeedWidthFactor = 0.004,
+        PressureWidthFactor = 0.065,
+        MinWidthFactor = 0.992,
         PositionSmoothing = 0.56,
         WidthSmoothing = 0.16,
         MinMoveDistance = 0.34,
@@ -48,13 +55,17 @@ public sealed class MarkerBrushConfig
         RibbonQuadOverlap = 1.07,
         RibbonMiterLimit = 1.8,
         RibbonNormalSmoothing = 0.45,
-        RibbonCapSegments = 20
+        RibbonCapSegments = 20,
+        CurvatureSmoothingMin = 0.14,
+        CurvatureSmoothingMax = 0.46,
+        CurvatureReferenceDegrees = 70.0
     };
 
     public static MarkerBrushConfig Balanced => new MarkerBrushConfig
     {
-        SpeedWidthFactor = 0.07,
-        MinWidthFactor = 0.86,
+        SpeedWidthFactor = 0.038,
+        PressureWidthFactor = 0.085,
+        MinWidthFactor = 0.915,
         PositionSmoothing = 0.72,
         WidthSmoothing = 0.32,
         MinMoveDistance = 0.5,
@@ -70,13 +81,17 @@ public sealed class MarkerBrushConfig
         RibbonQuadOverlap = 1.01,
         RibbonMiterLimit = 2.8,
         RibbonNormalSmoothing = 0.78,
-        RibbonCapSegments = 10
+        RibbonCapSegments = 10,
+        CurvatureSmoothingMin = 0.08,
+        CurvatureSmoothingMax = 0.34,
+        CurvatureReferenceDegrees = 62.0
     };
 
     public static MarkerBrushConfig Sharp => new MarkerBrushConfig
     {
-        SpeedWidthFactor = 0.14,
-        MinWidthFactor = 0.72,
+        SpeedWidthFactor = 0.078,
+        PressureWidthFactor = 0.13,
+        MinWidthFactor = 0.84,
         PositionSmoothing = 0.92,
         WidthSmoothing = 0.6,
         MinMoveDistance = 0.8,
@@ -92,7 +107,10 @@ public sealed class MarkerBrushConfig
         RibbonQuadOverlap = 0.96,
         RibbonMiterLimit = 4.2,
         RibbonNormalSmoothing = 0.93,
-        RibbonCapSegments = 6
+        RibbonCapSegments = 6,
+        CurvatureSmoothingMin = 0.04,
+        CurvatureSmoothingMax = 0.22,
+        CurvatureReferenceDegrees = 54.0
     };
 }
 
@@ -121,13 +139,19 @@ public class MarkerBrushRenderer : IBrushRenderer
     private WpfColor _color;
     private double _baseSize;
     private bool _isActive;
-    private long _lastTimestamp;
+    private long _lastTimestampTicks;
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
     private double _velocityPeak;
+    private readonly OneEuroPointFilter _positionFilter = new OneEuroPointFilter(1.2, 0.06, 1.0);
+    private readonly OneEuroFilter _widthFilter = new OneEuroFilter(1.5, 0.03, 1.0);
     private readonly MarkerRenderMode _renderMode;
+    private int _geometryVersion;
+    private bool _cacheDirty = true;
+    private Geometry? _cachedGeometry;
 
     public bool IsActive => _isActive;
+    public int GeometryVersion => _geometryVersion;
     public MarkerRenderMode RenderMode => _renderMode;
 
     public MarkerBrushRenderer()
@@ -155,33 +179,42 @@ public class MarkerBrushRenderer : IBrushRenderer
         _velocityPeak = 0.001;
     }
 
-    public void OnDown(WpfPoint point)
+    public void OnDown(BrushInputSample input)
     {
+        var point = input.Position;
         _points.Clear();
         _isActive = true;
-        _lastTimestamp = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+        _lastTimestampTicks = input.TimestampTicks > 0
+            ? input.TimestampTicks
+            : Stopwatch.GetTimestamp();
         _smoothedWidth = _baseSize;
         _smoothedPos = point;
         _velocityPeak = 0.001;
+        _positionFilter.Reset();
+        _widthFilter.Reset();
+        _smoothedPos = _positionFilter.Filter(point, 1.0 / 120.0);
+        _smoothedWidth = _widthFilter.Filter(_baseSize, 1.0 / 120.0);
         _points.Add(new MarkerPoint(point, _smoothedWidth));
+        MarkGeometryDirty();
     }
 
-    public void OnMove(WpfPoint point)
+    public void OnMove(BrushInputSample input)
     {
         if (!_isActive) return;
+        var point = input.Position;
 
-        _smoothedPos = new WpfPoint(
-            _smoothedPos.X * (1 - _config.PositionSmoothing) + point.X * _config.PositionSmoothing,
-            _smoothedPos.Y * (1 - _config.PositionSmoothing) + point.Y * _config.PositionSmoothing
-        );
+        var now = input.TimestampTicks > 0
+            ? input.TimestampTicks
+            : Stopwatch.GetTimestamp();
+        var dt = (now - _lastTimestampTicks) * 1000.0 / Stopwatch.Frequency;
+        if (dt < 1) dt = 1;
+        double dtSeconds = dt / 1000.0;
+
+        _smoothedPos = _positionFilter.Filter(point, dtSeconds);
 
         var lastPt = _points[_points.Count - 1].Position;
         var dist = (_smoothedPos - lastPt).Length;
         if (dist < _config.MinMoveDistance) return;
-
-        var now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-        var dt = now - _lastTimestamp;
-        if (dt < 1) dt = 1;
 
         double velocity = dist / dt;
         _velocityPeak = Math.Max(_velocityPeak * _config.VelocityDecay, velocity);
@@ -190,26 +223,38 @@ public class MarkerBrushRenderer : IBrushRenderer
         double targetWidth = _baseSize * (1.0 - (_config.SpeedWidthFactor * normSpeed));
         double minWidth = _baseSize * _config.MinWidthFactor;
         targetWidth = Math.Max(targetWidth, minWidth);
+        if (input.HasPressure)
+        {
+            double centeredPressure = MapPressureCentered(Math.Clamp(input.Pressure, 0, 1));
+            double pressureScale = 1.0 + (centeredPressure * _config.PressureWidthFactor);
+            targetWidth *= Math.Clamp(pressureScale, 0.84, 1.2);
+        }
 
         _smoothedWidth = Lerp(_smoothedWidth, targetWidth, _config.WidthSmoothing);
+        _smoothedWidth = _widthFilter.Filter(_smoothedWidth, dtSeconds);
         _points.Add(new MarkerPoint(_smoothedPos, _smoothedWidth));
-        _lastTimestamp = now;
+        _lastTimestampTicks = now;
+        MarkGeometryDirty();
     }
 
-    public void OnUp(WpfPoint point)
+    public void OnUp(BrushInputSample input)
     {
         if (!_isActive) return;
+        var point = input.Position;
         var last = _points[_points.Count - 1].Position;
         if ((point - last).Length > 0.1)
         {
             _points.Add(new MarkerPoint(point, _smoothedWidth));
+            MarkGeometryDirty();
         }
         _isActive = false;
     }
 
     public void Render(DrawingContext dc)
     {
-        var geometry = BuildStrokeGeometry();
+        var geometry = _isActive && _renderMode == MarkerRenderMode.Ribbon
+            ? BuildSegmentGeometry()
+            : GetLastStrokeGeometry();
         if (geometry == null)
         {
             return;
@@ -221,7 +266,13 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public Geometry? GetLastStrokeGeometry()
     {
-        return BuildStrokeGeometry();
+        if (!_cacheDirty)
+        {
+            return _cachedGeometry;
+        }
+        _cachedGeometry = BuildStrokeGeometryCore();
+        _cacheDirty = false;
+        return _cachedGeometry;
     }
 
     /// <summary>
@@ -243,6 +294,7 @@ public class MarkerBrushRenderer : IBrushRenderer
     {
         _points.Clear();
         _isActive = false;
+        MarkGeometryDirty();
     }
 
     private WpfColor GetMarkerColor()
@@ -251,7 +303,14 @@ public class MarkerBrushRenderer : IBrushRenderer
         return WpfColor.FromArgb(alpha, _color.R, _color.G, _color.B);
     }
 
-    private Geometry? BuildStrokeGeometry()
+    private void MarkGeometryDirty()
+    {
+        _cacheDirty = true;
+        _cachedGeometry = null;
+        _geometryVersion++;
+    }
+
+    private Geometry? BuildStrokeGeometryCore()
     {
         return _renderMode == MarkerRenderMode.Ribbon
             ? BuildRibbonGeometry()
@@ -358,7 +417,7 @@ public class MarkerBrushRenderer : IBrushRenderer
             if (circle.CanFreeze) circle.Freeze();
             return circle;
         }
-        SmoothSamplePositions(samples);
+        SmoothSamplePositionsAdaptive(samples);
 
         var left = new List<WpfPoint>(samples.Count);
         var right = new List<WpfPoint>(samples.Count);
@@ -451,6 +510,21 @@ public class MarkerBrushRenderer : IBrushRenderer
         return start + ((end - start) * t);
     }
 
+    private static double MapPressureCentered(double pressure)
+    {
+        double centered = (pressure - 0.5) * 2.0;
+        double abs = Math.Abs(centered);
+        const double deadZone = 0.14;
+        if (abs <= deadZone)
+        {
+            return 0.0;
+        }
+
+        double normalized = (abs - deadZone) / (1.0 - deadZone);
+        double curved = Math.Pow(normalized, 1.28);
+        return Math.Sign(centered) * Math.Clamp(curved, 0.0, 1.0);
+    }
+
     private List<MarkerPoint> BuildSmoothSamples()
     {
         var samples = new List<MarkerPoint>();
@@ -512,7 +586,7 @@ public class MarkerBrushRenderer : IBrushRenderer
         }
     }
 
-    private static void SmoothSamplePositions(List<MarkerPoint> samples)
+    private void SmoothSamplePositionsAdaptive(List<MarkerPoint> samples)
     {
         if (samples.Count < 3)
         {
@@ -526,9 +600,23 @@ public class MarkerBrushRenderer : IBrushRenderer
             var prev = samples[i - 1].Position;
             var curr = samples[i].Position;
             var next = samples[i + 1].Position;
+            var a = curr - prev;
+            var b = next - curr;
+            double angle = 0;
+            if (a.LengthSquared > 0.0001 && b.LengthSquared > 0.0001)
+            {
+                angle = Math.Abs(Vector.AngleBetween(a, b));
+            }
+            double reference = Math.Clamp(_config.CurvatureReferenceDegrees, 24.0, 175.0);
+            double cornerFactor = Math.Clamp(angle / reference, 0, 1);
+            double smoothing = Lerp(_config.CurvatureSmoothingMax, _config.CurvatureSmoothingMin, cornerFactor);
+            smoothing = Math.Clamp(smoothing, 0.02, 0.75);
+            double inv = 1.0 - smoothing;
+            double avgX = (prev.X + next.X) * 0.5;
+            double avgY = (prev.Y + next.Y) * 0.5;
             positions[i] = new WpfPoint(
-                (prev.X + (curr.X * 2.0) + next.X) * 0.25,
-                (prev.Y + (curr.Y * 2.0) + next.Y) * 0.25);
+                (curr.X * inv) + (avgX * smoothing),
+                (curr.Y * inv) + (avgY * smoothing));
         }
         for (int i = 0; i < samples.Count; i++)
         {

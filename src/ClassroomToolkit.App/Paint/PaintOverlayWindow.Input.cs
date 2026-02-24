@@ -6,7 +6,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Globalization;
+using System.Diagnostics;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Photos;
 using WpfPoint = System.Windows.Point;
 
@@ -63,7 +65,14 @@ public partial class PaintOverlayWindow
         }
         if (_photoModeActive)
         {
+            if (ShouldSuppressPhotoWheelFromRecentGesture())
+            {
+                LogPhotoInputTelemetry("wheel", "suppressed-recent-gesture");
+                e.Handled = true;
+                return;
+            }
             ZoomPhoto(e.Delta, e.GetPosition(OverlayRoot));
+            LogPhotoInputTelemetry("wheel", $"delta={e.Delta}");
             e.Handled = true;
             return;
         }
@@ -322,6 +331,12 @@ public partial class PaintOverlayWindow
 
     private void HandlePointerDown(WpfPoint position)
     {
+        HandlePointerDown(BrushInputSample.CreatePointer(position));
+    }
+
+    private void HandlePointerDown(BrushInputSample input)
+    {
+        var position = input.Position;
         MarkInkInput();
         _lastPointerPosition = position;
         TrySwitchActiveImagePageForInput(position);
@@ -352,7 +367,7 @@ public partial class PaintOverlayWindow
         }
         if (_mode == PaintToolMode.Brush)
         {
-            BeginBrushStroke(position);
+            BeginBrushStroke(input);
             CapturePointerInput();
         }
     }
@@ -470,6 +485,16 @@ public partial class PaintOverlayWindow
         return false;
     }
 
+    public void UpdatePhotoPostInputRefreshDelayMs(int delayMs)
+    {
+        _photoPostInputRefreshDelayMs = Math.Clamp(delayMs, 40, 400);
+    }
+
+    public void UpdatePhotoInputTelemetryEnabled(bool enabled)
+    {
+        _photoInputTelemetryEnabled = enabled;
+    }
+
     private bool TryBuildImageScreenRect(BitmapSource bitmap, Transform? transform, out Rect rect)
     {
         rect = Rect.Empty;
@@ -512,11 +537,17 @@ public partial class PaintOverlayWindow
 
     private void HandlePointerMove(WpfPoint position)
     {
+        HandlePointerMove(BrushInputSample.CreatePointer(position));
+    }
+
+    private void HandlePointerMove(BrushInputSample input)
+    {
+        var position = input.Position;
         MarkInkInput();
         _lastPointerPosition = position;
         if (_mode == PaintToolMode.Brush)
         {
-            UpdateBrushStroke(position);
+            UpdateBrushStroke(input);
             return;
         }
         if (_mode == PaintToolMode.Eraser)
@@ -537,6 +568,12 @@ public partial class PaintOverlayWindow
 
     private void HandlePointerUp(WpfPoint position)
     {
+        HandlePointerUp(BrushInputSample.CreatePointer(position));
+    }
+
+    private void HandlePointerUp(BrushInputSample input)
+    {
+        var position = input.Position;
         MarkInkInput();
         _lastPointerPosition = position;
         if (IsCrossPageFirstInputTraceActive())
@@ -545,7 +582,12 @@ public partial class PaintOverlayWindow
         }
         if (_mode == PaintToolMode.Brush)
         {
-            EndBrushStroke(position);
+            EndBrushStroke(input);
+            if (_pendingAdaptiveRendererRefresh)
+            {
+                _pendingAdaptiveRendererRefresh = false;
+                EnsureActiveRenderer(force: true);
+            }
         }
         else if (_mode == PaintToolMode.Eraser)
         {
@@ -572,11 +614,12 @@ public partial class PaintOverlayWindow
             {
                 // Keep first-stroke path lightweight, but do not permanently skip the seam refresh.
                 // A short delayed refresh after pointer-up restores neighbor page/ink visibility.
+                ApplyCrossPagePointerUpFastRefresh();
                 _inkDiagnostics?.OnCrossPageUpdateEvent("defer", "pointer-up", "stable-recover-v3");
                 ScheduleCrossPageDisplayUpdateAfterInputSettles(
                     source: "pointer-up",
                     singlePerPointerUp: true,
-                    delayOverrideMs: 140);
+                    delayOverrideMs: _photoPostInputRefreshDelayMs);
             }
         }
         if (IsCrossPageFirstInputTraceActive())
@@ -621,19 +664,20 @@ public partial class PaintOverlayWindow
             return;
         }
         EnsurePhotoTransformsWritable();
+        MarkPhotoGestureInput();
         var scale = e.DeltaManipulation.Scale;
-        // Filter tiny touch/manipulation noise to avoid accidental zoom jumps while dragging.
-        if (Math.Abs(scale.X - 1.0) > 0.02 || Math.Abs(scale.Y - 1.0) > 0.02)
-        {
-            var factor = (scale.X + scale.Y) / 2.0;
-            ApplyPhotoScale(factor, e.ManipulationOrigin);
-        }
+        var factor = (scale.X + scale.Y) / 2.0;
+        ApplyPhotoZoomInput(PhotoZoomInputSource.Gesture, factor, e.ManipulationOrigin);
+        LogPhotoInputTelemetry("gesture-zoom", $"factor={factor:0.####}");
         var translation = e.DeltaManipulation.Translation;
         if (Math.Abs(translation.X) > 0.01 || Math.Abs(translation.Y) > 0.01)
         {
             _photoTranslate.X += translation.X;
             _photoTranslate.Y += translation.Y;
+            ApplyPhotoPanBounds(allowResistance: true);
+            UpdateNeighborTransformsForPan();
             SchedulePhotoTransformSave(userAdjusted: true);
+            LogPhotoInputTelemetry("gesture-pan", $"dx={translation.X:0.##},dy={translation.Y:0.##}");
         }
         if (_crossPageDisplayEnabled)
         {
@@ -641,28 +685,139 @@ public partial class PaintOverlayWindow
         }
     }
 
+    private BrushInputSample CreateStylusInputSample(StylusPoint stylusPoint)
+    {
+        var timestampTicks = Stopwatch.GetTimestamp();
+        var position = new WpfPoint(stylusPoint.X, stylusPoint.Y);
+        var orientation = StylusOrientationResolver.Resolve(stylusPoint);
+        if (!_stylusPressureAnalyzer.TryResolve(
+                stylusPoint.PressureFactor,
+                _stylusPseudoPressureLowThreshold,
+                _stylusPseudoPressureHighThreshold,
+                ResolveStylusPressureGamma(_classroomWritingMode),
+                out var pressure))
+        {
+            // Some classroom all-in-one touch devices report fixed 0/1 pseudo-pressure.
+            // Treat as unavailable to keep velocity model stable.
+            return BrushInputSample.CreatePointer(
+                position,
+                timestampTicks,
+                orientation.AzimuthRadians,
+                orientation.AltitudeRadians,
+                orientation.TiltXRadians,
+                orientation.TiltYRadians);
+        }
+
+        pressure = _stylusPressureCalibrator.Calibrate(pressure, _stylusPressureAnalyzer.Profile);
+        if (_stylusDeviceAdaptiveProfiler.Observe(timestampTicks, _stylusPressureAnalyzer.Profile))
+        {
+            if (_strokeInProgress)
+            {
+                _pendingAdaptiveRendererRefresh = true;
+            }
+            else
+            {
+                EnsureActiveRenderer(force: true);
+            }
+            _brushPredictionHorizonMs = _stylusDeviceAdaptiveProfiler.CurrentProfile.PredictionHorizonMs;
+        }
+
+        return BrushInputSample.CreateStylus(
+            position,
+            timestampTicks,
+            pressure,
+            orientation.AzimuthRadians,
+            orientation.AltitudeRadians,
+            orientation.TiltXRadians,
+            orientation.TiltYRadians);
+    }
+
+    private static double ResolveStylusPressureGamma(ClassroomWritingMode mode)
+    {
+        return mode switch
+        {
+            ClassroomWritingMode.Stable => 1.16,
+            ClassroomWritingMode.Responsive => 0.88,
+            _ => 1.0
+        };
+    }
+
+    private void MarkPhotoGestureInput()
+    {
+        _lastPhotoGestureInputUtc = DateTime.UtcNow;
+    }
+
+    private bool ShouldSuppressPhotoWheelFromRecentGesture()
+    {
+        return PhotoInputConflictGuard.ShouldSuppressWheelAfterGesture(
+            _lastPhotoGestureInputUtc,
+            PhotoWheelSuppressAfterGestureMs,
+            DateTime.UtcNow);
+    }
+
+    private void LogPhotoInputTelemetry(string eventType, string payload)
+    {
+        if (!_photoInputTelemetryEnabled)
+        {
+            return;
+        }
+        Debug.WriteLine(
+            $"[PhotoInputTelemetry] type={eventType}; {payload}; " +
+            $"scale={_photoScale.ScaleX:0.###}; tx={_photoTranslate.X:0.##}; ty={_photoTranslate.Y:0.##}");
+    }
+
     private void OnStylusDown(object sender, StylusDownEventArgs e)
     {
         if (_photoLoading) return;
-        if (!IsBoardActive() && _mode == PaintToolMode.Cursor) return;
+        if (StylusCursorPolicy.ShouldPanPhoto(_photoModeActive, IsBoardActive(), _mode))
+        {
+            if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject)) return;
+            BeginPhotoPan(e.GetPosition(OverlayRoot), captureStylus: true);
+            e.Handled = true;
+            return;
+        }
         
         // 如果正在操作照片控件，忽略
         if (_photoModeActive && IsWithinPhotoControls(e.OriginalSource as DependencyObject)) return;
-
-        var position = e.GetPosition(OverlayRoot);
-        HandlePointerDown(position);
+        var stylusPoints = e.GetStylusPoints(OverlayRoot);
+        if (stylusPoints.Count > 0)
+        {
+            HandlePointerDown(CreateStylusInputSample(stylusPoints[0]));
+        }
+        else
+        {
+            HandlePointerDown(e.GetPosition(OverlayRoot));
+        }
         e.Handled = true;
     }
 
     private void OnStylusMove(object sender, StylusEventArgs e)
     {
         if (_photoLoading) return;
-        if (!IsBoardActive() && _mode == PaintToolMode.Cursor) return;
+        if (StylusCursorPolicy.ShouldPanPhoto(_photoModeActive, IsBoardActive(), _mode))
+        {
+            if (_photoPanning)
+            {
+                UpdatePhotoPan(e.GetPosition(OverlayRoot));
+                e.Handled = true;
+            }
+            return;
+        }
 
         if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
         {
-            var position = e.GetPosition(OverlayRoot);
-            HandlePointerMove(position);
+            var stylusPoints = e.GetStylusPoints(OverlayRoot);
+            if (stylusPoints.Count == 0)
+            {
+                HandlePointerMove(e.GetPosition(OverlayRoot));
+            }
+            else
+            {
+                foreach (var stylusPoint in stylusPoints)
+                {
+                    HandlePointerMove(CreateStylusInputSample(stylusPoint));
+                }
+            }
             e.Handled = true;
         }
     }
@@ -670,12 +825,27 @@ public partial class PaintOverlayWindow
     private void OnStylusUp(object sender, StylusEventArgs e)
     {
         if (_photoLoading) return;
-        if (!IsBoardActive() && _mode == PaintToolMode.Cursor) return;
+        if (StylusCursorPolicy.ShouldPanPhoto(_photoModeActive, IsBoardActive(), _mode))
+        {
+            if (_photoPanning)
+            {
+                EndPhotoPan();
+                e.Handled = true;
+            }
+            return;
+        }
 
         if (_strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting)
         {
-            var position = e.GetPosition(OverlayRoot);
-            HandlePointerUp(position);
+            var stylusPoints = e.GetStylusPoints(OverlayRoot);
+            if (stylusPoints.Count > 0)
+            {
+                HandlePointerUp(CreateStylusInputSample(stylusPoints[^1]));
+            }
+            else
+            {
+                HandlePointerUp(e.GetPosition(OverlayRoot));
+            }
             e.Handled = true;
         }
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Paint;
 using FluentAssertions;
 using Xunit;
 
@@ -48,6 +49,42 @@ public sealed class InkPersistenceServiceTests : IDisposable
         doc.Pages[0].PageIndex.Should().Be(1);
         doc.Pages[0].Strokes.Should().HaveCount(1);
         doc.Pages[0].Strokes[0].ColorHex.Should().Be("#FF0000");
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPreserveCalligraphyRibbonLayers()
+    {
+        var filePath = CreateTempFile("calligraphy.png");
+        var strokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Brush,
+                BrushStyle = PaintBrushStyle.Calligraphy,
+                ColorHex = "#111111",
+                BrushSize = 5.0,
+                GeometryPath = "M 0 0 L 20 20",
+                Ribbons = new List<InkRibbonData>
+                {
+                    new() { GeometryPath = "M 0 0 L 10 10", Opacity = 0.26, RibbonT = 0.0 },
+                    new() { GeometryPath = "M 0 1 L 10 11", Opacity = 0.14, RibbonT = 1.0 }
+                }
+            }
+        };
+
+        _service.SaveInkForFile(filePath, 1, strokes);
+
+        var doc = _service.LoadInkForFile(filePath);
+        doc.Should().NotBeNull();
+        doc!.Pages.Should().HaveCount(1);
+        var loaded = doc.Pages[0].Strokes[0];
+        loaded.Ribbons.Should().HaveCount(2);
+        loaded.Ribbons[0].GeometryPath.Should().Be("M 0 0 L 10 10");
+        loaded.Ribbons[0].Opacity.Should().BeApproximately(0.26, 0.0001);
+        loaded.Ribbons[0].RibbonT.Should().BeApproximately(0.0, 0.0001);
+        loaded.Ribbons[1].GeometryPath.Should().Be("M 0 1 L 10 11");
+        loaded.Ribbons[1].Opacity.Should().BeApproximately(0.14, 0.0001);
+        loaded.Ribbons[1].RibbonT.Should().BeApproximately(1.0, 0.0001);
     }
 
     [Fact]

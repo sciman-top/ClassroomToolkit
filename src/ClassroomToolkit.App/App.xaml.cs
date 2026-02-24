@@ -14,6 +14,7 @@ namespace ClassroomToolkit.App;
 public partial class App : WpfApplication
 {
     private static readonly object LogWriteLock = new();
+    private static readonly string AppRootDirectory = new ConfigurationService().BaseDirectory;
     private int _criticalDialogShowing;
     private IServiceProvider? _services;
 
@@ -73,7 +74,7 @@ public partial class App : WpfApplication
             builder.AddConsole();
             
             // File logger for production/persistence
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            var logPath = Path.Combine(AppRootDirectory, "logs");
             builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(logPath));
         });
 
@@ -148,7 +149,7 @@ public partial class App : WpfApplication
     {
         try
         {
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            var logPath = Path.Combine(AppRootDirectory, "logs");
             if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
             var logFile = Path.Combine(logPath, $"error_{DateTime.Now:yyyyMMdd}.log");

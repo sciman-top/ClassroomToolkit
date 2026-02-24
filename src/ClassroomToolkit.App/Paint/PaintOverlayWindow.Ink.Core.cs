@@ -30,7 +30,9 @@ public partial class PaintOverlayWindow
     private bool _calligraphySealEnabled = true;
     private byte _calligraphyOverlayOpacityThreshold = 230;
     private CalligraphyBrushPreset _calligraphyPreset = CalligraphyBrushPreset.Sharp;
+    private CalligraphyRenderMode _calligraphyRenderMode = CalligraphyRenderMode.Clarity;
     private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Balanced;
+    private ClassroomWritingMode _classroomWritingMode = ClassroomWritingMode.Balanced;
     private int _inkRedrawToken;
     private DateTime _lastInkRedrawUtc = DateTime.MinValue;
 
@@ -56,6 +58,17 @@ public partial class PaintOverlayWindow
     private readonly Random _inkRandom = new Random();
     private DateTime _lastCalligraphyPreviewUtc = DateTime.MinValue;
     private WpfPoint? _lastCalligraphyPreviewPoint;
+    private double _calligraphyPreviewMinDistance = CalligraphyPreviewMinDistanceDefault;
+    private double _stylusPseudoPressureLowThreshold = StylusPseudoPressureLowThresholdDefault;
+    private double _stylusPseudoPressureHighThreshold = StylusPseudoPressureHighThresholdDefault;
+    private readonly StylusPressureSignalAnalyzer _stylusPressureAnalyzer = new();
+    private readonly StylusPressureCurveCalibrator _stylusPressureCalibrator = new();
+    private readonly StylusDeviceAdaptiveProfiler _stylusDeviceAdaptiveProfiler = new();
+    private bool _pendingAdaptiveRendererRefresh;
+    private BrushInputSample? _lastBrushInputSample;
+    private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
+    private int _brushPredictionHorizonMs = 8;
+    private const double BrushPredictionMaxDistanceDip = 10.0;
     
     // Ink History & Cache
     private readonly List<InkStrokeData> _inkStrokes = new();
@@ -64,7 +77,6 @@ public partial class PaintOverlayWindow
     private readonly DispatcherTimer _inkMonitor;
     private DispatcherTimer? _inkSidecarAutoSaveTimer;
     private readonly LatestOnlyAsyncGate _inkSidecarAutoSaveGate = new();
-    private readonly Random _inkSeedRandom = new Random();
     private bool _inkRecordEnabled = true;
     private bool _inkReplayPreviousEnabled;
     private int _inkRetentionDays = 30;
@@ -81,11 +93,18 @@ public partial class PaintOverlayWindow
     private const long MaxHistoryMemoryBytes = 512 * 1024 * 1024; // 512MB
     private long _currentHistoryMemoryBytes;
     private const int InkNoiseTileCacheLimit = 96;
+    private const int InkSolidBrushCacheLimit = 256;
+    private const int InkPenCacheLimit = 192;
     private static readonly object InkNoiseTileCacheLock = new();
     private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
     private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
+    private readonly Dictionary<int, SolidColorBrush> _inkSolidBrushCache = new();
+    private readonly Dictionary<InkPenCacheKey, MediaPen> _inkPenCache = new();
     private byte[]? _clearSurfaceBuffer;
     private int _clearSurfaceBufferSize;
+    private byte[]? _compositeSurfaceBuffer;
+    private int _compositeSurfaceBufferSize;
+    private readonly DrawingVisual _scratchRenderVisual = new();
 
     private InkCacheScope _currentCacheScope = InkCacheScope.None;
     private InkStorageService _inkStorage = new();
@@ -110,7 +129,9 @@ public partial class PaintOverlayWindow
     // Constants
     private const double CalligraphySealStrokeWidthFactor = 0.08;
     private const int CalligraphyPreviewMinIntervalMs = 16;
-    private const double CalligraphyPreviewMinDistance = 2.0;
+    private const double CalligraphyPreviewMinDistanceDefault = ClassroomWritingModeTuner.DefaultCalligraphyPreviewMinDistance;
+    private const double StylusPseudoPressureLowThresholdDefault = ClassroomWritingModeTuner.DefaultPseudoPressureLowThreshold;
+    private const double StylusPseudoPressureHighThresholdDefault = ClassroomWritingModeTuner.DefaultPseudoPressureHighThreshold;
     private const int InkInputCooldownMs = 120;
     private const int InkMonitorActiveIntervalMs = 600;
     private const int InkMonitorIdleIntervalMs = 1400;
@@ -123,6 +144,26 @@ public partial class PaintOverlayWindow
     private const int CrossPageNeighborPrefetchRadiusMin = 1;
     private const int CrossPageNeighborPrefetchRadiusMax = 4;
     private const int NeighborInkCacheLimit = 10;
+    private const double CalligraphyDegradeAreaThreshold = 160000.0;
+    private const int CalligraphyDegradeLayerThreshold = 22;
+    private const int CalligraphyMaxRibbonLayersNormal = 18;
+    private const int CalligraphyMaxRibbonLayersDegraded = 8;
+    private const int CalligraphyMaxBloomLayersNormal = 10;
+    private const int CalligraphyMaxBloomLayersDegraded = 4;
+    private const int CalligraphyAdaptiveLevelMax = 2;
+    private const double CalligraphyAdaptiveHighCostMs = 6.4;
+    private const double CalligraphyAdaptiveLowCostMs = 3.8;
+    private const double CalligraphyAdaptiveCostEmaAlpha = 0.2;
+    private const int CalligraphyAdaptiveAdjustMinIntervalMs = 200;
+    private const int CalligraphyAdaptiveAreaThresholdStep = 25000;
+    private const int CalligraphyAdaptiveLayerThresholdStep = 4;
+    private static readonly bool CalligraphySinglePassCompositeEnabled = true;
+    private static readonly bool CalligraphySinglePassTextureMaskEnabled = false;
+    private static readonly bool CalligraphySinglePassSealEnabled = false;
+
+    private double _calligraphyBatchCostEmaMs = 4.0;
+    private int _calligraphyAdaptiveLevel;
+    private DateTime _lastCalligraphyAdaptiveAdjustUtc = DateTime.MinValue;
 
     private void EnsureRasterSurface()
     {
@@ -211,6 +252,16 @@ public partial class PaintOverlayWindow
     {
         return a + (b - a) * t;
     }
+
+    private byte[] GetCompositeSurfaceBuffer(int requiredLength)
+    {
+        if (_compositeSurfaceBuffer == null || _compositeSurfaceBufferSize < requiredLength)
+        {
+            _compositeSurfaceBuffer = new byte[requiredLength];
+            _compositeSurfaceBufferSize = requiredLength;
+        }
+        return _compositeSurfaceBuffer;
+    }
     
     private void BlendSourceOver(Int32Rect rect, byte[] srcPixels, int srcStride)
     {
@@ -220,7 +271,7 @@ public partial class PaintOverlayWindow
         }
         var destStride = rect.Width * 4;
         var destLength = destStride * rect.Height;
-        var destPixels = PixelPool.Rent(destLength);
+        var destPixels = GetCompositeSurfaceBuffer(destLength);
         _rasterSurface.CopyPixels(rect, destPixels, destStride, 0);
         for (int y = 0; y < rect.Height; y++)
         {
@@ -236,6 +287,15 @@ public partial class PaintOverlayWindow
                 }
                 int invA = 255 - srcA;
                 int d = destRow + x * 4;
+                if (srcA == 255 || destPixels[d + 3] == 0)
+                {
+                    destPixels[d] = srcPixels[i];
+                    destPixels[d + 1] = srcPixels[i + 1];
+                    destPixels[d + 2] = srcPixels[i + 2];
+                    destPixels[d + 3] = srcA;
+                    continue;
+                }
+
                 destPixels[d] = (byte)(srcPixels[i] + destPixels[d] * invA / 255);
                 destPixels[d + 1] = (byte)(srcPixels[i + 1] + destPixels[d + 1] * invA / 255);
                 destPixels[d + 2] = (byte)(srcPixels[i + 2] + destPixels[d + 2] * invA / 255);
@@ -243,7 +303,6 @@ public partial class PaintOverlayWindow
             }
         }
         _rasterSurface.WritePixels(rect, destPixels, destStride, 0);
-        PixelPool.Return(destPixels, clearArray: false);
     }
 
     private sealed class RefreshOrchestrator

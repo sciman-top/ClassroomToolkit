@@ -4,8 +4,10 @@
         xmlns:local="clr-namespace:ClassroomToolkit.App.Photos"
         xmlns:converters="clr-namespace:ClassroomToolkit.App.Converters"
         Title="PDF/图片管理"
-        Width="900"
-        Height="600"
+        Width="1100"
+        Height="700"
+        MinWidth="960"
+        MinHeight="620"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
     <Window.Resources>
@@ -17,18 +19,18 @@
         <local:PdfBackgroundConverter x:Key="PdfBackgroundConverter"/>
     </Window.Resources>
 
-    <Grid Background="{StaticResource Brush_Window_Atmosphere}">
+    <Grid x:Name="RootGrid" Background="{StaticResource Brush_Window_Atmosphere}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1*" MinWidth="200" MaxWidth="400"/>
-            <ColumnDefinition Width="6"/>
-            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition x:Name="LeftColumn" Width="2*" MinWidth="220" MaxWidth="520"/>
+            <ColumnDefinition x:Name="SplitterColumn" Width="6"/>
+            <ColumnDefinition x:Name="RightColumn" Width="5*" MinWidth="560"/>
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="1*"/>
-                <RowDefinition Height="1*"/>
-                <RowDefinition Height="2*"/>
+                <RowDefinition x:Name="FavoritesRow" Height="1*" MinHeight="120"/>
+                <RowDefinition x:Name="RecentsRow" Height="1*" MinHeight="120"/>
+                <RowDefinition x:Name="FolderTreeRow" Height="2*" MinHeight="180"/>
             </Grid.RowDefinitions>
 
             <!-- 1. 收藏夹 -->
@@ -84,7 +86,8 @@
             </Border>
         </Grid>
 
-        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
+        <GridSplitter x:Name="MainColumnSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"
+                      ShowsPreview="True" DragCompleted="OnMainColumnSplitterDragCompleted"/>
 
         <Border Grid.Column="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
             <DockPanel>
@@ -99,7 +102,7 @@
 
                 <!-- 工具栏 -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,12,8">
-                    <StackPanel Orientation="Horizontal">
+                    <WrapPanel x:Name="ToolbarWrapPanel" Orientation="Horizontal" ItemHeight="30">
                         <!-- 增加高度到 30，统一字体 13 -->
                         <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
                                 Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
@@ -120,7 +123,7 @@
                                   VerticalAlignment="Center"
                                   IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
                                   Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
-                    </StackPanel>
+                    </WrapPanel>
                 </DockPanel>
 
                 <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top" Text="请选择左侧文件夹查看图片"

@@ -21,6 +21,7 @@ public partial class MainWindow
         if (_imageManagerWindow == null)
         {
             _imageManagerWindow = _imageManagerWindowFactory.Create(_settings.PhotoFavoriteFolders, _settings.PhotoRecentFolders);
+            _imageManagerWindow.ApplyLayoutSettings(_settings);
             _imageManagerWindow.ViewModel.ShowInkOverlay = _settings.PhotoShowInkOverlay;
             _imageManagerWindow.ImageSelected += OnImageSelected;
             _imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
@@ -30,8 +31,14 @@ public partial class MainWindow
             _imageManagerWindow.Activated += (_, _) => TouchSurface(ZOrderSurface.ImageManager);
             _imageManagerWindow.Closed += (_, _) =>
             {
-                _imageManagerWindow.StateChanged -= OnImageManagerStateChanged;
-                _imageManagerWindow.ShowInkOverlayChanged -= OnImageManagerShowInkOverlayChanged;
+                var closedWindow = _imageManagerWindow;
+                if (closedWindow != null)
+                {
+                    closedWindow.CaptureLayoutSettings(_settings);
+                    closedWindow.StateChanged -= OnImageManagerStateChanged;
+                    closedWindow.ShowInkOverlayChanged -= OnImageManagerShowInkOverlayChanged;
+                }
+                SaveSettings();
                 _imageManagerWindow = null;
                 ApplyZOrderPolicy();
             };

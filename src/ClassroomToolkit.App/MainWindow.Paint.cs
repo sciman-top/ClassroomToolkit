@@ -162,12 +162,16 @@ public partial class MainWindow
             _settings.ControlWpsPpt = dialog.ControlWpsPpt;
             _settings.WpsInputMode = dialog.WpsInputMode;
             _settings.WpsWheelForward = dialog.WpsWheelForward;
+            _settings.WpsDebounceMs = dialog.WpsDebounceMs;
+            _settings.PresentationLockStrategyWhenDegraded = dialog.PresentationLockStrategyWhenDegraded;
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
             _settings.BrushStyle = dialog.BrushStyle;
             _settings.WhiteboardPreset = dialog.WhiteboardPreset;
             _settings.CalligraphyPreset = dialog.CalligraphyPreset;
+            _settings.PresetScheme = dialog.PresetScheme;
+            _settings.ClassroomWritingMode = dialog.ClassroomWritingMode;
             _settings.CalligraphyInkBloomEnabled = dialog.CalligraphyInkBloomEnabled;
             _settings.CalligraphySealEnabled = dialog.CalligraphySealEnabled;
             _settings.CalligraphyOverlayOpacityThreshold = dialog.CalligraphyOverlayOpacityThreshold;
@@ -181,7 +185,11 @@ public partial class MainWindow
             _settings.InkExportMaxParallelFiles = dialog.InkExportMaxParallelFiles;
             _settings.PhotoRememberTransform = dialog.PhotoRememberTransform;
             _settings.PhotoCrossPageDisplay = dialog.PhotoCrossPageDisplay;
+            _settings.PhotoInputTelemetryEnabled = dialog.PhotoInputTelemetryEnabled;
             _settings.PhotoNeighborPrefetchRadiusMax = dialog.PhotoNeighborPrefetchRadiusMax;
+            _settings.PhotoPostInputRefreshDelayMs = dialog.PhotoPostInputRefreshDelayMs;
+            _settings.PhotoWheelZoomBase = dialog.PhotoWheelZoomBase;
+            _settings.PhotoGestureZoomSensitivity = dialog.PhotoGestureZoomSensitivity;
             SaveSettings();
             _inkExportOptions.Scope = _settings.InkExportScope;
             _inkExportOptions.MaxParallelFiles = _settings.InkExportMaxParallelFiles;

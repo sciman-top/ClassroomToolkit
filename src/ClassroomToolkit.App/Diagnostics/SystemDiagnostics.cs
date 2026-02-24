@@ -59,6 +59,12 @@ public static class SystemDiagnostics
         lines.Add($"控制WPS演示：{(settings.ControlWpsPpt ? "启用" : "禁用")}");
         lines.Add($"WPS兼容策略：{settings.WpsInputMode}");
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
+        lines.Add($"WPS去抖毫秒：{settings.WpsDebounceMs}");
+        lines.Add($"降级策略锁定：{(settings.PresentationLockStrategyWhenDegraded ? "启用" : "禁用")}");
+        lines.Add($"图片滚轮缩放步进：{settings.PhotoWheelZoomBase:0.####}");
+        lines.Add($"图片手势缩放灵敏度：{settings.PhotoGestureZoomSensitivity:0.##}x");
+        lines.Add($"跨页抬笔刷新延迟：{settings.PhotoPostInputRefreshDelayMs}ms");
+        lines.Add($"图片输入遥测日志：{(settings.PhotoInputTelemetryEnabled ? "启用" : "禁用")}");
         lines.Add($"全屏演示前台保障：{(settings.ForcePresentationForegroundOnFullscreen ? "启用" : "禁用")}");
 
         AppendPresentationDiagnostics(lines, issues, fixes, settings);
