@@ -50,6 +50,14 @@
 - 在 `MainWindow.*`、`PaintOverlayWindow.*`、`RollCallWindow.*` 中继续累积跨层编排
 - 通过 feature flag 长期并存两条高风险主链
 
+### 4.1 新增功能接入守则
+
+- 新增功能或行为修改前，必须先判定归宿层：`App/View`、`Session`、`Windowing`、`Application`、`Domain`、`Infra`、`Services`、`Interop`。
+- `MainWindow.*`、`PaintOverlayWindow.*`、`RollCallWindow.*` 只允许保留视图接线、轻量 UI 协调和现有边界内的少量生命周期代码；不得继续堆叠新的运行时规则、状态写回、存储决策或外部交互分支。
+- 新增窗口/场景逻辑优先落到独立 `Policy / StateUpdater / Executor / Coordinator / UseCase` 文件；不要为了省事把分支继续写回热点窗口文件。
+- `Services` 只能承接运行时能力实现与应用端口适配；禁止把新增业务规则、场景互切编排或持久化策略堆进 `Services`。
+- 若某次改动无法说明“为什么该逻辑必须留在热点文件或当前层”，默认视为归宿错误，需先拆分再继续。
+
 ## 5. 允许依赖矩阵（执行版）
 
 | From | To | 结论 |

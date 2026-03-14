@@ -1,12 +1,13 @@
 # GEMINI.md — ClassroomToolkit 项目规则（Gemini CLI）
 **项目**: ClassroomToolkit  
-**类型**: Windows WPF (.NET 8)  
+**类型**: Windows WPF (.NET 10)  
 **适用范围**: 项目级（仓库根）  
 **上下文**: 项目根目录  
-**版本**: 1.44  
-**最后更新**: 2026-02-13
+**版本**: 1.45  
+**最后更新**: 2026-03-14
 
 ## 0. 变更记录
+- 2026-03-14 v1.45：补充“终态蓝图扩展守则”，明确新增功能必须先判定归宿层，禁止继续向热点窗口文件和 `Services` 堆叠运行时编排。
 - 2026-02-13 v1.44：补充全局-项目联动复核条目（全局标题版本一致性与项目引用链校验），降低协同漂移风险。
 - 2026-02-13 v1.43：补充项目级边界判定矩阵与 B 节回滚提示模板，强化全局-项目协同与六文件复核。
 - 2026-02-13 v1.42：同步架构改造落地（DI 启动链、MainViewModel、Windowing 协调器、PerMonitorV2、新增测试与 Release 验证命令）。
@@ -73,6 +74,8 @@
 ### A.2 操作与验证范式
 - 定位：优先 `rg`/`rg --files` 定位，再打开必要文件；避免全量遍历 `student_photos/`。
 - 批量改动：>=2 文件或跨模块视为批量，完成后复查受影响文件清单并说明范围。
+- 扩展守则：新增功能或行为修改前，先判定归宿层（`App/View`、`Session`、`Windowing`、`Application`、`Infra`、`Services`、`Interop`）；未完成归宿判定，不得直接向热点文件堆逻辑。
+- 热点文件：`MainWindow.*`、`PaintOverlayWindow.*`、`RollCallWindow.*` 默认只允许接线、轻量视图协调与已存在边界内的少量 UI 逻辑；新增运行时规则、状态写回、外部交互分支必须优先外提到 `Session / Policy / Updater / Executor / UseCase`。
 - 说明格式：批量改动按 C.9 变更影响模板说明。
 - 说明触发：最小复述条目超过 3 条或新增跨模块/跨平台约束时，需说明原因。
 - 验证：多步骤优先 `powershell -File scripts/ctoolkit.ps1`，单点验证用 `dotnet test --filter ...`。
@@ -146,6 +149,8 @@
 ### 5. 变更边界与依赖
 - 不改变 `students.xlsx` 结构或 `settings.ini` 格式
 - 不提交真实学生数据；`students.xlsx` 与 `student_photos/` 仅为示例资产
+- 禁止把 `MainWindow.*`、`PaintOverlayWindow.*`、`RollCallWindow.*` 继续做成“功能收纳箱”；新增分支、状态机片段、Interop 调用、存储决策默认应落到独立职责文件
+- 禁止把 `src/ClassroomToolkit.Services` 扩张为第二业务中心；新增业务规则、场景互切、持久化策略优先归 `Application / Domain / Infra`
 - Interop 大幅重构需先沟通确认
 
 ### 6. 关键技术要点 (Input Simulation)
@@ -186,5 +191,4 @@
 - 联动复核：全局文件升级后，需核对项目 A.3 与 B 节对 GlobalUser 的引用路径和语义是否仍一致。
 - 验证：变更后补充验证命令或未执行原因与风险。
 - 复核：更新后检查 A.3 边界判定矩阵与 B 节微模板完整性（最小摘要/操作/风险提示/回滚提示）。
-
 

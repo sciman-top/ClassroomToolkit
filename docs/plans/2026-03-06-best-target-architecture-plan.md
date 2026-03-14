@@ -125,6 +125,9 @@
 - 文档裁决优先级固定：主方案 > 主进度 > handover > ADR > phase 历史文档。
 - `phase-*` 文档仅作历史参考，不得推翻当前口径。
 - 默认连续执行，不做阶段性暂停。
+- 新增功能或行为修改前，先判定归宿层；禁止为赶进度继续向 `MainWindow.*`、`PaintOverlayWindow.*`、`RollCallWindow.*` 堆叠运行时分支。
+- 热点窗口文件只允许保留视图接线与轻量协调；新增状态写回、Interop 决策、存储决策、场景编排默认外提到 `Session / Policy / Updater / Executor / UseCase / Infra`。
+- `Services` 不得回流为第二编排中心；新增业务规则与场景互切逻辑默认不进入 `Services`。
 - 仅在以下情况暂停：
   - 主方案 / 主进度 / handover / ADR 之间按优先级仍无法裁决
   - 必须外部人工条件或外部环境
