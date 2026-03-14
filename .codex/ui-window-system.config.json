@@ -1,0 +1,37 @@
+{
+  "project": "ClassroomToolkit",
+  "updated_at": "2026-03-14",
+  "mode": "ui-window-system",
+  "scope": {
+    "goal": "unattended-safe loop plumbing for UI/window-system refactor preparation"
+  },
+  "wrapper": {
+    "default_manual_stop_status": "BLOCKED_NEEDS_HUMAN",
+    "shared_lock_file": ".codex/refactor-loop.lock.json",
+    "allow_explicit_path_override_only_when_matching_registry": true,
+    "reconciliation_refresh_on_gate_resume": true,
+    "refuse_completion_when_reconciliation_stale": true
+  },
+  "manual_gates": [
+    "theme-freeze",
+    "main-scene-freeze",
+    "fullscreen-float-freeze",
+    "final-visual-regression"
+  ],
+  "stop_rules": [
+    "BLOCKED_NEEDS_HUMAN",
+    "NO_ELIGIBLE_TASK",
+    "ALL_AUTOMATABLE_TASKS_DONE"
+  ],
+  "governing_reconciliation": {
+    "doc_paths": [
+      "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
+      "docs/superpowers/specs/2026-03-14-ui-mode-loop-integration-design.md",
+      "docs/superpowers/plans/2026-03-14-ui-mode-loop-integration-implementation-plan.md",
+      "docs/validation/ui-window-system-progress.md",
+      "docs/validation/ui-window-system-acceptance.md"
+    ],
+    "doc_sync_policy": "spec > integration-design > implementation-plan > progress > acceptance",
+    "refresh_on_gate_resume": true
+  }
+}

@@ -1,0 +1,33 @@
+﻿{
+  "project": "ClassroomToolkit",
+  "mode": "ui-window-system",
+  "mode_family": "ui-overhaul",
+  "updated_at": "2026-03-14T00:00:00Z",
+  "current_task": null,
+  "visual_phase": "foundation",
+  "current_manual_gate": null,
+  "theme_frozen": false,
+  "main_scene_frozen": false,
+  "fullscreen_frozen": false,
+  "final_visual_review_passed": false,
+  "governing_reconciliation": {
+    "last_reconciled_at": null,
+    "doc_paths": [
+      "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
+      "docs/superpowers/specs/2026-03-14-ui-mode-loop-integration-design.md",
+      "docs/superpowers/plans/2026-03-14-ui-mode-loop-integration-implementation-plan.md",
+      "docs/validation/ui-window-system-progress.md",
+      "docs/validation/ui-window-system-acceptance.md"
+    ],
+    "doc_sync_policy": "spec > integration-design > implementation-plan > progress > acceptance",
+    "completion_gate_policy": "refuse_done_when_authoritative_docs_are_newer_than_reconciliation"
+  },
+  "tasks": {},
+  "blocked": [],
+  "history": [],
+  "last_summary": ""
+}
+
+
+
+

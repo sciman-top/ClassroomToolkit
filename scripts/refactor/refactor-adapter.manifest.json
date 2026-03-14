@@ -1,0 +1,142 @@
+{
+  "version": "2026-03-13",
+  "entries": [
+    {
+      "path": ".codex/skills/autonomous-refactor-loop",
+      "kind": "directory",
+      "required": true,
+      "role": "skill"
+    },
+    {
+      "path": "scripts/run-refactor-loop.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper"
+    },
+    {
+      "path": "scripts/run-autonomous-execution-loop.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-entry"
+    },
+    {
+      "path": "scripts/refactor/select-next-task.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/update-refactor-state.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/test-governing-reconciliation.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/check-task-done.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/check-doc-consistency.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/install-precommit-consistency-hook.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/install-refactor-adapter.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
+      "path": "scripts/refactor/export-refactor-adapter.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
+      "path": "scripts/refactor/refactor-adapter.manifest.json",
+      "kind": "file",
+      "required": true,
+      "role": "manifest"
+    },
+    {
+      "path": ".codex/refactor-modes.json",
+      "kind": "file",
+      "required": true,
+      "role": "mode-registry"
+    },
+    {
+      "path": ".codex/ui-window-system.config.json",
+      "kind": "file",
+      "required": true,
+      "role": "ui-mode-config"
+    },
+    {
+      "path": ".codex/ui-window-system-state.json",
+      "kind": "seed-state",
+      "required": true,
+      "role": "ui-mode-state",
+      "mode_id": "ui-window-system"
+    },
+    {
+      "path": "docs/ui-refactor/tasks.json",
+      "kind": "file",
+      "required": true,
+      "role": "task-graph"
+    },
+    {
+      "path": "docs/validation/ui-window-system-progress.md",
+      "kind": "file",
+      "required": true,
+      "role": "doc"
+    },
+    {
+      "path": "docs/validation/ui-window-system-acceptance.md",
+      "kind": "file",
+      "required": true,
+      "role": "doc"
+    },
+    {
+      "path": "scripts/refactor/resolve-refactor-mode.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/resume-manual-gate.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "scripts/refactor/test-ui-mode-smoke.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "refactor-script"
+    },
+    {
+      "path": "docs/refactor/tasks.json",
+      "kind": "file",
+      "required": true,
+      "role": "task-graph"
+    }
+  ],
+  "state_seed": {
+    "path": ".codex/refactor-state.json",
+    "mode": "autonomous-refactor-loop"
+  }
+}
