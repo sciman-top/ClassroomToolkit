@@ -85,8 +85,10 @@ public partial class PaintOverlayWindow
             ApplyInkStrokes(cached, preferInteractiveFastPath);
             return;
         }
-        // Method A fallback: try loading from sidecar file on disk
-        if (allowDiskFallback && _inkPersistence != null && TryLoadInkFromSidecar())
+        // Method A fallback: only load persisted ink when save-toggle allows persistence.
+        if (InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback, _inkSaveEnabled)
+            && _inkPersistence != null
+            && TryLoadInkFromSidecar())
         {
             if (IsCrossPageFirstInputTraceActive())
             {
@@ -162,17 +164,7 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        var candidates = new List<(string Source, InkBitmapCacheEntry Entry)>(2);
-        if (_interactiveSwitchInkCache.TryGetValue(cacheKey, out var switchEntry))
-        {
-            candidates.Add(("switch-seed", switchEntry));
-        }
-        if (_neighborInkCache.TryGetValue(cacheKey, out var neighborEntry)
-            && !ReferenceEquals(switchEntry, neighborEntry))
-        {
-            candidates.Add(("neighbor-cache", neighborEntry));
-        }
-        if (candidates.Count == 0)
+        if (!_neighborInkCache.TryGetValue(cacheKey, out var neighborEntry))
         {
             if (IsCrossPageFirstInputTraceActive())
             {
@@ -182,48 +174,45 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        string lastReason = "no-candidate";
-        foreach (var (source, entry) in candidates)
+        var bitmap = neighborEntry.Bitmap;
+        var decision = CrossPageInkFastPathSelector.EvaluateCandidateForRasterCopy(
+            interactiveSwitch,
+            strokes,
+            neighborEntry.Strokes,
+            bitmap.PixelWidth,
+            bitmap.PixelHeight,
+            bitmap.DpiX,
+            bitmap.DpiY,
+            _surfacePixelWidth,
+            _surfacePixelHeight,
+            _surfaceDpiX,
+            _surfaceDpiY);
+        if (!decision.ShouldApply)
         {
-            var bitmap = entry.Bitmap;
-            var decision = CrossPageInkFastPathSelector.EvaluateCandidateForRasterCopy(
-                interactiveSwitch,
-                strokes,
-                entry.Strokes,
-                bitmap.PixelWidth,
-                bitmap.PixelHeight,
-                bitmap.DpiX,
-                bitmap.DpiY,
-                _surfacePixelWidth,
-                _surfacePixelHeight,
-                _surfaceDpiX,
-                _surfaceDpiY);
-            if (!decision.ShouldApply)
-            {
-                lastReason = $"{source}:{decision.Reason}";
-                continue;
-            }
-            if (!TryCopyBitmapToRasterSurface(bitmap))
-            {
-                lastReason = $"{source}:copy-failed";
-                continue;
-            }
-
-            _hasDrawing = true;
             if (IsCrossPageFirstInputTraceActive())
             {
-                MarkCrossPageFirstInputStage("apply-fast-hit", $"source={source}");
+                MarkCrossPageFirstInputStage("apply-fast-skip", decision.Reason);
             }
-            _inkDiagnostics?.OnCrossPageUpdateEvent("apply", "interactive-fastpath", $"source={source}");
-            return true;
+            _inkDiagnostics?.OnCrossPageUpdateEvent("skip", "interactive-fastpath", decision.Reason);
+            return false;
+        }
+        if (!TryCopyBitmapToRasterSurface(bitmap))
+        {
+            if (IsCrossPageFirstInputTraceActive())
+            {
+                MarkCrossPageFirstInputStage("apply-fast-skip", "copy-failed");
+            }
+            _inkDiagnostics?.OnCrossPageUpdateEvent("skip", "interactive-fastpath", "copy-failed");
+            return false;
         }
 
+        _hasDrawing = true;
         if (IsCrossPageFirstInputTraceActive())
         {
-            MarkCrossPageFirstInputStage("apply-fast-skip", lastReason);
+            MarkCrossPageFirstInputStage("apply-fast-hit", "source=neighbor-cache");
         }
-        _inkDiagnostics?.OnCrossPageUpdateEvent("skip", "interactive-fastpath", lastReason);
-        return false;
+        _inkDiagnostics?.OnCrossPageUpdateEvent("apply", "interactive-fastpath", "source=neighbor-cache");
+        return true;
     }
 
     private bool TryCopyBitmapToRasterSurface(BitmapSource source)

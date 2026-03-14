@@ -12,11 +12,7 @@
         ShowInTaskbar="False"
         Topmost="True">
     
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
-        </Border.Effect>
-
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
@@ -25,16 +21,16 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="启动器设置" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,8,0">
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="启动器设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 -->
-            <StackPanel Grid.Row="1" Margin="24">
+            <StackPanel Grid.Row="1" Margin="20,16,20,16">
                 <TextBlock Text="自动关闭时间 (分钟)" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
                 <TextBlock Text="设置为 0 则不自动关闭" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,8"/>
                 
@@ -42,9 +38,9 @@
             </StackPanel>
 
             <!-- 3. 按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Margin="0,0,10,0" Width="80" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="80" Click="OnConfirm"/>
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>

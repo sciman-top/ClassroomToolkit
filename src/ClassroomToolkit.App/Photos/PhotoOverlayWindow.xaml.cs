@@ -139,7 +139,7 @@ public partial class PhotoOverlayWindow : Window
             Canvas.SetTop(NameText, photoTop + 30);
         }
 
-        // 定位关闭按钮：在照片底部左右角
+        // 定位关闭按钮：主入口固定在右下角
         var buttonMargin = 30.0;
         var buttonSize = 56.0;
         
@@ -148,6 +148,13 @@ public partial class PhotoOverlayWindow : Window
 
         Canvas.SetLeft(CloseButtonRight, photoLeft + photoWidth - buttonMargin - buttonSize);
         Canvas.SetTop(CloseButtonRight, photoTop + photoHeight - buttonMargin - buttonSize);
+
+        // 关闭提示文案位于底部居中，避免遮挡主体内容。
+        CloseHintText.Measure(new WpfSize(double.PositiveInfinity, double.PositiveInfinity));
+        var hintLeft = Math.Max(16, (windowWidth - CloseHintText.DesiredSize.Width) / 2);
+        var hintTop = Math.Max(16, photoTop + photoHeight - 26);
+        Canvas.SetLeft(CloseHintText, hintLeft);
+        Canvas.SetTop(CloseHintText, hintTop);
     }
 
     public void CloseOverlay()

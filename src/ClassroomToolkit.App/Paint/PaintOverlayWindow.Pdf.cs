@@ -16,8 +16,32 @@ public partial class PaintOverlayWindow
 {
     #region PDF Loading
 
-    private const long PdfCacheMaxBytes = 100 * 1024 * 1024; // 100MB
+    private const long PdfCacheMaxBytes = PhotoDocumentRuntimeDefaults.PdfCacheMaxBytes;
     private long _pdfCacheCurrentBytes;
+
+    private bool IsPdfModeActive()
+    {
+        return _photoModeActive && _photoDocumentIsPdf;
+    }
+
+    private bool HasPdfDocument()
+    {
+        return _pdfDocument != null && _pdfPageCount > 0;
+    }
+
+    private bool CanUsePdfDocument()
+    {
+        return IsPdfModeActive() && HasPdfDocument();
+    }
+
+    private bool ShouldRefreshCrossPagePdfDisplay()
+    {
+        return CrossPagePdfVisiblePrefetchUpdatePolicy.ShouldRefreshCrossPageDisplay(
+            photoModeActive: _photoModeActive,
+            photoDocumentIsPdf: _photoDocumentIsPdf,
+            boardActive: IsBoardActive(),
+            crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled());
+    }
 
     private void StartPdfOpenAsync(string sourcePath)
     {
@@ -45,8 +69,7 @@ public partial class PaintOverlayWindow
             var scheduledApply = TryBeginInvoke(() =>
             {
                 if (token != _photoLoadToken
-                    || !_photoModeActive
-                    || !_photoDocumentIsPdf
+                    || !IsPdfModeActive()
                     || !string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
                 {
                     openedDocument.Dispose();
@@ -138,41 +161,26 @@ public partial class PaintOverlayWindow
         if (bitmap == null)
         {
             PhotoBackground.Source = null;
-            PhotoBackground.Visibility = Visibility.Collapsed;
+            RefreshPhotoBackgroundVisibility();
             return false;
         }
         PhotoBackground.Source = bitmap;
-        PhotoBackground.Visibility = Visibility.Visible;
+        RefreshPhotoBackgroundVisibility();
         UpdateCurrentPageWidthNormalization(bitmap);
         SchedulePdfPrefetch(pageIndex, _lastPdfNavigationDirection);
-        if (_crossPageDisplayEnabled)
+        if (ShouldRefreshCrossPagePdfDisplay())
         {
-            if (_photoUnifiedTransformReady)
-            {
-                EnsurePhotoTransformsWritable();
-                _photoScale.ScaleX = _lastPhotoScaleX;
-                _photoScale.ScaleY = _lastPhotoScaleY;
-                _photoTranslate.X = _lastPhotoTranslateX;
-                _photoTranslate.Y = _lastPhotoTranslateY;
-            }
-            else
-            {
-                ApplyPhotoFitToViewport(bitmap);
-            }
+            ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: true);
             return true;
         }
-        var appliedStored = TryApplyStoredPhotoTransform(GetCurrentPhotoTransformKey());
-        if (!appliedStored)
-        {
-            ApplyPhotoFitToViewport(bitmap);
-        }
+        ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
         return true;
     }
 
     private bool TryGetCachedPdfPageBitmap(int pageIndex, out BitmapSource? bitmap)
     {
         bitmap = null;
-        if (!Monitor.TryEnter(_pdfRenderLock, 50)) // Increased from 2ms to reduce prefetch failures
+        if (!Monitor.TryEnter(_pdfRenderLock, PhotoDocumentRuntimeDefaults.PdfCacheTryEnterTimeoutMs))
         {
             return false;
         }
@@ -307,7 +315,7 @@ public partial class PaintOverlayWindow
 
     private bool TryNavigatePdf(int direction)
     {
-        if (!_photoModeActive || !_photoDocumentIsPdf || _pdfDocument == null)
+        if (!CanUsePdfDocument())
         {
             return false;
         }
@@ -323,7 +331,7 @@ public partial class PaintOverlayWindow
         LoadCurrentPageIfExists();
         _lastPdfNavigationDirection = direction >= 0 ? 1 : -1;
         RenderPdfPage(_currentPageIndex);
-        if (_crossPageDisplayEnabled)
+        if (ShouldRefreshCrossPagePdfDisplay())
         {
             UpdateCrossPageDisplay();
         }
@@ -336,7 +344,7 @@ public partial class PaintOverlayWindow
 
     private void SchedulePdfPrefetch(int pageIndex, int direction)
     {
-        if (!_photoDocumentIsPdf || _pdfDocument == null || _pdfPageCount <= 0)
+        if (!CanUsePdfDocument())
         {
             return;
         }
@@ -350,12 +358,13 @@ public partial class PaintOverlayWindow
         {
             try
             {
-                var delay = _crossPageDisplayEnabled ? 0 : 120;
+                var crossPageDisplayActive = ShouldRefreshCrossPagePdfDisplay();
+                var delay = PdfPrefetchTimingPolicy.ResolveInitialDelayMs(crossPageDisplayActive);
                 if (delay > 0)
                 {
                     await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
                 }
-                if (token != _pdfPrefetchToken || !_photoModeActive || !_photoDocumentIsPdf)
+                if (token != _pdfPrefetchToken || !IsPdfModeActive())
                 {
                     return;
                 }
@@ -370,7 +379,7 @@ public partial class PaintOverlayWindow
 
     private void SchedulePdfVisiblePrefetch(IReadOnlyList<int> pageIndexes)
     {
-        if (!_photoDocumentIsPdf || _pdfDocument == null || _pdfPageCount <= 0)
+        if (!CanUsePdfDocument())
         {
             return;
         }
@@ -415,7 +424,7 @@ public partial class PaintOverlayWindow
                 {
                     TryBeginInvoke(() =>
                     {
-                        if (_photoModeActive && _photoDocumentIsPdf && _crossPageDisplayEnabled)
+                        if (ShouldRefreshCrossPagePdfDisplay())
                         {
                             UpdateCrossPageDisplay();
                         }
@@ -453,7 +462,7 @@ public partial class PaintOverlayWindow
         {
             return true;
         }
-        if (!Monitor.TryEnter(_pdfRenderLock, 100)) // Increased from 30ms for background prefetch
+        if (!Monitor.TryEnter(_pdfRenderLock, PhotoDocumentRuntimeDefaults.PdfPrefetchTryEnterTimeoutMs))
         {
             return false;
         }

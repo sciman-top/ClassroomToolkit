@@ -28,20 +28,10 @@ public sealed class StudentResourceLocatorTests
     [Fact]
     public void FindSolutionDirectory_ShouldReturnNull_WhenNoSolutionFileExists()
     {
-        var root = CreateTempDirectory();
-        var nested = Path.Combine(root, "a", "b", "c");
-        Directory.CreateDirectory(nested);
+        var nested = Path.Combine(@"Z:\", $"ctool_locator_no_sln_{Guid.NewGuid():N}", "a", "b", "c");
+        var result = StudentResourceLocator.FindSolutionDirectory(nested);
 
-        try
-        {
-            var result = StudentResourceLocator.FindSolutionDirectory(nested);
-
-            result.Should().BeNull();
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -64,8 +54,6 @@ public sealed class StudentResourceLocatorTests
 
     private static string CreateTempDirectory()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_locator_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path);
-        return path;
+        return TestPathHelper.CreateDirectory("ctool_locator");
     }
 }

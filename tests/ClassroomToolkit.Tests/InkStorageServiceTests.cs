@@ -8,7 +8,7 @@ public sealed class InkStorageServiceTests
     [Fact]
     public void SavePage_AndLoadPage_ShouldRoundTrip()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_ink_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink");
         try
         {
             var service = new InkStorageService(rootPath);
@@ -40,7 +40,7 @@ public sealed class InkStorageServiceTests
     [Fact]
     public void SavePage_ShouldNotLeaveTempFile_WhenTargetIsLocked()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_ink_lock_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_lock");
         try
         {
             var service = new InkStorageService(rootPath);
@@ -72,7 +72,7 @@ public sealed class InkStorageServiceTests
     [Fact]
     public void LoadPage_ShouldReturnNull_WhenJsonIsCorrupted()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_ink_bad_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_bad");
         try
         {
             var service = new InkStorageService(rootPath);
@@ -97,7 +97,7 @@ public sealed class InkStorageServiceTests
     [Fact]
     public void ListPages_ShouldSkipCorruptedFiles_AndReturnValidPages()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_ink_list_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_list");
         try
         {
             var service = new InkStorageService(rootPath);

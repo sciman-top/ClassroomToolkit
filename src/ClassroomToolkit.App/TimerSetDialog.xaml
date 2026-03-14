@@ -10,34 +10,31 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="12" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
-        </Border.Effect>
-
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
                 <RowDefinition Height="Auto"/> <!-- Mins -->
+                <RowDefinition Height="Auto"/> <!-- Quick presets -->
                 <RowDefinition Height="Auto"/> <!-- Secs -->
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
             <!-- 1. 标题 -->
-            <Grid Grid.Row="0" Margin="0,0,0,0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="设定时间" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="24,0,0,0"/>
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="设定时间" Style="{StaticResource Style_DialogShellTitleText}"/>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 分钟设置 -->
-            <Grid Grid.Row="1" Margin="24,20,24,10">
+            <Grid Grid.Row="1" Margin="20,16,20,10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="分钟(最大150分钟)" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="分钟 (0-150，滑杆 0-25)" FontSize="14" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="MinutesDownButton" Content="−" Width="28" Height="28" Margin="0,0,2,0"
                                 FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"
@@ -79,8 +76,21 @@
                         IsSnapToTickEnabled="True" TickFrequency="1"/>
             </Grid>
 
-            <!-- 3. 秒钟设置 -->
-            <Grid Grid.Row="2" Margin="24,10,24,20">
+            <!-- 3. 常用时长 -->
+            <StackPanel Grid.Row="2" Margin="20,0,20,8">
+                <TextBlock Text="常用预设" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
+                <WrapPanel Orientation="Horizontal" ItemHeight="28">
+                    <Button Content="3 分钟" Tag="3" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                    <Button Content="5 分钟" Tag="5" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                    <Button Content="10 分钟" Tag="10" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                    <Button Content="20 分钟" Tag="20" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                    <Button Content="30 分钟" Tag="30" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                    <Button Content="40 分钟" Tag="40" Width="72" Height="28" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                </WrapPanel>
+            </StackPanel>
+
+            <!-- 4. 秒钟设置 -->
+            <Grid Grid.Row="3" Margin="20,8,20,18">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -96,10 +106,10 @@
                         IsSnapToTickEnabled="True" TickFrequency="5"/>
             </Grid>
 
-            <!-- 4. 按钮 -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,0,24,24">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,12,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
+            <!-- 5. 按钮 -->
+            <StackPanel Grid.Row="4" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>

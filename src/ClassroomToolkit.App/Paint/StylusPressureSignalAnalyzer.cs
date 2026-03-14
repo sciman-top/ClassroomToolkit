@@ -13,14 +13,14 @@ internal enum StylusPressureDeviceProfile
 
 internal sealed class StylusPressureSignalAnalyzer
 {
-    private const int WindowSize = 28;
-    private const int MinSamplesForProfile = 12;
-    private const double EndpointPseudoRatioThreshold = 0.82;
-    private const double LowRangeThreshold = 0.07;
-    private const double ContinuousRangeThreshold = 0.18;
-    private const int EndpointDistinctMax = 3;
-    private const int LowRangeDistinctMax = 4;
-    private const int ContinuousDistinctMin = 7;
+    private const int WindowSize = StylusPressureAnalysisDefaults.WindowSize;
+    private const int MinSamplesForProfile = StylusPressureAnalysisDefaults.MinSamplesForProfile;
+    private const double EndpointPseudoRatioThreshold = StylusPressureAnalysisDefaults.EndpointPseudoRatioThreshold;
+    private const double LowRangeThreshold = StylusPressureAnalysisDefaults.LowRangeThreshold;
+    private const double ContinuousRangeThreshold = StylusPressureAnalysisDefaults.ContinuousRangeThreshold;
+    private const int EndpointDistinctMax = StylusPressureAnalysisDefaults.EndpointDistinctMax;
+    private const int LowRangeDistinctMax = StylusPressureAnalysisDefaults.LowRangeDistinctMax;
+    private const int ContinuousDistinctMin = StylusPressureAnalysisDefaults.ContinuousDistinctMin;
 
     private readonly Queue<double> _samples = new();
     private readonly Queue<bool> _endpointFlags = new();
@@ -111,7 +111,7 @@ internal sealed class StylusPressureSignalAnalyzer
             {
                 max = value;
             }
-            buckets.Add((int)Math.Round(value * 100.0));
+            buckets.Add((int)Math.Round(value * StylusPressureAnalysisDefaults.BucketScale));
         }
 
         double range = max - min;
@@ -130,7 +130,9 @@ internal sealed class StylusPressureSignalAnalyzer
             return;
         }
 
-        if (range >= ContinuousRangeThreshold && distinctCount >= ContinuousDistinctMin && endpointRatio < 0.7)
+        if (range >= ContinuousRangeThreshold
+            && distinctCount >= ContinuousDistinctMin
+            && endpointRatio < StylusPressureAnalysisDefaults.EndpointRatioUpperBoundForContinuous)
         {
             Profile = StylusPressureDeviceProfile.Continuous;
             return;
@@ -141,7 +143,9 @@ internal sealed class StylusPressureSignalAnalyzer
 
     private static double ApplyGammaCurve(double pressure, double gamma)
     {
-        double g = double.IsFinite(gamma) ? Math.Clamp(gamma, 0.55, 1.8) : 1.0;
+        double g = double.IsFinite(gamma)
+            ? Math.Clamp(gamma, StylusPressureAnalysisDefaults.GammaMin, StylusPressureAnalysisDefaults.GammaMax)
+            : 1.0;
         return Math.Clamp(Math.Pow(pressure, g), 0.0, 1.0);
     }
 }

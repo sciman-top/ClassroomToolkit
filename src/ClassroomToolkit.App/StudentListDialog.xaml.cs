@@ -34,12 +34,12 @@ public partial class StudentListDialog : Window
     {
         if (_students.Count == 0) return;
 
-        const double itemHeight = 56;  // 对应 XAML 中的 ItemHeight
+        const double itemHeight = 60;  // 卡片高度（含边距）
         const double headerHeight = 56;
         const double footerHeight = 50;
         const double windowBorderMargin = 20;
 
-        // 一行 10 人
+        // 固定 10 列，方便教师按学号序号快速定位所在位置。
         const int columns = 10;
         var rows = (int)Math.Ceiling(_students.Count / (double)columns);
 
@@ -59,7 +59,7 @@ public partial class StudentListDialog : Window
         Height = Math.Min(idealHeight, maxHeight);
 
         // 设置最小尺寸以确保内容可见
-        MinWidth = 600;
+        MinWidth = 980;
         MinHeight = Math.Min(400, maxHeight);
 
         // 居中显示

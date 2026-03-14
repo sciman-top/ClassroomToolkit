@@ -164,6 +164,18 @@ public partial class TimerSetDialog : Window
         _updating = false;
     }
 
+    private void OnPresetMinutesClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: string tag } || !int.TryParse(tag, out var minutes))
+        {
+            return;
+        }
+
+        var clamped = Math.Clamp(minutes, 0, MaxMinutes);
+        SetMinutes(clamped, updateSlider: clamped <= 25);
+        SetSeconds(0);
+    }
+
     private void SetSeconds(int seconds)
     {
         _updating = true;

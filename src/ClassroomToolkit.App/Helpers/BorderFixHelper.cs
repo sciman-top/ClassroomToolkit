@@ -127,18 +127,25 @@ namespace ClassroomToolkit.App.Helpers
                 }
                 
                 // 延迟再次执行，确保动态创建的控件也被修复
-                window.Dispatcher.BeginInvoke(new Action(() =>
+                try
                 {
-                    try
+                    window.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        FixAllBorders(window);
-                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 延迟修复完成");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟修复失败: {ex.Message}");
-                    }
-                }), System.Windows.Threading.DispatcherPriority.Loaded);
+                        try
+                        {
+                            FixAllBorders(window);
+                            System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 延迟修复完成");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟修复失败: {ex.Message}");
+                        }
+                    }), System.Windows.Threading.DispatcherPriority.Loaded);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟调度失败: {ex.Message}");
+                }
             }
         }
     }

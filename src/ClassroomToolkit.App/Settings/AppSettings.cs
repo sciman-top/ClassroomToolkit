@@ -48,7 +48,7 @@ public sealed class AppSettings
     public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
-    public string WpsInputMode { get; set; } = "auto";
+    public string WpsInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
     public int WpsDebounceMs { get; set; } = 200;

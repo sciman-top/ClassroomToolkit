@@ -1,4 +1,4 @@
-using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.Application.UseCases.Photos;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -96,3 +96,4 @@ public sealed class PhotoNavigationPlannerTests
         decision.ShouldNavigateFile.Should().BeFalse();
     }
 }
+

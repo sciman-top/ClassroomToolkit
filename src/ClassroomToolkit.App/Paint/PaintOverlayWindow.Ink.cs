@@ -15,7 +15,7 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
-using ClassroomToolkit.Interop;
+using ClassroomToolkit.App.Session;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -45,27 +45,59 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         RenderBrushPreview();
-        _lastCalligraphyPreviewUtc = DateTime.UtcNow;
+        _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
+        _lastCalligraphyPreviewPoint = position;
+    }
+
+    private void BeginBrushStrokeContinuation(BrushInputSample input)
+    {
+        var position = input.Position;
+        EnsureActiveRenderer();
+        if (_activeRenderer == null)
+        {
+            return;
+        }
+
+        _strokeInProgress = true;
+        var color = EffectiveBrushColor();
+        _activeRenderer.Initialize(color, _brushSize, color.A);
+        _activeRenderer.OnDown(input);
+        _lastBrushInputSample = input;
+        _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        RenderBrushPreview();
+        _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
         _lastCalligraphyPreviewPoint = position;
     }
 
     private void UpdateBrushStroke(BrushInputSample input)
     {
+        if (!TryUpdateBrushStrokeGeometry(input))
+        {
+            return;
+        }
+        FlushBrushStrokePreview(input);
+    }
+
+    private bool TryUpdateBrushStrokeGeometry(BrushInputSample input)
+    {
         if (!_strokeInProgress || _activeRenderer == null)
         {
-            return;
+            return false;
         }
-        var position = input.Position;
+
         var versionBeforeMove = _activeRenderer.GeometryVersion;
         _activeRenderer.OnMove(input);
-        if (_activeRenderer.GeometryVersion == versionBeforeMove)
-        {
-            return;
-        }
+        return _activeRenderer.GeometryVersion != versionBeforeMove;
+    }
+
+    private void FlushBrushStrokePreview(BrushInputSample input)
+    {
+        var position = input.Position;
         if (_brushStyle == PaintBrushStyle.Calligraphy && ShouldThrottleCalligraphyPreview(position))
         {
             return;
         }
+
         UpdateBrushPrediction(input);
         RenderBrushPreview();
     }
@@ -90,8 +122,10 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _lastCalligraphyPreviewPoint = null;
-        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
-                _photoModeActive,
+        var photoInkModeActive = IsPhotoInkModeActive();
+        if (!_suppressImmediatePhotoInkRedraw
+            && PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+                photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))
         {
@@ -123,11 +157,11 @@ public partial class PaintOverlayWindow
             if (delta.Length >= _calligraphyPreviewMinDistance)
             {
                 _lastCalligraphyPreviewPoint = position;
-                _lastCalligraphyPreviewUtc = DateTime.UtcNow;
+                _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
                 return false;
             }
         }
-        var nowUtc = DateTime.UtcNow;
+        var nowUtc = GetCurrentUtcTimestamp();
         if ((nowUtc - _lastCalligraphyPreviewUtc).TotalMilliseconds >= CalligraphyPreviewMinIntervalMs)
         {
             _lastCalligraphyPreviewUtc = nowUtc;
@@ -153,7 +187,9 @@ public partial class PaintOverlayWindow
         }
         var last = _lastEraserPoint.Value;
         var distance = (position - last).Length;
-        var threshold = Math.Max(1.0, _eraserSize * 0.2);
+        var threshold = Math.Max(
+            InkGeometryDefaults.EraserMoveThresholdMinDip,
+            _eraserSize * InkGeometryDefaults.EraserMoveThresholdScale);
         if (distance < threshold)
         {
             return;
@@ -172,15 +208,16 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (_lastEraserPoint == null || (_lastEraserPoint.Value - position).Length < 0.5)
+        if (_lastEraserPoint == null || (_lastEraserPoint.Value - position).Length < InkGeometryDefaults.EraserTapDistanceThresholdDip)
         {
             ApplyEraserAt(position);
         }
         _isErasing = false;
         _lastEraserPoint = null;
         NotifyInkStateChanged(updateActiveSnapshot: true);
+        var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
-                _photoModeActive,
+                photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))
         {
@@ -198,17 +235,19 @@ public partial class PaintOverlayWindow
 
         var previous = _lastBrushInputSample.Value;
         var dtMs = (input.TimestampTicks - previous.TimestampTicks) * 1000.0 / Math.Max(Stopwatch.Frequency, 1);
-        if (dtMs < 0.5)
+        if (dtMs < InkInputRuntimeDefaults.PredictionUpdateMinDtMs)
         {
             _lastBrushInputSample = input;
             return;
         }
 
         var dtSeconds = dtMs / 1000.0;
-        var v = (input.Position - previous.Position) / Math.Max(dtSeconds, 1e-6);
+        var v = (input.Position - previous.Position) / Math.Max(dtSeconds, BrushPredictionPreviewDefaults.MinPredictionDtSeconds);
         _lastBrushVelocityDipPerSec = new Vector(
-            (_lastBrushVelocityDipPerSec.X * 0.68) + (v.X * 0.32),
-            (_lastBrushVelocityDipPerSec.Y * 0.68) + (v.Y * 0.32));
+            (_lastBrushVelocityDipPerSec.X * BrushPredictionPreviewDefaults.VelocitySmoothingKeepFactor)
+            + (v.X * BrushPredictionPreviewDefaults.VelocitySmoothingApplyFactor),
+            (_lastBrushVelocityDipPerSec.Y * BrushPredictionPreviewDefaults.VelocitySmoothingKeepFactor)
+            + (v.Y * BrushPredictionPreviewDefaults.VelocitySmoothingApplyFactor));
         _lastBrushInputSample = input;
     }
 
@@ -247,9 +286,11 @@ public partial class PaintOverlayWindow
         p0 = new WpfPoint();
         p1 = new WpfPoint();
         p2 = new WpfPoint();
-        w0 = Math.Max(0.9, _brushSize * 0.2);
-        w1 = Math.Max(0.8, w0 * 0.82);
-        w2 = Math.Max(0.7, w1 * 0.78);
+        w0 = Math.Max(
+            BrushPredictionPreviewDefaults.InitialBaseWidthMinDip,
+            _brushSize * BrushPredictionPreviewDefaults.InitialBaseWidthFactor);
+        w1 = Math.Max(BrushPredictionPreviewDefaults.MinMidWidthDip, w0 * BrushPredictionPreviewDefaults.MidWidthRatio);
+        w2 = Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w1 * BrushPredictionPreviewDefaults.InitialTipWidthRatio);
 
         if (!_strokeInProgress || !_lastBrushInputSample.HasValue)
         {
@@ -257,19 +298,26 @@ public partial class PaintOverlayWindow
         }
 
         var speed = _lastBrushVelocityDipPerSec.Length;
-        if (speed < 12.0)
+        if (speed < BrushPredictionPreviewDefaults.MinSpeedDipPerSec)
         {
             return false;
         }
 
-        double horizonMs = Math.Clamp(_brushPredictionHorizonMs, 4, 16);
-        var damping = Math.Clamp(1.0 - (speed / 2600.0), 0.72, 1.0);
-        var lead1 = _lastBrushVelocityDipPerSec * ((horizonMs * 0.45) / 1000.0) * damping;
-        var lead2 = _lastBrushVelocityDipPerSec * ((horizonMs * 0.95) / 1000.0) * damping;
+        double horizonMs = Math.Clamp(_brushPredictionHorizonMs, InkPredictionDefaults.HorizonMinMs, InkPredictionDefaults.HorizonMaxMs);
+        var damping = Math.Clamp(
+            1.0 - (speed / BrushPredictionPreviewDefaults.DampingSpeedReference),
+            BrushPredictionPreviewDefaults.DampingMin,
+            1.0);
+        var lead1 = _lastBrushVelocityDipPerSec
+            * ((horizonMs * BrushPredictionPreviewDefaults.FirstLeadHorizonRatio) / 1000.0)
+            * damping;
+        var lead2 = _lastBrushVelocityDipPerSec
+            * ((horizonMs * BrushPredictionPreviewDefaults.SecondLeadHorizonRatio) / 1000.0)
+            * damping;
 
-        if (lead1.Length > BrushPredictionMaxDistanceDip * 0.7)
+        if (lead1.Length > BrushPredictionMaxDistanceDip * BrushPredictionPreviewDefaults.FirstLeadDistanceRatio)
         {
-            lead1 *= (BrushPredictionMaxDistanceDip * 0.7) / lead1.Length;
+            lead1 *= (BrushPredictionMaxDistanceDip * BrushPredictionPreviewDefaults.FirstLeadDistanceRatio) / lead1.Length;
         }
         if (lead2.Length > BrushPredictionMaxDistanceDip)
         {
@@ -280,11 +328,16 @@ public partial class PaintOverlayWindow
         p0 = origin;
         p1 = origin + lead1;
         p2 = origin + lead2;
-        double speedFactor = Math.Clamp((speed - 12.0) / 620.0, 0.0, 1.0);
-        var baseWidth = Math.Max(0.95, _brushSize * (0.17 + speedFactor * 0.09));
+        double speedFactor = Math.Clamp(
+            (speed - BrushPredictionPreviewDefaults.MinSpeedDipPerSec) / BrushPredictionPreviewDefaults.SpeedFactorRange,
+            0.0,
+            1.0);
+        var baseWidth = Math.Max(
+            BrushPredictionPreviewDefaults.MinBaseWidthDip,
+            _brushSize * (BrushPredictionPreviewDefaults.BaseWidthFactor + speedFactor * BrushPredictionPreviewDefaults.SpeedWidthGainFactor));
         w0 = baseWidth;
-        w1 = Math.Max(0.8, baseWidth * 0.82);
-        w2 = Math.Max(0.7, baseWidth * 0.68);
+        w1 = Math.Max(BrushPredictionPreviewDefaults.MinMidWidthDip, baseWidth * BrushPredictionPreviewDefaults.MidWidthRatio);
+        w2 = Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, baseWidth * BrushPredictionPreviewDefaults.TipWidthRatio);
         return true;
     }
 
@@ -298,9 +351,18 @@ public partial class PaintOverlayWindow
         double w1,
         double w2)
     {
-        byte a0 = (byte)Math.Clamp(color.A * 0.34, 24, 136);
-        byte a1 = (byte)Math.Clamp(color.A * 0.24, 18, 110);
-        byte a2 = (byte)Math.Clamp(color.A * 0.18, 14, 92);
+        byte a0 = (byte)Math.Clamp(
+            color.A * BrushPredictionPreviewDefaults.PrimaryAlphaMultiplier,
+            InkPredictionDefaults.PrimaryAlphaMin,
+            InkPredictionDefaults.PrimaryAlphaMax);
+        byte a1 = (byte)Math.Clamp(
+            color.A * BrushPredictionPreviewDefaults.SecondaryAlphaMultiplier,
+            InkPredictionDefaults.SecondaryAlphaMin,
+            InkPredictionDefaults.SecondaryAlphaMax);
+        byte a2 = (byte)Math.Clamp(
+            color.A * BrushPredictionPreviewDefaults.TipAlphaMultiplier,
+            InkPredictionDefaults.TipAlphaMin,
+            InkPredictionDefaults.TipAlphaMax);
 
         var c0 = MediaColor.FromArgb(a0, color.R, color.G, color.B);
         var c1 = MediaColor.FromArgb(a1, color.R, color.G, color.B);
@@ -326,7 +388,12 @@ public partial class PaintOverlayWindow
 
         var tipBrush = new SolidColorBrush(c2);
         if (tipBrush.CanFreeze) tipBrush.Freeze();
-        dc.DrawEllipse(tipBrush, null, p2, Math.Max(0.7, w2 * 0.5), Math.Max(0.7, w2 * 0.5));
+        dc.DrawEllipse(
+            tipBrush,
+            null,
+            p2,
+            Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w2 * BrushPredictionPreviewDefaults.TipRadiusRatio),
+            Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w2 * BrushPredictionPreviewDefaults.TipRadiusRatio));
     }
 
     private void BeginRegionSelection(WpfPoint position)
@@ -338,7 +405,7 @@ public partial class PaintOverlayWindow
             _regionRect = new WpfRectangle
             {
                 Stroke = new SolidColorBrush(MediaColor.FromArgb(200, 255, 200, 60)),
-                StrokeThickness = 2,
+                StrokeThickness = InkInputRuntimeDefaults.RegionSelectionStrokeThicknessDip,
                 StrokeDashArray = new DoubleCollection { 6, 4 },
                 Fill = new SolidColorBrush(MediaColor.FromArgb(30, 255, 200, 60)),
                 IsHitTestVisible = false
@@ -366,11 +433,121 @@ public partial class PaintOverlayWindow
         _isRegionSelecting = false;
         var region = BuildRegionRect(_regionStart, position);
         ClearRegionSelection();
-        if (region.Width > 2 && region.Height > 2)
+        if (region.Width > InkInputRuntimeDefaults.RegionEraseMinSideDip
+            && region.Height > InkInputRuntimeDefaults.RegionEraseMinSideDip)
         {
-            EraseRect(region);
+            EraseRectAcrossVisibleCrossPages(region);
         }
         NotifyInkStateChanged(updateActiveSnapshot: true);
+    }
+
+    private void EraseRectAcrossVisibleCrossPages(Rect region)
+    {
+        if (!CrossPageRegionErasePolicy.ShouldUseCrossPageErase(
+                IsPhotoInkModeActive(),
+                IsCrossPageDisplayActive()))
+        {
+            EraseRect(region);
+            return;
+        }
+
+        var currentPage = GetCurrentPageIndexForCrossPage();
+        var pages = ResolveCrossPagePagesIntersectingRegion(region, currentPage);
+        if (pages.Count == 0)
+        {
+            EraseRect(region);
+            return;
+        }
+
+        var batchOrder = CrossPageRegionEraseOrderPolicy.ResolveBatchOrder(
+            pages,
+            currentPage);
+        foreach (var targetPage in batchOrder)
+        {
+            if (!TryNavigateCrossPageForRegionErase(targetPage))
+            {
+                continue;
+            }
+            EraseRect(region);
+            NotifyInkStateChanged(updateActiveSnapshot: true, notifyContext: false);
+        }
+
+        PrimeVisibleNeighborInkSlots();
+        RequestCrossPageDisplayUpdate(CrossPageUpdateSources.RegionEraseCrossPage);
+    }
+
+    private bool TryNavigateCrossPageForRegionErase(int targetPage)
+    {
+        if (!CrossPageRegionErasePolicy.CanNavigateForRegionErase(
+                IsPhotoInkModeActive(),
+                IsCrossPageDisplayActive(),
+                targetPage))
+        {
+            return false;
+        }
+
+        var currentPage = GetCurrentPageIndexForCrossPage();
+        if (currentPage == targetPage)
+        {
+            return true;
+        }
+
+        if (PhotoBackground.Source is not BitmapSource currentBitmap)
+        {
+            return false;
+        }
+
+        var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
+        var offset = CrossPageInputNavigation.ComputePageOffset(
+            currentPage,
+            targetPage,
+            page => GetScaledHeightForPage(page, normalizedWidthDip));
+
+        SaveCurrentPageOnNavigate(
+            forceBackground: false,
+            persistToSidecar: false,
+            finalizeActiveOperation: false);
+
+        NavigateToPage(
+            targetPage,
+            _photoTranslate.Y + offset,
+            interactiveSwitch: true,
+            deferCrossPageDisplayUpdate: true);
+
+        return GetCurrentPageIndexForCrossPage() == targetPage;
+    }
+
+    private List<int> ResolveCrossPagePagesIntersectingRegion(Rect region, int currentPage)
+    {
+        var pages = new HashSet<int>();
+        if (PhotoBackground.Source is BitmapSource currentBitmap
+            && TryBuildImageScreenRect(currentBitmap, _photoContentTransform, out var currentRect)
+            && currentRect.IntersectsWith(region))
+        {
+            pages.Add(currentPage);
+        }
+
+        foreach (var img in _neighborPageImages)
+        {
+            if (img.Visibility != Visibility.Visible || img.Source is not BitmapSource bitmap)
+            {
+                continue;
+            }
+            if (!int.TryParse(img.Uid, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pageIndex))
+            {
+                continue;
+            }
+            if (!TryBuildImageScreenRect(bitmap, img.RenderTransform, out var rect))
+            {
+                continue;
+            }
+            if (rect.IntersectsWith(region))
+            {
+                pages.Add(pageIndex);
+            }
+        }
+
+        return pages.Where(page => page > 0).ToList();
     }
 
     private void BeginShape(WpfPoint position)
@@ -416,8 +593,9 @@ public partial class PaintOverlayWindow
             RecordShapeStroke(geometry, pen);
         }
         ClearShapePreview();
+        var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
-                _photoModeActive,
+                photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))
         {
@@ -443,14 +621,14 @@ public partial class PaintOverlayWindow
     
      private void ApplyEraserAt(WpfPoint position)
     {
-        var radius = Math.Max(2.0, _eraserSize * 0.5);
+        var radius = Math.Max(InkGeometryDefaults.MinEraserRadiusDip, _eraserSize * 0.5);
         var geometry = new EllipseGeometry(position, radius, radius);
         EraseGeometry(geometry);
     }
 
     private void EraseRect(Rect region)
     {
-        if (_photoModeActive)
+        if (IsPhotoInkModeActive())
         {
             EraseGeometry(new RectangleGeometry(region));
             return;
@@ -512,6 +690,7 @@ public partial class PaintOverlayWindow
             stroke.ReferenceWidth = refWidth;
             stroke.ReferenceHeight = refHeight;
         }
+        var photoInkModeActive = IsPhotoInkModeActive();
         if (_brushStyle == PaintBrushStyle.Calligraphy && _activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
         {
             var core = calligraphyRenderer.GetLastCoreGeometry();
@@ -523,7 +702,7 @@ public partial class PaintOverlayWindow
                 {
                     foreach (var ribbon in ribbons)
                     {
-                        var ribbonGeometry = _photoModeActive ? ToPhotoGeometry(ribbon.Geometry) : ribbon.Geometry;
+                        var ribbonGeometry = photoInkModeActive ? ToPhotoGeometry(ribbon.Geometry) : ribbon.Geometry;
                         if (ribbonGeometry == null)
                         {
                             continue;
@@ -537,7 +716,7 @@ public partial class PaintOverlayWindow
                     }
                 }
             }
-            var storeGeometry = _photoModeActive ? ToPhotoGeometry(strokeGeometry) : strokeGeometry;
+            var storeGeometry = photoInkModeActive ? ToPhotoGeometry(strokeGeometry) : strokeGeometry;
             if (storeGeometry == null)
             {
                 return;
@@ -553,7 +732,7 @@ public partial class PaintOverlayWindow
                 {
                     foreach (var bloom in blooms)
                     {
-                        var bloomGeometry = _photoModeActive ? ToPhotoGeometry(bloom.Geometry) : bloom.Geometry;
+                        var bloomGeometry = photoInkModeActive ? ToPhotoGeometry(bloom.Geometry) : bloom.Geometry;
                         if (bloomGeometry == null)
                         {
                             continue;
@@ -569,7 +748,7 @@ public partial class PaintOverlayWindow
         }
         else
         {
-            var storeGeometry = _photoModeActive ? ToPhotoGeometry(geometry) : geometry;
+            var storeGeometry = photoInkModeActive ? ToPhotoGeometry(geometry) : geometry;
             if (storeGeometry == null)
             {
                 return;
@@ -595,7 +774,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var storeGeometry = _photoModeActive ? ToPhotoGeometry(widened) : widened;
+        var storeGeometry = IsPhotoInkModeActive() ? ToPhotoGeometry(widened) : widened;
         if (storeGeometry == null)
         {
             return;
@@ -695,8 +874,9 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        var erasePrimary = _photoModeActive ? ToPhotoGeometry(geometry) : geometry;
-        var eraseFallback = _photoModeActive ? geometry : null;
+        var photoInkModeActive = IsPhotoInkModeActive();
+        var erasePrimary = photoInkModeActive ? ToPhotoGeometry(geometry) : geometry;
+        var eraseFallback = photoInkModeActive ? geometry : null;
         if (erasePrimary == null)
         {
             return false;
@@ -840,6 +1020,13 @@ public partial class PaintOverlayWindow
         return _strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting;
     }
 
+    private bool IsPhotoInkModeActive()
+    {
+        return PhotoInkModePolicy.IsActive(
+            photoModeActive: _photoModeActive,
+            boardActive: IsBoardActive());
+    }
+
     private void NotifyInkStateChanged(bool updateActiveSnapshot, bool notifyContext = true)
     {
         if (updateActiveSnapshot)
@@ -847,10 +1034,57 @@ public partial class PaintOverlayWindow
             UpdateActiveCacheSnapshot();
         }
         SetInkCacheDirty();
+        ApplyCrossPageInkVisualSync(CrossPageInkVisualSyncTrigger.InkStateChanged);
         if (notifyContext)
         {
             SetInkContextDirty();
         }
+    }
+
+    private void ApplyCrossPageInkVisualSync(CrossPageInkVisualSyncTrigger trigger)
+    {
+        var nowUtc = GetCurrentUtcTimestamp();
+        var elapsedMs = _crossPageInkVisualSyncState.LastSyncUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc
+            ? double.MaxValue
+            : (nowUtc - _crossPageInkVisualSyncState.LastSyncUtc).TotalMilliseconds;
+        if (CrossPageInkVisualSyncDedupPolicy.ShouldSkip(
+                trigger,
+                _crossPageInkVisualSyncState.LastTrigger,
+                interactionActive: IsCrossPageInteractionActive(),
+                elapsedMs))
+        {
+            return;
+        }
+
+        var decision = CrossPageInkVisualSyncPolicy.Resolve(
+            IsPhotoInkModeActive(),
+            IsCrossPageDisplayActive(),
+            trigger);
+        if (!decision.ShouldRequestCrossPageUpdate)
+        {
+            return;
+        }
+
+        if (decision.ShouldPrimeVisibleNeighborSlots)
+        {
+            PrimeVisibleNeighborInkSlots();
+        }
+
+        var source = trigger == CrossPageInkVisualSyncTrigger.InkRedrawCompleted
+            ? CrossPageUpdateSources.InkRedrawCompleted
+            : CrossPageUpdateSources.InkStateChanged;
+        if (_crossPageDisplayUpdateState.Pending
+            && CrossPageUpdateReplayPolicy.ShouldQueueReplay(CrossPageUpdateSourceKind.VisualSync))
+        {
+            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                ref _crossPageReplayState,
+                CrossPageReplayQueueDecisionFactory.VisualSync());
+        }
+        RequestCrossPageDisplayUpdate(source);
+        CrossPageInkVisualSyncStateUpdater.MarkApplied(
+            ref _crossPageInkVisualSyncState,
+            nowUtc,
+            trigger);
     }
 
     private void MarkCurrentInkPageLoaded(IReadOnlyList<InkStrokeData> strokes)
@@ -869,6 +1103,10 @@ public partial class PaintOverlayWindow
             return;
         }
         _inkDirtyPages.MarkLoaded(sourcePath, pageIndex, ComputeInkHash(strokes));
+        if (IsCurrentInkPage(sourcePath, pageIndex))
+        {
+            SyncSessionInkDirtyFlag();
+        }
         ClearInkWalSnapshot(sourcePath, pageIndex);
     }
 
@@ -881,20 +1119,74 @@ public partial class PaintOverlayWindow
         var hash = ComputeInkHash(_inkStrokes);
         _inkDirtyPages.MarkModified(_currentDocumentPath, _currentPageIndex, hash);
         TrackInkWalSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes, hash);
+        SyncSessionInkDirtyFlag();
     }
 
-    private void MarkInkPagePersisted(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes)
+    private bool MarkInkPagePersistedIfUnchanged(string sourcePath, int pageIndex, string hash)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return false;
+        }
+
+        var persisted = _inkDirtyPages.MarkPersistedIfUnchanged(sourcePath, pageIndex, hash);
+        if (persisted)
+        {
+            ClearInkWalSnapshot(sourcePath, pageIndex);
+        }
+        if (IsCurrentInkPage(sourcePath, pageIndex))
+        {
+            SyncSessionInkDirtyFlag();
+        }
+        return persisted;
+    }
+
+    private void MarkInkPageModified(string sourcePath, int pageIndex, string hash, IReadOnlyList<InkStrokeData>? walSnapshot = null)
     {
         if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
         {
             return;
         }
-        _inkDirtyPages.MarkPersistedIfUnchanged(sourcePath, pageIndex, ComputeInkHash(strokes));
-        ClearInkWalSnapshot(sourcePath, pageIndex);
+
+        _inkDirtyPages.MarkModified(sourcePath, pageIndex, hash);
+        if (walSnapshot != null)
+        {
+            TrackInkWalSnapshot(sourcePath, pageIndex, walSnapshot, hash);
+        }
+        if (IsCurrentInkPage(sourcePath, pageIndex))
+        {
+            SyncSessionInkDirtyFlag();
+        }
+    }
+
+    private bool IsCurrentInkPage(string sourcePath, int pageIndex)
+    {
+        return pageIndex == _currentPageIndex
+            && !string.IsNullOrWhiteSpace(_currentDocumentPath)
+            && string.Equals(sourcePath, _currentDocumentPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SyncSessionInkDirtyFlag()
+    {
+        var isDirty = IsCurrentPageDirty();
+        var current = _sessionCoordinator.CurrentState;
+        if (current.InkDirty == isDirty)
+        {
+            return;
+        }
+
+        DispatchSessionEvent(isDirty
+            ? new MarkInkDirtyEvent()
+            : new MarkInkSavedEvent());
     }
 
     private void TrackInkWalSnapshot(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes, string hash)
     {
+        if (!InkPersistenceTogglePolicy.ShouldTrackWal(_inkSaveEnabled))
+        {
+            return;
+        }
+
         try
         {
             _inkWal.Upsert(sourcePath, pageIndex, CloneInkStrokes(strokes), hash);
@@ -919,7 +1211,9 @@ public partial class PaintOverlayWindow
 
     private void RecoverInkWalForDirectory(string sourcePath)
     {
-        if (string.IsNullOrWhiteSpace(sourcePath) || _inkPersistence == null)
+        if (!InkPersistenceTogglePolicy.ShouldRecoverWal(_inkSaveEnabled)
+            || string.IsNullOrWhiteSpace(sourcePath)
+            || _inkPersistence == null)
         {
             return;
         }
@@ -990,19 +1284,20 @@ public partial class PaintOverlayWindow
     {
         width = 0;
         height = 0;
-        if (!_photoModeActive || PhotoBackground.Source is not BitmapSource bitmap)
+        if (!IsPhotoInkModeActive() || PhotoBackground.Source is not BitmapSource bitmap)
         {
             return false;
         }
 
         width = GetBitmapDisplayWidthInDip(bitmap);
         height = GetBitmapDisplayHeightInDip(bitmap);
-        return width > 0.5 && height > 0.5;
+        return width > InkInputRuntimeDefaults.PhotoReferenceSizeMinDip
+            && height > InkInputRuntimeDefaults.PhotoReferenceSizeMinDip;
     }
 
     private void MarkInkInput()
     {
-        _lastInkInputUtc = DateTime.UtcNow;
+        _lastInkInputUtc = GetCurrentUtcTimestamp();
         _inkDiagnostics?.OnInkInput();
         UpdateInkMonitorInterval();
     }
@@ -1013,17 +1308,17 @@ public partial class PaintOverlayWindow
         {
             return true;
         }
-        if (_lastInkInputUtc == DateTime.MinValue)
+        if (_lastInkInputUtc == InkRuntimeTimingDefaults.UnsetTimestampUtc)
         {
             return false;
         }
-        return (DateTime.UtcNow - _lastInkInputUtc).TotalMilliseconds < InkInputCooldownMs;
+        return (GetCurrentUtcTimestamp() - _lastInkInputUtc).TotalMilliseconds < InkInputCooldownMs;
     }
 
     private void UpdateInkMonitorInterval()
     {
-        var nowUtc = DateTime.UtcNow;
-        var idle = _lastInkInputUtc != DateTime.MinValue
+        var nowUtc = GetCurrentUtcTimestamp();
+        var idle = _lastInkInputUtc != InkRuntimeTimingDefaults.UnsetTimestampUtc
                    && (nowUtc - _lastInkInputUtc).TotalMilliseconds > InkIdleThresholdMs;
 
         var targetMs = idle ? InkMonitorIdleIntervalMs : InkMonitorActiveIntervalMs;

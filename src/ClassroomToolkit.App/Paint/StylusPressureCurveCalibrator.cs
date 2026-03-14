@@ -4,7 +4,7 @@ namespace ClassroomToolkit.App.Paint;
 
 internal sealed class StylusPressureCurveCalibrator
 {
-    private const int BinCount = 64;
+    private const int BinCount = StylusPressureCalibrationDefaults.BinCount;
     private readonly int[] _hist = new int[BinCount];
     private int _samples;
     private double _emaMin = 1.0;
@@ -26,8 +26,8 @@ internal sealed class StylusPressureCurveCalibrator
 
     public void SeedRange(double lowQuantile, double highQuantile)
     {
-        var low = Math.Clamp(lowQuantile, 0.0, 0.95);
-        var high = Math.Clamp(highQuantile, low + 0.01, 1.0);
+        var low = Math.Clamp(lowQuantile, 0.0, StylusPressureCalibrationDefaults.SeedLowQuantileMax);
+        var high = Math.Clamp(highQuantile, low + StylusPressureCalibrationDefaults.SeedRangeMinWidth, 1.0);
         _seedLow = low;
         _seedHigh = high;
         _hasSeedRange = true;
@@ -35,23 +35,23 @@ internal sealed class StylusPressureCurveCalibrator
 
     public bool TryExportRange(out double lowQuantile, out double highQuantile)
     {
-        if (_samples < 20 && !_hasSeedRange)
+        if (_samples < StylusPressureCalibrationDefaults.MinSamplesForQuantiles && !_hasSeedRange)
         {
             lowQuantile = 0.0;
             highQuantile = 1.0;
             return false;
         }
 
-        if (_samples < 20 && _hasSeedRange)
+        if (_samples < StylusPressureCalibrationDefaults.MinSamplesForQuantiles && _hasSeedRange)
         {
             lowQuantile = _seedLow;
             highQuantile = _seedHigh;
             return true;
         }
 
-        lowQuantile = ResolveQuantile(0.04);
-        highQuantile = ResolveQuantile(0.96);
-        return highQuantile - lowQuantile >= 0.01;
+        lowQuantile = ResolveQuantile(StylusPressureCalibrationDefaults.LowQuantile);
+        highQuantile = ResolveQuantile(StylusPressureCalibrationDefaults.HighQuantile);
+        return highQuantile - lowQuantile >= StylusPressureCalibrationDefaults.SeedRangeMinWidth;
     }
 
     public double Calibrate(double pressure, StylusPressureDeviceProfile profile)
@@ -66,31 +66,36 @@ internal sealed class StylusPressureCurveCalibrator
         _hist[index]++;
         _samples++;
 
-        const double emaAlpha = 0.03;
-        _emaMin = Math.Min(_emaMin * (1.0 - emaAlpha) + value * emaAlpha, value);
-        _emaMax = Math.Max(_emaMax * (1.0 - emaAlpha) + value * emaAlpha, value);
+        _emaMin = Math.Min(
+            _emaMin * (1.0 - StylusPressureCalibrationDefaults.EmaAlpha) + value * StylusPressureCalibrationDefaults.EmaAlpha,
+            value);
+        _emaMax = Math.Max(
+            _emaMax * (1.0 - StylusPressureCalibrationDefaults.EmaAlpha) + value * StylusPressureCalibrationDefaults.EmaAlpha,
+            value);
 
-        if (_samples < 20)
+        if (_samples < StylusPressureCalibrationDefaults.MinSamplesForQuantiles)
         {
             if (_hasSeedRange)
             {
                 var seeded = Math.Clamp(value, _seedLow, _seedHigh);
-                var seededNormalized = (seeded - _seedLow) / Math.Max(_seedHigh - _seedLow, 1e-5);
+                var seededNormalized = (seeded - _seedLow)
+                    / Math.Max(_seedHigh - _seedLow, StylusPressureCalibrationDefaults.NormalizationEpsilon);
                 return Math.Clamp(seededNormalized, 0.0, 1.0);
             }
             return value;
         }
 
-        var lowQ = ResolveQuantile(0.04);
-        var highQ = ResolveQuantile(0.96);
-        if (highQ - lowQ < 0.04)
+        var lowQ = ResolveQuantile(StylusPressureCalibrationDefaults.LowQuantile);
+        var highQ = ResolveQuantile(StylusPressureCalibrationDefaults.HighQuantile);
+        if (highQ - lowQ < StylusPressureCalibrationDefaults.MinEffectiveRange)
         {
             lowQ = Math.Min(lowQ, _emaMin);
             highQ = Math.Max(highQ, _emaMax);
         }
 
         var clamped = Math.Clamp(value, lowQ, highQ);
-        var normalized = (clamped - lowQ) / Math.Max(highQ - lowQ, 1e-5);
+        var normalized = (clamped - lowQ)
+            / Math.Max(highQ - lowQ, StylusPressureCalibrationDefaults.NormalizationEpsilon);
         return Math.Clamp(normalized, 0.0, 1.0);
     }
 

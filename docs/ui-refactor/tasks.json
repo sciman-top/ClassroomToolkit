@@ -1,657 +1,724 @@
-﻿{
-    "project":  "ClassroomToolkit",
-    "updated_at":  "2026-03-14",
-    "mode":  "ui-window-system",
-    "mode_family":  "ui-overhaul",
-    "governing_reconciliation":  {
-                                     "last_reconciled_at":  "2026-03-14T00:00:00Z",
-                                     "doc_paths":  [
-                                                       "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
-                                                       "docs/superpowers/specs/2026-03-14-ui-mode-loop-integration-design.md",
-                                                       "docs/superpowers/plans/2026-03-14-ui-mode-loop-integration-implementation-plan.md",
-                                                       "docs/validation/ui-window-system-progress.md",
-                                                       "docs/validation/ui-window-system-acceptance.md"
-                                                   ],
-                                     "doc_sync_policy":  "spec \u003e integration-design \u003e implementation-plan \u003e progress \u003e acceptance",
-                                     "completion_gate_policy":  "refuse_done_when_authoritative_docs_are_newer_than_reconciliation"
-                                 },
-    "tasks":  [
-                  {
-                      "id":  "ui-foundation-bootstrap",
-                      "title":  "Bootstrap UI mode execution layer",
-                      "stage":  "foundation",
-                      "priority":  1,
-                      "order":  10,
-                      "depends_on":  [
-
-                                     ],
-                      "summary":  "Create mode registry and base UI mode scaffold without disturbing architecture-refactor flow.",
-                      "file_hints":  [
-                                         ".codex/refactor-modes.json",
-                                         ".codex/ui-window-system.config.json",
-                                         ".codex/ui-window-system-state.json",
-                                         "scripts/refactor/resolve-refactor-mode.ps1",
-                                         "scripts/refactor/test-ui-mode-smoke.ps1"
-                                     ],
-                      "done_when":  [
-                                        "Mode resolver deterministically maps ui-overhaul to ui-window-system",
-                                        "UI mode state, config, and task graph exist and are parseable",
-                                        "architecture-refactor task/state paths remain unchanged"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "ui-window-system must not reuse docs/refactor/tasks.json",
-                                                  "ui-window-system must not reuse .codex/refactor-state.json"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-mode-wrapper-plumbing",
-                      "title":  "Add wrapper and helper mode plumbing",
-                      "stage":  "foundation",
-                      "priority":  1,
-                      "order":  20,
-                      "depends_on":  [
-                                         "ui-foundation-bootstrap"
-                                     ],
-                      "summary":  "Make wrapper, selector, updater, reconciliation, and manifest workflows mode-aware.",
-                      "file_hints":  [
-                                         "scripts/run-refactor-loop.ps1",
-                                         "scripts/run-autonomous-execution-loop.ps1",
-                                         "scripts/refactor/select-next-task.ps1",
-                                         "scripts/refactor/update-refactor-state.ps1",
-                                         "scripts/refactor/test-governing-reconciliation.ps1",
-                                         "scripts/refactor/check-doc-consistency.ps1",
-                                         "scripts/refactor/refactor-adapter.manifest.json"
-                                     ],
-                      "done_when":  [
-                                        "Wrapper resolves mode-specific task/state/config and writes mode metadata to lock",
-                                        "Unsupported mode family stops with BLOCKED_NEEDS_HUMAN",
-                                        "Explicit wrong path override is rejected as mode/path conflict"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
-                                                      "powershell -File scripts/run-refactor-loop.ps1 -Mode ui-window-system -DryRun",
-                                                      "powershell -File scripts/run-refactor-loop.ps1 -Mode unsupported-family -DryRun"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "architecture-refactor remains default mode",
-                                                  "shared lock prevents cross-mode concurrent writers"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-foundation-complete",
-                      "title":  "Finalize foundation verification baseline",
-                      "stage":  "foundation",
-                      "priority":  1,
-                      "order":  30,
-                      "depends_on":  [
-                                         "ui-mode-wrapper-plumbing"
-                                     ],
-                      "summary":  "Stabilize smoke matrix and mode-specific install/export consistency.",
-                      "file_hints":  [
-                                         "scripts/refactor/test-ui-mode-smoke.ps1",
-                                         "scripts/refactor/install-refactor-adapter.ps1",
-                                         "scripts/refactor/export-refactor-adapter.ps1",
-                                         "docs/validation/ui-window-system-progress.md"
-                                     ],
-                      "done_when":  [
-                                        "All smoke scenarios pass",
-                                        "Installer/exporter preserve UI mode seed-state and mode filter semantics",
-                                        "Progress doc records repo-local scope boundary"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1 -Scenario installer-exporter"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "No generic kernel changes are introduced in this pass"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-controls-token-baseline",
-                      "title":  "Build controls token baseline",
-                      "stage":  "controls",
-                      "priority":  2,
-                      "order":  100,
-                      "depends_on":  [
-                                         "ui-foundation-complete"
-                                     ],
-                      "summary":  "Define control token baseline and explicit control family mapping.",
-                      "file_hints":  [
-                                         "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
-                                         "docs/ui-refactor/tasks.json",
-                                         "src/ClassroomToolkit.App/Assets/Styles/Colors.xaml",
-                                         "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Control token mapping is documented and linked to implementation files",
-                                        "Button/input/list control families are explicitly scoped",
-                                        "No shell-stage task starts before control token baseline completes"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Token changes must keep readability and compact sizing constraints"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-controls-button-and-input-family",
-                      "title":  "Unify button and input control family",
-                      "stage":  "controls",
-                      "priority":  2,
-                      "order":  110,
-                      "depends_on":  [
-                                         "ui-controls-token-baseline"
-                                     ],
-                      "summary":  "Implement unified button/input styles and state visuals with compact sizing.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml",
-                                         "src/ClassroomToolkit.App/Assets/Styles/Colors.xaml",
-                                         "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
-                                         "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Primary/secondary/danger buttons share one style family",
-                                        "Input controls have consistent corner, border, and focus behaviors",
-                                        "Existing settings windows use unified styles without inline hard-coded overrides"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet build ClassroomToolkit.sln -c Debug",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "No new heavy animation or expensive visual effect is introduced"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-controls-list-and-menu-family",
-                      "title":  "Unify list, tab, and menu control family",
-                      "stage":  "controls",
-                      "priority":  2,
-                      "order":  120,
-                      "depends_on":  [
-                                         "ui-controls-button-and-input-family"
-                                     ],
-                      "summary":  "Align list/tab/menu states and spacing for management and settings windows.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml",
-                                         "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
-                                         "src/ClassroomToolkit.App/StudentListDialog.xaml",
-                                         "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "List and tab selection states use the same visual grammar",
-                                        "Context menu and toolbar dropdown styles are consistent",
-                                        "Management windows no longer mix incompatible list style patterns"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet build ClassroomToolkit.sln -c Debug",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Selection contrast remains readable in projector scenarios"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-window-shell-dialog-shell",
-                      "title":  "Migrate dialog shell baseline",
-                      "stage":  "window-shell",
-                      "priority":  2,
-                      "order":  200,
-                      "depends_on":  [
-                                         "ui-controls-list-and-menu-family"
-                                     ],
-                      "summary":  "Apply unified dialog shell layout and action bar behavior to lightweight dialogs.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/TimerSetDialog.xaml",
-                                         "src/ClassroomToolkit.App/RemoteKeyDialog.xaml.cs",
-                                         "src/ClassroomToolkit.App/AutoExitDialog.xaml.cs",
-                                         "src/ClassroomToolkit.App/AboutDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Dialog windows use consistent title/content/action regions",
-                                        "Action button ordering and sizing are unified",
-                                        "Dialog close/owner semantics remain unchanged"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Modal owner and focus handoff behavior must not regress"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-window-shell-management-shell",
-                      "title":  "Migrate management shell baseline",
-                      "stage":  "window-shell",
-                      "priority":  2,
-                      "order":  210,
-                      "depends_on":  [
-                                         "ui-window-shell-dialog-shell"
-                                     ],
-                      "summary":  "Apply unified management shell to resource and list management windows.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
-                                         "src/ClassroomToolkit.App/StudentListDialog.xaml",
-                                         "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Management windows share header/content/footer shell regions",
-                                        "Toolbar and list content spacing is shell-consistent",
-                                        "No shell-level owner/topmost behavior regressions are introduced"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Window movement and z-order coordination remain orchestrator-controlled"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-window-shell-work-and-fullscreen-shell",
-                      "title":  "Migrate work and fullscreen shell baseline",
-                      "stage":  "window-shell",
-                      "priority":  2,
-                      "order":  220,
-                      "depends_on":  [
-                                         "ui-window-shell-management-shell"
-                                     ],
-                      "summary":  "Apply unified shell baseline to work windows and fullscreen overlays.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/MainWindow.xaml",
-                                         "src/ClassroomToolkit.App/RollCallWindow.xaml",
-                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml",
-                                         "src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Work shell is consistent for MainWindow and RollCallWindow",
-                                        "Fullscreen shell keeps content-first layout and light controls",
-                                        "Topmost and activation behavior remain policy-safe"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests|FullyQualifiedName~MainWindow\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "No extra heavy transparency effects are introduced"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "theme-freeze-gate",
-                      "title":  "Theme freeze manual gate",
-                      "stage":  "visual-regression",
-                      "priority":  100,
-                      "order":  300,
-                      "depends_on":  [
-                                         "ui-window-shell-work-and-fullscreen-shell"
-                                     ],
-                      "summary":  "Human approval gate for visual tokens and shell baseline.",
-                      "file_hints":  [
-                                         "docs/validation/ui-window-system-progress.md",
-                                         "docs/validation/ui-window-system-acceptance.md"
-                                     ],
-                      "done_when":  [
-                                        "A human explicitly approves theme tokens and shell baseline"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-
-                                                  ]
-                                 },
-                      "manual_gate":  "theme-freeze",
-                      "behavior_invariants":  [
-                                                  "No main-scene window polish starts before this gate is resumed"
-                                              ],
-                      "blocked_by_visual_review":  true
-                  },
-                  {
-                      "id":  "ui-main-scenes-main-window",
-                      "title":  "Polish MainWindow scene",
-                      "stage":  "main-scenes",
-                      "priority":  3,
-                      "order":  400,
-                      "depends_on":  [
-                                         "theme-freeze-gate"
-                                     ],
-                      "summary":  "Apply final main-scene visual hierarchy and compact controls to MainWindow.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/MainWindow.xaml",
-                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
-                                         "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
-                                     ],
-                      "done_when":  [
-                                        "MainWindow primary actions have unified visual hierarchy and compact sizing",
-                                        "Bottom utility actions are visually secondary and style-consistent",
-                                        "MainWindow interaction tests remain stable"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "MainWindow startup and owner relationships must not change"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-main-scenes-rollcall-and-timer",
-                      "title":  "Polish RollCall and timer scene",
-                      "stage":  "main-scenes",
-                      "priority":  3,
-                      "order":  410,
-                      "depends_on":  [
-                                         "ui-main-scenes-main-window"
-                                     ],
-                      "summary":  "Apply final main-scene hierarchy and readability constraints to RollCall and timer visuals.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/RollCallWindow.xaml",
-                                         "src/ClassroomToolkit.App/RollCallWindow.xaml.cs",
-                                         "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "RollCall scene uses clear name-first hierarchy and stable control density",
-                                        "Timer scene keeps high legibility and restrained visual effects",
-                                        "RollCall tests remain passing"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCall\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "RollCall remote control and timer behavior must not regress"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-main-scenes-toolbar-and-overlay",
-                      "title":  "Polish toolbar and overlay scene",
-                      "stage":  "main-scenes",
-                      "priority":  3,
-                      "order":  420,
-                      "depends_on":  [
-                                         "ui-main-scenes-rollcall-and-timer"
-                                     ],
-                      "summary":  "Apply compact and coherent visual language to toolbar and fullscreen overlays.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs",
-                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml",
-                                         "src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Toolbar groups are compact, consistent, and icon sizing is unified",
-                                        "Overlay controls remain content-first with restrained chrome",
-                                        "Overlay-related tests remain stable"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Overlay|FullyQualifiedName~Photo\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Overlay input passthrough and topmost behavior remain policy-driven"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "main-scene-freeze-gate",
-                      "title":  "Main scene freeze manual gate",
-                      "stage":  "visual-regression",
-                      "priority":  100,
-                      "order":  500,
-                      "depends_on":  [
-                                         "ui-main-scenes-toolbar-and-overlay"
-                                     ],
-                      "summary":  "Human approval gate for main scene visual and interaction consistency.",
-                      "file_hints":  [
-                                         "docs/validation/ui-window-system-progress.md",
-                                         "docs/validation/ui-window-system-acceptance.md"
-                                     ],
-                      "done_when":  [
-                                        "A human approves main-scene freeze result"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-
-                                                  ]
-                                 },
-                      "manual_gate":  "main-scene-freeze",
-                      "behavior_invariants":  [
-                                                  "Management/settings polish cannot begin before this gate resumes"
-                                              ],
-                      "blocked_by_visual_review":  true
-                  },
-                  {
-                      "id":  "ui-management-image-and-list",
-                      "title":  "Polish image manager and student list windows",
-                      "stage":  "management-and-settings",
-                      "priority":  4,
-                      "order":  600,
-                      "depends_on":  [
-                                         "main-scene-freeze-gate"
-                                     ],
-                      "summary":  "Apply management visual hierarchy and shell consistency to image manager and student list windows.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
-                                         "src/ClassroomToolkit.App/StudentListDialog.xaml",
-                                         "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Image manager adopts unified management shell and compact control density",
-                                        "Student list view aligns with management shell visual grammar",
-                                        "Management interactions remain stable"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet build ClassroomToolkit.sln -c Debug",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "File/navigation workflows must remain functionally unchanged"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-management-settings-dialog-family",
-                      "title":  "Polish settings dialog family",
-                      "stage":  "management-and-settings",
-                      "priority":  4,
-                      "order":  610,
-                      "depends_on":  [
-                                         "ui-management-image-and-list"
-                                     ],
-                      "summary":  "Apply unified settings shell and compact form language across settings dialogs.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
-                                         "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml",
-                                         "src/ClassroomToolkit.App/TimerSetDialog.xaml",
-                                         "src/ClassroomToolkit.App/AboutDialog.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Settings dialogs share one shell structure and action bar",
-                                        "Form spacing and typography are consistent across settings windows",
-                                        "Settings save behavior remains unchanged"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Settings|FullyQualifiedName~Configuration\"",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "No configuration schema or persistence format changes are introduced"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "ui-dialog-tail-pass",
-                      "title":  "Polish lightweight dialog and utility tail windows",
-                      "stage":  "dialog-tail",
-                      "priority":  4,
-                      "order":  700,
-                      "depends_on":  [
-                                         "ui-management-settings-dialog-family"
-                                     ],
-                      "summary":  "Apply final polish pass to lightweight dialogs and utility windows.",
-                      "file_hints":  [
-                                         "src/ClassroomToolkit.App/AutoExitDialog.xaml.cs",
-                                         "src/ClassroomToolkit.App/RemoteKeyDialog.xaml.cs",
-                                         "src/ClassroomToolkit.App/Paint/BoardColorDialog.xaml.cs",
-                                         "src/ClassroomToolkit.App/Paint/QuickColorPaletteWindow.xaml"
-                                     ],
-                      "done_when":  [
-                                        "Utility dialogs share consistent compact appearance and control density",
-                                        "Quick palette and board color dialogs align with visual token baseline",
-                                        "No dialog activation/focus regressions are observed"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "dotnet build ClassroomToolkit.sln -c Debug",
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Dialog owner and topmost semantics remain unchanged"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "fullscreen-float-freeze-gate",
-                      "title":  "Fullscreen and float freeze manual gate",
-                      "stage":  "visual-regression",
-                      "priority":  100,
-                      "order":  800,
-                      "depends_on":  [
-                                         "ui-dialog-tail-pass"
-                                     ],
-                      "summary":  "Human approval gate for fullscreen/overlay/floating visual behavior freeze.",
-                      "file_hints":  [
-                                         "docs/validation/ui-window-system-progress.md",
-                                         "docs/validation/ui-window-system-acceptance.md"
-                                     ],
-                      "done_when":  [
-                                        "A human approves fullscreen and floating scene freeze result"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-
-                                                  ]
-                                 },
-                      "manual_gate":  "fullscreen-float-freeze",
-                      "behavior_invariants":  [
-                                                  "Final visual regression cannot begin before this gate resumes"
-                                              ],
-                      "blocked_by_visual_review":  true
-                  },
-                  {
-                      "id":  "ui-visual-regression-stage",
-                      "title":  "Run final visual regression verification stage",
-                      "stage":  "visual-regression",
-                      "priority":  5,
-                      "order":  900,
-                      "depends_on":  [
-                                         "fullscreen-float-freeze-gate"
-                                     ],
-                      "summary":  "Prepare final visual regression package and acceptance evidence checklist.",
-                      "file_hints":  [
-                                         "docs/validation/ui-window-system-progress.md",
-                                         "docs/validation/ui-window-system-acceptance.md"
-                                     ],
-                      "done_when":  [
-                                        "Final visual regression checklist is complete and documented",
-                                        "Acceptance doc captures unresolved risks and explicit pass/fail evidence",
-                                        "Reconciliation check reports no stale authoritative docs"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-                                                      "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
-                                                      "powershell -File scripts/refactor/test-governing-reconciliation.ps1 -TaskFile docs/ui-refactor/tasks.json -ConfigFile .codex/ui-window-system.config.json -AsJson"
-                                                  ]
-                                 },
-                      "manual_gate":  null,
-                      "behavior_invariants":  [
-                                                  "Completion is blocked when reconciliation is stale"
-                                              ],
-                      "blocked_by_visual_review":  false
-                  },
-                  {
-                      "id":  "final-visual-regression-gate",
-                      "title":  "Final visual regression manual gate",
-                      "stage":  "visual-regression",
-                      "priority":  100,
-                      "order":  1000,
-                      "depends_on":  [
-                                         "ui-visual-regression-stage"
-                                     ],
-                      "summary":  "Final human approval gate before claiming ui-window-system automatable tasks done.",
-                      "file_hints":  [
-                                         "docs/validation/ui-window-system-acceptance.md"
-                                     ],
-                      "done_when":  [
-                                        "A human records final visual regression approval with evidence"
-                                    ],
-                      "verify":  {
-                                     "commands":  [
-
-                                                  ]
-                                 },
-                      "manual_gate":  "final-visual-regression",
-                      "behavior_invariants":  [
-                                                  "Wrapper must refuse ALL_AUTOMATABLE_TASKS_DONE when this gate is unresolved"
-                                              ],
-                      "blocked_by_visual_review":  true
-                  }
-              ]
+{
+  "project": "ClassroomToolkit",
+  "updated_at": "2026-03-14",
+  "mode": "ui-window-system",
+  "mode_family": "ui-overhaul",
+  "governing_reconciliation": {
+    "last_reconciled_at": "2026-03-14T07:51:37.6475422Z",
+    "doc_paths": [
+      "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
+      "docs/superpowers/specs/2026-03-14-ui-mode-loop-integration-design.md",
+      "docs/superpowers/plans/2026-03-14-ui-mode-loop-integration-implementation-plan.md",
+      "docs/validation/ui-window-system-progress.md",
+      "docs/validation/ui-window-system-acceptance.md"
+    ],
+    "doc_sync_policy": "spec > integration-design > implementation-plan > progress > acceptance",
+    "completion_gate_policy": "refuse_done_when_authoritative_docs_are_newer_than_reconciliation"
+  },
+  "tasks": [
+    {
+      "id": "ui-foundation-bootstrap",
+      "title": "Bootstrap UI mode execution layer",
+      "stage": "foundation",
+      "priority": 1,
+      "order": 10,
+      "depends_on": [],
+      "summary": "Create mode registry and base UI mode scaffold without disturbing architecture-refactor flow.",
+      "file_hints": [
+        ".codex/refactor-modes.json",
+        ".codex/ui-window-system.config.json",
+        ".codex/ui-window-system-state.json",
+        "scripts/refactor/resolve-refactor-mode.ps1",
+        "scripts/refactor/test-ui-mode-smoke.ps1"
+      ],
+      "done_when": [
+        "Mode resolver deterministically maps ui-overhaul to ui-window-system",
+        "UI mode state, config, and task graph exist and are parseable",
+        "architecture-refactor task/state paths remain unchanged"
+      ],
+      "verify": {
+        "commands": [
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "ui-window-system must not reuse docs/refactor/tasks.json",
+        "ui-window-system must not reuse .codex/refactor-state.json"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-mode-wrapper-plumbing",
+      "title": "Add wrapper and helper mode plumbing",
+      "stage": "foundation",
+      "priority": 1,
+      "order": 20,
+      "depends_on": [
+        "ui-foundation-bootstrap"
+      ],
+      "summary": "Make wrapper, selector, updater, reconciliation, and manifest workflows mode-aware.",
+      "file_hints": [
+        "scripts/run-refactor-loop.ps1",
+        "scripts/run-autonomous-execution-loop.ps1",
+        "scripts/refactor/select-next-task.ps1",
+        "scripts/refactor/update-refactor-state.ps1",
+        "scripts/refactor/test-governing-reconciliation.ps1",
+        "scripts/refactor/check-doc-consistency.ps1",
+        "scripts/refactor/refactor-adapter.manifest.json"
+      ],
+      "done_when": [
+        "Wrapper resolves mode-specific task/state/config and writes mode metadata to lock",
+        "Unsupported mode family stops with BLOCKED_NEEDS_HUMAN",
+        "Explicit wrong path override is rejected as mode/path conflict"
+      ],
+      "verify": {
+        "commands": [
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
+          "powershell -File scripts/run-refactor-loop.ps1 -Mode ui-window-system -DryRun",
+          "powershell -File scripts/run-refactor-loop.ps1 -Mode unsupported-family -DryRun"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "architecture-refactor remains default mode",
+        "shared lock prevents cross-mode concurrent writers"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-foundation-complete",
+      "title": "Finalize foundation verification baseline",
+      "stage": "foundation",
+      "priority": 1,
+      "order": 30,
+      "depends_on": [
+        "ui-mode-wrapper-plumbing"
+      ],
+      "summary": "Stabilize smoke matrix and mode-specific install/export consistency.",
+      "file_hints": [
+        "scripts/refactor/test-ui-mode-smoke.ps1",
+        "scripts/refactor/install-refactor-adapter.ps1",
+        "scripts/refactor/export-refactor-adapter.ps1",
+        "docs/validation/ui-window-system-progress.md"
+      ],
+      "done_when": [
+        "All smoke scenarios pass",
+        "Installer/exporter preserve UI mode seed-state and mode filter semantics",
+        "Progress doc records repo-local scope boundary"
+      ],
+      "verify": {
+        "commands": [
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1 -Scenario installer-exporter"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No generic kernel changes are introduced in this pass"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-controls-token-baseline",
+      "title": "Build controls token baseline",
+      "stage": "controls",
+      "priority": 2,
+      "order": 100,
+      "depends_on": [
+        "ui-foundation-complete"
+      ],
+      "summary": "Define control token baseline and explicit control family mapping.",
+      "file_hints": [
+        "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
+        "docs/ui-refactor/tasks.json",
+        "src/ClassroomToolkit.App/Assets/Styles/Colors.xaml",
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
+      ],
+      "done_when": [
+        "Control token mapping is documented and linked to implementation files",
+        "Button/input/list control families are explicitly scoped",
+        "No shell-stage task starts before control token baseline completes"
+      ],
+      "verify": {
+        "commands": [
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Token changes must keep readability and compact sizing constraints"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-controls-button-and-input-family",
+      "title": "Unify button and input control family",
+      "stage": "controls",
+      "priority": 2,
+      "order": 110,
+      "depends_on": [
+        "ui-controls-token-baseline"
+      ],
+      "summary": "Implement unified button/input styles and state visuals with compact sizing.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml",
+        "src/ClassroomToolkit.App/Assets/Styles/Colors.xaml",
+        "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
+        "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml"
+      ],
+      "done_when": [
+        "Primary/secondary/danger buttons share one style family",
+        "Input controls have consistent corner, border, and focus behaviors",
+        "Existing settings windows use unified styles without inline hard-coded overrides"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet build ClassroomToolkit.sln -c Debug",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No new heavy animation or expensive visual effect is introduced"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-controls-list-and-menu-family",
+      "title": "Unify list, tab, and menu control family",
+      "stage": "controls",
+      "priority": 2,
+      "order": 120,
+      "depends_on": [
+        "ui-controls-button-and-input-family"
+      ],
+      "summary": "Align list/tab/menu states and spacing for management and settings windows.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml",
+        "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
+        "src/ClassroomToolkit.App/StudentListDialog.xaml",
+        "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml"
+      ],
+      "done_when": [
+        "List and tab selection states use the same visual grammar",
+        "Context menu and toolbar dropdown styles are consistent",
+        "Management windows no longer mix incompatible list style patterns"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet build ClassroomToolkit.sln -c Debug",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Selection contrast remains readable in projector scenarios"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-window-shell-dialog-shell",
+      "title": "Migrate dialog shell baseline",
+      "stage": "window-shell",
+      "priority": 2,
+      "order": 200,
+      "depends_on": [
+        "ui-controls-list-and-menu-family"
+      ],
+      "summary": "Apply unified dialog shell layout and action bar behavior to lightweight dialogs.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/TimerSetDialog.xaml",
+        "src/ClassroomToolkit.App/RemoteKeyDialog.xaml.cs",
+        "src/ClassroomToolkit.App/AutoExitDialog.xaml.cs",
+        "src/ClassroomToolkit.App/AboutDialog.xaml"
+      ],
+      "done_when": [
+        "Dialog windows use consistent title/content/action regions",
+        "Action button ordering and sizing are unified",
+        "Dialog close/owner semantics remain unchanged"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Modal owner and focus handoff behavior must not regress"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-window-shell-management-shell",
+      "title": "Migrate management shell baseline",
+      "stage": "window-shell",
+      "priority": 2,
+      "order": 210,
+      "depends_on": [
+        "ui-window-shell-dialog-shell"
+      ],
+      "summary": "Apply unified management shell to resource and list management windows.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
+        "src/ClassroomToolkit.App/StudentListDialog.xaml",
+        "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml"
+      ],
+      "done_when": [
+        "Management windows share header/content/footer shell regions",
+        "Toolbar and list content spacing is shell-consistent",
+        "No shell-level owner/topmost behavior regressions are introduced"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Window movement and z-order coordination remain orchestrator-controlled"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
+    },
+    {
+      "id": "ui-window-shell-work-and-fullscreen-shell",
+      "title": "Migrate work and fullscreen shell baseline",
+      "stage": "window-shell",
+      "priority": 2,
+      "order": 220,
+      "depends_on": [
+        "ui-window-shell-management-shell"
+      ],
+      "summary": "Apply unified shell baseline to work windows and fullscreen overlays.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml",
+        "src/ClassroomToolkit.App/RollCallWindow.xaml",
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml",
+        "src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml"
+      ],
+      "done_when": [
+        "Work shell is consistent for MainWindow and RollCallWindow",
+        "Fullscreen shell keeps content-first layout and light controls",
+        "Topmost and activation behavior remain policy-safe"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests|FullyQualifiedName~MainWindow\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No extra heavy transparency effects are introduced"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "deferred"
+    },
+    {
+      "id": "ui-window-shell-work-main-rollcall-shell",
+      "title": "Migrate work shell baseline for MainWindow and RollCallWindow",
+      "parent_id": "ui-window-shell-work-and-fullscreen-shell",
+      "stage": "window-shell",
+      "priority": 2,
+      "order": 221,
+      "depends_on": [
+        "ui-window-shell-management-shell"
+      ],
+      "summary": "Apply unified work-shell baseline to MainWindow and RollCallWindow first, without changing owner/topmost policies.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml",
+        "src/ClassroomToolkit.App/RollCallWindow.xaml",
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
+      ],
+      "done_when": [
+        "MainWindow and RollCallWindow share a consistent work-shell structure",
+        "Window-level activation and topmost policies remain unchanged",
+        "Window-shell verification remains green for work windows"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests|FullyQualifiedName~MainWindow\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No extra heavy transparency effects are introduced"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "pending"
+    },
+    {
+      "id": "ui-window-shell-fullscreen-overlay-shell",
+      "title": "Migrate fullscreen overlay shell baseline",
+      "parent_id": "ui-window-shell-work-and-fullscreen-shell",
+      "stage": "window-shell",
+      "priority": 2,
+      "order": 222,
+      "depends_on": [
+        "ui-window-shell-work-main-rollcall-shell"
+      ],
+      "summary": "Apply unified fullscreen shell baseline to overlay windows with content-first layout and light controls.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml",
+        "src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml",
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
+      ],
+      "done_when": [
+        "Fullscreen overlays keep content-first layout with restrained control chrome",
+        "Topmost and activation behavior remain policy-safe",
+        "Window-shell verification remains green for overlay windows"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestratorTests|FullyQualifiedName~MainWindow\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No extra heavy transparency effects are introduced"
+      ],
+      "blocked_by_visual_review": false,
+      "status_hint": "pending"
+    },
+    {
+      "id": "theme-freeze-gate",
+      "title": "Theme freeze manual gate",
+      "stage": "visual-regression",
+      "priority": 100,
+      "order": 300,
+      "depends_on": [
+        "ui-window-shell-fullscreen-overlay-shell"
+      ],
+      "summary": "Human approval gate for visual tokens and shell baseline.",
+      "file_hints": [
+        "docs/validation/ui-window-system-progress.md",
+        "docs/validation/ui-window-system-acceptance.md"
+      ],
+      "done_when": [
+        "A human explicitly approves theme tokens and shell baseline"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "manual_gate": "theme-freeze",
+      "behavior_invariants": [
+        "No main-scene window polish starts before this gate is resumed"
+      ],
+      "blocked_by_visual_review": true
+    },
+    {
+      "id": "ui-main-scenes-main-window",
+      "title": "Polish MainWindow scene",
+      "stage": "main-scenes",
+      "priority": 3,
+      "order": 400,
+      "depends_on": [
+        "theme-freeze-gate"
+      ],
+      "summary": "Apply final main-scene visual hierarchy and compact controls to MainWindow.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml",
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
+      ],
+      "done_when": [
+        "MainWindow primary actions have unified visual hierarchy and compact sizing",
+        "Bottom utility actions are visually secondary and style-consistent",
+        "MainWindow interaction tests remain stable"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "MainWindow startup and owner relationships must not change"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "ui-main-scenes-rollcall-and-timer",
+      "title": "Polish RollCall and timer scene",
+      "stage": "main-scenes",
+      "priority": 3,
+      "order": 410,
+      "depends_on": [
+        "ui-main-scenes-main-window"
+      ],
+      "summary": "Apply final main-scene hierarchy and readability constraints to RollCall and timer visuals.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/RollCallWindow.xaml",
+        "src/ClassroomToolkit.App/RollCallWindow.xaml.cs",
+        "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml"
+      ],
+      "done_when": [
+        "RollCall scene uses clear name-first hierarchy and stable control density",
+        "Timer scene keeps high legibility and restrained visual effects",
+        "RollCall tests remain passing"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCall\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "RollCall remote control and timer behavior must not regress"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "ui-main-scenes-toolbar-and-overlay",
+      "title": "Polish toolbar and overlay scene",
+      "stage": "main-scenes",
+      "priority": 3,
+      "order": 420,
+      "depends_on": [
+        "ui-main-scenes-rollcall-and-timer"
+      ],
+      "summary": "Apply compact and coherent visual language to toolbar and fullscreen overlays.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml",
+        "src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml"
+      ],
+      "done_when": [
+        "Toolbar groups are compact, consistent, and icon sizing is unified",
+        "Overlay controls remain content-first with restrained chrome",
+        "Overlay-related tests remain stable"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Overlay|FullyQualifiedName~Photo\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Overlay input passthrough and topmost behavior remain policy-driven"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "main-scene-freeze-gate",
+      "title": "Main scene freeze manual gate",
+      "stage": "visual-regression",
+      "priority": 100,
+      "order": 500,
+      "depends_on": [
+        "ui-main-scenes-toolbar-and-overlay"
+      ],
+      "summary": "Human approval gate for main scene visual and interaction consistency.",
+      "file_hints": [
+        "docs/validation/ui-window-system-progress.md",
+        "docs/validation/ui-window-system-acceptance.md"
+      ],
+      "done_when": [
+        "A human approves main-scene freeze result"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "manual_gate": "main-scene-freeze",
+      "behavior_invariants": [
+        "Management/settings polish cannot begin before this gate resumes"
+      ],
+      "blocked_by_visual_review": true
+    },
+    {
+      "id": "ui-management-image-and-list",
+      "title": "Polish image manager and student list windows",
+      "stage": "management-and-settings",
+      "priority": 4,
+      "order": 600,
+      "depends_on": [
+        "main-scene-freeze-gate"
+      ],
+      "summary": "Apply management visual hierarchy and shell consistency to image manager and student list windows.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml",
+        "src/ClassroomToolkit.App/StudentListDialog.xaml",
+        "src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml"
+      ],
+      "done_when": [
+        "Image manager adopts unified management shell and compact control density",
+        "Student list view aligns with management shell visual grammar",
+        "Management interactions remain stable"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet build ClassroomToolkit.sln -c Debug",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "File/navigation workflows must remain functionally unchanged"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "ui-management-settings-dialog-family",
+      "title": "Polish settings dialog family",
+      "stage": "management-and-settings",
+      "priority": 4,
+      "order": 610,
+      "depends_on": [
+        "ui-management-image-and-list"
+      ],
+      "summary": "Apply unified settings shell and compact form language across settings dialogs.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
+        "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml",
+        "src/ClassroomToolkit.App/TimerSetDialog.xaml",
+        "src/ClassroomToolkit.App/AboutDialog.xaml"
+      ],
+      "done_when": [
+        "Settings dialogs share one shell structure and action bar",
+        "Form spacing and typography are consistent across settings windows",
+        "Settings save behavior remains unchanged"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Settings|FullyQualifiedName~Configuration\"",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "No configuration schema or persistence format changes are introduced"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "ui-dialog-tail-pass",
+      "title": "Polish lightweight dialog and utility tail windows",
+      "stage": "dialog-tail",
+      "priority": 4,
+      "order": 700,
+      "depends_on": [
+        "ui-management-settings-dialog-family"
+      ],
+      "summary": "Apply final polish pass to lightweight dialogs and utility windows.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/AutoExitDialog.xaml.cs",
+        "src/ClassroomToolkit.App/RemoteKeyDialog.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/BoardColorDialog.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/QuickColorPaletteWindow.xaml"
+      ],
+      "done_when": [
+        "Utility dialogs share consistent compact appearance and control density",
+        "Quick palette and board color dialogs align with visual token baseline",
+        "No dialog activation/focus regressions are observed"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet build ClassroomToolkit.sln -c Debug",
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Dialog owner and topmost semantics remain unchanged"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "fullscreen-float-freeze-gate",
+      "title": "Fullscreen and float freeze manual gate",
+      "stage": "visual-regression",
+      "priority": 100,
+      "order": 800,
+      "depends_on": [
+        "ui-dialog-tail-pass"
+      ],
+      "summary": "Human approval gate for fullscreen/overlay/floating visual behavior freeze.",
+      "file_hints": [
+        "docs/validation/ui-window-system-progress.md",
+        "docs/validation/ui-window-system-acceptance.md"
+      ],
+      "done_when": [
+        "A human approves fullscreen and floating scene freeze result"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "manual_gate": "fullscreen-float-freeze",
+      "behavior_invariants": [
+        "Final visual regression cannot begin before this gate resumes"
+      ],
+      "blocked_by_visual_review": true
+    },
+    {
+      "id": "ui-visual-regression-stage",
+      "title": "Run final visual regression verification stage",
+      "stage": "visual-regression",
+      "priority": 5,
+      "order": 900,
+      "depends_on": [
+        "fullscreen-float-freeze-gate"
+      ],
+      "summary": "Prepare final visual regression package and acceptance evidence checklist.",
+      "file_hints": [
+        "docs/validation/ui-window-system-progress.md",
+        "docs/validation/ui-window-system-acceptance.md"
+      ],
+      "done_when": [
+        "Final visual regression checklist is complete and documented",
+        "Acceptance doc captures unresolved risks and explicit pass/fail evidence",
+        "Reconciliation check reports no stale authoritative docs"
+      ],
+      "verify": {
+        "commands": [
+          "powershell -File scripts/refactor/test-ui-mode-smoke.ps1",
+          "powershell -File scripts/refactor/test-governing-reconciliation.ps1 -TaskFile docs/ui-refactor/tasks.json -ConfigFile .codex/ui-window-system.config.json -AsJson"
+        ]
+      },
+      "manual_gate": null,
+      "behavior_invariants": [
+        "Completion is blocked when reconciliation is stale"
+      ],
+      "blocked_by_visual_review": false
+    },
+    {
+      "id": "final-visual-regression-gate",
+      "title": "Final visual regression manual gate",
+      "stage": "visual-regression",
+      "priority": 100,
+      "order": 1000,
+      "depends_on": [
+        "ui-visual-regression-stage"
+      ],
+      "summary": "Final human approval gate before claiming ui-window-system automatable tasks done.",
+      "file_hints": [
+        "docs/validation/ui-window-system-acceptance.md"
+      ],
+      "done_when": [
+        "A human records final visual regression approval with evidence"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "manual_gate": "final-visual-regression",
+      "behavior_invariants": [
+        "Wrapper must refuse ALL_AUTOMATABLE_TASKS_DONE when this gate is unresolved"
+      ],
+      "blocked_by_visual_review": true
+    }
+  ]
 }

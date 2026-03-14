@@ -5,8 +5,13 @@ using System.Windows.Threading;
 using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
+using System.Diagnostics;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.Application.Abstractions;
+using ClassroomToolkit.Application.UseCases.RollCall;
+using ClassroomToolkit.Infra.Settings;
+using ClassroomToolkit.Infra.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace ClassroomToolkit.App;
@@ -51,6 +56,27 @@ public partial class App : WpfApplication
     {
         var services = new ServiceCollection();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<ISettingsDocumentStore>(provider =>
+        {
+            var configuration = provider.GetRequiredService<IConfigurationService>();
+            TryBootstrapSettingsDocumentMigration(configuration);
+            return configuration.SettingsDocumentFormat switch
+            {
+                SettingsDocumentFormat.Json => new JsonSettingsDocumentStoreAdapter(configuration.SettingsDocumentPath),
+                _ => new SettingsDocumentStoreAdapter(configuration.SettingsDocumentPath)
+            };
+        });
+        services.AddSingleton<IRollCallWorkbookStore>(_ =>
+        {
+            var store = RollCallWorkbookStoreResolver.Create(
+                AppFlags.UseSqliteBusinessStore,
+                AppFlags.EnableExperimentalSqliteBackend,
+                out var selectedBackend);
+            Debug.WriteLine(
+                $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
+            return store;
+        });
+        services.AddSingleton<RollCallWorkbookUseCase>();
         services.AddSingleton<AppSettingsService>();
         services.AddSingleton(provider => provider.GetRequiredService<AppSettingsService>().Load());
         services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
@@ -79,6 +105,21 @@ public partial class App : WpfApplication
         });
 
         _services = services.BuildServiceProvider();
+    }
+
+    private static void TryBootstrapSettingsDocumentMigration(IConfigurationService configuration)
+    {
+        var decision = SettingsDocumentBootstrapMigrationPolicy.Resolve(
+            configuration.SettingsDocumentFormat,
+            File.Exists(configuration.SettingsDocumentPath),
+            File.Exists(configuration.SettingsIniPath));
+        SettingsDocumentBootstrapMigrationExecutor.TryMigrate(
+            decision,
+            configuration.SettingsIniPath,
+            configuration.SettingsDocumentPath,
+            (iniPath, jsonPath, overwriteJson) =>
+                new SettingsDocumentMigrationService().MigrateIniToJson(iniPath, jsonPath, overwriteJson).Migrated,
+            message => Debug.WriteLine(message));
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -126,7 +167,7 @@ public partial class App : WpfApplication
         }
 
         // 弹窗提示用户（防止重入导致消息风暴）
-        Dispatcher.BeginInvoke(() =>
+        _ = Dispatcher.InvokeAsync(() =>
         {
             if (Interlocked.Exchange(ref _criticalDialogShowing, 1) == 1)
             {

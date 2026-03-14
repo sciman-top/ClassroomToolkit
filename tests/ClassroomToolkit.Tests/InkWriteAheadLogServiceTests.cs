@@ -16,7 +16,7 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
 
     public InkWriteAheadLogServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ctk_wal_test_{Guid.NewGuid():N}");
+        _tempDir = TestPathHelper.CreateDirectory("ctk_wal_test");
         Directory.CreateDirectory(_tempDir);
     }
 

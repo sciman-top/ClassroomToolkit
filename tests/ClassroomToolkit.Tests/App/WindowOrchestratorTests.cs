@@ -17,8 +17,25 @@ public sealed class WindowOrchestratorTests
             ZOrderSurface.PhotoFullscreen
         };
 
-        orchestrator.TouchSurface(stack, ZOrderSurface.Whiteboard);
+        var changed = orchestrator.TouchSurface(stack, ZOrderSurface.Whiteboard);
 
+        changed.Should().BeTrue();
+        stack.Should().ContainInOrder(ZOrderSurface.PhotoFullscreen, ZOrderSurface.Whiteboard);
+    }
+
+    [Fact]
+    public void TouchSurface_ShouldReturnFalse_WhenSurfaceAlreadyFront()
+    {
+        var orchestrator = new WindowOrchestrator();
+        var stack = new List<ZOrderSurface>
+        {
+            ZOrderSurface.PhotoFullscreen,
+            ZOrderSurface.Whiteboard
+        };
+
+        var changed = orchestrator.TouchSurface(stack, ZOrderSurface.Whiteboard);
+
+        changed.Should().BeFalse();
         stack.Should().ContainInOrder(ZOrderSurface.PhotoFullscreen, ZOrderSurface.Whiteboard);
     }
 

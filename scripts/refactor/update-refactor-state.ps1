@@ -1,12 +1,13 @@
 param(
-    [ValidateSet("init", "start", "complete", "block", "defer", "note", "unblock")]
+    [ValidateSet("init", "start", "complete", "block", "defer", "note", "unblock", "gate-skip")]
     [string]$Action,
     [string]$StateFile = ".codex/refactor-state.json",
     [string]$TaskId,
     [string]$Summary = "",
     [string]$Reason = "",
     [string]$Mode = "",
-    [string]$ModeFamily = ""
+    [string]$ModeFamily = "",
+    [string]$EvidenceDoc = ""
 )
 
 Set-StrictMode -Version Latest
@@ -182,16 +183,49 @@ switch ($Action) {
             $state.current_manual_gate = $null
         }
     }
+    "gate-skip" {
+        $taskState = Ensure-TaskState -State $state -Id $TaskId
+        $taskState.status = "completed"
+        $taskState.last_summary = $Summary
+        $state.current_task = $null
+        $state.last_summary = $Summary
+
+        if ($null -eq $state.PSObject.Properties["current_manual_gate"]) {
+            $state | Add-Member -NotePropertyName "current_manual_gate" -NotePropertyValue $null -Force
+        }
+        $state.current_manual_gate = $null
+
+        $gateFieldMap = @{
+            "theme-freeze" = "theme_frozen"
+            "main-scene-freeze" = "main_scene_frozen"
+            "fullscreen-float-freeze" = "fullscreen_frozen"
+            "final-visual-regression" = "final_visual_review_passed"
+        }
+        if ($gateFieldMap.ContainsKey($Reason)) {
+            $gateField = [string]$gateFieldMap[$Reason]
+            if ($null -eq $state.PSObject.Properties[$gateField]) {
+                $state | Add-Member -NotePropertyName $gateField -NotePropertyValue $true -Force
+            }
+            else {
+                $state.$gateField = $true
+            }
+        }
+    }
 }
 
 $state.updated_at = [DateTime]::UtcNow.ToString("o")
-$state.history += [pscustomobject]@{
+$historyRecord = [ordered]@{
     action = $Action
     task_id = $TaskId
     summary = $Summary
     reason = $Reason
     recorded_at = [DateTime]::UtcNow.ToString("o")
 }
+if ($Action -eq "gate-skip" -and -not [string]::IsNullOrWhiteSpace($EvidenceDoc)) {
+    $historyRecord["evidence_doc"] = $EvidenceDoc
+}
+
+$state.history += [pscustomobject]$historyRecord
 
 $directory = Split-Path -Parent $StateFile
 if ($directory -and -not (Test-Path -LiteralPath $directory)) {

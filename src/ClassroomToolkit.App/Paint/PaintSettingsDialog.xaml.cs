@@ -6,11 +6,9 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using MediaColor = System.Windows.Media.Color;
-using MediaBrushes = System.Windows.Media.Brushes;
-using MediaColorConverter = System.Windows.Media.ColorConverter;
-using WpfButton = System.Windows.Controls.Button;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
+using WpfGrid = System.Windows.Controls.Grid;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -55,9 +53,9 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
-        ("自动判断（推荐）", "auto"),
-        ("强制原始输入（SendInput）", "raw"),
-        ("强制消息投递（PostMessage）", "message")
+        ("自动判断（推荐）", WpsInputModeDefaults.Auto),
+        ("强制原始输入（SendInput）", WpsInputModeDefaults.Raw),
+        ("强制消息投递（PostMessage）", WpsInputModeDefaults.Message)
     };
     private static readonly (string Label, int Value)[] WpsDebounceChoices =
     {
@@ -68,7 +66,15 @@ public partial class PaintSettingsDialog : Window
         ("200 ms（默认）", 200),
         ("300 ms（更稳）", 300)
     };
-    private static readonly double[] ToolbarScaleChoices = { 0.8, 1.0, 1.25, 1.5, 1.75, 2.0 };
+    private static readonly double[] ToolbarScaleChoices =
+    {
+        ToolbarScaleDefaults.Min,
+        ToolbarScaleDefaults.Default,
+        1.25,
+        1.5,
+        1.75,
+        ToolbarScaleDefaults.Max
+    };
     private static readonly (string Label, InkExportScope Scope)[] InkExportScopeChoices =
     {
         ("全部历史与本次", InkExportScope.AllPersistedAndSession),
@@ -90,48 +96,93 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, int Value)[] PostInputRefreshDelayChoices =
     {
-        ("更快（80ms）", 80),
-        ("平衡（120ms，推荐/默认）", 120),
-        ("稳定（140ms）", 140),
-        ("跨屏稳（160ms）", 160),
+        ("更快（80ms）", PaintPresetDefaults.PostInputResponsiveMs),
+        ("平衡（120ms，推荐/默认）", PaintPresetDefaults.PostInputBalancedMs),
+        ("稳定（140ms）", PaintPresetDefaults.PostInputStableMs),
+        ("跨屏稳（160ms）", PaintPresetDefaults.PostInputDualScreenMs),
         ("保守（180ms）", 180)
     };
     private static readonly (string Label, double Value)[] WheelZoomBaseChoices =
     {
-        ("细腻（慢）", 1.0006),
-        ("跨屏稳（中慢）", 1.0007),
-        ("平衡（推荐/默认）", 1.0008),
-        ("迅速（快）", 1.0010)
+        ("细腻（慢）", PaintPresetDefaults.WheelZoomStable),
+        ("跨屏稳（中慢）", PaintPresetDefaults.WheelZoomDualScreen),
+        ("平衡（推荐/默认）", PaintPresetDefaults.WheelZoomBalanced),
+        ("迅速（快）", PaintPresetDefaults.WheelZoomResponsive)
     };
     private static readonly (string Label, double Value)[] GestureSensitivityChoices =
     {
-        ("柔和（0.8x）", 0.8),
-        ("跨屏稳（0.9x）", 0.9),
-        ("标准（1.0x，推荐/默认）", 1.0),
-        ("灵敏（1.2x）", 1.2)
+        ("柔和（0.8x）", PaintPresetDefaults.GestureSensitivityStable),
+        ("跨屏稳（0.9x）", PaintPresetDefaults.GestureSensitivityDualScreen),
+        ("标准（1.0x，推荐/默认）", PhotoZoomInputDefaults.GestureSensitivityDefault),
+        ("灵敏（1.2x）", PaintPresetDefaults.GestureSensitivityResponsive)
     };
     private static readonly (string Label, string Value)[] PresetSchemeChoices =
     {
-        ("自定义（不覆盖）", "custom"),
-        ("课堂平衡（推荐）", "balanced"),
-        ("高灵敏（流畅优先）", "responsive"),
-        ("高稳定（容错优先）", "stable"),
-        ("双屏投影（跨屏优先）", "dual_screen")
+        ("自定义（不覆盖）", PresetSchemeDefaults.Custom),
+        ("课堂平衡（推荐）", PresetSchemeDefaults.Balanced),
+        ("高灵敏（流畅优先）", PresetSchemeDefaults.Responsive),
+        ("高稳定（容错优先）", PresetSchemeDefaults.Stable),
+        ("双屏投影（跨屏优先）", PresetSchemeDefaults.DualScreen)
     };
     private static readonly Dictionary<string, string> PresetHints = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["custom"] = "保持你当前设置，不自动覆盖参数。",
-        ["balanced"] = "课堂通用推荐：联动“课堂通用”书写模式，整体稳和快均衡。",
-        ["responsive"] = "流畅优先：联动“跟手优先”书写模式，适合高性能设备。",
-        ["stable"] = "稳定优先：联动“稳笔模式”，适合老旧设备或复杂环境。",
-        ["dual_screen"] = "跨屏优先：联动“稳笔模式”，适合主屏+投影授课。"
+        [PresetSchemeDefaults.Custom] = "保持你当前设置，不自动覆盖参数。手动修改联动参数后会自动切到此项。",
+        [PresetSchemeDefaults.Balanced] = "课堂通用推荐：联动“课堂通用”书写模式，整体稳和快均衡。",
+        [PresetSchemeDefaults.Responsive] = "流畅优先：联动“跟手优先”书写模式，适合高性能设备。",
+        [PresetSchemeDefaults.Stable] = "稳定优先：联动“稳笔模式”，适合老旧设备或复杂环境。",
+        [PresetSchemeDefaults.DualScreen] = "跨屏优先：联动“稳笔模式”，适合主屏+投影授课。"
     };
+    private const string PresetManagedHintForCustom =
+        "当前为自定义：可独立调整 WPS 模式、滚轮映射、降级锁定、去抖阈值、抬笔刷新、缩放步进与手势灵敏。";
+    private const string PresetManagedHintForPreset =
+        "当前预设托管：联动参数已锁定。点击“转为自定义后编辑”后可单独调整。";
+
+    private readonly record struct PresetBrushSectionState(
+        string PresetScheme,
+        PaintBrushStyle BrushStyle,
+        WhiteboardBrushPreset WhiteboardPreset,
+        CalligraphyBrushPreset CalligraphyPreset,
+        ClassroomWritingMode ClassroomWritingMode,
+        int BrushSizePx,
+        int BrushOpacityPercent,
+        int EraserSizePx,
+        bool CalligraphyInkBloomEnabled,
+        bool CalligraphySealEnabled,
+        int CalligraphyOverlayThresholdPercent,
+        string WpsInputMode,
+        bool WpsWheelForward,
+        bool LockStrategyWhenDegraded,
+        int WpsDebounceMs,
+        int PhotoPostInputRefreshDelayMs,
+        double PhotoWheelZoomBase,
+        double PhotoGestureZoomSensitivity);
+
+    private readonly record struct SceneSectionState(
+        bool InkSaveEnabled,
+        InkExportScope InkExportScope,
+        int InkExportMaxParallelFiles,
+        bool PhotoCrossPageDisplay,
+        bool PhotoRememberTransform,
+        bool PhotoInputTelemetryEnabled,
+        int PhotoNeighborPrefetchRadiusMax,
+        int PhotoPostInputRefreshDelayMs,
+        double PhotoWheelZoomBase,
+        double PhotoGestureZoomSensitivity,
+        string WpsInputMode,
+        bool WpsWheelForward,
+        bool ForcePresentationForegroundOnFullscreen,
+        int WpsDebounceMs,
+        bool LockStrategyWhenDegraded);
+
+    private readonly record struct AdvancedSectionState(
+        PaintShapeType ShapeType,
+        double ToolbarScale);
 
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
-    public string WpsInputMode { get; private set; } = "auto";
+    public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; private set; }
-    public int WpsDebounceMs { get; private set; } = 200;
+    public int WpsDebounceMs { get; private set; } = PaintPresetDefaults.WpsDebounceDefaultMs;
     public bool PresentationLockStrategyWhenDegraded { get; private set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
@@ -139,7 +190,7 @@ public partial class PaintSettingsDialog : Window
     public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.StandardRibbon;
     public WhiteboardBrushPreset WhiteboardPreset { get; private set; } = WhiteboardBrushPreset.Smooth;
     public CalligraphyBrushPreset CalligraphyPreset { get; private set; } = CalligraphyBrushPreset.Sharp;
-    public string PresetScheme { get; private set; } = "custom";
+    public string PresetScheme { get; private set; } = PresetSchemeDefaults.Custom;
     public ClassroomWritingMode ClassroomWritingMode { get; private set; } = ClassroomWritingMode.Balanced;
     public bool CalligraphyInkBloomEnabled { get; private set; }
     public bool CalligraphySealEnabled { get; private set; }
@@ -147,19 +198,28 @@ public partial class PaintSettingsDialog : Window
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
-    public double ToolbarScale { get; private set; } = 1.0;
+    public double ToolbarScale { get; private set; } = ToolbarScaleDefaults.Default;
     public bool InkSaveEnabled { get; private set; }
     public InkExportScope InkExportScope { get; private set; } = InkExportScope.AllPersistedAndSession;
-    public int InkExportMaxParallelFiles { get; private set; } = 2;
+    public int InkExportMaxParallelFiles { get; private set; } = PaintSettingsOptionDefaults.InkExportMaxParallelDefault;
     public bool PhotoRememberTransform { get; private set; }
     public bool PhotoCrossPageDisplay { get; private set; }
     public bool PhotoInputTelemetryEnabled { get; private set; }
-    public int PhotoNeighborPrefetchRadiusMax { get; private set; } = 4;
-    public int PhotoPostInputRefreshDelayMs { get; private set; } = 120;
-    public double PhotoWheelZoomBase { get; private set; } = 1.0008;
-    public double PhotoGestureZoomSensitivity { get; private set; } = 1.0;
+    public int PhotoNeighborPrefetchRadiusMax { get; private set; } = PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault;
+    public int PhotoPostInputRefreshDelayMs { get; private set; } = PaintPresetDefaults.PostInputRefreshDefaultMs;
+    public double PhotoWheelZoomBase { get; private set; } = PhotoZoomInputDefaults.WheelZoomBaseDefault;
+    public double PhotoGestureZoomSensitivity { get; private set; } = PhotoZoomInputDefaults.GestureSensitivityDefault;
     private bool _suppressPresetSelectionChanged;
+    private bool _suppressPresetAutoCustom = true;
+    private string _currentPresetScheme = PresetSchemeDefaults.Custom;
+    private PresetSchemeManagedParameters _customManagedSnapshot;
+    private bool _hasCustomManagedSnapshot;
     private bool _sizeToContentCommitted;
+    private readonly PresetSchemeRecommendation _presetRecommendation;
+    private bool _suppressSectionDirtyTracking = true;
+    private PresetBrushSectionState _initialPresetBrushSectionState;
+    private SceneSectionState _initialSceneSectionState;
+    private AdvancedSectionState _initialAdvancedSectionState;
 
     public PaintSettingsDialog(AppSettings settings)
     {
@@ -183,21 +243,27 @@ public partial class PaintSettingsDialog : Window
         {
             WpsModeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectComboByTag(WpsModeCombo, settings.WpsInputMode, "auto");
+        SelectComboByTag(WpsModeCombo, settings.WpsInputMode, WpsInputModeDefaults.Auto);
         _suppressPresetSelectionChanged = true;
         foreach (var (label, value) in PresetSchemeChoices)
         {
             PresetSchemeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
         var initialPreset = ResolveInitialPresetScheme(settings);
-        SelectComboByTag(PresetSchemeCombo, initialPreset, "custom");
+        SelectComboByTag(PresetSchemeCombo, initialPreset, PresetSchemeDefaults.Custom);
         UpdatePresetHint(initialPreset);
+        if (WritingModeOverrideExpander != null)
+        {
+            WritingModeOverrideExpander.IsExpanded = false;
+        }
+        _currentPresetScheme = initialPreset;
         _suppressPresetSelectionChanged = false;
+        _presetRecommendation = PresetSchemePolicy.ResolveRecommendation(settings);
         foreach (var (label, value) in WpsDebounceChoices)
         {
             WpsDebounceCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectIntCombo(WpsDebounceCombo, settings.WpsDebounceMs, fallback: 200);
+        SelectIntCombo(WpsDebounceCombo, settings.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         LockStrategyOnDegradeCheck.IsChecked = settings.PresentationLockStrategyWhenDegraded;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
@@ -211,27 +277,33 @@ public partial class PaintSettingsDialog : Window
         {
             ExportParallelCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectIntCombo(ExportParallelCombo, settings.InkExportMaxParallelFiles, fallback: 2);
+        SelectIntCombo(
+            ExportParallelCombo,
+            settings.InkExportMaxParallelFiles,
+            fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
         foreach (var (label, value) in NeighborPrefetchChoices)
         {
             NeighborPrefetchCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectIntCombo(NeighborPrefetchCombo, settings.PhotoNeighborPrefetchRadiusMax, fallback: 4);
+        SelectIntCombo(
+            NeighborPrefetchCombo,
+            settings.PhotoNeighborPrefetchRadiusMax,
+            fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);
         foreach (var (label, value) in PostInputRefreshDelayChoices)
         {
             PostInputRefreshDelayCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectIntCombo(PostInputRefreshDelayCombo, settings.PhotoPostInputRefreshDelayMs, fallback: 120);
+        SelectIntCombo(PostInputRefreshDelayCombo, settings.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
         foreach (var (label, value) in WheelZoomBaseChoices)
         {
             WheelZoomBaseCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectDoubleCombo(WheelZoomBaseCombo, settings.PhotoWheelZoomBase, fallback: 1.0008);
+        SelectDoubleCombo(WheelZoomBaseCombo, settings.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
         foreach (var (label, value) in GestureSensitivityChoices)
         {
             GestureSensitivityCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
-        SelectDoubleCombo(GestureSensitivityCombo, settings.PhotoGestureZoomSensitivity, fallback: 1.0);
+        SelectDoubleCombo(GestureSensitivityCombo, settings.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
         PhotoInputTelemetryCheck.IsChecked = settings.PhotoInputTelemetryEnabled;
         PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
         PhotoCrossPageDisplayCheck.IsChecked = settings.PhotoCrossPageDisplay;
@@ -287,7 +359,6 @@ public partial class PaintSettingsDialog : Window
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
         UpdateCalligraphyOverlayThresholdLabel();
-        HighlightTempColorByValue(BrushColor);
         Loaded += (_, _) =>
         {
             WindowPlacementHelper.EnsureVisible(this);
@@ -297,19 +368,32 @@ public partial class PaintSettingsDialog : Window
             }
 
             _sizeToContentCommitted = true;
-            Dispatcher.BeginInvoke(new Action(() => SizeToContent = System.Windows.SizeToContent.Manual),
+            _ = Dispatcher.InvokeAsync(
+                () => SizeToContent = System.Windows.SizeToContent.Manual,
                 System.Windows.Threading.DispatcherPriority.ContextIdle);
         };
+
+        InitializeCustomSnapshotIfNeeded();
+        AttachPresetManagedControlHandlers();
+        AttachSectionDirtyTrackingHandlers();
+        _suppressPresetAutoCustom = false;
+        UpdatePresetHint(_currentPresetScheme);
+        ApplySceneCardsLayout(SceneCardsGrid?.ActualWidth ?? 0);
+        _initialPresetBrushSectionState = CapturePresetBrushSectionStateFromControls();
+        _initialSceneSectionState = CaptureSceneSectionStateFromControls();
+        _initialAdvancedSectionState = CaptureAdvancedSectionStateFromControls();
+        _suppressSectionDirtyTracking = false;
+        UpdateSectionDirtyStates();
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
         ControlMsPpt = true;
         ControlWpsPpt = true;
-        WpsInputMode = GetSelectedTag(WpsModeCombo, "auto");
-        PresetScheme = GetSelectedTag(PresetSchemeCombo, "custom");
+        WpsInputMode = GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto);
+        PresetScheme = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
-        WpsDebounceMs = ResolveIntCombo(WpsDebounceCombo, fallback: 200);
+        WpsDebounceMs = ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         PresentationLockStrategyWhenDegraded = LockStrategyOnDegradeCheck.IsChecked != false;
         ForcePresentationForegroundOnFullscreen = ForceForegroundCheck.IsChecked == true;
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
@@ -326,14 +410,18 @@ public partial class PaintSettingsDialog : Window
         ToolbarScale = GetSelectedScale();
         InkSaveEnabled = InkSaveCheck.IsChecked == true;
         InkExportScope = ResolveInkExportScope();
-        InkExportMaxParallelFiles = ResolveIntCombo(ExportParallelCombo, fallback: 2);
+        InkExportMaxParallelFiles = ResolveIntCombo(
+            ExportParallelCombo,
+            fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
         PhotoRememberTransform = PhotoRememberTransformCheck.IsChecked == true;
         PhotoCrossPageDisplay = PhotoCrossPageDisplayCheck.IsChecked == true;
         PhotoInputTelemetryEnabled = PhotoInputTelemetryCheck.IsChecked == true;
-        PhotoNeighborPrefetchRadiusMax = ResolveIntCombo(NeighborPrefetchCombo, fallback: 4);
-        PhotoPostInputRefreshDelayMs = ResolveIntCombo(PostInputRefreshDelayCombo, fallback: 120);
-        PhotoWheelZoomBase = ResolveDoubleCombo(WheelZoomBaseCombo, fallback: 1.0008);
-        PhotoGestureZoomSensitivity = ResolveDoubleCombo(GestureSensitivityCombo, fallback: 1.0);
+        PhotoNeighborPrefetchRadiusMax = ResolveIntCombo(
+            NeighborPrefetchCombo,
+            fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);
+        PhotoPostInputRefreshDelayMs = ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
+        PhotoWheelZoomBase = ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
+        PhotoGestureZoomSensitivity = ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
         DialogResult = true;
     }
 
@@ -348,102 +436,129 @@ public partial class PaintSettingsDialog : Window
         {
             return;
         }
-        var preset = GetSelectedTag(PresetSchemeCombo, "custom");
+        var preset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
+        if (IsCustomScheme(_currentPresetScheme) && !IsCustomScheme(preset))
+        {
+            SaveCurrentAsCustomSnapshot();
+        }
         UpdatePresetHint(preset);
+        UpdateWritingModeOverrideExpanderState(preset);
         ApplyPresetScheme(preset);
+        _currentPresetScheme = preset;
     }
 
-    private void ApplyPresetScheme(string preset)
+    private void OnReapplyPresetClick(object sender, RoutedEventArgs e)
     {
-        if (string.Equals(preset, "custom", StringComparison.OrdinalIgnoreCase))
+        var preset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
+        if (string.Equals(preset, PresetSchemeDefaults.Custom, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        SelectComboByTag(WpsModeCombo, "auto", "auto");
-        LockStrategyOnDegradeCheck.IsChecked = true;
-        WpsWheelCheck.IsChecked = true;
+        ApplyPresetScheme(preset);
+        UpdatePresetHint(preset);
+    }
 
-        switch (preset)
+    private void OnConvertToCustomEditingClick(object sender, RoutedEventArgs e)
+    {
+        var preset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
+        if (IsCustomScheme(preset))
         {
-            case "balanced":
-                SelectClassroomWritingMode(ClassroomWritingMode.Balanced);
-                SelectIntCombo(WpsDebounceCombo, 120, fallback: 120);
-                SelectIntCombo(PostInputRefreshDelayCombo, 120, fallback: 120);
-                SelectDoubleCombo(WheelZoomBaseCombo, 1.0008, fallback: 1.0008);
-                SelectDoubleCombo(GestureSensitivityCombo, 1.0, fallback: 1.0);
-                break;
-            case "responsive":
-                SelectClassroomWritingMode(ClassroomWritingMode.Responsive);
-                SelectIntCombo(WpsDebounceCombo, 80, fallback: 80);
-                SelectIntCombo(PostInputRefreshDelayCombo, 80, fallback: 80);
-                SelectDoubleCombo(WheelZoomBaseCombo, 1.0010, fallback: 1.0010);
-                SelectDoubleCombo(GestureSensitivityCombo, 1.2, fallback: 1.2);
-                break;
-            case "stable":
-                SelectClassroomWritingMode(ClassroomWritingMode.Stable);
-                SelectIntCombo(WpsDebounceCombo, 200, fallback: 200);
-                SelectIntCombo(PostInputRefreshDelayCombo, 140, fallback: 140);
-                SelectDoubleCombo(WheelZoomBaseCombo, 1.0006, fallback: 1.0006);
-                SelectDoubleCombo(GestureSensitivityCombo, 0.8, fallback: 0.8);
-                break;
-            case "dual_screen":
-                SelectClassroomWritingMode(ClassroomWritingMode.Stable);
-                SelectIntCombo(WpsDebounceCombo, 160, fallback: 160);
-                SelectIntCombo(PostInputRefreshDelayCombo, 160, fallback: 160);
-                SelectDoubleCombo(WheelZoomBaseCombo, 1.0007, fallback: 1.0007);
-                SelectDoubleCombo(GestureSensitivityCombo, 0.9, fallback: 0.9);
-                break;
+            return;
         }
 
-        UpdateClassroomWritingModeHint(ResolveClassroomWritingMode());
+        SaveCurrentAsCustomSnapshot();
+        SelectComboByTag(PresetSchemeCombo, PresetSchemeDefaults.Custom, PresetSchemeDefaults.Custom);
+    }
+
+    private void OnApplyRecommendedPresetClick(object sender, RoutedEventArgs e)
+    {
+        if (!PresetSchemePolicy.TryResolveManagedParameters(_presetRecommendation.Scheme, out _))
+        {
+            return;
+        }
+
+        var currentPreset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
+        if (string.Equals(currentPreset, _presetRecommendation.Scheme, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SelectComboByTag(PresetSchemeCombo, _presetRecommendation.Scheme, PresetSchemeDefaults.Balanced);
+    }
+
+    private void OnResetPresetBrushSectionClick(object sender, RoutedEventArgs e)
+    {
+        ApplyPresetBrushSectionState(_initialPresetBrushSectionState);
+        UpdateSectionDirtyStates();
+    }
+
+    private void OnResetSceneSectionClick(object sender, RoutedEventArgs e)
+    {
+        ApplySceneSectionState(_initialSceneSectionState);
+        UpdateSectionDirtyStates();
+    }
+
+    private void OnResetAdvancedSectionClick(object sender, RoutedEventArgs e)
+    {
+        ApplyAdvancedSectionState(_initialAdvancedSectionState);
+        UpdateSectionDirtyStates();
+    }
+
+    private void OnRestoreCustomPresetClick(object sender, RoutedEventArgs e)
+    {
+        if (!_hasCustomManagedSnapshot)
+        {
+            return;
+        }
+
+        if (!IsCustomScheme(GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom)))
+        {
+            return;
+        }
+
+        _suppressPresetAutoCustom = true;
+        try
+        {
+            ApplyManagedParametersToControls(_customManagedSnapshot);
+        }
+        finally
+        {
+            _suppressPresetAutoCustom = false;
+        }
+
+        _currentPresetScheme = PresetSchemeDefaults.Custom;
+        UpdateClassroomWritingModeHint(_customManagedSnapshot.ClassroomWritingMode);
+        UpdatePresetHint(PresetSchemeDefaults.Custom);
+        UpdateWritingModeOverrideExpanderState(PresetSchemeDefaults.Custom);
+        System.Diagnostics.Debug.WriteLine($"[PaintPreset] restored custom snapshot: {FormatManagedParameters(_customManagedSnapshot)}");
+    }
+
+    private void ApplyPresetScheme(string preset)
+    {
+        if (!PresetSchemePolicy.TryResolveManagedParameters(preset, out var parameters))
+        {
+            return;
+        }
+
+        var before = CaptureManagedParametersFromControls();
+        _suppressPresetAutoCustom = true;
+        try
+        {
+            ApplyManagedParametersToControls(parameters);
+        }
+        finally
+        {
+            _suppressPresetAutoCustom = false;
+        }
+        UpdateClassroomWritingModeHint(parameters.ClassroomWritingMode);
+        System.Diagnostics.Debug.WriteLine(
+            $"[PaintPreset] apply {preset}: before=({FormatManagedParameters(before)}) -> after=({FormatManagedParameters(parameters)})");
     }
 
     private static string ResolveInitialPresetScheme(AppSettings settings)
     {
-        var configured = (settings.PresetScheme ?? string.Empty).Trim().ToLowerInvariant();
-        if (configured is "custom" or "balanced" or "responsive" or "stable" or "dual_screen")
-        {
-            return configured;
-        }
-
-        if (settings.ClassroomWritingMode == ClassroomWritingMode.Balanced &&
-            settings.WpsDebounceMs == 120 &&
-            settings.PhotoPostInputRefreshDelayMs == 120 &&
-            Math.Abs(settings.PhotoWheelZoomBase - 1.0008) < 0.0001 &&
-            Math.Abs(settings.PhotoGestureZoomSensitivity - 1.0) < 0.0001)
-        {
-            return "balanced";
-        }
-
-        if (settings.ClassroomWritingMode == ClassroomWritingMode.Responsive &&
-            settings.WpsDebounceMs == 80 &&
-            settings.PhotoPostInputRefreshDelayMs == 80 &&
-            Math.Abs(settings.PhotoWheelZoomBase - 1.0010) < 0.0001 &&
-            Math.Abs(settings.PhotoGestureZoomSensitivity - 1.2) < 0.0001)
-        {
-            return "responsive";
-        }
-
-        if (settings.ClassroomWritingMode == ClassroomWritingMode.Stable &&
-            settings.WpsDebounceMs == 200 &&
-            settings.PhotoPostInputRefreshDelayMs == 140 &&
-            Math.Abs(settings.PhotoWheelZoomBase - 1.0006) < 0.0001 &&
-            Math.Abs(settings.PhotoGestureZoomSensitivity - 0.8) < 0.0001)
-        {
-            return "stable";
-        }
-
-        if (settings.ClassroomWritingMode == ClassroomWritingMode.Stable &&
-            settings.WpsDebounceMs == 160 &&
-            settings.PhotoPostInputRefreshDelayMs == 160 &&
-            Math.Abs(settings.PhotoWheelZoomBase - 1.0007) < 0.0001 &&
-            Math.Abs(settings.PhotoGestureZoomSensitivity - 0.9) < 0.0001)
-        {
-            return "dual_screen";
-        }
-
-        return "custom";
+        return PresetSchemePolicy.ResolveInitialScheme(settings);
     }
 
     private void UpdatePresetHint(string preset)
@@ -454,9 +569,26 @@ public partial class PaintSettingsDialog : Window
         }
         if (!PresetHints.TryGetValue(preset, out var hint))
         {
-            hint = PresetHints["custom"];
+            hint = PresetHints[PresetSchemeDefaults.Custom];
         }
         PresetSchemeHintText.Text = hint;
+        if (PresetManagedHintText != null)
+        {
+            var isCustom = IsCustomScheme(preset);
+            PresetManagedHintText.Text = isCustom
+                ? PresetManagedHintForCustom
+                : PresetManagedHintForPreset;
+        }
+        if (ReapplyPresetButton != null)
+        {
+            ReapplyPresetButton.IsEnabled = !IsCustomScheme(preset);
+        }
+        if (RestoreCustomPresetButton != null)
+        {
+            RestoreCustomPresetButton.IsEnabled = IsCustomScheme(preset) && _hasCustomManagedSnapshot;
+        }
+        UpdateManagedControlVisualState(preset);
+        UpdatePresetRecommendation(preset);
     }
 
     private void OnBrushSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -487,6 +619,503 @@ public partial class PaintSettingsDialog : Window
     private void OnClassroomWritingModeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         UpdateClassroomWritingModeHint(ResolveClassroomWritingMode());
+        DemotePresetToCustomWhenManuallyOverridden();
+    }
+
+    private void OnPresetManagedComboChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        DemotePresetToCustomWhenManuallyOverridden();
+    }
+
+    private void OnPresetManagedToggleChanged(object sender, RoutedEventArgs e)
+    {
+        DemotePresetToCustomWhenManuallyOverridden();
+    }
+
+    private void AttachPresetManagedControlHandlers()
+    {
+        WpsModeCombo.SelectionChanged += OnPresetManagedComboChanged;
+        WpsDebounceCombo.SelectionChanged += OnPresetManagedComboChanged;
+        PostInputRefreshDelayCombo.SelectionChanged += OnPresetManagedComboChanged;
+        WheelZoomBaseCombo.SelectionChanged += OnPresetManagedComboChanged;
+        GestureSensitivityCombo.SelectionChanged += OnPresetManagedComboChanged;
+        WpsWheelCheck.Checked += OnPresetManagedToggleChanged;
+        WpsWheelCheck.Unchecked += OnPresetManagedToggleChanged;
+        LockStrategyOnDegradeCheck.Checked += OnPresetManagedToggleChanged;
+        LockStrategyOnDegradeCheck.Unchecked += OnPresetManagedToggleChanged;
+    }
+
+    private void AttachSectionDirtyTrackingHandlers()
+    {
+        BrushStyleCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        WhiteboardPresetCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        CalligraphyPresetCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        PresetSchemeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        ClassroomWritingModeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        BrushSizeSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
+        BrushOpacitySlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
+        EraserSizeSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
+        CalligraphyInkBloomCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        CalligraphyInkBloomCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        CalligraphySealCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        CalligraphySealCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        CalligraphyOverlayThresholdSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
+
+        InkSaveCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        InkSaveCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        InkExportScopeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        ExportParallelCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        PhotoCrossPageDisplayCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        PhotoCrossPageDisplayCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        PhotoRememberTransformCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        PhotoRememberTransformCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        PhotoInputTelemetryCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        PhotoInputTelemetryCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        NeighborPrefetchCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        PostInputRefreshDelayCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        WheelZoomBaseCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        GestureSensitivityCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        WpsModeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        WpsWheelCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        WpsWheelCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        ForceForegroundCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        ForceForegroundCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        WpsDebounceCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        LockStrategyOnDegradeCheck.Checked += (_, _) => UpdateSectionDirtyStates();
+        LockStrategyOnDegradeCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+
+        ShapeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        ToolbarScaleCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+    }
+
+    private void DemotePresetToCustomWhenManuallyOverridden()
+    {
+        if (_suppressPresetSelectionChanged || _suppressPresetAutoCustom)
+        {
+            return;
+        }
+        if (PresetSchemeCombo == null)
+        {
+            return;
+        }
+        var preset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
+        if (string.Equals(preset, PresetSchemeDefaults.Custom, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SaveCurrentAsCustomSnapshot();
+        _suppressPresetSelectionChanged = true;
+        try
+        {
+            SelectComboByTag(PresetSchemeCombo, PresetSchemeDefaults.Custom, PresetSchemeDefaults.Custom);
+        }
+        finally
+        {
+            _suppressPresetSelectionChanged = false;
+        }
+        _currentPresetScheme = PresetSchemeDefaults.Custom;
+        UpdatePresetHint(PresetSchemeDefaults.Custom);
+        UpdateWritingModeOverrideExpanderState(PresetSchemeDefaults.Custom);
+    }
+
+    private static bool IsCustomScheme(string preset)
+    {
+        return string.Equals(preset, PresetSchemeDefaults.Custom, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void InitializeCustomSnapshotIfNeeded()
+    {
+        if (IsCustomScheme(_currentPresetScheme))
+        {
+            SaveCurrentAsCustomSnapshot();
+        }
+    }
+
+    private void SaveCurrentAsCustomSnapshot()
+    {
+        _customManagedSnapshot = CaptureManagedParametersFromControls();
+        _hasCustomManagedSnapshot = true;
+        System.Diagnostics.Debug.WriteLine($"[PaintPreset] save custom snapshot: {FormatManagedParameters(_customManagedSnapshot)}");
+    }
+
+    private PresetSchemeManagedParameters CaptureManagedParametersFromControls()
+    {
+        return new PresetSchemeManagedParameters(
+            GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
+            WpsWheelCheck.IsChecked == true,
+            LockStrategyOnDegradeCheck.IsChecked != false,
+            ResolveClassroomWritingMode(),
+            ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
+            ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
+            ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
+            ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault));
+    }
+
+    private void ApplyManagedParametersToControls(PresetSchemeManagedParameters parameters)
+    {
+        SelectComboByTag(WpsModeCombo, parameters.WpsInputMode, WpsInputModeDefaults.Auto);
+        LockStrategyOnDegradeCheck.IsChecked = parameters.LockStrategyWhenDegraded;
+        WpsWheelCheck.IsChecked = parameters.WpsWheelForward;
+        SelectClassroomWritingMode(parameters.ClassroomWritingMode);
+        SelectIntCombo(WpsDebounceCombo, parameters.WpsDebounceMs, fallback: parameters.WpsDebounceMs);
+        SelectIntCombo(PostInputRefreshDelayCombo, parameters.PhotoPostInputRefreshDelayMs, fallback: parameters.PhotoPostInputRefreshDelayMs);
+        SelectDoubleCombo(WheelZoomBaseCombo, parameters.PhotoWheelZoomBase, fallback: parameters.PhotoWheelZoomBase);
+        SelectDoubleCombo(
+            GestureSensitivityCombo,
+            parameters.PhotoGestureZoomSensitivity,
+            fallback: parameters.PhotoGestureZoomSensitivity);
+    }
+
+    private static string FormatManagedParameters(PresetSchemeManagedParameters parameters)
+    {
+        return $"mode={parameters.WpsInputMode}; wheel={parameters.WpsWheelForward}; lock={parameters.LockStrategyWhenDegraded}; " +
+               $"writing={parameters.ClassroomWritingMode}; debounce={parameters.WpsDebounceMs}; postInput={parameters.PhotoPostInputRefreshDelayMs}; " +
+               $"wheelZoom={parameters.PhotoWheelZoomBase:0.####}; gesture={parameters.PhotoGestureZoomSensitivity:0.###}";
+    }
+
+    private void UpdateManagedControlVisualState(string preset)
+    {
+        var isCustom = IsCustomScheme(preset);
+        var tip = isCustom
+            ? "自定义模式：该参数可独立调整。"
+            : "预设托管：切换到“自定义”后可独立调整。";
+
+        WpsModeCombo.ToolTip = tip;
+        WpsDebounceCombo.ToolTip = tip;
+        WpsWheelCheck.ToolTip = tip;
+        LockStrategyOnDegradeCheck.ToolTip = tip;
+        PostInputRefreshDelayCombo.ToolTip = tip;
+        WheelZoomBaseCombo.ToolTip = tip;
+        GestureSensitivityCombo.ToolTip = tip;
+        ClassroomWritingModeCombo.ToolTip = tip;
+        WpsModeCombo.IsEnabled = isCustom;
+        WpsDebounceCombo.IsEnabled = isCustom;
+        WpsWheelCheck.IsEnabled = isCustom;
+        LockStrategyOnDegradeCheck.IsEnabled = isCustom;
+        PostInputRefreshDelayCombo.IsEnabled = isCustom;
+        WheelZoomBaseCombo.IsEnabled = isCustom;
+        GestureSensitivityCombo.IsEnabled = isCustom;
+        ClassroomWritingModeCombo.IsEnabled = isCustom;
+        if (ConvertToCustomEditingButton != null)
+        {
+            ConvertToCustomEditingButton.Visibility = isCustom ? Visibility.Collapsed : Visibility.Visible;
+            ConvertToCustomEditingButton.IsEnabled = !isCustom;
+        }
+    }
+
+    private PresetBrushSectionState CapturePresetBrushSectionStateFromControls()
+    {
+        return new PresetBrushSectionState(
+            PresetScheme: GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom),
+            BrushStyle: ResolveBrushStyle(),
+            WhiteboardPreset: ResolveWhiteboardPreset(),
+            CalligraphyPreset: ResolveCalligraphyPreset(),
+            ClassroomWritingMode: ResolveClassroomWritingMode(),
+            BrushSizePx: (int)Math.Round(BrushSizeSlider.Value),
+            BrushOpacityPercent: (int)Math.Round(BrushOpacitySlider.Value),
+            EraserSizePx: (int)Math.Round(EraserSizeSlider.Value),
+            CalligraphyInkBloomEnabled: CalligraphyInkBloomCheck.IsChecked == true,
+            CalligraphySealEnabled: CalligraphySealCheck.IsChecked == true,
+            CalligraphyOverlayThresholdPercent: (int)Math.Round(CalligraphyOverlayThresholdSlider.Value),
+            WpsInputMode: GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
+            WpsWheelForward: WpsWheelCheck.IsChecked == true,
+            LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false,
+            WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
+            PhotoPostInputRefreshDelayMs: ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
+            PhotoWheelZoomBase: ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
+            PhotoGestureZoomSensitivity: ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault));
+    }
+
+    private SceneSectionState CaptureSceneSectionStateFromControls()
+    {
+        return new SceneSectionState(
+            InkSaveEnabled: InkSaveCheck.IsChecked == true,
+            InkExportScope: ResolveInkExportScope(),
+            InkExportMaxParallelFiles: ResolveIntCombo(ExportParallelCombo, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault),
+            PhotoCrossPageDisplay: PhotoCrossPageDisplayCheck.IsChecked == true,
+            PhotoRememberTransform: PhotoRememberTransformCheck.IsChecked == true,
+            PhotoInputTelemetryEnabled: PhotoInputTelemetryCheck.IsChecked == true,
+            PhotoNeighborPrefetchRadiusMax: ResolveIntCombo(NeighborPrefetchCombo, fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault),
+            PhotoPostInputRefreshDelayMs: ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
+            PhotoWheelZoomBase: ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
+            PhotoGestureZoomSensitivity: ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault),
+            WpsInputMode: GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
+            WpsWheelForward: WpsWheelCheck.IsChecked == true,
+            ForcePresentationForegroundOnFullscreen: ForceForegroundCheck.IsChecked == true,
+            WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
+            LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false);
+    }
+
+    private AdvancedSectionState CaptureAdvancedSectionStateFromControls()
+    {
+        return new AdvancedSectionState(
+            ShapeType: ResolveShapeType(),
+            ToolbarScale: GetSelectedScale());
+    }
+
+    private void ApplyPresetBrushSectionState(PresetBrushSectionState state)
+    {
+        _suppressSectionDirtyTracking = true;
+        _suppressPresetSelectionChanged = true;
+        _suppressPresetAutoCustom = true;
+        try
+        {
+            SelectComboByTag(PresetSchemeCombo, state.PresetScheme, PresetSchemeDefaults.Custom);
+            SelectBrushStyle(state.BrushStyle);
+            SelectWhiteboardPreset(state.WhiteboardPreset);
+            SelectCalligraphyPreset(state.CalligraphyPreset);
+            SelectClassroomWritingMode(state.ClassroomWritingMode);
+            BrushSizeSlider.Value = Clamp(state.BrushSizePx, 1, 50);
+            BrushOpacitySlider.Value = Clamp(state.BrushOpacityPercent, 0, 100);
+            EraserSizeSlider.Value = Clamp(state.EraserSizePx, 6, 60);
+            CalligraphyInkBloomCheck.IsChecked = state.CalligraphyInkBloomEnabled;
+            CalligraphySealCheck.IsChecked = state.CalligraphySealEnabled;
+            CalligraphyOverlayThresholdSlider.Value = Clamp(state.CalligraphyOverlayThresholdPercent, 0, 100);
+            SelectComboByTag(WpsModeCombo, state.WpsInputMode, WpsInputModeDefaults.Auto);
+            WpsWheelCheck.IsChecked = state.WpsWheelForward;
+            LockStrategyOnDegradeCheck.IsChecked = state.LockStrategyWhenDegraded;
+            SelectIntCombo(WpsDebounceCombo, state.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+            SelectIntCombo(PostInputRefreshDelayCombo, state.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
+            SelectDoubleCombo(WheelZoomBaseCombo, state.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
+            SelectDoubleCombo(GestureSensitivityCombo, state.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+        }
+        finally
+        {
+            _suppressPresetAutoCustom = false;
+            _suppressPresetSelectionChanged = false;
+            _suppressSectionDirtyTracking = false;
+        }
+
+        _currentPresetScheme = state.PresetScheme;
+        if (IsCustomScheme(state.PresetScheme))
+        {
+            SaveCurrentAsCustomSnapshot();
+        }
+        UpdateCalligraphyOptionState();
+        UpdateClassroomWritingModeHint(state.ClassroomWritingMode);
+        UpdatePresetHint(state.PresetScheme);
+        UpdateWritingModeOverrideExpanderState(state.PresetScheme);
+    }
+
+    private void ApplySceneSectionState(SceneSectionState state)
+    {
+        _suppressSectionDirtyTracking = true;
+        _suppressPresetAutoCustom = true;
+        try
+        {
+            InkSaveCheck.IsChecked = state.InkSaveEnabled;
+            SelectInkExportScope(state.InkExportScope);
+            SelectIntCombo(ExportParallelCombo, state.InkExportMaxParallelFiles, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
+            PhotoCrossPageDisplayCheck.IsChecked = state.PhotoCrossPageDisplay;
+            PhotoRememberTransformCheck.IsChecked = state.PhotoRememberTransform;
+            PhotoInputTelemetryCheck.IsChecked = state.PhotoInputTelemetryEnabled;
+            SelectIntCombo(NeighborPrefetchCombo, state.PhotoNeighborPrefetchRadiusMax, fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);
+            SelectIntCombo(PostInputRefreshDelayCombo, state.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
+            SelectDoubleCombo(WheelZoomBaseCombo, state.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
+            SelectDoubleCombo(GestureSensitivityCombo, state.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+            SelectComboByTag(WpsModeCombo, state.WpsInputMode, WpsInputModeDefaults.Auto);
+            WpsWheelCheck.IsChecked = state.WpsWheelForward;
+            ForceForegroundCheck.IsChecked = state.ForcePresentationForegroundOnFullscreen;
+            SelectIntCombo(WpsDebounceCombo, state.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+            LockStrategyOnDegradeCheck.IsChecked = state.LockStrategyWhenDegraded;
+        }
+        finally
+        {
+            _suppressPresetAutoCustom = false;
+            _suppressSectionDirtyTracking = false;
+        }
+
+        UpdatePresetHint(GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom));
+    }
+
+    private void ApplyAdvancedSectionState(AdvancedSectionState state)
+    {
+        _suppressSectionDirtyTracking = true;
+        try
+        {
+            SelectShapeType(state.ShapeType);
+            SelectComboByTag(ToolbarScaleCombo, state.ToolbarScale);
+        }
+        finally
+        {
+            _suppressSectionDirtyTracking = false;
+        }
+    }
+
+    private void UpdateSectionDirtyStates()
+    {
+        if (_suppressSectionDirtyTracking)
+        {
+            return;
+        }
+
+        bool presetDirty = IsPresetBrushSectionDirty();
+        bool sceneDirty = IsSceneSectionDirty();
+        bool advancedDirty = IsAdvancedSectionDirty();
+        if (PresetBrushSectionStateText != null)
+        {
+            PresetBrushSectionStateText.Text = presetDirty ? "本页状态：已修改" : "本页状态：未修改";
+        }
+        if (SceneSectionStateText != null)
+        {
+            SceneSectionStateText.Text = sceneDirty ? "本页状态：已修改" : "本页状态：未修改";
+        }
+        if (AdvancedSectionStateText != null)
+        {
+            AdvancedSectionStateText.Text = advancedDirty ? "本页状态：已修改" : "本页状态：未修改";
+        }
+        if (ResetPresetBrushSectionButton != null)
+        {
+            ResetPresetBrushSectionButton.IsEnabled = presetDirty;
+        }
+        if (ResetSceneSectionButton != null)
+        {
+            ResetSceneSectionButton.IsEnabled = sceneDirty;
+        }
+        if (ResetAdvancedSectionButton != null)
+        {
+            ResetAdvancedSectionButton.IsEnabled = advancedDirty;
+        }
+    }
+
+    private bool IsPresetBrushSectionDirty()
+    {
+        var current = CapturePresetBrushSectionStateFromControls();
+        var initial = _initialPresetBrushSectionState;
+        return !string.Equals(current.PresetScheme, initial.PresetScheme, StringComparison.OrdinalIgnoreCase)
+            || current.BrushStyle != initial.BrushStyle
+            || current.WhiteboardPreset != initial.WhiteboardPreset
+            || current.CalligraphyPreset != initial.CalligraphyPreset
+            || current.ClassroomWritingMode != initial.ClassroomWritingMode
+            || current.BrushSizePx != initial.BrushSizePx
+            || current.BrushOpacityPercent != initial.BrushOpacityPercent
+            || current.EraserSizePx != initial.EraserSizePx
+            || current.CalligraphyInkBloomEnabled != initial.CalligraphyInkBloomEnabled
+            || current.CalligraphySealEnabled != initial.CalligraphySealEnabled
+            || current.CalligraphyOverlayThresholdPercent != initial.CalligraphyOverlayThresholdPercent
+            || !string.Equals(current.WpsInputMode, initial.WpsInputMode, StringComparison.OrdinalIgnoreCase)
+            || current.WpsWheelForward != initial.WpsWheelForward
+            || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded
+            || current.WpsDebounceMs != initial.WpsDebounceMs
+            || current.PhotoPostInputRefreshDelayMs != initial.PhotoPostInputRefreshDelayMs
+            || Math.Abs(current.PhotoWheelZoomBase - initial.PhotoWheelZoomBase) > PaintSettingsDefaults.DoubleComparisonEpsilon
+            || Math.Abs(current.PhotoGestureZoomSensitivity - initial.PhotoGestureZoomSensitivity) > PaintSettingsDefaults.DoubleComparisonEpsilon;
+    }
+
+    private bool IsSceneSectionDirty()
+    {
+        var current = CaptureSceneSectionStateFromControls();
+        var initial = _initialSceneSectionState;
+        return current.InkSaveEnabled != initial.InkSaveEnabled
+            || current.InkExportScope != initial.InkExportScope
+            || current.InkExportMaxParallelFiles != initial.InkExportMaxParallelFiles
+            || current.PhotoCrossPageDisplay != initial.PhotoCrossPageDisplay
+            || current.PhotoRememberTransform != initial.PhotoRememberTransform
+            || current.PhotoInputTelemetryEnabled != initial.PhotoInputTelemetryEnabled
+            || current.PhotoNeighborPrefetchRadiusMax != initial.PhotoNeighborPrefetchRadiusMax
+            || current.PhotoPostInputRefreshDelayMs != initial.PhotoPostInputRefreshDelayMs
+            || Math.Abs(current.PhotoWheelZoomBase - initial.PhotoWheelZoomBase) > PaintSettingsDefaults.DoubleComparisonEpsilon
+            || Math.Abs(current.PhotoGestureZoomSensitivity - initial.PhotoGestureZoomSensitivity) > PaintSettingsDefaults.DoubleComparisonEpsilon
+            || !string.Equals(current.WpsInputMode, initial.WpsInputMode, StringComparison.OrdinalIgnoreCase)
+            || current.WpsWheelForward != initial.WpsWheelForward
+            || current.ForcePresentationForegroundOnFullscreen != initial.ForcePresentationForegroundOnFullscreen
+            || current.WpsDebounceMs != initial.WpsDebounceMs
+            || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded;
+    }
+
+    private bool IsAdvancedSectionDirty()
+    {
+        var current = CaptureAdvancedSectionStateFromControls();
+        var initial = _initialAdvancedSectionState;
+        return current.ShapeType != initial.ShapeType
+            || Math.Abs(current.ToolbarScale - initial.ToolbarScale) > PaintSettingsDefaults.ComboTagComparisonEpsilon;
+    }
+
+    private void UpdatePresetRecommendation(string currentPreset)
+    {
+        if (PresetSchemeRecommendationText == null || ApplyRecommendedPresetButton == null)
+        {
+            return;
+        }
+
+        var recommendedScheme = _presetRecommendation.Scheme;
+        var isRecommendedValid = PresetSchemePolicy.TryResolveManagedParameters(recommendedScheme, out _);
+        if (!isRecommendedValid)
+        {
+            PresetSchemeRecommendationText.Text = string.Empty;
+            ApplyRecommendedPresetButton.IsEnabled = false;
+            return;
+        }
+
+        var recommendedLabel = ResolvePresetDisplayName(recommendedScheme);
+        bool alreadyApplied = string.Equals(currentPreset, recommendedScheme, StringComparison.OrdinalIgnoreCase);
+        var prefix = alreadyApplied
+            ? $"设备画像推荐：{recommendedLabel}（已应用）。"
+            : $"设备画像推荐：{recommendedLabel}。";
+        PresetSchemeRecommendationText.Text = $"{prefix}{_presetRecommendation.Reason}";
+        ApplyRecommendedPresetButton.IsEnabled = !alreadyApplied;
+    }
+
+    private static string ResolvePresetDisplayName(string scheme)
+    {
+        foreach (var (label, value) in PresetSchemeChoices)
+        {
+            if (string.Equals(value, scheme, StringComparison.OrdinalIgnoreCase))
+            {
+                return label;
+            }
+        }
+
+        return "课堂平衡（推荐）";
+    }
+
+    private void UpdateWritingModeOverrideExpanderState(string preset)
+    {
+        if (WritingModeOverrideExpander == null)
+        {
+            return;
+        }
+
+        WritingModeOverrideExpander.IsExpanded = IsCustomScheme(preset);
+    }
+
+    private void OnSceneCardsGridSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ApplySceneCardsLayout(e.NewSize.Width);
+    }
+
+    private void ApplySceneCardsLayout(double availableWidth)
+    {
+        if (PhotoPdfSettingsCard == null || WpsSettingsCard == null)
+        {
+            return;
+        }
+
+        var layoutMode = SceneCardsLayoutPolicy.Resolve(availableWidth);
+        if (layoutMode == SceneCardsLayoutMode.SingleColumn)
+        {
+            WpfGrid.SetRow(PhotoPdfSettingsCard, 0);
+            WpfGrid.SetColumn(PhotoPdfSettingsCard, 0);
+            WpfGrid.SetColumnSpan(PhotoPdfSettingsCard, 2);
+            PhotoPdfSettingsCard.Margin = new Thickness(0, 0, 0, 8);
+
+            WpfGrid.SetRow(WpsSettingsCard, 1);
+            WpfGrid.SetColumn(WpsSettingsCard, 0);
+            WpfGrid.SetColumnSpan(WpsSettingsCard, 2);
+            WpsSettingsCard.Margin = new Thickness(0, 8, 0, 0);
+            return;
+        }
+
+        WpfGrid.SetRow(PhotoPdfSettingsCard, 0);
+        WpfGrid.SetColumn(PhotoPdfSettingsCard, 0);
+        WpfGrid.SetColumnSpan(PhotoPdfSettingsCard, 1);
+        PhotoPdfSettingsCard.Margin = new Thickness(0, 0, 6, 0);
+
+        WpfGrid.SetRow(WpsSettingsCard, 0);
+        WpfGrid.SetColumn(WpsSettingsCard, 1);
+        WpfGrid.SetColumnSpan(WpsSettingsCard, 1);
+        WpsSettingsCard.Margin = new Thickness(6, 0, 0, 0);
     }
 
 
@@ -550,85 +1179,6 @@ public partial class PaintSettingsDialog : Window
         }
         ClassroomWritingModeHint.Text = hint;
     }
-
-
-
-    private void OnTempColorClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton button)
-        {
-            return;
-        }
-        var hex = button.Tag as string;
-        if (string.IsNullOrWhiteSpace(hex))
-        {
-            return;
-        }
-        BrushColor = (MediaColor)MediaColorConverter.ConvertFromString(hex);
-        HighlightTempColor(button);
-    }
-
-    private void HighlightTempColor(WpfButton selected)
-    {
-        if (selected == null)
-        {
-            return;
-        }
-        var parent = VisualTreeHelper.GetParent(selected) as System.Windows.Controls.Panel;
-        if (parent == null)
-        {
-            return;
-        }
-        foreach (var child in parent.Children.OfType<WpfButton>())
-        {
-            child.BorderThickness = new Thickness(1);
-            child.BorderBrush = new SolidColorBrush(MediaColor.FromArgb(0x20, 0, 0, 0));
-        }
-        selected.BorderThickness = new Thickness(2);
-        selected.BorderBrush = MediaBrushes.DeepSkyBlue;
-    }
-
-    private void HighlightTempColorByValue(MediaColor color)
-    {
-        var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-        foreach (var button in FindTempColorButtons())
-        {
-            var tag = button.Tag as string;
-            if (string.Equals(tag, hex, StringComparison.OrdinalIgnoreCase))
-            {
-                HighlightTempColor(button);
-                return;
-            }
-        }
-    }
-
-    private IEnumerable<WpfButton> FindTempColorButtons()
-    {
-        return FindVisualChildren<WpfButton>(this)
-            .Where(btn => btn.Tag is string tag && tag.StartsWith("#", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-    {
-        if (parent == null)
-        {
-            yield break;
-        }
-        var count = VisualTreeHelper.GetChildrenCount(parent);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T match)
-            {
-                yield return match;
-            }
-            foreach (var nested in FindVisualChildren<T>(child))
-            {
-                yield return nested;
-            }
-        }
-    }
-
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
@@ -644,13 +1194,16 @@ public partial class PaintSettingsDialog : Window
 
     private static int ToPercent(byte value)
     {
-        return (int)Math.Round(value * 100.0 / 255.0);
+        return (int)Math.Round(value * PaintSettingsDefaults.PercentMax / PaintSettingsDefaults.PercentToByteScale);
     }
 
     private static byte ToByte(double percent)
     {
-        var clamped = Math.Max(0, Math.Min(100, percent));
-        return (byte)Math.Clamp((int)Math.Round(clamped * 255.0 / 100.0), 0, 255);
+        var clamped = Math.Max(PaintSettingsDefaults.PercentMin, Math.Min(PaintSettingsDefaults.PercentMax, percent));
+        return (byte)Math.Clamp(
+            (int)Math.Round(clamped * PaintSettingsDefaults.PercentToByteScale / PaintSettingsDefaults.PercentMax),
+            0,
+            255);
     }
 
     private void SelectShapeType(PaintShapeType type)
@@ -713,7 +1266,7 @@ public partial class PaintSettingsDialog : Window
     {
         foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
-            if (item.Tag is double tag && Math.Abs(tag - value) < 0.001)
+            if (item.Tag is double tag && Math.Abs(tag - value) < PaintSettingsDefaults.ComboTagComparisonEpsilon)
             {
                 combo.SelectedItem = item;
                 return;
@@ -812,7 +1365,7 @@ public partial class PaintSettingsDialog : Window
 
     private static double FindNearestScale(double value)
     {
-        var target = Clamp(value, 0.8, 2.0);
+        var target = Clamp(value, ToolbarScaleDefaults.Min, ToolbarScaleDefaults.Max);
         return ToolbarScaleChoices.OrderBy(choice => Math.Abs(choice - target)).First();
     }
 
@@ -881,7 +1434,7 @@ public partial class PaintSettingsDialog : Window
     {
         foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
-            if (item.Tag is double tagged && Math.Abs(tagged - value) < 0.0001)
+            if (item.Tag is double tagged && Math.Abs(tagged - value) < PaintSettingsDefaults.DoubleComparisonEpsilon)
             {
                 combo.SelectedItem = item;
                 return;
@@ -889,7 +1442,7 @@ public partial class PaintSettingsDialog : Window
         }
         foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
         {
-            if (item.Tag is double tagged && Math.Abs(tagged - fallback) < 0.0001)
+            if (item.Tag is double tagged && Math.Abs(tagged - fallback) < PaintSettingsDefaults.DoubleComparisonEpsilon)
             {
                 combo.SelectedItem = item;
                 return;

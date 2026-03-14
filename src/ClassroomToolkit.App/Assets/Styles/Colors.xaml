@@ -161,6 +161,11 @@
     
     <!-- 4. Card (Soft) -->
     <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="8" ShadowDepth="4" Opacity="0.4" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Card_Subtle" Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.05" RenderingBias="Performance"/>
+
+    <!-- 4.1 Dialog -->
+    <DropShadowEffect x:Key="Shadow_Dialog" Color="#000000" BlurRadius="30" ShadowDepth="8" Opacity="0.5" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Dialog_Heavy" Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5" RenderingBias="Performance"/>
 
     <!-- 5. Glass Glow (Subtle White) -->
     <DropShadowEffect x:Key="Shadow_Glass_Glow" Color="#FFFFFF" BlurRadius="10" ShadowDepth="0" Opacity="0.1" RenderingBias="Performance"/>

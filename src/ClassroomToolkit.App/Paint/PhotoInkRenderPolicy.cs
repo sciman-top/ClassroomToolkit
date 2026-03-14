@@ -9,9 +9,10 @@ internal static class PhotoInkRenderPolicy
         Transform? rasterRenderTransform,
         Transform? photoContentTransform)
     {
-        return photoModeActive
-            && photoContentTransform != null
-            && ReferenceEquals(rasterRenderTransform, photoContentTransform);
+        // Interactive and persisted ink are rendered into a viewport-sized raster surface.
+        // Keep that surface in screen space; otherwise strokes stored in photo coordinates can be
+        // clipped away before the photo transform is applied.
+        return false;
     }
 
     internal static bool ShouldRequestImmediateRedraw(
@@ -19,9 +20,6 @@ internal static class PhotoInkRenderPolicy
         Transform? rasterRenderTransform,
         Transform? photoContentTransform)
     {
-        return ShouldRenderInteractiveInkInPhotoSpace(
-            photoModeActive,
-            rasterRenderTransform,
-            photoContentTransform);
+        return false;
     }
 }

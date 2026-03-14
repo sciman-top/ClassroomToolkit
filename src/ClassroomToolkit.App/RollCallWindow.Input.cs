@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Models;
+using ClassroomToolkit.App.RollCall;
 using ClassroomToolkit.Domain.Utilities;
-using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -57,8 +59,7 @@ public partial class RollCallWindow
         var prompt = group == ClassroomToolkit.Domain.Utilities.IdentityUtils.AllGroupName
             ? "确定要重置所有分组的点名状态并重新开始吗？"
             : $"确定要重置“{group}”分组的点名状态并重新开始吗？";
-        var result = System.Windows.MessageBox.Show(prompt, "提示", MessageBoxButton.OKCancel, MessageBoxImage.Question);
-        if (result != MessageBoxResult.OK)
+        if (!TryShowRollCallConfirmationSafe("reset-rollcall-group", prompt))
         {
             return;
         }
@@ -102,7 +103,7 @@ public partial class RollCallWindow
         {
             Owner = this
         };
-        if (dialog.ShowDialog() == true && dialog.SelectedIndex.HasValue)
+        if (TryShowDialogSafe(dialog, nameof(StudentListDialog)) && dialog.SelectedIndex.HasValue)
         {
             if (_viewModel.SetCurrentStudentByIndex(dialog.SelectedIndex.Value))
             {
@@ -118,7 +119,7 @@ public partial class RollCallWindow
         {
             Owner = this
         };
-        if (dialog.ShowDialog() != true)
+        if (!TryShowDialogSafe(dialog, nameof(RollCallSettingsDialog)))
         {
             return;
         }
@@ -143,7 +144,7 @@ public partial class RollCallWindow
         }
         if (_photoOverlay != null && _photoOverlay.IsVisible)
         {
-            _photoOverlay.CloseOverlay();
+            HidePhotoOverlay();
             e.Handled = true;
         }
     }
@@ -152,12 +153,7 @@ public partial class RollCallWindow
     {
         try
         {
-            if (!ShouldEnableRemotePresenterHook()) return;
-
-            var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.Tab, KeyModifiers.None);
-            var bindings = ResolveRemoteBindings(_viewModel.RemotePresenterKey, fallback);
-            
-            Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+            Action handler = () =>
             {
                  Dispatcher.Invoke(() =>
                  {
@@ -177,9 +173,16 @@ public partial class RollCallWindow
                  });
             };
 
-            bool result = await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableRemotePresenterHook());
-            
-            if (!result && !_remoteHookUnavailableNotified && isCurrent() && ShouldEnableRemotePresenterHook())
+            var request = new RollCallRemoteHookStartRequest(
+                ShouldEnable: ShouldEnableRemotePresenterHook(),
+                ConfiguredKey: _viewModel.RemotePresenterKey,
+                FallbackToken: "tab",
+                Handler: handler,
+                ShouldKeepActive: () => isCurrent() && ShouldEnableRemotePresenterHook(),
+                AlreadyUnavailableNotified: _remoteHookUnavailableNotified,
+                NotifyUnavailableOnFailure: true);
+            var result = await _remoteHookCoordinator.TryStartAsync(request);
+            if (result.ShouldNotifyUnavailable)
             {
                  NotifyRemoteHookError();
             }
@@ -193,19 +196,14 @@ public partial class RollCallWindow
 
     private void StopKeyboardHook()
     {
-        _hookService.UnregisterAll();
+        _remoteHookCoordinator.StopAllHooks();
     }
 
     private async Task StartGroupSwitchHookCoreAsync(Func<bool> isCurrent)
     {
         try
         {
-            if (!ShouldEnableGroupSwitchHook()) return;
-
-            var fallback = new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.B, KeyModifiers.None);
-            var bindings = ResolveRemoteBindings(_viewModel.RemoteGroupSwitchKey, fallback);
-            
-            Action<ClassroomToolkit.Interop.Presentation.KeyBinding> handler = _ =>
+            Action handler = () =>
             {
                 Dispatcher.Invoke(() =>
                 {
@@ -216,8 +214,15 @@ public partial class RollCallWindow
                     ScheduleRollStateSave();
                 });
             };
-
-            await _hookService.RegisterHookAsync(bindings, handler, () => isCurrent() && ShouldEnableGroupSwitchHook());
+            var request = new RollCallRemoteHookStartRequest(
+                ShouldEnable: ShouldEnableGroupSwitchHook(),
+                ConfiguredKey: _viewModel.RemoteGroupSwitchKey,
+                FallbackToken: "b",
+                Handler: handler,
+                ShouldKeepActive: () => isCurrent() && ShouldEnableGroupSwitchHook(),
+                AlreadyUnavailableNotified: false,
+                NotifyUnavailableOnFailure: false);
+            await _remoteHookCoordinator.TryStartAsync(request);
         }
         catch (Exception ex)
         {
@@ -229,11 +234,11 @@ public partial class RollCallWindow
     {
         if (_remoteHookUnavailableNotified) return;
         _remoteHookUnavailableNotified = true;
-        Dispatcher.BeginInvoke(() =>
+        _ = Dispatcher.InvokeAsync(() =>
         {
             var owner = System.Windows.Application.Current?.MainWindow;
             var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
-            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
         });
     }
 
@@ -255,41 +260,13 @@ public partial class RollCallWindow
 
     private bool ShouldEnableGroupSwitchHook() => _viewModel.RemoteGroupSwitchEnabled && _viewModel.IsRollCallMode;
 
-    private static bool IsUnsupportedRemoteBinding(ClassroomToolkit.Interop.Presentation.KeyBinding binding)
-    {
-        return binding.Modifiers == KeyModifiers.None
-            && binding.Key == VirtualKey.W; // W (removed)
-    }
-
-    private static IReadOnlyList<ClassroomToolkit.Interop.Presentation.KeyBinding> ResolveRemoteBindings(
-        string configuredKey,
-        ClassroomToolkit.Interop.Presentation.KeyBinding fallback)
-    {
-        if (string.Equals(configuredKey?.Trim(), "f5", StringComparison.OrdinalIgnoreCase))
-        {
-            return new[]
-            {
-                new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.F5, KeyModifiers.None),
-                new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.F5, KeyModifiers.Shift),
-                new ClassroomToolkit.Interop.Presentation.KeyBinding(VirtualKey.Escape, KeyModifiers.None)
-            };
-        }
-
-        var binding = KeyBindingParser.ParseOrDefault(configuredKey, fallback);
-        if (IsUnsupportedRemoteBinding(binding))
-        {
-            binding = fallback;
-        }
-        return new[] { binding };
-    }
-
     private void OpenRemoteKeyDialog()
     {
         var dialog = new RemoteKeyDialog(_viewModel.RemotePresenterKey)
         {
             Owner = this
         };
-        if (dialog.ShowDialog() == true)
+        if (TryShowDialogSafe(dialog, nameof(RemoteKeyDialog)))
         {
             _viewModel.SetRemotePresenterKey(dialog.SelectedKey);
             _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;

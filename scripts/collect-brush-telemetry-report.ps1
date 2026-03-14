@@ -9,6 +9,29 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Invoke-DotnetWithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+        [int]$MaxAttempts = 3,
+        [int]$RetryDelaySeconds = 2
+    )
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        & dotnet @Arguments
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+
+        if ($attempt -ge $MaxAttempts) {
+            throw "dotnet $($Arguments -join ' ') failed after $MaxAttempts attempts (exit=$LASTEXITCODE)."
+        }
+
+        Write-Host "dotnet $($Arguments -join ' ') 失败，$RetryDelaySeconds 秒后重试 ($attempt/$MaxAttempts)..." -ForegroundColor Yellow
+        Start-Sleep -Seconds $RetryDelaySeconds
+    }
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $repoRoot
 
@@ -26,24 +49,18 @@ Write-Host "    Output directory: $runDirectory" -ForegroundColor DarkGray
 
 if (-not $SkipRestore) {
     Write-Host "==> Restoring packages" -ForegroundColor Cyan
-    dotnet restore
-    if ($LASTEXITCODE -ne 0) {
-        throw "dotnet restore failed with exit code $LASTEXITCODE"
-    }
+    Invoke-DotnetWithRetry -Arguments @("restore")
 }
 
 if (-not $SkipBuild) {
     Write-Host "==> Building test project" -ForegroundColor Cyan
-    dotnet build $TestProject -c $Configuration
-    if ($LASTEXITCODE -ne 0) {
-        throw "dotnet build failed with exit code $LASTEXITCODE"
-    }
+    Invoke-DotnetWithRetry -Arguments @("build", $TestProject, "-c", $Configuration, "-m:1")
 }
 
 Write-Host "==> Running telemetry snapshot tests" -ForegroundColor Cyan
 $env:CTOOLKIT_TELEMETRY_OUTPUT = $telemetryJsonl
 try {
-    $null = & dotnet test $TestProject -c $Configuration --no-build --filter "FullyQualifiedName~BrushTelemetrySnapshotTests" *>&1 | Tee-Object -FilePath $logPath
+    $null = & dotnet test $TestProject -c $Configuration --no-build -m:1 --filter "FullyQualifiedName~BrushTelemetrySnapshotTests" *>&1 | Tee-Object -FilePath $logPath
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet test failed with exit code $LASTEXITCODE"
     }

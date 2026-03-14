@@ -9,7 +9,7 @@ public sealed class IniSettingsStoreTests
     [Fact]
     public void TryLoad_ShouldReadUtf16LeIniFile()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_ini_utf16_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_ini_utf16", ".ini");
         try
         {
             var content = "[Paint]\r\ncontrol_ms_ppt=True\r\n";
@@ -34,7 +34,7 @@ public sealed class IniSettingsStoreTests
     [Fact]
     public void TryLoad_ShouldFailForBinaryContentContainingNullByte()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_ini_binary_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_ini_binary", ".ini");
         try
         {
             File.WriteAllBytes(path, new byte[] { 0x5B, 0x50, 0x00, 0x61, 0x69, 0x6E, 0x74, 0x5D });

@@ -19,7 +19,7 @@ public sealed class InkExportServiceTests : IDisposable
 
     public InkExportServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ctk_export_test_{Guid.NewGuid():N}");
+        _tempDir = TestPathHelper.CreateDirectory("ctk_export_test");
         Directory.CreateDirectory(_tempDir);
         _service = new InkExportService(new InkPersistenceService());
     }

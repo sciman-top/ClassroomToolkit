@@ -11,7 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using ClassroomToolkit.Interop;
+using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Settings;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
 
@@ -170,7 +170,19 @@ public partial class ImageManagerWindow : Window
             UseDescriptionForTitle = true,
             ShowNewFolderButton = false
         };
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+        System.Windows.Forms.DialogResult result;
+        try
+        {
+            result = dialog.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatFavoriteFolderDialogFailureMessage(
+                    ex.Message));
+            return;
+        }
+        if (result != System.Windows.Forms.DialogResult.OK)
         {
             return;
         }
@@ -345,7 +357,13 @@ public partial class ImageManagerWindow : Window
                 OpenFolder(parentDir.FullName, addToRecents: true);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatUpNavigationFailureMessage(
+                    ViewModel.CurrentFolder,
+                    ex.Message));
+        }
     }
 
     private void SetViewMode(bool listMode)
@@ -534,10 +552,21 @@ public partial class ImageManagerWindow : Window
 
         try
         {
-            var result = await Task.Run(() => ScanDirectory(folder, token), token);
+            var loadResult = await Task.Run(() =>
+            {
+                var cleanupSummary = CleanupOrphanInkArtifacts(folder);
+                var scanResult = ScanDirectory(folder, token);
+                return (cleanupSummary, scanResult);
+            }, token);
+            var result = loadResult.scanResult;
             if (result == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
             {
                 return;
+            }
+            if (loadResult.cleanupSummary.SidecarsDeleted > 0 || loadResult.cleanupSummary.CompositesDeleted > 0)
+            {
+                Debug.WriteLine(
+                    $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={loadResult.cleanupSummary.SidecarsDeleted} composites={loadResult.cleanupSummary.CompositesDeleted}");
             }
 
             foreach (var item in result)
@@ -599,18 +628,42 @@ public partial class ImageManagerWindow : Window
                 return;
             }
 
-            try
-            {
-                await Dispatcher.BeginInvoke(() =>
-                {
-                    if (!_isClosing && !token.IsCancellationRequested && requestId == Volatile.Read(ref _loadImagesRequestId))
-                    {
-                        item.Thumbnail = thumbnail;
-                    }
-                });
-            }
-            catch { }
+            await TryDispatchThumbnailUpdateAsync(item, thumbnail, token, requestId);
         }, token);
+    }
+
+    private async Task TryDispatchThumbnailUpdateAsync(
+        ImageItem item,
+        ImageSource thumbnail,
+        CancellationToken token,
+        int requestId)
+    {
+        try
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                if (!_isClosing && !token.IsCancellationRequested && requestId == Volatile.Read(ref _loadImagesRequestId))
+                {
+                    item.Thumbnail = thumbnail;
+                }
+                return;
+            }
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!_isClosing && !token.IsCancellationRequested && requestId == Volatile.Read(ref _loadImagesRequestId))
+                {
+                    item.Thumbnail = thumbnail;
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
+                    item.Path,
+                    ex.Message));
+        }
     }
 
     private void BeginClose()
@@ -664,27 +717,30 @@ public partial class ImageManagerWindow : Window
                 if (!string.IsNullOrWhiteSpace(name)) item.Items.Add(CreateFolderNode(dir, name));
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
+                    path,
+                    ex.Message));
+        }
     }
 
     private void RemoveMinimizeButton()
     {
         var hwnd = _hwnd != IntPtr.Zero ? _hwnd : new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
-        var style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GwlStyle);
-        if ((style & NativeMethods.WsMinimizeBox) == 0) return;
-        style &= ~NativeMethods.WsMinimizeBox;
-        NativeMethods.SetWindowLong(hwnd, NativeMethods.GwlStyle, style);
-        NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoZOrder | NativeMethods.SwpNoOwnerZOrder | NativeMethods.SwpFrameChanged);
-    }
-
-    public void SyncTopmost(bool enabled)
-    {
-        Topmost = enabled;
-        var hwnd = _hwnd != IntPtr.Zero ? _hwnd : new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero) return;
-        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
-        NativeMethods.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
+        if (!WindowStyleExecutor.TryUpdateStyleBits(
+                hwnd,
+                WindowStyleBitMasks.GwlStyle,
+                setMask: 0,
+                clearMask: WindowStyleBitMasks.WsMinimizeBox,
+                out var style))
+        {
+            return;
+        }
+        if ((style & WindowStyleBitMasks.WsMinimizeBox) != 0) return;
+        WindowPlacementExecutor.TryRefreshFrame(hwnd);
     }
 
     private void OnMainColumnSplitterDragCompleted(object sender, DragCompletedEventArgs e)

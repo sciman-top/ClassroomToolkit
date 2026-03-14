@@ -5,8 +5,8 @@ using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Domain.Utilities;
-using ClassroomToolkit.Interop;
 using WpfSize = System.Windows.Size;
 using ClassroomToolkit.App.Settings;
 
@@ -14,17 +14,6 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow
 {
-    public void SyncTopmost(bool enabled)
-    {
-        Topmost = enabled;
-        if (_hwnd == IntPtr.Zero)
-        {
-            return;
-        }
-        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
-        NativeMethods.SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
-    }
-    
     private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
     {
         if (!_dataLoaded)
@@ -37,7 +26,17 @@ public partial class RollCallWindow
             {
                 return;
             }
-            DragMove();
+            try
+            {
+                DragMove();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
+                        ex.GetType().Name,
+                        ex.Message));
+            }
         }
     }
 
@@ -68,9 +67,12 @@ public partial class RollCallWindow
             DragMove();
             e.Handled = true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore drag exceptions.
+            System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
+                    ex.GetType().Name,
+                    ex.Message));
         }
     }
 
@@ -80,7 +82,7 @@ public partial class RollCallWindow
     /// </summary>
     public void HideRollCall()
     {
-        Hide();
+        ExecuteRollCallSafe("hide-rollcall-window", Hide);
         HidePhotoOverlay();
         UpdateGroupNameDisplay();
         PersistSettings();
@@ -112,11 +114,7 @@ public partial class RollCallWindow
         ClosePhotoOverlay();
         if (_groupOverlay != null)
         {
-            try { _groupOverlay.Close(); }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"RollCallWindow: close group overlay failed: {ex.GetType().Name} - {ex.Message}");
-            }
+            ExecuteRollCallSafe("close-group-overlay-window", _groupOverlay.Close);
             _groupOverlay = null;
         }
 
@@ -181,28 +179,42 @@ public partial class RollCallWindow
         {
             return;
         }
-        var allowTransparent = !_hovering && PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false);
+        var transparencyDecision = RollCallTransparencyPolicy.ResolveTransparency(
+            hovering: _hovering,
+            paintAllowsTransparency: PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false));
+        var allowTransparent = transparencyDecision.TransparentEnabled;
         UpdateHoverTimer(allowTransparent);
-        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
-        if (allowTransparent)
+        var styleApplyDecision = RollCallTransparencyPolicy.ResolveStyleApply(
+            transparentEnabled: allowTransparent,
+            lastTransparentEnabled: _lastTransparentStyleEnabled);
+        if (!styleApplyDecision.ShouldApplyStyle)
         {
-            exStyle |= NativeMethods.WsExTransparent;
+            return;
         }
-        else
+
+        var (setMask, clearMask) = RollCallTransparencyPolicy.ResolveStyleMasks(allowTransparent);
+        if (WindowStyleExecutor.TryUpdateExtendedStyleBits(
+                _hwnd,
+                setMask,
+                clearMask,
+                out _))
         {
-            exStyle &= ~NativeMethods.WsExTransparent;
+            _lastTransparentStyleEnabled = allowTransparent;
         }
-        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle);
     }
 
     private void UpdateHoverTimer(bool transparentEnabled)
     {
-        if (!transparentEnabled)
+        var hoverTimerDecision = RollCallTransparencyPolicy.ResolveHoverTimer(
+            transparentEnabled: transparentEnabled,
+            hoverTimerEnabled: _hoverCheckTimer.IsEnabled);
+        if (hoverTimerDecision.ShouldStop)
         {
             _hoverCheckTimer.Stop();
             return;
         }
-        if (!_hoverCheckTimer.IsEnabled)
+
+        if (hoverTimerDecision.ShouldStart)
         {
             _hoverCheckTimer.Start();
         }
@@ -214,16 +226,10 @@ public partial class RollCallWindow
         {
             return;
         }
-        if (!NativeMethods.GetCursorPos(out var point))
+        if (!WindowCursorHitTestExecutor.TryIsCursorInsideWindow(_hwnd, out var inside))
         {
             return;
         }
-        NativeMethods.NativeRect rect;
-        if (!NativeMethods.GetWindowRect(_hwnd, out rect))
-        {
-            return;
-        }
-        var inside = point.X >= rect.Left && point.X <= rect.Right && point.Y >= rect.Top && point.Y <= rect.Bottom;
         if (inside == _hovering)
         {
             return;
@@ -254,7 +260,7 @@ public partial class RollCallWindow
             // 未启用分组切换功能或不在点名模式，不显示组名
             if (_groupOverlay != null)
             {
-                _groupOverlay.HideGroup();
+                ExecuteGroupOverlaySafe("hide-group", _groupOverlay.HideGroup);
             }
             return;
         }
@@ -269,16 +275,29 @@ public partial class RollCallWindow
                 _groupOverlay = new RollCallGroupOverlayWindow();
                 _groupOverlay.Closed += (s, e) => _groupOverlay = null;
             }
-            _groupOverlay.ShowGroup(_viewModel.CurrentGroup, persistent: true);
+            ExecuteGroupOverlaySafe(
+                "show-group",
+                () => _groupOverlay.ShowGroup(_viewModel.CurrentGroup, persistent: true));
         }
         else
         {
             // 点名窗口显示时：绝不显示组名
             if (_groupOverlay != null)
             {
-                _groupOverlay.HideGroup();
+                ExecuteGroupOverlaySafe("hide-group", _groupOverlay.HideGroup);
             }
         }
+    }
+
+    private void ExecuteGroupOverlaySafe(string operation, Action action)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            action,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatGroupOverlayFailureMessage(
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message)));
     }
 
     private void ApplyWindowBounds(AppSettings settings)
@@ -346,7 +365,7 @@ public partial class RollCallWindow
         {
             return;
         }
-        Dispatcher.BeginInvoke(() =>
+        _ = Dispatcher.InvokeAsync(() =>
         {
             var titleSize = MeasureElement(TitleBarRoot);
             var bottomSize = MeasureElement(BottomBarRoot);

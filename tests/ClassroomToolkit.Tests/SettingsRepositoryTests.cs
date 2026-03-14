@@ -8,7 +8,7 @@ public sealed class SettingsRepositoryTests
     [Fact]
     public void Save_ShouldThrow_WhenDataIsNull()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_settings_null_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_settings_null", ".ini");
         try
         {
             var repo = new SettingsRepository(path);
@@ -29,7 +29,7 @@ public sealed class SettingsRepositoryTests
     [Fact]
     public void Save_ShouldThrow_WhenLastLoadFailedAndSettingsFileExists()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_settings_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_settings", ".ini");
         try
         {
             File.WriteAllText(path, "[Paint]\nbrush_base_size=8\n");
@@ -63,7 +63,7 @@ public sealed class SettingsRepositoryTests
     [Fact]
     public void Save_ShouldSucceed_WhenLastLoadSucceeded()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_settings_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_settings", ".ini");
         try
         {
             File.WriteAllText(path, "[Paint]\nbrush_base_size=8\n");

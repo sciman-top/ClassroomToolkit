@@ -4,8 +4,10 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Settings;
-using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
 using Microsoft.Extensions.Logging;
 
 namespace ClassroomToolkit.App.Services;
@@ -14,18 +16,22 @@ public interface IPaintWindowOrchestrator
 {
     PaintOverlayWindow? OverlayWindow { get; }
     PaintToolbarWindow? ToolbarWindow { get; }
+    UiSessionState? CurrentOverlaySessionState { get; }
+    IReadOnlyList<string> CurrentOverlaySessionViolations { get; }
     
     event Action<bool>? PhotoModeChanged;
     event Action<int>? PhotoNavigationRequested;
     event Action<double, double, double, double>? PhotoUnifiedTransformChanged;
     event Action? PresentationFullscreenDetected;
-    event Action<PresentationType>? PresentationForegroundDetected;
+    event Action<PresentationForegroundSource>? PresentationForegroundDetected;
     event Action? PhotoForegroundDetected;
     event Action? PhotoCloseRequested;
-    event Action? FloatingZOrderRequested;
+    event Action? PhotoCursorModeFocusRequested;
+    event Action<FloatingZOrderRequest>? FloatingZOrderRequested;
     event Action? OverlayActivated;
     event Action? SettingsRequested;
     event Action? PhotoOpenRequested;
+    event Action<UiSessionTransition>? OverlaySessionTransitionOccurred;
 
     void EnsureWindows(AppSettings settings);
     void Show(bool photoMode = false);
@@ -41,21 +47,26 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     private readonly IPaintWindowFactory _paintWindowFactory;
     private readonly AppSettingsService _appSettingsService;
     private readonly ILogger<PaintWindowOrchestrator> _logger;
+    private AppSettings? _currentSettings;
 
     public PaintOverlayWindow? OverlayWindow { get; private set; }
     public PaintToolbarWindow? ToolbarWindow { get; private set; }
+    public UiSessionState? CurrentOverlaySessionState => OverlayWindow?.CurrentSessionState;
+    public IReadOnlyList<string> CurrentOverlaySessionViolations => OverlayWindow?.CurrentSessionViolations ?? Array.Empty<string>();
 
     public event Action<bool>? PhotoModeChanged;
     public event Action<int>? PhotoNavigationRequested;
     public event Action<double, double, double, double>? PhotoUnifiedTransformChanged;
     public event Action? PresentationFullscreenDetected;
-    public event Action<PresentationType>? PresentationForegroundDetected;
+    public event Action<PresentationForegroundSource>? PresentationForegroundDetected;
     public event Action? PhotoForegroundDetected;
     public event Action? PhotoCloseRequested;
-    public event Action? FloatingZOrderRequested;
+    public event Action? PhotoCursorModeFocusRequested;
+    public event Action<FloatingZOrderRequest>? FloatingZOrderRequested;
     public event Action? OverlayActivated;
     public event Action? SettingsRequested;
     public event Action? PhotoOpenRequested;
+    public event Action<UiSessionTransition>? OverlaySessionTransitionOccurred;
 
     public PaintWindowOrchestrator(
         IPaintWindowFactory paintWindowFactory,
@@ -78,111 +89,226 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         var windows = _paintWindowFactory.Create();
         OverlayWindow = windows.overlay;
         ToolbarWindow = windows.toolbar;
+        _currentSettings = settings;
 
         ToolbarWindow.AttachOverlay(OverlayWindow);
-
-        // Forward Overlay Events
-        OverlayWindow.PhotoModeChanged += active => PhotoModeChanged?.Invoke(active);
-        OverlayWindow.PhotoNavigationRequested += dir => PhotoNavigationRequested?.Invoke(dir);
-        OverlayWindow.PhotoUnifiedTransformChanged += (sx, sy, tx, ty) => PhotoUnifiedTransformChanged?.Invoke(sx, sy, tx, ty);
-        OverlayWindow.PresentationFullscreenDetected += () => PresentationFullscreenDetected?.Invoke();
-        OverlayWindow.PresentationForegroundDetected += type => PresentationForegroundDetected?.Invoke(type);
-        OverlayWindow.PhotoForegroundDetected += () => PhotoForegroundDetected?.Invoke();
-        OverlayWindow.PhotoCloseRequested += () => PhotoCloseRequested?.Invoke();
-        OverlayWindow.FloatingZOrderRequested += () => FloatingZOrderRequested?.Invoke();
-        OverlayWindow.Activated += (_, _) => OverlayActivated?.Invoke();
-        
-        // Handle Window Closing
-        OverlayWindow.Closed += (_, _) =>
-        {
-            OverlayWindow = null;
-            UpdateToggleButtons();
-        };
-        ToolbarWindow.Closed += (_, _) =>
-        {
-            if (ToolbarWindow != null)
-            {
-                CaptureToolbarPosition(settings, save: true);
-            }
-            ToolbarWindow = null;
-            UpdateToggleButtons();
-        };
-
-        ToolbarWindow.LocationChanged += (_, _) => CaptureToolbarPosition(settings, save: false);
+        WireOverlayWindowEvents();
+        WireToolbarWindowEvents();
 
         ApplyPaintToolbarPosition(settings);
         ToolbarWindow.ApplySettings(settings);
-
-        // Wiring Toolbar -> Overlay interaction
-        ToolbarWindow.ModeChanged += mode =>
-        {
-            if (ToolbarWindow.HasOverlay) return;
-            OverlayWindow.SetMode(mode);
-        };
-        ToolbarWindow.BrushColorChanged += color =>
-        {
-            if (!ToolbarWindow.HasOverlay)
-            {
-                OverlayWindow.SetBrush(color, ToolbarWindow.BrushSize, OverlayWindow.CurrentBrushOpacity);
-            }
-            settings.BrushColor = color;
-            _appSettingsService.Save(settings);
-        };
-        ToolbarWindow.BoardColorChanged += color =>
-        {
-            settings.BoardColor = color;
-            _appSettingsService.Save(settings);
-            if (ToolbarWindow.BoardActive && !ToolbarWindow.HasOverlay)
-            {
-                OverlayWindow.SetBoardColor(color);
-                OverlayWindow.SetBoardOpacity(255);
-            }
-        };
-        ToolbarWindow.ClearRequested += () => OverlayWindow.ClearAll();
-        ToolbarWindow.UndoRequested += () => OverlayWindow.Undo();
-        ToolbarWindow.QuickColorSlotChanged += (index, color) =>
-        {
-            switch (index)
-            {
-                case 0: settings.QuickColor1 = color; break;
-                case 1: settings.QuickColor2 = color; break;
-                case 2: settings.QuickColor3 = color; break;
-            }
-            _appSettingsService.Save(settings);
-        };
-        ToolbarWindow.ShapeTypeChanged += type =>
-        {
-            settings.ShapeType = type;
-            _appSettingsService.Save(settings);
-            OverlayWindow?.SetShapeType(type);
-        };
-        ToolbarWindow.WhiteboardToggled += active =>
-        {
-            if (!ToolbarWindow.HasOverlay)
-            {
-                if (active)
-                {
-                    if (OverlayWindow.IsPhotoModeActive) OverlayWindow.ExitPhotoMode();
-                    OverlayWindow.SetBoardColor(settings.BoardColor);
-                    OverlayWindow.SetBoardOpacity(255);
-                }
-                else
-                {
-                    OverlayWindow.SetBoardColor(Colors.Transparent);
-                    OverlayWindow.SetBoardOpacity(0);
-                }
-            }
-            // Note: ZOrder and TouchSurface logic relies on events propagating back to MainWindow via this Orchestrator or direct binding.
-            // But here we are inside Orchestrator. We might need to expose an event for WhiteboardToggled if MainWindow does extra stuff.
-            // Accessing OverlayActivated event might cover z-order needs.
-        };
-
-        // Forward Settings Requests
-        ToolbarWindow.SettingsRequested += () => SettingsRequested?.Invoke();
-        ToolbarWindow.PhotoOpenRequested += () => PhotoOpenRequested?.Invoke();
+        WireToolbarBehaviorEvents();
         
         ApplyInitialOverlaySettings(settings);
     }
+
+    private void WireOverlayWindowEvents()
+    {
+        if (OverlayWindow == null)
+        {
+            return;
+        }
+
+        OverlayWindow.PhotoModeChanged += OnOverlayPhotoModeChanged;
+        OverlayWindow.PhotoNavigationRequested += OnOverlayPhotoNavigationRequested;
+        OverlayWindow.PhotoUnifiedTransformChanged += OnOverlayPhotoUnifiedTransformChanged;
+        OverlayWindow.PresentationFullscreenDetected += OnOverlayPresentationFullscreenDetected;
+        OverlayWindow.PresentationForegroundDetected += OnOverlayPresentationForegroundDetected;
+        OverlayWindow.PhotoForegroundDetected += OnOverlayPhotoForegroundDetected;
+        OverlayWindow.PhotoCloseRequested += OnOverlayPhotoCloseRequested;
+        OverlayWindow.PhotoCursorModeFocusRequested += OnOverlayPhotoCursorModeFocusRequested;
+        OverlayWindow.FloatingZOrderRequested += OnOverlayFloatingZOrderRequested;
+        OverlayWindow.UiSessionTransitionOccurred += OnOverlaySessionTransitionOccurred;
+        OverlayWindow.Activated += OnOverlayWindowActivated;
+        OverlayWindow.Closed += OnOverlayWindowClosed;
+    }
+
+    private void WireToolbarWindowEvents()
+    {
+        if (ToolbarWindow == null)
+        {
+            return;
+        }
+
+        ToolbarWindow.Closed += OnToolbarWindowClosed;
+        ToolbarWindow.LocationChanged += OnToolbarWindowLocationChanged;
+    }
+
+    private void WireToolbarBehaviorEvents()
+    {
+        if (ToolbarWindow == null)
+        {
+            return;
+        }
+
+        ToolbarWindow.ModeChanged += OnToolbarModeChanged;
+        ToolbarWindow.BrushColorChanged += OnToolbarBrushColorChanged;
+        ToolbarWindow.BoardColorChanged += OnToolbarBoardColorChanged;
+        ToolbarWindow.ClearRequested += OnToolbarClearRequested;
+        ToolbarWindow.UndoRequested += OnToolbarUndoRequested;
+        ToolbarWindow.QuickColorSlotChanged += OnToolbarQuickColorSlotChanged;
+        ToolbarWindow.ShapeTypeChanged += OnToolbarShapeTypeChanged;
+        ToolbarWindow.WhiteboardToggled += OnToolbarWhiteboardToggled;
+        ToolbarWindow.SettingsRequested += OnToolbarSettingsRequested;
+        ToolbarWindow.PhotoOpenRequested += OnToolbarPhotoOpenRequested;
+    }
+
+    private void OnOverlayPhotoModeChanged(bool active) => PhotoModeChanged?.Invoke(active);
+
+    private void OnOverlayPhotoNavigationRequested(int direction) => PhotoNavigationRequested?.Invoke(direction);
+
+    private void OnOverlayPhotoUnifiedTransformChanged(double scaleX, double scaleY, double translateX, double translateY)
+        => PhotoUnifiedTransformChanged?.Invoke(scaleX, scaleY, translateX, translateY);
+
+    private void OnOverlayPresentationFullscreenDetected() => PresentationFullscreenDetected?.Invoke();
+
+    private void OnOverlayPresentationForegroundDetected(PresentationForegroundSource source)
+        => PresentationForegroundDetected?.Invoke(source);
+
+    private void OnOverlayPhotoForegroundDetected() => PhotoForegroundDetected?.Invoke();
+
+    private void OnOverlayPhotoCloseRequested() => PhotoCloseRequested?.Invoke();
+
+    private void OnOverlayPhotoCursorModeFocusRequested() => PhotoCursorModeFocusRequested?.Invoke();
+
+    private void OnOverlayFloatingZOrderRequested(FloatingZOrderRequest request) => FloatingZOrderRequested?.Invoke(request);
+
+    private void OnOverlaySessionTransitionOccurred(UiSessionTransition transition) => OverlaySessionTransitionOccurred?.Invoke(transition);
+
+    private void OnOverlayWindowActivated(object? sender, EventArgs e) => OverlayActivated?.Invoke();
+
+    private void OnOverlayWindowClosed(object? sender, EventArgs e)
+    {
+        OverlayWindow = null;
+        UpdateToggleButtons();
+    }
+
+    private void OnToolbarWindowClosed(object? sender, EventArgs e)
+    {
+        if (ToolbarWindow != null && _currentSettings != null)
+        {
+            CaptureToolbarPosition(_currentSettings, save: true);
+        }
+
+        ToolbarWindow = null;
+        UpdateToggleButtons();
+    }
+
+    private void OnToolbarWindowLocationChanged(object? sender, EventArgs e)
+    {
+        if (_currentSettings != null)
+        {
+            CaptureToolbarPosition(_currentSettings, save: false);
+        }
+    }
+
+    private void OnToolbarModeChanged(PaintToolMode mode)
+    {
+        if (ToolbarWindow?.HasOverlay == true || OverlayWindow == null)
+        {
+            return;
+        }
+
+        OverlayWindow.SetMode(mode);
+    }
+
+    private void OnToolbarBrushColorChanged(System.Windows.Media.Color color)
+    {
+        if (ToolbarWindow == null || OverlayWindow == null || _currentSettings == null)
+        {
+            return;
+        }
+
+        if (!ToolbarWindow.HasOverlay)
+        {
+            OverlayWindow.SetBrush(color, ToolbarWindow.BrushSize, OverlayWindow.CurrentBrushOpacity);
+        }
+
+        _currentSettings.BrushColor = color;
+        _appSettingsService.Save(_currentSettings);
+    }
+
+    private void OnToolbarBoardColorChanged(System.Windows.Media.Color color)
+    {
+        if (ToolbarWindow == null || OverlayWindow == null || _currentSettings == null)
+        {
+            return;
+        }
+
+        _currentSettings.BoardColor = color;
+        _appSettingsService.Save(_currentSettings);
+        if (ToolbarWindow.BoardActive && !ToolbarWindow.HasOverlay)
+        {
+            OverlayWindow.SetBoardColor(color);
+            OverlayWindow.SetBoardOpacity(255);
+        }
+    }
+
+    private void OnToolbarClearRequested()
+    {
+        OverlayWindow?.ClearAll();
+    }
+
+    private void OnToolbarUndoRequested()
+    {
+        OverlayWindow?.Undo();
+    }
+
+    private void OnToolbarQuickColorSlotChanged(int index, System.Windows.Media.Color color)
+    {
+        if (_currentSettings == null)
+        {
+            return;
+        }
+
+        switch (index)
+        {
+            case 0: _currentSettings.QuickColor1 = color; break;
+            case 1: _currentSettings.QuickColor2 = color; break;
+            case 2: _currentSettings.QuickColor3 = color; break;
+        }
+
+        _appSettingsService.Save(_currentSettings);
+    }
+
+    private void OnToolbarShapeTypeChanged(PaintShapeType type)
+    {
+        if (_currentSettings == null)
+        {
+            return;
+        }
+
+        _currentSettings.ShapeType = type;
+        _appSettingsService.Save(_currentSettings);
+        OverlayWindow?.SetShapeType(type);
+    }
+
+    private void OnToolbarWhiteboardToggled(bool active)
+    {
+        if (ToolbarWindow?.HasOverlay == true || OverlayWindow == null || _currentSettings == null)
+        {
+            return;
+        }
+
+        if (active)
+        {
+            if (OverlayWindow.IsPhotoModeActive)
+            {
+                OverlayWindow.ExitPhotoMode();
+            }
+
+            OverlayWindow.SetBoardColor(_currentSettings.BoardColor);
+            OverlayWindow.SetBoardOpacity(255);
+            return;
+        }
+
+        OverlayWindow.SetBoardColor(Colors.Transparent);
+        OverlayWindow.SetBoardOpacity(0);
+    }
+
+    private void OnToolbarSettingsRequested() => SettingsRequested?.Invoke();
+
+    private void OnToolbarPhotoOpenRequested() => PhotoOpenRequested?.Invoke();
 
     private void ApplyInitialOverlaySettings(AppSettings settings)
     {
@@ -244,29 +370,55 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     public void Show(bool photoMode = false)
     {
         if (OverlayWindow == null) return;
-        
-        OverlayWindow.Show();
+
+        var showContext = new PaintWindowVisibilityShowContext(
+            OverlayVisible: OverlayWindow.IsVisible,
+            ToolbarExists: ToolbarWindow != null,
+            ToolbarOwnerAlreadyOverlay: ToolbarWindow?.Owner == OverlayWindow);
+        var showPlan = PaintWindowVisibilityPolicy.ResolveShow(showContext);
+        if (showPlan.ShowOverlay)
+        {
+            OverlayWindow.Show();
+        }
         if (ToolbarWindow != null)
         {
-            if (ToolbarWindow.Owner != OverlayWindow && OverlayWindow.IsVisible)
+            FloatingSingleOwnerExecutionExecutor.Apply(
+                showPlan.ToolbarOwnerAction,
+                ToolbarWindow,
+                OverlayWindow);
+            if (showPlan.ShowToolbar)
             {
-                ToolbarWindow.Owner = OverlayWindow;
+                ToolbarWindow.Show();
             }
-            ToolbarWindow.Show();
-            WindowPlacementHelper.EnsureVisible(ToolbarWindow);
-            OverlayWindow.SetMode(ToolbarWindow.CurrentMode);
+            if (showPlan.EnsureToolbarVisible)
+            {
+                WindowPlacementHelper.EnsureVisible(ToolbarWindow);
+            }
+            if (showPlan.RestoreToolbarMode)
+            {
+                OverlayWindow.SetMode(ToolbarWindow.CurrentMode);
+            }
         }
-        
-        OverlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+        if (showPlan.RestorePresentationFocus)
+        {
+            OverlayWindow.RestorePresentationFocusIfNeeded(requireFullscreen: true);
+        }
     }
 
     public void Hide()
     {
         if (OverlayWindow == null) return;
-        
-        if (OverlayWindow.IsVisible)
+
+        var hideContext = new PaintWindowVisibilityHideContext(
+            OverlayVisible: OverlayWindow.IsVisible,
+            ToolbarVisible: ToolbarWindow?.IsVisible == true);
+        var hidePlan = PaintWindowVisibilityPolicy.ResolveHide(hideContext);
+        if (hidePlan.HideOverlay)
         {
             OverlayWindow.Hide();
+        }
+        if (hidePlan.HideToolbar)
+        {
             ToolbarWindow?.Hide();
         }
     }

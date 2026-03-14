@@ -122,6 +122,9 @@ public enum MarkerRenderMode
 
 public class MarkerBrushRenderer : IBrushRenderer
 {
+    private const int PreviewTailPointWindow = 56;
+    private const int PreviewBaseRefreshStride = 14;
+
     private readonly MarkerBrushConfig _config;
     private struct MarkerPoint
     {
@@ -149,6 +152,12 @@ public class MarkerBrushRenderer : IBrushRenderer
     private int _geometryVersion;
     private bool _cacheDirty = true;
     private Geometry? _cachedGeometry;
+    private Geometry? _cachedPreviewGeometry;
+    private int _previewGeometryVersion = -1;
+    private Geometry? _previewBaseGeometry;
+    private int _previewBasePointCount;
+    private SolidColorBrush? _cachedRenderBrush;
+    private int _cachedRenderColorKey = int.MinValue;
 
     public bool IsActive => _isActive;
     public int GeometryVersion => _geometryVersion;
@@ -177,6 +186,8 @@ public class MarkerBrushRenderer : IBrushRenderer
         _smoothedWidth = baseSize;
         _smoothedPos = new WpfPoint(0, 0);
         _velocityPeak = 0.001;
+        _cachedRenderBrush = null;
+        _cachedRenderColorKey = int.MinValue;
     }
 
     public void OnDown(BrushInputSample input)
@@ -195,6 +206,8 @@ public class MarkerBrushRenderer : IBrushRenderer
         _smoothedPos = _positionFilter.Filter(point, 1.0 / 120.0);
         _smoothedWidth = _widthFilter.Filter(_baseSize, 1.0 / 120.0);
         _points.Add(new MarkerPoint(point, _smoothedWidth));
+        _previewBaseGeometry = null;
+        _previewBasePointCount = 0;
         MarkGeometryDirty();
     }
 
@@ -211,10 +224,25 @@ public class MarkerBrushRenderer : IBrushRenderer
         double dtSeconds = dt / 1000.0;
 
         _smoothedPos = _positionFilter.Filter(point, dtSeconds);
-
         var lastPt = _points[_points.Count - 1].Position;
+        double rawDist = (point - lastPt).Length;
+        double rawSpeed = rawDist / dt;
+        double followBoost = Math.Clamp((rawSpeed - 1.0) / 2.2, 0, 1);
+        if (dt > 9.0)
+        {
+            followBoost = Math.Max(followBoost, Math.Clamp((dt - 9.0) / 20.0, 0, 1));
+        }
+        if (followBoost > 0.001)
+        {
+            _smoothedPos = new WpfPoint(
+                Lerp(_smoothedPos.X, point.X, followBoost * 0.58),
+                Lerp(_smoothedPos.Y, point.Y, followBoost * 0.58));
+        }
+
         var dist = (_smoothedPos - lastPt).Length;
-        if (dist < _config.MinMoveDistance) return;
+        double minMoveDistance = Lerp(_config.MinMoveDistance, _config.MinMoveDistance * 0.45, followBoost);
+        minMoveDistance = Math.Clamp(minMoveDistance, 0.18, _config.MinMoveDistance);
+        if (dist < minMoveDistance) return;
 
         double velocity = dist / dt;
         _velocityPeak = Math.Max(_velocityPeak * _config.VelocityDecay, velocity);
@@ -252,16 +280,14 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public void Render(DrawingContext dc)
     {
-        var geometry = _isActive && _renderMode == MarkerRenderMode.Ribbon
-            ? BuildSegmentGeometry()
+        var geometry = _isActive
+            ? GetPreviewGeometry()
             : GetLastStrokeGeometry();
         if (geometry == null)
         {
             return;
         }
-        var brush = new SolidColorBrush(GetMarkerColor());
-        brush.Freeze();
-        dc.DrawGeometry(brush, null, geometry);
+        dc.DrawGeometry(GetCachedRenderBrush(), null, geometry);
     }
 
     public Geometry? GetLastStrokeGeometry()
@@ -294,6 +320,8 @@ public class MarkerBrushRenderer : IBrushRenderer
     {
         _points.Clear();
         _isActive = false;
+        _previewBaseGeometry = null;
+        _previewBasePointCount = 0;
         MarkGeometryDirty();
     }
 
@@ -307,7 +335,65 @@ public class MarkerBrushRenderer : IBrushRenderer
     {
         _cacheDirty = true;
         _cachedGeometry = null;
+        _cachedPreviewGeometry = null;
+        _previewGeometryVersion = -1;
         _geometryVersion++;
+    }
+
+    private Geometry? GetPreviewGeometry()
+    {
+        if (_cachedPreviewGeometry != null && _previewGeometryVersion == _geometryVersion)
+        {
+            return _cachedPreviewGeometry;
+        }
+
+        Geometry? preview;
+        if (_points.Count <= PreviewTailPointWindow + 4)
+        {
+            _previewBaseGeometry = null;
+            _previewBasePointCount = 0;
+            preview = BuildSegmentGeometryFromPoints(_points);
+        }
+        else
+        {
+            int basePointCount = Math.Max(2, _points.Count - PreviewTailPointWindow);
+            bool shouldRefreshBase = _previewBaseGeometry == null
+                || _previewBasePointCount <= 0
+                || basePointCount < _previewBasePointCount
+                || (basePointCount - _previewBasePointCount) >= PreviewBaseRefreshStride;
+
+            if (shouldRefreshBase)
+            {
+                _previewBasePointCount = basePointCount;
+                _previewBaseGeometry = BuildSegmentGeometryForRange(0, _previewBasePointCount);
+                if (_previewBaseGeometry?.CanFreeze == true)
+                {
+                    _previewBaseGeometry.Freeze();
+                }
+            }
+
+            int tailStart = Math.Max(0, _previewBasePointCount - 3);
+            var tailGeometry = BuildSegmentGeometryForRange(tailStart, _points.Count);
+            if (_previewBaseGeometry != null && tailGeometry != null)
+            {
+                var group = new GeometryGroup { FillRule = FillRule.Nonzero };
+                group.Children.Add(_previewBaseGeometry);
+                group.Children.Add(tailGeometry);
+                preview = group;
+            }
+            else
+            {
+                preview = tailGeometry ?? _previewBaseGeometry;
+            }
+        }
+
+        if (preview?.CanFreeze == true)
+        {
+            preview.Freeze();
+        }
+        _cachedPreviewGeometry = preview;
+        _previewGeometryVersion = _geometryVersion;
+        return _cachedPreviewGeometry;
     }
 
     private Geometry? BuildStrokeGeometryCore()
@@ -319,22 +405,41 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     private Geometry? BuildSegmentGeometry()
     {
-        if (_points.Count == 0)
+        return BuildSegmentGeometryFromPoints(_points);
+    }
+
+    private Geometry? BuildSegmentGeometryForRange(int startInclusive, int endExclusive)
+    {
+        int start = Math.Clamp(startInclusive, 0, _points.Count);
+        int end = Math.Clamp(endExclusive, start, _points.Count);
+        int count = end - start;
+        if (count <= 0)
         {
             return null;
         }
-        if (_points.Count == 1)
+
+        var source = _points.GetRange(start, count);
+        return BuildSegmentGeometryFromPoints(source);
+    }
+
+    private Geometry? BuildSegmentGeometryFromPoints(IReadOnlyList<MarkerPoint> sourcePoints)
+    {
+        if (sourcePoints.Count == 0)
         {
-            var single = _points[0];
+            return null;
+        }
+        if (sourcePoints.Count == 1)
+        {
+            var single = sourcePoints[0];
             var circle = new EllipseGeometry(single.Position, single.Width * 0.5, single.Width * 0.5);
             if (circle.CanFreeze) circle.Freeze();
             return circle;
         }
 
-        var samples = BuildSmoothSamples();
+        var samples = BuildSmoothSamples(sourcePoints);
         if (samples.Count < 2)
         {
-            var point = _points[0];
+            var point = sourcePoints[0];
             var circle = new EllipseGeometry(point.Position, point.Width * 0.5, point.Width * 0.5);
             if (circle.CanFreeze) circle.Freeze();
             return circle;
@@ -405,7 +510,12 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     private Geometry? BuildRibbonGeometry()
     {
-        var samples = BuildSmoothSamples();
+        return BuildRibbonGeometryFromPoints(_points);
+    }
+
+    private Geometry? BuildRibbonGeometryFromPoints(IReadOnlyList<MarkerPoint> sourcePoints)
+    {
+        var samples = BuildSmoothSamples(sourcePoints);
         if (samples.Count == 0)
         {
             return null;
@@ -525,25 +635,25 @@ public class MarkerBrushRenderer : IBrushRenderer
         return Math.Sign(centered) * Math.Clamp(curved, 0.0, 1.0);
     }
 
-    private List<MarkerPoint> BuildSmoothSamples()
+    private List<MarkerPoint> BuildSmoothSamples(IReadOnlyList<MarkerPoint> sourcePoints)
     {
         var samples = new List<MarkerPoint>();
-        if (_points.Count == 0)
+        if (sourcePoints.Count == 0)
         {
             return samples;
         }
-        if (_points.Count == 1)
+        if (sourcePoints.Count == 1)
         {
-            samples.Add(_points[0]);
+            samples.Add(sourcePoints[0]);
             return samples;
         }
 
-        for (int i = 0; i < _points.Count - 1; i++)
+        for (int i = 0; i < sourcePoints.Count - 1; i++)
         {
-            var p0 = _points[Math.Max(i - 1, 0)];
-            var p1 = _points[i];
-            var p2 = _points[i + 1];
-            var p3 = _points[Math.Min(i + 2, _points.Count - 1)];
+            var p0 = sourcePoints[Math.Max(i - 1, 0)];
+            var p1 = sourcePoints[i];
+            var p2 = sourcePoints[i + 1];
+            var p3 = sourcePoints[Math.Min(i + 2, sourcePoints.Count - 1)];
 
             var segment = p2.Position - p1.Position;
             double length = segment.Length;
@@ -565,6 +675,25 @@ public class MarkerBrushRenderer : IBrushRenderer
         SmoothSampleWidths(samples);
         ApplyTaper(samples);
         return samples;
+    }
+
+    private SolidColorBrush GetCachedRenderBrush()
+    {
+        var color = GetMarkerColor();
+        int key = color.A << 24 | color.R << 16 | color.G << 8 | color.B;
+        if (_cachedRenderBrush != null && _cachedRenderColorKey == key)
+        {
+            return _cachedRenderBrush;
+        }
+
+        var brush = new SolidColorBrush(color);
+        if (brush.CanFreeze)
+        {
+            brush.Freeze();
+        }
+        _cachedRenderBrush = brush;
+        _cachedRenderColorKey = key;
+        return brush;
     }
 
     private static void SmoothSampleWidths(List<MarkerPoint> samples)

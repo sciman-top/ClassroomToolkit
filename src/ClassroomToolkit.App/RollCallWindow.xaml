@@ -19,10 +19,7 @@
     </Window.Resources>
 
     <!-- 1. 主容器：圆角+深邃阴影 -->
-    <Border Background="{StaticResource Brush_Window_Atmosphere}"
-            CornerRadius="20"
-            BorderBrush="{StaticResource Brush_Border_Glass}"
-            BorderThickness="1"
+    <Border Style="{StaticResource Style_WorkShellWindowBorder}"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <!-- 使用统一的深邃浮层阴影 -->
@@ -37,7 +34,7 @@
             </Grid.RowDefinitions>
 
             <!-- 2. 顶部标题栏 -->
-            <Grid x:Name="TitleBarRoot" Grid.Row="0" MouseLeftButtonDown="OnTitleBarDrag" Background="Transparent">
+            <Grid x:Name="TitleBarRoot" Grid.Row="0" Style="{StaticResource Style_WorkShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -97,7 +94,7 @@
             </Grid>
 
             <!-- 3. 内容展示区 -->
-            <Grid Grid.Row="1" Margin="20,4,20,8">
+            <Grid Grid.Row="1" Style="{StaticResource Style_WorkShellContentHost}">
                 <!-- A. 点名视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                     <Grid.ColumnDefinitions>
@@ -213,7 +210,7 @@
             </Grid>
 
             <!-- 4. 底部操作栏 -->
-            <Border x:Name="BottomBarRoot" Grid.Row="2" Background="{StaticResource Brush_Background_L2}" CornerRadius="16" Margin="20,0,20,16" Padding="6,4">
+            <Border x:Name="BottomBarRoot" Grid.Row="2" Style="{StaticResource Style_WorkShellBottomBar}">
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.2"/>
                 </Border.Effect>

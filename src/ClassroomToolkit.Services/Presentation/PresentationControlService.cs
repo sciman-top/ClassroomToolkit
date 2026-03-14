@@ -237,14 +237,21 @@ public sealed class PresentationControlService
             && !plan.UseWheelAsKey
             && command is PresentationCommand.Next or PresentationCommand.Previous)
         {
-            var delta = command == PresentationCommand.Next ? -120 : 120;
-            var wheelStrategy = plan.Strategy == InputStrategy.Raw ? InputStrategy.Message : plan.Strategy;
-            var wheelSent = _inputSender.SendWheel(target.Handle, delta, wheelStrategy);
-            if (wheelSent)
+            var messageCompatibleStrategy = plan.Strategy == InputStrategy.Raw
+                ? InputStrategy.Message
+                : plan.Strategy;
+            var fallbackBinding = _mapper.Map(plan.TargetType, command);
+            var keySent = _inputSender.SendKey(
+                target.Handle,
+                fallbackBinding.Key,
+                fallbackBinding.Modifiers,
+                messageCompatibleStrategy,
+                keyDownOnly: true);
+            if (keySent)
             {
                 RememberWpsCommand(command, target.Handle);
             }
-            return wheelSent;
+            return keySent;
         }
         var binding = _mapper.Map(plan.TargetType, command);
         var sent = _inputSender.SendKey(target.Handle, binding.Key, binding.Modifiers, plan.Strategy, keyDownOnly);

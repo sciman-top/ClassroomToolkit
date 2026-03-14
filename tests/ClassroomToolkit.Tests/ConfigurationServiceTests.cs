@@ -6,7 +6,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class ConfigurationServiceTests
 {
     [Fact]
-    public void Constructor_ShouldUseDefaultSettingsIni_WhenAppSettingsDoesNotExist()
+    public void Constructor_ShouldUseDefaultSettingsJson_WhenAppSettingsDoesNotExist()
     {
         var baseDirectory = CreateTempDirectory();
         try
@@ -15,6 +15,8 @@ public sealed class ConfigurationServiceTests
 
             service.BaseDirectory.Should().Be(Path.GetFullPath(baseDirectory));
             service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.json"));
         }
         finally
         {
@@ -39,6 +41,8 @@ public sealed class ConfigurationServiceTests
             var service = new ConfigurationService(baseDirectory);
 
             service.SettingsIniPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "config\\custom.ini")));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Ini);
+            service.SettingsDocumentPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "config\\custom.ini")));
         }
         finally
         {
@@ -65,6 +69,8 @@ public sealed class ConfigurationServiceTests
             var service = new ConfigurationService(baseDirectory);
 
             service.SettingsIniPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "nested\\settings.ini")));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Ini);
+            service.SettingsDocumentPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "nested\\settings.ini")));
         }
         finally
         {
@@ -83,6 +89,8 @@ public sealed class ConfigurationServiceTests
             var service = new ConfigurationService(baseDirectory);
 
             service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.json"));
         }
         finally
         {
@@ -104,6 +112,8 @@ public sealed class ConfigurationServiceTests
 
             service.BaseDirectory.Should().Be(solutionRoot);
             service.SettingsIniPath.Should().Be(Path.Combine(solutionRoot, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(solutionRoot, "settings.json"));
         }
         finally
         {
@@ -114,24 +124,71 @@ public sealed class ConfigurationServiceTests
     [Fact]
     public void Constructor_ShouldUseExecutableDirectory_WhenSolutionFileNotFound()
     {
-        var executableDirectory = CreateTempDirectory();
+        var executableDirectory = Path.Combine(@"Z:\", $"ctool_config_no_sln_{Guid.NewGuid():N}");
+        var service = new ConfigurationService(executableDirectory);
+
+        service.BaseDirectory.Should().Be(Path.GetFullPath(executableDirectory));
+        service.SettingsIniPath.Should().Be(Path.Combine(executableDirectory, "settings.ini"));
+        service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+        service.SettingsDocumentPath.Should().Be(Path.Combine(executableDirectory, "settings.json"));
+    }
+
+    [Fact]
+    public void Constructor_ShouldUseJsonDocumentStore_WhenConfigured()
+    {
+        var baseDirectory = CreateTempDirectory();
         try
         {
-            var service = new ConfigurationService(executableDirectory);
+            File.WriteAllText(
+                Path.Combine(baseDirectory, "appsettings.json"),
+                """
+                {
+                  "SettingsDocumentFormat": "json",
+                  "SettingsDocumentPath": "config\\settings.json"
+                }
+                """);
 
-            service.BaseDirectory.Should().Be(Path.GetFullPath(executableDirectory));
-            service.SettingsIniPath.Should().Be(Path.Combine(executableDirectory, "settings.ini"));
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "config\\settings.json")));
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
         }
         finally
         {
-            Directory.Delete(executableDirectory, recursive: true);
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Constructor_ShouldInferJsonDocumentStore_WhenPathIsJson()
+    {
+        var baseDirectory = CreateTempDirectory();
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(baseDirectory, "appsettings.json"),
+                """
+                {
+                  "SettingsDocumentPath": "settings.custom.json"
+                }
+                """);
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "settings.custom.json")));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
         }
     }
 
     private static string CreateTempDirectory()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_config_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path);
+        var path = TestPathHelper.CreateDirectory("ctool_config");
+        File.WriteAllText(Path.Combine(path, "ClassroomToolkit.sln"), "mock-sln");
         return path;
     }
 }

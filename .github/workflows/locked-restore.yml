@@ -12,6 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Refactor Doc Consistency Gate
+        shell: pwsh
+        run: |
+          $report = & powershell -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -AsJson
+          $report
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Refactor doc consistency check failed."
+            exit $LASTEXITCODE
+          }
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:

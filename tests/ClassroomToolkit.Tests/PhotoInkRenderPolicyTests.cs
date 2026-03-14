@@ -7,7 +7,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class PhotoInkRenderPolicyTests
 {
     [Fact]
-    public void ShouldRequestImmediateRedraw_ShouldReturnTrue_WhenPhotoModeUsesPhotoTransform()
+    public void ShouldRequestImmediateRedraw_ShouldReturnFalse_WhenPhotoModeUsesPhotoTransform()
     {
         var photoTransform = new TransformGroup();
         var rasterTransform = photoTransform;
@@ -17,7 +17,7 @@ public sealed class PhotoInkRenderPolicyTests
             rasterRenderTransform: rasterTransform,
             photoContentTransform: photoTransform);
 
-        result.Should().BeTrue();
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class PhotoInkRenderPolicyTests
     }
 
     [Fact]
-    public void ShouldRenderInteractiveInkInPhotoSpace_ShouldReturnTrue_WhenPhotoModeUsesPhotoTransform()
+    public void ShouldRenderInteractiveInkInPhotoSpace_ShouldReturnFalse_WhenPhotoModeUsesPhotoTransform()
     {
         var photoTransform = new TransformGroup();
         var rasterTransform = photoTransform;
@@ -59,6 +59,6 @@ public sealed class PhotoInkRenderPolicyTests
             rasterRenderTransform: rasterTransform,
             photoContentTransform: photoTransform);
 
-        result.Should().BeTrue();
+        result.Should().BeFalse();
     }
 }

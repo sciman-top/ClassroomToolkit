@@ -28,7 +28,7 @@ public partial class RollCallWindow
         {
             Owner = this
         };
-        if (dialog.ShowDialog() == true)
+        if (TryShowDialogSafe(dialog, nameof(TimerSetDialog)))
         {
             _viewModel.SetCountdown(dialog.Minutes, dialog.Seconds);
         }

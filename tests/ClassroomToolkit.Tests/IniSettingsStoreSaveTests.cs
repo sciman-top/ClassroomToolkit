@@ -8,7 +8,7 @@ public sealed class IniSettingsStoreSaveTests
     [Fact]
     public void Save_ShouldNotLeaveTempFile_WhenTargetIsLocked()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_ini_save_{Guid.NewGuid():N}.ini");
+        var path = TestPathHelper.CreateFilePath("ctool_ini_save", ".ini");
         try
         {
             File.WriteAllText(path, "[Paint]\nbrush_base_size=8\n");
@@ -25,7 +25,7 @@ public sealed class IniSettingsStoreSaveTests
             Action act = () => store.Save(data);
 
             act.Should().Throw<IOException>();
-            var directory = Path.GetDirectoryName(path) ?? Path.GetTempPath();
+            var directory = Path.GetDirectoryName(path) ?? TestPathHelper.CreateDirectory("ctool_ini_save_fallback");
             var tempFiles = Directory.GetFiles(directory, $"{Path.GetFileName(path)}.*.tmp");
             tempFiles.Should().BeEmpty();
         }

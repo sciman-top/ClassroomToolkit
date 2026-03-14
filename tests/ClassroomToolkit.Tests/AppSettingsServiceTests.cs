@@ -1,6 +1,7 @@
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -8,17 +9,9 @@ namespace ClassroomToolkit.Tests;
 public sealed class AppSettingsServiceTests
 {
     [Fact]
-    public void Constructor_ShouldThrow_WhenConfigurationServiceIsNull()
+    public void Constructor_ShouldThrow_WhenStoreIsNull()
     {
-        Action act = () => new AppSettingsService((IConfigurationService)null!);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void Constructor_ShouldThrow_WhenSettingsPathIsNull()
-    {
-        Action act = () => new AppSettingsService((string)null!);
+        Action act = () => new AppSettingsService((SettingsDocumentStoreAdapter)null!);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -30,11 +23,11 @@ public sealed class AppSettingsServiceTests
     [InlineData("off", false)]
     public void Load_ShouldParseBooleanAliases(string raw, bool expected)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_bool_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings_bool");
         try
         {
             File.WriteAllText(path, $"[Paint]\ncontrol_ms_ppt={raw}\n");
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
 
             var settings = service.Load();
 
@@ -52,11 +45,11 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void Load_ShouldFallbackForInvalidBooleanText()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
             File.WriteAllText(path, "[Paint]\ncontrol_ms_ppt=INVALID_BOOL\n");
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
 
             var settings = service.Load();
 
@@ -74,10 +67,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistPhotoUnifiedTransformState()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.PhotoUnifiedTransformEnabled = true;
             initial.PhotoUnifiedScaleX = 1.25;
@@ -106,10 +99,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistPhotoShowInkOverlayState()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.PhotoShowInkOverlay = false;
 
@@ -130,10 +123,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistInkExportScope()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.InkExportScope = InkExportScope.SessionChangesOnly;
             initial.InkExportMaxParallelFiles = 3;
@@ -166,10 +159,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistPresentationAlignmentOptions()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.WpsDebounceMs = 120;
             initial.PresentationLockStrategyWhenDegraded = false;
@@ -192,10 +185,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistClassroomWritingMode()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.ClassroomWritingMode = ClassroomWritingMode.Responsive;
 
@@ -216,11 +209,11 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void Load_ShouldFallbackClassroomWritingMode_WhenInvalid()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
             File.WriteAllText(path, "[Paint]\nclassroom_writing_mode=INVALID_MODE\n");
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
 
             var settings = service.Load();
 
@@ -238,10 +231,10 @@ public sealed class AppSettingsServiceTests
     [Fact]
     public void SaveAndLoad_ShouldPersistStylusAdaptiveState()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ctool_app_settings_{Guid.NewGuid():N}.ini");
+        var path = CreateTempIniPath("ctool_app_settings");
         try
         {
-            var service = new AppSettingsService(path);
+            var service = CreateService(path);
             var initial = service.Load();
             initial.StylusAdaptivePressureProfile = 1;
             initial.StylusAdaptiveSampleRateTier = 3;
@@ -265,5 +258,15 @@ public sealed class AppSettingsServiceTests
                 File.Delete(path);
             }
         }
+    }
+
+    private static AppSettingsService CreateService(string path)
+    {
+        return new AppSettingsService(new SettingsDocumentStoreAdapter(path));
+    }
+
+    private static string CreateTempIniPath(string prefix)
+    {
+        return TestPathHelper.CreateFilePath(prefix, ".ini");
     }
 }

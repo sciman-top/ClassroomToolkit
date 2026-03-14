@@ -9,7 +9,7 @@ public sealed class StudentWorkbookStoreTests
     [Fact]
     public void SaveAndLoad_ShouldPreserveStudentsAndRollState()
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), $"ctool_{Guid.NewGuid():N}.xlsx");
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook", ".xlsx");
         try
         {
             var students = new List<StudentRecord>

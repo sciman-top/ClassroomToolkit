@@ -1,6 +1,6 @@
 # 依赖与还原源基线（保守方案）
 
-更新时间：2026-02-10
+更新时间：2026-03-10
 范围：ClassroomToolkit 仓库（仅文档基线，不改变构建行为）
 
 ## 1. 当前依赖事实（仓库证据）
@@ -10,14 +10,23 @@
   - `PdfiumViewer.Native.x86_64.no_v8-no_xfa` `2018.4.8.256`
   - `System.Speech` `8.0.0`
 - 基础设施层 `src/ClassroomToolkit.Infra/ClassroomToolkit.Infra.csproj`
-  - `ClosedXML` `0.102.3`
+  - `ClosedXML` `0.105.0`
+  - `Microsoft.Data.Sqlite` `8.0.8`
+  - `Microsoft.Extensions.Logging` `8.0.0`
+- 服务层 `src/ClassroomToolkit.Services/ClassroomToolkit.Services.csproj`
+  - `System.Speech` `8.0.0`
 - 测试层 `tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`
-  - `ClosedXML` `0.102.3`
+  - `ClosedXML` `0.105.0`
   - `FluentAssertions` `6.12.0`
   - `Microsoft.NET.Test.Sdk` `17.6.0`
-  - `xunit` `2.4.2`
-  - `xunit.runner.visualstudio` `2.4.5`
+  - `xunit` `2.9.3`
+  - `xunit.runner.visualstudio` `3.1.5`
   - `coverlet.collector` `6.0.0`
+
+## 1.1 当前框架基线
+
+- 解决方案当前主目标框架：`.NET 10`
+- `global.json`：SDK `10.0.100-preview.6.25358.103`
 
 ## 2. 源配置现状（仓库内）
 

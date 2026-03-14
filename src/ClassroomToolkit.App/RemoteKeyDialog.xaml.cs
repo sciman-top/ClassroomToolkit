@@ -1,6 +1,6 @@
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
-using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.Services.Input;
 
 namespace ClassroomToolkit.App;
 
@@ -46,13 +46,13 @@ public partial class RemoteKeyDialog : Window
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
-        var text = (CustomBox.Text ?? string.Empty).Trim().ToLowerInvariant();
-        if (!KeyBindingParser.TryParse(text, out var binding) || binding == null)
+        if (!KeyBindingTokenParser.TryNormalize(CustomBox.Text, out var normalized))
         {
             System.Windows.MessageBox.Show("请输入有效的按键组合。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        SelectedKey = binding.ToString();
+
+        SelectedKey = normalized;
         DialogResult = true;
     }
 

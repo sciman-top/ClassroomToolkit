@@ -15,7 +15,7 @@ public sealed class InkPersistenceServiceTests : IDisposable
 
     public InkPersistenceServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ctk_ink_test_{Guid.NewGuid():N}");
+        _tempDir = TestPathHelper.CreateDirectory("ctk_ink_test");
         Directory.CreateDirectory(_tempDir);
         _service = new InkPersistenceService();
     }

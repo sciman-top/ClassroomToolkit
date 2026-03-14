@@ -3,10 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Windowing;
 using MessageBox = System.Windows.MessageBox;
 
 namespace ClassroomToolkit.App.Paint;
@@ -17,7 +20,9 @@ namespace ClassroomToolkit.App.Paint;
 /// </summary>
 public partial class PaintOverlayWindow
 {
+    private static readonly JsonSerializerOptions InkHistoryJsonOptions = CreateInkHistoryJsonOptions();
     private InkPersistenceService? _inkPersistence;
+    private ClassroomToolkit.Infra.Storage.InkHistorySqliteStoreAdapter? _inkHistorySqliteAdapter;
     private InkExportService? _inkExport;
     private InkExportOptions _inkExportOptions = new();
     private sealed record SidecarPersistSnapshot(
@@ -27,12 +32,65 @@ public partial class PaintOverlayWindow
         List<InkStrokeData> Strokes,
         string SnapshotHash);
 
+    private void ShowExportMessageSafe(
+        string operation,
+        string message,
+        string title,
+        MessageBoxImage image)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            () => MessageBox.Show(this, message, title, MessageBoxButton.OK, image),
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkExport][{operation}] messagebox failed: {ex.GetType().Name} - {ex.Message}"));
+    }
+
+    private MessageBoxResult ShowExportConfirmationSafe(
+        string operation,
+        string message,
+        string title,
+        MessageBoxButton buttons,
+        MessageBoxImage image,
+        MessageBoxResult fallback = MessageBoxResult.Cancel)
+    {
+        var result = fallback;
+        SafeActionExecutionExecutor.TryExecute(
+            () => result = MessageBox.Show(this, message, title, buttons, image),
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkExport][{operation}] confirm failed: {ex.GetType().Name} - {ex.Message}"));
+        return result;
+    }
+
+    private void DispatchExportUiUpdate(string operation, Action action)
+    {
+        var scheduled = TryBeginInvoke(action, System.Windows.Threading.DispatcherPriority.Background);
+        if (scheduled)
+        {
+            return;
+        }
+
+        if (Dispatcher.CheckAccess())
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                action,
+                ex => System.Diagnostics.Debug.WriteLine(
+                    $"[InkExport][{operation}] inline-ui-update failed: {ex.GetType().Name} - {ex.Message}"));
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[InkExport][{operation}] ui-update dispatch failed");
+    }
+
     /// <summary>
     /// Inject the persistence and export services. Must be called after construction.
     /// </summary>
-    public void SetInkPersistenceServices(InkPersistenceService persistence, InkExportService export, InkExportOptions? exportOptions = null)
+    public void SetInkPersistenceServices(
+        InkPersistenceService persistence,
+        InkExportService export,
+        InkExportOptions? exportOptions = null,
+        ClassroomToolkit.Infra.Storage.InkHistorySqliteStoreAdapter? inkHistorySqliteAdapter = null)
     {
         _inkPersistence = persistence;
+        _inkHistorySqliteAdapter = inkHistorySqliteAdapter;
         _inkExport = export;
         if (exportOptions != null)
         {
@@ -79,8 +137,8 @@ public partial class PaintOverlayWindow
                 strokes = CloneCommittedInkStrokes();
             }
             var hash = ComputeInkHash(strokes);
-            persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
-            var persistedStrokes = persistence.LoadInkPageForFile(sourcePath, pageIndex) ?? new List<InkStrokeData>();
+            PersistInkHistorySnapshot(sourcePath, pageIndex, strokes, persistence);
+            var persistedStrokes = LoadInkHistorySnapshot(sourcePath, pageIndex, persistence);
             var persistedHash = ComputeInkHash(persistedStrokes);
             if (!string.Equals(hash, persistedHash, StringComparison.Ordinal))
             {
@@ -88,8 +146,7 @@ public partial class PaintOverlayWindow
                 TrackInkWalSnapshot(sourcePath, pageIndex, strokes, hash);
                 return false;
             }
-            _inkDirtyPages.MarkPersistedIfUnchanged(sourcePath, pageIndex, hash);
-            ClearInkWalSnapshot(sourcePath, pageIndex);
+            MarkInkPagePersistedIfUnchanged(sourcePath, pageIndex, hash);
             if (strokes.Count == 0 && _inkExport != null)
             {
                 _inkExport.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
@@ -158,18 +215,23 @@ public partial class PaintOverlayWindow
         var generation = _inkSidecarAutoSaveGate.NextGeneration();
         _ = _inkSidecarAutoSaveGate.RunAsync(generation, async isCurrent =>
         {
+            if (!_inkSaveEnabled)
+            {
+                return;
+            }
+
             for (int attempt = 1; attempt <= InkSidecarAutoSaveRetryMax; attempt++)
             {
-                if (!isCurrent())
+                if (!isCurrent() || !_inkSaveEnabled)
                 {
                     return;
                 }
 
                 if (TryPersistSidecarSnapshot(snapshot, logFailure: attempt == InkSidecarAutoSaveRetryMax))
                 {
-                    _ = Dispatcher.BeginInvoke(() =>
+                    DispatchExportUiUpdate("autosave-persisted", () =>
                     {
-                        var persisted = _inkDirtyPages.MarkPersistedIfUnchanged(
+                        var persisted = MarkInkPagePersistedIfUnchanged(
                             snapshot.SourcePath,
                             snapshot.PageIndex,
                             snapshot.SnapshotHash);
@@ -187,20 +249,26 @@ public partial class PaintOverlayWindow
                 {
                     await Task.Delay(InkSidecarAutoSaveRetryDelayMs * attempt).ConfigureAwait(false);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[InkPersist] Auto-save retry delay interrupted: {ex.GetType().Name} - {ex.Message}");
                     return;
                 }
             }
 
-            if (!isCurrent())
+            if (!isCurrent() || !_inkSaveEnabled)
             {
                 return;
             }
 
-            _ = Dispatcher.BeginInvoke(() =>
+            DispatchExportUiUpdate("autosave-failed-reschedule", () =>
             {
-                _inkDirtyPages.MarkModified(snapshot.SourcePath, snapshot.PageIndex, snapshot.SnapshotHash);
+                MarkInkPageModified(
+                    snapshot.SourcePath,
+                    snapshot.PageIndex,
+                    snapshot.SnapshotHash,
+                    snapshot.Strokes);
                 _inkDiagnostics?.OnAutoSaveFailure();
                 ScheduleSidecarAutoSave();
             });
@@ -255,7 +323,8 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        var result = MessageBox.Show(
+        var result = ShowExportConfirmationSafe(
+            "prompt-load-sidecar-ink",
             "检测到此文件有保存的笔迹，是否加载？",
             "加载笔迹",
             MessageBoxButton.YesNo,
@@ -269,7 +338,7 @@ public partial class PaintOverlayWindow
         try
         {
             var pageIndex = _photoDocumentIsPdf ? _currentPageIndex : 1;
-            if (TryLoadSidecarPageInkToCache(filePath, pageIndex, out var currentPageStrokes))
+            if (TryLoadSidecarPageInkToCache(filePath, pageIndex, out var currentPageStrokes, allowWhenSaveDisabled: true))
             {
                 ApplyInkStrokes(currentPageStrokes);
             }
@@ -282,17 +351,25 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private bool TryLoadSidecarPageInkToCache(string sourcePath, int pageIndex, out List<InkStrokeData> strokes)
+    private bool TryLoadSidecarPageInkToCache(
+        string sourcePath,
+        int pageIndex,
+        out List<InkStrokeData> strokes,
+        bool allowWhenSaveDisabled = false)
     {
         strokes = new List<InkStrokeData>();
         if (_inkPersistence == null || string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
         {
             return false;
         }
+        if (!allowWhenSaveDisabled && !_inkSaveEnabled)
+        {
+            return false;
+        }
 
         try
         {
-            var loaded = _inkPersistence.LoadInkPageForFile(sourcePath, pageIndex);
+            var loaded = LoadInkHistorySnapshot(sourcePath, pageIndex, _inkPersistence);
             if (loaded == null || loaded.Count == 0)
             {
                 return false;
@@ -331,6 +408,76 @@ public partial class PaintOverlayWindow
         return TryLoadSidecarPageInkToCache(sourcePath, 1, out _);
     }
 
+    private static JsonSerializerOptions CreateInkHistoryJsonOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
+    private void PersistInkHistorySnapshot(
+        string sourcePath,
+        int pageIndex,
+        List<InkStrokeData> strokes,
+        InkPersistenceService persistence)
+    {
+        var historyAdapter = _inkHistorySqliteAdapter;
+        if (historyAdapter == null)
+        {
+            persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
+            return;
+        }
+
+        var strokesJson = SerializeInkStrokes(strokes);
+        historyAdapter.Save(sourcePath, pageIndex, strokesJson);
+    }
+
+    private List<InkStrokeData> LoadInkHistorySnapshot(
+        string sourcePath,
+        int pageIndex,
+        InkPersistenceService persistence)
+    {
+        var historyAdapter = _inkHistorySqliteAdapter;
+        if (historyAdapter == null)
+        {
+            return persistence.LoadInkPageForFile(sourcePath, pageIndex) ?? new List<InkStrokeData>();
+        }
+
+        var result = historyAdapter.LoadOrCreate(sourcePath, pageIndex, writeSnapshot: _inkSaveEnabled);
+        return DeserializeInkStrokes(result.StrokesJson);
+    }
+
+    private static string? SerializeInkStrokes(List<InkStrokeData> strokes)
+    {
+        if (strokes == null || strokes.Count == 0)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Serialize(strokes, InkHistoryJsonOptions);
+    }
+
+    private static List<InkStrokeData> DeserializeInkStrokes(string? strokesJson)
+    {
+        if (string.IsNullOrWhiteSpace(strokesJson))
+        {
+            return new List<InkStrokeData>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<InkStrokeData>>(strokesJson, InkHistoryJsonOptions) ?? new List<InkStrokeData>();
+        }
+        catch (JsonException)
+        {
+            return new List<InkStrokeData>();
+        }
+    }
+
     /// <summary>
     /// Handler for the export button click on both sidebars.
     /// </summary>
@@ -338,13 +485,13 @@ public partial class PaintOverlayWindow
     {
         if (_inkPersistence == null || _inkExport == null)
         {
-            MessageBox.Show("笔迹服务未初始化。", "导出失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowExportMessageSafe("export-click-service-uninitialized", "笔迹服务未初始化。", "导出失败", MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_currentDocumentPath))
         {
-            MessageBox.Show("当前没有打开的文件。", "导出失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowExportMessageSafe("export-click-document-empty", "当前没有打开的文件。", "导出失败", MessageBoxImage.Warning);
             return;
         }
 
@@ -366,7 +513,7 @@ public partial class PaintOverlayWindow
         var inkDoc = BuildInkDocumentForExport(_currentDocumentPath);
         if (!InkExportSnapshotBuilder.HasAnyInkStrokes(inkDoc))
         {
-            MessageBox.Show("当前文件没有笔迹，无法导出。", "导出笔迹合成图片", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowExportMessageSafe("export-current-no-ink", "当前文件没有笔迹，无法导出。", "导出笔迹合成图片", MessageBoxImage.Information);
             return;
         }
 
@@ -374,7 +521,8 @@ public partial class PaintOverlayWindow
         var existing = _inkExport.GetExistingOutputPaths(_currentDocumentPath, inkDoc, _inkExportOptions);
         if (existing.Count > 0)
         {
-            var result = MessageBox.Show(
+            var result = ShowExportConfirmationSafe(
+                "export-current-overwrite-check",
                 $"导出目录中已存在 {existing.Count} 个同名文件，是否覆盖？",
                 "确认覆盖",
                 MessageBoxButton.YesNo,
@@ -389,15 +537,15 @@ public partial class PaintOverlayWindow
         var outputs = exportResult.OutputPaths;
         if (outputs.Count > 0)
         {
-            MessageBox.Show(
+            ShowExportMessageSafe(
+                "export-current-complete",
                 $"导出完成：新增 {exportResult.ExportedCount}，跳过 {exportResult.SkippedCount}，失败 {exportResult.FailedCount}\n输出文件 {outputs.Count} 个到：\n{InkExportService.GetExportDirectory(_currentDocumentPath)}",
                 "导出完成",
-                MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
         else
         {
-            MessageBox.Show("没有可导出的内容。", "导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowExportMessageSafe("export-current-empty", "没有可导出的内容。", "导出", MessageBoxImage.Information);
         }
     }
 
@@ -457,7 +605,7 @@ public partial class PaintOverlayWindow
         var filesToExport = filesToExportSet.ToList();
         if (filesToExport.Count == 0)
         {
-            MessageBox.Show("当前目录没有可导出的笔迹合成记录。", "导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowExportMessageSafe("export-directory-empty", "当前目录没有可导出的笔迹合成记录。", "导出", MessageBoxImage.Information);
             return;
         }
 
@@ -487,7 +635,8 @@ public partial class PaintOverlayWindow
 
         if (overwriteCount > 0)
         {
-            var overwriteChoice = MessageBox.Show(
+            var overwriteChoice = ShowExportConfirmationSafe(
+                "export-directory-overwrite-check",
                 $"导出目录中已存在 {overwriteCount} 个同名文件，是否覆盖？",
                 "确认覆盖",
                 MessageBoxButton.YesNo,
@@ -518,7 +667,15 @@ public partial class PaintOverlayWindow
             TextWrapping = TextWrapping.Wrap
         };
         progressWindow.Content = progressText;
-        progressWindow.Show();
+        var progressWindowShown = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                progressWindow.Show();
+                progressWindowShown = true;
+            },
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkExport][progress-window-show] failed: {ex.GetType().Name} - {ex.Message}"));
 
         var exportOptions = _inkExportOptions;
         var exportService = _inkExport;
@@ -553,19 +710,25 @@ public partial class PaintOverlayWindow
                 Interlocked.Add(ref failedCount, fileResult.FailedCount);
 
                 var done = Interlocked.Increment(ref completed);
-                _ = Dispatcher.BeginInvoke(() =>
+                DispatchExportUiUpdate("directory-progress-update", () =>
                 {
                     progressText.Text = $"正在导出 ({done}/{total}, 并发 {maxParallel}): {Path.GetFileName(sourcePath)}";
                 });
             });
 
-            Dispatcher.BeginInvoke(() =>
+            DispatchExportUiUpdate("directory-export-complete", () =>
             {
-                progressWindow.Close();
-                MessageBox.Show(
+                if (progressWindowShown)
+                {
+                    SafeActionExecutionExecutor.TryExecute(
+                        progressWindow.Close,
+                        ex => System.Diagnostics.Debug.WriteLine(
+                            $"[InkExport][progress-window-close] failed: {ex.GetType().Name} - {ex.Message}"));
+                }
+                ShowExportMessageSafe(
+                    "export-directory-complete",
                     $"导出完成：新增 {exportedCount}，跳过 {skippedCount}，失败 {failedCount}\n输出文件 {outputs.Count} 个。",
                     "导出完成",
-                    MessageBoxButton.OK,
                     MessageBoxImage.Information);
             });
         });
@@ -583,8 +746,10 @@ public partial class PaintOverlayWindow
                 sizeWeight = Math.Max(1, new FileInfo(sourcePath).Length / (512 * 1024));
             }
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[InkExport] Estimate workload fallback for '{sourcePath}': {ex.GetType().Name} - {ex.Message}");
             sizeWeight = 1;
         }
         return pageWeight * sizeWeight;
@@ -654,10 +819,10 @@ public partial class PaintOverlayWindow
             .Select(item => $"{Path.GetFileName(item.SourcePath)} 第 {item.PageIndex} 页：{item.Error}")
             .ToList();
         var details = string.Join("\n", topFailures);
-        MessageBox.Show(
+        ShowExportMessageSafe(
+            "export-preflush-failed",
             $"导出前自动保存校验失败，已中止导出。\n失败 {flushResult.Failures.Count} 页：\n{details}",
             "导出已中止",
-            MessageBoxButton.OK,
             MessageBoxImage.Warning);
         return false;
     }

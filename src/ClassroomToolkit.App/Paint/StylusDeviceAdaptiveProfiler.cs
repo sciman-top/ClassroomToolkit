@@ -53,7 +53,10 @@ internal sealed class StylusDeviceAdaptiveProfiler
         CurrentProfile = ResolveProfile(_lastPressureProfile, _lastRateTier);
         if (predictionHorizonMs.HasValue)
         {
-            int ms = Math.Clamp(predictionHorizonMs.Value, 4, 18);
+            int ms = Math.Clamp(
+                predictionHorizonMs.Value,
+                StylusAdaptiveProfilingDefaults.SeedPredictionHorizonMinMs,
+                StylusAdaptiveProfilingDefaults.SeedPredictionHorizonMaxMs);
             CurrentProfile = CurrentProfile with { PredictionHorizonMs = ms };
         }
     }
@@ -63,10 +66,10 @@ internal sealed class StylusDeviceAdaptiveProfiler
         if (timestampTicks > 0 && _lastTimestamp > 0)
         {
             double dtMs = (timestampTicks - _lastTimestamp) * 1000.0 / Math.Max(System.Diagnostics.Stopwatch.Frequency, 1);
-            if (dtMs is > 0.2 and < 100.0)
+            if (dtMs is > StylusAdaptiveProfilingDefaults.ObserveIntervalMinMs and < StylusAdaptiveProfilingDefaults.ObserveIntervalMaxMs)
             {
                 _intervalMs.Enqueue(dtMs);
-                while (_intervalMs.Count > 64)
+                while (_intervalMs.Count > StylusAdaptiveProfilingDefaults.ObserveIntervalWindowSize)
                 {
                     _intervalMs.Dequeue();
                 }
@@ -107,7 +110,7 @@ internal sealed class StylusDeviceAdaptiveProfiler
 
     private StylusSampleRateTier ResolveSampleRateTier()
     {
-        if (_intervalMs.Count < 8)
+        if (_intervalMs.Count < StylusAdaptiveProfilingDefaults.ResolveRateMinSamples)
         {
             return StylusSampleRateTier.Unknown;
         }
@@ -124,11 +127,11 @@ internal sealed class StylusDeviceAdaptiveProfiler
         }
 
         double hz = 1000.0 / avgMs;
-        if (hz >= 150)
+        if (hz >= StylusAdaptiveProfilingDefaults.HighSampleRateHzThreshold)
         {
             return StylusSampleRateTier.High;
         }
-        if (hz >= 90)
+        if (hz >= StylusAdaptiveProfilingDefaults.MediumSampleRateHzThreshold)
         {
             return StylusSampleRateTier.Medium;
         }
@@ -169,19 +172,21 @@ internal sealed class StylusDeviceAdaptiveProfiler
                 markerMove = 0.84;
                 markerWidthDelta = 0.07;
                 calligraphyPosAlphaScale = 0.9;
-                predictionHorizonMs += 4;
+                predictionHorizonMs += StylusAdaptiveProfilingDefaults.LowRatePredictionHorizonDeltaMs;
                 break;
             case StylusSampleRateTier.Medium:
                 markerMove = 0.95;
                 markerWidthDelta = 0.03;
                 calligraphyPosAlphaScale = 0.97;
-                predictionHorizonMs += 2;
+                predictionHorizonMs += StylusAdaptiveProfilingDefaults.MediumRatePredictionHorizonDeltaMs;
                 break;
             case StylusSampleRateTier.High:
                 markerMove = 1.02;
                 markerWidthDelta = -0.02;
                 calligraphyPosAlphaScale = 1.03;
-                predictionHorizonMs = Math.Max(6, predictionHorizonMs - 1);
+                predictionHorizonMs = Math.Max(
+                    StylusAdaptiveProfilingDefaults.HighRatePredictionHorizonMinMs,
+                    predictionHorizonMs - StylusAdaptiveProfilingDefaults.HighRatePredictionHorizonDeltaMs);
                 break;
         }
 

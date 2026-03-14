@@ -14,6 +14,23 @@ public class GlobalHookService : IDisposable
 
     public event Action? HookUnavailable;
 
+    public Task<bool> RegisterHookAsync(
+        IEnumerable<string> bindingTokens,
+        Action callback,
+        Func<bool> shouldKeepActive)
+    {
+        ArgumentNullException.ThrowIfNull(bindingTokens);
+        ArgumentNullException.ThrowIfNull(callback);
+        ArgumentNullException.ThrowIfNull(shouldKeepActive);
+
+        var fallback = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+        var bindings = bindingTokens
+            .Select(token => KeyBindingParser.ParseOrDefault(token, fallback))
+            .ToArray();
+
+        return RegisterHookAsync(bindings, _ => callback(), shouldKeepActive);
+    }
+
     public async Task<bool> RegisterHookAsync(
         IEnumerable<KeyBinding> bindings,
         Action<KeyBinding> callback,

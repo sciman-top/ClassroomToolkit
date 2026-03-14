@@ -77,6 +77,35 @@ public sealed class BrushQualityRegressionTests
         angle.Should().BeGreaterThan(45.0);
     }
 
+    [Fact]
+    public void MarkerRenderer_ShouldKeepContinuity_OnSparseFastTrace()
+    {
+        var input = BuildSparseFastTrace();
+        var renderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon, MarkerBrushConfig.Balanced);
+        renderer.Initialize(Colors.Blue, baseSize: 12, opacity: 255);
+
+        var output = Replay(renderer, input, hasPressure: true, hz: 60);
+        output.Count.Should().BeGreaterThanOrEqualTo(input.Count - 2);
+        var inputMaxSegment = ComputeMaxSegmentLength(input);
+        var outputMaxSegment = ComputeMaxSegmentLength(output.Select(p => p.Position).ToList());
+        outputMaxSegment.Should().BeLessThan(inputMaxSegment * 1.25);
+    }
+
+    [Fact]
+    public void CalligraphyRenderer_ShouldKeepContinuity_OnSparseFastTrace()
+    {
+        var input = BuildSparseFastTrace();
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyBalanced());
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        var output = Replay(renderer, input, hasPressure: true, hz: 60);
+        output.Count.Should().BeGreaterThanOrEqualTo(input.Count - 3);
+        var inputMaxSegment = ComputeMaxSegmentLength(input);
+        var outputMaxSegment = ComputeMaxSegmentLength(output.Select(p => p.Position).ToList());
+        outputMaxSegment.Should().BeLessThan(inputMaxSegment * 1.2);
+        (output[^1].Position - input[^1]).Length.Should().BeLessThan(18.0);
+    }
+
     private static List<Point> BuildNoisyLine()
     {
         var points = new List<Point>();
@@ -104,11 +133,23 @@ public sealed class BrushQualityRegressionTests
         return points;
     }
 
-    private static List<StrokePointData> Replay(IBrushRenderer renderer, IReadOnlyList<Point> input, bool hasPressure)
+    private static List<Point> BuildSparseFastTrace()
+    {
+        var points = new List<Point>();
+        for (int i = 0; i < 18; i++)
+        {
+            double x = 20 + (i * 56.0);
+            double y = 100 + (Math.Sin(i * 0.72) * 45.0) + (Math.Cos(i * 0.28) * 16.0);
+            points.Add(new Point(x, y));
+        }
+        return points;
+    }
+
+    private static List<StrokePointData> Replay(IBrushRenderer renderer, IReadOnlyList<Point> input, bool hasPressure, int hz = 120)
     {
         input.Count.Should().BeGreaterThanOrEqualTo(2);
         long now = Stopwatch.GetTimestamp();
-        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        long step = Math.Max(1, Stopwatch.Frequency / Math.Max(1, hz));
 
         for (int i = 0; i < input.Count; i++)
         {
@@ -133,6 +174,21 @@ public sealed class BrushQualityRegressionTests
         }
 
         return renderer.GetLastStrokePoints() ?? new List<StrokePointData>();
+    }
+
+    private static double ComputeMaxSegmentLength(IReadOnlyList<Point> points)
+    {
+        if (points.Count < 2)
+        {
+            return 0.0;
+        }
+
+        double max = 0.0;
+        for (int i = 1; i < points.Count; i++)
+        {
+            max = Math.Max(max, (points[i] - points[i - 1]).Length);
+        }
+        return max;
     }
 
     private static double ComputeDistanceStdDev(IReadOnlyList<Point> points, (Point Start, Point End) baseline)

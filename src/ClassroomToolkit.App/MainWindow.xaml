@@ -161,10 +161,7 @@
 
     <!-- 主布局容器 (Atmospheric Gradient) -->
     <Border x:Name="MainContainer"
-            CornerRadius="20"
-            Background="{StaticResource Brush_Window_Atmosphere}"
-            BorderThickness="1"
-            BorderBrush="{StaticResource Brush_Border_Glass}"
+            Style="{StaticResource Style_WorkShellWindowBorder}"
             MouseLeftButtonDown="OnDragAreaMouseDown">
         
         <Border.Effect>
@@ -180,7 +177,7 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 顶部装饰 (拖拽把手 - Pill) -->
-            <Grid Grid.Row="0" Height="14" Background="Transparent" VerticalAlignment="Top">
+            <Grid Grid.Row="0" Height="14" Style="{StaticResource Style_WorkShellTitleBar}">
                 <Rectangle Width="28" Height="4" RadiusX="2" RadiusY="2" 
                            Fill="{StaticResource Brush_Border_Light}"
                            VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.5"/>
@@ -208,13 +205,8 @@
             </StackPanel>
 
             <!-- 3. 底部工具栏 (Floating Capsule) -->
-            <Border Grid.Row="2" 
-                    Background="{StaticResource Brush_Glass_Surface}" 
-                    CornerRadius="14" 
-                    BorderBrush="{StaticResource Brush_Border_Glass}"
-                    BorderThickness="1"
-                    Padding="8,4" 
-                    Margin="8,0,8,4"
+            <Border Grid.Row="2"
+                    Style="{StaticResource Style_WorkShellBottomBar}"
                     HorizontalAlignment="Center">
                 
                 <Grid>

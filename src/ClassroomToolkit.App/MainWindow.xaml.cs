@@ -13,6 +13,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
 
@@ -31,11 +32,23 @@ public partial class MainWindow : Window
     private Paint.PaintToolbarWindow? _toolbarWindow => _paintWindowOrchestrator.ToolbarWindow;
     private Photos.ImageManagerWindow? _imageManagerWindow;
     private readonly List<ZOrderSurface> _surfaceStack = new();
+    private SurfaceZOrderDecisionRuntimeState _surfaceZOrderDecisionState = SurfaceZOrderDecisionRuntimeState.Default;
     private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
     private IDisposable? _presentationForegroundSuppression;
     private bool _zOrderPolicyApplying;
-    private readonly PhotoNavigationSession _photoNavigationSession = new();
+    private FloatingCoordinationRuntimeState _floatingCoordinationState = FloatingCoordinationRuntimeState.Default;
+    private FloatingDispatchQueueState _floatingDispatchQueueState = FloatingDispatchQueueState.Default;
+    private ToolbarInteractionRetouchRuntimeState _toolbarInteractionRetouchState = ToolbarInteractionRetouchRuntimeState.Default;
+    private bool _toolbarDirectRepairBackgroundQueued;
+    private bool _toolbarDirectRepairRerunRequested;
+    private ExplicitForegroundRetouchRuntimeState _explicitForegroundRetouchState = ExplicitForegroundRetouchRuntimeState.Default;
+    private OverlayActivatedRetouchRuntimeState _overlayActivatedRetouchState = OverlayActivatedRetouchRuntimeState.Default;
+    private ZOrderRequestRuntimeState _zOrderRequestState = ZOrderRequestRuntimeState.Default;
+    private long _lastAppliedSessionTransitionId;
+    private readonly ClassroomToolkit.Application.UseCases.Photos.PhotoNavigationSession _photoNavigationSession = new();
     private LauncherBubbleWindow? _bubbleWindow;
+    private LauncherBubbleVisibilityRuntimeState _bubbleVisibilityState = LauncherBubbleVisibilityRuntimeState.Default;
+    private DateTime _lastLauncherVisibleForTopmostUtc = MainWindowRuntimeDefaults.DefaultTimestampUtc;
     private readonly DispatcherTimer _autoExitTimer;
     private readonly CancellationTokenSource _backgroundTasksCancellation = new();
     private bool _allowClose;
@@ -51,6 +64,9 @@ public partial class MainWindow : Window
     private readonly Services.IPaintWindowOrchestrator _paintWindowOrchestrator;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
     private readonly IWindowOrchestrator _windowOrchestrator;
+    private bool _paintOrchestratorEventsWired;
+    private Paint.PaintOverlayWindow? _lifecycleWiredOverlayWindow;
+    private Paint.PaintToolbarWindow? _lifecycleWiredToolbarWindow;
     public MainWindow(
         AppSettingsService settingsService,
         AppSettings settings,
@@ -79,25 +95,34 @@ public partial class MainWindow : Window
         _imageManagerWindowFactory = imageManagerWindowFactory;
         _windowOrchestrator = windowOrchestrator;
         _autoExitTimer = new DispatcherTimer();
-        _autoExitTimer.Tick += (_, _) =>
-        {
-            _autoExitTimer.Stop();
-            RequestExit();
-        };
+        _autoExitTimer.Tick += OnAutoExitTimerTick;
         _presentationForegroundSuppressionTimer = new DispatcherTimer();
-        _presentationForegroundSuppressionTimer.Tick += (_, _) => ReleasePresentationForegroundSuppression();
+        _presentationForegroundSuppressionTimer.Tick += OnPresentationForegroundSuppressionTimerTick;
         _mainViewModel.OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
         _mainViewModel.OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
         DataContext = _mainViewModel;
         Loaded += OnLoaded;
-        IsVisibleChanged += (_, _) =>
-        {
-            if (IsVisible)
-            {
-                WindowPlacementHelper.EnsureVisible(this);
-            }
-        };
+        IsVisibleChanged += OnMainWindowVisibleChanged;
         Closing += OnClosing;
+    }
+
+    private void OnAutoExitTimerTick(object? sender, EventArgs e)
+    {
+        _autoExitTimer.Stop();
+        RequestExit();
+    }
+
+    private void OnPresentationForegroundSuppressionTimerTick(object? sender, EventArgs e)
+    {
+        ReleasePresentationForegroundSuppression();
+    }
+
+    private void OnMainWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (MainWindowVisibleChangedPolicy.ShouldEnsureVisible(IsVisible))
+        {
+            WindowPlacementHelper.EnsureVisible(this);
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -107,7 +132,8 @@ public partial class MainWindow : Window
         ScheduleAutoExitTimer();
         ScheduleInkCleanup();
         WarmupRollCallData();
-        if (_settings.LauncherMinimized)
+        var toggleAction = MainWindowLoadedToggleActionPolicy.Resolve(_settings.LauncherMinimized);
+        if (toggleAction == MainWindowLoadedToggleAction.MinimizeLauncher)
         {
             MinimizeLauncher(fromSettings: true);
         }
@@ -120,15 +146,7 @@ public partial class MainWindow : Window
 
     private void WarmupRollCallData()
     {
-        try
-        {
-            var path = ResolveStudentWorkbookPath();
-            ClassroomToolkit.App.ViewModels.RollCallViewModel.WarmupData(path);
-        }
-        catch
-        {
-            // Ignore warmup failures.
-        }
+        // Warmup is performed inside RollCallWindow initialization.
     }
 
     // ── Roll-call ──
@@ -140,22 +158,46 @@ public partial class MainWindow : Window
         {
             return;
         }
-        if (_rollCallWindow.IsVisible)
-        {
-            _rollCallWindow.HideRollCall();
-        }
-        else
-        {
-            _rollCallWindow.Show();
-            _rollCallWindow.Activate();
-            _rollCallWindow.SyncTopmost(true);
-            if (_overlayWindow != null && _overlayWindow.IsVisible)
-            {
-                _rollCallWindow.Owner = _overlayWindow;
-            }
-        }
-        ApplyZOrderPolicy();
+        var transitionPlan = RollCallVisibilityTransitionPolicy.Resolve(
+            CaptureRollCallVisibilityTransitionContext());
+        ApplyRollCallTransition(transitionPlan);
         UpdateToggleButtons();
+    }
+
+    private RollCallVisibilityTransitionContext CaptureRollCallVisibilityTransitionContext()
+    {
+        return new RollCallVisibilityTransitionContext(
+            RollCallVisible: _rollCallWindow?.IsVisible == true,
+            RollCallActive: _rollCallWindow?.IsActive == true,
+            OverlayVisible: _overlayWindow?.IsVisible == true);
+    }
+
+    private void ApplyRollCallTransition(RollCallVisibilityTransitionPlan transitionPlan)
+    {
+        if (_rollCallWindow == null)
+        {
+            return;
+        }
+
+        if (transitionPlan.HideWindow)
+        {
+            ExecuteLifecycleSafe("rollcall-toggle", "hide-rollcall-window", _rollCallWindow.HideRollCall);
+        }
+        if (transitionPlan.SyncOwnerToOverlay)
+        {
+            SyncOverlayOwnedWindow(_rollCallWindow);
+        }
+        if (transitionPlan.ShowWindow)
+        {
+            ExecuteLifecycleSafe("rollcall-toggle", "show-rollcall-window", _rollCallWindow.Show);
+        }
+        UserInitiatedWindowExecutionExecutor.Apply(
+            _rollCallWindow,
+            transitionPlan.ActivateWindow);
+        FloatingZOrderApplyExecutor.Apply(
+            transitionPlan.RequestZOrderApply,
+            transitionPlan.ForceEnforceZOrder,
+            RequestApplyZOrderPolicy);
     }
 
     private void EnsureRollCallWindow()
@@ -166,18 +208,33 @@ public partial class MainWindow : Window
         }
         var path = ResolveStudentWorkbookPath();
         _rollCallWindow = _rollCallWindowFactory.Create(path);
-        _rollCallWindow.IsVisibleChanged += (_, _) => UpdateToggleButtons();
-        _rollCallWindow.Closed += (_, _) =>
-        {
-            _rollCallWindow = null;
-            UpdateToggleButtons();
-        };
+        WireRollCallWindow(_rollCallWindow);
+    }
+
+    private void WireRollCallWindow(RollCallWindow rollCallWindow)
+    {
+        rollCallWindow.IsVisibleChanged += OnRollCallWindowVisibleChanged;
+        rollCallWindow.Closed += OnRollCallWindowClosed;
+    }
+
+    private void OnRollCallWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        UpdateToggleButtons();
+    }
+
+    private void OnRollCallWindowClosed(object? sender, EventArgs e)
+    {
+        _rollCallWindow = null;
+        UpdateToggleButtons();
     }
 
     private void UpdateToggleButtons()
     {
-        _mainViewModel.IsPaintActive = _overlayWindow != null && _overlayWindow.IsVisible;
-        _mainViewModel.IsRollCallVisible = _rollCallWindow != null && _rollCallWindow.IsVisible;
+        var toggleState = ViewModels.MainWindowToggleStatePolicy.Resolve(
+            overlayVisible: _overlayWindow?.IsVisible == true,
+            rollCallVisible: _rollCallWindow?.IsVisible == true);
+        _mainViewModel.IsPaintActive = toggleState.IsPaintActive;
+        _mainViewModel.IsRollCallVisible = toggleState.IsRollCallVisible;
     }
 
     private void OnOpenRollCallSettings()
@@ -186,7 +243,7 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        if (dialog.ShowDialog() != true)
+        if (!TryShowDialogWithDiagnostics(dialog, nameof(RollCallSettingsDialog)))
         {
             return;
         }
@@ -223,139 +280,419 @@ public partial class MainWindow : Window
 
     private void TouchSurface(ZOrderSurface surface, bool applyPolicy = true)
     {
-        _windowOrchestrator.TouchSurface(_surfaceStack, surface);
-        if (applyPolicy)
+        var changed = _windowOrchestrator.TouchSurface(_surfaceStack, surface);
+        FloatingZOrderApplyExecutor.ApplyTouchResult(
+            applyPolicy,
+            changed,
+            RequestApplyZOrderPolicy);
+    }
+
+    private void ApplySurfaceZOrderDecision(SurfaceZOrderDecision decision)
+    {
+        var interactionState = CaptureOverlayInteractionState();
+        var dedupIntervalMs = MainWindowZOrderDedupIntervalPolicy.ResolveSurfaceDecisionIntervalMs(interactionState);
+        var dedupDecision = SurfaceZOrderDecisionDedupPolicy.Resolve(
+            decision,
+            _surfaceZOrderDecisionState,
+            GetCurrentUtcTimestamp(),
+            minIntervalMs: dedupIntervalMs);
+        SurfaceZOrderDecisionStateUpdater.Apply(
+            ref _surfaceZOrderDecisionState,
+            dedupDecision);
+        if (!dedupDecision.ShouldApply)
         {
-            ApplyZOrderPolicy();
+            System.Diagnostics.Debug.WriteLine(
+                SurfaceZOrderDecisionDiagnosticsPolicy.FormatDedupSkipMessage(
+                    dedupDecision.Reason));
+            return;
+        }
+
+        SurfaceZOrderCoordinator.Apply(
+            decision,
+            surface => _windowOrchestrator.TouchSurface(_surfaceStack, surface),
+            RequestApplyZOrderPolicy);
+    }
+
+    private void RequestApplyZOrderPolicy(bool forceEnforceZOrder = false)
+    {
+        var nowUtc = GetCurrentUtcTimestamp();
+        var previousRequestState = _zOrderRequestState;
+        var interactionState = CaptureOverlayInteractionState();
+        var dedupIntervalMs = MainWindowZOrderDedupIntervalPolicy.ResolveRequestIntervalMs(interactionState);
+        var admission = ZOrderRequestAdmissionPolicy.Resolve(
+            _zOrderPolicyApplying,
+            _floatingDispatchQueueState.ApplyQueued,
+            _zOrderRequestState,
+            nowUtc,
+            forceEnforceZOrder,
+            dedupIntervalMs: dedupIntervalMs);
+        ZOrderRequestStateUpdater.Apply(
+            ref _zOrderRequestState,
+            admission);
+        if (!admission.ShouldQueue)
+        {
+            System.Diagnostics.Debug.WriteLine(ZOrderRequestDiagnosticsPolicy.FormatSkipMessage(
+                admission.Reason,
+                forceEnforceZOrder,
+                _floatingDispatchQueueState.ApplyQueued,
+                _zOrderPolicyApplying));
+            return;
+        }
+        if (ZOrderRequestQueuedDiagnosticsAdmissionPolicy.ShouldLog(admission.Reason))
+        {
+            System.Diagnostics.Debug.WriteLine(ZOrderRequestDiagnosticsPolicy.FormatQueuedMessage(
+                admission.Reason,
+                forceEnforceZOrder));
+        }
+
+        var queueDispatchFailed = false;
+        FloatingDispatchQueueStateUpdater.ApplyRequest(
+            ref _floatingDispatchQueueState,
+            forceEnforceZOrder,
+            () => TryBeginInvoke(ExecuteQueuedApplyZOrderPolicy, DispatcherPriority.Background, "ExecuteQueuedApplyZOrderPolicy"),
+            decision =>
+            {
+                var handlingPlan = ZOrderQueueDispatchDecisionHandlingPolicy.Resolve(decision.Reason);
+                if (handlingPlan.ShouldLogDecision)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        FloatingDispatchQueueDiagnosticsPolicy.FormatRequestDecisionMessage(
+                            decision.Action,
+                            decision.Reason,
+                            forceEnforceZOrder));
+                }
+
+                if (handlingPlan.ShouldMarkQueueDispatchFailed)
+                {
+                    queueDispatchFailed = true;
+                }
+            },
+            ex => System.Diagnostics.Debug.WriteLine(
+                FloatingDispatchQueueDiagnosticsPolicy.FormatQueueDispatchFailureExceptionMessage(
+                    ex.GetType().Name,
+                    ex.Message)));
+        ZOrderQueueDispatchFailureRollbackStateUpdater.Apply(
+            ref _zOrderRequestState,
+            queueDispatchFailed,
+            previousRequestState);
+        if (queueDispatchFailed)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                ZOrderRequestDiagnosticsPolicy.FormatQueueDispatchFailedRollbackMessage(forceEnforceZOrder));
         }
     }
 
-    private void ApplyZOrderPolicy()
+    private void ExecuteQueuedApplyZOrderPolicy()
     {
-        if (_zOrderPolicyApplying)
+        var admission = FloatingDispatchExecuteAdmissionPolicy.Resolve(_floatingDispatchQueueState.ApplyQueued);
+        if (!admission.ShouldExecute)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                FloatingDispatchExecuteDiagnosticsPolicy.FormatSkipMessage(admission.Reason));
+            return;
+        }
+
+        FloatingDispatchQueueStateUpdater.ApplyExecuteQueued(
+            ref _floatingDispatchQueueState,
+            ApplyZOrderPolicy,
+            ex => System.Diagnostics.Debug.WriteLine(
+                FloatingDispatchExecuteDiagnosticsPolicy.FormatFailureMessage(
+                    ex.GetType().Name,
+                    ex.Message)));
+    }
+
+    private bool TryBeginInvoke(Action action, DispatcherPriority priority, string operation)
+    {
+        try
+        {
+            Dispatcher.BeginInvoke(action, priority);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                DispatcherBeginInvokeDiagnosticsPolicy.FormatFailureMessage(
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message));
+            return false;
+        }
+    }
+
+    private static DateTime GetCurrentUtcTimestamp() => DateTime.UtcNow;
+
+    private MainWindowOverlayInteractionState CaptureOverlayInteractionState()
+    {
+        return MainWindowOverlayInteractionStatePolicy.Resolve(
+            _overlayWindow?.IsVisible == true,
+            _overlayWindow?.IsPhotoModeActive == true,
+            _toolbarWindow?.BoardActive == true);
+    }
+
+    private FloatingUtilityActivitySnapshot CaptureFloatingUtilityActivity()
+    {
+        return CaptureFloatingUtilityActivity(CaptureLauncherWindowRuntimeSnapshot());
+    }
+
+    private FloatingUtilityActivitySnapshot CaptureFloatingUtilityActivity(
+        LauncherWindowRuntimeSnapshot launcherSnapshot)
+    {
+        return FloatingUtilityActivitySnapshotPolicy.Resolve(
+            toolbarActive: _toolbarWindow?.IsActive == true,
+            rollCallActive: _rollCallWindow?.IsActive == true,
+            imageManagerActive: _imageManagerWindow?.IsActive == true,
+            launcherActive: launcherSnapshot.Active);
+    }
+
+    private void ApplyZOrderPolicy(bool forceEnforceZOrder = false)
+    {
+        if (!ZOrderApplyGuardStateUpdater.TryEnter(ref _zOrderPolicyApplying))
         {
             return;
         }
-        _zOrderPolicyApplying = true;
         try
         {
-            var overlayVisible = _overlayWindow?.IsVisible == true;
-            var photoActive = _overlayWindow?.IsPhotoModeActive == true;
-            var presentationFullscreen = _overlayWindow?.IsPresentationFullscreenActive == true;
-            var whiteboardActive = _toolbarWindow?.BoardActive == true;
-            var imageManagerVisible = _imageManagerWindow?.IsVisible == true
-                && _imageManagerWindow.WindowState != WindowState.Minimized;
-
-            _windowOrchestrator.PruneSurfaceStack(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
-            var frontSurface = _windowOrchestrator.ResolveFrontSurface(_surfaceStack, photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible);
-            SyncFloatingWindowOwners(overlayVisible);
-
-            if (_imageManagerWindow != null && imageManagerVisible)
+            var coordination = CaptureFloatingWindowCoordinationSnapshot();
+            var suppressionDecision = OverlayActivationSuppressionPolicy.Resolve(
+                _overlayActivatedRetouchState.SuppressNextApply);
+            if (suppressionDecision.ShouldSuppress)
             {
-                var imageManagerFront = frontSurface == ZOrderSurface.ImageManager;
-                _imageManagerWindow.SyncTopmost(imageManagerFront);
-                if (imageManagerFront && !_imageManagerWindow.IsActive)
-                {
-                    _imageManagerWindow.Activate();
-                }
+                System.Diagnostics.Debug.WriteLine(
+                    OverlayActivationDiagnosticsPolicy.FormatSuppressionMessage(
+                        suppressionDecision.Reason));
             }
-
-            if (_overlayWindow != null && overlayVisible)
-            {
-                if (frontSurface is ZOrderSurface.PhotoFullscreen or ZOrderSurface.Whiteboard)
-                {
-                    _overlayWindow.Activate();
-                }
-            }
-
-            if (_toolbarWindow != null && _toolbarWindow.IsVisible)
-            {
-                _toolbarWindow.SyncTopmost(true);
-            }
-            if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-            {
-                _rollCallWindow.SyncTopmost(true);
-            }
+            var state = FloatingWindowCoordinator.Apply(
+                _windowOrchestrator,
+                _surfaceStack,
+                coordination,
+                new FloatingWindowCoordinationState(
+                    LastFrontSurface: _floatingCoordinationState.LastFrontSurface,
+                    LastTopmostPlan: _floatingCoordinationState.LastTopmostPlan),
+                forceEnforceZOrder,
+                suppressionDecision.ShouldSuppress,
+                _overlayWindow,
+                _toolbarWindow,
+                _rollCallWindow,
+                ResolveLauncherWindow(coordination.Launcher),
+                coordination.Runtime.ImageManagerVisible ? _imageManagerWindow : null);
+            SessionTransitionDecisionStateUpdater.Apply(
+                ref _floatingCoordinationState,
+                state);
         }
         finally
         {
-            _zOrderPolicyApplying = false;
+            ZOrderApplyGuardStateUpdater.Exit(ref _zOrderPolicyApplying);
         }
     }
+
+    private FloatingWindowRuntimeSnapshot CaptureFloatingWindowRuntimeSnapshot(
+        LauncherWindowRuntimeSnapshot launcherSnapshot)
+    {
+        return FloatingWindowRuntimeSnapshotPolicy.Resolve(
+            overlayVisible: _overlayWindow?.IsVisible == true,
+            overlayActive: _overlayWindow?.IsActive == true,
+            photoActive: _overlayWindow?.IsPhotoModeActive == true,
+            presentationFullscreen: _overlayWindow?.IsPresentationFullscreenActive == true,
+            whiteboardActive: _toolbarWindow?.BoardActive == true,
+            imageManagerVisible: _imageManagerWindow?.IsVisible == true,
+            imageManagerMinimized: _imageManagerWindow?.WindowState == WindowState.Minimized,
+            launcherVisible: launcherSnapshot.VisibleForTopmost);
+    }
+
+    private FloatingWindowCoordinationSnapshot CaptureFloatingWindowCoordinationSnapshot()
+    {
+        var launcherSnapshot = CaptureLauncherWindowRuntimeSnapshot();
+        var runtimeSnapshot = CaptureFloatingWindowRuntimeSnapshot(launcherSnapshot);
+        var overlay = _overlayWindow;
+        return FloatingWindowCoordinationSnapshotPolicy.Resolve(
+            runtimeSnapshot,
+            launcherSnapshot,
+            toolbarVisible: _toolbarWindow?.IsVisible == true,
+            rollCallVisible: _rollCallWindow?.IsVisible == true,
+            toolbarActive: _toolbarWindow?.IsActive == true,
+            rollCallActive: _rollCallWindow?.IsActive == true,
+            imageManagerActive: _imageManagerWindow?.IsActive == true,
+            launcherActive: launcherSnapshot.Active,
+            toolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
+            rollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
+            imageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null);
+    }
+
+    private LauncherWindowRuntimeSnapshot CaptureLauncherWindowRuntimeSnapshot()
+    {
+        var nowUtc = GetCurrentUtcTimestamp();
+        var snapshot = LauncherWindowRuntimeSnapshotPolicy.Resolve(
+            launcherMinimized: _settings.LauncherMinimized,
+            mainVisible: IsVisible,
+            mainMinimized: WindowState == WindowState.Minimized,
+            mainActive: IsActive,
+            bubbleVisible: _bubbleWindow?.IsVisible == true,
+            bubbleMinimized: _bubbleWindow?.WindowState == WindowState.Minimized,
+            bubbleActive: _bubbleWindow?.IsActive == true);
+        LauncherTopmostVisibilityStateUpdater.ApplyResolvedTimestamp(
+            ref _lastLauncherVisibleForTopmostUtc,
+            nowUtc,
+            snapshot.VisibleForTopmost);
+        if (LauncherWindowRuntimeSelectionLogPolicy.ShouldLog(snapshot.SelectionReason))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                LauncherWindowRuntimeDiagnosticsPolicy.FormatSelectionMessage(snapshot.SelectionReason));
+        }
+        return snapshot;
+    }
+
+    private Window? ResolveLauncherWindow(LauncherWindowRuntimeSnapshot launcherSnapshot)
+    {
+        var resolvedKind = LauncherWindowResolverPolicy.Resolve(
+            launcherSnapshot.WindowKind,
+            bubbleExists: _bubbleWindow != null,
+            bubbleVisible: _bubbleWindow?.IsVisible == true,
+            mainVisible: IsVisible);
+
+        return LauncherWindowResolutionPolicy.ShouldUseBubbleWindow(
+            resolvedKind,
+            bubbleWindowExists: _bubbleWindow != null)
+            ? _bubbleWindow
+            : this;
+    }
+
+    private void SyncOverlayOwnedWindow(Window? child)
+    {
+        var overlay = _overlayWindow;
+        var action = FloatingSingleOwnerExecutionPolicy.Resolve(
+            childExists: child != null,
+            overlayVisible: overlay?.IsVisible == true,
+            ownerAlreadyOverlay: child?.Owner == overlay && overlay != null);
+        FloatingSingleOwnerExecutionExecutor.Apply(action, child, overlay);
+    }
+
+    private void DetachOverlayOwnedWindow(Window? child)
+    {
+        var overlay = _overlayWindow;
+        var action = FloatingSingleOwnerExecutionPolicy.Resolve(
+            childExists: child != null,
+            overlayVisible: false,
+            ownerAlreadyOverlay: child?.Owner == overlay && overlay != null);
+        FloatingSingleOwnerExecutionExecutor.Apply(action, child, overlay);
+    }
+
     private void SyncFloatingWindowOwners(bool overlayVisible)
     {
         var overlay = _overlayWindow;
-        if (_toolbarWindow != null && _toolbarWindow.IsVisible)
-        {
-            if (overlayVisible && overlay != null)
-            {
-                if (_toolbarWindow.Owner != overlay)
-                {
-                    _toolbarWindow.Owner = overlay;
-                }
-            }
-            else if (_toolbarWindow.Owner != null)
-            {
-                _toolbarWindow.Owner = null;
-            }
-        }
-        if (_rollCallWindow != null && _rollCallWindow.IsVisible)
-        {
-            if (overlayVisible && overlay != null)
-            {
-                if (_rollCallWindow.Owner != overlay)
-                {
-                    _rollCallWindow.Owner = overlay;
-                }
-            }
-            else if (_rollCallWindow.Owner != null)
-            {
-                _rollCallWindow.Owner = null;
-            }
-        }
+        var snapshot = FloatingOwnerRuntimeSnapshotPolicy.Resolve(
+            overlayVisible: overlayVisible,
+            toolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
+            rollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
+            imageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null);
+        var plan = FloatingOwnerExecutionPlanPolicy.Resolve(snapshot);
+        FloatingOwnerExecutionExecutor.Apply(
+            plan,
+            overlay,
+            _toolbarWindow,
+            _rollCallWindow,
+            _imageManagerWindow);
     }
 
     // ── Lifecycle & settings ──
 
     private void RequestExit()
     {
-        if (_allowClose)
+        var exitPlan = MainWindowExitPlanPolicy.Resolve(
+            _allowClose,
+            _backgroundTasksCancellation.IsCancellationRequested,
+            _bubbleWindow != null,
+            _rollCallWindow != null);
+        if (!exitPlan.ShouldExit)
         {
             return;
         }
+
         _allowClose = true;
-        if (!_backgroundTasksCancellation.IsCancellationRequested)
+        const string phase = "request-exit";
+
+        if (exitPlan.ShouldCancelBackgroundTasks)
         {
-            _backgroundTasksCancellation.Cancel();
+            ExecuteLifecycleSafe(phase, "cancel-background-tasks", () => _backgroundTasksCancellation.Cancel());
         }
-        TriggerInkCleanup();
-        CapturePaintToolbarPosition(save: true);
-        SaveLauncherSettings();
-        if (_bubbleWindow != null)
+        ExecuteLifecycleSafe(phase, "reset-toolbar-retouch-runtime", () => ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason.RequestExit));
+        ExecuteLifecycleSafe(phase, "trigger-ink-cleanup", TriggerInkCleanup);
+        ExecuteLifecycleSafe(phase, "capture-toolbar-position", () => CapturePaintToolbarPosition(save: true));
+        ExecuteLifecycleSafe(phase, "save-launcher-settings", SaveLauncherSettings);
+        if (exitPlan.ShouldCloseBubbleWindow && _bubbleWindow != null)
         {
-            _bubbleWindow.Close();
+            var bubbleWindow = _bubbleWindow;
+            ExecuteLifecycleSafe(phase, "close-launcher-bubble-window", bubbleWindow.Close);
             _bubbleWindow = null;
         }
-        if (_rollCallWindow != null)
+        if (exitPlan.ShouldCloseRollCallWindow && _rollCallWindow != null)
         {
-            _rollCallWindow.RequestClose();
+            var rollCallWindow = _rollCallWindow;
+            ExecuteLifecycleSafe(phase, "close-rollcall-window", rollCallWindow.RequestClose);
             _rollCallWindow = null;
         }
         
-        _paintWindowOrchestrator.Close();
-        /*
-        if (_overlayWindow != null)
-        {
-            try { _overlayWindow.Close(); } catch { }
-            // _overlayWindow = null; // Property now
-        }
-        if (_toolbarWindow != null)
-        {
-            try { _toolbarWindow.Close(); } catch { }
-            // _toolbarWindow = null; // Property now
-        }
-        */
-        System.Windows.Application.Current.Shutdown();
+        ExecuteLifecycleSafe(phase, "close-paint-window-orchestrator", _paintWindowOrchestrator.Close);
+        ExecuteLifecycleSafe(phase, "shutdown-application", () => System.Windows.Application.Current.Shutdown());
+    }
+
+    private void ExecuteLifecycleSafe(string phase, string operation, Action action)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            action,
+            ex => System.Diagnostics.Debug.WriteLine(
+                LifecycleSafeExecutionDiagnosticsPolicy.FormatFailureMessage(
+                    phase,
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message)));
+    }
+
+    private void TryFixWindowBorders(Window window, string phase, string target)
+    {
+        ExecuteLifecycleSafe(
+            phase,
+            $"border-fix-{target}",
+            () =>
+            {
+                try
+                {
+                    BorderFixHelper.FixAllBorders(window);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        BorderFixDiagnosticsPolicy.FormatFailureMessage(
+                            phase,
+                            target,
+                            ex.GetType().Name,
+                            ex.Message));
+                }
+            });
+    }
+
+    private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
+    {
+        var result = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () => DialogShowResultStateUpdater.MarkFromDialogResult(ref result, dialog.SafeShowDialog()),
+            ex => System.Diagnostics.Debug.WriteLine(
+                DialogShowDiagnosticsPolicy.FormatFailureMessage(
+                    dialogName,
+                    ex.Message)));
+        return result;
+    }
+
+    private void ShowMainInfoMessageSafe(string operation, string message)
+    {
+        ExecuteLifecycleSafe(
+            "main-message",
+            operation,
+            () => System.Windows.MessageBox.Show(
+                this,
+                message,
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information));
     }
 
     private void SaveSettings()
@@ -377,17 +714,20 @@ public partial class MainWindow : Window
                 _settings.StylusPressureCalibratedHigh = calibratedHigh;
             }
             _settingsService.Save(_settings);
-            _settingsSaveFailedNotified = false;
+            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
         }
         catch (Exception ex)
         {
-            if (_settingsSaveFailedNotified)
+            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
+                ref _settingsSaveFailedNotified,
+                notificationPlan);
+            if (!notificationPlan.ShouldNotify)
             {
                 return;
             }
-            _settingsSaveFailedNotified = true;
             var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
-            System.Windows.MessageBox.Show(this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowMainInfoMessageSafe("settings-save-failed", detail);
         }
     }
 
@@ -400,29 +740,12 @@ public partial class MainWindow : Window
     {
         try
         {
-            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            void AddIfValid(string? path)
-            {
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    return;
-                }
-                if (Directory.Exists(path))
-                {
-                    candidates.Add(path);
-                }
-            }
-
-            AddIfValid(AppDomain.CurrentDomain.BaseDirectory);
-            AddIfValid(_settings.InkPhotoRootPath);
-            foreach (var folder in _settings.PhotoRecentFolders ?? new List<string>())
-            {
-                AddIfValid(folder);
-            }
-            foreach (var folder in _settings.PhotoFavoriteFolders ?? new List<string>())
-            {
-                AddIfValid(folder);
-            }
+            var candidates = InkCleanupCandidateDirectoryPolicy.Resolve(
+                AppDomain.CurrentDomain.BaseDirectory,
+                _settings.InkPhotoRootPath,
+                _settings.PhotoRecentFolders,
+                _settings.PhotoFavoriteFolders,
+                Directory.Exists);
 
             var totalSidecars = 0;
             var totalComposites = 0;
@@ -431,29 +754,36 @@ public partial class MainWindow : Window
                 totalSidecars += _inkPersistenceService.CleanupOrphanSidecarsInDirectory(directory);
                 totalComposites += _inkExportService.CleanupOrphanCompositeOutputsInDirectory(directory);
             }
-
-            if (totalSidecars > 0 || totalComposites > 0)
+            var summary = new InkStartupCleanupSummary(
+                TotalSidecars: totalSidecars,
+                TotalComposites: totalComposites);
+            if (InkStartupCleanupLogPolicy.ShouldLogDeletionSummary(summary))
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[InkStartupCleanup] deleted orphan sidecars={totalSidecars}, composites={totalComposites}");
+                System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatDeletionSummary(summary));
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[InkStartupCleanup] failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatFailureMessage(ex.Message));
         }
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_allowClose)
+        var closingPlan = MainWindowOnClosingPlanPolicy.Resolve(_allowClose);
+        if (!closingPlan.ShouldCancelClose)
         {
             return;
         }
-        e.Cancel = true;
-        RequestExit();
+        e.Cancel = closingPlan.ShouldCancelClose;
+        if (closingPlan.ShouldRequestExit)
+        {
+            RequestExit();
+        }
     }
 }
+
+
 
 
 

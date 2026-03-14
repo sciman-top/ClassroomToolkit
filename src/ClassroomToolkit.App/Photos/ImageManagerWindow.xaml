@@ -17,80 +17,95 @@
         <local:FolderVisibilityConverter x:Key="FolderVisibilityConverter"/>
         <local:FileVisibilityConverter x:Key="FileVisibilityConverter"/>
         <local:PdfBackgroundConverter x:Key="PdfBackgroundConverter"/>
+        <Style x:Key="ImageTileListViewItemStyle"
+               TargetType="ListViewItem"
+               BasedOn="{StaticResource Style_ListViewItem_SelectionUnified}">
+            <Setter Property="Padding" Value="0"/>
+        </Style>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid" Background="{StaticResource Brush_Window_Atmosphere}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="LeftColumn" Width="2*" MinWidth="220" MaxWidth="520"/>
-            <ColumnDefinition x:Name="SplitterColumn" Width="6"/>
-            <ColumnDefinition x:Name="RightColumn" Width="5*" MinWidth="560"/>
-        </Grid.ColumnDefinitions>
-
-        <Grid Grid.Column="0">
+    <Border Style="{StaticResource Style_ManagementShellWindowBorder}">
+        <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition x:Name="FavoritesRow" Height="1*" MinHeight="120"/>
-                <RowDefinition x:Name="RecentsRow" Height="1*" MinHeight="120"/>
-                <RowDefinition x:Name="FolderTreeRow" Height="2*" MinHeight="180"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                    <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
+                    <TextBlock Text="资源与名单管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                </StackPanel>
+            </Grid>
+            <Border Grid.Row="0" Style="{StaticResource Style_ManagementShellDivider}"/>
+
+            <Grid x:Name="RootGrid" Grid.Row="1" Margin="0,4,0,0" Background="{x:Null}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="LeftColumn" Width="2*" MinWidth="240" MaxWidth="520"/>
+                    <ColumnDefinition x:Name="SplitterColumn" Width="6"/>
+                    <ColumnDefinition x:Name="RightColumn" Width="5*" MinWidth="560"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition x:Name="FavoritesRow" Height="Auto" MinHeight="64"/>
+                        <RowDefinition x:Name="RecentsRow" Height="Auto" MinHeight="64"/>
+                        <RowDefinition x:Name="FolderTreeRow" Height="*" MinHeight="220"/>
+                    </Grid.RowDefinitions>
 
             <!-- 1. 收藏夹 -->
             <Border Grid.Row="0" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="12" Margin="12,12,3,6" CornerRadius="8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="收藏夹" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-                        <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
-                        <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
-                    </StackPanel>
-                    <ListBox Grid.Row="2" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
-                </Grid>
+                    BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="8">
+                <Expander Header="收藏夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
+                    <Grid Margin="0,8,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
+                            <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
+                        </StackPanel>
+                        <ListBox Grid.Row="1" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
+                                 MaxHeight="220"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    </Grid>
+                </Expander>
             </Border>
 
             <!-- 2. 最近目录 -->
             <Border Grid.Row="1" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="12" Margin="12,6,3,6" CornerRadius="8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="最近目录" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
-                    <ListBox Grid.Row="1" x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
+                    BorderThickness="1" Padding="8,6" Margin="12,6,3,6" CornerRadius="8">
+                <Expander Header="最近目录" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                    <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
+                             Margin="0,8,0,0"
+                             MaxHeight="180"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
-                </Grid>
+                </Expander>
             </Border>
 
             <!-- 3. 此电脑 -->
             <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="12" Margin="12,6,3,12" CornerRadius="8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="此电脑" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,6"/>
-                    <TreeView Grid.Row="1" x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
+                    BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="8">
+                <Expander Header="此电脑" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
+                    <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
+                              Margin="0,8,0,0"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                               Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
                         <!-- Global TreeViewItem style applied automatically -->
                     </TreeView>
-                </Grid>
+                </Expander>
             </Border>
-        </Grid>
+                </Grid>
 
-        <GridSplitter x:Name="MainColumnSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"
-                      ShowsPreview="True" DragCompleted="OnMainColumnSplitterDragCompleted"/>
+                <GridSplitter x:Name="MainColumnSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"
+                              ShowsPreview="True" DragCompleted="OnMainColumnSplitterDragCompleted"/>
 
-        <Border Grid.Column="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
-            <DockPanel>
+                <Border Grid.Column="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
+                    <DockPanel>
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Border Background="{StaticResource Brush_Background_L3}" BorderBrush="{StaticResource Brush_Border}"
@@ -102,67 +117,52 @@
 
                 <!-- 工具栏 -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,12,8">
-                    <WrapPanel x:Name="ToolbarWrapPanel" Orientation="Horizontal" ItemHeight="30">
-                        <!-- 增加高度到 30，统一字体 13 -->
-                        <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
-                                Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                        <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,6,0"
-                                Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                        <Button x:Name="UpButton" Content="向上" Width="60" Height="30" Margin="0,0,12,0"
-                                Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                        <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
-                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
-                        <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="30" Margin="0,0,12,0"
-                                      Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
-                        <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
-                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
-                                ValueChanged="OnThumbnailSizeChanged" IsEnabled="{Binding IsThumbnailSizeSliderEnabled}"/>
-                        <CheckBox x:Name="ShowInkCheckBox" Content="显示笔迹" Margin="12,0,0,0"
-                                  Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
-                                  Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
-                    </WrapPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
+                                    Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                            <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,6,0"
+                                    Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                            <Button x:Name="UpButton" Content="向上" Width="60" Height="30" Margin="0,0,10,0"
+                                    Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
+                            <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
+                            <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="30" Margin="0,0,10,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
+                                    ValueChanged="OnThumbnailSizeChanged" IsEnabled="{Binding IsThumbnailSizeSliderEnabled}"/>
+                            <CheckBox x:Name="ShowInkCheckBox" Content="显示笔迹" Margin="12,0,0,0"
+                                      Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
+                                      Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
+                        </StackPanel>
+                    </Grid>
                 </DockPanel>
 
-                <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top" Text="请选择左侧文件夹查看图片"
+                <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top" Text="未选择目录或目录为空，请在左侧选择文件夹后查看。"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
                     <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
                               Background="Transparent" BorderThickness="0" 
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              Foreground="{StaticResource Brush_Text_Primary}">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,1"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListViewItem">
-                                            <Border x:Name="bd"
-                                                    Background="{TemplateBinding Background}"
-                                                    CornerRadius="4"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListView.ItemContainerStyle>
+                              Foreground="{StaticResource Brush_Text_Primary}"
+                              ItemContainerStyle="{StaticResource ImageTileListViewItemStyle}">
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel IsItemsHost="True" />
@@ -220,7 +220,16 @@
                         </ListView.View>
                     </ListView>
                 </Grid>
-            </DockPanel>
-        </Border>
-    </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
+                <Grid>
+                    <TextBlock Text="统一管理壳层：头部、内容区与底部信息栏已对齐。"
+                               Style="{StaticResource Style_ManagementShellFooterText}"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

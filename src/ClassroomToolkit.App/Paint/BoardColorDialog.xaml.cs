@@ -43,8 +43,8 @@ public partial class BoardColorDialog : Window
                 Margin = new Thickness(0, 0, 8, 0),
                 Background = new SolidColorBrush(option.Color),
                 Foreground = new SolidColorBrush(GetContrastingColor(option.Color)),
-                BorderBrush = new SolidColorBrush(MediaColor.FromArgb(40, 0, 0, 0)),
-                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(GetContrastBorderColor(option.Color)),
+                BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
                 FontWeight = FontWeights.SemiBold,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 // 为了简单，我们直接设置圆角
@@ -97,6 +97,19 @@ public partial class BoardColorDialog : Window
     {
         var luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B;
         return luminance >= 160 ? Colors.Black : Colors.White;
+    }
+
+    private static MediaColor GetContrastBorderColor(MediaColor color)
+    {
+        return IsDarkColor(color)
+            ? MediaColor.FromArgb(220, 255, 255, 255)
+            : MediaColor.FromArgb(100, 0, 0, 0);
+    }
+
+    private static bool IsDarkColor(MediaColor color)
+    {
+        var luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B;
+        return luminance < 70;
     }
 }
 

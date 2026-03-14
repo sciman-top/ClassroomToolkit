@@ -13,7 +13,6 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
-using ClassroomToolkit.Interop;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -103,8 +102,8 @@ public partial class PaintOverlayWindow
         var height = Math.Abs(end.Y - start.Y);
         Canvas.SetLeft(rect, left);
         Canvas.SetTop(rect, top);
-        rect.Width = Math.Max(1, width);
-        rect.Height = Math.Max(1, height);
+        rect.Width = Math.Max(InkGeometryDefaults.MinSelectionRectSideDip, width);
+        rect.Height = Math.Max(InkGeometryDefaults.MinSelectionRectSideDip, height);
     }
 
     private static Rect BuildRegionRect(WpfPoint start, WpfPoint end)
@@ -113,7 +112,11 @@ public partial class PaintOverlayWindow
         var top = Math.Min(start.Y, end.Y);
         var width = Math.Abs(end.X - start.X);
         var height = Math.Abs(end.Y - start.Y);
-        return new Rect(left, top, Math.Max(1, width), Math.Max(1, height));
+        return new Rect(
+            left,
+            top,
+            Math.Max(InkGeometryDefaults.MinSelectionRectSideDip, width),
+            Math.Max(InkGeometryDefaults.MinSelectionRectSideDip, height));
     }
 
     private static List<InkStrokeData> CloneInkStrokes(IEnumerable<InkStrokeData> source)
@@ -200,7 +203,7 @@ public partial class PaintOverlayWindow
         var stroke = new SolidColorBrush(EffectiveBrushColor());
         stroke.Freeze();
         shape.Stroke = stroke;
-        shape.StrokeThickness = Math.Max(1, _brushSize);
+        shape.StrokeThickness = Math.Max(InkGeometryDefaults.MinShapeStrokeThicknessDip, _brushSize);
         shape.StrokeStartLineCap = PenLineCap.Round;
         shape.StrokeEndLineCap = PenLineCap.Round;
         shape.StrokeLineJoin = PenLineJoin.Round;
@@ -229,8 +232,8 @@ public partial class PaintOverlayWindow
         {
             Canvas.SetLeft(shape, left);
             Canvas.SetTop(shape, top);
-            shape.Width = Math.Max(1, width);
-            shape.Height = Math.Max(1, height);
+            shape.Width = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, width);
+            shape.Height = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, height);
         }
     }
 
@@ -252,7 +255,7 @@ public partial class PaintOverlayWindow
     {
         var brush = new SolidColorBrush(EffectiveBrushColor());
         brush.Freeze();
-        var pen = new MediaPen(brush, Math.Max(1.0, _brushSize))
+        var pen = new MediaPen(brush, Math.Max(InkGeometryDefaults.MinPenThicknessDip, _brushSize))
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
@@ -269,9 +272,9 @@ public partial class PaintOverlayWindow
 
     private Geometry? BuildEraserGeometry(WpfPoint start, WpfPoint end)
     {
-        var radius = Math.Max(2.0, _eraserSize * 0.5);
+        var radius = Math.Max(InkGeometryDefaults.MinEraserRadiusDip, _eraserSize * 0.5);
         var delta = end - start;
-        if (delta.Length < 0.5)
+        if (delta.Length < InkGeometryDefaults.EraserTapDistanceThresholdDip)
         {
             return new EllipseGeometry(start, radius, radius);
         }
@@ -281,7 +284,7 @@ public partial class PaintOverlayWindow
             ctx.BeginFigure(start, isFilled: false, isClosed: false);
             ctx.LineTo(end, isStroked: true, isSmoothJoin: true);
         }
-        var pen = new MediaPen(MediaBrushes.Black, Math.Max(1.0, _eraserSize))
+        var pen = new MediaPen(MediaBrushes.Black, Math.Max(InkGeometryDefaults.MinPenThicknessDip, _eraserSize))
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,

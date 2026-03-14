@@ -3,21 +3,17 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Interop;
-using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
-
-using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintToolbarWindow : Window
 {
-    private IntPtr _hwnd;
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
     private double _brushSize = 12;
@@ -28,7 +24,7 @@ public partial class PaintToolbarWindow : Window
     private bool _boardActive;
     private MediaColor _boardColor = Colors.White;
     private PaintOverlayWindow? _overlay;
-    private double _uiScale = 1.0;
+    private double _uiScale = ToolbarScaleDefaults.Default;
     private bool _modeInitialized;
     private PaintToolMode _currentMode = PaintToolMode.Brush;
     public event Action<PaintToolMode>? ModeChanged;
@@ -72,12 +68,6 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(0, Colors.Black);
         SetQuickColorSlot(1, Colors.Red);
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
-        SourceInitialized += (_, _) =>
-        {
-            _hwnd = new WindowInteropHelper(this).Handle;
-            // 不再应用 WS_EX_NOACTIVATE，以允许工具栏窗口正常获得焦点和用户交互
-            // ApplyNoActivate();
-        };
         PreviewKeyDown += OnPreviewKeyDown;
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
         IsVisibleChanged += (_, _) =>
@@ -135,20 +125,9 @@ public partial class PaintToolbarWindow : Window
         _overlay = overlay;
     }
 
-    public void SyncTopmost(bool enabled)
-    {
-        Topmost = enabled;
-        if (_hwnd == IntPtr.Zero)
-        {
-            return;
-        }
-        var insertAfter = enabled ? NativeMethods.HwndTopmost : NativeMethods.HwndNoTopmost;
-        NativeMethods.SetWindowPos(_hwnd, insertAfter, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
-    }
-
     private void ApplyUiScale(double scale)
     {
-        _uiScale = Math.Max(0.8, Math.Min(2.0, scale));
+        _uiScale = Math.Max(ToolbarScaleDefaults.Min, Math.Min(ToolbarScaleDefaults.Max, scale));
         if (ToolbarContainer != null)
         {
             ToolbarContainer.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
@@ -177,6 +156,7 @@ public partial class PaintToolbarWindow : Window
         if (ReferenceEquals(sender, RegionEraseButton))
         {
             UpdateToolButtons(PaintToolMode.RegionErase);
+            return;
         }
     }
 
@@ -329,7 +309,7 @@ public partial class PaintToolbarWindow : Window
         {
             Owner = this
         };
-        if (dialog.ShowDialog() != true || dialog.SelectedColor == null)
+        if (!TryShowDialogWithDiagnostics(dialog, nameof(BoardColorDialog)) || dialog.SelectedColor == null)
         {
             return;
         }
@@ -392,7 +372,7 @@ public partial class PaintToolbarWindow : Window
             picker.Left = anchor.X;
             picker.Top = anchor.Y;
         }
-        if (picker.ShowDialog() != true || picker.SelectedColor == null)
+        if (!TryShowDialogWithDiagnostics(picker, nameof(QuickColorPaletteWindow)) || picker.SelectedColor == null)
         {
             return;
         }
@@ -422,6 +402,18 @@ public partial class PaintToolbarWindow : Window
         }
         
         BrushColorChanged?.Invoke(color);
+    }
+
+    private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
+    {
+        var result = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () => result = dialog.SafeShowDialog() == true,
+            ex => System.Diagnostics.Debug.WriteLine(
+                DialogShowDiagnosticsPolicy.FormatFailureMessage(
+                    dialogName,
+                    ex.Message)));
+        return result;
     }
 
     private void SetQuickColorSlot(int index, MediaColor color)
@@ -578,44 +570,18 @@ public partial class PaintToolbarWindow : Window
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         var key = e.Key;
-        if (_overlay != null && _overlay.TryHandlePhotoKey(key))
-        {
-            e.Handled = true;
-            return;
-        }
-        if (_overlay != null && (_overlay.IsPhotoModeActive || _overlay.IsWhiteboardActive))
+        var overlay = _overlay;
+        if (overlay == null)
         {
             return;
         }
-        // 只转发演示文稿导航键
-        bool isNavigationKey = key == System.Windows.Input.Key.Left ||
-                               key == System.Windows.Input.Key.Right ||
-                               key == System.Windows.Input.Key.Up ||
-                               key == System.Windows.Input.Key.Down ||
-                               key == System.Windows.Input.Key.PageUp ||
-                               key == System.Windows.Input.Key.PageDown ||
-                               key == System.Windows.Input.Key.Space ||
-                               key == System.Windows.Input.Key.Enter ||
-                               key == System.Windows.Input.Key.Home ||
-                               key == System.Windows.Input.Key.End;
 
-        if (!isNavigationKey)
-        {
-            return;
-        }
-        // 通知覆盖窗口转发到演示文稿
-        _overlay?.ForwardKeyboardToPresentation(key);
-        e.Handled = true;
-    }
-
-    private void ApplyNoActivate()
-    {
-        if (_hwnd == IntPtr.Zero)
-        {
-            return;
-        }
-        var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
-        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle | NativeMethods.WsExNoActivate);
+        e.Handled = AuxWindowKeyRoutingHandler.TryHandle(
+            key,
+            overlayVisible: overlay.IsVisible,
+            tryHandlePhotoKey: overlay.TryHandlePhotoKey,
+            canRoutePresentationInput: overlay.CanRoutePresentationInputFromAuxWindow(),
+            forwardPresentationKey: overlay.ForwardKeyboardToPresentation);
     }
 
 }

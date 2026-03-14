@@ -4,15 +4,21 @@ namespace ClassroomToolkit.App.Windowing;
 
 public sealed class WindowOrchestrator : IWindowOrchestrator
 {
-    public void TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface)
+    public bool TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface)
     {
         if (surface == ZOrderSurface.None)
         {
-            return;
+            return false;
+        }
+
+        if (surfaceStack.Count > 0 && surfaceStack[^1] == surface)
+        {
+            return false;
         }
 
         surfaceStack.Remove(surface);
         surfaceStack.Add(surface);
+        return true;
     }
 
     public void PruneSurfaceStack(

@@ -108,48 +108,33 @@ public partial class PaintOverlayWindow
         if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
             PhotoBackground.Source = null;
-            PhotoBackground.Visibility = Visibility.Collapsed;
+            RefreshPhotoBackgroundVisibility();
             return false;
         }
         try
         {
-            var bitmap = TryLoadBitmapSource(imagePath, downsampleToMonitor: _crossPageDisplayEnabled);
+            var bitmap = TryLoadBitmapSource(imagePath, downsampleToMonitor: IsCrossPageDisplayActive());
             if (bitmap == null)
             {
                 PhotoBackground.Source = null;
-                PhotoBackground.Visibility = Visibility.Collapsed;
+                RefreshPhotoBackgroundVisibility();
                 return false;
             }
             PhotoBackground.Source = bitmap;
-            PhotoBackground.Visibility = Visibility.Visible;
+            RefreshPhotoBackgroundVisibility();
             UpdateCurrentPageWidthNormalization(bitmap);
-            if (_crossPageDisplayEnabled)
+            if (IsCrossPageDisplayActive())
             {
-                if (_photoUnifiedTransformReady)
-                {
-                    EnsurePhotoTransformsWritable();
-                    _photoScale.ScaleX = _lastPhotoScaleX;
-                    _photoScale.ScaleY = _lastPhotoScaleY;
-                    _photoTranslate.X = _lastPhotoTranslateX;
-                    _photoTranslate.Y = _lastPhotoTranslateY;
-                }
-                else
-                {
-                    ApplyPhotoFitToViewport(bitmap);
-                }
+                ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: true);
                 return true;
             }
-            var appliedStored = TryApplyStoredPhotoTransform(GetCurrentPhotoTransformKey());
-            if (!appliedStored)
-            {
-                ApplyPhotoFitToViewport(bitmap);
-            }
+            ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
             return true;
         }
         catch
         {
             PhotoBackground.Source = null;
-            PhotoBackground.Visibility = Visibility.Collapsed;
+            RefreshPhotoBackgroundVisibility();
             return false;
         }
     }
@@ -165,10 +150,7 @@ public partial class PaintOverlayWindow
         {
             PhotoLoadingOverlay.Visibility = Visibility.Visible;
         }
-        if (OverlayRoot != null)
-        {
-            OverlayRoot.IsHitTestVisible = false;
-        }
+        UpdateOverlayHitTestVisibility();
     }
 
     private void HidePhotoLoadingOverlay()
@@ -178,9 +160,6 @@ public partial class PaintOverlayWindow
         {
             PhotoLoadingOverlay.Visibility = Visibility.Collapsed;
         }
-        if (OverlayRoot != null)
-        {
-            OverlayRoot.IsHitTestVisible = _mode != PaintToolMode.Cursor || _photoModeActive;
-        }
+        UpdateOverlayHitTestVisibility();
     }
 }

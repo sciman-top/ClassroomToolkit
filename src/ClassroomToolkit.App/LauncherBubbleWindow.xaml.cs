@@ -1,10 +1,8 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Helpers;
-
-using ClassroomToolkit.Interop;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -51,11 +49,17 @@ public partial class LauncherBubbleWindow : Window
 
     private void SetWindowNoActivate()
     {
-        if (_hwnd != IntPtr.Zero)
+        if (_hwnd == IntPtr.Zero)
         {
-            var exStyle = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GwlExstyle);
-            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GwlExstyle, exStyle | NativeMethods.WsExNoActivate | NativeMethods.WsExToolWindow);
+            return;
         }
+
+        _ = WindowStyleExecutor.TryUpdateStyleBits(
+            _hwnd,
+            WindowStyleBitMasks.GwlExStyle,
+            setMask: WindowStyleBitMasks.WsExNoActivate | WindowStyleBitMasks.WsExToolWindow,
+            clearMask: 0,
+            out _);
     }
 
     public event Action? RestoreRequested;
@@ -185,7 +189,7 @@ public partial class LauncherBubbleWindow : Window
         else
         {
             // 拖动结束：延迟吸附到边缘，避免卡顿
-            Dispatcher.BeginInvoke(new Action(() =>
+            _ = Dispatcher.InvokeAsync(new Action(() =>
             {
                 try
                 {

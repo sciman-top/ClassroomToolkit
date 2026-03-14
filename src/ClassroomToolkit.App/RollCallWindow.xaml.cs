@@ -17,12 +17,13 @@ using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Timers;
-using ClassroomToolkit.Interop;
-using System.Runtime.InteropServices;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.RollCall;
+using ClassroomToolkit.App.Windowing;
 using System.Windows.Interop;
+using ClassroomToolkit.Application.UseCases.RollCall;
 
 namespace ClassroomToolkit.App;
 
@@ -41,8 +42,10 @@ public partial class RollCallWindow : Window
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly ClassroomToolkit.Services.Input.GlobalHookService _hookService;
+    private readonly RollCallRemoteHookCoordinator _remoteHookCoordinator;
     private readonly ClassroomToolkit.Services.Speech.SpeechService _speechService;
     private readonly string _dataPath;
+    private readonly RollCallWorkbookUseCase _rollCallWorkbookUseCase;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _rollStateSaveTimer;
     private readonly DispatcherTimer _windowBoundsSaveTimer;
@@ -64,8 +67,9 @@ public partial class RollCallWindow : Window
     private bool _settingsSaveFailedNotified;
     private bool _hovering;
     private bool _windowBoundsDirty;
-    private DateTime _suppressRollUntil = DateTime.MinValue;
+    private DateTime _suppressRollUntil = RollCallRuntimeDefaults.UnsetTimestampUtc;
     private IntPtr _hwnd;
+    private bool? _lastTransparentStyleEnabled;
     private readonly DispatcherTimer _hoverCheckTimer;
     
     public ICommand OpenRemoteKeyCommand { get; }
@@ -81,17 +85,23 @@ public partial class RollCallWindow : Window
         AppSettingsService settingsService, 
         AppSettings settings,
         ClassroomToolkit.Services.Input.GlobalHookService hookService,
-        ClassroomToolkit.Services.Speech.SpeechService speechService)
+        ClassroomToolkit.Services.Speech.SpeechService speechService,
+        RollCallWorkbookUseCase rollCallWorkbookUseCase)
     {
         InitializeComponent();
         _dataPath = dataPath;
         _settingsService = settingsService;
         _settings = settings;
         _hookService = hookService;
+        _remoteHookCoordinator = new RollCallRemoteHookCoordinator(
+            RegisterRemoteHookAsync,
+            RollCallRemoteHookBindingPolicy.ResolveTokens,
+            () => _hookService.UnregisterAll());
         _speechService = speechService;
+        _rollCallWorkbookUseCase = rollCallWorkbookUseCase;
         ApplyWindowBounds(settings);
         
-        _viewModel = new RollCallViewModel(dataPath);
+        _viewModel = new RollCallViewModel(dataPath, _rollCallWorkbookUseCase);
         DataContext = _viewModel;
         _viewModel.GroupButtons.CollectionChanged += (_, _) => UpdateMinWindowSize();
         
@@ -160,7 +170,77 @@ public partial class RollCallWindow : Window
     public void RequestClose()
     {
         _allowClose = true;
-        Close();
+        ExecuteRollCallSafe("request-close", Close);
+    }
+
+    private void ExecuteRollCallSafe(string operation, Action action)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            action,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatWindowLifecycleFailureMessage(
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message)));
+    }
+
+    private bool TryShowDialogSafe(Window dialog, string dialogName)
+    {
+        var result = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () => result = dialog.SafeShowDialog() == true,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatDialogShowFailureMessage(
+                    dialogName,
+                    ex.GetType().Name,
+                    ex.Message)));
+        return result;
+    }
+
+    private void ShowRollCallInfoMessageSafe(string operation, string message, Window? owner = null)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            () => System.Windows.MessageBox.Show(
+                owner ?? this,
+                message,
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information),
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatWindowLifecycleFailureMessage(
+                    $"messagebox-{operation}",
+                    ex.GetType().Name,
+                    ex.Message)));
+    }
+
+    private bool TryShowRollCallConfirmationSafe(string operation, string prompt)
+    {
+        var confirmed = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                var result = System.Windows.MessageBox.Show(
+                    this,
+                    prompt,
+                    "提示",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Question);
+                confirmed = result == MessageBoxResult.OK;
+            },
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatConfirmationFailureMessage(
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message)));
+        return confirmed;
+    }
+
+    private Task<bool> RegisterRemoteHookAsync(
+        IEnumerable<string> tokens,
+        Action callback,
+        Func<bool> shouldKeepActive)
+    {
+        return _hookService.RegisterHookAsync(tokens, callback, shouldKeepActive);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -173,6 +253,7 @@ public partial class RollCallWindow : Window
         {
             _initialized = true;
             ApplySettings(_settings, updatePhoto: false);
+            _viewModel.WarmupData(_dataPath);
             await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
             RestoreGroupSelection();
             // 启动时不显示之前点名状态的学生照片，避免意外显示
@@ -189,14 +270,15 @@ public partial class RollCallWindow : Window
         catch (Exception ex)
         {
             _initialized = false;
-            System.Diagnostics.Debug.WriteLine($"RollCallWindow 初始化失败: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatInitializationFailureMessage(
+                    ex.GetType().Name,
+                    ex.Message));
             var owner = System.Windows.Application.Current?.MainWindow;
-            System.Windows.MessageBox.Show(
-                owner ?? this,
+            ShowRollCallInfoMessageSafe(
+                "initialize",
                 "点名窗口初始化失败，请稍后重试。",
-                "提示",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                owner);
         }
     }
 }

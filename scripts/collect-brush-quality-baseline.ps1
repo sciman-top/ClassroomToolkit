@@ -9,6 +9,29 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Invoke-DotnetWithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+        [int]$MaxAttempts = 3,
+        [int]$RetryDelaySeconds = 2
+    )
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        & dotnet @Arguments
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+
+        if ($attempt -ge $MaxAttempts) {
+            throw "dotnet $($Arguments -join ' ') failed after $MaxAttempts attempts (exit=$LASTEXITCODE)."
+        }
+
+        Write-Host "dotnet $($Arguments -join ' ') 失败，$RetryDelaySeconds 秒后重试 ($attempt/$MaxAttempts)..." -ForegroundColor Yellow
+        Start-Sleep -Seconds $RetryDelaySeconds
+    }
+}
+
 function Read-TrxCounters {
     param(
         [Parameter(Mandatory = $true)]
@@ -57,7 +80,7 @@ function Invoke-TestBatch {
     Write-Host "    Filter: $Filter" -ForegroundColor DarkGray
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $null = & dotnet test $ProjectPath -c $BuildConfig --no-build --filter $Filter --logger "trx;LogFileName=$trxName" --results-directory $RunDirectory *>&1 | Tee-Object -FilePath $logPath
+    $null = & dotnet test $ProjectPath -c $BuildConfig --no-build -m:1 --filter $Filter --logger "trx;LogFileName=$trxName" --results-directory $RunDirectory *>&1 | Tee-Object -FilePath $logPath
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
@@ -88,18 +111,12 @@ Write-Host "    Output directory: $runDirectory" -ForegroundColor DarkGray
 
 if (-not $SkipRestore) {
     Write-Host "==> Restoring packages" -ForegroundColor Cyan
-    dotnet restore
-    if ($LASTEXITCODE -ne 0) {
-        throw "dotnet restore failed with exit code $LASTEXITCODE"
-    }
+    Invoke-DotnetWithRetry -Arguments @("restore")
 }
 
 if (-not $SkipBuild) {
     Write-Host "==> Building test project" -ForegroundColor Cyan
-    dotnet build $TestProject -c $Configuration
-    if ($LASTEXITCODE -ne 0) {
-        throw "dotnet build failed with exit code $LASTEXITCODE"
-    }
+    Invoke-DotnetWithRetry -Arguments @("build", $TestProject, "-c", $Configuration, "-m:1")
 }
 
 $batches = @(

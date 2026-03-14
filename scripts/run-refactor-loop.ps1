@@ -9,10 +9,15 @@ param(
     [int]$MaxIterations = 10,
     [int]$MaxNoProgress = 3,
     [int]$MaxNonCodeProgress = 2,
+    [int]$MaxExecFailuresPerTask = 1,
+    [int]$MaxNoProgressPerTask = 1,
     [int]$MaxAutoRecoverPerTask = 1,
     [int]$IterationTimeoutSeconds = 900,
     [int]$IdleTimeoutSeconds = 120,
     [int]$LockStaleAfterMinutes = 30,
+    [ValidateSet("compact", "full")]
+    [string]$PromptProfile = "compact",
+    [switch]$SkipManualGates,
     [switch]$DryRun
 )
 
@@ -112,6 +117,8 @@ $stateUpdaterPath = Join-Path $repoPath "scripts/refactor/update-refactor-state.
 $reconciliationCheckPath = Join-Path $repoPath "scripts/refactor/test-governing-reconciliation.ps1"
 $consistencyCheckPath = Join-Path $repoPath "scripts/refactor/check-doc-consistency.ps1"
 $loopLogRoot = Join-Path $repoPath (Join-Path ".codex/logs/refactor-loop" $Mode)
+$uiProgressDocPath = Join-Path $repoPath "docs/validation/ui-window-system-progress.md"
+$uiAcceptanceDocPath = Join-Path $repoPath "docs/validation/ui-window-system-acceptance.md"
 
 New-Item -ItemType Directory -Force -Path $loopLogRoot | Out-Null
 
@@ -465,7 +472,7 @@ function Get-ObservableReport {
         }
     }
 
-    $lines = Get-Content -LiteralPath $StdoutPath -Encoding UTF8
+    $lines = @(Get-Content -LiteralPath $StdoutPath -Encoding UTF8)
     $status = $null
     $sections = @()
 
@@ -660,6 +667,63 @@ function Write-IterationProgress {
     Write-Host "omitted: $($progress.omitted)"
 }
 
+function Append-LineToDoc {
+    param(
+        [string]$Path,
+        [string]$Line
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or [string]::IsNullOrWhiteSpace($Line)) {
+        return
+    }
+
+    $directory = Split-Path -Parent $Path
+    if (-not [string]::IsNullOrWhiteSpace($directory) -and -not (Test-Path -LiteralPath $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        Set-Content -LiteralPath $Path -Value "$Line`r`n" -Encoding UTF8
+        return
+    }
+
+    Add-Content -LiteralPath $Path -Value $Line -Encoding UTF8
+}
+
+function Handle-ManualGateSkip {
+    param(
+        [string]$TaskId,
+        [string]$TaskTitle,
+        [string]$GateId
+    )
+
+    $timestamp = [DateTime]::UtcNow.ToString("o")
+    $summary = "Manual gate '$GateId' skipped by wrapper flag -SkipManualGates for task '$TaskId'."
+    $evidenceDocRelative = ""
+    if ($Mode -eq "ui-window-system") {
+        $progressLine = "- $timestamp [gate-skip] $TaskId ($TaskTitle) gate=$GateId reason=skip-manual-gates"
+        $acceptanceLine = "- $timestamp [gate-skip] gate=$GateId task=$TaskId evidence=skip-manual-gates"
+        Append-LineToDoc -Path $uiProgressDocPath -Line $progressLine
+        Append-LineToDoc -Path $uiAcceptanceDocPath -Line $acceptanceLine
+        $evidenceDocRelative = "docs/validation/ui-window-system-acceptance.md"
+    }
+
+    & powershell -File $stateUpdaterPath `
+        -Action gate-skip `
+        -StateFile $StateFile `
+        -TaskId $TaskId `
+        -Summary $summary `
+        -Reason $GateId `
+        -EvidenceDoc $evidenceDocRelative `
+        -Mode $Mode `
+        -ModeFamily ([string]$modeInfo.mode_family) | Out-Null
+
+    Write-Host "MANUAL_GATE_SKIPPED"
+    Write-Host "task_id: $TaskId"
+    Write-Host "gate_id: $GateId"
+    Write-Host "evidence_doc: $(if ([string]::IsNullOrWhiteSpace($evidenceDocRelative)) { 'none' } else { $evidenceDocRelative })"
+}
+
 function Get-SectionFields {
     param(
         $ObservableReport,
@@ -716,6 +780,103 @@ function Test-HasCodeLikeChanges {
     }
 
     return $false
+}
+
+function New-IterationPrompt {
+    param(
+        [string]$TodayIso,
+        [string]$SkillPathValue,
+        [string]$RepoPath,
+        [string]$ModeId,
+        [string]$ModeFamily,
+        [string]$TaskFilePath,
+        [string]$StateFilePath,
+        [string]$ConfigFilePath,
+        [string]$TaskIdValue,
+        [string]$TaskTitleValue,
+        [bool]$Resume,
+        [string]$PromptProfileValue,
+        [int]$OwnerPid,
+        [string]$LoopId
+    )
+
+    if ($PromptProfileValue -eq "full") {
+        return @"
+Today is $TodayIso.
+
+Read and follow this skill first:
+- $SkillPathValue
+
+Execute one unattended autonomous execution iteration for ClassroomToolkit using the existing repo-local refactor adaptation layer.
+
+Execution context:
+- repo_root: $RepoPath
+- mode_id: $ModeId
+- mode_family: $ModeFamily
+- task_file: $TaskFilePath
+- state_file: $StateFilePath
+- config_file: $(if ([string]::IsNullOrWhiteSpace($ConfigFilePath)) { 'none' } else { $ConfigFilePath })
+- wrapper_file: scripts/run-refactor-loop.ps1
+- selected_task_id: $TaskIdValue
+- selected_task_title: $TaskTitleValue
+- resume: $Resume
+
+Lock context:
+- lock_file: .codex/refactor-loop.lock.json
+- wrapper_owner_pid: $OwnerPid
+- wrapper_loop_run_id: $LoopId
+- treat this lock as same-loop ownership unless it points to a different live owner
+
+Required behavior:
+- reuse the resolved repo-local mode files above; do not bootstrap a second execution layer
+- use staged reading; read the execution layer first and only read the minimum governing docs needed for this task
+- if the task is unsuitable or missing prerequisites, emit the correct blocker status and do not force execution
+- otherwise complete the smallest safe closure path, verify it, and update state/tasks as needed
+- if the task is too large, split it into child tasks and defer the parent
+- do not revert unrelated existing user changes
+- do not emit ALL_AUTOMATABLE_TASKS_DONE unless the resolved mode is truly at its final manual-regression or acceptance gate
+- emit EXECUTION_PLAN, RESULT_SUMMARY, and exactly one STATUS line
+"@
+    }
+
+    return @"
+Today is $TodayIso.
+Follow this skill:
+- $SkillPathValue
+
+Run exactly one unattended iteration for ClassroomToolkit.
+Context:
+- repo_root: $RepoPath
+- mode_id: $ModeId
+- mode_family: $ModeFamily
+- task_file: $TaskFilePath
+- state_file: $StateFilePath
+- config_file: $(if ([string]::IsNullOrWhiteSpace($ConfigFilePath)) { 'none' } else { $ConfigFilePath })
+- selected_task_id: $TaskIdValue
+- selected_task_title: $TaskTitleValue
+- resume: $Resume
+- wrapper_owner_pid: $OwnerPid
+- wrapper_loop_run_id: $LoopId
+
+Rules:
+- Reuse existing repo-local execution files. Do not bootstrap another layer.
+- Read only minimum required files for this task.
+- If unsuitable/missing prerequisites, stop with STATUS: BLOCKED_NEEDS_HUMAN.
+- Otherwise finish the smallest safe closure path with required verification and state/task updates.
+- If too large, split into child tasks and defer parent.
+- Do not revert unrelated local changes.
+- Keep output compact. Do not print command transcripts or long prose.
+
+Output contract (strict):
+EXECUTION_PLAN
+- short bullets only (max 6 lines)
+RESULT_SUMMARY
+final_status: <completed|blocked|deferred|in_progress|pending|omitted>
+files_changed: <comma-separated repo-relative paths or none>
+verification_result: <pass|fail|pre_existing_failure|not_run>
+next_action: <one short line>
+STATUS: <ITERATION_COMPLETE_CONTINUE|BLOCKED_NEEDS_HUMAN|NO_ELIGIBLE_TASK|ALL_AUTOMATABLE_TASKS_DONE>
+"@
 }
 
 function Test-IsRecoverableBlock {
@@ -892,6 +1053,8 @@ $noProgressCount = 0
 $nonCodeProgressCount = 0
 $autoRecoverAttempts = @{}
 $autoRecoverHints = @{}
+$execFailuresByTask = @{}
+$noProgressByTask = @{}
 Acquire-LoopLock -Path $lockFilePath -StaleAfterMinutes $LockStaleAfterMinutes
 
 try {
@@ -937,6 +1100,16 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
 
     $taskId = [string]$selection.id
     $taskTitle = [string]$selection.title
+    $manualGateId = $null
+    if ($null -ne $selection.PSObject.Properties["manual_gate"] -and -not [string]::IsNullOrWhiteSpace([string]$selection.manual_gate)) {
+        $manualGateId = [string]$selection.manual_gate
+    }
+
+    if ($SkipManualGates.IsPresent -and -not [string]::IsNullOrWhiteSpace($manualGateId)) {
+        Handle-ManualGateSkip -TaskId $taskId -TaskTitle $taskTitle -GateId $manualGateId
+        continue
+    }
+
     $script:CurrentIterationTaskId = $taskId
     $script:CurrentIterationFinalStatus = "unknown"
     $script:CurrentIterationCodeLikeChanges = $false
@@ -945,42 +1118,40 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
         $isResume = [bool]$selection.resume
     }
 
-    $prompt = @"
-Today is 2026-03-11.
+    $taskExecFailures = 0
+    if ($execFailuresByTask.ContainsKey($taskId)) {
+        $taskExecFailures = [int]$execFailuresByTask[$taskId]
+    }
 
-Read and follow this skill first:
-- $SkillPath
+    $taskNoProgressCount = 0
+    if ($noProgressByTask.ContainsKey($taskId)) {
+        $taskNoProgressCount = [int]$noProgressByTask[$taskId]
+    }
 
-Execute one unattended autonomous execution iteration for ClassroomToolkit using the existing repo-local refactor adaptation layer.
+    if ($taskExecFailures -ge $MaxExecFailuresPerTask -or $taskNoProgressCount -ge $MaxNoProgressPerTask) {
+        $budgetSummary = "Task execution budget exhausted (exec_failures=$taskExecFailures/$MaxExecFailuresPerTask, no_progress=$taskNoProgressCount/$MaxNoProgressPerTask)."
+        & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" | Out-Null
+        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Write-Host $budgetSummary
+        break
+    }
 
-Execution context:
-- repo_root: $repoPath
-- mode_id: $Mode
-- mode_family: $([string]$modeInfo.mode_family)
-- task_file: $TaskFile
-- state_file: $StateFile
-- config_file: $(if ([string]::IsNullOrWhiteSpace($ConfigFile)) { 'none' } else { $ConfigFile })
-- wrapper_file: scripts/run-refactor-loop.ps1
-- selected_task_id: $taskId
-- selected_task_title: $taskTitle
-- resume: $isResume
-
-Lock context:
-- lock_file: .codex/refactor-loop.lock.json
-- wrapper_owner_pid: $PID
-- wrapper_loop_run_id: $loopRunId
-- treat this lock as same-loop ownership unless it points to a different live owner
-
-Required behavior:
-- reuse the resolved repo-local mode files above; do not bootstrap a second execution layer
-- use staged reading; read the execution layer first and only read the minimum governing docs needed for this task
-- if the task is unsuitable or missing prerequisites, emit the correct blocker status and do not force execution
-- otherwise complete the smallest safe closure path, verify it, and update state/tasks as needed
-- if the task is too large, split it into child tasks and defer the parent
-- do not revert unrelated existing user changes
-- do not emit ALL_AUTOMATABLE_TASKS_DONE unless the resolved mode is truly at its final manual-regression or acceptance gate
-- emit EXECUTION_PLAN, RESULT_SUMMARY, and exactly one STATUS line
-"@
+    $todayIso = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+    $prompt = New-IterationPrompt `
+        -TodayIso $todayIso `
+        -SkillPathValue $SkillPath `
+        -RepoPath $repoPath `
+        -ModeId $Mode `
+        -ModeFamily ([string]$modeInfo.mode_family) `
+        -TaskFilePath $TaskFile `
+        -StateFilePath $StateFile `
+        -ConfigFilePath $ConfigFile `
+        -TaskIdValue $taskId `
+        -TaskTitleValue $taskTitle `
+        -Resume $isResume `
+        -PromptProfileValue $PromptProfile `
+        -OwnerPid $PID `
+        -LoopId $loopRunId
 
     if ($autoRecoverHints.ContainsKey($taskId)) {
         $prompt += @"
@@ -1023,10 +1194,19 @@ Auto-recovery note for this task:
 
     if ($invokeResult.TimedOut) {
         $noProgressCount++
+        $taskNoProgressCount++
+        $noProgressByTask[$taskId] = $taskNoProgressCount
         $timeoutLabel = if ($invokeResult.TimedOutReason -eq "idle-timeout") { "Iteration stopped after $IdleTimeoutSeconds seconds of no output/log activity." } else { "Iteration timed out after $IterationTimeoutSeconds seconds." }
         $timeoutSummary = "$timeoutLabel stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)"
         & powershell -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $timeoutSummary -Reason "timeout" | Out-Null
         Write-Host $timeoutSummary
+
+        if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
+            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task timeout/no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-per-task-threshold" | Out-Null
+            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Write-Host "Per-task timeout/no-progress threshold reached. Task marked blocked."
+            break
+        }
 
         if ($noProgressCount -ge $MaxNoProgress) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated timeouts. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-threshold" | Out-Null
@@ -1142,12 +1322,33 @@ Auto-recovery note for this task:
         break
     }
 
+    $countedNoProgress = $false
     if ($invokeResult.ExitCode -ne 0 -and -not $hadMeaningfulProgress) {
         $noProgressCount++
+        $taskNoProgressCount++
+        $noProgressByTask[$taskId] = $taskNoProgressCount
+        $taskExecFailures++
+        $execFailuresByTask[$taskId] = $taskExecFailures
         $nonCodeProgressCount = 0
         $failureSummary = "Iteration failed with exit code $($invokeResult.ExitCode). stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)"
         & powershell -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $failureSummary -Reason "exec-failed" | Out-Null
         Write-Host $failureSummary
+        Write-Host "Task exec-failure count: $taskExecFailures / $MaxExecFailuresPerTask"
+        $countedNoProgress = $true
+
+        if ($taskExecFailures -ge $MaxExecFailuresPerTask) {
+            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task execution failure threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-per-task-threshold" | Out-Null
+            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Write-Host "Per-task execution failure threshold reached. Task marked blocked."
+            break
+        }
+
+        if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
+            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold after execution failure. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
+            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Write-Host "Per-task no-progress threshold reached. Task marked blocked."
+            break
+        }
 
         if ($noProgressCount -ge $MaxNoProgress) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated execution failures. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-threshold" | Out-Null
@@ -1158,9 +1359,22 @@ Auto-recovery note for this task:
     }
 
     if (-not $hadMeaningfulProgress) {
-        $noProgressCount++
+        if (-not $countedNoProgress) {
+            $noProgressCount++
+            $taskNoProgressCount++
+            $noProgressByTask[$taskId] = $taskNoProgressCount
+        }
         $nonCodeProgressCount = 0
         Write-Host "No state/task-graph change after iteration. Retry count: $noProgressCount / $MaxNoProgress"
+        Write-Host "Task no-progress count: $taskNoProgressCount / $MaxNoProgressPerTask"
+
+        if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
+            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
+            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Write-Host "Per-task no-progress threshold reached. Task marked blocked."
+            Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
+            break
+        }
 
         if ($noProgressCount -ge $MaxNoProgress) {
             Write-Host "STATUS: NO_ELIGIBLE_TASK"
@@ -1171,6 +1385,8 @@ Auto-recovery note for this task:
     }
     else {
         $noProgressCount = 0
+        $noProgressByTask[$taskId] = 0
+        $execFailuresByTask[$taskId] = 0
         if ($hasCodeLikeChanges) {
             $nonCodeProgressCount = 0
         }

@@ -1,8 +1,7 @@
 using ClassroomToolkit.App.Models;
+using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
-using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
-using ClassroomToolkit.Infra.Storage;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -227,9 +226,7 @@ public sealed partial class RollCallViewModel
 
         try
         {
-            var store = new StudentWorkbookStore();
-            var rollStateJson = RollStateSerializer.SerializeWorkbookStates(_classStates);
-            store.Save(_workbook, _dataPath, rollStateJson);
+            _workbookUseCase.Save(_dataPath, _workbook, _classStates);
         }
         catch (Exception ex)
         {

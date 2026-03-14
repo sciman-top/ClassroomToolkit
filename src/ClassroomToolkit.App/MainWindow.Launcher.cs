@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -16,11 +18,6 @@ namespace ClassroomToolkit.App;
 /// </summary>
 public partial class MainWindow
 {
-    private void EnsureFloatingWindowsOnTop()
-    {
-        ApplyZOrderPolicy();
-    }
-
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
     {
         MinimizeLauncher(fromSettings: false);
@@ -32,56 +29,25 @@ public partial class MainWindow
         {
             Owner = this
         };
-        dialog.ShowDialog();
+        _ = TryShowDialogWithDiagnostics(dialog, nameof(AboutDialog));
     }
 
     private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
     {
-        var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / 60);
+        var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / MainWindowRuntimeDefaults.LauncherMinutesToSeconds);
         var dialog = new AutoExitDialog(currentMinutes)
         {
             Owner = this
         };
         
-        // 先修复当前窗口
-        try
-        {
-            BorderFixHelper.FixAllBorders(this);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复当前窗口完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复失败: {ex.Message}");
-        }
-        
-        // 立即修复新创建的对话框
-        try
-        {
-            BorderFixHelper.FixAllBorders(dialog);
-            System.Diagnostics.Debug.WriteLine("MainWindow: 修复对话框完成");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 修复对话框失败: {ex.Message}");
-        }
-        
-        // 使用安全显示方法
-        bool? result = null;
-        try
-        {
-            result = dialog.SafeShowDialog();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"对话框显示失败: {ex.Message}");
-            throw;
-        }
-        
-        if (result != true)
+        TryFixWindowBorders(this, "launcher-settings", "main-window");
+        TryFixWindowBorders(dialog, "launcher-settings", "auto-exit-dialog");
+
+        if (!TryShowDialogWithDiagnostics(dialog, nameof(AutoExitDialog)))
         {
             return;
         }
-        _settings.LauncherAutoExitSeconds = Math.Max(0, dialog.Minutes) * 60;
+        _settings.LauncherAutoExitSeconds = Math.Max(0, dialog.Minutes) * MainWindowRuntimeDefaults.LauncherMinutesToSeconds;
         ScheduleAutoExitTimer();
         SaveLauncherSettings();
     }
@@ -105,8 +71,12 @@ public partial class MainWindow
         {
             DragMove();
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                LauncherDragDiagnosticsPolicy.FormatDragMoveFailureMessage(
+                    ex.GetType().Name,
+                    ex.Message));
             return;
         }
         EnsureWithinWorkArea();
@@ -163,23 +133,14 @@ public partial class MainWindow
 
     private void EnsureWithinWorkArea()
     {
-        var area = SystemParameters.WorkArea;
-        if (Left < area.Left)
-        {
-            Left = area.Left;
-        }
-        if (Top < area.Top)
-        {
-            Top = area.Top;
-        }
-        if (Left + Width > area.Right)
-        {
-            Left = area.Right - Width;
-        }
-        if (Top + Height > area.Bottom)
-        {
-            Top = area.Bottom - Height;
-        }
+        var resolvedPosition = LauncherWorkAreaClampPolicy.Resolve(
+            Left,
+            Top,
+            Width,
+            Height,
+            SystemParameters.WorkArea);
+        Left = resolvedPosition.X;
+        Top = resolvedPosition.Y;
     }
 
     private void EnsureBubbleWindow()
@@ -189,8 +150,63 @@ public partial class MainWindow
             return;
         }
         _bubbleWindow = new LauncherBubbleWindow();
-        _bubbleWindow.RestoreRequested += RestoreLauncher;
-        _bubbleWindow.PositionChanged += OnBubblePositionChanged;
+        WireBubbleWindow(_bubbleWindow);
+    }
+
+    private void WireBubbleWindow(LauncherBubbleWindow bubbleWindow)
+    {
+        bubbleWindow.RestoreRequested += RestoreLauncher;
+        bubbleWindow.PositionChanged += OnBubblePositionChanged;
+        bubbleWindow.IsVisibleChanged += OnBubbleWindowVisibleChanged;
+    }
+
+    private void OnBubbleWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        var currentVisibleState = _bubbleWindow?.IsVisible == true;
+        var nowUtc = GetCurrentUtcTimestamp();
+        var gateDecision = LauncherBubbleZOrderApplyGatePolicy.Resolve(
+            currentVisibleState,
+            _bubbleVisibilityState.SuppressVisibleChangedApply,
+            _bubbleVisibilityState.SuppressVisibleChangedUntilUtc,
+            nowUtc,
+            _allowClose,
+            _bubbleWindow != null);
+        if (!gateDecision.ShouldApply)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                LauncherBubbleDiagnosticsPolicy.FormatVisibleChangedGateSkipMessage(
+                    gateDecision.Reason,
+                    gateDecision.VisibleChangedReason));
+            return;
+        }
+
+        var interactionState = CaptureOverlayInteractionState();
+        var dedupIntervalMs = LauncherBubbleVisibleChangedDedupIntervalPolicy.ResolveMs(
+            overlayVisible: interactionState.OverlayVisible,
+            photoModeActive: interactionState.PhotoModeActive,
+            whiteboardActive: interactionState.WhiteboardActive);
+        var dedupDecision = LauncherBubbleVisibleChangedDedupPolicy.Resolve(
+            currentVisibleState,
+            _bubbleVisibilityState.VisibleChangedState,
+            nowUtc,
+            minIntervalMs: dedupIntervalMs);
+        LauncherBubbleVisibilityStateUpdater.ApplyVisibleChangedDecision(
+            ref _bubbleVisibilityState,
+            dedupDecision);
+        if (!dedupDecision.ShouldApply)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                LauncherBubbleDiagnosticsPolicy.FormatVisibleChangedDedupSkipMessage(
+                    dedupDecision.Reason));
+            return;
+        }
+
+        var decision = LauncherBubbleVisibilityPolicy.Resolve(
+            bubbleVisible: currentVisibleState);
+        FloatingZOrderApplyExecutor.Apply(
+            decision.RequestZOrderApply,
+            decision.ForceEnforceZOrder,
+            RequestApplyZOrderPolicy);
     }
 
     private void MinimizeLauncher(bool fromSettings)
@@ -200,25 +216,110 @@ public partial class MainWindow
         {
             return;
         }
+
+        var minimizeDecision = LauncherVisibilityTransitionPolicy.ResolveMinimizeDecision(
+            CaptureLauncherMinimizeTransitionContext(_bubbleWindow));
+        var transitionPlan = minimizeDecision.Plan;
         var target = fromSettings
             ? new System.Windows.Point(_settings.LauncherBubbleX, _settings.LauncherBubbleY)
             : new System.Windows.Point(Left + Width / 2, Top + Height / 2);
         _bubbleWindow.PlaceNear(target);
-        _bubbleWindow.Show();
-        Hide();
+        System.Diagnostics.Debug.WriteLine(
+            $"[Launcher][Minimize] reason={LauncherVisibilityTransitionReasonPolicy.ResolveMinimizeTag(minimizeDecision.Reason)}");
         _settings.LauncherMinimized = true;
-        SaveLauncherSettings();
+        ApplyLauncherMinimizeTransition(transitionPlan);
     }
 
     private void RestoreLauncher()
     {
+        var restoreDecision = LauncherVisibilityTransitionPolicy.ResolveRestoreDecision(
+            CaptureLauncherRestoreTransitionContext());
+        var transitionPlan = restoreDecision.Plan;
+        System.Diagnostics.Debug.WriteLine(
+            $"[Launcher][Restore] reason={LauncherVisibilityTransitionReasonPolicy.ResolveRestoreTag(restoreDecision.Reason)}");
         _settings.LauncherMinimized = false;
-        _bubbleWindow?.Hide();
-        Show();
-        Activate();
+        ApplyLauncherRestoreTransition(transitionPlan);
+    }
+
+    private LauncherMinimizeTransitionContext CaptureLauncherMinimizeTransitionContext(
+        LauncherBubbleWindow bubbleWindow)
+    {
+        return new LauncherMinimizeTransitionContext(
+            MainVisible: IsVisible,
+            BubbleVisible: bubbleWindow.IsVisible);
+    }
+
+    private LauncherRestoreTransitionContext CaptureLauncherRestoreTransitionContext()
+    {
+        return new LauncherRestoreTransitionContext(
+            MainVisible: IsVisible,
+            MainActive: IsActive,
+            BubbleVisible: _bubbleWindow?.IsVisible == true);
+    }
+
+    private void ApplyLauncherMinimizeTransition(LauncherVisibilityTransitionPlan transitionPlan)
+    {
+        if (transitionPlan.ShowBubbleWindow)
+        {
+            ExecuteBubbleVisibilityTransition(() => _bubbleWindow?.Show());
+        }
+        if (transitionPlan.HideMainWindow)
+        {
+            ExecuteLifecycleSafe("launcher-transition", "hide-main-window", Hide);
+        }
+        SaveLauncherSettings();
+        FloatingZOrderApplyExecutor.Apply(
+            transitionPlan.RequestZOrderApply,
+            transitionPlan.ForceEnforceZOrder,
+            RequestApplyZOrderPolicy);
+    }
+
+    private void ApplyLauncherRestoreTransition(LauncherVisibilityTransitionPlan transitionPlan)
+    {
+        if (transitionPlan.HideBubbleWindow)
+        {
+            ExecuteBubbleVisibilityTransition(() => _bubbleWindow?.Hide());
+        }
+        if (transitionPlan.ShowMainWindow)
+        {
+            ExecuteLifecycleSafe("launcher-transition", "show-main-window", Show);
+        }
+        UserInitiatedWindowExecutionExecutor.Apply(
+            this,
+            transitionPlan.ActivateMainWindow);
         EnsureWithinWorkArea();
         SaveLauncherSettings();
         UpdateToggleButtons();
+        FloatingZOrderApplyExecutor.Apply(
+            transitionPlan.RequestZOrderApply,
+            transitionPlan.ForceEnforceZOrder,
+            RequestApplyZOrderPolicy);
+    }
+
+    private void ExecuteBubbleVisibilityTransition(Action transition)
+    {
+        LauncherBubbleVisibilityStateUpdater.MarkSuppressVisibleChangedApply(
+            ref _bubbleVisibilityState,
+            suppress: true);
+        try
+        {
+            ExecuteLifecycleSafe("launcher-bubble-transition", "apply-bubble-visibility", transition);
+        }
+        finally
+        {
+            LauncherBubbleVisibilityStateUpdater.MarkSuppressVisibleChangedApply(
+                ref _bubbleVisibilityState,
+                suppress: false);
+            var interactionState = CaptureOverlayInteractionState();
+            var cooldownMs = LauncherBubbleVisibleChangedSuppressionPolicy.ResolveCooldownMs(
+                overlayVisible: interactionState.OverlayVisible,
+                photoModeActive: interactionState.PhotoModeActive,
+                whiteboardActive: interactionState.WhiteboardActive);
+            LauncherBubbleVisibilityStateUpdater.MarkVisibleChangedSuppressionCooldown(
+                ref _bubbleVisibilityState,
+                GetCurrentUtcTimestamp(),
+                cooldownMs: cooldownMs);
+        }
     }
 
     private void OnBubblePositionChanged(System.Windows.Point position)
@@ -234,17 +335,17 @@ public partial class MainWindow
     private void ScheduleAutoExitTimer()
     {
         _autoExitTimer.Stop();
-        if (_settings.LauncherAutoExitSeconds > 0)
+        var timerPlan = LauncherAutoExitTimerPlanPolicy.Resolve(_settings.LauncherAutoExitSeconds);
+        if (timerPlan.ShouldStart)
         {
-            _autoExitTimer.Interval = TimeSpan.FromSeconds(_settings.LauncherAutoExitSeconds);
+            _autoExitTimer.Interval = timerPlan.Interval;
             _autoExitTimer.Start();
         }
     }
 
     private void RunStartupDiagnostics()
     {
-        var flag = Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG");
-        if (string.Equals(flag, "1", StringComparison.OrdinalIgnoreCase))
+        if (!StartupDiagnosticsGatePolicy.ShouldRun(Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG")))
         {
             return;
         }
@@ -267,7 +368,7 @@ public partial class MainWindow
                 {
                     Owner = this
                 };
-                dialog.ShowDialog();
+                TryShowDialogWithDiagnostics(dialog, nameof(DiagnosticsDialog));
             });
         }, _backgroundTasksCancellation.Token, ex =>
         {

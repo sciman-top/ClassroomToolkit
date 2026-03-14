@@ -90,6 +90,10 @@
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                         </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4"/>
                         </Trigger>
@@ -372,16 +376,20 @@
 
     <!-- ========== 2. 按钮样式 (Buttons) ========== -->
 
-    <!-- [Style_PrimaryButton] - Radiant Gradient & Glass -->
-    <Style x:Key="Style_PrimaryButton" TargetType="Button">
-        <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Glass}"/>
+    <!-- Shared Button Family Base -->
+    <Style x:Key="Style_ButtonFamilyBase" TargetType="Button">
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,5"/> <!-- Compact Padding -->
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- [Style_PrimaryButton] - Radiant Gradient & Glass -->
+    <Style x:Key="Style_PrimaryButton" TargetType="Button" BasedOn="{StaticResource Style_ButtonFamilyBase}">
+        <Setter Property="Background" Value="{StaticResource Gradient_Primary}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Glass}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -455,14 +463,11 @@
     </Style>
 
     <!-- [Style_SecondaryButton] - Subtle Ghost Button -->
-    <Style x:Key="Style_SecondaryButton" TargetType="Button">
+    <Style x:Key="Style_SecondaryButton" TargetType="Button" BasedOn="{StaticResource Style_ButtonFamilyBase}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
         <Setter Property="Padding" Value="14,6"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -539,14 +544,10 @@
     </Style>
 
     <!-- [Style_DangerButton] -->
-    <Style x:Key="Style_DangerButton" TargetType="Button">
+    <Style x:Key="Style_DangerButton" TargetType="Button" BasedOn="{StaticResource Style_ButtonFamilyBase}">
         <Setter Property="Background" Value="#20EF4444"/> <!-- Low Opacity Red -->
         <Setter Property="Foreground" Value="{StaticResource Brush_Danger}"/>
-        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
-        <Setter Property="Padding" Value="10,5"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
              <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -630,6 +631,163 @@
         </Setter>
     </Style>
 
+    <!-- [DialogShell] -->
+    <Style x:Key="Style_DialogShellWindowBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Window_Atmosphere}"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Margin" Value="10"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="TextElement.Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+        <Setter Property="Effect" Value="{StaticResource Shadow_Dialog_Heavy}"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellTitleBar" TargetType="Grid">
+        <Setter Property="Height" Value="44"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellTitleText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="18,0,0,0"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellDivider" TargetType="Border">
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{StaticResource Brush_Border}"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellCloseButton" TargetType="Button" BasedOn="{StaticResource Style_IconButton}">
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellActionBar" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="20,0,20,20"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellSecondaryActionButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+        <Setter Property="Width" Value="88"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+    </Style>
+
+    <Style x:Key="Style_DialogShellPrimaryActionButton" TargetType="Button" BasedOn="{StaticResource Style_PrimaryButton}">
+        <Setter Property="Width" Value="88"/>
+    </Style>
+
+    <!-- [ManagementShell] -->
+    <Style x:Key="Style_ManagementShellWindowBorder" TargetType="Border" BasedOn="{StaticResource Style_DialogShellWindowBorder}">
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Margin" Value="10"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellTitleBar" TargetType="Grid" BasedOn="{StaticResource Style_DialogShellTitleBar}">
+        <Setter Property="Height" Value="48"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellTitleText" TargetType="TextBlock" BasedOn="{StaticResource Style_DialogShellTitleText}">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="Margin" Value="20,0,0,0"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellSubtitleText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Tertiary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellDivider" TargetType="Border" BasedOn="{StaticResource Style_DialogShellDivider}"/>
+
+    <Style x:Key="Style_ManagementShellContentBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Margin" Value="12,8,12,8"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellFooterBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="Padding" Value="16,0"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellFooterText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellCloseButton" TargetType="Button" BasedOn="{StaticResource Style_DialogShellCloseButton}">
+        <Setter Property="Margin" Value="0,0,12,0"/>
+    </Style>
+
+    <Style x:Key="Style_ManagementShellFooterActionButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+        <Setter Property="Width" Value="88"/>
+        <Setter Property="Height" Value="32"/>
+    </Style>
+
+    <!-- [WorkShell] -->
+    <Style x:Key="Style_WorkShellWindowBorder" TargetType="Border" BasedOn="{StaticResource Style_DialogShellWindowBorder}">
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+
+    <Style x:Key="Style_WorkShellTitleBar" TargetType="Grid">
+        <Setter Property="Height" Value="52"/>
+        <Setter Property="Margin" Value="20,0,16,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+    <Style x:Key="Style_WorkShellContentHost" TargetType="Grid">
+        <Setter Property="Margin" Value="20,4,20,8"/>
+    </Style>
+
+    <Style x:Key="Style_WorkShellBottomBar" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="Margin" Value="20,0,20,16"/>
+    </Style>
+
+    <!-- [FullscreenShell] -->
+    <Style x:Key="Style_FullscreenShellCloseButton" TargetType="Button" BasedOn="{StaticResource Style_IconButton}">
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="Opacity" Value="0.85"/>
+    </Style>
+
+    <Style x:Key="Style_FullscreenShellSideRail" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="Opacity" Value="0.8"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Glass}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style x:Key="Style_FullscreenShellHintBadge" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Glass}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="Opacity" Value="0.9"/>
+    </Style>
+
     <!-- ========== 3. 容器控件 (Containers) ========== -->
 
     <!-- TabControl Style - Modern Pill/Line -->
@@ -680,7 +838,7 @@
                                     <!-- Selected always wins -->
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
-                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Tint}"/>
+                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                                         <Setter TargetName="underline" Property="Opacity" Value="1"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
@@ -784,43 +942,69 @@
     </Style>
 
     <!-- ListView/ListBox Style -->
+    <Style x:Key="Style_ListBoxItem_SelectionUnified" TargetType="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ListViewItem_SelectionUnified" TargetType="ListViewItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <GridViewRowPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="Style_CleanListBox" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-        <Setter Property="ItemContainerStyle">
-            <Setter.Value>
-                <Style TargetType="ListBoxItem">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="Padding" Value="8,6"/>
-                    <Setter Property="Margin" Value="0,1"/>
-                    <Setter Property="OverridesDefaultStyle" Value="True"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="bd" 
-                                        Background="{TemplateBinding Background}" 
-                                        CornerRadius="4" 
-                                        Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_SelectionUnified}"/>
     </Style>
 
     <Style TargetType="ListView">
@@ -828,37 +1012,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-        <Setter Property="ItemContainerStyle">
-            <Setter.Value>
-                <Style TargetType="ListViewItem">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="Padding" Value="8,6"/>
-                    <Setter Property="Margin" Value="0,1"/>
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="ListViewItem">
-                                <Border x:Name="bd" 
-                                        Background="{TemplateBinding Background}" 
-                                        CornerRadius="4" 
-                                        Padding="{TemplateBinding Padding}">
-                                    <GridViewRowPresenter VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListViewItem_SelectionUnified}"/>
     </Style>
 
     <!-- GridViewColumnHeader Style -->

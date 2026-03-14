@@ -1,0 +1,113 @@
+using ClassroomToolkit.Application.Abstractions;
+using ClassroomToolkit.Application.UseCases.RollCall;
+using ClassroomToolkit.Domain.Models;
+using ClassroomToolkit.Domain.Serialization;
+using FluentAssertions;
+using System.Text.Json;
+
+namespace ClassroomToolkit.Tests;
+
+public sealed class RollCallWorkbookUseCaseTests
+{
+    [Fact]
+    public void Load_ShouldDeserializeRollState()
+    {
+        var workbook = new StudentWorkbook(
+            new Dictionary<string, ClassRoster>
+            {
+                ["班级1"] = new("班级1", new[] { StudentRecord.Create("101", "张三", "班级1", "一组") })
+            },
+            "班级1");
+
+        var rollStateJson = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>
+        {
+            ["班级1"] = new ClassRollState { CurrentGroup = "一组", CurrentStudent = "101" }
+        });
+        var store = new StubStore(new RollCallWorkbookStoreLoadData(workbook, false, rollStateJson));
+
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        var result = useCase.Load("students.xlsx");
+
+        result.ErrorMessage.Should().BeNull();
+        result.Workbook.Should().BeSameAs(workbook);
+        result.ClassStates.Should().ContainKey("班级1");
+    }
+
+    [Fact]
+    public void Load_ShouldReturnFallback_WhenStoreThrows()
+    {
+        var store = new StubStore(exception: new InvalidOperationException("boom"));
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        var result = useCase.Load("students.xlsx");
+
+        result.ErrorMessage.Should().Contain("学生名册读取失败");
+        result.Workbook.ClassNames.Should().Contain("班级1");
+        result.ClassStates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Save_ShouldSerializeStates_AndDelegateToStore()
+    {
+        var workbook = new StudentWorkbook(
+            new Dictionary<string, ClassRoster>
+            {
+                ["班级1"] = new("班级1", new[] { StudentRecord.Create("101", "张三", "班级1", "一组") })
+            },
+            "班级1");
+        var store = new StubStore(new RollCallWorkbookStoreLoadData(workbook, false, null));
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        var states = new Dictionary<string, ClassRollState>
+        {
+            ["班级1"] = new ClassRollState
+            {
+                CurrentGroup = "一组",
+                CurrentStudent = "101",
+                GroupRemaining = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["全部"] = new List<string> { "101" }
+                }
+            }
+        };
+
+        useCase.Save("students.xlsx", workbook, states);
+
+        store.SavedPath.Should().Be("students.xlsx");
+        var parsed = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(store.SavedRollStateJson!);
+        parsed.Should().NotBeNull();
+        parsed!.Should().ContainKey("班级1");
+    }
+
+    private sealed class StubStore : IRollCallWorkbookStore
+    {
+        private readonly RollCallWorkbookStoreLoadData? _loadData;
+        private readonly Exception? _exception;
+
+        public string? SavedPath { get; private set; }
+        public string? SavedRollStateJson { get; private set; }
+
+        public StubStore(RollCallWorkbookStoreLoadData? loadData = null, Exception? exception = null)
+        {
+            _loadData = loadData;
+            _exception = exception;
+        }
+
+        public RollCallWorkbookStoreLoadData LoadOrCreate(string path)
+        {
+            if (_exception != null)
+            {
+                throw _exception;
+            }
+
+            return _loadData ?? throw new InvalidOperationException("No load data configured.");
+        }
+
+        public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
+        {
+            SavedPath = path;
+            SavedRollStateJson = rollStateJson;
+        }
+    }
+}

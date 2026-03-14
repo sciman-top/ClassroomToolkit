@@ -23,6 +23,7 @@ public sealed class KeyboardHook : IDisposable
     private bool _rightCtrlDown;
     private bool _leftAltDown;
     private bool _rightAltDown;
+    private VirtualKey? _pendingSuppressedKey;
     private int _callbackExceptionCount;
     private long _lastExceptionLogTick;
 
@@ -92,6 +93,7 @@ public sealed class KeyboardHook : IDisposable
         }
         UnhookWindowsHookEx(_hookId);
         _hookId = IntPtr.Zero;
+        _pendingSuppressedKey = null;
     }
 
     ~KeyboardHook()
@@ -130,6 +132,7 @@ public sealed class KeyboardHook : IDisposable
                 UpdateModifiers(virtualKey, isDown);
             }
 
+            var bindingMatched = false;
             if (isDown)
             {
                 var key = MapKey(virtualKey);
@@ -139,13 +142,23 @@ public sealed class KeyboardHook : IDisposable
                     var binding = new KeyBinding(key.Value, modifiers);
                     if (TargetBinding != null && binding.Equals(TargetBinding))
                     {
+                        bindingMatched = true;
                         BindingTriggered?.Invoke(binding);
-                        if (SuppressWhenMatched)
-                        {
-                            return new IntPtr(1);
-                        }
                     }
                 }
+            }
+
+            var suppressionDecision = KeyboardHookSuppressionPolicy.Resolve(
+                suppressWhenMatched: SuppressWhenMatched,
+                bindingMatched: bindingMatched,
+                isDown: isDown,
+                isUp: isUp,
+                key: virtualKey,
+                pendingSuppressedKey: _pendingSuppressedKey);
+            _pendingSuppressedKey = suppressionDecision.PendingSuppressedKey;
+            if (suppressionDecision.ShouldSuppress)
+            {
+                return new IntPtr(1);
             }
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }

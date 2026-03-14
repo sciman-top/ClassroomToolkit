@@ -21,9 +21,39 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    private const int CrossPagePostInputRefreshDelayMs = 420;
-    private const int NeighborPagesClearGraceMs = 180;
-    private const int InteractiveSwitchInkCacheLimit = 3;
+    private bool IsCrossPageInteractionActive()
+    {
+        return CrossPageInteractionActivityPolicy.IsActive(
+            _photoPanning,
+            _crossPageDragging,
+            IsInkOperationActive());
+    }
+
+    private bool IsCrossPagePanOrDragActive()
+    {
+        return CrossPageInteractionActivityPolicy.IsActive(
+            _photoPanning,
+            _crossPageDragging,
+            inkOperationActive: false);
+    }
+
+    private bool IsCrossPageDisplayActive()
+    {
+        return PhotoInteractionModePolicy.IsCrossPageDisplayActive(
+            photoModeActive: _photoModeActive,
+            boardActive: IsBoardActive(),
+            crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled());
+    }
+
+    private bool IsCrossPageDisplaySettingEnabled()
+    {
+        return _crossPageDisplayEnabled;
+    }
+
+    private bool IsCrossPageImageSequenceActive()
+    {
+        return IsCrossPageDisplayActive() && !_photoDocumentIsPdf;
+    }
 
     private void ClearNeighborPages()
     {
@@ -35,14 +65,15 @@ public partial class PaintOverlayWindow
         _neighborPagesCanvas.Visibility = Visibility.Collapsed;
         _neighborPageImages.Clear();
         _neighborInkImages.Clear();
-        _lastNeighborPagesNonEmptyUtc = DateTime.MinValue;
+        _lastNeighborPagesNonEmptyUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
+        _interactiveSwitchPinnedNeighborPage = 0;
+        _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     }
 
     private void ClearNeighborImageCache()
     {
         _neighborImageCache.Clear();
         _neighborInkCache.Clear();
-        _interactiveSwitchInkCache.Clear();
         _neighborPageHeightCache.Clear();
     }
 
@@ -81,8 +112,8 @@ public partial class PaintOverlayWindow
             return cached;
         }
         var path = _photoSequencePaths[arrayIndex];
-        var bitmap = TryLoadBitmapSource(path, downsampleToMonitor: _crossPageDisplayEnabled);
-        if (bitmap == null && _crossPageDisplayEnabled)
+        var bitmap = TryLoadBitmapSource(path, downsampleToMonitor: IsCrossPageImageSequenceActive());
+        if (bitmap == null && IsCrossPageImageSequenceActive())
         {
             // Fallback: when downsample decode fails transiently, retry full decode once.
             // This prioritizes continuity over memory in cross-page seam rendering.
@@ -129,11 +160,12 @@ public partial class PaintOverlayWindow
     
     private void ScheduleNeighborImagePrefetch(int pageIndex)
     {
-        if (!_photoModeActive || _photoDocumentIsPdf)
-        {
-            return;
-        }
-        if (!_crossPageDisplayEnabled && (_photoPanning || _crossPageDragging))
+        var interactionActiveForPrefetch = IsCrossPagePanOrDragActive();
+        if (!CrossPageNeighborPrefetchGatePolicy.ShouldSchedule(
+                _photoModeActive,
+                _photoDocumentIsPdf,
+                IsCrossPageDisplaySettingEnabled(),
+                interactionActiveForPrefetch))
         {
             return;
         }
@@ -149,11 +181,15 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        Dispatcher.BeginInvoke(() =>
+        var scheduled = TryBeginInvoke(() =>
         {
             try
             {
-                if (!_photoModeActive || _photoDocumentIsPdf || _crossPageDragging)
+                if (!CrossPageNeighborPrefetchGatePolicy.ShouldRunPrefetch(
+                        _photoModeActive,
+                        _photoDocumentIsPdf,
+                        IsCrossPageDisplaySettingEnabled(),
+                        IsCrossPagePanOrDragActive()))
                 {
                     return;
                 }
@@ -185,6 +221,11 @@ public partial class PaintOverlayWindow
                 _neighborImagePrefetchPending.Remove(pageIndex);
             }
         }, DispatcherPriority.Background);
+        if (!scheduled)
+        {
+            _neighborImagePrefetchPending.Remove(pageIndex);
+            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", "neighbor-prefetch", "dispatch-failed");
+        }
     }
 
     private double GetScaledPageHeight(BitmapSource? bitmap, double normalizedWidthDip = 0)
@@ -256,7 +297,7 @@ public partial class PaintOverlayWindow
 
     private double GetCrossPageNormalizedWidthDip(BitmapSource? fallback = null)
     {
-        if (!_crossPageDisplayEnabled || _photoDocumentIsPdf)
+        if (!IsCrossPageImageSequenceActive())
         {
             return 0;
         }
@@ -281,7 +322,7 @@ public partial class PaintOverlayWindow
     private void UpdateCurrentPageWidthNormalization(BitmapSource? bitmap = null)
     {
         EnsurePhotoTransformsWritable();
-        if (!_crossPageDisplayEnabled || _photoDocumentIsPdf)
+        if (!IsCrossPageImageSequenceActive())
         {
             _photoPageScale.ScaleX = 1.0;
             _photoPageScale.ScaleY = 1.0;
@@ -309,7 +350,7 @@ public partial class PaintOverlayWindow
 
     private void UpdateCrossPageDisplay()
     {
-        if (!_crossPageDisplayEnabled || !_photoModeActive)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -341,7 +382,7 @@ public partial class PaintOverlayWindow
 
         // Dynamically collect all pages intersecting viewport to avoid missing strips
         // when zoomed out or when page heights vary significantly.
-        const double visibilityMargin = 2.0;
+        var visibilityMargin = CrossPageViewportBoundsDefaults.VisibilityMarginDip;
         var visiblePages = new List<(int PageIndex, double Top)>
         {
             (currentPage, currentTop)
@@ -409,7 +450,8 @@ public partial class PaintOverlayWindow
             }
         }
         // Render neighbor pages
-        var neighborPages = visiblePages.Where(p => p.PageIndex != currentPage).ToList();
+        var neighborPages = CrossPageNeighborPageDedupPolicy.Resolve(
+            visiblePages.Where(p => p.PageIndex != currentPage).ToList());
         if (_crossPageDragging && _crossPageTranslateClamped && neighborPages.Count == 0)
         {
             return;
@@ -450,6 +492,56 @@ public partial class PaintOverlayWindow
         return 0;
     }
 
+    private double GetScaledHeightForInteractiveSwitchClamp(
+        int pageIndex,
+        double normalizedWidthDip,
+        double fallbackHeight)
+    {
+        if (pageIndex <= 0)
+        {
+            return fallbackHeight;
+        }
+
+        if (_neighborPageHeightCache.TryGetValue(pageIndex, out var cachedHeight) && cachedHeight > 0)
+        {
+            return cachedHeight;
+        }
+
+        if (pageIndex == GetCurrentPageIndexForCrossPage() && PhotoBackground.Source is BitmapSource currentBitmap)
+        {
+            var currentHeight = GetScaledPageHeight(currentBitmap, normalizedWidthDip);
+            if (currentHeight > 0)
+            {
+                _neighborPageHeightCache[pageIndex] = currentHeight;
+                return currentHeight;
+            }
+        }
+
+        if (_photoDocumentIsPdf)
+        {
+            if (TryGetCachedPdfPageBitmap(pageIndex, out var cachedPdfBitmap) && cachedPdfBitmap != null)
+            {
+                var pdfHeight = GetScaledPageHeight(cachedPdfBitmap, normalizedWidthDip);
+                if (pdfHeight > 0)
+                {
+                    _neighborPageHeightCache[pageIndex] = pdfHeight;
+                    return pdfHeight;
+                }
+            }
+        }
+        else if (_neighborImageCache.TryGetValue(pageIndex, out var cachedImageBitmap))
+        {
+            var imageHeight = GetScaledPageHeight(cachedImageBitmap, normalizedWidthDip);
+            if (imageHeight > 0)
+            {
+                _neighborPageHeightCache[pageIndex] = imageHeight;
+                return imageHeight;
+            }
+        }
+
+        return fallbackHeight;
+    }
+
     private double GetNeighborPageHeightWithFallback(int pageIndex, double normalizedWidthDip, double preferredHeight, string direction)
     {
         var height = GetScaledHeightForPage(pageIndex, normalizedWidthDip);
@@ -482,15 +574,29 @@ public partial class PaintOverlayWindow
 
     private void RenderNeighborPages(List<(int PageIndex, double Top)> neighborPages)
     {
+        var nowUtc = GetCurrentUtcTimestamp();
+        var interactionActive = IsCrossPageInteractionActive();
+        if (CrossPageInteractivePinLifetimePolicy.ShouldReleasePin(
+                _interactiveSwitchPinnedNeighborInkHoldUntilUtc,
+                nowUtc,
+                interactionActive))
+        {
+            _interactiveSwitchPinnedNeighborPage = 0;
+            _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
+        }
+
         if (neighborPages.Count == 0)
         {
-            var elapsedSinceNonEmptyMs = (DateTime.UtcNow - _lastNeighborPagesNonEmptyUtc).TotalMilliseconds;
+            var nowForClearUtc = GetCurrentUtcTimestamp();
+            var interactionActiveForClear = IsCrossPageInteractionActive();
+            var elapsedSinceNonEmptyMs = (nowForClearUtc - _lastNeighborPagesNonEmptyUtc).TotalMilliseconds;
             var hasVisibleNeighborFrame = _neighborPageImages.Any(img => img.Visibility == Visibility.Visible && img.Source != null);
-            if (hasVisibleNeighborFrame
-                && !_photoPanning
-                && !_crossPageDragging
-                && _lastNeighborPagesNonEmptyUtc != DateTime.MinValue
-                && elapsedSinceNonEmptyMs < NeighborPagesClearGraceMs)
+            if (CrossPageNeighborPagesClearPolicy.ShouldKeepFrames(
+                hasVisibleNeighborFrame,
+                interactionActiveForClear,
+                _lastNeighborPagesNonEmptyUtc,
+                nowForClearUtc,
+                CrossPageRuntimeDefaults.NeighborPagesClearGraceMs))
             {
                 _inkDiagnostics?.OnCrossPageUpdateEvent("hold", "neighbor-pages", $"reason=grace elapsedMs={elapsedSinceNonEmptyMs:F0}");
                 return;
@@ -498,7 +604,7 @@ public partial class PaintOverlayWindow
             ClearNeighborPages();
             return;
         }
-        _lastNeighborPagesNonEmptyUtc = DateTime.UtcNow;
+        _lastNeighborPagesNonEmptyUtc = GetCurrentUtcTimestamp();
         if (_neighborPagesCanvas == null)
         {
             return;
@@ -536,6 +642,34 @@ public partial class PaintOverlayWindow
             _neighborInkImages.Add(inkImg);
             _neighborPagesCanvas.Children.Add(inkImg);
         }
+
+        // Preserve currently visible frames by page uid so slot reordering does not
+        // temporarily blank a page's bitmap/ink for one frame.
+        var preservedPageFrames = new Dictionary<string, BitmapSource>(StringComparer.Ordinal);
+        var preservedInkFrames = new Dictionary<string, BitmapSource>(StringComparer.Ordinal);
+        for (int i = 0; i < _neighborPageImages.Count; i++)
+        {
+            var pageImg = _neighborPageImages[i];
+            if (pageImg.Visibility == Visibility.Visible
+                && pageImg.Source is BitmapSource pageBitmap
+                && !string.IsNullOrWhiteSpace(pageImg.Uid)
+                && !preservedPageFrames.ContainsKey(pageImg.Uid))
+            {
+                preservedPageFrames[pageImg.Uid] = pageBitmap;
+            }
+
+            if (i < _neighborInkImages.Count)
+            {
+                var inkImg = _neighborInkImages[i];
+                if (inkImg.Visibility == Visibility.Visible
+                    && inkImg.Source is BitmapSource inkBitmap
+                    && !string.IsNullOrWhiteSpace(inkImg.Uid)
+                    && !preservedInkFrames.ContainsKey(inkImg.Uid))
+                {
+                    preservedInkFrames[inkImg.Uid] = inkBitmap;
+                }
+            }
+        }
         // Hide excess images
         for (int i = neighborPages.Count; i < _neighborPageImages.Count; i++)
         {
@@ -550,20 +684,61 @@ public partial class PaintOverlayWindow
         {
             var (pageIndex, top) = neighborPages[i];
             var pageUid = pageIndex.ToString(CultureInfo.InvariantCulture);
-            BitmapSource? bitmap = GetNeighborPageBitmapForRender(pageIndex);
             var img = _neighborPageImages[i];
             var slotPageChanged = !string.Equals(img.Uid, pageUid, StringComparison.Ordinal);
-            if (bitmap != null)
+            var hasCurrentFrame = img.Source is BitmapSource;
+            BitmapSource? bitmap;
+            if (interactionActive && !slotPageChanged && img.Source is BitmapSource visibleBitmap)
             {
-                img.Source = bitmap;
+                // During drag/gesture pan, prefer transform-only movement for already visible slots.
+                bitmap = visibleBitmap;
+            }
+            else
+            {
+                bitmap = GetNeighborPageBitmapForRender(pageIndex);
+            }
+            if (bitmap == null
+                && slotPageChanged
+                && preservedPageFrames.TryGetValue(pageUid, out var preservedPageBitmap))
+            {
+                bitmap = preservedPageBitmap;
+            }
+            var pageFrameDecision = CrossPageNeighborPageFramePolicy.Resolve(
+                slotPageChanged,
+                hasCurrentFrame,
+                hasResolvedTargetFrame: bitmap != null,
+                interactionActive: interactionActive);
+            var heldCurrentSlotFrame = false;
+            var shouldReplacePageFrame = CrossPageInteractivePageReplacementPolicy.ShouldReplace(
+                hasResolvedTargetFrame: bitmap != null,
+                interactionActive,
+                slotPageChanged,
+                hasCurrentFrame);
+            if (shouldReplacePageFrame && bitmap != null)
+            {
+                TryAssignFrameSource(img, bitmap);
                 img.Visibility = Visibility.Visible;
             }
-            else if (slotPageChanged)
+            else if (!shouldReplacePageFrame && img.Source is BitmapSource keepBitmap)
             {
-                img.Source = null;
+                bitmap = keepBitmap;
+                img.Visibility = Visibility.Visible;
+            }
+            else if (pageFrameDecision.HoldCurrentFrame && img.Source is BitmapSource currentFrame)
+            {
+                bitmap = currentFrame;
+                img.Visibility = Visibility.Visible;
+                heldCurrentSlotFrame = true;
+                missingPageBitmapCount++;
+                _inkDiagnostics?.OnCrossPageUpdateEvent("hold", "neighbor-bitmap", $"page={pageIndex} mode=slot-hold");
+            }
+            else if (pageFrameDecision.CollapseSlot)
+            {
+                TryAssignFrameSource(img, null);
                 img.Visibility = Visibility.Collapsed;
                 missingPageBitmapCount++;
-                _inkDiagnostics?.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot=reused");
+                var slotTag = slotPageChanged ? "reused" : "same";
+                _inkDiagnostics?.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot={slotTag}");
             }
             else if (img.Source is BitmapSource heldBitmap)
             {
@@ -579,24 +754,53 @@ public partial class PaintOverlayWindow
                 missingPageBitmapCount++;
                 _inkDiagnostics?.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot=same");
             }
+            if (heldCurrentSlotFrame)
+            {
+                // Keep existing page/ink transforms and uid until target page frame arrives.
+                continue;
+            }
             var inkImg = _neighborInkImages[i];
+            var baseHoldInkReplacement = CrossPageInteractiveInkFrameHoldPolicy.ShouldHoldReplacement(
+                pageIndex,
+                _interactiveSwitchPinnedNeighborPage,
+                _interactiveSwitchPinnedNeighborInkHoldUntilUtc,
+                nowUtc,
+                hasCurrentInkFrame: inkImg.Source != null);
+            var holdInkReplacement = CrossPageInteractiveNeighborInkHoldPolicy.Resolve(
+                baseHoldInkReplacement,
+                interactionActive,
+                hasCurrentInkFrame: inkImg.Source != null,
+                inkOperationActive: IsInkOperationActive());
+            var usedPreservedInkFrame = false;
             if (bitmap != null)
             {
-                if (!_photoPanning && !_crossPageDragging)
+                if (inkImg.Source == null
+                    && preservedInkFrames.TryGetValue(pageUid, out var preservedInkBitmap))
+                {
+                    TryAssignFrameSource(inkImg, preservedInkBitmap);
+                    usedPreservedInkFrame = true;
+                }
+
+                if (!interactionActive)
                 {
                     var inkBitmap = TryGetNeighborInkBitmap(pageIndex, bitmap);
-                    if (inkBitmap != null)
+                    var frameDecision = CrossPageNeighborInkFramePolicy.Resolve(
+                        slotPageChanged,
+                        hasCurrentInkFrame: inkImg.Source != null,
+                        holdInkReplacement,
+                        usedPreservedInkFrame,
+                        hasResolvedInkBitmap: inkBitmap != null);
+                    if (inkBitmap != null
+                        && !holdInkReplacement
+                        && (frameDecision.AllowResolvedInkReplacement
+                            || !ReferenceEquals(inkImg.Source, inkBitmap)))
                     {
-                        inkImg.Source = inkBitmap;
-                    }
-                    else if (slotPageChanged)
-                    {
-                        // Slot is reused by another page: stale ink bitmap would be rendered
-                        // with the new page transform and appear scaled/shifted.
-                        inkImg.Source = null;
+                        TryAssignFrameSource(inkImg, inkBitmap);
                     }
                     // Keep previous frame until replacement is ready to avoid one-frame flashing.
-                    inkImg.Visibility = inkImg.Source != null ? Visibility.Visible : Visibility.Collapsed;
+                    inkImg.Visibility = frameDecision.KeepVisible && inkImg.Source != null
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
                 }
                 else
                 {
@@ -609,23 +813,72 @@ public partial class PaintOverlayWindow
                         if (!string.IsNullOrWhiteSpace(cacheKey)
                             && _neighborInkCache.TryGetValue(cacheKey, out var cachedEntry))
                         {
-                            inkImg.Source = cachedEntry.Bitmap;
+                            TryAssignFrameSource(inkImg, cachedEntry.Bitmap);
                         }
                     }
-                    if (slotPageChanged && inkImg.Source == null)
+                    // In interactive cross-page drawing/erase, keep neighbor ink in sync
+                    // so updates appear immediately without requiring zoom/pan.
+                    var interactiveInkBitmap = ResolveNeighborInkBitmap(
+                        pageIndex,
+                        bitmap,
+                        allowDeferredRender: false);
+                    var shouldReplaceInteractiveInk = CrossPageInteractiveInkReplacementPolicy.ShouldReplace(
+                        hasResolvedInkBitmap: interactiveInkBitmap != null,
+                        holdInkReplacement: holdInkReplacement,
+                        hasCurrentInkFrame: inkImg.Source != null,
+                        slotPageChanged: slotPageChanged);
+                    if (shouldReplaceInteractiveInk)
                     {
-                        inkImg.Source = null;
+                        TryAssignFrameSource(inkImg, interactiveInkBitmap);
                     }
-                    inkImg.Visibility = inkImg.Source != null ? Visibility.Visible : Visibility.Collapsed;
+                    else if (slotPageChanged && inkImg.Source != null)
+                    {
+                        // Slot remapped to a different page: never keep old-page ink on top of new-page bitmap.
+                        // Prefer a brief empty frame over cross-page ghost duplication.
+                        TryAssignFrameSource(inkImg, null);
+                        if (interactiveInkBitmap == null)
+                        {
+                            RequestDeferredNeighborInkRender(pageIndex, bitmap);
+                        }
+                    }
+                    else if (CrossPageInteractiveInkClearPolicy.ShouldClearCurrentFrame(
+                                 holdInkReplacement,
+                                 HasNeighborInkStrokes(pageIndex),
+                                 IsInkOperationActive(),
+                                 interactionActive))
+                    {
+                        TryAssignFrameSource(inkImg, null);
+                    }
+                    else if (slotPageChanged && interactiveInkBitmap == null)
+                    {
+                        RequestDeferredNeighborInkRender(pageIndex, bitmap);
+                    }
+                    var interactionDecision = CrossPageNeighborInkFramePolicy.Resolve(
+                        slotPageChanged,
+                        hasCurrentInkFrame: inkImg.Source != null,
+                        holdInkReplacement,
+                        usedPreservedInkFrame,
+                        hasResolvedInkBitmap: interactiveInkBitmap != null);
+                    inkImg.Visibility = interactionDecision.KeepVisible && inkImg.Source != null
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
                 }
             }
             else
             {
-                if (slotPageChanged)
+                var noBitmapDecision = CrossPageNeighborInkFramePolicy.Resolve(
+                    slotPageChanged,
+                    hasCurrentInkFrame: inkImg.Source != null,
+                    holdInkReplacement,
+                    usedPreservedInkFrame: false,
+                    hasResolvedInkBitmap: false);
+                if (noBitmapDecision.ClearCurrentFrame)
                 {
-                    inkImg.Source = null;
+                    TryAssignFrameSource(inkImg, null);
                 }
-                inkImg.Visibility = inkImg.Source != null ? Visibility.Visible : Visibility.Collapsed;
+                inkImg.Visibility = noBitmapDecision.KeepVisible && inkImg.Source != null
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
             }
             if (bitmap != null)
             {
@@ -644,11 +897,7 @@ public partial class PaintOverlayWindow
                 img.Uid = pageUid;
                 inkImg.Uid = pageUid;
                 // Apply same transform as current page
-                var transform = new TransformGroup();
-                transform.Children.Add(new ScaleTransform(_photoScale.ScaleX * pageScaleRatio, _photoScale.ScaleY * pageScaleRatio));
-                transform.Children.Add(new TranslateTransform(_photoTranslate.X, _photoTranslate.Y + baseTop));
-                img.RenderTransform = transform;
-                inkImg.RenderTransform = transform;
+                ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
             }
         }
 
@@ -660,7 +909,7 @@ public partial class PaintOverlayWindow
 
     private void UpdateNeighborTransformsForPan()
     {
-        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -706,7 +955,7 @@ public partial class PaintOverlayWindow
 
     private void FinalizeCurrentPageFromScroll()
     {
-        if (!_crossPageDisplayEnabled)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -764,7 +1013,7 @@ public partial class PaintOverlayWindow
 
     private void SyncCurrentPageToViewportCenter()
     {
-        if (!_crossPageDisplayEnabled)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -791,7 +1040,7 @@ public partial class PaintOverlayWindow
         double maxY;
         if (pageHeight <= viewportHeight)
         {
-            var middle = (viewportHeight - pageHeight) * 0.5;
+            var middle = (viewportHeight - pageHeight) * CrossPageViewportBoundsDefaults.CenterRatio;
             minY = middle;
             maxY = middle;
         }
@@ -805,7 +1054,7 @@ public partial class PaintOverlayWindow
 
     private void ApplyCrossPageBoundaryLimits(bool includeSlack = true)
     {
-        if (!_crossPageDisplayEnabled || !_photoModeActive)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -818,7 +1067,7 @@ public partial class PaintOverlayWindow
 
         var originalY = _photoTranslate.Y;
         _photoTranslate.Y = Math.Clamp(_photoTranslate.Y, minY, maxY);
-        _crossPageTranslateClamped = Math.Abs(originalY - _photoTranslate.Y) > 0.5;
+        _crossPageTranslateClamped = CrossPageViewportBoundsPolicy.IsTranslateClamped(originalY, _photoTranslate.Y);
     }
 
     private bool TryGetCrossPageBounds(
@@ -833,7 +1082,7 @@ public partial class PaintOverlayWindow
         minX = maxX = minY = maxY = 0;
         normalizedWidthDip = 0;
 
-        if (!_crossPageDisplayEnabled || !_photoModeActive)
+        if (!IsCrossPageDisplayActive())
         {
             return false;
         }
@@ -890,7 +1139,7 @@ public partial class PaintOverlayWindow
 
         if (includeSlack)
         {
-            var slack = Math.Max(32.0, viewportHeight * 0.5);
+            var slack = CrossPageViewportBoundsPolicy.ResolveSlackDip(viewportHeight);
             if (currentPage > 1)
             {
                 maxY += slack;
@@ -902,7 +1151,7 @@ public partial class PaintOverlayWindow
         }
         if (minY > maxY)
         {
-            var middle = (minY + maxY) * 0.5;
+            var middle = (minY + maxY) * CrossPageViewportBoundsDefaults.CenterRatio;
             minY = middle;
             maxY = middle;
         }
@@ -910,18 +1159,12 @@ public partial class PaintOverlayWindow
         if (normalizedWidthDip > 0)
         {
             var scaledWidth = normalizedWidthDip * _photoScale.ScaleX;
-            var horizontalSlack = Math.Max(48.0, viewportWidth * 0.08);
-            if (scaledWidth <= viewportWidth)
-            {
-                var centerX = (viewportWidth - scaledWidth) * 0.5;
-                minX = centerX - horizontalSlack;
-                maxX = centerX + horizontalSlack;
-            }
-            else
-            {
-                minX = (viewportWidth - scaledWidth) - horizontalSlack;
-                maxX = horizontalSlack;
-            }
+            var xRange = PhotoHorizontalPanRangePolicy.Resolve(
+                viewportWidth,
+                scaledWidth,
+                includeSlack);
+            minX = xRange.MinX;
+            maxX = xRange.MaxX;
         }
         else
         {
@@ -932,18 +1175,81 @@ public partial class PaintOverlayWindow
         return true;
     }
 
-    private void RequestCrossPageDisplayUpdate(string source = "unspecified")
+    private void RequestCrossPageDisplayUpdate(string source = CrossPageUpdateSources.Unspecified)
     {
+        var admissionDecision = CrossPageRequestAdmissionPolicy.Resolve(
+            crossPageDisplayActive: IsCrossPageDisplayActive(),
+            photoLoading: _photoLoading,
+            hasPhotoBackgroundSource: PhotoBackground.Source != null,
+            overlayVisible: IsVisible,
+            overlayMinimized: WindowState == WindowState.Minimized,
+            hasUsableViewport: OverlayRoot.ActualWidth > 0 && OverlayRoot.ActualHeight > 0);
+        if (!admissionDecision.ShouldAdmit)
+        {
+            _inkDiagnostics?.OnCrossPageUpdateEvent(
+                "skip",
+                source,
+                CrossPageRequestAdmissionReasonPolicy.ResolveDiagnosticTag(admissionDecision.Reason));
+            return;
+        }
+
+        var request = CrossPageUpdateRequestContextFactory.Create(source);
+        source = request.Source;
+        var nowUtc = GetCurrentUtcTimestamp();
+        var duplicateDecision = CrossPageDuplicateWindowPolicy.Resolve(
+                request,
+                _crossPageUpdateRequestState,
+                nowUtc);
+        if (duplicateDecision.ShouldSkip)
+        {
+            var replayQueueDecision = CrossPageDuplicateSkipReplayQueuePolicy.Resolve(
+                duplicateDecision,
+                request.Kind,
+                source);
+            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                ref _crossPageReplayState,
+                replayQueueDecision);
+            var reason = CrossPageDuplicateWindowReasonPolicy.ResolveDiagnosticTag(duplicateDecision.Reason);
+            _inkDiagnostics?.OnCrossPageUpdateEvent("skip", source, reason);
+            return;
+        }
+
+        CrossPageUpdateRequestStateUpdater.ApplyAcceptedRequest(
+            ref _crossPageUpdateRequestState,
+            request,
+            nowUtc);
+        var dispatchSnapshot = CrossPageDisplayUpdateDispatchSnapshotPolicy.Resolve(
+            pending: _crossPageDisplayUpdateState.Pending,
+            panning: _photoPanning,
+            dragging: _crossPageDragging,
+            inkOperationActive: IsInkOperationActive());
         _inkDiagnostics?.OnCrossPageUpdateEvent(
             "request",
             source,
-            $"pending={_crossPageUpdatePending} panning={_photoPanning} dragging={_crossPageDragging}");
+            CrossPageDisplayUpdateDispatchSnapshot.FormatDiagnosticsTag(dispatchSnapshot));
         if (IsCrossPageFirstInputTraceActive())
         {
             MarkCrossPageFirstInputStage("crosspage-update-enter");
         }
-        if (_crossPageUpdatePending)
+        var elapsedMs = (nowUtc - _crossPageDisplayUpdateClockState.LastUpdateUtc).TotalMilliseconds;
+        var dispatchDecision = CrossPageDisplayUpdateDispatchDecisionPolicy.Resolve(
+            dispatchSnapshot,
+            elapsedMs,
+            draggingMinIntervalMs: CrossPageRuntimeDefaults.DraggingUpdateMinIntervalMs,
+            normalMinIntervalMs: CrossPageRuntimeDefaults.UpdateMinIntervalMs);
+        var sourceSuffix = CrossPageUpdateSourceParser.Parse(source).Suffix;
+        dispatchDecision = CrossPageImmediateDispatchPolicy.Resolve(dispatchDecision, sourceSuffix);
+        dispatchDecision = CrossPagePendingTakeoverPolicy.Resolve(
+            dispatchDecision,
+            sourceSuffix,
+            _crossPageDisplayUpdateState,
+            nowUtc);
+        if (dispatchDecision.Mode == CrossPageDisplayUpdateDispatchMode.SkipPending)
         {
+            var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(request.Kind, source);
+            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                ref _crossPageReplayState,
+                replayQueueDecision);
             _inkDiagnostics?.OnCrossPageUpdateEvent("skip", source, "pending");
             if (IsCrossPageFirstInputTraceActive())
             {
@@ -951,74 +1257,318 @@ public partial class PaintOverlayWindow
             }
             return;
         }
-        var nowUtc = DateTime.UtcNow;
-        var throttleActive = _photoPanning || _crossPageDragging;
-        var elapsedMs = (nowUtc - _lastCrossPageUpdateUtc).TotalMilliseconds;
-        if (throttleActive && elapsedMs < CrossPageUpdateMinIntervalMs)
+        if (dispatchDecision.Mode == CrossPageDisplayUpdateDispatchMode.Delayed)
         {
-            _crossPageUpdatePending = true;
-            var token = Interlocked.Increment(ref _crossPageUpdateToken);
-            var delay = Math.Max(1, (int)Math.Ceiling(CrossPageUpdateMinIntervalMs - elapsedMs));
+            var token = CrossPageDisplayUpdatePendingStateUpdater.MarkDelayedScheduled(
+                ref _crossPageDisplayUpdateState,
+                nowUtc);
+            var delay = dispatchDecision.DelayMs;
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
                 try
                 {
                     await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                        ex.GetType().Name);
+                    var scheduledRecovery = TryBeginInvoke(() =>
+                    {
+                        RecoverCrossPageDelayedDispatchFailure(
+                            request.Kind,
+                            source,
+                            token,
+                            detail);
+                    }, DispatcherPriority.Background);
+                    var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                        recoveryDispatchScheduled: scheduledRecovery,
+                        dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                        dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                        dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                    if (recoveryDecision.ShouldRecoverInline)
+                    {
+                        var tokenMatched = CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
+                            _crossPageDisplayUpdateState,
+                            token);
+                        RecoverCrossPageDelayedDispatchFailure(
+                            request.Kind,
+                            source,
+                            token,
+                            CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
+                                tokenMatched));
+                    }
                     return;
                 }
                 var scheduled = TryBeginInvoke(() =>
                 {
-                    if (token != _crossPageUpdateToken)
+                    if (!CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
+                            _crossPageDisplayUpdateState,
+                            token))
                     {
                         return;
                     }
-                    _crossPageUpdatePending = false;
-                    if (!_photoModeActive || !_crossPageDisplayEnabled)
-                    {
-                        return;
-                    }
-                    _lastCrossPageUpdateUtc = DateTime.UtcNow;
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("run", source, "mode=delayed");
-                    if (IsCrossPageFirstInputTraceActive())
-                    {
-                        MarkCrossPageFirstInputStage("crosspage-update-run", "delayed");
-                    }
-                    UpdateCrossPageDisplay();
+                    CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+                    ExecuteCrossPageDisplayUpdateRun(
+                        source,
+                        mode: "delayed",
+                        emitAbortDiagnostics: false);
                 }, DispatcherPriority.Render);
                 if (!scheduled)
                 {
-                    _crossPageUpdatePending = false;
+                    CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+                    HandleCrossPageDisplayUpdateDispatchFailure(
+                        request.Kind,
+                        source,
+                        mode: "delayed",
+                        emitAbortDiagnostics: false);
                 }
             });
             return;
         }
-        _crossPageUpdatePending = true;
+        CrossPageDisplayUpdatePendingStateUpdater.MarkDirectScheduled(ref _crossPageDisplayUpdateState, nowUtc);
         var directScheduled = TryBeginInvoke(() =>
         {
-            _crossPageUpdatePending = false;
-            if (!_photoModeActive || !_crossPageDisplayEnabled)
-            {
-                _inkDiagnostics?.OnCrossPageUpdateEvent("abort", source, "inactive");
-                return;
-            }
-            _lastCrossPageUpdateUtc = DateTime.UtcNow;
-            _inkDiagnostics?.OnCrossPageUpdateEvent("run", source, "mode=direct");
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("crosspage-update-run", "direct");
-            }
-            UpdateCrossPageDisplay();
+            CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+            ExecuteCrossPageDisplayUpdateRun(
+                source,
+                mode: "direct",
+                emitAbortDiagnostics: true);
         }, DispatcherPriority.Render);
         if (!directScheduled)
         {
-            _crossPageUpdatePending = false;
+            CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+            HandleCrossPageDisplayUpdateDispatchFailure(
+                request.Kind,
+                source,
+                mode: "direct",
+                emitAbortDiagnostics: true);
         }
     }
 
-        private BitmapSource? TryGetNeighborInkBitmap(int pageIndex, BitmapSource pageBitmap)
+    private void RecoverCrossPageDelayedDispatchFailure(
+        CrossPageUpdateSourceKind kind,
+        string source,
+        int token,
+        string detail)
+    {
+        if (!CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
+                _crossPageDisplayUpdateState,
+                token))
+        {
+            return;
+        }
+
+        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+        var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(kind, source);
+        CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+            ref _crossPageReplayState,
+            replayQueueDecision);
+        _inkDiagnostics?.OnCrossPageUpdateEvent("recover", source, detail);
+    }
+
+    private void HandleCrossPageDisplayUpdateDispatchFailure(
+        CrossPageUpdateSourceKind kind,
+        string source,
+        string mode,
+        bool emitAbortDiagnostics)
+    {
+        var fallbackDecision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
+            dispatchScheduled: false,
+            dispatcherCheckAccess: Dispatcher.CheckAccess(),
+            dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+        if (fallbackDecision.ShouldRunInline)
+        {
+            ExecuteCrossPageDisplayUpdateRun(
+                source,
+                mode: $"{mode}-inline-fallback",
+                emitAbortDiagnostics: emitAbortDiagnostics);
+            return;
+        }
+
+        if (fallbackDecision.ShouldQueueReplay)
+        {
+            var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(kind, source);
+            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                ref _crossPageReplayState,
+                replayQueueDecision);
+            _inkDiagnostics?.OnCrossPageUpdateEvent(
+                "recover",
+                source,
+                "dispatch-failed-queue-replay");
+            TryFlushCrossPageReplay();
+        }
+    }
+
+    private void ExecuteCrossPageDisplayUpdateRun(
+        string source,
+        string mode,
+        bool emitAbortDiagnostics)
+    {
+        var runGate = CrossPageDisplayRunGatePolicy.Resolve(IsCrossPageDisplayActive());
+        if (!runGate.ShouldRun)
+        {
+            if (emitAbortDiagnostics)
+            {
+                _inkDiagnostics?.OnCrossPageUpdateEvent(
+                    "abort",
+                    source,
+                    runGate.AbortReason ?? CrossPageDeferredDiagnosticReason.Inactive);
+            }
+            return;
+        }
+
+        CrossPageDisplayUpdateClockStateUpdater.MarkUpdated(
+            ref _crossPageDisplayUpdateClockState,
+            GetCurrentUtcTimestamp());
+        _inkDiagnostics?.OnCrossPageUpdateEvent("run", source, $"mode={mode}");
+        if (IsCrossPageFirstInputTraceActive())
+        {
+            MarkCrossPageFirstInputStage("crosspage-update-run", mode);
+        }
+        try
+        {
+            UpdateCrossPageDisplay();
+            TryFlushCrossPageReplay();
+        }
+        catch (Exception ex)
+        {
+            var replayQueueDecision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(source);
+            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                ref _crossPageReplayState,
+                replayQueueDecision);
+            _inkDiagnostics?.OnCrossPageUpdateEvent(
+                "recover",
+                source,
+                $"run-failed ex={ex.GetType().Name}");
+        }
+    }
+
+    private void ApplyNeighborSharedTransform(
+        WpfImage pageImage,
+        WpfImage inkImage,
+        double pageScaleRatio,
+        double baseTop)
+    {
+        if (pageImage.RenderTransform is TransformGroup existing
+            && existing.Children.Count >= 2
+            && existing.Children[0] is ScaleTransform existingScale
+            && existing.Children[1] is TranslateTransform existingTranslate)
+        {
+            existingScale.ScaleX = _photoScale.ScaleX * pageScaleRatio;
+            existingScale.ScaleY = _photoScale.ScaleY * pageScaleRatio;
+            existingTranslate.X = _photoTranslate.X;
+            existingTranslate.Y = _photoTranslate.Y + baseTop;
+            if (!ReferenceEquals(inkImage.RenderTransform, existing))
+            {
+                inkImage.RenderTransform = existing;
+            }
+            return;
+        }
+
+        var transform = new TransformGroup();
+        transform.Children.Add(new ScaleTransform(_photoScale.ScaleX * pageScaleRatio, _photoScale.ScaleY * pageScaleRatio));
+        transform.Children.Add(new TranslateTransform(_photoTranslate.X, _photoTranslate.Y + baseTop));
+        pageImage.RenderTransform = transform;
+        inkImage.RenderTransform = transform;
+    }
+
+    private void TryFlushCrossPageReplay()
+    {
+        var replayPending = HasCrossPageReplayPending();
+        if (!CrossPageUpdateReplayPolicy.ShouldFlushReplay(
+                replayPending,
+                _crossPageDisplayUpdateState.Pending,
+                _photoModeActive,
+                IsCrossPageDisplaySettingEnabled(),
+                IsCrossPageInteractionActive()))
+        {
+            return;
+        }
+
+        var target = CrossPageReplayDispatchPolicy.Resolve(
+            _crossPageReplayState.VisualSyncReplayPending,
+            _crossPageReplayState.InteractionReplayPending,
+            _crossPageReplayState.LastDispatchTarget,
+            _crossPageReplayState.PreferInteractionReplay);
+        if (target == CrossPageReplayDispatchTarget.None)
+        {
+            return;
+        }
+
+        TryScheduleCrossPageReplayDispatch(target);
+    }
+
+    private bool HasCrossPageReplayPending()
+    {
+        return CrossPageReplayPendingStateUpdater.HasPending(_crossPageReplayState);
+    }
+
+    private void TryFlushCrossPageReplayAfterPointerUp()
+    {
+        // Pointer-up is the earliest stable point where interaction can end.
+        // Triggering replay flush here avoids "old page refreshes only after next pan".
+        TryFlushCrossPageReplay();
+    }
+
+    private void TryScheduleCrossPageReplayDispatch(CrossPageReplayDispatchTarget target)
+    {
+        if (!CrossPageReplayPendingStateUpdater.TryMarkDispatchScheduled(
+                ref _crossPageReplayState,
+                target))
+        {
+            return;
+        }
+        var source = CrossPageReplayDispatchRequestPolicy.ResolveSource(target);
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            CrossPageReplayPendingStateUpdater.MarkDispatchFailed(
+                ref _crossPageReplayState,
+                target);
+            return;
+        }
+
+        var scheduled = TryBeginInvoke(
+            () => RequestCrossPageDisplayUpdate(source),
+            DispatcherPriority.Background);
+        if (scheduled)
+        {
+            return;
+        }
+        var fallbackDecision = CrossPageReplayDispatchScheduleFallbackPolicy.Resolve(
+            dispatchScheduled: false,
+            dispatcherCheckAccess: Dispatcher.CheckAccess(),
+            dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+        if (fallbackDecision.ShouldRunInline)
+        {
+            try
+            {
+                RequestCrossPageDisplayUpdate(source);
+                return;
+            }
+            catch
+            {
+                // Fall through to replay requeue.
+            }
+        }
+
+        if (fallbackDecision.ShouldRequeuePending || fallbackDecision.ShouldRunInline)
+        {
+            CrossPageReplayPendingStateUpdater.MarkDispatchFailed(
+                ref _crossPageReplayState,
+                target);
+        }
+    }
+
+    private void ResetCrossPageReplayState()
+    {
+        CrossPageReplayPendingStateUpdater.Reset(
+            ref _crossPageReplayState);
+    }
+
+    private BitmapSource? ResolveNeighborInkBitmap(int pageIndex, BitmapSource pageBitmap, bool allowDeferredRender)
     {
         if (!_inkShowEnabled || !_inkCacheEnabled || pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)
         {
@@ -1045,12 +1595,52 @@ public partial class PaintOverlayWindow
         {
             return entry.Bitmap;
         }
-        ScheduleNeighborInkRender(cacheKey, pageIndex, pageBitmap, strokes);
+        TryPrimeNeighborInkCache(pageIndex, pageBitmap);
+        if (_neighborInkCache.TryGetValue(cacheKey, out var primedEntry) && ReferenceEquals(primedEntry.Strokes, strokes))
+        {
+            return primedEntry.Bitmap;
+        }
+        if (allowDeferredRender)
+        {
+            ScheduleNeighborInkRender(cacheKey, pageIndex, pageBitmap, strokes);
+        }
         if (_neighborInkCache.TryGetValue(cacheKey, out var staleEntry))
         {
             return staleEntry.Bitmap;
         }
         return null;
+    }
+
+    private bool HasNeighborInkStrokes(int pageIndex)
+    {
+        var cacheKey = BuildNeighborInkCacheKey(pageIndex);
+        return !string.IsNullOrWhiteSpace(cacheKey)
+            && _photoCache.TryGet(cacheKey, out var strokes)
+            && strokes.Count > 0;
+    }
+
+    private BitmapSource? TryGetNeighborInkBitmap(int pageIndex, BitmapSource pageBitmap)
+    {
+        return ResolveNeighborInkBitmap(pageIndex, pageBitmap, allowDeferredRender: true);
+    }
+
+    private void RequestDeferredNeighborInkRender(int pageIndex, BitmapSource pageBitmap)
+    {
+        if (!_inkShowEnabled || !_inkCacheEnabled || pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)
+        {
+            return;
+        }
+        var cacheKey = BuildNeighborInkCacheKey(pageIndex);
+        if (string.IsNullOrWhiteSpace(cacheKey))
+        {
+            return;
+        }
+        if (!_photoCache.TryGet(cacheKey, out var strokes) || strokes.Count == 0)
+        {
+            return;
+        }
+
+        ScheduleNeighborInkRender(cacheKey, pageIndex, pageBitmap, strokes);
     }
 
     private void ScheduleNeighborInkSidecarLoad(string cacheKey, int pageIndex)
@@ -1068,7 +1658,7 @@ public partial class PaintOverlayWindow
         {
             try
             {
-                if (!_photoModeActive || !_crossPageDisplayEnabled)
+                if (!IsCrossPageDisplayActive())
                 {
                     return;
                 }
@@ -1079,7 +1669,9 @@ public partial class PaintOverlayWindow
                 if (TryLoadNeighborInkFromSidecarIntoCache(pageIndex))
                 {
                     // De-dup against pointer-up refresh for the same switch cycle.
-                    ScheduleCrossPageDisplayUpdateAfterInputSettles("neighbor-sidecar", singlePerPointerUp: true);
+                    ScheduleCrossPageDisplayUpdateAfterInputSettles(
+                        CrossPageUpdateSources.NeighborSidecar,
+                        singlePerPointerUp: true);
                 }
             }
             finally
@@ -1108,7 +1700,7 @@ public partial class PaintOverlayWindow
         {
             try
             {
-                if (!_photoModeActive || !_crossPageDisplayEnabled)
+                if (!IsCrossPageDisplayActive())
                 {
                     return;
                 }
@@ -1139,11 +1731,11 @@ public partial class PaintOverlayWindow
                 // Prefer in-place slot replacement to avoid a full cross-page refresh flash.
                 if (TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, bitmap))
                 {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("apply", "neighbor-render", $"page={pageIndex}");
+                    _inkDiagnostics?.OnCrossPageUpdateEvent("apply", CrossPageUpdateSources.NeighborRender, $"page={pageIndex}");
                 }
                 else
                 {
-                    ScheduleCrossPageDisplayUpdateAfterInputSettles("neighbor-render");
+                    ScheduleCrossPageDisplayUpdateAfterInputSettles(CrossPageUpdateSources.NeighborRender);
                 }
             }
             finally
@@ -1158,37 +1750,34 @@ public partial class PaintOverlayWindow
     }
 
     private void ScheduleCrossPageDisplayUpdateAfterInputSettles(
-        string source = "post-input",
+        string source = CrossPageUpdateSources.PostInput,
         bool singlePerPointerUp = false,
         int? delayOverrideMs = null)
     {
-        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        var scheduleGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeSchedule(
+            IsCrossPageDisplayActive(),
+            IsCrossPageInteractionActive());
+        if (!scheduleGate.ShouldProceed)
         {
-            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, "inactive");
+            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, scheduleGate.Reason ?? CrossPageDeferredDiagnosticReason.Inactive);
             return;
         }
 
-        if (IsInkOperationActive())
-        {
-            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, "ink-active");
-            return;
-        }
+        var targetDelayMs = CrossPagePostInputDelayPolicy.ResolveMs(
+            source,
+            _photoPostInputRefreshDelayMs,
+            fallbackDelayMs: CrossPageRuntimeDefaults.PostInputRefreshDelayMs,
+            delayOverrideMs: delayOverrideMs);
 
-        var targetDelayMs = delayOverrideMs.GetValueOrDefault(CrossPagePostInputRefreshDelayMs);
-        if (targetDelayMs <= 0)
-        {
-            targetDelayMs = CrossPagePostInputRefreshDelayMs;
-        }
-
-        var elapsedMs = (DateTime.UtcNow - _lastCrossPagePointerUpUtc).TotalMilliseconds;
-        if (elapsedMs >= targetDelayMs || _lastCrossPagePointerUpUtc == DateTime.MinValue)
+        var elapsedMs = (GetCurrentUtcTimestamp() - _lastCrossPagePointerUpUtc).TotalMilliseconds;
+        if (elapsedMs >= targetDelayMs || _lastCrossPagePointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
         {
             if (singlePerPointerUp && !TryAcquirePostInputRefreshSlot(out var seqImmediate))
             {
                 _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, $"already-refreshed seq={seqImmediate}");
                 return;
             }
-            RequestCrossPageDisplayUpdate($"{source}-immediate");
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(source));
             return;
         }
 
@@ -1201,20 +1790,46 @@ public partial class PaintOverlayWindow
             {
                 await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
+                var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                    ex.GetType().Name);
+                var recoverySource = CrossPageUpdateSources.WithImmediate(source);
+                var scheduledRecovery = TryBeginInvoke(
+                    () => RequestCrossPageDisplayUpdate(recoverySource),
+                    DispatcherPriority.Background);
+                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                    recoveryDispatchScheduled: scheduledRecovery,
+                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                if (recoveryDecision.ShouldRecoverInline)
+                {
+                    RequestCrossPageDisplayUpdate(recoverySource);
+                    _inkDiagnostics?.OnCrossPageUpdateEvent(
+                        "defer-recover",
+                        source,
+                        CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(tokenMatched: true));
+                }
+                else
+                {
+                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, detail);
+                }
                 return;
             }
 
-            TryBeginInvoke(() =>
+            var scheduled = TryBeginInvoke(() =>
             {
                 if (token != _crossPagePostInputRefreshToken)
                 {
                     return;
                 }
-                if (!_photoModeActive || !_crossPageDisplayEnabled || IsInkOperationActive())
+                var delayedDispatchGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeDelayedDispatch(
+                    IsCrossPageDisplayActive(),
+                    IsCrossPageInteractionActive());
+                if (!delayedDispatchGate.ShouldProceed)
                 {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, "inactive-or-ink-active");
+                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, delayedDispatchGate.Reason ?? CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
                     return;
                 }
                 if (singlePerPointerUp && !TryAcquirePostInputRefreshSlot(out var seqDelayed))
@@ -1222,26 +1837,60 @@ public partial class PaintOverlayWindow
                     _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, $"already-refreshed seq={seqDelayed}");
                     return;
                 }
-                RequestCrossPageDisplayUpdate($"{source}-delayed");
+                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithDelayed(source));
             }, DispatcherPriority.Background);
+            if (!scheduled)
+            {
+                var recoverySource = CrossPageUpdateSources.WithImmediate(source);
+                var scheduledRecovery = TryBeginInvoke(
+                    () => RequestCrossPageDisplayUpdate(recoverySource),
+                    DispatcherPriority.Background);
+                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                    recoveryDispatchScheduled: scheduledRecovery,
+                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                if (recoveryDecision.ShouldRecoverInline)
+                {
+                    RequestCrossPageDisplayUpdate(recoverySource);
+                }
+                else
+                {
+                    _inkDiagnostics?.OnCrossPageUpdateEvent(
+                        "defer-abort",
+                        source,
+                        "delayed-dispatch-failed");
+                }
+            }
         });
     }
 
-    private void ApplyCrossPagePointerUpFastRefresh(string source = "pointer-up-fast")
+    private void ApplyCrossPagePointerUpFastRefresh(
+        string source = CrossPageUpdateSources.PointerUpFast,
+        bool requestImmediateRefresh = false)
     {
-        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
+
         // Fast path: keep current/neighbor transforms coherent immediately.
         UpdateNeighborTransformsForPan();
-        _inkDiagnostics?.OnCrossPageUpdateEvent("run", source, "mode=fast-current");
+        if (requestImmediateRefresh)
+        {
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(source));
+        }
+
+        _inkDiagnostics?.OnCrossPageUpdateEvent(
+            "run",
+            source,
+            requestImmediateRefresh ? "mode=fast-current+immediate" : "mode=fast-current");
     }
 
     private bool TryAcquirePostInputRefreshSlot(out long pointerUpSequence)
     {
         pointerUpSequence = Interlocked.Read(ref _crossPagePointerUpSequence);
-        if (_lastCrossPagePointerUpUtc == DateTime.MinValue)
+        if (_lastCrossPagePointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
         {
             return true;
         }
@@ -1262,6 +1911,38 @@ public partial class PaintOverlayWindow
             {
                 return true;
             }
+        }
+    }
+
+    private void HideNeighborSlotForPage(int pageIndex)
+    {
+        if (!IsCrossPageDisplayActive() || pageIndex <= 0)
+        {
+            return;
+        }
+        var pageUid = pageIndex.ToString(CultureInfo.InvariantCulture);
+
+        for (int i = 0; i < _neighborPageImages.Count; i++)
+        {
+            var pageImg = _neighborPageImages[i];
+            if (string.Equals(pageImg.Uid, pageUid, StringComparison.Ordinal))
+            {
+                pageImg.Visibility = Visibility.Collapsed;
+            }
+
+            if (i < _neighborInkImages.Count)
+            {
+                var inkImg = _neighborInkImages[i];
+                if (string.Equals(inkImg.Uid, pageUid, StringComparison.Ordinal))
+                {
+                    inkImg.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+        if (_interactiveSwitchPinnedNeighborPage == pageIndex)
+        {
+            _interactiveSwitchPinnedNeighborPage = 0;
+            _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
         }
     }
 
@@ -1289,7 +1970,7 @@ public partial class PaintOverlayWindow
                 continue;
             }
 
-            inkImg.Source = inkBitmap;
+            TryAssignFrameSource(inkImg, inkBitmap);
             inkImg.Visibility = Visibility.Visible;
             return true;
         }
@@ -1297,45 +1978,133 @@ public partial class PaintOverlayWindow
         return false;
     }
 
+    private static bool TryAssignFrameSource(WpfImage target, ImageSource? source, bool forceAssign = false)
+    {
+        if (!CrossPageFrameSourceAssignmentPolicy.ShouldAssign(target.Source, source, forceAssign))
+        {
+            return false;
+        }
+
+        target.Source = source;
+        return true;
+    }
+
+    private void PrimeVisibleNeighborInkSlots()
+    {
+        if (!IsCrossPageDisplayActive() || !_inkShowEnabled || !_inkCacheEnabled)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _neighborPageImages.Count; i++)
+        {
+            var pageImg = _neighborPageImages[i];
+            if (pageImg.Visibility != Visibility.Visible || pageImg.Source is not BitmapSource pageBitmap)
+            {
+                continue;
+            }
+            if (!int.TryParse(pageImg.Uid, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pageIndex) || pageIndex <= 0)
+            {
+                continue;
+            }
+
+            TryPrimeNeighborInkCache(pageIndex, pageBitmap);
+            var cacheKey = BuildNeighborInkCacheKey(pageIndex);
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                continue;
+            }
+            if (!_neighborInkCache.TryGetValue(cacheKey, out var entry) || entry.Bitmap == null)
+            {
+                continue;
+            }
+            TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, entry.Bitmap);
+        }
+    }
+
     private void ScheduleCrossPageDisplayUpdateForMissingNeighborPages(int missingCount)
     {
-        if (!_photoModeActive || !_crossPageDisplayEnabled || missingCount <= 0)
+        var nowUtc = GetCurrentUtcTimestamp();
+        var decision = CrossPageMissingNeighborRefreshPolicy.Resolve(
+            _photoModeActive,
+            IsCrossPageDisplaySettingEnabled(),
+            interactionActive: IsCrossPageInteractionActive(),
+            missingCount,
+            _lastCrossPageMissingBitmapRefreshUtc,
+            nowUtc);
+        if (!decision.ShouldSchedule)
         {
             return;
         }
 
-        var elapsedMs = (DateTime.UtcNow - _lastCrossPageMissingBitmapRefreshUtc).TotalMilliseconds;
-        if (elapsedMs < 140)
-        {
-            return;
-        }
-
-        _lastCrossPageMissingBitmapRefreshUtc = DateTime.UtcNow;
-        _inkDiagnostics?.OnCrossPageUpdateEvent("defer-schedule", "neighbor-missing", $"count={missingCount}");
+        _lastCrossPageMissingBitmapRefreshUtc = decision.LastScheduledUtc;
+        _inkDiagnostics?.OnCrossPageUpdateEvent("defer-schedule", CrossPageUpdateSources.NeighborMissing, $"count={missingCount}");
         var token = Interlocked.Increment(ref _crossPageMissingBitmapRefreshToken);
         _ = System.Threading.Tasks.Task.Run(async () =>
         {
             try
             {
-                await System.Threading.Tasks.Task.Delay(120).ConfigureAwait(false);
+                await System.Threading.Tasks.Task.Delay(decision.DelayMs).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
+                var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                    ex.GetType().Name);
+                var recoverySource = CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.NeighborMissingDelayed);
+                var scheduledRecovery = TryBeginInvoke(
+                    () => RequestCrossPageDisplayUpdate(recoverySource),
+                    DispatcherPriority.Background);
+                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                    recoveryDispatchScheduled: scheduledRecovery,
+                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                if (recoveryDecision.ShouldRecoverInline)
+                {
+                    RequestCrossPageDisplayUpdate(recoverySource);
+                }
+                else
+                {
+                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", CrossPageUpdateSources.NeighborMissingDelayed, detail);
+                }
                 return;
             }
 
-            TryBeginInvoke(() =>
+            var scheduled = TryBeginInvoke(() =>
             {
                 if (token != _crossPageMissingBitmapRefreshToken)
                 {
                     return;
                 }
-                if (!_photoModeActive || !_crossPageDisplayEnabled)
+                if (!IsCrossPageDisplayActive())
                 {
                     return;
                 }
-                RequestCrossPageDisplayUpdate("neighbor-missing-delayed");
+                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.NeighborMissingDelayed);
             }, DispatcherPriority.Background);
+            if (!scheduled)
+            {
+                var recoverySource = CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.NeighborMissingDelayed);
+                var scheduledRecovery = TryBeginInvoke(
+                    () => RequestCrossPageDisplayUpdate(recoverySource),
+                    DispatcherPriority.Background);
+                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                    recoveryDispatchScheduled: scheduledRecovery,
+                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                if (recoveryDecision.ShouldRecoverInline)
+                {
+                    RequestCrossPageDisplayUpdate(recoverySource);
+                }
+                else
+                {
+                    _inkDiagnostics?.OnCrossPageUpdateEvent(
+                        "defer-abort",
+                        CrossPageUpdateSources.NeighborMissingDelayed,
+                        "missing-neighbor-delayed-dispatch-failed");
+                }
+            }
         });
     }
 
@@ -1417,46 +2186,11 @@ public partial class PaintOverlayWindow
             return;
         }
         _neighborInkCache.Remove(cacheKey);
-        _interactiveSwitchInkCache.Remove(cacheKey);
-    }
-
-    private void RememberInteractiveSwitchInkBitmap(string cacheKey, int pageIndex, BitmapSource bitmap)
-    {
-        if (string.IsNullOrWhiteSpace(cacheKey) || pageIndex <= 0)
-        {
-            return;
-        }
-        if (!_photoCache.TryGet(cacheKey, out var strokes) || strokes.Count == 0)
-        {
-            return;
-        }
-
-        _interactiveSwitchInkCache[cacheKey] = new InkBitmapCacheEntry(pageIndex, strokes, bitmap);
-        TrimInteractiveSwitchInkCache(pageIndex);
-    }
-
-    private void TrimInteractiveSwitchInkCache(int anchorPageIndex)
-    {
-        if (_interactiveSwitchInkCache.Count <= InteractiveSwitchInkCacheLimit)
-        {
-            return;
-        }
-
-        var keysToRemove = _interactiveSwitchInkCache
-            .OrderBy(pair => Math.Abs(pair.Value.PageIndex - anchorPageIndex))
-            .Skip(InteractiveSwitchInkCacheLimit)
-            .Select(pair => pair.Key)
-            .ToList();
-
-        foreach (var key in keysToRemove)
-        {
-            _interactiveSwitchInkCache.Remove(key);
-        }
     }
 
     private int GetNeighborPrefetchRadius()
     {
-        if (!_crossPageDisplayEnabled || _photoDocumentIsPdf)
+        if (!IsCrossPageImageSequenceActive())
         {
             return CrossPageNeighborPrefetchRadiusMin;
         }
@@ -1472,3 +2206,13 @@ public partial class PaintOverlayWindow
         return Math.Clamp(radius, CrossPageNeighborPrefetchRadiusMin, _neighborPrefetchRadiusMaxSetting);
     }
 }
+
+
+
+
+
+
+
+
+
+

@@ -2,17 +2,48 @@ using System.Globalization;
 using System.Speech.Synthesis;
 using System.Windows;
 using ClassroomToolkit.App.Settings;
-using ClassroomToolkit.Interop.Presentation;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.Services.Input;
 using Microsoft.Win32;
 
 namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
+    private readonly record struct DisplayTabState(
+        bool ShowId,
+        bool ShowName,
+        bool ShowPhoto,
+        int PhotoDurationSeconds,
+        string PhotoSharedClass);
+
+    private readonly record struct SpeechTabState(
+        bool SpeechEnabled,
+        string SpeechEngine,
+        string SpeechVoiceId,
+        string SpeechOutputId);
+
+    private readonly record struct RemoteTabState(
+        bool RemoteEnabled,
+        string RemotePresenterKey,
+        bool RemoteGroupSwitchEnabled,
+        string RemoteGroupSwitchKey);
+
+    private readonly record struct TimerTabState(
+        bool TimerSoundEnabled,
+        string TimerSoundVariant,
+        bool ReminderSoundEnabled,
+        string ReminderSoundVariant,
+        int ReminderIntervalMinutes);
+
     private readonly string _initialVoiceId;
     private readonly string _initialOutputId;
+    private bool _suppressDirtyTracking = true;
+    private DisplayTabState _initialDisplayTabState;
+    private SpeechTabState _initialSpeechTabState;
+    private RemoteTabState _initialRemoteTabState;
+    private TimerTabState _initialTimerTabState;
 
     public bool RollCallShowId { get; private set; }
     public bool RollCallShowName { get; private set; }
@@ -75,38 +106,56 @@ public partial class RollCallSettingsDialog : Window
         UpdateSpeechControls();
         UpdateRemoteKeyEnabled();
         UpdateRemoteGroupSwitchEnabled();
+        AttachDirtyTrackingHandlers();
+        _initialDisplayTabState = CaptureDisplayTabState();
+        _initialSpeechTabState = CaptureSpeechTabState();
+        _initialRemoteTabState = CaptureRemoteTabState();
+        _initialTimerTabState = CaptureTimerTabState();
+        _suppressDirtyTracking = false;
+        UpdateTabDirtyStates();
         Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
     }
 
     private void OnRemoteEnabledChanged(object sender, RoutedEventArgs e)
     {
         UpdateRemoteKeyEnabled();
+        UpdateTabDirtyStates();
     }
 
     private void OnRemoteGroupSwitchChanged(object sender, RoutedEventArgs e)
     {
         UpdateRemoteGroupSwitchEnabled();
+        UpdateTabDirtyStates();
     }
 
+    private void OnSpeechToggleChanged(object sender, RoutedEventArgs e)
+    {
+        UpdateSpeechControls();
+        UpdateTabDirtyStates();
+    }
 
     private void OnShowPhotoChanged(object sender, RoutedEventArgs e)
     {
         UpdatePhotoControls();
+        UpdateTabDirtyStates();
     }
 
     private void OnPhotoDurationChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdatePhotoDurationLabel();
+        UpdateTabDirtyStates();
     }
 
     private void OnTimerControlChanged(object sender, RoutedEventArgs e)
     {
         UpdateTimerControls();
+        UpdateTabDirtyStates();
     }
 
     private void OnReminderIntervalChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateReminderIntervalLabel();
+        UpdateTabDirtyStates();
     }
 
     private void OnSpeechEngineChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -114,6 +163,233 @@ public partial class RollCallSettingsDialog : Window
         UpdateSpeechControls();
         // 重新构建语音列表，因为不同引擎可能有不同的语音
         BuildVoiceCombo(_initialVoiceId);
+        UpdateTabDirtyStates();
+    }
+
+    private void OnResetDisplayTabClick(object sender, RoutedEventArgs e)
+    {
+        ApplyDisplayTabState(_initialDisplayTabState);
+        UpdateTabDirtyStates();
+    }
+
+    private void OnResetSpeechTabClick(object sender, RoutedEventArgs e)
+    {
+        ApplySpeechTabState(_initialSpeechTabState);
+        UpdateTabDirtyStates();
+    }
+
+    private void OnResetRemoteTabClick(object sender, RoutedEventArgs e)
+    {
+        ApplyRemoteTabState(_initialRemoteTabState);
+        UpdateTabDirtyStates();
+    }
+
+    private void OnResetTimerTabClick(object sender, RoutedEventArgs e)
+    {
+        ApplyTimerTabState(_initialTimerTabState);
+        UpdateTabDirtyStates();
+    }
+
+    private void AttachDirtyTrackingHandlers()
+    {
+        ShowIdCheck.Checked += (_, _) => UpdateTabDirtyStates();
+        ShowIdCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
+        ShowNameCheck.Checked += (_, _) => UpdateTabDirtyStates();
+        ShowNameCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
+        PhotoSharedCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+
+        SpeechCheck.Checked += (_, _) => UpdateTabDirtyStates();
+        SpeechCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
+        SpeechVoiceCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        SpeechOutputCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+
+        RemoteKeyCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        RemoteGroupSwitchKeyCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+
+        TimerSoundCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        ReminderSoundCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+    }
+
+    private DisplayTabState CaptureDisplayTabState()
+    {
+        return new DisplayTabState(
+            ShowId: ShowIdCheck.IsChecked == true,
+            ShowName: ShowNameCheck.IsChecked == true,
+            ShowPhoto: ShowPhotoCheck.IsChecked == true,
+            PhotoDurationSeconds: (int)Math.Round(PhotoDurationSlider.Value),
+            PhotoSharedClass: GetSelectedValue(PhotoSharedCombo, string.Empty));
+    }
+
+    private SpeechTabState CaptureSpeechTabState()
+    {
+        return new SpeechTabState(
+            SpeechEnabled: SpeechCheck.IsChecked == true,
+            SpeechEngine: GetSelectedValue(SpeechEngineCombo, "pyttsx3"),
+            SpeechVoiceId: GetSelectedValue(SpeechVoiceCombo, string.Empty),
+            SpeechOutputId: GetSelectedValue(SpeechOutputCombo, string.Empty));
+    }
+
+    private RemoteTabState CaptureRemoteTabState()
+    {
+        return new RemoteTabState(
+            RemoteEnabled: RemoteEnabledCheck.IsChecked == true,
+            RemotePresenterKey: GetRemoteKey(),
+            RemoteGroupSwitchEnabled: RemoteGroupSwitchCheck.IsChecked == true,
+            RemoteGroupSwitchKey: GetRemoteGroupSwitchKey());
+    }
+
+    private TimerTabState CaptureTimerTabState()
+    {
+        return new TimerTabState(
+            TimerSoundEnabled: TimerSoundCheck.IsChecked == true,
+            TimerSoundVariant: GetSelectedValue(TimerSoundCombo, "bell"),
+            ReminderSoundEnabled: ReminderSoundCheck.IsChecked == true,
+            ReminderSoundVariant: GetSelectedValue(ReminderSoundCombo, "short_bell"),
+            ReminderIntervalMinutes: (int)Math.Round(ReminderIntervalSlider.Value));
+    }
+
+    private void ApplyDisplayTabState(DisplayTabState state)
+    {
+        _suppressDirtyTracking = true;
+        try
+        {
+            ShowIdCheck.IsChecked = state.ShowId;
+            ShowNameCheck.IsChecked = state.ShowName;
+            ShowPhotoCheck.IsChecked = state.ShowPhoto;
+            PhotoDurationSlider.Value = Math.Clamp(state.PhotoDurationSeconds, 0, 10);
+            SelectComboValue(PhotoSharedCombo, state.PhotoSharedClass, string.Empty);
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdatePhotoDurationLabel();
+        UpdatePhotoControls();
+    }
+
+    private void ApplySpeechTabState(SpeechTabState state)
+    {
+        _suppressDirtyTracking = true;
+        try
+        {
+            SpeechCheck.IsChecked = state.SpeechEnabled;
+            BuildSpeechEngineCombo(state.SpeechEngine);
+            BuildVoiceCombo(state.SpeechVoiceId);
+            BuildOutputCombo(state.SpeechEngine, state.SpeechOutputId);
+            SelectComboValue(SpeechVoiceCombo, state.SpeechVoiceId, _initialVoiceId);
+            SelectComboValue(SpeechOutputCombo, state.SpeechOutputId, _initialOutputId);
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdateSpeechControls();
+    }
+
+    private void ApplyRemoteTabState(RemoteTabState state)
+    {
+        _suppressDirtyTracking = true;
+        try
+        {
+            RemoteEnabledCheck.IsChecked = state.RemoteEnabled;
+            SelectComboValue(RemoteKeyCombo, state.RemotePresenterKey, "tab");
+            RemoteGroupSwitchCheck.IsChecked = state.RemoteGroupSwitchEnabled;
+            SelectComboValue(RemoteGroupSwitchKeyCombo, state.RemoteGroupSwitchKey, "b");
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdateRemoteKeyEnabled();
+        UpdateRemoteGroupSwitchEnabled();
+    }
+
+    private void ApplyTimerTabState(TimerTabState state)
+    {
+        _suppressDirtyTracking = true;
+        try
+        {
+            TimerSoundCheck.IsChecked = state.TimerSoundEnabled;
+            SelectComboValue(TimerSoundCombo, state.TimerSoundVariant, "bell");
+            ReminderSoundCheck.IsChecked = state.ReminderSoundEnabled;
+            SelectComboValue(ReminderSoundCombo, state.ReminderSoundVariant, "short_bell");
+            ReminderIntervalSlider.Value = Math.Clamp(state.ReminderIntervalMinutes, 1, 20);
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdateTimerControls();
+        UpdateReminderIntervalLabel();
+    }
+
+    private void UpdateTabDirtyStates()
+    {
+        if (_suppressDirtyTracking)
+        {
+            return;
+        }
+
+        var displayDirty = IsDisplayTabDirty();
+        var speechDirty = IsSpeechTabDirty();
+        var remoteDirty = IsRemoteTabDirty();
+        var timerDirty = IsTimerTabDirty();
+
+        DisplayTabStateText.Text = displayDirty ? "本页状态：已修改" : "本页状态：未修改";
+        SpeechTabStateText.Text = speechDirty ? "本页状态：已修改" : "本页状态：未修改";
+        RemoteTabStateText.Text = remoteDirty ? "本页状态：已修改" : "本页状态：未修改";
+        TimerTabStateText.Text = timerDirty ? "本页状态：已修改" : "本页状态：未修改";
+
+        ResetDisplayTabButton.IsEnabled = displayDirty;
+        ResetSpeechTabButton.IsEnabled = speechDirty;
+        ResetRemoteTabButton.IsEnabled = remoteDirty;
+        ResetTimerTabButton.IsEnabled = timerDirty;
+    }
+
+    private bool IsDisplayTabDirty()
+    {
+        var current = CaptureDisplayTabState();
+        var initial = _initialDisplayTabState;
+        return current.ShowId != initial.ShowId
+            || current.ShowName != initial.ShowName
+            || current.ShowPhoto != initial.ShowPhoto
+            || current.PhotoDurationSeconds != initial.PhotoDurationSeconds
+            || !string.Equals(current.PhotoSharedClass, initial.PhotoSharedClass, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsSpeechTabDirty()
+    {
+        var current = CaptureSpeechTabState();
+        var initial = _initialSpeechTabState;
+        return current.SpeechEnabled != initial.SpeechEnabled
+            || !string.Equals(current.SpeechEngine, initial.SpeechEngine, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(current.SpeechVoiceId, initial.SpeechVoiceId, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(current.SpeechOutputId, initial.SpeechOutputId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsRemoteTabDirty()
+    {
+        var current = CaptureRemoteTabState();
+        var initial = _initialRemoteTabState;
+        return current.RemoteEnabled != initial.RemoteEnabled
+            || !string.Equals(current.RemotePresenterKey, initial.RemotePresenterKey, StringComparison.OrdinalIgnoreCase)
+            || current.RemoteGroupSwitchEnabled != initial.RemoteGroupSwitchEnabled
+            || !string.Equals(current.RemoteGroupSwitchKey, initial.RemoteGroupSwitchKey, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsTimerTabDirty()
+    {
+        var current = CaptureTimerTabState();
+        var initial = _initialTimerTabState;
+        return current.TimerSoundEnabled != initial.TimerSoundEnabled
+            || !string.Equals(current.TimerSoundVariant, initial.TimerSoundVariant, StringComparison.OrdinalIgnoreCase)
+            || current.ReminderSoundEnabled != initial.ReminderSoundEnabled
+            || !string.Equals(current.ReminderSoundVariant, initial.ReminderSoundVariant, StringComparison.OrdinalIgnoreCase)
+            || current.ReminderIntervalMinutes != initial.ReminderIntervalMinutes;
     }
 
     private void UpdateRemoteKeyEnabled()
@@ -151,6 +427,16 @@ public partial class RollCallSettingsDialog : Window
 
     private void UpdateSpeechControls()
     {
+        var speechEnabled = SpeechCheck.IsChecked == true;
+        SpeechEngineCombo.IsEnabled = speechEnabled;
+        SpeechVoiceCombo.IsEnabled = speechEnabled;
+        if (!speechEnabled)
+        {
+            SpeechOutputCombo.IsEnabled = false;
+            SpeechOutputCombo.ToolTip = "已关闭语音播报。";
+            return;
+        }
+
         var engine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
         if (engine == "pyttsx3")
         {
@@ -167,6 +453,11 @@ public partial class RollCallSettingsDialog : Window
             SpeechOutputCombo.IsEnabled = false;
             SpeechOutputCombo.ToolTip = "未检测到可用的输出设备。";
         }
+
+        if (SpeechVoiceCombo.Items.Count == 0)
+        {
+            SpeechVoiceCombo.IsEnabled = false;
+        }
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
@@ -179,22 +470,22 @@ public partial class RollCallSettingsDialog : Window
 
         if (RemoteEnabledCheck.IsChecked == true)
         {
-            if (!KeyBindingParser.TryParse(keyText, out var binding) || binding == null)
+            if (!KeyBindingTokenParser.TryNormalize(keyText, out var normalizedKey))
             {
                 System.Windows.MessageBox.Show("请输入有效的点名按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
-            keyText = binding.ToString();
+            keyText = normalizedKey;
         }
 
         if (RemoteGroupSwitchCheck.IsChecked == true)
         {
-            if (!KeyBindingParser.TryParse(groupKeyText, out var binding) || binding == null)
+            if (!KeyBindingTokenParser.TryNormalize(groupKeyText, out var normalizedGroupKey))
             {
                 System.Windows.MessageBox.Show("请输入有效的分组切换按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
-            groupKeyText = binding.ToString();
+            groupKeyText = normalizedGroupKey;
         }
 
         if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true && 
@@ -607,6 +898,24 @@ public partial class RollCallSettingsDialog : Window
             return value;
         }
         return fallback;
+    }
+
+    private static void SelectComboValue(System.Windows.Controls.ComboBox combo, string value, string fallback)
+    {
+        if (combo.ItemsSource == null)
+        {
+            combo.SelectedValue = string.IsNullOrWhiteSpace(value) ? fallback : value;
+            return;
+        }
+
+        combo.SelectedValue = string.IsNullOrWhiteSpace(value) ? fallback : value;
+        var selected = GetSelectedValue(combo, string.Empty);
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            return;
+        }
+
+        combo.SelectedValue = fallback;
     }
 
     private sealed record ComboOption(string Value, string Label);

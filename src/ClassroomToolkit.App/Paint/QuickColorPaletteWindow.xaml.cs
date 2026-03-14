@@ -46,8 +46,8 @@ public partial class QuickColorPaletteWindow : Window
                 Height = 22,
                 Margin = new Thickness(2, 0, 2, 0),
                 Background = new SolidColorBrush(option.Color),
-                BorderBrush = new SolidColorBrush(MediaColor.FromArgb(120, 0, 0, 0)),
-                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(GetContrastBorderColor(option.Color)),
+                BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
                 ToolTip = option.Name,
                 Style = (Style)FindResource("ColorBlockButtonStyle")
             };
@@ -60,5 +60,18 @@ public partial class QuickColorPaletteWindow : Window
     {
         SelectedColor = color;
         DialogResult = true;
+    }
+
+    private static MediaColor GetContrastBorderColor(MediaColor color)
+    {
+        return IsDarkColor(color)
+            ? MediaColor.FromArgb(220, 255, 255, 255)
+            : MediaColor.FromArgb(140, 0, 0, 0);
+    }
+
+    private static bool IsDarkColor(MediaColor color)
+    {
+        var luminance = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B;
+        return luminance < 70;
     }
 }

@@ -82,9 +82,9 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
     }
 
     private readonly List<StrokePoint> _points = new();
-    private readonly Queue<double> _velocityBuffer = new();
-    private readonly Queue<double> _widthBuffer = new();
-    private readonly Queue<double> _pressureBuffer = new();
+    private readonly SlidingAverageWindow _velocityAverage = new();
+    private readonly SlidingAverageWindow _widthAverage = new();
+    private readonly SlidingAverageWindow _pressureAverage = new();
     private WpfColor _color;
     private double _baseSize;
     private bool _isActive;
@@ -117,6 +117,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
     private List<InkBloomGeometry>? _cachedBlooms;
     private Geometry? _previewBaseGeometry;
     private int _previewBasePointCount;
+    private readonly List<StrokePoint> _previewSliceBuffer = new();
     private int _geometryVersion;
     private int _lastResampledPointCount;
     private double _lastEffectiveTaperBaseDip;
@@ -153,9 +154,9 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
     {
         var point = input.Position;
         _points.Clear();
-        _velocityBuffer.Clear();
-        _widthBuffer.Clear();
-        _pressureBuffer.Clear();
+        _velocityAverage.Reset();
+        _widthAverage.Reset();
+        _pressureAverage.Reset();
         _isActive = true;
         _pointCount = 0;
         _minVelocity = double.MaxValue;
@@ -179,6 +180,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewSliceBuffer.Clear();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
         _smoothedPos = _positionFilter.Filter(point, 1.0 / 120.0);
@@ -186,7 +188,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, 0, 0, 0, 0, _strokeNoisePhase, _inkWetness, nibAngle, 1.0));
         if (input.HasPressure)
         {
-            _pressureBuffer.Enqueue(Math.Clamp(input.Pressure, 0, 1));
+            _pressureAverage.Push(Math.Clamp(input.Pressure, 0, 1), _config.PressureSmoothWindow);
         }
     }
 
@@ -231,13 +233,19 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         // Position smoothing (adaptive EMA)
         double speedAlpha = Math.Clamp(rawSpeed / Math.Max(_config.PositionSmoothingSpeedReference, 0.001), 0, 1);
         double posAlpha = Lerp(_config.PositionSmoothingMinAlpha, _config.PositionSmoothingMaxAlpha, speedAlpha);
+        double followBoost = Math.Clamp((rawSpeed - 1.1) / 2.4, 0, 1);
+        if (rawDtMs > 9.0)
+        {
+            followBoost = Math.Max(followBoost, Math.Clamp((rawDtMs - 9.0) / 24.0, 0, 1));
+        }
+        posAlpha = Lerp(posAlpha, 0.97, followBoost);
         var filteredPoint = _positionFilter.Filter(point, dtSeconds);
         _smoothedPos = new WpfPoint(
             _smoothedPos.X * (1 - posAlpha) + filteredPoint.X * posAlpha,
             _smoothedPos.Y * (1 - posAlpha) + filteredPoint.Y * posAlpha
         );
 
-        var lastPt = _points.Last();
+        var lastPt = _points[^1];
         var dist = (_smoothedPos - lastPt.Position).Length;
 
         // 去噪：忽略过小的移动（阈值随当前宽度调整）
@@ -246,14 +254,34 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         {
             double speedNorm = Math.Clamp(rawSpeed / Math.Max(_config.AdaptiveSamplingSpeedReference, 0.001), 0, 1);
             minDistFactor = Lerp(_config.AdaptiveSamplingMinFactor, _config.AdaptiveSamplingMaxFactor, speedNorm);
+            // Fast handwriting prefers continuity over aggressive thinning.
+            minDistFactor *= Lerp(1.0, 0.62, speedNorm);
+            if (rawDtMs > 9.0)
+            {
+                minDistFactor *= Lerp(1.0, 0.82, Math.Clamp((rawDtMs - 9.0) / 22.0, 0, 1));
+            }
         }
         double minDist = Math.Clamp(_smoothedWidth * minDistFactor, 0.4, 2.6);
             if (dist < minDist) return;
 
-        // 数据验证：检查异常跳变
-            if (dist > _config.MaxPointJumpDistance)
+        // 数据验证：异常跳变保护（掉帧时允许更大的连续位移，避免断线）
+            double maxPointJumpDistance = ResolveDynamicMaxPointJumpDistance(rawDtMs);
+            if (dist > maxPointJumpDistance)
             {
-                return;
+                if (rawDtMs <= 6.0)
+                {
+                    return;
+                }
+
+                var jumpDirection = _smoothedPos - lastPt.Position;
+                if (jumpDirection.LengthSquared < 0.0001)
+                {
+                    return;
+                }
+
+                jumpDirection.Normalize();
+                _smoothedPos = lastPt.Position + (jumpDirection * maxPointJumpDistance);
+                dist = maxPointJumpDistance;
             }
 
         var now = input.TimestampTicks > 0
@@ -268,13 +296,12 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         _minVelocity = Math.Min(_minVelocity, velocity);
         _maxVelocity = Math.Max(_maxVelocity, velocity);
 
-        double smoothVelocity = PushAndAverage(_velocityBuffer, _config.VelocitySmoothWindow, velocity);
+        double smoothVelocity = _velocityAverage.Push(velocity, _config.VelocitySmoothWindow);
         double resolvedPressure = input.HasPressure ? Math.Clamp(input.Pressure, 0, 1) : 0.5;
         resolvedPressure = _pressureFilter.Filter(resolvedPressure, dtSeconds);
-        double smoothedPressure = PushAndAverage(
-            _pressureBuffer,
-            _config.PressureSmoothWindow,
-            resolvedPressure);
+        double smoothedPressure = _pressureAverage.Push(
+            resolvedPressure,
+            _config.PressureSmoothWindow);
         double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount, smoothedPressure, input.HasPressure);
 
         double brushAngle = ResolveEffectiveBrushAngle(input);
@@ -372,7 +399,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
             effectiveWidth = Math.Min(effectiveWidth, lowSpeedMax);
         }
 
-        targetWidth = PushAndAverage(_widthBuffer, _config.PressureSmoothWindow, effectiveWidth);
+        targetWidth = _widthAverage.Push(effectiveWidth, _config.PressureSmoothWindow);
         targetWidth = ClampWidth(targetWidth);
 
         double lowPassSpeedNorm = Math.Clamp(
@@ -490,9 +517,9 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
     public void Reset()
     {
         _points.Clear();
-        _velocityBuffer.Clear();
-        _widthBuffer.Clear();
-        _pressureBuffer.Clear();
+        _velocityAverage.Reset();
+        _widthAverage.Reset();
+        _pressureAverage.Reset();
         _isActive = false;
         _pointCount = 0;
         _minVelocity = double.MaxValue;
@@ -508,6 +535,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewSliceBuffer.Clear();
         MarkGeometryDirty();
     }
 
@@ -769,14 +797,6 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         return Math.Clamp(width, minWidth, maxWidth);
     }
 
-    private static double PushAndAverage(Queue<double> buffer, int maxCount, double value)
-    {
-        int limit = Math.Max(1, maxCount);
-        buffer.Enqueue(value);
-        while (buffer.Count > limit) buffer.Dequeue();
-        return buffer.Average();
-    }
-
     private static double MapPressureSigned(double pressure, double deadZone, double gamma)
     {
         double centered = (pressure - 0.5) * 2.0;
@@ -825,6 +845,16 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         // Stronger attenuation when revisiting the same area repeatedly.
         double overlapNorm = Math.Clamp(hits / 3.0, 0.0, 1.0);
         return Lerp(1.0, 0.66, overlapNorm);
+    }
+
+    private double ResolveDynamicMaxPointJumpDistance(double rawDtMs)
+    {
+        double baseLimit = Math.Max(_config.MaxPointJumpDistance, _baseSize * 5.0);
+        double safeDtMs = Math.Clamp(rawDtMs, 1.0, 80.0);
+        double followSpeedDipPerMs = Math.Max(2.4, _baseSize * 0.24);
+        double expandedByDt = safeDtMs * followSpeedDipPerMs;
+        double hardCap = Math.Max(baseLimit * 2.4, _baseSize * 20.0);
+        return Math.Clamp(Math.Max(baseLimit, expandedByDt), baseLimit, hardCap);
     }
 
     private void TrimRawPointsIfNeeded()
@@ -900,11 +930,7 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
 
     private bool IsMoveTelemetryEnabled()
     {
-#if !DEBUG
-        return false;
-#else
         return _config.EnableDebugMoveTelemetry || BrushMoveTelemetryFlag;
-#endif
     }
 
     private static bool ResolveTelemetryFlagFromEnvironment()
@@ -1123,6 +1149,48 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
             Array.Sort(values, 0, count);
             int idx = Math.Clamp((int)Math.Ceiling((count - 1) * q), 0, count - 1);
             return values[idx];
+        }
+    }
+
+    private sealed class SlidingAverageWindow
+    {
+        private const int MaxCapacity = 64;
+        private readonly double[] _values = new double[MaxCapacity];
+        private int _start;
+        private int _count;
+
+        public void Reset()
+        {
+            _start = 0;
+            _count = 0;
+        }
+
+        public double Push(double value, int windowSize)
+        {
+            int limit = Math.Clamp(windowSize, 1, MaxCapacity);
+            if (_count == MaxCapacity)
+            {
+                _start = (_start + 1) % MaxCapacity;
+                _count--;
+            }
+
+            int writeIndex = (_start + _count) % MaxCapacity;
+            _values[writeIndex] = value;
+            _count++;
+
+            while (_count > limit)
+            {
+                _start = (_start + 1) % MaxCapacity;
+                _count--;
+            }
+
+            double sum = 0.0;
+            for (int i = 0; i < _count; i++)
+            {
+                int idx = (_start + i) % MaxCapacity;
+                sum += _values[idx];
+            }
+            return sum / Math.Max(1, _count);
         }
     }
 }

@@ -94,7 +94,7 @@ public sealed class StudentWorkbookStore
             }
             if (File.Exists(path))
             {
-                File.Replace(tempPath, path, null);
+                TryReplaceOrOverwrite(tempPath, path);
             }
             else
             {
@@ -107,6 +107,18 @@ public sealed class StudentWorkbookStore
             {
                 File.Delete(tempPath);
             }
+        }
+    }
+
+    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
+    {
+        try
+        {
+            File.Replace(tempPath, targetPath, null);
+        }
+        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
+        {
+            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 

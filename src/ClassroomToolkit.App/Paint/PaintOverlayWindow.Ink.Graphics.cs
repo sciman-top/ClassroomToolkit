@@ -18,7 +18,7 @@ public partial class PaintOverlayWindow
     private bool ShouldRenderInteractiveInkInPhotoSpace()
     {
         return PhotoInkRenderPolicy.ShouldRenderInteractiveInkInPhotoSpace(
-            _photoModeActive,
+            IsPhotoInkModeActive(),
             RasterImage.RenderTransform,
             _photoContentTransform);
     }
@@ -453,8 +453,8 @@ public partial class PaintOverlayWindow
 
     private static bool ShouldSplitRenderBatch(Int32Rect currentRect, Int32Rect nextRect, Int32Rect unionRect)
     {
-        const int proximityPaddingPixels = 24;
-        const double areaRatioThreshold = 1.6;
+        const int proximityPaddingPixels = InkRenderBatchingDefaults.ProximityPaddingPixels;
+        const double areaRatioThreshold = InkRenderBatchingDefaults.AreaRatioThreshold;
 
         if (RectsNear(currentRect, nextRect, proximityPaddingPixels))
         {

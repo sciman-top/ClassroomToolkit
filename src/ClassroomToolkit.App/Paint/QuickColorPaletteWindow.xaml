@@ -30,6 +30,8 @@
         <Border.Effect>
             <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
         </Border.Effect>
-        <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
+        <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
+            <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
+        </Border>
     </Border>
 </Window>

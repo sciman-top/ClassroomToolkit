@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Services.Presentation;
 using MediaColor = System.Windows.Media.Color;
 
@@ -42,19 +44,21 @@ public partial class PaintOverlayWindow
     {
         if (isActive && !wasActive)
         {
+            DispatchSessionEvent(new EnterWhiteboardEvent());
+            UpdatePhotoContentTransforms(enabled: false);
             if (!_photoModeActive)
             {
-                WindowState = WindowState.Normal;
-                ApplyFullscreenBounds();
-                Dispatcher.BeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
+                RecoverOverlayFullscreenBounds();
             }
             SaveCurrentPageOnNavigate(forceBackground: false);
             _presentationFullscreenActive = false;
-            _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+            ClearCurrentPresentationType();
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
             _boardSuspendedPhotoCache = _photoModeActive;
-            if (_photoModeActive && _crossPageDisplayEnabled)
+            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+                    _photoModeActive,
+                    IsCrossPageDisplaySettingEnabled()))
             {
                 ClearNeighborPages();
             }
@@ -63,12 +67,22 @@ public partial class PaintOverlayWindow
         }
         if (!isActive && wasActive)
         {
+            var resume = WhiteboardResumeSceneResolver.Resolve(
+                _photoModeActive,
+                _photoDocumentIsPdf,
+                MapPresentationForegroundSource(ResolveFullscreenPresentationType()));
+            DispatchSessionEvent(new ExitWhiteboardEvent(
+                ResumeScene: resume.Scene,
+                PhotoSource: resume.PhotoSource,
+                PresentationSource: resume.PresentationSource));
+            if (_photoModeActive)
+            {
+                UpdatePhotoContentTransforms(enabled: true);
+            }
             if (!_photoModeActive)
             {
                 // Keep overlay on monitor bounds instead of work-area maximize semantics.
-                WindowState = WindowState.Normal;
-                ApplyFullscreenBounds();
-                Dispatcher.BeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
+                RecoverOverlayFullscreenBounds();
             }
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
@@ -80,9 +94,11 @@ public partial class PaintOverlayWindow
                 _currentCacheKey = BuildPhotoModeCacheKey(_currentDocumentPath, _currentPageIndex, _photoDocumentIsPdf);
                 LoadCurrentPageIfExists();
             }
-            if (_photoModeActive && _crossPageDisplayEnabled)
+            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+                    _photoModeActive,
+                    IsCrossPageDisplaySettingEnabled()))
             {
-                RequestCrossPageDisplayUpdate("board-exit");
+                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.BoardExit);
             }
             _refreshOrchestrator.RequestRefresh("board-exit");
         }
@@ -103,10 +119,7 @@ public partial class PaintOverlayWindow
         OverlayRoot.Background = new SolidColorBrush(color);
         if (_photoModeActive)
         {
-            var active = IsBoardActive();
-            PhotoBackground.Visibility = active
-                ? Visibility.Collapsed
-                : (PhotoBackground.Source != null ? Visibility.Visible : Visibility.Collapsed);
+            RefreshPhotoBackgroundVisibility();
             PhotoControlLayer.Visibility = _photoModeActive
                 ? Visibility.Visible
                 : Visibility.Collapsed;

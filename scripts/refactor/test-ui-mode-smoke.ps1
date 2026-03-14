@@ -16,6 +16,74 @@ function Read-JsonFile {
     return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
 }
 
+function Get-TaskStateStatus {
+    param(
+        [object]$State,
+        [string]$TaskId
+    )
+
+    $taskState = $State.tasks.PSObject.Properties[$TaskId]
+    if ($null -eq $taskState) {
+        return "pending"
+    }
+
+    return [string]$taskState.Value.status
+}
+
+function Get-ExpectedReadyTaskId {
+    param(
+        [object]$TaskDoc,
+        [object]$State
+    )
+
+    $completed = @{}
+    foreach ($task in @($TaskDoc.tasks)) {
+        $taskId = [string]$task.id
+        if ([string]::IsNullOrWhiteSpace($taskId)) {
+            continue
+        }
+
+        if ((Get-TaskStateStatus -State $State -TaskId $taskId) -eq "completed") {
+            $completed[$taskId] = $true
+        }
+    }
+
+    $readyTasks = @()
+    foreach ($task in @($TaskDoc.tasks)) {
+        $taskId = [string]$task.id
+        if ([string]::IsNullOrWhiteSpace($taskId)) {
+            continue
+        }
+
+        $status = Get-TaskStateStatus -State $State -TaskId $taskId
+        if ($status -in @("completed", "blocked", "deferred", "in_progress", "omitted")) {
+            continue
+        }
+
+        $depsMet = $true
+        foreach ($dependency in @($task.depends_on)) {
+            if (-not $completed.ContainsKey([string]$dependency)) {
+                $depsMet = $false
+                break
+            }
+        }
+
+        if ($depsMet) {
+            $readyTasks += $task
+        }
+    }
+
+    $next = $readyTasks |
+        Sort-Object -Property @{ Expression = "priority"; Ascending = $true }, @{ Expression = "order"; Ascending = $true } |
+        Select-Object -First 1
+
+    if ($null -eq $next) {
+        return $null
+    }
+
+    return [string]$next.id
+}
+
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 $registryPath = Join-Path $repoPath ".codex/refactor-modes.json"
 $resolverPath = Join-Path $repoPath "scripts/refactor/resolve-refactor-mode.ps1"
@@ -62,12 +130,18 @@ function Test-DefaultScenario {
         throw "wrapper reconciliation_refresh_on_gate_resume missing"
     }
 
+    $taskDoc = Read-JsonFile -Path $uiTaskPath
     $selection = & powershell -File $selectorPath -TaskFile $uiTaskPath -StateFile $uiStatePath -AsJson | ConvertFrom-Json
-    if ([string]$selection.id -ne "ui-foundation-bootstrap") {
-        throw "unexpected initial UI task selection"
+    $expectedSelectionId = Get-ExpectedReadyTaskId -TaskDoc $taskDoc -State $state
+    if ([string]::IsNullOrWhiteSpace($expectedSelectionId)) {
+        if ([string]$selection.status -ne "done") {
+            throw "no expected ready task found in current state"
+        }
+    }
+    elseif ([string]$selection.id -ne $expectedSelectionId) {
+        throw "unexpected UI task selection. expected=$expectedSelectionId actual=$([string]$selection.id)"
     }
 
-    $taskDoc = Read-JsonFile -Path $uiTaskPath
     $expectedStages = @(
         "foundation",
         "controls",
@@ -201,12 +275,47 @@ function Test-InstallerExporterScenario {
     }
 }
 
+function Test-SkipManualGateStateScenario {
+    $backup = Get-Content -LiteralPath $uiStatePath -Raw
+    try {
+        & powershell -File $stateUpdaterPath `
+            -Action gate-skip `
+            -StateFile $uiStatePath `
+            -TaskId theme-freeze-gate `
+            -Summary "skip manual gate for smoke" `
+            -Reason "theme-freeze" `
+            -EvidenceDoc "docs/validation/ui-window-system-acceptance.md" `
+            -Mode "ui-window-system" `
+            -ModeFamily "ui-overhaul" | Out-Null
+
+        $state = Read-JsonFile -Path $uiStatePath
+        if ([string]$state.tasks.'theme-freeze-gate'.status -ne "completed") {
+            throw "gate-skip did not complete the gate task"
+        }
+        if (-not [bool]$state.theme_frozen) {
+            throw "gate-skip did not set theme_frozen"
+        }
+
+        $lastHistory = @($state.history | Select-Object -Last 1)
+        if ($lastHistory.Count -eq 0 -or [string]$lastHistory[0].action -ne "gate-skip") {
+            throw "gate-skip history record missing"
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$lastHistory[0].evidence_doc)) {
+            throw "gate-skip evidence_doc missing"
+        }
+    }
+    finally {
+        Set-Content -LiteralPath $uiStatePath -Value $backup -Encoding UTF8
+    }
+}
+
 switch ($Scenario) {
     "default" { Test-DefaultScenario }
     "gate-resume-refresh" { Test-GateResumeScenario }
     "stale-reconciliation" { Test-StaleReconciliationScenario }
     "lock-contention" { Test-LockContentionScenario }
     "installer-exporter" { Test-InstallerExporterScenario }
+    "skip-manual-gate-state" { Test-SkipManualGateStateScenario }
     default { throw "Unsupported smoke scenario: $Scenario" }
 }
 

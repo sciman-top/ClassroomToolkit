@@ -12,6 +12,10 @@ public partial class VariableWidthBrushRenderer
 {
     private const int PreviewTailPointWindow = 56;
     private const int PreviewBaseRefreshStride = 14;
+    private const int PreviewFastMaxUpsampleSteps = 6;
+    private const int PreviewFastMaxResampledPointCount = 1200;
+    private const double PreviewFastUpsampleSpacingFactor = 1.28;
+    private const double PreviewFastArcLengthStepFactor = 1.35;
 
     public sealed class RibbonGeometry
     {
@@ -92,7 +96,7 @@ public partial class VariableWidthBrushRenderer
         {
             _previewBaseGeometry = null;
             _previewBasePointCount = 0;
-            var samples = BuildCenterlineSamplesFinal(_points);
+            var samples = BuildCenterlineSamplesFinal(_points, previewFastPath: true);
             preview = samples.Count < 2 ? null : BuildRibbonGeometry(samples, ribbonT: 0, noiseSeedOffset: 0);
         }
         else
@@ -146,14 +150,26 @@ public partial class VariableWidthBrushRenderer
             return null;
         }
 
-        var source = _points.GetRange(start, count);
-        var samples = BuildCenterlineSamplesFinal(source);
+        var source = CopyRangeToPreviewSliceBuffer(start, end);
+        var samples = BuildCenterlineSamplesFinal(source, previewFastPath: true);
         if (samples.Count < 2)
         {
             return null;
         }
 
         return BuildRibbonGeometry(samples, ribbonT: 0, noiseSeedOffset: 0);
+    }
+
+    private IReadOnlyList<StrokePoint> CopyRangeToPreviewSliceBuffer(int startInclusive, int endExclusive)
+    {
+        _previewSliceBuffer.Clear();
+        int start = Math.Max(0, startInclusive);
+        int end = Math.Min(_points.Count, endExclusive);
+        for (int i = start; i < end; i++)
+        {
+            _previewSliceBuffer.Add(_points[i]);
+        }
+        return _previewSliceBuffer;
     }
 
     public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
@@ -410,10 +426,10 @@ public partial class VariableWidthBrushRenderer
 
     private List<StrokePoint> BuildCenterlineSamplesFinal()
     {
-        return BuildCenterlineSamplesFinal(_points);
+        return BuildCenterlineSamplesFinal(_points, previewFastPath: false);
     }
 
-    private List<StrokePoint> BuildCenterlineSamplesFinal(IReadOnlyList<StrokePoint> sourcePoints)
+    private List<StrokePoint> BuildCenterlineSamplesFinal(IReadOnlyList<StrokePoint> sourcePoints, bool previewFastPath)
     {
         var samples = new List<StrokePoint>();
         if (sourcePoints.Count == 0)
@@ -462,7 +478,7 @@ public partial class VariableWidthBrushRenderer
             var p2 = sourcePoints[i + 1];
             var p3 = sourcePoints[Math.Min(i + 2, sourcePoints.Count - 1)];
 
-            int upsampleSteps = ResolveUpsampleSteps(p0, p1, p2, p3);
+            int upsampleSteps = ResolveUpsampleSteps(p0, p1, p2, p3, previewFastPath);
             int startStep = (i == 0) ? 0 : 1;
             for (int step = startStep; step <= upsampleSteps; step++)
             {
@@ -479,7 +495,7 @@ public partial class VariableWidthBrushRenderer
 
                 if (i > 0 || step > 0)
                 {
-                    double segmentLength = (pos - (samples.Count > 0 ? samples.Last().Position : p1.Position)).Length;
+                    double segmentLength = (pos - (samples.Count > 0 ? samples[^1].Position : p1.Position)).Length;
                     accumulatedLength += segmentLength;
                 }
 
@@ -524,7 +540,7 @@ public partial class VariableWidthBrushRenderer
             }
         }
 
-        var resampled = ResampleByArcLength(samples);
+        var resampled = ResampleByArcLength(samples, previewFastPath);
         if (_config.EnableEndpointTaperPostResample)
         {
             ApplyEndpointTaper(resampled);
@@ -533,15 +549,24 @@ public partial class VariableWidthBrushRenderer
         return resampled;
     }
 
-    private List<StrokePoint> ResampleByArcLength(List<StrokePoint> source)
+    private List<StrokePoint> ResampleByArcLength(List<StrokePoint> source, bool previewFastPath)
     {
         if (source.Count < 2)
         {
             return source;
         }
 
-        double step = Math.Clamp(_config.ArcLengthResampleStepPx, 0.6, 6.0);
+        double step = _config.ArcLengthResampleStepPx;
+        if (previewFastPath)
+        {
+            step *= PreviewFastArcLengthStepFactor;
+        }
+        step = Math.Clamp(step, 0.6, 6.0);
         int maxPoints = Math.Max(2, _config.MaxResampledPointCount);
+        if (previewFastPath)
+        {
+            maxPoints = Math.Min(maxPoints, PreviewFastMaxResampledPointCount);
+        }
         var cumulative = new double[source.Count];
         double totalLength = 0.0;
         cumulative[0] = 0.0;
@@ -812,11 +837,19 @@ public partial class VariableWidthBrushRenderer
         return samples;
     }
 
-    private int ResolveUpsampleSteps(StrokePoint p0, StrokePoint p1, StrokePoint p2, StrokePoint p3)
+    private int ResolveUpsampleSteps(StrokePoint p0, StrokePoint p1, StrokePoint p2, StrokePoint p3, bool previewFastPath = false)
     {
         int minSteps = Math.Clamp(_config.MinUpsampleSteps, 1, 24);
         int maxSteps = Math.Clamp(_config.MaxUpsampleSteps, minSteps, 32);
+        if (previewFastPath)
+        {
+            maxSteps = Math.Min(maxSteps, PreviewFastMaxUpsampleSteps);
+        }
         double targetSpacing = Math.Max(_config.UpsampleTargetSpacing, 0.2);
+        if (previewFastPath)
+        {
+            targetSpacing *= PreviewFastUpsampleSpacingFactor;
+        }
 
         double segmentLength = (p2.Position - p1.Position).Length;
         int stepsByLength = (int)Math.Ceiling(segmentLength / targetSpacing);

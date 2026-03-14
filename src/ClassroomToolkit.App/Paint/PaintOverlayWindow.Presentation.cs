@@ -6,82 +6,78 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private void ClearCurrentPresentationType()
+    {
+        _currentPresentationType = PresentationType.None;
+    }
+
     public bool RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
     {
-        if (_photoModeActive || IsBoardActive())
-        {
-            return false;
-        }
-        if (!IsVisible)
-        {
-            return false;
-        }
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
-        {
-            return false;
-        }
+        var sessionState = _sessionCoordinator.CurrentState;
+        var presentationAllowed = PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+            _presentationOptions.AllowOffice,
+            _presentationOptions.AllowWps);
         var target = _presentationResolver.ResolvePresentationTarget(
             _presentationClassifier,
             _presentationOptions.AllowWps,
             _presentationOptions.AllowOffice,
             _currentProcessId);
-        if (!target.IsValid)
-        {
-            return false;
-        }
-        if (!_presentationClassifier.IsSlideshowWindow(target.Info))
-        {
-            return false;
-        }
-        if (requireFullscreen && !IsFullscreenPresentationWindow(target))
-        {
-            return false;
-        }
+        var targetIsValid = target.IsValid;
+        var targetIsSlideshow = targetIsValid && _presentationClassifier.IsSlideshowWindow(target.Info);
+        var targetIsFullscreen = targetIsValid && IsFullscreenPresentationWindow(target);
         var force = ShouldForcePresentationForeground(target);
-        if (!force && !IsForegroundOwnedByCurrentProcess())
+        var foregroundOwned = IsForegroundOwnedByCurrentProcess();
+        if (!PresentationFocusRestorePolicy.CanRestore(
+                sessionState,
+                _photoModeActive,
+                IsBoardActive(),
+                IsVisible,
+                presentationAllowed,
+                targetIsValid,
+                targetIsSlideshow,
+                targetIsFullscreen,
+                requireFullscreen,
+                force,
+                foregroundOwned))
         {
             return false;
         }
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.EnsureForeground(target.Handle);
+
+        return PresentationWindowFocus.EnsureForeground(target.Handle);
     }
 
     public void ForwardKeyboardToPresentation(Key key)
     {
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
+        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+                _presentationOptions.AllowOffice,
+                _presentationOptions.AllowWps))
         {
             return;
         }
-        // 将键盘按键转换为演示文稿命令
-        ClassroomToolkit.Services.Presentation.PresentationCommand? command = null;
-        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Next;
-        }
-        else if (key == Key.Left || key == Key.Up || key == Key.PageUp)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        }
-        if (command == null)
+        if (!PresentationKeyCommandPolicy.TryMap(key, out var command))
         {
             return;
         }
-        if (TrySendPresentationCommand(command.Value))
+        if (TrySendPresentationCommand(command))
         {
         }
     }
 
     private void UpdatePresentationFocusMonitor()
     {
-        var shouldMonitor = IsVisible
-            && (_presentationOptions.AllowOffice
-                || _presentationOptions.AllowWps
-                || (_photoModeActive && _photoFullscreen));
+        var shouldMonitor = PresentationFocusMonitorActivationPolicy.ShouldMonitor(
+            overlayVisible: IsVisible,
+            allowOffice: _presentationOptions.AllowOffice,
+            allowWps: _presentationOptions.AllowWps,
+            photoFullscreenActive: IsPhotoFullscreenActive);
         if (shouldMonitor)
         {
             if (!_presentationFocusMonitor.IsEnabled)
@@ -98,7 +94,9 @@ public partial class PaintOverlayWindow
 
     private void DetectForegroundPresentation()
     {
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
+        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+                _presentationOptions.AllowOffice,
+                _presentationOptions.AllowWps))
         {
             _foregroundPresentationActive = false;
             return;
@@ -110,7 +108,7 @@ public partial class PaintOverlayWindow
             return;
         }
         var type = _presentationClassifier.Classify(target.Info);
-        if (type == ClassroomToolkit.Interop.Presentation.PresentationType.None)
+        if (type == PresentationType.None)
         {
             _foregroundPresentationActive = false;
             return;
@@ -129,12 +127,12 @@ public partial class PaintOverlayWindow
         _foregroundPresentationActive = true;
         _foregroundPresentationHandle = target.Handle;
         _foregroundPresentationType = type;
-        PresentationForegroundDetected?.Invoke(type);
+        PresentationForegroundDetected?.Invoke(MapPresentationForegroundSource(type));
     }
 
     private void DetectForegroundPhoto()
     {
-        if (!_photoModeActive || !_photoFullscreen)
+        if (!IsPhotoFullscreenActive)
         {
             _foregroundPhotoActive = false;
             return;
@@ -162,26 +160,23 @@ public partial class PaintOverlayWindow
     {
         DetectForegroundPresentation();
         DetectForegroundPhoto();
-        if (!_presentationFocusRestoreEnabled)
-        {
-            return;
-        }
-        if (_photoModeActive || IsBoardActive())
-        {
-            return;
-        }
-        if (DateTime.UtcNow < _nextPresentationFocusAttempt)
-        {
-            return;
-        }
-        if (!IsForegroundOwnedByCurrentProcess())
+        var nowUtc = GetCurrentUtcTimestamp();
+        if (!PresentationFocusMonitorPolicy.ShouldAttemptRestore(
+                restoreEnabled: _presentationFocusRestoreEnabled,
+                photoModeActive: _photoModeActive,
+                boardActive: IsBoardActive(),
+                foregroundOwnedByCurrentProcess: IsForegroundOwnedByCurrentProcess(),
+                nowUtc: nowUtc,
+                nextAttemptUtc: _nextPresentationFocusAttempt))
         {
             return;
         }
         var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
         if (restored)
         {
-            _nextPresentationFocusAttempt = DateTime.UtcNow.AddMilliseconds(PresentationFocusCooldownMs);
+            _nextPresentationFocusAttempt = PresentationFocusMonitorPolicy.ComputeNextAttemptUtc(
+                nowUtc,
+                PresentationFocusCooldownMs);
             LogPresentationState("focus-restored");
         }
     }
@@ -193,14 +188,17 @@ public partial class PaintOverlayWindow
         _pendingInkContextCheck = false;
 
         var allowPresentation = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
+        var photoOrBoardActive = PhotoInteractionModePolicy.IsPhotoOrBoardActive(
+            photoModeActive: _photoModeActive,
+            boardActive: IsBoardActive());
         if (!allowPresentation)
         {
             if (_presentationFullscreenActive)
             {
                 _presentationFullscreenActive = false;
-                _currentPresentationType = ClassroomToolkit.Interop.Presentation.PresentationType.None;
+                ClearCurrentPresentationType();
                 PresentationFullscreenDetected?.Invoke();
-                if (!_photoModeActive && !IsBoardActive())
+                if (!photoOrBoardActive)
                 {
                     _currentCacheScope = InkCacheScope.None;
                     _currentCacheKey = string.Empty;
@@ -210,10 +208,10 @@ public partial class PaintOverlayWindow
         }
         else
         {
-            UpdatePresentationFullscreenState(clearInkOnExit: !_photoModeActive && !IsBoardActive());
+            UpdatePresentationFullscreenState(clearInkOnExit: !photoOrBoardActive);
         }
 
-        if (_photoModeActive || IsBoardActive())
+        if (photoOrBoardActive)
         {
             _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
             return;
@@ -234,13 +232,21 @@ public partial class PaintOverlayWindow
         // Keep fullscreen tracking aligned with slideshow-window validation.
         // This avoids treating WPS non-slideshow fullscreen windows as active presentation sessions.
         var nextType = ResolveFullscreenPresentationType();
-        var fullscreenNow = nextType != ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        var fullscreenNow = nextType != PresentationType.None;
         var stateChanged = fullscreenNow != _presentationFullscreenActive;
         _presentationFullscreenActive = fullscreenNow;
-        _currentPresentationType = fullscreenNow ? nextType : ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        _currentPresentationType = fullscreenNow ? nextType : PresentationType.None;
         if (!stateChanged)
         {
             return;
+        }
+        if (fullscreenNow)
+        {
+            DispatchSessionEvent(new EnterPresentationFullscreenEvent(MapPresentationSource(nextType)));
+        }
+        else
+        {
+            DispatchSessionEvent(new ExitPresentationFullscreenEvent());
         }
         PresentationFullscreenDetected?.Invoke();
         if (!fullscreenNow && clearInkOnExit)
@@ -251,12 +257,12 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private ClassroomToolkit.Interop.Presentation.PresentationType ResolveForegroundPresentationType()
+    private PresentationType ResolveForegroundPresentationType()
     {
         var target = _presentationResolver.ResolveForeground();
         if (!target.IsValid || target.Info == null)
         {
-            return ClassroomToolkit.Interop.Presentation.PresentationType.None;
+            return PresentationType.None;
         }
         return _presentationClassifier.Classify(target.Info);
     }
@@ -265,9 +271,9 @@ public partial class PaintOverlayWindow
     {
         _presentationOptions.Strategy = mode switch
         {
-            "raw" => ClassroomToolkit.Interop.Presentation.InputStrategy.Raw,
-            "message" => ClassroomToolkit.Interop.Presentation.InputStrategy.Message,
-            _ => ClassroomToolkit.Interop.Presentation.InputStrategy.Auto
+            WpsInputModeDefaults.Raw => InputStrategy.Raw,
+            WpsInputModeDefaults.Message => InputStrategy.Message,
+            _ => InputStrategy.Auto
         };
         _presentationService.ResetWpsAutoFallback();
         _presentationService.ResetOfficeAutoFallback();
@@ -321,42 +327,56 @@ public partial class PaintOverlayWindow
 
     private void OnWpsNavHookRequested(int direction, string source)
     {
-        Dispatcher.BeginInvoke(new Action(() =>
+        var scheduled = TryBeginInvoke(() =>
         {
             if (!_presentationOptions.AllowWps)
             {
+                Debug.WriteLine($"[WpsNavHook] ignored allow=false source={source} dir={direction}");
                 return;
             }
             MarkWpsHookInput();
             if (IsBoardActive() || direction == 0)
             {
+                Debug.WriteLine($"[WpsNavHook] ignored board={IsBoardActive()} dir={direction}");
                 return;
             }
             var target = ResolveWpsTarget();
             if (!target.IsValid)
             {
+                Debug.WriteLine($"[WpsNavHook] target invalid source={source} dir={direction}");
                 return;
             }
             var passthrough = IsWpsRawInputPassthrough(target);
             var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
             if (passthrough && !interceptSource)
             {
+                Debug.WriteLine($"[WpsNavHook] passthrough source={source} dir={direction}");
                 return;
             }
             if (ShouldSuppressWpsNav(direction, target.Handle))
             {
+                Debug.WriteLine($"[WpsNavHook] suppressed source={source} dir={direction}");
                 return;
             }
             var command = direction > 0
                 ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
                 : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
             var options = BuildWpsOptions(source);
-            if (_presentationService.TrySendToTarget(target, command, options))
+            if (TrySendPresentationCommandToTarget(target, command, options))
             {
                 RememberWpsNav(direction, target.Handle);
                 LogPresentationState($"wps-nav:{source}:{direction}");
+                Debug.WriteLine($"[WpsNavHook] sent source={source} dir={direction}");
             }
-        }));
+            else
+            {
+                Debug.WriteLine($"[WpsNavHook] send failed source={source} dir={direction}");
+            }
+        }, System.Windows.Threading.DispatcherPriority.Background);
+        if (!scheduled)
+        {
+            Debug.WriteLine($"[WpsNavHook] dispatch failed source={source} dir={direction}");
+        }
     }
 
     private bool TrySendWpsNavigation(ClassroomToolkit.Services.Presentation.PresentationCommand command)
@@ -379,26 +399,13 @@ public partial class PaintOverlayWindow
 
     private bool TrySendWpsNavigation(
         ClassroomToolkit.Services.Presentation.PresentationCommand command,
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target,
+        PresentationTarget target,
         bool allowBackground)
     {
-        if (!_presentationOptions.AllowWps)
-        {
-            return false;
-        }
-        if (IsBoardActive())
-        {
-            return false;
-        }
-        if (!target.IsValid || target.Info == null)
-        {
-            return false;
-        }
-        if (!IsPresentationSlideshow(target))
-        {
-            return false;
-        }
-        if (!allowBackground && !IsTargetForeground(target))
+        if (!CanSendPresentationNavigation(
+                allowChannel: _presentationOptions.AllowWps,
+                target,
+                allowBackground))
         {
             return false;
         }
@@ -408,7 +415,7 @@ public partial class PaintOverlayWindow
             return false;
         }
         var options = BuildWpsOptions("wheel");
-        var sent = _presentationService.TrySendToTarget(target, command, options);
+        var sent = TrySendPresentationCommandToTarget(target, command, options);
         if (sent)
         {
             RememberWpsNav(direction, target.Handle);
@@ -418,20 +425,13 @@ public partial class PaintOverlayWindow
 
     private bool TryHandlePresentationKey(Key key)
     {
-        ClassroomToolkit.Services.Presentation.PresentationCommand? command = null;
-        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Next;
-        }
-        else if (key == Key.Left || key == Key.Up || key == Key.PageUp)
-        {
-            command = ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-        }
-        if (command == null)
+        var presentationAllowed = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
+        var keyMapped = PresentationKeyCommandPolicy.TryMap(key, out var command);
+        if (!PresentationKeyboardDispatchPolicy.ShouldDispatch(presentationAllowed, keyMapped))
         {
             return false;
         }
-        if (!TrySendPresentationCommand(command.Value))
+        if (!TrySendPresentationCommand(command))
         {
             return false;
         }
@@ -440,96 +440,59 @@ public partial class PaintOverlayWindow
 
     private bool TrySendPresentationCommand(ClassroomToolkit.Services.Presentation.PresentationCommand command)
     {
-        if (!_presentationOptions.AllowOffice && !_presentationOptions.AllowWps)
+        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+                _presentationOptions.AllowOffice,
+                _presentationOptions.AllowWps))
         {
             return false;
         }
         var wpsTarget = _presentationOptions.AllowWps
             ? ResolveWpsTarget()
-            : ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
+            : PresentationTarget.Empty;
         var officeTarget = _presentationOptions.AllowOffice
             ? _presentationResolver.ResolvePresentationTarget(
                 _presentationClassifier,
                 allowWps: false,
                 allowOffice: true,
                 _currentProcessId)
-            : ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
+            : PresentationTarget.Empty;
         var wpsSlideshow = IsPresentationSlideshow(wpsTarget);
         var officeSlideshow = IsPresentationSlideshow(officeTarget);
         var foreground = ResolveForegroundPresentationType();
+        var bothTargetsAvailable = wpsSlideshow && officeSlideshow;
+        var context = new OverlayPresentationCommandRouteContext(
+            ForegroundType: MapRouteType(foreground),
+            CurrentPresentationType: MapRouteType(_currentPresentationType),
+            WpsSlideshow: wpsSlideshow,
+            OfficeSlideshow: officeSlideshow,
+            WpsFullscreen: bothTargetsAvailable && IsFullscreenWindow(wpsTarget.Handle),
+            OfficeFullscreen: bothTargetsAvailable && IsFullscreenWindow(officeTarget.Handle));
 
-        if (foreground == ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-            && wpsSlideshow
-            && TrySendWpsNavigation(command, wpsTarget, allowBackground: false))
-        {
-            return true;
-        }
-        if (foreground == ClassroomToolkit.Interop.Presentation.PresentationType.Office
-            && officeSlideshow
-            && TrySendOfficeNavigation(command, officeTarget, allowBackground: false))
-        {
-            return true;
-        }
+        return OverlayPresentationCommandRouter.TrySend(
+            context,
+            allowBackground => TrySendWpsNavigation(command, wpsTarget, allowBackground),
+            allowBackground => TrySendOfficeNavigation(command, officeTarget, allowBackground));
+    }
 
-        if (wpsSlideshow && officeSlideshow)
+    private static OverlayPresentationRouteType MapRouteType(PresentationType type)
+    {
+        return type switch
         {
-            if (_currentPresentationType == ClassroomToolkit.Interop.Presentation.PresentationType.Wps
-                && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
-            {
-                return true;
-            }
-            if (_currentPresentationType == ClassroomToolkit.Interop.Presentation.PresentationType.Office
-                && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
-            {
-                return true;
-            }
-            var wpsFullscreen = IsFullscreenWindow(wpsTarget.Handle);
-            var officeFullscreen = IsFullscreenWindow(officeTarget.Handle);
-            if (wpsFullscreen && !officeFullscreen
-                && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
-            {
-                return true;
-            }
-            if (officeFullscreen && !wpsFullscreen
-                && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
-            {
-                return true;
-            }
-        }
-
-        if (wpsSlideshow && TrySendWpsNavigation(command, wpsTarget, allowBackground: true))
-        {
-            return true;
-        }
-        if (officeSlideshow && TrySendOfficeNavigation(command, officeTarget, allowBackground: true))
-        {
-            return true;
-        }
-        return false;
+            PresentationType.Wps => OverlayPresentationRouteType.Wps,
+            PresentationType.Office => OverlayPresentationRouteType.Office,
+            _ => OverlayPresentationRouteType.None
+        };
     }
 
     private bool TrySendOfficeNavigation(
         ClassroomToolkit.Services.Presentation.PresentationCommand command,
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target,
+        PresentationTarget target,
         bool allowBackground)
     {
-        if (!_presentationOptions.AllowOffice)
-        {
-            return false;
-        }
-        if (IsBoardActive())
-        {
-            return false;
-        }
-        if (!target.IsValid || target.Info == null)
-        {
-            return false;
-        }
-        if (!IsPresentationSlideshow(target))
-        {
-            return false;
-        }
-        if (!allowBackground && !IsTargetForeground(target))
+        if (!CanSendPresentationNavigation(
+                allowChannel: _presentationOptions.AllowOffice,
+                target,
+                allowBackground))
         {
             return false;
         }
@@ -542,10 +505,41 @@ public partial class PaintOverlayWindow
             AllowOffice = true,
             AllowWps = false
         };
+        return TrySendPresentationCommandToTarget(target, command, options);
+    }
+
+    private bool TrySendPresentationCommandToTarget(
+        PresentationTarget target,
+        ClassroomToolkit.Services.Presentation.PresentationCommand command,
+        ClassroomToolkit.Services.Presentation.PresentationControlOptions options)
+    {
+        if (!target.IsValid)
+        {
+            return false;
+        }
+
         return _presentationService.TrySendToTarget(target, command, options);
     }
 
-    private bool IsPresentationSlideshow(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private bool CanSendPresentationNavigation(
+        bool allowChannel,
+        PresentationTarget target,
+        bool allowBackground)
+    {
+        var targetHasInfo = target.Info != null;
+        var targetIsSlideshow = targetHasInfo && IsPresentationSlideshow(target);
+        var targetForeground = target.IsValid && IsTargetForeground(target);
+        return PresentationNavigationAdmissionPolicy.ShouldAttempt(
+            allowChannel: allowChannel,
+            boardActive: IsBoardActive(),
+            targetIsValid: target.IsValid,
+            targetHasInfo: targetHasInfo,
+            targetIsSlideshow: targetIsSlideshow,
+            allowBackground: allowBackground,
+            targetForeground: targetForeground);
+    }
+
+    private bool IsPresentationSlideshow(PresentationTarget target)
     {
         if (!target.IsValid || target.Info == null)
         {
@@ -558,7 +552,7 @@ public partial class PaintOverlayWindow
         return IsFullscreenWindow(target.Handle);
     }
 
-    private ClassroomToolkit.Interop.Presentation.PresentationType ResolveFullscreenPresentationType()
+    private PresentationType ResolveFullscreenPresentationType()
     {
         bool wpsFullscreen = false;
         bool officeFullscreen = false;
@@ -576,20 +570,10 @@ public partial class PaintOverlayWindow
                 _currentProcessId);
             officeFullscreen = IsFullscreenPresentationWindow(officeTarget);
         }
-        if (wpsFullscreen && !officeFullscreen)
-        {
-            return ClassroomToolkit.Interop.Presentation.PresentationType.Wps;
-        }
-        if (officeFullscreen && !wpsFullscreen)
-        {
-            return ClassroomToolkit.Interop.Presentation.PresentationType.Office;
-        }
-        if (wpsFullscreen && officeFullscreen
-            && _currentPresentationType != ClassroomToolkit.Interop.Presentation.PresentationType.None)
-        {
-            return _currentPresentationType;
-        }
-        return ClassroomToolkit.Interop.Presentation.PresentationType.None;
+        return PresentationFullscreenTypeResolutionPolicy.Resolve(
+            wpsFullscreen,
+            officeFullscreen,
+            _currentPresentationType);
     }
 
     private ClassroomToolkit.Services.Presentation.PresentationControlOptions BuildWpsOptions(string? source = null)
@@ -597,11 +581,11 @@ public partial class PaintOverlayWindow
         var strategy = _presentationOptions.Strategy;
         if (_wpsForceMessageFallback)
         {
-            strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+            strategy = InputStrategy.Message;
         }
         if (string.Equals(source, "wheel", StringComparison.OrdinalIgnoreCase) && _presentationOptions.WheelAsKey)
         {
-            strategy = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+            strategy = InputStrategy.Message;
         }
         return new ClassroomToolkit.Services.Presentation.PresentationControlOptions
         {
@@ -642,51 +626,43 @@ public partial class PaintOverlayWindow
             return;
         }
         _wpsForceMessageFallback = false;
-        var shouldEnable = _presentationOptions.AllowWps && !IsBoardActive() && IsVisible && !_photoModeActive;
+        var shouldEnable = WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(
+            _presentationOptions.AllowWps,
+            IsBoardActive(),
+            IsVisible,
+            _photoModeActive);
         var blockOnly = false;
         var interceptKeyboard = true;
         var interceptWheel = true;
         var emitWheelOnBlock = true;
-        var target = ClassroomToolkit.Interop.Presentation.PresentationTarget.Empty;
+        var target = PresentationTarget.Empty;
         if (shouldEnable)
         {
             target = ResolveWpsTarget();
-            shouldEnable = target.IsValid;
+            shouldEnable = WpsHookEnableGatePolicy.ShouldEnableWithTarget(
+                shouldEnable,
+                target.IsValid,
+                IsPresentationSlideshow(target));
         }
-        var sendMode = ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+        var sendMode = InputStrategy.Message;
         var wheelForward = false;
         if (shouldEnable)
         {
             sendMode = ResolveWpsSendMode(target);
             wheelForward = _presentationOptions.WheelAsKey;
-            interceptWheel = wheelForward;
-            emitWheelOnBlock = wheelForward;
         }
-        
-        // 光标模式下，直接禁用钩子拦截，让输入直接传递到 WPS
-        if (_mode == PaintToolMode.Cursor)
-        {
-            interceptKeyboard = false;
-            interceptWheel = false;
-        }
-        else if (shouldEnable && !IsTargetForeground(target))
-        {
-            interceptKeyboard = false;
-            interceptWheel = false;
-            emitWheelOnBlock = false;
-        }
-        else if (shouldEnable && sendMode == ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
-        {
-            blockOnly = true;
-            if (IsTargetForeground(target))
-            {
-                if (!wheelForward)
-                {
-                    blockOnly = false;
-                    emitWheelOnBlock = false;
-                }
-            }
-        }
+
+        var decision = WpsHookInterceptPolicy.Resolve(
+            shouldEnable,
+            _mode,
+            targetIsSlideshow: shouldEnable,
+            targetForeground: shouldEnable && IsTargetForeground(target),
+            isRawSendMode: sendMode == InputStrategy.Raw,
+            wheelForward);
+        blockOnly = decision.BlockOnly;
+        interceptKeyboard = decision.InterceptKeyboard;
+        interceptWheel = decision.InterceptWheel;
+        emitWheelOnBlock = decision.EmitWheelOnBlock;
         
         if (shouldEnable)
         {
@@ -695,6 +671,7 @@ public partial class PaintOverlayWindow
             _wpsNavHook.SetInterceptKeyboard(interceptKeyboard);
             _wpsNavHook.SetInterceptWheel(interceptWheel);
             _wpsNavHook.SetEmitWheelOnBlock(emitWheelOnBlock);
+            _wpsHookBlockOnly = blockOnly;
             _wpsHookInterceptKeyboard = interceptKeyboard;
             _wpsHookInterceptWheel = interceptWheel;
             if (!_wpsNavHookActive)
@@ -744,13 +721,14 @@ public partial class PaintOverlayWindow
         _wpsNavHook.SetInterceptKeyboard(true);
         _wpsNavHook.SetInterceptWheel(true);
         _wpsNavHook.SetEmitWheelOnBlock(true);
+        _wpsHookBlockOnly = false;
         _wpsNavHook.Stop();
         _wpsNavHookActive = false;
         _wpsHookInterceptKeyboard = true;
         _wpsHookInterceptWheel = true;
     }
 
-    private ClassroomToolkit.Interop.Presentation.PresentationTarget ResolveWpsTarget()
+    private PresentationTarget ResolveWpsTarget()
     {
         return _presentationResolver.ResolvePresentationTarget(
             _presentationClassifier,
@@ -759,23 +737,23 @@ public partial class PaintOverlayWindow
             (uint)Environment.ProcessId);
     }
 
-    private ClassroomToolkit.Interop.Presentation.InputStrategy ResolveWpsSendMode(
-        ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private InputStrategy ResolveWpsSendMode(
+        PresentationTarget target)
     {
         if (_wpsForceMessageFallback)
         {
-            return ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+            return InputStrategy.Message;
         }
         var mode = _presentationOptions.Strategy;
-        if (mode == ClassroomToolkit.Interop.Presentation.InputStrategy.Auto)
+        if (mode == InputStrategy.Auto)
         {
             if (_presentationService.IsWpsAutoForcedMessage)
             {
-                return ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+                return InputStrategy.Message;
             }
             return target.IsValid
-                ? ClassroomToolkit.Interop.Presentation.InputStrategy.Raw
-                : ClassroomToolkit.Interop.Presentation.InputStrategy.Message;
+                ? InputStrategy.Raw
+                : InputStrategy.Message;
         }
         return mode;
     }
@@ -796,75 +774,78 @@ public partial class PaintOverlayWindow
             return;
         }
         _wpsHookUnavailableNotified = true;
-        Dispatcher.BeginInvoke(() =>
+        var scheduled = TryBeginInvoke(() =>
         {
-            var owner = System.Windows.Application.Current?.MainWindow;
-            var message = "检测到 WPS 放映全局钩子不可用，已自动切换为消息投递模式。";
-            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        });
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    var owner = System.Windows.Application.Current?.MainWindow;
+                    var message = "检测到 WPS 放映全局钩子不可用，已自动切换为消息投递模式。";
+                    System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                },
+                ex => Debug.WriteLine(
+                    $"[WpsNavHook] unavailable message failed: {ex.GetType().Name} - {ex.Message}"));
+        }, System.Windows.Threading.DispatcherPriority.Background);
+        if (!scheduled)
+        {
+            Debug.WriteLine("[WpsNavHook] unavailable message dispatch failed");
+        }
     }
 
-    private bool IsWpsRawInputPassthrough(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private bool IsWpsRawInputPassthrough(PresentationTarget target)
     {
-        if (ResolveWpsSendMode(target) != ClassroomToolkit.Interop.Presentation.InputStrategy.Raw)
+        if (ResolveWpsSendMode(target) != InputStrategy.Raw)
         {
             return false;
         }
         return IsTargetForeground(target);
     }
 
-    private bool IsTargetForeground(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private bool IsTargetForeground(PresentationTarget target)
     {
         if (!target.IsValid)
         {
             return false;
         }
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsForeground(target.Handle);
+        return PresentationWindowFocus.IsForeground(target.Handle);
     }
 
     private bool ShouldSuppressWpsNav(int direction, IntPtr target)
     {
-        if (target == IntPtr.Zero)
-        {
-            return false;
-        }
-        if (_wpsNavBlockUntil > DateTime.UtcNow)
-        {
-            return true;
-        }
-        if (_lastWpsNavEvent.HasValue)
-        {
-            var last = _lastWpsNavEvent.Value;
-            if (last.Code == direction && last.Target == target)
-            {
-                var elapsed = DateTime.UtcNow - last.Timestamp;
-                if (elapsed.TotalMilliseconds < WpsNavDebounceMs)
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
+        var nowUtc = GetCurrentUtcTimestamp();
+        return WpsNavigationDebouncePolicy.ShouldSuppress(
+            direction,
+            target,
+            nowUtc,
+            new WpsNavigationDebounceState(_lastWpsNavEvent, _wpsNavBlockUntil),
+            WpsNavDebounceMs);
     }
 
     private void RememberWpsNav(int direction, IntPtr target)
     {
-        _lastWpsNavEvent = (direction, target, DateTime.UtcNow);
-        _wpsNavBlockUntil = DateTime.UtcNow.AddMilliseconds(WpsNavDebounceMs);
+        var nowUtc = GetCurrentUtcTimestamp();
+        var state = WpsNavigationDebouncePolicy.Remember(
+            direction,
+            target,
+            nowUtc,
+            WpsNavDebounceMs);
+        WpsNavigationDebounceStateUpdater.Apply(
+            ref _lastWpsNavEvent,
+            ref _wpsNavBlockUntil,
+            state);
     }
 
     private void MarkWpsHookInput()
     {
-        _lastWpsHookInput = DateTime.UtcNow;
+        _lastWpsHookInput = GetCurrentUtcTimestamp();
     }
 
     private bool WpsHookRecentlyFired()
     {
-        if (_lastWpsHookInput == DateTime.MinValue)
-        {
-            return false;
-        }
-        return (DateTime.UtcNow - _lastWpsHookInput).TotalMilliseconds < WpsNavDebounceMs;
+        return WpsHookInputDebouncePolicy.IsRecent(
+            _lastWpsHookInput,
+            GetCurrentUtcTimestamp(),
+            WpsNavDebounceMs);
     }
 
     private bool IsForegroundOwnedByCurrentProcess()
@@ -878,7 +859,7 @@ public partial class PaintOverlayWindow
         return processId == (uint)Environment.ProcessId;
     }
 
-    private bool ShouldForcePresentationForeground(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private bool ShouldForcePresentationForeground(PresentationTarget target)
     {
         if (!_forcePresentationForegroundOnFullscreen)
         {
@@ -888,7 +869,7 @@ public partial class PaintOverlayWindow
         return IsFullscreenWindow(target.Handle);
     }
 
-    private bool IsFullscreenPresentationWindow(ClassroomToolkit.Interop.Presentation.PresentationTarget target)
+    private bool IsFullscreenPresentationWindow(PresentationTarget target)
     {
         if (!target.IsValid || target.Info == null)
         {
@@ -918,7 +899,7 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        const int tolerance = 2;
+        const int tolerance = PresentationFullscreenWindowDefaults.BoundsTolerancePixels;
         return Math.Abs(rect.Left - info.Monitor.Left) <= tolerance
                && Math.Abs(rect.Top - info.Monitor.Top) <= tolerance
                && Math.Abs(rect.Right - info.Monitor.Right) <= tolerance

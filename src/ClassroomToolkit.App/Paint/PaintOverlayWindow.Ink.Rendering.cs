@@ -12,7 +12,6 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
-using ClassroomToolkit.Interop;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -28,6 +27,7 @@ public partial class PaintOverlayWindow
 
     private void RenderStoredStroke(InkStrokeData stroke)
     {
+        var photoInkModeActive = IsPhotoInkModeActive();
         var geometry = stroke.CachedGeometry;
         if (geometry == null)
         {
@@ -48,7 +48,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        if (!_photoModeActive && stroke.CachedBounds.HasValue)
+        if (!photoInkModeActive && stroke.CachedBounds.HasValue)
         {
              var bounds = stroke.CachedBounds.Value;
              if (bounds.Right < 0 || bounds.Bottom < 0 || bounds.Left > _surfacePixelWidth || bounds.Top > _surfacePixelHeight)
@@ -57,16 +57,22 @@ public partial class PaintOverlayWindow
              }
         }
         
-        var usePhotoTransform = _photoModeActive && ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
+        var usePhotoTransform = photoInkModeActive && ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
         var renderGeometry = usePhotoTransform
             ? geometry
-            : (_photoModeActive ? ToScreenGeometry(geometry) : geometry);
+            : (photoInkModeActive ? ToScreenGeometry(geometry) : geometry);
         if (renderGeometry == null)
         {
             return;
         }
         
-        if (_photoModeActive && !renderGeometry.Bounds.IntersectsWith(new Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight)))
+        if (photoInkModeActive
+            && !PhotoInkViewportIntersectionPolicy.ShouldRender(
+                photoInkModeActive,
+                usePhotoTransform,
+                renderGeometry.Bounds,
+                _photoContentTransform?.Value ?? Matrix.Identity,
+                ResolveInkViewportBoundsDip()))
         {
             return;
         }
@@ -116,7 +122,7 @@ public partial class PaintOverlayWindow
                 }
                 var renderRibbon = usePhotoTransform
                     ? ribbonGeometry
-                    : (_photoModeActive ? ToScreenGeometry(ribbonGeometry) : ribbonGeometry);
+                    : (photoInkModeActive ? ToScreenGeometry(ribbonGeometry) : ribbonGeometry);
                 if (renderRibbon == null)
                 {
                     continue;
@@ -137,7 +143,7 @@ public partial class PaintOverlayWindow
                 }
                 var renderBloom = usePhotoTransform
                     ? bloomGeometry
-                    : (_photoModeActive ? ToScreenGeometry(bloomGeometry) : bloomGeometry);
+                    : (photoInkModeActive ? ToScreenGeometry(bloomGeometry) : bloomGeometry);
                 if (renderBloom == null)
                 {
                     continue;
@@ -168,6 +174,40 @@ public partial class PaintOverlayWindow
             ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection)
             : null;
         RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
+    }
+
+    private Rect ResolveInkViewportBoundsDip()
+    {
+        var width = OverlayRoot.ActualWidth;
+        if (width <= 0)
+        {
+            width = ActualWidth;
+        }
+        if (width <= 0)
+        {
+            width = _surfaceDpiX > 0
+                ? _surfacePixelWidth * 96.0 / _surfaceDpiX
+                : _surfacePixelWidth;
+        }
+
+        var height = OverlayRoot.ActualHeight;
+        if (height <= 0)
+        {
+            height = ActualHeight;
+        }
+        if (height <= 0)
+        {
+            height = _surfaceDpiY > 0
+                ? _surfacePixelHeight * 96.0 / _surfaceDpiY
+                : _surfacePixelHeight;
+        }
+
+        if (width <= 0 || height <= 0)
+        {
+            return Rect.Empty;
+        }
+
+        return new Rect(0, 0, width, height);
     }
 
     private void RenderInkCore(Geometry geometry, MediaColor color, bool enableSeal)
@@ -299,7 +339,9 @@ public partial class PaintOverlayWindow
     {
         var color = ApplyOpacity(baseColor, opacity);
         int colorKey = PackColorKey(color);
-        int widthMilli = Math.Max(1, (int)Math.Round(width * 1000.0));
+        int widthMilli = Math.Max(
+            InkRenderingCacheDefaults.PenWidthMinMilli,
+            (int)Math.Round(width * InkRenderingCacheDefaults.PenWidthQuantizeScale));
         var key = new InkPenCacheKey(colorKey, widthMilli, lineJoin, startCap, endCap);
         if (_inkPenCache.TryGetValue(key, out var cached))
         {
@@ -311,7 +353,7 @@ public partial class PaintOverlayWindow
             _inkPenCache.Clear();
         }
 
-        var pen = new MediaPen(GetCachedSolidBrush(color), widthMilli / 1000.0)
+        var pen = new MediaPen(GetCachedSolidBrush(color), widthMilli / InkRenderingCacheDefaults.PenWidthQuantizeScale)
         {
             LineJoin = lineJoin,
             StartLineCap = startCap,
@@ -348,7 +390,7 @@ public partial class PaintOverlayWindow
         _calligraphyBatchCostEmaMs = _calligraphyBatchCostEmaMs * (1.0 - CalligraphyAdaptiveCostEmaAlpha)
             + batchElapsedMs * CalligraphyAdaptiveCostEmaAlpha;
 
-        var nowUtc = DateTime.UtcNow;
+        var nowUtc = GetCurrentUtcTimestamp();
         if ((nowUtc - _lastCalligraphyAdaptiveAdjustUtc).TotalMilliseconds < CalligraphyAdaptiveAdjustMinIntervalMs)
         {
             return;
@@ -559,7 +601,8 @@ public partial class PaintOverlayWindow
 
     private bool ShouldSuppressCalligraphyOverlays()
     {
-        return _brushOpacity < _calligraphyOverlayOpacityThreshold;
+        // In photo/PDF mode prioritize stroke stability and latency over decorative overlays.
+        return IsPhotoInkModeActive() || _brushOpacity < _calligraphyOverlayOpacityThreshold;
     }
 
     private bool IsInkMaskEligible(Geometry geometry)
@@ -681,6 +724,7 @@ public partial class PaintOverlayWindow
             RenderStoredStroke(stroke);
         }
         _hasDrawing = _inkStrokes.Count > 0;
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: IsPhotoInkModeActive());
         _perfRedrawSurface.Add(redrawSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
         if (IsCrossPageFirstInputTraceActive())
         {
@@ -698,14 +742,16 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var throttleActive = _photoModeActive && (_photoPanning || _crossPageDragging);
-        var elapsedMs = (DateTime.UtcNow - _lastInkRedrawUtc).TotalMilliseconds;
+        var throttleActive = IsPhotoInkModeActive() && IsCrossPagePanOrDragActive();
+        var elapsedMs = (GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds;
         _inkDiagnostics?.OnRedrawRequested(throttleActive && elapsedMs < InkRedrawMinIntervalMs);
         if (throttleActive && elapsedMs < InkRedrawMinIntervalMs)
         {
             _redrawPending = true;
             var token = Interlocked.Increment(ref _inkRedrawToken);
-            var delay = Math.Max(1, (int)Math.Ceiling(InkRedrawMinIntervalMs - elapsedMs));
+            var delay = Math.Max(
+                InkRuntimeTimingDefaults.RedrawDispatchDelayMinMs,
+                (int)Math.Ceiling(InkRedrawMinIntervalMs - elapsedMs));
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
                 try
@@ -730,9 +776,10 @@ public partial class PaintOverlayWindow
                     _redrawInProgress = true;
                     try
                     {
-                        _lastInkRedrawUtc = DateTime.UtcNow;
+                        _lastInkRedrawUtc = GetCurrentUtcTimestamp();
                         RedrawInkSurface();
-                        _inkDiagnostics?.OnRedrawCompleted((DateTime.UtcNow - _lastInkRedrawUtc).TotalMilliseconds);
+                        OnInkRedrawCompleted();
+                        _inkDiagnostics?.OnRedrawCompleted((GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds);
                     }
                     finally
                     {
@@ -757,9 +804,10 @@ public partial class PaintOverlayWindow
             _redrawInProgress = true;
             try
             {
-                _lastInkRedrawUtc = DateTime.UtcNow;
+                _lastInkRedrawUtc = GetCurrentUtcTimestamp();
                 RedrawInkSurface();
-                _inkDiagnostics?.OnRedrawCompleted((DateTime.UtcNow - _lastInkRedrawUtc).TotalMilliseconds);
+                OnInkRedrawCompleted();
+                _inkDiagnostics?.OnRedrawCompleted((GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds);
             }
             finally
             {
@@ -770,5 +818,10 @@ public partial class PaintOverlayWindow
         {
             _redrawPending = false;
         }
+    }
+
+    private void OnInkRedrawCompleted()
+    {
+        ApplyCrossPageInkVisualSync(CrossPageInkVisualSyncTrigger.InkRedrawCompleted);
     }
 }

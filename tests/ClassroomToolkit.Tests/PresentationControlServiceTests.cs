@@ -103,7 +103,7 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
-    public void WpsWheelForwardDisabled_ShouldSendWheel()
+    public void WpsWheelForwardDisabled_WhenDowngradedToMessage_ShouldSendKeyDownOnly()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -123,10 +123,45 @@ public sealed class PresentationControlServiceTests
         var result = service.TrySendToTarget(target, PresentationCommand.Next, options);
 
         result.Should().BeTrue();
-        sender.WheelCalls.Should().Be(1);
-        sender.LastWheelDelta.Should().Be(-120);
-        sender.LastWheelStrategy.Should().Be(InputStrategy.Message);
-        sender.KeyCalls.Should().Be(0);
+        sender.KeyCalls.Should().Be(1);
+        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKey.Should().Be(VirtualKey.PageDown);
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
+        sender.WheelCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void WpsWheelForwardDisabled_WhenRawAvailable_ShouldStillSendKeyDownOnly()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new RecordingInputSender();
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
+        var target = new PresentationTarget(new IntPtr(1234), info);
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = false,
+            AllowWps = true
+        };
+
+        var result = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        result.Should().BeTrue();
+        sender.KeyCalls.Should().Be(1);
+        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKey.Should().Be(VirtualKey.PageDown);
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
+        sender.WheelCalls.Should().Be(0);
     }
 
     [Fact]

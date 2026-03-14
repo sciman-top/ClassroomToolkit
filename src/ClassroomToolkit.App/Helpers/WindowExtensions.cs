@@ -20,5 +20,11 @@ public static class WindowExtensions
             dialog.Show();
             return dialog.DialogResult;
         }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"WindowExtensions.SafeShowDialog failed: {ex.GetType().Name} - {ex.Message}");
+            return false;
+        }
     }
 }

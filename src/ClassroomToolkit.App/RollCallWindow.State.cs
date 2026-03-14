@@ -13,14 +13,14 @@ public partial class RollCallWindow
     {
         var owner = System.Windows.Application.Current?.MainWindow;
         var detail = string.IsNullOrWhiteSpace(message) ? "学生名册读取失败，请检查文件是否被占用或已损坏。" : message;
-        System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowRollCallInfoMessageSafe("data-load-failed", detail, owner);
     }
 
     private void OnDataSaveFailed(string message)
     {
         var owner = System.Windows.Application.Current?.MainWindow;
         var detail = string.IsNullOrWhiteSpace(message) ? "学生名册保存失败，请关闭 Excel 后重试。" : message;
-        System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowRollCallInfoMessageSafe("data-save-failed", detail, owner);
     }
 
     private void ScheduleRollStateSave()
@@ -132,7 +132,7 @@ public partial class RollCallWindow
             _settingsSaveFailedNotified = true;
             var owner = System.Windows.Application.Current?.MainWindow;
             var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
-            System.Windows.MessageBox.Show(owner ?? this, detail, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowRollCallInfoMessageSafe("settings-save-failed", detail, owner);
         }
     }
 
@@ -204,7 +204,7 @@ public partial class RollCallWindow
             PersistSettings();
             _viewModel.SaveState();
             UpdateMinWindowSize();
-            SuppressRollClicks(TimeSpan.FromMilliseconds(250));
+            SuppressRollClicks(TimeSpan.FromMilliseconds(RollCallRuntimeDefaults.ClassSwitchSuppressMs));
             return;
         }
         if (!string.Equals(_viewModel.ActiveClassName, selected, StringComparison.OrdinalIgnoreCase))
@@ -229,7 +229,7 @@ public partial class RollCallWindow
         {
             Owner = this
         };
-        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.SelectedClass))
+        if (TryShowDialogSafe(dialog, nameof(ClassSelectDialog)) && !string.IsNullOrWhiteSpace(dialog.SelectedClass))
         {
             TryApplyClassSelection(dialog.SelectedClass);
         }
@@ -237,25 +237,24 @@ public partial class RollCallWindow
 
     private void SuppressRollClicks(TimeSpan duration)
     {
-        var until = DateTime.UtcNow.Add(duration);
-        if (until > _suppressRollUntil)
-        {
-            _suppressRollUntil = until;
-        }
+        _suppressRollUntil = RollCallClickSuppressionPolicy.ExtendSuppressUntil(
+            _suppressRollUntil,
+            GetCurrentUtcTimestamp(),
+            duration);
     }
 
     private bool ShouldSuppressRollClick()
     {
-        if (_suppressRollUntil >= DateTime.UtcNow)
-        {
-            return true;
-        }
-        return false;
+        return RollCallClickSuppressionPolicy.ShouldSuppress(
+            _suppressRollUntil,
+            GetCurrentUtcTimestamp());
     }
+
+    private static DateTime GetCurrentUtcTimestamp() => DateTime.UtcNow;
 
     private void ShowRollCallMessage(string message)
     {
-        System.Windows.MessageBox.Show(message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowRollCallInfoMessageSafe("rollcall-message", message);
     }
     
     private async void SpeakStudentName()
@@ -283,11 +282,11 @@ public partial class RollCallWindow
             return;
         }
         _speechUnavailableNotified = true;
-        Dispatcher.BeginInvoke(() =>
+        _ = Dispatcher.InvokeAsync(() =>
         {
             var owner = System.Windows.Application.Current?.MainWindow;
             var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
-            System.Windows.MessageBox.Show(owner ?? this, message, "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
         });
     }
 }

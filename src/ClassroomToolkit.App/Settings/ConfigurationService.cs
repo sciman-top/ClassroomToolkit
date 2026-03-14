@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text.Json;
 
@@ -7,6 +8,7 @@ public sealed class ConfigurationService : IConfigurationService
 {
     private const string AppSettingsFileName = "appsettings.json";
     private const string DefaultSettingsIniName = "settings.ini";
+    private const string DefaultSettingsJsonName = "settings.json";
     private const string SolutionFileName = "ClassroomToolkit.sln";
 
     public ConfigurationService()
@@ -18,11 +20,16 @@ public sealed class ConfigurationService : IConfigurationService
     {
         BaseDirectory = ResolveAppRootDirectory(baseDirectory);
         SettingsIniPath = ResolveSettingsIniPath();
+        (SettingsDocumentFormat, SettingsDocumentPath) = ResolveSettingsDocument();
     }
 
     public string BaseDirectory { get; }
 
     public string SettingsIniPath { get; }
+
+    public SettingsDocumentFormat SettingsDocumentFormat { get; }
+
+    public string SettingsDocumentPath { get; }
 
     private string ResolveSettingsIniPath()
     {
@@ -88,6 +95,94 @@ public sealed class ConfigurationService : IConfigurationService
     private string GetDefaultSettingsIniPath()
     {
         return Path.Combine(BaseDirectory, DefaultSettingsIniName);
+    }
+
+    private string GetDefaultSettingsJsonPath()
+    {
+        return Path.Combine(BaseDirectory, DefaultSettingsJsonName);
+    }
+
+    private (SettingsDocumentFormat format, string path) ResolveSettingsDocument()
+    {
+        var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
+        if (!File.Exists(appSettingsPath))
+        {
+            return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(appSettingsPath);
+            using var document = JsonDocument.Parse(stream);
+            var root = document.RootElement;
+            var hasPathsNode = root.TryGetProperty("Paths", out var pathsNode);
+
+            var configuredFormat = TryReadDocumentFormat(root, "SettingsDocumentFormat")
+                ?? (hasPathsNode
+                    ? TryReadDocumentFormat(pathsNode, "SettingsDocumentFormat")
+                    : null);
+
+            var configuredPath = TryReadSettingPath(root, "SettingsDocumentPath", out var directPath)
+                ? directPath
+                : hasPathsNode
+                    && (TryReadSettingPath(pathsNode, "SettingsDocument", out var nestedPath)
+                        || TryReadSettingPath(pathsNode, "SettingsJson", out nestedPath))
+                        ? nestedPath
+                        : string.Empty;
+
+            if (configuredFormat == null && !string.IsNullOrWhiteSpace(configuredPath))
+            {
+                configuredFormat = Path.GetExtension(configuredPath).Equals(".json", StringComparison.OrdinalIgnoreCase)
+                    ? SettingsDocumentFormat.Json
+                    : SettingsDocumentFormat.Ini;
+            }
+
+            var format = configuredFormat ?? SettingsDocumentFormat.Ini;
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                return format switch
+                {
+                    SettingsDocumentFormat.Json => (format, GetDefaultSettingsJsonPath()),
+                    _ => (SettingsDocumentFormat.Ini, SettingsIniPath)
+                };
+            }
+
+            return (format, configuredPath);
+        }
+        catch (JsonException)
+        {
+            // Fall back to default INI when appsettings.json is malformed.
+        }
+        catch (IOException)
+        {
+            // Fall back to default INI when appsettings.json cannot be read.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Fall back to default INI when appsettings.json cannot be accessed.
+        }
+
+        return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
+    }
+
+    private static SettingsDocumentFormat? TryReadDocumentFormat(JsonElement element, string key)
+    {
+        if (!element.TryGetProperty(key, out var node) || node.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var raw = node.GetString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return raw.Trim().Equals("json", StringComparison.OrdinalIgnoreCase)
+            ? SettingsDocumentFormat.Json
+            : raw.Trim().Equals("ini", StringComparison.OrdinalIgnoreCase)
+                ? SettingsDocumentFormat.Ini
+                : null;
     }
 
     private static string ResolveAppRootDirectory(string? baseDirectory)

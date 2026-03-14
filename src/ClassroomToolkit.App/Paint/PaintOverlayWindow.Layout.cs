@@ -1,6 +1,5 @@
 using System;
 using System.Windows;
-using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Paint;
 

@@ -1,0 +1,1103 @@
+{
+    "project":  "ClassroomToolkit",
+    "updated_at":  "2026-03-13",
+    "mode":  "repo-local-autonomous-refactor-loop",
+    "scope":  {
+                  "goal":  "unattended automated closure of the remaining target-architecture gap up to the final manual-regression gate",
+                  "omit_manual_regression":  true
+              },
+    "governing_docs":  [
+                           "docs/plans/2026-03-06-best-target-architecture-plan.md",
+                           "docs/validation/2026-03-06-target-architecture-progress.md",
+                           "docs/handover.md",
+                           "docs/validation/target-architecture-final-acceptance.md",
+                           "docs/architecture/2026-03-10-target-boundary-map.md",
+                           "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md",
+                           "docs/runbooks/migration-rollback-playbook.md"
+                       ],
+    "defaults":  {
+                     "state_file":  ".codex/refactor-state.json",
+                     "verification_policy":  "task-targeted-first-then-batch",
+                     "doc_sync_policy":  "main-plan \u003e progress \u003e handover \u003e validation-history",
+                     "mutation_policy":  "execution-graph-only"
+                 },
+    "governing_reconciliation":  {
+                                     "last_reconciled_at":  "2026-03-13T13:30:45Z",
+                                     "doc_paths":  [
+                                                       "docs/plans/2026-03-06-best-target-architecture-plan.md",
+                                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                                       "docs/handover.md",
+                                                       "docs/validation/target-architecture-final-acceptance.md",
+                                                       "docs/architecture/2026-03-10-target-boundary-map.md",
+                                                       "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md",
+                                                       "docs/runbooks/migration-rollback-playbook.md"
+                                                   ],
+                                     "policy":  "wrapper must refuse ALL_AUTOMATABLE_TASKS_DONE when any governing doc is newer than this reconciliation stamp"
+                                 },
+    "tasks":  [
+                  {
+                      "id":  "phase0-baseline",
+                      "title":  "Historical baseline phase",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  10,
+                      "depends_on":  [
+
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Historical baseline freeze completed and retained only as context.",
+                      "file_hints":  [
+                                         "docs/validation/phase-0-baseline.md"
+                                     ],
+                      "done_when":  [
+                                        "Historical baseline is recorded"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "phase1-application-bootstrap",
+                      "title":  "Historical application bootstrap phase",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  20,
+                      "depends_on":  [
+                                         "phase0-baseline"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Application bootstrap and first use-case port setup are already complete.",
+                      "file_hints":  [
+                                         "docs/validation/phase-1-application-bootstrap.md"
+                                     ],
+                      "done_when":  [
+                                        "Historical bootstrap phase is recorded as completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "phase2-module-migrations",
+                      "title":  "Historical module migration phase",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  30,
+                      "depends_on":  [
+                                         "phase1-application-bootstrap"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Photos, RollCall, and Presentation core migration are already complete.",
+                      "file_hints":  [
+                                         "docs/validation/phase-2-module-migrations.md"
+                                     ],
+                      "done_when":  [
+                                        "Historical module migration phase is recorded as completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "phase3-boundary-hardening",
+                      "title":  "Historical boundary hardening phase",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  40,
+                      "depends_on":  [
+                                         "phase2-module-migrations"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Boundary guards are already established and moved into the ongoing architecture guard path.",
+                      "file_hints":  [
+                                         "docs/validation/phase-3-boundary-hardening.md"
+                                     ],
+                      "done_when":  [
+                                        "Historical boundary hardening phase is recorded as completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "slice-overlay-presentation-router",
+                      "title":  "Completed first-batch overlay presentation router slice",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  50,
+                      "depends_on":  [
+                                         "phase3-boundary-hardening"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Overlay presentation routing slice is already complete and documented in the interop matrix and progress doc.",
+                      "file_hints":  [
+                                         "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+                                         "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                     ],
+                      "done_when":  [
+                                        "Overlay presentation routing slice remains completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "slice-rollcall-remote-hook",
+                      "title":  "Completed first-batch RollCall remote hook slice",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  60,
+                      "depends_on":  [
+                                         "slice-overlay-presentation-router"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "RollCall remote hook coordination slice is already complete and documented.",
+                      "file_hints":  [
+                                         "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+                                         "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                     ],
+                      "done_when":  [
+                                        "RollCall remote hook slice remains completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "slice-rollcall-windowstyle-boundary",
+                      "title":  "Completed first-batch RollCall window style boundary slice",
+                      "stage":  "history",
+                      "priority":  99,
+                      "order":  70,
+                      "depends_on":  [
+                                         "slice-rollcall-remote-hook"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "RollCall window style execution boundary slice is already complete and documented.",
+                      "file_hints":  [
+                                         "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+                                         "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                     ],
+                      "done_when":  [
+                                        "RollCall window style boundary slice remains completed"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "reconcile-current-progress",
+                      "title":  "Reconcile current dirty worktree with execution docs",
+                      "stage":  "execution-foundation",
+                      "priority":  1,
+                      "order":  80,
+                      "depends_on":  [
+                                         "slice-rollcall-windowstyle-boundary"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Map the current dirty worktree to the main plan, progress doc, and handover.",
+                      "file_hints":  [
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Current dirty worktree progress is represented in tasks or state",
+                                        "Minimum required docs are synced",
+                                        "No unrelated changes are reverted"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "git status --short",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-lifecycle-tail",
+                      "title":  "Close remaining MainWindow lifecycle and runtime tail work",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-tail-stage",
+                      "priority":  1,
+                      "order":  100,
+                      "depends_on":  [
+                                         "reconcile-current-progress"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "MainWindow lifecycle tail is already closed through policy/state extraction and verified by the targeted lifecycle filter plus ArchitectureDependencyTests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "tests/ClassroomToolkit.Tests/MainWindowVisibleChangedPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/MainWindowLoadedToggleActionPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/MainWindowOverlayInteractionStatePolicyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Remaining MainWindow lifecycle tail logic no longer depends on inline hotspot branching",
+                                        "Related MainWindow lifecycle policy tests pass",
+                                        "ArchitectureDependencyTests still pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindowVisibleChangedPolicyTests|FullyQualifiedName~MainWindowLoadedToggleActionPolicyTests|FullyQualifiedName~MainWindowOverlayInteractionStatePolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-launcher-zorder-tail",
+                      "title":  "Close remaining MainWindow launcher and Z-order tail work",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-tail-stage",
+                      "priority":  1,
+                      "order":  110,
+                      "depends_on":  [
+                                         "mainwindow-lifecycle-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified the existing launcher-resolution, dispatch-queue, and Z-order queue rollback closure through the targeted MainWindow queue/policy filter plus ArchitectureDependencyTests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.Launcher.cs",
+                                         "tests/ClassroomToolkit.Tests/FloatingDispatchQueueDecisionLogPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/LauncherWindowResolutionPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/ZOrderQueueDispatchDecisionHandlingPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/ZOrderQueueDispatchFailureRollbackStatePolicyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Remaining launcher and Z-order queue tail logic is policy-driven or executor-driven",
+                                        "Launcher and Z-order targeted tests pass",
+                                        "ArchitectureDependencyTests still pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~FloatingDispatchQueueDecisionLogPolicyTests|FullyQualifiedName~LauncherWindowResolutionPolicyTests|FullyQualifiedName~ZOrderQueueDispatchDecisionHandlingPolicyTests|FullyQualifiedName~ZOrderQueueDispatchFailureRollbackStatePolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "overlay-presentation-tail",
+                      "title":  "Close remaining Overlay presentation tail work",
+                      "stage":  "overlay-tail",
+                      "parent_id":  "overlay-tail-stage",
+                      "priority":  1,
+                      "order":  120,
+                      "depends_on":  [
+                                         "reconcile-current-progress"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified the existing Overlay presentation tail closure through the presentation-focused filter and ArchitectureDependencyTests without re-expanding direct coupling.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+                                         "tests/ClassroomToolkit.Tests/PresentationChannelAvailabilityPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/PresentationFullscreenTypeResolutionPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/PresentationFocusRestorePolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/OverlayPresentationCommandRouterTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Remaining Overlay presentation tail logic is routed through policies or router boundaries",
+                                        "Presentation targeted tests pass",
+                                        "ArchitectureDependencyTests still pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Presentation|FullyQualifiedName~OverlayPresentationCommandRouterTests|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "overlay-input-tail",
+                      "title":  "Close remaining Overlay input tail work",
+                      "stage":  "overlay-tail",
+                      "parent_id":  "overlay-tail-stage",
+                      "priority":  1,
+                      "order":  130,
+                      "depends_on":  [
+                                         "overlay-presentation-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified the existing Overlay input tail closure through the targeted input/pointer-source filter and ArchitectureDependencyTests without reopening hotspot inline branches.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs",
+                                         "tests/ClassroomToolkit.Tests/OverlayInputRoutingPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/OverlayPointerSourceHandlingPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/PhotoManipulationAdmissionPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/PhotoRightButtonDownExecutionPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/OverlayLostMouseCaptureExecutionPolicyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Remaining Overlay input tail logic no longer depends on ad-hoc inline event handling branches",
+                                        "Input and pointer-source targeted tests pass",
+                                        "ArchitectureDependencyTests still pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~OverlayInputRoutingPolicyTests|FullyQualifiedName~OverlayPointerSourceHandlingPolicyTests|FullyQualifiedName~PhotoManipulationAdmissionPolicyTests|FullyQualifiedName~PhotoRightButtonDownExecutionPolicyTests|FullyQualifiedName~OverlayLostMouseCaptureExecutionPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "cross-page-tail",
+                      "title":  "Close remaining cross-page consistency tail work",
+                      "stage":  "overlay-tail",
+                      "parent_id":  "overlay-tail-stage",
+                      "priority":  1,
+                      "order":  140,
+                      "depends_on":  [
+                                         "overlay-input-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified existing cross-page consistency tail closure through the targeted CrossPage/Photo/Overlay filter and ArchitectureDependencyTests (903/903).",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/",
+                                         "tests/ClassroomToolkit.Tests/CrossPage*",
+                                         "tests/ClassroomToolkit.Tests/Photo*",
+                                         "tests/ClassroomToolkit.Tests/Overlay*"
+                                     ],
+                      "done_when":  [
+                                        "The remaining cross-page tail no longer depends on move-or-zoom compensation behavior",
+                                        "Cross-page targeted tests pass",
+                                        "ArchitectureDependencyTests still pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPage|FullyQualifiedName~Photo|FullyQualifiedName~Overlay|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-domain-selection",
+                      "title":  "Choose and wire the next SQLite business domain",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-tail-stage",
+                      "priority":  2,
+                      "order":  200,
+                      "depends_on":  [
+                                         "reconcile-current-progress"
+                                     ],
+                      "status_hint":  "deferred",
+                      "summary":  "Deferred as an oversized umbrella task and split into scoped child tasks for domain decision, adapter implementation, and app wiring closure.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Infra/",
+                                         "src/ClassroomToolkit.Services/",
+                                         "tests/ClassroomToolkit.Tests/*Store*",
+                                         "tests/ClassroomToolkit.Tests/*Repository*"
+                                     ],
+                      "done_when":  [
+                                        "At least one new business domain uses SQLite as the primary automated path",
+                                        "Its read or write path is covered by targeted tests"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-domain-student-workbook-selection",
+                      "title":  "Finalize SQLite domain choice for student workbook data",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-domain-selection",
+                      "priority":  2,
+                      "order":  201,
+                      "depends_on":  [
+                                         "reconcile-current-progress"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Finalized student workbook/class roster as the next SQLite business domain beyond RollCall and synced boundary plus rollback expectation across progress/handover/runbook docs.",
+                      "file_hints":  [
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "docs/runbooks/migration-rollback-playbook.md",
+                                         "src/ClassroomToolkit.Infra/Storage/"
+                                     ],
+                      "done_when":  [
+                                        "The chosen business domain beyond RollCall is explicit and consistent across execution docs",
+                                        "Domain boundary and rollback expectation are recorded for follow-up implementation"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "rg -n \"SQLite|sqlite|鐝骇|鍚嶅唽|student workbook|class roster\" docs/validation/2026-03-06-target-architecture-progress.md docs/handover.md docs/runbooks/migration-rollback-playbook.md"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-domain-student-workbook-adapter",
+                      "title":  "Implement SQLite-backed student workbook adapter with tests",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-domain-selection",
+                      "priority":  2,
+                      "order":  202,
+                      "depends_on":  [
+                                         "sqlite-domain-student-workbook-selection"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Implemented a dedicated StudentWorkbook SQLite adapter with snapshot/state persistence and focused read/write/fallback tests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Infra/Storage/",
+                                         "tests/ClassroomToolkit.Tests/*Store*",
+                                         "tests/ClassroomToolkit.Tests/*Repository*",
+                                         "tests/ClassroomToolkit.Tests/*Sqlite*"
+                                     ],
+                      "done_when":  [
+                                        "Student workbook domain has a dedicated SQLite adapter path",
+                                        "Targeted adapter tests cover at least one read path and one write path"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Student|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-domain-student-workbook-wiring",
+                      "title":  "Wire student workbook SQLite path into runtime selection",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-domain-selection",
+                      "priority":  2,
+                      "order":  203,
+                      "depends_on":  [
+                                         "sqlite-domain-student-workbook-adapter"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Wired runtime selection to StudentWorkbook SQLite path via StudentWorkbookSqliteRollCallStoreAdapter, added startup guardrail log wording, and passed resolver/store/repository/sqlite plus ArchitectureDependencyTests filter (113/113).",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/App.xaml.cs",
+                                         "src/ClassroomToolkit.Infra/Storage/",
+                                         "tests/ClassroomToolkit.Tests/*Resolver*",
+                                         "tests/ClassroomToolkit.Tests/*Sqlite*"
+                                     ],
+                      "done_when":  [
+                                        "Runtime backend selection can resolve to the new student workbook SQLite path",
+                                        "Targeted wiring and guard tests pass without increasing App-\u003eInterop direct dependency baseline"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Resolver|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-migration-tail",
+                      "title":  "Close SQLite migration and rollback tail work",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-tail-stage",
+                      "priority":  2,
+                      "order":  210,
+                      "depends_on":  [
+                                         "sqlite-domain-student-workbook-wiring"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed SQLite migration/rollback tail by confirming student-workbook fallback-read coverage and syncing rollback/progress/handover docs; task filter passed (85/85).",
+                      "file_hints":  [
+                                         "docs/runbooks/migration-rollback-playbook.md",
+                                         "tests/ClassroomToolkit.Tests/*Migration*",
+                                         "tests/ClassroomToolkit.Tests/*SettingsDocument*",
+                                         "src/ClassroomToolkit.Infra/"
+                                     ],
+                      "done_when":  [
+                                        "Migration or fallback coverage exists for the new SQLite domain",
+                                        "Rollback runbook is updated",
+                                        "Storage-tail targeted tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Migration|FullyQualifiedName~SettingsDocument|FullyQualifiedName~Sqlite|FullyQualifiedName~Store\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/runbooks/migration-rollback-playbook.md",
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "ink-capability-guardrails",
+                      "title":  "Finish Ink capability and fallback guardrails",
+                      "stage":  "ink-tail",
+                      "parent_id":  "ink-tail-stage",
+                      "priority":  2,
+                      "order":  300,
+                      "depends_on":  [
+                                         "reconcile-current-progress"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified Ink capability detection and CPU/GPU fallback guardrails via targeted Ink/Renderer/Brush filter (252/252), with CPU remaining the safe primary path when GPU is unavailable or gated off.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/Brushes/",
+                                         "src/ClassroomToolkit.App/Paint/",
+                                         "tests/ClassroomToolkit.Tests/*Ink*",
+                                         "tests/ClassroomToolkit.Tests/*Renderer*",
+                                         "tests/ClassroomToolkit.Tests/*Brush*"
+                                     ],
+                      "done_when":  [
+                                        "Renderer entry points expose clear capability and fallback behavior",
+                                        "GPU failure does not affect CPU primary behavior",
+                                        "Ink and renderer targeted tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Ink|FullyQualifiedName~Renderer|FullyQualifiedName~Brush\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/validation/target-architecture-final-acceptance.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "automated-freeze-check",
+                      "title":  "Run automated freeze acceptance only",
+                      "stage":  "closure",
+                      "priority":  3,
+                      "order":  400,
+                      "depends_on":  [
+                                         "mainwindow-launcher-zorder-tail",
+                                         "cross-page-tail",
+                                         "sqlite-migration-tail",
+                                         "ink-capability-guardrails"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Completed automated freeze acceptance by passing ArchitectureDependencyTests (5/5), full Debug (2214/2214), and full Release (2214/2214), while leaving real manual regression omitted from unattended scope.",
+                      "file_hints":  [
+                                         "docs/validation/target-architecture-final-acceptance.md",
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Architecture guard tests pass",
+                                        "Debug full test suite passes",
+                                        "Release full test suite passes",
+                                        "Acceptance, progress, and handover docs reflect automated freeze status"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/target-architecture-final-acceptance.md",
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "windowing-activation-coordination-tail",
+                      "title":  "Finish scene-switch windowing, activation, and topmost coordination closure",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "windowing-tail-stage",
+                      "priority":  1,
+                      "order":  405,
+                      "depends_on":  [
+                                         "mainwindow-launcher-zorder-tail",
+                                         "cross-page-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Verified existing scene-switch windowing/activation/topmost coordination closure through the task-targeted filter (WindowOrchestrator|Topmost|Presentation|Launcher|ArchitectureDependencyTests, 379/379).",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+                                         "src/ClassroomToolkit.App/Windowing/",
+                                         "tests/ClassroomToolkit.Tests/*WindowOrchestrator*",
+                                         "tests/ClassroomToolkit.Tests/*Topmost*",
+                                         "tests/ClassroomToolkit.Tests/*Presentation*"
+                                     ],
+                      "done_when":  [
+                                        "Image/PDF/whiteboard/PPT-WPS switching no longer depends on scattered activation or topmost compensation branches",
+                                        "Launcher, toolbar, Overlay, RollCall, and ImageManager window relationships are coordinated through Session or Windowing paths",
+                                        "Targeted windowing and presentation tests pass without increasing App to Interop baseline"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestrator|FullyQualifiedName~Topmost|FullyQualifiedName~Presentation|FullyQualifiedName~Launcher|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/validation/target-architecture-final-acceptance.md",
+                                       "docs/architecture/2026-03-10-target-boundary-map.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-scattered-state-consolidation-tail",
+                      "title":  "Consolidate remaining MainWindow scattered state writes",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-tail-stage",
+                      "priority":  1,
+                      "order":  410,
+                      "depends_on":  [
+                                         "windowing-activation-coordination-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Remaining automatable cleanup of MainWindow hotspot state writes into Session, Updater, Policy, or Executor paths.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "tests/ClassroomToolkit.Tests/*MainWindow*",
+                                         "tests/ClassroomToolkit.Tests/*Launcher*",
+                                         "tests/ClassroomToolkit.Tests/*ZOrderQueue*"
+                                     ],
+                      "done_when":  [
+                                        "Remaining MainWindow hotspot state writes are consolidated into Session, Updater, Policy, or Executor paths",
+                                        "No new inline state-repair logic is added to MainWindow hotspot files",
+                                        "Targeted MainWindow tests and ArchitectureDependencyTests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow|FullyQualifiedName~FloatingDispatchQueue|FullyQualifiedName~Launcher|FullyQualifiedName~ZOrderQueue|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-history-domain-extension-tail",
+                      "title":  "Extend SQLite beyond student workbook into the next history domain",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-tail-stage",
+                      "priority":  2,
+                      "order":  420,
+                      "depends_on":  [
+                                         "sqlite-migration-tail"
+                                     ],
+                      "status_hint":  "deferred",
+                      "summary":  "Deferred as an oversized umbrella task and split into scoped child tasks for history-domain selection, adapter implementation, and runtime migration/rollback closure.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Infra/Storage/",
+                                         "src/ClassroomToolkit.Services/",
+                                         "tests/ClassroomToolkit.Tests/*History*",
+                                         "tests/ClassroomToolkit.Tests/*Store*",
+                                         "tests/ClassroomToolkit.Tests/*Repository*",
+                                         "tests/ClassroomToolkit.Tests/*Sqlite*"
+                                     ],
+                      "done_when":  [
+                                        "At least one history-oriented business domain uses SQLite as the primary automated path",
+                                        "Migration, fallback-read, and rollback coverage exist for that domain",
+                                        "Targeted storage tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~Migration\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/runbooks/migration-rollback-playbook.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-history-domain-selection",
+                      "title":  "Finalize next history-oriented SQLite domain scope",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-history-domain-extension-tail",
+                      "priority":  2,
+                      "order":  421,
+                      "depends_on":  [
+                                         "sqlite-migration-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Select one concrete history-oriented business domain and align boundary, migration expectation, and rollback scope across execution docs.",
+                      "file_hints":  [
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "docs/runbooks/migration-rollback-playbook.md",
+                                         "src/ClassroomToolkit.Infra/Storage/"
+                                     ],
+                      "done_when":  [
+                                        "A concrete history-oriented business domain is explicitly selected beyond student workbook",
+                                        "Domain boundary and migration plus rollback expectation are consistent across progress, handover, and runbook docs"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "rg -n \"SQLite|sqlite|history|migration|rollback|student workbook|class roster\" docs/validation/2026-03-06-target-architecture-progress.md docs/handover.md docs/runbooks/migration-rollback-playbook.md"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/runbooks/migration-rollback-playbook.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-history-domain-adapter",
+                      "title":  "Implement SQLite adapter for the selected history domain",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-history-domain-extension-tail",
+                      "priority":  2,
+                      "order":  422,
+                      "depends_on":  [
+                                         "sqlite-history-domain-selection"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Implement SQLite-backed adapter path for the selected history-oriented domain with focused read/write and fallback tests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Infra/Storage/",
+                                         "src/ClassroomToolkit.Services/",
+                                         "tests/ClassroomToolkit.Tests/*History*",
+                                         "tests/ClassroomToolkit.Tests/*Store*",
+                                         "tests/ClassroomToolkit.Tests/*Repository*",
+                                         "tests/ClassroomToolkit.Tests/*Sqlite*"
+                                     ],
+                      "done_when":  [
+                                        "Selected history-oriented domain has a dedicated SQLite adapter path",
+                                        "Targeted tests cover at least one primary read path and one write path",
+                                        "Fallback-read behavior is covered when bridge or source path fails"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "sqlite-history-domain-wiring-migration",
+                      "title":  "Wire selected history-domain SQLite path with migration and rollback coverage",
+                      "stage":  "storage-tail",
+                      "parent_id":  "sqlite-history-domain-extension-tail",
+                      "priority":  2,
+                      "order":  423,
+                      "depends_on":  [
+                                         "sqlite-history-domain-adapter"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Completed Ink history SQLite runtime wiring via sidecar bridge + adapter path, synced migration/rollback docs, and passed the task-targeted History|Store|Repository|Sqlite|Migration filter (98/98).",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/App.xaml.cs",
+                                         "src/ClassroomToolkit.Infra/Storage/",
+                                         "src/ClassroomToolkit.Infra/Migration/",
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "docs/runbooks/migration-rollback-playbook.md",
+                                         "tests/ClassroomToolkit.Tests/*Migration*",
+                                         "tests/ClassroomToolkit.Tests/*History*",
+                                         "tests/ClassroomToolkit.Tests/*Store*",
+                                         "tests/ClassroomToolkit.Tests/*Repository*",
+                                         "tests/ClassroomToolkit.Tests/*Sqlite*"
+                                     ],
+                      "done_when":  [
+                                        "Runtime selection can resolve to the selected history-domain SQLite path",
+                                        "Migration and rollback expectations are reflected in runbook and synced docs",
+                                        "Task-targeted history/storage/migration verification passes"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~Migration\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/runbooks/migration-rollback-playbook.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "ink-gpu-release-strategy-tail",
+                      "title":  "Close the remaining GPU Ink optional-release strategy gap",
+                      "stage":  "ink-tail",
+                      "parent_id":  "ink-tail-stage",
+                      "priority":  2,
+                      "order":  430,
+                      "depends_on":  [
+                                         "ink-capability-guardrails"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed GPU Ink optional-release strategy gap: kept CPU as stable default, enforced dual-gate GPU enablement with safe fallback, aligned release-facing docs, and passed task verify filter (Ink|Renderer|Brush|Gpu: 259/259).",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/",
+                                         "src/ClassroomToolkit.App/Paint/Brushes/",
+                                         "tests/ClassroomToolkit.Tests/*Ink*",
+                                         "tests/ClassroomToolkit.Tests/*Renderer*",
+                                         "tests/ClassroomToolkit.Tests/*Brush*",
+                                         "docs/validation/target-architecture-final-acceptance.md"
+                                     ],
+                      "done_when":  [
+                                        "GPU Ink enablement and fallback behavior are explicit and release-facing docs match the implemented policy",
+                                        "CPU remains the stable default path and GPU failure cannot destabilize the session",
+                                        "Targeted Ink, renderer, and GPU-related tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Ink|FullyQualifiedName~Renderer|FullyQualifiedName~Brush|FullyQualifiedName~Gpu\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/validation/target-architecture-final-acceptance.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "automated-freeze-recheck-after-gap-closure",
+                      "title":  "Re-run automated freeze acceptance after remaining automatable gap closure",
+                      "stage":  "closure",
+                      "priority":  3,
+                      "order":  440,
+                      "depends_on":  [
+                                         "mainwindow-scattered-state-consolidation-tail",
+                                         "sqlite-history-domain-wiring-migration",
+                                         "ink-gpu-release-strategy-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2227/2227), and full Release (2227/2227), with acceptance/progress/handover/matrix docs synced.",
+                      "file_hints":  [
+                                         "docs/validation/target-architecture-final-acceptance.md",
+                                         "docs/validation/2026-03-06-target-architecture-progress.md",
+                                         "docs/handover.md",
+                                         "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Architecture guard tests pass",
+                                        "Debug full test suite passes",
+                                        "Release full test suite passes",
+                                        "Acceptance, progress, and handover docs reflect the post-gap-closure freeze result"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/target-architecture-final-acceptance.md",
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md",
+                                       "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  },
+                  {
+                      "id":  "manual-final-regression",
+                      "title":  "Real manual final regression",
+                      "stage":  "manual-regression",
+                      "priority":  100,
+                      "order":  500,
+                      "depends_on":  [
+                                         "automated-freeze-recheck-after-gap-closure"
+                                     ],
+                      "status_hint":  "omitted",
+                      "summary":  "Real PPT, WPS, image, PDF, whiteboard, and window-relationship regression in a live environment.",
+                      "file_hints":  [
+                                         "docs/validation/target-architecture-final-acceptance.md",
+                                         "docs/validation/templates/classroom-pilot-acceptance-template.md"
+                                     ],
+                      "done_when":  [
+                                        "Live environment regression is executed by a human"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/target-architecture-final-acceptance.md"
+                                   ],
+                      "manual_gate":  true,
+                      "mutation":  {
+                                       "allow_split":  false,
+                                       "allow_reorder_within_stage":  false
+                                   }
+                  }
+              ]
+}
+

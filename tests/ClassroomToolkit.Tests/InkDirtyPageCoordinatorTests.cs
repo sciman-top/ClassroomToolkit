@@ -52,7 +52,7 @@ public sealed class InkDirtyPageCoordinatorTests
     public void EnumerateSessionModifiedSourcesInDirectory_ShouldReturnOnlyMatchingDirectory()
     {
         var coordinator = new InkDirtyPageCoordinator();
-        var dir = Path.Combine(Path.GetTempPath(), "ctk-coordinator");
+        var dir = TestPathHelper.CreateDirectory("ctk_coordinator");
         var sourceA = Path.Combine(dir, "a.pdf");
         var sourceB = Path.Combine(dir, "sub", "b.pdf");
 
@@ -68,9 +68,13 @@ public sealed class InkDirtyPageCoordinatorTests
     public void GetDirtyPages_ShouldApplyDirectoryFilter()
     {
         var coordinator = new InkDirtyPageCoordinator();
-        var dir = Path.Combine(Path.GetTempPath(), "ctk-coordinator-2");
+        var root = TestPathHelper.CreateDirectory("ctk_coordinator_2_root");
+        var dir = Path.Combine(root, "target");
+        Directory.CreateDirectory(dir);
         var file1 = Path.Combine(dir, "1.png");
-        var file2 = Path.Combine(Path.GetTempPath(), "outside", "2.png");
+        var outsideDir = Path.Combine(root, "outside");
+        Directory.CreateDirectory(outsideDir);
+        var file2 = Path.Combine(outsideDir, "2.png");
 
         coordinator.MarkModified(file1, 1, "a");
         coordinator.MarkModified(file2, 3, "b");

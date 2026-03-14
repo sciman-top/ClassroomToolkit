@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
-using ClassroomToolkit.Infra.Settings;
 
 namespace ClassroomToolkit.App.Settings;
 
@@ -14,22 +14,16 @@ public sealed class AppSettingsService
         @"^(?<w>\d+)x(?<h>\d+)(?<x>[+-]\d+)(?<y>[+-]\d+)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    private readonly SettingsRepository _repository;
+    private readonly ISettingsDocumentStore _store;
 
-    public AppSettingsService(IConfigurationService configurationService)
-        : this((configurationService ?? throw new ArgumentNullException(nameof(configurationService))).SettingsIniPath)
+    public AppSettingsService(ISettingsDocumentStore store)
     {
-    }
-
-    public AppSettingsService(string settingsPath)
-    {
-        ArgumentNullException.ThrowIfNull(settingsPath);
-        _repository = new SettingsRepository(settingsPath);
+        _store = store ?? throw new ArgumentNullException(nameof(store));
     }
 
     public AppSettings Load()
     {
-        var data = _repository.Load();
+        var data = _store.Load();
         var settings = new AppSettings();
 
         if (data.TryGetValue("RollCallTimer", out var roll))
@@ -201,7 +195,7 @@ public sealed class AppSettingsService
 
     public void Save(AppSettings settings)
     {
-        var data = _repository.Load();
+        var data = _store.Load();
         var roll = GetOrCreate(data, "RollCallTimer");
         roll["show_id"] = settings.RollCallShowId ? "True" : "False";
         roll["show_name"] = settings.RollCallShowName ? "True" : "False";
@@ -325,7 +319,7 @@ public sealed class AppSettingsService
         launcher["minimized"] = settings.LauncherMinimized ? "True" : "False";
         launcher["auto_exit_seconds"] = settings.LauncherAutoExitSeconds.ToString(CultureInfo.InvariantCulture);
 
-        _repository.Save(data);
+        _store.Save(data);
     }
 
     private static Dictionary<string, string> GetOrCreate(Dictionary<string, Dictionary<string, string>> data, string key)

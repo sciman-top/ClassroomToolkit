@@ -9,30 +9,6 @@
         WindowState="Maximized"
         ResizeMode="NoResize">
     
-    <Window.Resources>
-        <Style x:Key="Style_ModernCloseButton" TargetType="Button">
-            <Setter Property="Width" Value="56"/>
-            <Setter Property="Height" Value="56"/>
-            <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="28" Background="{TemplateBinding Background}" BorderBrush="{StaticResource Brush_Border_Light}" BorderThickness="1">
-                            <Path Data="{StaticResource Icon_Close}" Fill="White" Stretch="Uniform" Width="20" Height="20" 
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Primary}"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
     <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
         <!-- 透明背景，点击关闭 -->
         <Rectangle x:Name="BackgroundRect" Fill="Transparent" MouseLeftButtonDown="OnCloseClick"/>
@@ -62,12 +38,27 @@
 
         <!-- 底部关闭按钮 -->
         <Button x:Name="CloseButtonLeft" 
-                Style="{StaticResource Style_ModernCloseButton}" 
+                Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
-                Opacity="0.3"/>
+                Opacity="0.3"
+                Width="56"
+                Height="56"
+                Visibility="Collapsed"/>
         <Button x:Name="CloseButtonRight" 
-                Style="{StaticResource Style_ModernCloseButton}" 
+                Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
-                Opacity="0.3"/>
+                Opacity="0.45"
+                Width="56"
+                Height="56"/>
+
+        <TextBlock x:Name="CloseHintText"
+                   Text="单击背景或右下角关闭"
+                   FontSize="16"
+                   Foreground="#E6FFFFFF"
+                   Panel.ZIndex="10">
+            <TextBlock.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="6" ShadowDepth="1" Opacity="0.6"/>
+            </TextBlock.Effect>
+        </TextBlock>
     </Canvas>
 </Window>

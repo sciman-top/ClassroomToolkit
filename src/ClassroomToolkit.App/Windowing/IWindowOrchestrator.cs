@@ -4,7 +4,7 @@ namespace ClassroomToolkit.App.Windowing;
 
 public interface IWindowOrchestrator
 {
-    void TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface);
+    bool TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface);
 
     void PruneSurfaceStack(
         IList<ZOrderSurface> surfaceStack,

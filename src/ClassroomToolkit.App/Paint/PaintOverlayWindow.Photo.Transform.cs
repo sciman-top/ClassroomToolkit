@@ -23,34 +23,33 @@ public partial class PaintOverlayWindow
     private bool TryStepPhotoViewport(int direction)
     {
         var viewportHeight = ResolvePhotoViewportHeight();
-        if (viewportHeight <= 1)
+        if (viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             return false;
         }
         EnsurePhotoTransformsWritable();
-        // Keep a small continuity overlap between editions for reading context.
-        const double overlapRatio = 0.12;
-        var step = Math.Max(24.0, viewportHeight * (1.0 - overlapRatio));
+        var step = PhotoViewportStepPolicy.ResolveStep(viewportHeight);
         var originalY = _photoTranslate.Y;
         _photoTranslate.Y -= direction * step;
 
-        if (_crossPageDisplayEnabled)
+        if (IsCrossPageDisplayActive())
         {
             ApplyCrossPageBoundaryLimits(includeSlack: false);
             SyncCurrentPageToViewportCenter();
-            RequestCrossPageDisplayUpdate("step-viewport");
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.StepViewport);
         }
         else
         {
             ClampSinglePageTranslateY(viewportHeight);
         }
 
-        var moved = Math.Abs(_photoTranslate.Y - originalY) > 0.5;
+        var moved = Math.Abs(_photoTranslate.Y - originalY) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip;
         if (!moved)
         {
             return false;
         }
         SchedulePhotoTransformSave(userAdjusted: true);
+        RequestPhotoTransformInkRedraw();
         return true;
     }
 
@@ -85,15 +84,24 @@ public partial class PaintOverlayWindow
 
     public void UpdatePhotoZoomTuning(double wheelBase, double gestureSensitivity)
     {
-        _photoWheelZoomBase = Math.Clamp(wheelBase, 1.0002, 1.0020);
-        _photoGestureZoomSensitivity = Math.Clamp(gestureSensitivity, 0.5, 1.8);
+        _photoWheelZoomBase = Math.Clamp(
+            wheelBase,
+            PhotoZoomInputDefaults.WheelZoomBaseMin,
+            PhotoZoomInputDefaults.WheelZoomBaseMax);
+        _photoGestureZoomSensitivity = Math.Clamp(
+            gestureSensitivity,
+            PhotoZoomInputDefaults.GestureSensitivityMin,
+            PhotoZoomInputDefaults.GestureSensitivityMax);
     }
 
     private void ApplyPhotoScale(double scaleFactor, WpfPoint center)
     {
         EnsurePhotoTransformsWritable();
-        double newScale = Math.Clamp(_photoScale.ScaleX * scaleFactor, 0.2, 4.0);
-        if (Math.Abs(newScale - _photoScale.ScaleX) < 0.001)
+        double newScale = Math.Clamp(
+            _photoScale.ScaleX * scaleFactor,
+            PhotoTransformViewportDefaults.MinScale,
+            PhotoTransformViewportDefaults.MaxScale);
+        if (Math.Abs(newScale - _photoScale.ScaleX) < PhotoZoomInputDefaults.ScaleApplyEpsilon)
         {
             return;
         }
@@ -102,20 +110,63 @@ public partial class PaintOverlayWindow
         _photoScale.ScaleY = newScale;
         _photoTranslate.X = center.X - before.X * newScale;
         _photoTranslate.Y = center.Y - before.Y * newScale;
-        if (_crossPageDisplayEnabled)
+        if (IsCrossPageDisplayActive())
         {
             ApplyCrossPageBoundaryLimits();
         }
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
         SchedulePhotoTransformSave(userAdjusted: true);
-        if (_crossPageDisplayEnabled)
+        if (IsCrossPageDisplayActive())
         {
-            RequestCrossPageDisplayUpdate("apply-scale");
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.ApplyScale);
+        }
+        SyncPhotoInteractiveRefreshAnchor();
+        RequestPhotoTransformInkRedraw();
+    }
+
+    private void RequestPhotoTransformInkRedraw()
+    {
+        if (IsPhotoInkModeActive())
+        {
+            RequestInkRedraw();
+        }
+    }
+
+    private void SyncPhotoInteractiveRefreshAnchor()
+    {
+        _lastPhotoInteractiveRefreshTranslateX = _photoTranslate.X;
+        _lastPhotoInteractiveRefreshTranslateY = _photoTranslate.Y;
+    }
+
+    private void UpdatePhotoInkPanCompensation()
+    {
+        var delta = PhotoInkPanCompensationPolicy.Resolve(
+            IsPhotoInkModeActive(),
+            _photoTranslate.X,
+            _photoTranslate.Y,
+            _lastInkRedrawPhotoTranslateX,
+            _lastInkRedrawPhotoTranslateY);
+        _photoInkPanCompensation.X = delta.X;
+        _photoInkPanCompensation.Y = delta.Y;
+    }
+
+    private void ResetPhotoInkPanCompensation(bool syncToCurrentPhotoTranslate)
+    {
+        _photoInkPanCompensation.X = 0;
+        _photoInkPanCompensation.Y = 0;
+        if (syncToCurrentPhotoTranslate)
+        {
+            _lastInkRedrawPhotoTranslateX = _photoTranslate.X;
+            _lastInkRedrawPhotoTranslateY = _photoTranslate.Y;
+            SyncPhotoInteractiveRefreshAnchor();
         }
     }
 
     private WpfPoint ToPhotoSpace(WpfPoint point)
     {
-        if (!_photoModeActive)
+        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+                photoModeActive: _photoModeActive,
+                boardActive: IsBoardActive()))
         {
             return point;
         }
@@ -125,7 +176,10 @@ public partial class PaintOverlayWindow
 
     private Geometry? ToPhotoGeometry(Geometry geometry)
     {
-        if (!_photoModeActive || geometry == null)
+        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+                photoModeActive: _photoModeActive,
+                boardActive: IsBoardActive())
+            || geometry == null)
         {
             return geometry;
         }
@@ -142,7 +196,10 @@ public partial class PaintOverlayWindow
 
     private Geometry? ToScreenGeometry(Geometry geometry)
     {
-        if (!_photoModeActive || geometry == null)
+        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+                photoModeActive: _photoModeActive,
+                boardActive: IsBoardActive())
+            || geometry == null)
         {
             return geometry;
         }
@@ -168,7 +225,8 @@ public partial class PaintOverlayWindow
     {
         var scaleX = _photoPageScale.ScaleX * _photoScale.ScaleX;
         var scaleY = _photoPageScale.ScaleY * _photoScale.ScaleY;
-        if (Math.Abs(scaleX) < 0.0001 || Math.Abs(scaleY) < 0.0001)
+        if (Math.Abs(scaleX) < PhotoTransformMathDefaults.InverseScaleEpsilon
+            || Math.Abs(scaleY) < PhotoTransformMathDefaults.InverseScaleEpsilon)
         {
             return Matrix.Identity;
         }
@@ -180,7 +238,12 @@ public partial class PaintOverlayWindow
 
     private bool TryBeginPhotoPan(MouseButtonEventArgs e)
     {
-        if (!_photoModeActive || _mode != PaintToolMode.Cursor || IsBoardActive())
+        var shouldPanPhoto = StylusCursorPolicy.ShouldPanPhoto(
+            _photoModeActive,
+            IsBoardActive(),
+            _mode,
+            IsInkOperationActive());
+        if (!PhotoPanBeginGuardPolicy.ShouldBegin(shouldPanPhoto, _photoPanning))
         {
             return false;
         }
@@ -192,9 +255,11 @@ public partial class PaintOverlayWindow
     private void BeginPhotoPan(WpfPoint position, bool captureStylus)
     {
         _photoPanning = true;
+        _photoPanHadEffectiveMovement = false;
         _photoPanStart = position;
         _photoPanOriginX = _photoTranslate.X;
         _photoPanOriginY = _photoTranslate.Y;
+        SyncPhotoInteractiveRefreshAnchor();
         LogPhotoInputTelemetry("pan-start", $"stylus={captureStylus}");
         if (captureStylus)
         {
@@ -217,20 +282,41 @@ public partial class PaintOverlayWindow
         _photoTranslate.X = _photoPanOriginX + delta.X;
         _photoTranslate.Y = _photoPanOriginY + delta.Y;
         ApplyPhotoPanBounds(allowResistance: true);
-        // Enable cross-page display when dragging vertically
-        if (_crossPageDisplayEnabled)
+        UpdatePhotoInkPanCompensation();
+        var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+            _lastPhotoInteractiveRefreshTranslateX,
+            _lastPhotoInteractiveRefreshTranslateY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
+        // Enable cross-page drag mode only when vertical drag exceeds threshold.
+        if (shouldRefresh && PhotoPanDragActivationPolicy.ShouldActivateCrossPageDrag(
+                IsCrossPageDisplayActive(),
+                delta.Y))
         {
-            if (Math.Abs(delta.Y) > 5)
-            {
-                _crossPageDragging = true;
-            }
+            _crossPageDragging = true;
         }
-        UpdateNeighborTransformsForPan();
-        if (_crossPageDisplayEnabled)
+        if (!shouldRefresh)
         {
-            RequestCrossPageDisplayUpdate("photo-pan");
+            return;
+        }
+        _photoPanHadEffectiveMovement = true;
+        SyncPhotoInteractiveRefreshAnchor();
+
+        UpdateNeighborTransformsForPan();
+        if (IsCrossPageDisplayActive())
+        {
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.PhotoPan);
         }
         SchedulePhotoTransformSave(userAdjusted: true);
+        if (PhotoInkPanRedrawPolicy.ShouldRequest(
+                IsPhotoInkModeActive(),
+                _photoTranslate.X,
+                _photoTranslate.Y,
+                _lastInkRedrawPhotoTranslateX,
+                _lastInkRedrawPhotoTranslateY))
+        {
+            RequestPhotoTransformInkRedraw();
+        }
     }
 
     private void EndPhotoPan()
@@ -239,6 +325,8 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        var hadEffectiveMovement = _photoPanHadEffectiveMovement;
+        var hadCrossPageDragCommit = _crossPageDragging && IsCrossPageDisplayActive();
         _photoPanning = false;
         if (OverlayRoot.IsMouseCaptured)
         {
@@ -249,15 +337,22 @@ public partial class PaintOverlayWindow
             Stylus.Capture(null);
         }
         ApplyPhotoPanBounds(allowResistance: false);
-        if (_crossPageDragging && _crossPageDisplayEnabled)
+        if (_crossPageDragging && IsCrossPageDisplayActive())
         {
             _crossPageDragging = false;
             _crossPageTranslateClamped = false;
             FinalizeCurrentPageFromScroll();
         }
+        _photoPanHadEffectiveMovement = false;
         LogPhotoInputTelemetry("pan-end", "commit");
         FlushPhotoTransformSave();
-        RequestInkRedraw();
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        if (PhotoPanEndRedrawPolicy.ShouldRequestInkRedraw(
+                hadEffectiveMovement,
+                hadCrossPageDragCommit))
+        {
+            RequestInkRedraw();
+        }
     }
 
     private void ApplyPhotoPanBounds(bool allowResistance)
@@ -267,7 +362,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        if (_crossPageDisplayEnabled)
+        if (IsCrossPageDisplayActive())
         {
             if (TryGetCrossPageBounds(
                     currentBitmap,
@@ -282,13 +377,20 @@ public partial class PaintOverlayWindow
                 var originalY = _photoTranslate.Y;
                 _photoTranslate.X = PhotoPanLimiter.ApplyAxis(_photoTranslate.X, minX, maxX, allowResistance);
                 _photoTranslate.Y = PhotoPanLimiter.ApplyAxis(_photoTranslate.Y, minY, maxY, allowResistance);
-                _crossPageTranslateClamped = Math.Abs(originalX - _photoTranslate.X) > 0.5
-                    || Math.Abs(originalY - _photoTranslate.Y) > 0.5;
+                _crossPageTranslateClamped =
+                    Math.Abs(originalX - _photoTranslate.X) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip
+                    || Math.Abs(originalY - _photoTranslate.Y) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip;
             }
             return;
         }
 
-        if (TryGetSinglePagePanBounds(currentBitmap, out var singleMinX, out var singleMaxX, out var singleMinY, out var singleMaxY))
+        if (TryGetSinglePagePanBounds(
+                currentBitmap,
+                out var singleMinX,
+                out var singleMaxX,
+                out var singleMinY,
+                out var singleMaxY,
+                includeSlack: allowResistance))
         {
             _photoTranslate.X = PhotoPanLimiter.ApplyAxis(_photoTranslate.X, singleMinX, singleMaxX, allowResistance);
             _photoTranslate.Y = PhotoPanLimiter.ApplyAxis(_photoTranslate.Y, singleMinY, singleMaxY, allowResistance);
@@ -300,7 +402,8 @@ public partial class PaintOverlayWindow
         out double minX,
         out double maxX,
         out double minY,
-        out double maxY)
+        out double maxY,
+        bool includeSlack)
     {
         minX = maxX = minY = maxY = 0;
         var viewportWidth = OverlayRoot.ActualWidth;
@@ -325,21 +428,16 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        if (pageWidth <= viewportWidth)
-        {
-            var centerX = (viewportWidth - pageWidth) * 0.5;
-            minX = centerX;
-            maxX = centerX;
-        }
-        else
-        {
-            minX = viewportWidth - pageWidth;
-            maxX = 0;
-        }
+        var xRange = PhotoHorizontalPanRangePolicy.Resolve(
+            viewportWidth,
+            pageWidth,
+            includeSlack);
+        minX = xRange.MinX;
+        maxX = xRange.MaxX;
 
         if (pageHeight <= viewportHeight)
         {
-            var centerY = (viewportHeight - pageHeight) * 0.5;
+            var centerY = (viewportHeight - pageHeight) * CrossPageViewportBoundsDefaults.CenterRatio;
             minY = centerY;
             maxY = centerY;
         }
@@ -410,17 +508,15 @@ public partial class PaintOverlayWindow
             if (_rememberPhotoTransform)
             {
                 var key = GetCurrentPhotoTransformKey();
-                if (!_crossPageDisplayEnabled && TryApplyStoredPhotoTransform(key))
+                if (!IsCrossPageDisplayActive() && TryApplyStoredPhotoTransform(key))
                 {
                 }
                 else
                 {
-                    EnsurePhotoTransformsWritable();
-                    _photoScale.ScaleX = _lastPhotoScaleX;
-                    _photoScale.ScaleY = _lastPhotoScaleY;
-                    _photoTranslate.X = _lastPhotoTranslateX;
-                    _photoTranslate.Y = _lastPhotoTranslateY;
+                    ApplyLastUnifiedPhotoTransform(markUserDirty: false);
                 }
+                ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+                RequestPhotoTransformInkRedraw();
             }
         }
     }
@@ -454,7 +550,12 @@ public partial class PaintOverlayWindow
 
     private bool TryApplyStoredPhotoTransform(string cacheKey)
     {
-        if (_crossPageDisplayEnabled)
+        if (!_rememberPhotoTransform)
+        {
+            _photoUserTransformDirty = false;
+            return false;
+        }
+        if (IsCrossPageDisplayActive())
         {
             return false;
         }
@@ -484,7 +585,7 @@ public partial class PaintOverlayWindow
         _lastPhotoTranslateX = _photoTranslate.X;
         _lastPhotoTranslateY = _photoTranslate.Y;
         _photoUserTransformDirty = userAdjusted;
-        if (_crossPageDisplayEnabled)
+        if (IsCrossPageDisplayActive())
         {
             _photoUnifiedTransformReady = true;
             SchedulePhotoUnifiedTransformSave();
@@ -520,7 +621,7 @@ public partial class PaintOverlayWindow
         {
             _photoTransformSaveTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(120)
+                Interval = TimeSpan.FromMilliseconds(PhotoTransformTimingDefaults.TransformSaveDebounceMs)
             };
             _photoTransformSaveTimer.Tick += (_, _) =>
             {
@@ -555,7 +656,7 @@ public partial class PaintOverlayWindow
 
     private void SchedulePhotoUnifiedTransformSave()
     {
-        if (!_photoModeActive || !_crossPageDisplayEnabled)
+        if (!IsCrossPageDisplayActive())
         {
             return;
         }
@@ -567,7 +668,7 @@ public partial class PaintOverlayWindow
         {
             _photoUnifiedTransformSaveTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(300)
+                Interval = TimeSpan.FromMilliseconds(PhotoTransformTimingDefaults.UnifiedTransformBroadcastDebounceMs)
             };
             _photoUnifiedTransformSaveTimer.Tick += (_, _) =>
             {
@@ -586,15 +687,15 @@ public partial class PaintOverlayWindow
     private double ResolvePhotoViewportWidth()
     {
         var viewportWidth = OverlayRoot.ActualWidth;
-        if (viewportWidth <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             viewportWidth = PhotoWindowFrame.ActualWidth;
         }
-        if (viewportWidth <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             viewportWidth = ActualWidth;
         }
-        if (viewportWidth <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             var monitor = GetCurrentMonitorRectInDip(useWorkArea: false);
             viewportWidth = monitor.Width;
@@ -619,45 +720,53 @@ public partial class PaintOverlayWindow
     {
         var viewportWidth = ResolvePhotoViewportWidth();
         var viewportHeight = ResolvePhotoViewportHeight();
-        if (viewportWidth <= 1 || viewportHeight <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             return;
         }
         EnsurePhotoTransformsWritable();
         var imageWidth = GetBitmapDisplayWidthInDip(bitmap) * _photoPageScale.ScaleX;
         var imageHeight = GetBitmapDisplayHeightInDip(bitmap) * _photoPageScale.ScaleY;
-        if (imageWidth <= 1 || imageHeight <= 1)
+        if (imageWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || imageHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             return;
         }
-        var targetScale = Math.Clamp(viewportWidth / imageWidth, 0.2, 4.0);
+        var targetScale = Math.Clamp(
+            viewportWidth / imageWidth,
+            PhotoTransformViewportDefaults.MinScale,
+            PhotoTransformViewportDefaults.MaxScale);
         _photoScale.ScaleX = targetScale;
         _photoScale.ScaleY = targetScale;
         var scaledWidth = imageWidth * targetScale;
         var scaledHeight = imageHeight * targetScale;
-        _photoTranslate.X = (viewportWidth - scaledWidth) * 0.5;
-        _photoTranslate.Y = (viewportHeight - scaledHeight) * 0.5;
-        if (_crossPageDisplayEnabled)
+        _photoTranslate.X = (viewportWidth - scaledWidth) * CrossPageViewportBoundsDefaults.CenterRatio;
+        _photoTranslate.Y = (viewportHeight - scaledHeight) * CrossPageViewportBoundsDefaults.CenterRatio;
+        if (IsCrossPageDisplayActive())
         {
             ApplyCrossPageBoundaryLimits(includeSlack: false);
             SyncCurrentPageToViewportCenter();
-            RequestCrossPageDisplayUpdate("fit-width");
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.FitWidth);
         }
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        SyncPhotoInteractiveRefreshAnchor();
         SchedulePhotoTransformSave(userAdjusted: true);
+        RequestPhotoTransformInkRedraw();
     }
 
     private double ResolvePhotoViewportHeight()
     {
         var viewportHeight = OverlayRoot.ActualHeight;
-        if (viewportHeight <= 1)
+        if (viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             viewportHeight = PhotoWindowFrame.ActualHeight;
         }
-        if (viewportHeight <= 1)
+        if (viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             viewportHeight = ActualHeight;
         }
-        if (viewportHeight <= 1)
+        if (viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             var monitor = GetCurrentMonitorRectInDip(useWorkArea: false);
             viewportHeight = monitor.Height;
@@ -674,18 +783,21 @@ public partial class PaintOverlayWindow
         EnsurePhotoTransformsWritable();
         var viewportWidth = OverlayRoot.ActualWidth;
         var viewportHeight = OverlayRoot.ActualHeight;
-        if (viewportWidth <= 1 || viewportHeight <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             viewportWidth = PhotoWindowFrame.ActualWidth;
             viewportHeight = PhotoWindowFrame.ActualHeight;
         }
-        if (viewportWidth <= 1 || viewportHeight <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             var monitor = GetCurrentMonitorRectInDip(useWorkArea: false);
             viewportWidth = monitor.Width;
             viewportHeight = monitor.Height;
         }
-        if (viewportWidth <= 1 || viewportHeight <= 1)
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
             return;
         }
@@ -695,8 +807,8 @@ public partial class PaintOverlayWindow
         {
             var dpiX = dpiOverride.HasValue && dpiOverride.Value > 0 ? dpiOverride.Value : bitmap.DpiX;
             var dpiY = dpiOverride.HasValue && dpiOverride.Value > 0 ? dpiOverride.Value : bitmap.DpiY;
-            imageWidth = dpiX > 0 ? bitmap.PixelWidth * 96.0 / dpiX : bitmap.PixelWidth;
-            imageHeight = dpiY > 0 ? bitmap.PixelHeight * 96.0 / dpiY : bitmap.PixelHeight;
+            imageWidth = dpiX > 0 ? bitmap.PixelWidth * PhotoDocumentRuntimeDefaults.PdfDefaultDpi / dpiX : bitmap.PixelWidth;
+            imageHeight = dpiY > 0 ? bitmap.PixelHeight * PhotoDocumentRuntimeDefaults.PdfDefaultDpi / dpiY : bitmap.PixelHeight;
         }
         else
         {
@@ -716,9 +828,12 @@ public partial class PaintOverlayWindow
         _photoScale.ScaleY = scale;
         var scaledWidth = imageWidth * scale;
         var scaledHeight = imageHeight * scale;
-        _photoTranslate.X = (viewportWidth - scaledWidth) / 2.0;
-        _photoTranslate.Y = (viewportHeight - scaledHeight) / 2.0;
+        _photoTranslate.X = (viewportWidth - scaledWidth) * CrossPageViewportBoundsDefaults.CenterRatio;
+        _photoTranslate.Y = (viewportHeight - scaledHeight) * CrossPageViewportBoundsDefaults.CenterRatio;
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        SyncPhotoInteractiveRefreshAnchor();
         SavePhotoTransformState(userAdjusted: false);
+        RequestPhotoTransformInkRedraw();
     }
 }
 

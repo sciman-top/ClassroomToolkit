@@ -1,17 +1,17 @@
 using System.Collections.ObjectModel;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
-using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
-using ClassroomToolkit.Infra.Storage;
 
 namespace ClassroomToolkit.App.ViewModels;
 
 public sealed partial class RollCallViewModel : ViewModelBase
 {
+    private readonly RollCallWorkbookUseCase _workbookUseCase;
     private readonly string _dataPath;
     private StudentWorkbook? _workbook;
     private RollCallEngine? _engine;
@@ -47,9 +47,10 @@ public sealed partial class RollCallViewModel : ViewModelBase
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
 
-    public RollCallViewModel(string dataPath)
+    public RollCallViewModel(string dataPath, RollCallWorkbookUseCase workbookUseCase)
     {
         _dataPath = dataPath;
+        _workbookUseCase = workbookUseCase ?? throw new ArgumentNullException(nameof(workbookUseCase));
         _photoResolver = new StudentPhotoResolver("student_photos");
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
@@ -300,4 +301,5 @@ public sealed partial class RollCallViewModel : ViewModelBase
     public void ToggleMode() => IsRollCallMode = !IsRollCallMode;
     public void SetRemotePresenterKey(string key) => RemotePresenterKey = key;
     public void ResetCurrentStudentDisplay() => UpdateCurrentStudent();
+
 }

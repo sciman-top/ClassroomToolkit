@@ -1,31 +1,38 @@
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
-using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Services;
-using ClassroomToolkit.Infra.Storage;
 
 namespace ClassroomToolkit.App.ViewModels;
 
 public sealed partial class RollCallViewModel
 {
-    private static readonly object PreloadLock = new();
-    private static Task<RollCallLoadResult>? _preloadTask;
-    private static RollCallLoadResult? _preloadedResult;
-    private static string? _preloadedPath;
-    private static DateTime _preloadedWriteTimeUtc;
+    private readonly object _preloadLock = new();
+    private Task<RollCallLoadResult>? _preloadTask;
+    private RollCallLoadResult? _preloadedResult;
+    private string? _preloadedPath;
+    private DateTime _preloadedWriteTimeUtc;
 
-    public static void WarmupData(string path)
+    public void WarmupData(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         if (!File.Exists(path)) return;
 
         DateTime writeTimeUtc;
         try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch { return; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
+            return;
+        }
 
-        lock (PreloadLock)
+        lock (_preloadLock)
         {
             if (_preloadedResult != null && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc))
             {
@@ -47,7 +54,7 @@ public sealed partial class RollCallViewModel
             _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath));
             _preloadTask.ContinueWith(task =>
             {
-                lock (PreloadLock)
+                lock (_preloadLock)
                 {
                     if (task.Status == TaskStatus.RanToCompletion && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
                     {
@@ -92,18 +99,26 @@ public sealed partial class RollCallViewModel
         return TryConsumePreloadedResult(_dataPath) ?? LoadDataFromPath(_dataPath);
     }
 
-    private static RollCallLoadResult? TryConsumePreloadedResult(string path)
+    private RollCallLoadResult? TryConsumePreloadedResult(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
 
         DateTime writeTimeUtc;
         try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
+            return null;
+        }
 
         Task<RollCallLoadResult>? preloadTask = null;
         bool consumeTask = false;
 
-        lock (PreloadLock)
+        lock (_preloadLock)
         {
             if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc)
             {
@@ -133,31 +148,24 @@ public sealed partial class RollCallViewModel
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
+                        path,
+                        ex.GetType().Name,
+                        ex.Message));
+                return null;
+            }
         }
 
         return null;
     }
 
-    private static RollCallLoadResult LoadDataFromPath(string path)
+    private RollCallLoadResult LoadDataFromPath(string path)
     {
-        try
-        {
-            var store = new StudentWorkbookStore();
-            var result = store.LoadOrCreate(path);
-            var states = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pair in RollStateSerializer.DeserializeWorkbookStates(result.RollStateJson))
-            {
-                states[pair.Key] = pair.Value;
-            }
-            return new RollCallLoadResult(result.Workbook, states, null);
-        }
-        catch (Exception ex)
-        {
-            var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
-            var fallbackWorkbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster }, "班级1");
-            return new RollCallLoadResult(fallbackWorkbook, new Dictionary<string, ClassRollState>(), $"学生名册读取失败：{ex.Message}");
-        }
+        var result = _workbookUseCase.Load(path);
+        return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage);
     }
 
     private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)

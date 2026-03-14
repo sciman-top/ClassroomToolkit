@@ -142,14 +142,16 @@ public sealed class StudentPhotoResolver
     private Dictionary<string, string> GetIndex(string directory)
     {
         var now = DateTime.UtcNow;
-        if (_cache.TryGetValue(directory, out var cached) && now - cached.Timestamp < CacheTtl)
+        if (_cache.TryGetValue(directory, out var cached)
+            && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
         {
             return cached.Index;
         }
         lock (GetIndexLock(directory))
         {
             now = DateTime.UtcNow;
-            if (_cache.TryGetValue(directory, out cached) && now - cached.Timestamp < CacheTtl)
+            if (_cache.TryGetValue(directory, out cached)
+                && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
             {
                 return cached.Index;
             }

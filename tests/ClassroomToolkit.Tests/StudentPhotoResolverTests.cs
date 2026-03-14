@@ -18,7 +18,7 @@ public sealed class StudentPhotoResolverTests
     [Fact]
     public void ResolvePhotoPath_ShouldNotTraverseOutsideRoot_WhenClassNameIsParentDirectory()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_resolver_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver");
         var parentPath = Directory.GetParent(rootPath)!.FullName;
         var outsidePhoto = Path.Combine(parentPath, $"student_{Guid.NewGuid():N}.jpg");
         Directory.CreateDirectory(rootPath);
@@ -50,7 +50,7 @@ public sealed class StudentPhotoResolverTests
     [Fact]
     public void ResolvePhotoPath_ShouldNotTraverseOutsideClassDirectory_WhenStudentIdContainsParentPath()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_resolver_sid_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_sid");
         var className = "ClassA";
         var classDirectory = Path.Combine(rootPath, className);
         var outsidePhotoName = $"student_{Guid.NewGuid():N}";
@@ -78,7 +78,7 @@ public sealed class StudentPhotoResolverTests
     [Fact]
     public void ResolvePhotoPath_ShouldResolveInClassDirectory_WhenStudentIdIsValid()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), $"ctool_resolver_ok_{Guid.NewGuid():N}");
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_ok");
         var className = "ClassA";
         var classDirectory = Path.Combine(rootPath, className);
         Directory.CreateDirectory(classDirectory);

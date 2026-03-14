@@ -1,4 +1,5 @@
 using System.Text;
+using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.Infra.Settings;
 
@@ -147,7 +148,7 @@ public sealed class IniSettingsStore
             File.WriteAllText(tempPath, builder.ToString(), Encoding.UTF8);
             if (File.Exists(_path))
             {
-                File.Replace(tempPath, _path, null);
+                TryReplaceOrOverwrite(tempPath, _path);
             }
             else
             {
@@ -160,6 +161,18 @@ public sealed class IniSettingsStore
             {
                 File.Delete(tempPath);
             }
+        }
+    }
+
+    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
+    {
+        try
+        {
+            File.Replace(tempPath, targetPath, null);
+        }
+        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
+        {
+            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 }

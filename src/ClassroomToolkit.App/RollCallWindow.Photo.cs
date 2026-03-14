@@ -4,6 +4,7 @@ using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -88,7 +89,13 @@ public partial class RollCallWindow
         {
             return;
         }
-        _photoOverlay.CloseOverlay();
+        SafeActionExecutionExecutor.TryExecute(
+            _photoOverlay.CloseOverlay,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                    "hide-overlay",
+                    ex.GetType().Name,
+                    ex.Message)));
     }
 
     private void ClosePhotoOverlay()
@@ -97,8 +104,20 @@ public partial class RollCallWindow
         {
             return;
         }
-        _photoOverlay.CloseOverlay();
-        _photoOverlay.Close();
+        SafeActionExecutionExecutor.TryExecute(
+            _photoOverlay.CloseOverlay,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                    "close-overlay",
+                    ex.GetType().Name,
+                    ex.Message)));
+        SafeActionExecutionExecutor.TryExecute(
+            _photoOverlay.Close,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                    "close-window",
+                    ex.GetType().Name,
+                    ex.Message)));
         _photoOverlay.PhotoClosed -= OnPhotoClosed;
         _photoOverlay = null;
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
@@ -62,5 +63,35 @@ public sealed class BrushRendererGeometryVersionTests
 
         renderer.OnMove(BrushInputSample.CreatePointer(new Point(29, 26), now + Math.Max(1, Stopwatch.Frequency / 120)));
         renderer.GeometryVersion.Should().BeGreaterThan(versionAfterDown);
+    }
+
+    [Fact]
+    public void CalligraphyRenderer_GeometryVersion_ShouldIncreaseWhenLargeMoveHasFrameDelay()
+    {
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyBalanced());
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        renderer.OnDown(BrushInputSample.CreatePointer(new Point(20, 20), now));
+        var versionAfterDown = renderer.GeometryVersion;
+        long delayedTicks = now + Math.Max(1, (long)Math.Round(Stopwatch.Frequency * 0.08));
+
+        renderer.OnMove(BrushInputSample.CreatePointer(new Point(800, 24), delayedTicks));
+        renderer.GeometryVersion.Should().BeGreaterThan(versionAfterDown);
+    }
+
+    [Fact]
+    public void CalligraphyRenderer_GeometryVersion_ShouldIgnoreLargeMoveWhenIntervalTooShort()
+    {
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyBalanced());
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        renderer.OnDown(BrushInputSample.CreatePointer(new Point(20, 20), now));
+        var versionAfterDown = renderer.GeometryVersion;
+        long shortTicks = now + Math.Max(1, (long)Math.Round(Stopwatch.Frequency * 0.002));
+
+        renderer.OnMove(BrushInputSample.CreatePointer(new Point(800, 24), shortTicks));
+        renderer.GeometryVersion.Should().Be(versionAfterDown);
     }
 }

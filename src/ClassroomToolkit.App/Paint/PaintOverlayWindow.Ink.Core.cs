@@ -13,7 +13,6 @@ using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Utilities;
-using ClassroomToolkit.Interop;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -34,7 +33,7 @@ public partial class PaintOverlayWindow
     private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Balanced;
     private ClassroomWritingMode _classroomWritingMode = ClassroomWritingMode.Balanced;
     private int _inkRedrawToken;
-    private DateTime _lastInkRedrawUtc = DateTime.MinValue;
+    private DateTime _lastInkRedrawUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
 
     // Ink Fields
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
@@ -56,7 +55,7 @@ public partial class PaintOverlayWindow
     private WpfPoint? _lastEraserPoint;
     private bool _hasDrawing;
     private readonly Random _inkRandom = new Random();
-    private DateTime _lastCalligraphyPreviewUtc = DateTime.MinValue;
+    private DateTime _lastCalligraphyPreviewUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
     private WpfPoint? _lastCalligraphyPreviewPoint;
     private double _calligraphyPreviewMinDistance = CalligraphyPreviewMinDistanceDefault;
     private double _stylusPseudoPressureLowThreshold = StylusPseudoPressureLowThresholdDefault;
@@ -66,9 +65,13 @@ public partial class PaintOverlayWindow
     private readonly StylusDeviceAdaptiveProfiler _stylusDeviceAdaptiveProfiler = new();
     private bool _pendingAdaptiveRendererRefresh;
     private BrushInputSample? _lastBrushInputSample;
+    private BrushInputSample? _pendingCrossPageBrushContinuationSample;
+    private bool _pendingCrossPageBrushReplayCurrentInput;
+    private bool _suppressImmediatePhotoInkRedraw;
     private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
     private int _brushPredictionHorizonMs = 8;
-    private const double BrushPredictionMaxDistanceDip = 10.0;
+    private readonly IInkRendererFactory _inkRendererFactory;
+    private const double BrushPredictionMaxDistanceDip = InkPredictionDefaults.MaxDistanceDip;
     
     // Ink History & Cache
     private readonly List<InkStrokeData> _inkStrokes = new();
@@ -84,17 +87,17 @@ public partial class PaintOverlayWindow
     private bool _inkCacheEnabled = true;
     private bool _inkSaveEnabled;
     private bool _inkShowEnabled = true;
-    private DateTime _lastInkInputUtc = DateTime.MinValue;
+    private DateTime _lastInkInputUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
     private bool _pendingInkContextCheck;
     
     // Pools & Buffers
     private static readonly ArrayPool<byte> PixelPool = ArrayPool<byte>.Shared;
-    private const int HistoryLimit = 20;
-    private const long MaxHistoryMemoryBytes = 512 * 1024 * 1024; // 512MB
+    private const int HistoryLimit = InkCacheRuntimeDefaults.HistoryLimit;
+    private const long MaxHistoryMemoryBytes = InkCacheRuntimeDefaults.MaxHistoryMemoryBytes;
     private long _currentHistoryMemoryBytes;
-    private const int InkNoiseTileCacheLimit = 96;
-    private const int InkSolidBrushCacheLimit = 256;
-    private const int InkPenCacheLimit = 192;
+    private const int InkNoiseTileCacheLimit = InkCacheRuntimeDefaults.NoiseTileCacheLimit;
+    private const int InkSolidBrushCacheLimit = InkCacheRuntimeDefaults.SolidBrushCacheLimit;
+    private const int InkPenCacheLimit = InkCacheRuntimeDefaults.PenCacheLimit;
     private static readonly object InkNoiseTileCacheLock = new();
     private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
     private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
@@ -127,43 +130,43 @@ public partial class PaintOverlayWindow
     private int _neighborPrefetchRadiusMaxSetting = CrossPageNeighborPrefetchRadiusMax;
 
     // Constants
-    private const double CalligraphySealStrokeWidthFactor = 0.08;
-    private const int CalligraphyPreviewMinIntervalMs = 16;
+    private const double CalligraphySealStrokeWidthFactor = CalligraphyRenderingDefaults.SealStrokeWidthFactor;
+    private const int CalligraphyPreviewMinIntervalMs = InkRuntimeTimingDefaults.CalligraphyPreviewMinIntervalMs;
     private const double CalligraphyPreviewMinDistanceDefault = ClassroomWritingModeTuner.DefaultCalligraphyPreviewMinDistance;
     private const double StylusPseudoPressureLowThresholdDefault = ClassroomWritingModeTuner.DefaultPseudoPressureLowThreshold;
     private const double StylusPseudoPressureHighThresholdDefault = ClassroomWritingModeTuner.DefaultPseudoPressureHighThreshold;
-    private const int InkInputCooldownMs = 120;
-    private const int InkMonitorActiveIntervalMs = 600;
-    private const int InkMonitorIdleIntervalMs = 1400;
-    private const int InkIdleThresholdMs = 2500;
-    private const int InkRedrawMinIntervalMs = 16;
-    private const int InkSidecarAutoSaveDelayMs = 600;
-    private const int InkSidecarAutoSaveRetryMax = 3;
-    private const int InkSidecarAutoSaveRetryDelayMs = 900;
-    private const int CrossPageNeighborPrefetchRadiusDefault = 2;
-    private const int CrossPageNeighborPrefetchRadiusMin = 1;
-    private const int CrossPageNeighborPrefetchRadiusMax = 4;
-    private const int NeighborInkCacheLimit = 10;
-    private const double CalligraphyDegradeAreaThreshold = 160000.0;
-    private const int CalligraphyDegradeLayerThreshold = 22;
-    private const int CalligraphyMaxRibbonLayersNormal = 18;
-    private const int CalligraphyMaxRibbonLayersDegraded = 8;
-    private const int CalligraphyMaxBloomLayersNormal = 10;
-    private const int CalligraphyMaxBloomLayersDegraded = 4;
-    private const int CalligraphyAdaptiveLevelMax = 2;
-    private const double CalligraphyAdaptiveHighCostMs = 6.4;
-    private const double CalligraphyAdaptiveLowCostMs = 3.8;
-    private const double CalligraphyAdaptiveCostEmaAlpha = 0.2;
-    private const int CalligraphyAdaptiveAdjustMinIntervalMs = 200;
-    private const int CalligraphyAdaptiveAreaThresholdStep = 25000;
-    private const int CalligraphyAdaptiveLayerThresholdStep = 4;
+    private const int InkInputCooldownMs = InkRuntimeTimingDefaults.InputCooldownMs;
+    private const int InkMonitorActiveIntervalMs = InkRuntimeTimingDefaults.MonitorActiveIntervalMs;
+    private const int InkMonitorIdleIntervalMs = InkRuntimeTimingDefaults.MonitorIdleIntervalMs;
+    private const int InkIdleThresholdMs = InkRuntimeTimingDefaults.IdleThresholdMs;
+    private const int InkRedrawMinIntervalMs = InkRuntimeTimingDefaults.RedrawMinIntervalMs;
+    private const int InkSidecarAutoSaveDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveDelayMs;
+    private const int InkSidecarAutoSaveRetryMax = InkRuntimeTimingDefaults.SidecarAutoSaveRetryMax;
+    private const int InkSidecarAutoSaveRetryDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveRetryDelayMs;
+    private const int CrossPageNeighborPrefetchRadiusDefault = CrossPageNeighborPrefetchDefaults.RadiusDefault;
+    private const int CrossPageNeighborPrefetchRadiusMin = CrossPageNeighborPrefetchDefaults.RadiusMin;
+    private const int CrossPageNeighborPrefetchRadiusMax = CrossPageNeighborPrefetchDefaults.RadiusMax;
+    private const int NeighborInkCacheLimit = CrossPageNeighborPrefetchDefaults.NeighborInkCacheLimit;
+    private const double CalligraphyDegradeAreaThreshold = CalligraphyRenderingDefaults.DegradeAreaThreshold;
+    private const int CalligraphyDegradeLayerThreshold = CalligraphyRenderingDefaults.DegradeLayerThreshold;
+    private const int CalligraphyMaxRibbonLayersNormal = CalligraphyRenderingDefaults.MaxRibbonLayersNormal;
+    private const int CalligraphyMaxRibbonLayersDegraded = CalligraphyRenderingDefaults.MaxRibbonLayersDegraded;
+    private const int CalligraphyMaxBloomLayersNormal = CalligraphyRenderingDefaults.MaxBloomLayersNormal;
+    private const int CalligraphyMaxBloomLayersDegraded = CalligraphyRenderingDefaults.MaxBloomLayersDegraded;
+    private const int CalligraphyAdaptiveLevelMax = CalligraphyRenderingDefaults.AdaptiveLevelMax;
+    private const double CalligraphyAdaptiveHighCostMs = CalligraphyRenderingDefaults.AdaptiveHighCostMs;
+    private const double CalligraphyAdaptiveLowCostMs = CalligraphyRenderingDefaults.AdaptiveLowCostMs;
+    private const double CalligraphyAdaptiveCostEmaAlpha = CalligraphyRenderingDefaults.AdaptiveCostEmaAlpha;
+    private const int CalligraphyAdaptiveAdjustMinIntervalMs = InkRuntimeTimingDefaults.CalligraphyAdaptiveAdjustMinIntervalMs;
+    private const int CalligraphyAdaptiveAreaThresholdStep = CalligraphyRenderingDefaults.AdaptiveAreaThresholdStep;
+    private const int CalligraphyAdaptiveLayerThresholdStep = CalligraphyRenderingDefaults.AdaptiveLayerThresholdStep;
     private static readonly bool CalligraphySinglePassCompositeEnabled = true;
     private static readonly bool CalligraphySinglePassTextureMaskEnabled = false;
     private static readonly bool CalligraphySinglePassSealEnabled = false;
 
     private double _calligraphyBatchCostEmaMs = 4.0;
     private int _calligraphyAdaptiveLevel;
-    private DateTime _lastCalligraphyAdaptiveAdjustUtc = DateTime.MinValue;
+    private DateTime _lastCalligraphyAdaptiveAdjustUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
 
     private void EnsureRasterSurface()
     {
@@ -323,7 +326,21 @@ public partial class PaintOverlayWindow
             Interlocked.Exchange(ref _refreshRequested, 1);
             if (Interlocked.CompareExchange(ref _refreshRunning, 1, 0) == 0)
             {
+                TryScheduleDrain();
+            }
+        }
+
+        private void TryScheduleDrain()
+        {
+            try
+            {
                 _dispatcher.BeginInvoke(new Action(Drain), DispatcherPriority.Background);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Exchange(ref _refreshRunning, 0);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[InkRefresh] BeginInvoke failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
 
@@ -341,7 +358,7 @@ public partial class PaintOverlayWindow
                     if (Interlocked.Exchange(ref _refreshRequested, 0) == 1
                         && Interlocked.CompareExchange(ref _refreshRunning, 1, 0) == 0)
                     {
-                        _dispatcher.BeginInvoke(new Action(Drain), DispatcherPriority.Background);
+                        TryScheduleDrain();
                     }
                     return;
                 }
@@ -356,7 +373,7 @@ public partial class PaintOverlayWindow
         private double _total;
         private double _max;
         private int _uiThreadSamples;
-        private DateTime _lastLogUtc = DateTime.MinValue;
+        private DateTime _lastLogUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
 
         public PerfStats(string name)
         {
@@ -376,11 +393,11 @@ public partial class PaintOverlayWindow
                 _uiThreadSamples++;
             }
 
-            if (_count < 30 && (DateTime.UtcNow - _lastLogUtc).TotalSeconds < 30)
+            if (_count < 30 && (GetCurrentUtcTimestamp() - _lastLogUtc).TotalSeconds < 30)
             {
                 return;
             }
-            if (_count % 30 != 0 && (DateTime.UtcNow - _lastLogUtc).TotalSeconds < 30)
+            if (_count % 30 != 0 && (GetCurrentUtcTimestamp() - _lastLogUtc).TotalSeconds < 30)
             {
                 return;
             }
@@ -389,7 +406,7 @@ public partial class PaintOverlayWindow
             var uiRatio = _count == 0 ? 0 : (double)_uiThreadSamples / _count * 100.0;
             System.Diagnostics.Debug.WriteLine(
                 $"[Perf] {_name}: avg={avg:F2}ms max={_max:F2}ms samples={_count} ui={uiRatio:F0}%");
-            _lastLogUtc = DateTime.UtcNow;
+            _lastLogUtc = GetCurrentUtcTimestamp();
         }
     }
 }

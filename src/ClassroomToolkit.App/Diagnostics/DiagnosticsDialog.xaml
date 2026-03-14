@@ -21,12 +21,7 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="16" Margin="10"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
-        </Border.Effect>
-
+    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
@@ -35,68 +30,76 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="系统兼容性诊断" FontWeight="Bold" Margin="16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,0,8,0">
+            <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="系统兼容性诊断" Style="{StaticResource Style_ManagementShellTitleText}"/>
+                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnCloseClick">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_ManagementShellDivider}"/>
 
             <!-- 2. 内容 -->
-            <Grid Grid.Row="1" Margin="12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <Border Grid.Row="1" Style="{StaticResource Style_ManagementShellContentBorder}">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock x:Name="SummaryText"
-                           Grid.Row="0"
-                           FontWeight="Bold"
-                           FontSize="14"
-                           Foreground="{StaticResource Brush_Primary}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,10" />
+                    <TextBlock x:Name="SummaryText"
+                               Grid.Row="0"
+                               FontWeight="Bold"
+                               FontSize="14"
+                               Foreground="{StaticResource Brush_Primary}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10" />
 
-                <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
-                    <!-- Global TabControl style applied automatically -->
+                    <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
+                        <!-- Global TabControl style applied automatically -->
 
-                    <TabItem Header="详情">
-                        <TextBox x:Name="DetailBox"
-                                 IsReadOnly="True"
-                                 TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 Padding="8"
-                                 Background="{StaticResource Brush_Background_L2}"
-                                 Foreground="{StaticResource Brush_Text_Primary}"
-                                 FontFamily="Consolas"
-                                 FontSize="12"
-                                 Margin="0,8,0,0"
-                                 BorderThickness="0"/>
-                    </TabItem>
-                    <TabItem Header="建议">
-                        <TextBox x:Name="SuggestionBox"
-                                 IsReadOnly="True"
-                                 TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 Padding="8"
-                                 Background="{StaticResource Brush_Background_L2}"
-                                 Foreground="{StaticResource Brush_Text_Primary}"
-                                 FontFamily="Consolas"
-                                 FontSize="12"
-                                 Margin="0,8,0,0"
-                                 BorderThickness="0"/>
-                    </TabItem>
-                </TabControl>
-            </Grid>
+                        <TabItem Header="详情">
+                            <TextBox x:Name="DetailBox"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     Padding="8"
+                                     Background="{StaticResource Brush_Background_L2}"
+                                     Foreground="{StaticResource Brush_Text_Primary}"
+                                     FontFamily="Consolas"
+                                     FontSize="12"
+                                     Margin="0,8,0,0"
+                                     BorderThickness="0"/>
+                        </TabItem>
+                        <TabItem Header="建议">
+                            <TextBox x:Name="SuggestionBox"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     Padding="8"
+                                     Background="{StaticResource Brush_Background_L2}"
+                                     Foreground="{StaticResource Brush_Text_Primary}"
+                                     FontFamily="Consolas"
+                                     FontSize="12"
+                                     Margin="0,8,0,0"
+                                     BorderThickness="0"/>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </Border>
 
             <!-- 3. 按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
-                <Button Content="复制全部" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,8,0" Click="OnCopyClick" />
-                <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="80" Click="OnCloseClick" />
-            </StackPanel>
+            <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
+                <Grid>
+                    <TextBlock Text="诊断详情用于本机兼容性排查。"
+                               Style="{StaticResource Style_ManagementShellFooterText}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="复制全部" Style="{StaticResource Style_ManagementShellFooterActionButton}" Margin="0,0,8,0" Click="OnCopyClick" />
+                        <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="88" Height="32" Click="OnCloseClick" />
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Border>
 </Window>
