@@ -14,12 +14,12 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <SolidColorBrush x:Key="Brush_Student_Waiting" Color="#4DA3FF"/>
-        <SolidColorBrush x:Key="Brush_Student_Called" Color="#9AA3AF"/>
+        <SolidColorBrush x:Key="Brush_Student_Waiting" Color="{StaticResource Color_Accent_Primary}"/>
+        <SolidColorBrush x:Key="Brush_Student_Called" Color="{StaticResource Color_Text_Tertiary}"/>
         
         <!-- 本地专用：学生卡片 - Modern Adaptation -->
         <Style x:Key="Style_StudentCard_Modern" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource Brush_Background_L2}"/>
+            <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
             <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Margin" Value="4"/>
@@ -74,7 +74,7 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <Border Background="{StaticResource Brush_Background_L3}" CornerRadius="6" Padding="6" BorderBrush="Transparent">
+                    <Border Background="{StaticResource Brush_InputBackground}" CornerRadius="6" Padding="6" BorderBrush="Transparent">
                         <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="14" Height="14" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="班级名单" Style="{StaticResource Style_ManagementShellTitleText}" Margin="10,0,0,0"/>
@@ -166,3 +166,4 @@
         </Grid>
     </Border>
 </Window>
+

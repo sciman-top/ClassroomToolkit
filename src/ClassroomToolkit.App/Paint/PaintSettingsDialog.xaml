@@ -45,7 +45,8 @@
                         Width="36"
                         Height="36"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="14" Height="14"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <!-- 分隔线 -->
@@ -109,7 +110,7 @@
                     <StackPanel Grid.Column="1">
                         <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
                         <Expander Header="毛笔高级（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
-                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                 <StackPanel>
                                     <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
                                     <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
@@ -129,7 +130,7 @@
                 </Grid>
 
                 <Expander x:Name="WritingModeOverrideExpander" Header="书写模式（子项覆盖）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
-                    <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="10" Padding="12" Margin="0,8,0,0" Background="{StaticResource Brush_Background_L2}">
+                    <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="10" Padding="12" Margin="0,8,0,0" Background="{StaticResource Brush_Surface_Secondary}">
                         <StackPanel>
                             <TextBlock Text="总预设入口在“预设方案”；此处仅用于按需覆盖书写手感。"
                                        Foreground="{StaticResource Brush_Text_Secondary}"
@@ -149,7 +150,7 @@
                     </Border>
                 </Expander>
 
-                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="{StaticResource Brush_Background_L3}">
+                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="{StaticResource Brush_Surface_Primary}">
                     <StackPanel>
                         <TextBlock Text="预设方案" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
                         <TextBlock Text="这是总预设入口，会联动书写模式及场景参数。"
@@ -327,7 +328,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- PDF、图片的设置 -->
-                    <Border x:Name="PhotoPdfSettingsCard" Grid.Row="0" Grid.Column="0" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,0,6,0" Background="{StaticResource Brush_Background_L3}">
+                    <Border x:Name="PhotoPdfSettingsCard" Grid.Row="0" Grid.Column="0" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,0,6,0" Background="{StaticResource Brush_Surface_Primary}">
                         <Border.Effect>
                             <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                         </Border.Effect>
@@ -346,7 +347,7 @@
                             <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
 
                             <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
-                                <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                                <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
@@ -396,7 +397,7 @@
                     </Border>
 
                     <!-- WPS 演示文稿兼容性 -->
-                    <Border x:Name="WpsSettingsCard" Grid.Row="0" Grid.Column="1" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="6,0,0,0" Background="{StaticResource Brush_Background_L3}">
+                    <Border x:Name="WpsSettingsCard" Grid.Row="0" Grid.Column="1" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="6,0,0,0" Background="{StaticResource Brush_Surface_Primary}">
                         <Border.Effect>
                             <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                         </Border.Effect>
@@ -416,7 +417,7 @@
                             <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
 
                             <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
-                                <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Background_L2}">
+                                <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
@@ -453,3 +454,4 @@
         </Grid>
     </Border>
 </Window>
+

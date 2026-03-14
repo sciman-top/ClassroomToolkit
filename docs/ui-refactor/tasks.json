@@ -299,7 +299,7 @@
       "depends_on": [
         "ui-window-shell-management-shell"
       ],
-      "summary": "Apply unified shell baseline to work windows and fullscreen overlays.",
+      "summary": "Parent closure complete: work/fullscreen shell baseline was split into child tasks and both children are now completed with verification evidence.",
       "file_hints": [
         "src/ClassroomToolkit.App/MainWindow.xaml",
         "src/ClassroomToolkit.App/RollCallWindow.xaml",
@@ -322,7 +322,7 @@
         "No extra heavy transparency effects are introduced"
       ],
       "blocked_by_visual_review": false,
-      "status_hint": "deferred"
+      "status_hint": "completed"
     },
     {
       "id": "ui-window-shell-work-main-rollcall-shell",
@@ -356,7 +356,7 @@
         "No extra heavy transparency effects are introduced"
       ],
       "blocked_by_visual_review": false,
-      "status_hint": "pending"
+      "status_hint": "completed"
     },
     {
       "id": "ui-window-shell-fullscreen-overlay-shell",
@@ -390,7 +390,7 @@
         "No extra heavy transparency effects are introduced"
       ],
       "blocked_by_visual_review": false,
-      "status_hint": "pending"
+      "status_hint": "completed"
     },
     {
       "id": "theme-freeze-gate",

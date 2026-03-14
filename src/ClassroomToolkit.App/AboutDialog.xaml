@@ -24,21 +24,22 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="关于" Style="{StaticResource Style_DialogShellTitleText}"/>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_XS}" Height="{StaticResource Size_Icon_Glyph_XS}"/>
                 </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 -->
-            <Border Grid.Row="1" Margin="20,16,20,16" Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="16,16" BorderBrush="Transparent">
+            <Border Grid.Row="1" Margin="20,16,20,16" Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="8" Padding="16,16" BorderBrush="Transparent">
                 <StackPanel>
                     <!-- App Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource Brush_Primary}" Margin="0,0,12,0" BorderBrush="Transparent">
                             <Border.Effect>
-                                <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="12" ShadowDepth="0" Opacity="0.3"/>
+                                <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_RollCall}" Fill="#FAFAFA" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Text_Primary}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}"/>
@@ -82,3 +83,4 @@
         </Grid>
     </Border>
 </Window>
+

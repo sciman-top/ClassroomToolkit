@@ -64,7 +64,7 @@
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
                                      Padding="8"
-                                     Background="{StaticResource Brush_Background_L2}"
+                                     Background="{StaticResource Brush_Surface_Secondary}"
                                      Foreground="{StaticResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
                                      FontSize="12"
@@ -78,7 +78,7 @@
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
                                      Padding="8"
-                                     Background="{StaticResource Brush_Background_L2}"
+                                     Background="{StaticResource Brush_Surface_Secondary}"
                                      Foreground="{StaticResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
                                      FontSize="12"
@@ -103,3 +103,4 @@
         </Grid>
     </Border>
 </Window>
+

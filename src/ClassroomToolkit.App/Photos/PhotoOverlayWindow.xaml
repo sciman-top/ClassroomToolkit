@@ -32,7 +32,7 @@
                    TextTrimming="CharacterEllipsis"
                    Panel.ZIndex="10">
             <TextBlock.Effect>
-                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.7"/>
+                <StaticResource ResourceKey="Shadow_Floating"/>
             </TextBlock.Effect>
         </TextBlock>
 
@@ -54,11 +54,12 @@
         <TextBlock x:Name="CloseHintText"
                    Text="单击背景或右下角关闭"
                    FontSize="16"
-                   Foreground="#E6FFFFFF"
+                   Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"
                    Panel.ZIndex="10">
             <TextBlock.Effect>
-                <DropShadowEffect Color="Black" BlurRadius="6" ShadowDepth="1" Opacity="0.6"/>
+                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
             </TextBlock.Effect>
         </TextBlock>
     </Canvas>
 </Window>
+

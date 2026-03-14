@@ -55,7 +55,7 @@
                     </Grid.RowDefinitions>
 
             <!-- 1. 收藏夹 -->
-            <Border Grid.Row="0" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+            <Border Grid.Row="0" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="8">
                 <Expander Header="收藏夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <Grid Margin="0,8,0,0">
@@ -76,7 +76,7 @@
             </Border>
 
             <!-- 2. 最近目录 -->
-            <Border Grid.Row="1" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+            <Border Grid.Row="1" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="8,6" Margin="12,6,3,6" CornerRadius="8">
                 <Expander Header="最近目录" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                     <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
@@ -88,7 +88,7 @@
             </Border>
 
             <!-- 3. 此电脑 -->
-            <Border Grid.Row="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" 
+            <Border Grid.Row="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="8">
                 <Expander Header="此电脑" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
@@ -104,11 +104,11 @@
                 <GridSplitter x:Name="MainColumnSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"
                               ShowsPreview="True" DragCompleted="OnMainColumnSplitterDragCompleted"/>
 
-                <Border Grid.Column="2" Background="{StaticResource Brush_Background_L2}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
+                <Border Grid.Column="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
                     <DockPanel>
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                    <Border Background="{StaticResource Brush_Background_L3}" BorderBrush="{StaticResource Brush_Border}"
+                    <Border Background="{StaticResource Brush_InputBackground}" BorderBrush="{StaticResource Brush_Border}"
                             BorderThickness="1" CornerRadius="4" Padding="8,6" Height="36">
                         <TextBlock x:Name="CurrentFolderText" Foreground="{StaticResource Brush_Text_Primary}"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
@@ -172,7 +172,7 @@
                             <DataTemplate>
                                 <StackPanel Margin="6" Width="{Binding ElementName=ThumbnailSizeSlider, Path=Value}">
                                     <Border BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="6" Padding="4"
-                                            Background="{StaticResource Brush_Background_L3}"
+                                            Background="{StaticResource Brush_InputBackground}"
                                             Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value, Converter={StaticResource ThumbnailSizeRatio}}">
                                         <Grid>
                                             <!-- 文件夹图标：固定大小，居中，不随 Slider 缩放 -->
@@ -184,7 +184,7 @@
                                             <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
                                                    Visibility="{Binding IsFolder, Converter={StaticResource FileVisibilityConverter}}"/>
                                             
-                                            <Border Background="#CC000000" CornerRadius="4" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                            <Border Background="{StaticResource Brush_OverlayMask}" CornerRadius="4" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                                     Margin="0,0,2,2" Visibility="{Binding PageBadgeVisibility}">
                                                 <TextBlock Text="{Binding PageBadge}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                             </Border>
@@ -233,3 +233,4 @@
         </Grid>
     </Border>
 </Window>
+

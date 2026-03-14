@@ -24,12 +24,12 @@
                 <Border x:Name="PhotoTitleBar" Height="48" Margin="0" VerticalAlignment="Top" 
                         MouseLeftButtonDown="OnPhotoTitleBarDrag">
                     <Border.Background>
-                        <SolidColorBrush Color="#AA1A1A2E"/>
+                        <SolidColorBrush Color="{StaticResource Color_Bg_Overlay}"/>
                     </Border.Background>
                     <DockPanel Margin="12,0" VerticalAlignment="Top" Height="38">
                         <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="19" Padding="16,0" Height="30" VerticalAlignment="Center" Margin="10,0,0,0">
                              <Border.Effect>
-                                <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.5"/>
+                                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                             </Border.Effect>
                             <TextBlock x:Name="PhotoTitleText" Text="图片应用" VerticalAlignment="Center"
                                        Foreground="{StaticResource Brush_Text_Primary}" FontWeight="SemiBold" FontSize="13"/>
@@ -40,20 +40,22 @@
                 <!-- 顶右角关闭 -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,8,12,0">
                     <Button x:Name="PhotoCloseButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick"
-                            Width="36" Height="36" shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                            Background="{StaticResource Brush_Background_L2}">
-                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
+                            Width="36" Height="36" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                              Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
                 </StackPanel>
 
                 <!-- 底部两侧浮动控制 -->
                 <Button x:Name="PhotoCloseLeftButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="36" Height="36" ToolTip="关闭"
                         HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
                 <Button x:Name="PhotoCloseRightButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="36" Height="36" ToolTip="关闭"
                         HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
 
                 <!-- 左侧翻页 (Glassy Pill) -->
@@ -61,10 +63,12 @@
                         Style="{StaticResource Style_FullscreenShellSideRail}">
                     <StackPanel Orientation="Vertical">
                          <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一版">
-                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
                         <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一版">
-                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
                         <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
                             <TextBlock Text="适宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
@@ -80,10 +84,12 @@
                         Style="{StaticResource Style_FullscreenShellSideRail}">
                     <StackPanel Orientation="Vertical">
                         <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一版">
-                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                            <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
                         <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一版">
-                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="18" Height="18"/>
+                            <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
                         <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中"
                                 Visibility="Collapsed">
@@ -103,11 +109,13 @@
                                FontSize="11"/>
                 </Border>
             </Grid>
-            <Grid x:Name="PhotoLoadingOverlay" Visibility="Collapsed" Background="#80000000" Panel.ZIndex="20">
-                <Border Background="#CC1A1A2E" CornerRadius="12" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid x:Name="PhotoLoadingOverlay" Visibility="Collapsed" Background="{StaticResource Brush_OverlayMask}" Panel.ZIndex="20">
+                <Border Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
+                        CornerRadius="12" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="PhotoLoadingText" Text="正在加载..." Foreground="White" FontSize="14" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </Grid>
     </Border>
 </Window>
+
