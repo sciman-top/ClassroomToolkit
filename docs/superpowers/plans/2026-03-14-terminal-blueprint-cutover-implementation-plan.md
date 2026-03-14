@@ -24,6 +24,11 @@
   - `CPU-first, GPU-optional` Ink runtime policy
 - Do not migrate to `WinUI 3`, do not expand `App -> Interop`, and do not reintroduce workbook/INI as runtime primary storage.
 - Before each chunk, inspect `git status` and verify no unrelated local changes need isolation.
+- Post-cleanup baseline adjustment (`2026-03-14`):
+  - Historical commits `fff6637` and `ba1cef9` already closed the current ImageManager layout/persistence slice and a large cross-page/ink policy slice.
+  - `MainWindow.*` remains the first hotspot.
+  - `PaintOverlayWindow.Input` and `PaintOverlayWindow.Presentation` are no longer default primary work items; reopen them only if `MainWindow` or overlay shell integration exposes a real seam failure, duplicated runtime branch, or new architecture-guard pressure.
+  - The default overlay follow-up now centers on `PaintOverlayWindow.xaml.cs` and the photo/cross-page shell files that still host coordination debt.
 
 ## File Structure
 
@@ -33,8 +38,10 @@
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Paint.cs`
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Photo.cs`
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs`
-- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Input.cs`
-- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs`
+- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Photo.cs`
+- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Photo.CrossPage.cs`
+- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Input.cs` (only if shell work exposes a missing seam)
+- `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs` (only if shell work exposes a missing seam)
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.xaml.cs`
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.Windowing.cs`
 - `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\RollCallWindow.Input.cs`
@@ -122,57 +129,62 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug 
 
 Expected: PASS and no behavior drift in window coordination tests.
 
-## Chunk 2: Paint Overlay Terminalization
+## Chunk 2: Paint Overlay Shell Closure
 
-### Task 3: Finish shrinking `PaintOverlayWindow` into thin shell + extracted runtime units
+### Task 3: Finish shrinking the remaining `PaintOverlayWindow` shell and photo/cross-page coordination tail
 
 **Files:**
 - Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.xaml.cs`
-- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Input.cs`
-- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs`
+- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Photo.cs`
+- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Photo.CrossPage.cs`
+- Modify if required by exposed seam only: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Input.cs`
+- Modify if required by exposed seam only: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs`
 - Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Session\PaintOverlaySessionEffectRunner.cs`
 - Create: any remaining extracted units under `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\` or `...\Windowing\`
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\OverlayPresentationCommandRouterTests.cs`
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\OverlayWheelPresentationExecutionPolicyTests.cs`
 - Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PhotoManipulationAdmissionPolicyTests.cs`
 - Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\CrossPageInputSwitchExecutionPolicyTests.cs`
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\Session\UiSessionPresentationInputPolicyTests.cs`
+- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PhotoInkCurrentPageClipPolicyTests.cs`
+- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\CrossPageNeighborBitmapResolvePolicyTests.cs`
+- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\CrossPageNeighborHeightResolvePolicyTests.cs`
 
-- [ ] Step 1: List any remaining `PaintOverlayWindow*` branches that still mix UI events, state mutation, and external command dispatch in one method.
+- [ ] Step 1: List any remaining branches in `PaintOverlayWindow.xaml.cs`, `PaintOverlayWindow.Photo.cs`, and `PaintOverlayWindow.Photo.CrossPage.cs` that still mix UI events, state mutation, and coordination dispatch in one method.
 - [ ] Step 2: Add or extend failing tests for those branches at the extracted policy/executor level instead of adding more window-level tests.
-- [ ] Step 3: Extract the mixed branches into named units and wire them through `Session`/`Windowing`/Presentation runtime boundaries.
+- [ ] Step 3: Extract the mixed branches into named units and wire them through `Session`/`Windowing` boundaries; only reopen `Input`/`Presentation` if the shell cutover proves the existing seam is insufficient.
 - [ ] Step 4: Delete obsolete wrappers and dead private helpers after coverage passes.
 - [ ] Step 5: Re-run the targeted overlay/cross-page/presentation suite.
 
 Run:
 ```powershell
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~Overlay|FullyQualifiedName~CrossPage|FullyQualifiedName~PhotoManipulation|FullyQualifiedName~Presentation"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~Overlay|FullyQualifiedName~CrossPage|FullyQualifiedName~PhotoManipulation|FullyQualifiedName~PhotoInk"
 ```
 
-Expected: PASS, no new App-layer `Interop` usage, and no regression in overlay routing.
+Expected: PASS, no new App-layer `Interop` usage, and no regression in overlay shell routing.
 
-### Task 4: Ensure presentation intent flows through `Application -> Services -> Interop`
+### Task 4: Reopen presentation/input seams only when integration evidence requires it
 
 **Files:**
-- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs`
-- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Application\UseCases\` (presentation use-case files)
-- Modify: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Services\` (presentation runtime gateway files)
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlServiceTests.cs`
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlPlannerTests.cs`
-- Test: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationChannelAvailabilityPolicyTests.cs`
+- Modify only if required by proven seam drift: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Presentation.cs`
+- Modify only if required by proven seam drift: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Input.cs`
+- Modify only if required by proven seam drift: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Application\UseCases\` (presentation use-case files)
+- Modify only if required by proven seam drift: `E:\PythonProject\ClassroomToolkit\src\ClassroomToolkit.Services\` (presentation runtime gateway files)
+- Test when reopened: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlServiceTests.cs`
+- Test when reopened: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationControlPlannerTests.cs`
+- Test when reopened: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\PresentationChannelAvailabilityPolicyTests.cs`
+- Test when reopened: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\OverlayPresentationCommandRouterTests.cs`
+- Test when reopened: `E:\PythonProject\ClassroomToolkit\tests\ClassroomToolkit.Tests\OverlayWheelPresentationExecutionPolicyTests.cs`
 
-- [ ] Step 1: Identify any remaining places where overlay code directly decides external command routing that belongs in `Application`/`Services`.
-- [ ] Step 2: Add a failing test around the use-case/service seam.
-- [ ] Step 3: Move intent expression upward into `Application`, keep `Services` as runtime gateway, and keep `Interop` behind adapters.
+- [ ] Step 1: Treat `Presentation` and `Input` as frozen-by-default because the current handover baseline marks those tails as closed.
+- [ ] Step 2: Reopen only if shell work exposes duplicate routing, direct external-command decisions in the wrong layer, or an architecture-guard regression.
+- [ ] Step 3: If reopened, add a failing seam test first, then move the minimum necessary intent routing back into `Application -> Services -> Interop`.
 - [ ] Step 4: Verify WPS/Office fallback behavior remains unchanged.
-- [ ] Step 5: Run the presentation suite.
+- [ ] Step 5: Run only the presentation/input suites that correspond to the reopened seam.
 
 Run:
 ```powershell
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationControl|FullyQualifiedName~PresentationChannel|FullyQualifiedName~PresentationFocus"
 ```
 
-Expected: PASS with unchanged fallback semantics.
+Expected: No-op if no seam drift appears; otherwise PASS with unchanged fallback semantics after the minimal reopening.
 
 ## Chunk 3: RollCall And Remaining App-Side Runtime Debt
 
