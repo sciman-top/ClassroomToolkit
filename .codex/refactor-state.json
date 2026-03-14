@@ -1,7 +1,7 @@
 ﻿{
     "project":  "ClassroomToolkit",
     "mode":  "autonomous-refactor-loop",
-    "updated_at":  "2026-03-15T00:18:52.0573679+08:00",
+    "updated_at":  "2026-03-15T03:02:00+08:00",
     "current_task":  null,
     "tasks":  {
                   "phase0-baseline":  {
@@ -75,9 +75,9 @@
                                           "last_summary":  "Verified existing cross-page consistency tail closure through the CrossPage/Photo/Overlay filter and ArchitectureDependencyTests (903/903)."
                                       },
                   "sqlite-domain-selection":  {
-                                                  "status":  "deferred",
+                                                  "status":  "completed",
                                                   "attempts":  2,
-                                                  "last_summary":  "Task split as oversized: deferred parent and added student-workbook SQLite child tasks for selection, adapter, and wiring closure."
+                                                  "last_summary":  "Closed parent by child-task completion: sqlite-domain-student-workbook-selection, sqlite-domain-student-workbook-adapter, and sqlite-domain-student-workbook-wiring are completed."
                                               },
                   "sqlite-domain-student-workbook-selection":  {
                                                                    "status":  "completed",
@@ -125,9 +125,9 @@
                                                                               "last_summary":  "Moved MainWindow.Paint toolbar direct-repair background scheduling, rerun, and failure-plan coordination into ToolbarInteractionDirectRepairExecutionCoordinator and passed the targeted ToolbarInteraction/FloatingTopmost/MainWindow/ArchitectureDependency filter (189/189)."
                                                                           },
                   "mainwindow-photo-image-manager-surface-tail":  {
-                                                                        "status":  "deferred",
+                                                                        "status":  "completed",
                                                                         "attempts":  1,
-                                                                        "last_summary":  "Deferred as oversized after splitting into child tasks: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail."
+                                                                        "last_summary":  "Closed parent by child-task completion: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail are completed."
                                                                     },
                   "mainwindow-image-manager-state-change-transition-tail":  {
                                                                                 "status":  "completed",
@@ -135,9 +135,9 @@
                                                                                 "last_summary":  "Moved MainWindow.Photo image-manager state-change normalize scheduling/fallback and surface-apply coordination into ImageManagerStateChangeTransitionCoordinator and passed the targeted filter (121/121)."
                                                                             },
                   "mainwindow-foreground-retouch-owner-sync-tail":  {
-                                                                         "status":  "deferred",
+                                                                         "status":  "completed",
                                                                          "attempts":  1,
-                                                                         "last_summary":  "Deferred as oversized after splitting into child tasks: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail."
+                                                                         "last_summary":  "Closed parent by child-task completion: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail are completed."
                                                                     },
                   "mainwindow-foreground-retouch-tail":  {
                                                               "status":  "completed",
@@ -200,9 +200,9 @@
                                                                        "last_summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21)."
                                                                    },
                   "sqlite-history-domain-extension-tail":  {
-                                                               "status":  "deferred",
+                                                               "status":  "completed",
                                                                "attempts":  1,
-                                                               "last_summary":  "Deferred as oversized and split into scoped child tasks: sqlite-history-domain-selection, sqlite-history-domain-adapter, sqlite-history-domain-wiring-migration."
+                                                               "last_summary":  "Closed parent by child-task completion: sqlite-history-domain-selection, sqlite-history-domain-adapter, and sqlite-history-domain-wiring-migration are completed."
                                                            },
                   "sqlite-history-domain-selection":  {
                                                           "status":  "completed",

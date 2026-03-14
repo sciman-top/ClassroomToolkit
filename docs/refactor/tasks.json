@@ -486,8 +486,8 @@
                       "depends_on":  [
                                          "reconcile-current-progress"
                                      ],
-                      "status_hint":  "deferred",
-                      "summary":  "Deferred as an oversized umbrella task and split into scoped child tasks for domain decision, adapter implementation, and app wiring closure.",
+                      "status_hint":  "completed",
+                      "summary":  "Closed by child-task split completion: sqlite-domain-student-workbook-selection, sqlite-domain-student-workbook-adapter, and sqlite-domain-student-workbook-wiring are all completed.",
                       "file_hints":  [
                                          "src/ClassroomToolkit.Infra/",
                                          "src/ClassroomToolkit.Services/",
@@ -871,8 +871,8 @@
                       "depends_on":  [
                                          "mainwindow-toolbar-direct-repair-coordination-tail"
                                      ],
-                      "status_hint":  "deferred",
-                      "summary":  "Deferred as oversized and split into child tasks for image-manager state-change transition closure and the remaining foreground-retouch/owner-sync coordination tail.",
+                      "status_hint":  "completed",
+                      "summary":  "Closed by child-task split completion: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail are completed.",
                       "file_hints":  [
                                          "src/ClassroomToolkit.App/MainWindow.Photo.cs",
                                          "src/ClassroomToolkit.App/MainWindow.xaml.cs",
@@ -949,8 +949,8 @@
                       "depends_on":  [
                                          "mainwindow-image-manager-state-change-transition-tail"
                                      ],
-                      "status_hint":  "deferred",
-                      "summary":  "Deferred as oversized after splitting the foreground-retouch/overlay-activation retouch slice away from the remaining image-manager owner-sync coordination tail.",
+                      "status_hint":  "completed",
+                      "summary":  "Closed by child-task split completion: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail are completed.",
                       "file_hints":  [
                                          "src/ClassroomToolkit.App/MainWindow.Photo.cs",
                                          "src/ClassroomToolkit.App/MainWindow.xaml.cs",
@@ -1447,8 +1447,8 @@
                       "depends_on":  [
                                          "sqlite-migration-tail"
                                      ],
-                      "status_hint":  "deferred",
-                      "summary":  "Deferred as an oversized umbrella task and split into scoped child tasks for history-domain selection, adapter implementation, and runtime migration/rollback closure.",
+                      "status_hint":  "completed",
+                      "summary":  "Closed by child-task split completion: sqlite-history-domain-selection, sqlite-history-domain-adapter, and sqlite-history-domain-wiring-migration are all completed.",
                       "file_hints":  [
                                          "src/ClassroomToolkit.Infra/Storage/",
                                          "src/ClassroomToolkit.Services/",
