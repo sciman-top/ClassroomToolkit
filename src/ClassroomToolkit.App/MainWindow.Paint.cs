@@ -273,65 +273,41 @@ public partial class MainWindow
                 ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchMessage(
                     trigger,
                     dispatchMode));
-            if (dispatchMode == ToolbarInteractionRetouchDispatchMode.Background)
-            {
-                var dispatchAdmission = ToolbarInteractionDirectRepairDispatchAdmissionPolicy.Resolve(
-                    _toolbarDirectRepairBackgroundQueued);
-                if (!dispatchAdmission.ShouldDispatch)
-                {
-                    ApplyToolbarDirectRepairDispatchFailurePlan(
-                        ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveAdmissionRejected());
-                    System.Diagnostics.Debug.WriteLine(
-                        ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchAdmissionSkipMessage(
-                            trigger,
-                            dispatchAdmission.Reason));
-                    return;
-                }
 
-                if (!ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref _toolbarDirectRepairBackgroundQueued))
-                {
-                    ApplyToolbarDirectRepairDispatchFailurePlan(
-                        ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveMarkQueuedFailed());
-                    System.Diagnostics.Debug.WriteLine(
-                        ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchAdmissionSkipMessage(
-                            trigger,
-                            ToolbarInteractionDirectRepairDispatchAdmissionReason.AlreadyQueued));
-                    return;
-                }
-                var scheduled = TryBeginInvoke(
-                    () =>
-                    {
-                        try
-                        {
-                            ApplyToolbarDirectRepair(trigger, launcherWindow);
-                            if (ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref _toolbarDirectRepairRerunRequested))
-                            {
-                                ApplyToolbarDirectRepair(trigger, launcherWindow);
-                            }
-                        }
-                        finally
-                        {
-                            ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref _toolbarDirectRepairBackgroundQueued);
-                        }
-                    },
+            var executionOutcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+                dispatchMode,
+                () => _toolbarDirectRepairBackgroundQueued,
+                () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref _toolbarDirectRepairBackgroundQueued),
+                () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref _toolbarDirectRepairBackgroundQueued),
+                () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref _toolbarDirectRepairRerunRequested),
+                () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref _toolbarDirectRepairRerunRequested),
+                () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref _toolbarDirectRepairRerunRequested),
+                () => ApplyToolbarDirectRepair(trigger, launcherWindow),
+                action => TryBeginInvoke(
+                    action,
                     System.Windows.Threading.DispatcherPriority.Background,
-                    "RetouchFloatingTopmostOnToolbarInteraction.DirectRepair");
-                if (!scheduled)
-                {
-                    ApplyToolbarDirectRepairDispatchFailurePlan(
-                        ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveScheduleFailed());
-                    System.Diagnostics.Debug.WriteLine(
-                        ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchFailureMessage(
-                            trigger,
-                            nameof(InvalidOperationException),
-                            "dispatcher-begininvoke-failed"));
-                    return;
-                }
-            }
-            else
+                    "RetouchFloatingTopmostOnToolbarInteraction.DirectRepair"));
+
+            if (executionOutcome == ToolbarInteractionDirectRepairExecutionOutcome.BackgroundDispatchRejected
+                || executionOutcome == ToolbarInteractionDirectRepairExecutionOutcome.BackgroundMarkQueuedFailed)
             {
-                ApplyToolbarDirectRepair(trigger, launcherWindow);
+                System.Diagnostics.Debug.WriteLine(
+                    ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchAdmissionSkipMessage(
+                        trigger,
+                        ToolbarInteractionDirectRepairDispatchAdmissionReason.AlreadyQueued));
+                return;
             }
+
+            if (executionOutcome == ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduleFailed)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchFailureMessage(
+                        trigger,
+                        nameof(InvalidOperationException),
+                        "dispatcher-begininvoke-failed"));
+                return;
+            }
+
             return;
         }
 
@@ -360,23 +336,6 @@ public partial class MainWindow
                     trigger,
                     ex.GetType().Name,
                     ex.Message)));
-    }
-
-    private void ApplyToolbarDirectRepairDispatchFailurePlan(
-        ToolbarInteractionDirectRepairDispatchFailurePlan failurePlan)
-    {
-        if (failurePlan.ShouldRequestRerun)
-        {
-            ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref _toolbarDirectRepairRerunRequested);
-        }
-        if (failurePlan.ShouldClearQueuedState)
-        {
-            ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref _toolbarDirectRepairBackgroundQueued);
-        }
-        if (failurePlan.ShouldClearRerunState)
-        {
-            ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref _toolbarDirectRepairRerunRequested);
-        }
     }
 
     private ToolbarInteractionRetouchSnapshot CaptureToolbarInteractionRetouchSnapshot(out Window? launcherWindow)

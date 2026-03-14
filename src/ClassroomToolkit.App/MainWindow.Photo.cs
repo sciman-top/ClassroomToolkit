@@ -97,33 +97,25 @@ public partial class MainWindow
 
     private void ApplyImageManagerOpenTransition(ImageManagerVisibilityTransitionPlan plan)
     {
-        if (_imageManagerWindow == null)
+        var imageManagerWindow = _imageManagerWindow;
+        if (imageManagerWindow == null)
         {
             return;
         }
 
-        if (plan.SyncOwnersToOverlay)
-        {
-            SyncFloatingWindowOwners(overlayVisible: true);
-        }
-        if (plan.ShowWindow)
-        {
-            ExecuteLifecycleSafe("photo-image-manager-open", "show-image-manager-window", _imageManagerWindow.Show);
-        }
-        WindowStateNormalizationExecutor.Apply(_imageManagerWindow, plan.NormalizeWindowState);
-        if (ImageManagerOpenSurfaceApplyPolicy.ShouldApply(
-                plan.TouchImageManagerSurface,
-                plan.RequestZOrderApply))
-        {
-            ApplySurfaceZOrderDecision(
-                ImageManagerVisibilitySurfaceDecisionPolicy.ResolveOpen(plan));
-        }
+        ImageManagerVisibilityTransitionCoordinator.ApplyOpen(
+            plan,
+            () => SyncFloatingWindowOwners(overlayVisible: true),
+            () => ExecuteLifecycleSafe("photo-image-manager-open", "show-image-manager-window", imageManagerWindow.Show),
+            () => WindowStateNormalizationExecutor.Apply(imageManagerWindow, plan.NormalizeWindowState),
+            ApplySurfaceZOrderDecision);
     }
 
     private void OnImageManagerStateChanged(object? sender, EventArgs e)
     {
         var context = CaptureImageManagerStateChangeContext();
-        ApplyImageManagerStateChangeTransitionIfNeeded(context);
+        var decision = ImageManagerStateChangePolicy.Resolve(context);
+        ApplyImageManagerStateChangeTransition(decision);
     }
 
     private ImageManagerStateChangeContext CaptureImageManagerStateChangeContext()
@@ -135,34 +127,16 @@ public partial class MainWindow
             OverlayWindowState: _overlayWindow?.WindowState ?? WindowState.Normal);
     }
 
-    private void ApplyImageManagerStateChangeTransitionIfNeeded(ImageManagerStateChangeContext context)
-    {
-        var decision = ImageManagerStateChangePolicy.Resolve(context);
-        if (!decision.NormalizeOverlayWindowState)
-        {
-            return;
-        }
-
-        ApplyImageManagerStateChangeTransition(decision);
-    }
-
     private void ApplyImageManagerStateChangeTransition(ImageManagerStateChangeDecision decision)
     {
-        var scheduled = TryBeginInvoke(
+        ImageManagerStateChangeTransitionCoordinator.Apply(
+            decision,
             () => WindowStateNormalizationExecutor.Apply(_overlayWindow, decision.NormalizeOverlayWindowState),
-            DispatcherPriority.Background,
-            "ApplyImageManagerStateChangeTransition.NormalizeOverlay");
-        if (!scheduled)
-        {
-            WindowStateNormalizationExecutor.Apply(_overlayWindow, decision.NormalizeOverlayWindowState);
-        }
-        if (ImageManagerStateChangeSurfaceApplyPolicy.ShouldApply(
-                decision.RequestZOrderApply,
-                decision.ForceEnforceZOrder))
-        {
-            ApplySurfaceZOrderDecision(
-                ImageManagerStateChangeSurfaceDecisionPolicy.Resolve(decision));
-        }
+            action => TryBeginInvoke(
+                action,
+                DispatcherPriority.Background,
+                "ApplyImageManagerStateChangeTransition.NormalizeOverlay"),
+            ApplySurfaceZOrderDecision);
     }
 
     private void OnImageManagerWindowActivated(object? sender, EventArgs e)
@@ -284,13 +258,10 @@ public partial class MainWindow
             ImageManagerVisible: imageManagerWindow.IsVisible,
             OwnerAlreadyOverlay: imageManagerWindow.Owner == _overlayWindow && _overlayWindow != null);
         var closePlan = ImageManagerVisibilityTransitionPolicy.ResolveCloseForPhotoSelection(closeContext);
-        if (closePlan.DetachOwnerBeforeClose)
-        {
-            DetachOverlayOwnedWindow(imageManagerWindow);
-        }
-        if (closePlan.CloseWindow)
-        {
-            SafeActionExecutionExecutor.TryExecute(
+        ImageManagerVisibilityTransitionCoordinator.ApplyCloseForPhotoSelection(
+            closePlan,
+            () => DetachOverlayOwnedWindow(imageManagerWindow),
+            () => SafeActionExecutionExecutor.TryExecute(
                 imageManagerWindow.Close,
                 ex => PhotoNavigationDiagnostics.Log(
                     "MainWindow.Select",
@@ -298,8 +269,7 @@ public partial class MainWindow
                         "photo-selection",
                         "close-image-manager-window",
                         ex.GetType().Name,
-                        ex.Message)));
-        }
+                        ex.Message))));
     }
 
     private bool PreparePhotoSelectionTransition(PhotoSelectionPreparationPlan selectionPlan)
@@ -420,27 +390,22 @@ public partial class MainWindow
         {
             return;
         }
-        _imageManagerWindow?.SetKeyboardNavigationSuppressed(active);
         var transitionPlan = PaintVisibilityTransitionPolicy.ResolvePhotoModeChange(
             photoModeActive: active,
             toolbarWindowState: _toolbarWindow.WindowState);
-        WindowStateNormalizationExecutor.Apply(_toolbarWindow, transitionPlan.NormalizeToolbarWindowState);
-        if (transitionPlan.ShowToolbar)
-        {
-            ExecuteLifecycleSafe("photo-mode-changed", "show-toolbar-window", _toolbarWindow.Show);
-        }
-        if (PhotoModeOwnerSyncPolicy.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface))
-        {
-            SyncFloatingWindowOwners(overlayVisible: transitionPlan.SyncFloatingOwnersVisible);
-        }
-        if (transitionPlan.RequestZOrderApply)
-        {
-            ApplyPhotoModeSurfaceTransition(
+        var toolbarWindow = _toolbarWindow;
+        PhotoModeTransitionCoordinator.Apply(
+            active,
+            transitionPlan,
+            value => _imageManagerWindow?.SetKeyboardNavigationSuppressed(value),
+            () => WindowStateNormalizationExecutor.Apply(toolbarWindow, transitionPlan.NormalizeToolbarWindowState),
+            () => ExecuteLifecycleSafe("photo-mode-changed", "show-toolbar-window", toolbarWindow.Show),
+            () => SyncFloatingWindowOwners(overlayVisible: transitionPlan.SyncFloatingOwnersVisible),
+            () => ApplyPhotoModeSurfaceTransition(
                 PhotoModeSurfaceTransitionKind.PhotoModeChanged,
                 photoModeActive: active,
                 requestZOrderApply: transitionPlan.RequestZOrderApply,
-                forceEnforceZOrder: transitionPlan.ForceEnforceZOrder);
-        }
+                forceEnforceZOrder: transitionPlan.ForceEnforceZOrder));
     }
 
     private void OnPhotoCursorModeFocusRequested()
@@ -515,30 +480,27 @@ public partial class MainWindow
             suppressNextApply: _overlayActivatedRetouchState.SuppressNextApply,
             activityState,
             surface: ZOrderSurface.None);
-        if (OverlayActivatedRetouchStateUpdater.TryConsumeSuppression(ref _overlayActivatedRetouchState))
+        var result = ForegroundSurfaceRetouchCoordinator.ApplyOverlayActivated(
+            suppressionConsumed: OverlayActivatedRetouchStateUpdater.TryConsumeSuppression(ref _overlayActivatedRetouchState),
+            decision,
+            _overlayActivatedRetouchState.LastRetouchUtc,
+            GetCurrentUtcTimestamp(),
+            MainWindowRuntimeDefaults.OverlayActivationRetouchMinIntervalMs,
+            nowUtc => OverlayActivatedRetouchStateUpdater.MarkRetouched(
+                ref _overlayActivatedRetouchState,
+                nowUtc),
+            ApplyForegroundSurfaceDecision);
+        if (result.SuppressionConsumed)
         {
             return;
         }
-        var nowUtc = GetCurrentUtcTimestamp();
-        var retouchDecision = OverlayActivationRetouchPolicy.Resolve(
-            decision,
-            _overlayActivatedRetouchState.LastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs: MainWindowRuntimeDefaults.OverlayActivationRetouchMinIntervalMs);
-        if (!retouchDecision.ShouldApply)
+
+        if (!result.Applied)
         {
             System.Diagnostics.Debug.WriteLine(
                 OverlayActivationDiagnosticsPolicy.FormatRetouchSkipMessage(
-                    retouchDecision.Reason));
-            return;
+                    result.Reason));
         }
-        if (OverlayActivationRetouchPolicy.ShouldUpdateLastRetouchUtc(retouchDecision))
-        {
-            OverlayActivatedRetouchStateUpdater.MarkRetouched(
-                ref _overlayActivatedRetouchState,
-                nowUtc);
-        }
-        ApplyForegroundSurfaceDecision(decision);
     }
 
     private void OnPresentationFullscreenDetected()
@@ -567,29 +529,27 @@ public partial class MainWindow
 
     private void ApplyExplicitForegroundRetouch(ZOrderSurface surface)
     {
-        var nowUtc = GetCurrentUtcTimestamp();
-        var throttleDecision = ForegroundExplicitRetouchThrottlePolicy.Resolve(
-            _explicitForegroundRetouchState,
-            nowUtc,
-            minimumIntervalMs: MainWindowRuntimeDefaults.ExplicitForegroundRetouchMinIntervalMs);
-        if (!throttleDecision.ShouldAllowRetouch)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                ForegroundExplicitRetouchDiagnosticsPolicy.FormatThrottleSkipMessage(
-                    surface,
-                    throttleDecision.Reason));
-            return;
-        }
-
-        ExplicitForegroundRetouchStateUpdater.MarkRetouched(
-            ref _explicitForegroundRetouchState,
-            nowUtc);
         var decision = ForegroundSurfaceTransitionPolicy.Resolve(
             ForegroundSurfaceTransitionKind.ExplicitForeground,
             activityState: CaptureForegroundSurfaceActivityState(),
             surface: surface,
             suppressNextApply: false);
-        ApplyForegroundSurfaceDecision(decision);
+        var result = ForegroundSurfaceRetouchCoordinator.ApplyExplicitForeground(
+            _explicitForegroundRetouchState,
+            GetCurrentUtcTimestamp(),
+            MainWindowRuntimeDefaults.ExplicitForegroundRetouchMinIntervalMs,
+            decision,
+            nowUtc => ExplicitForegroundRetouchStateUpdater.MarkRetouched(
+                ref _explicitForegroundRetouchState,
+                nowUtc),
+            ApplyForegroundSurfaceDecision);
+        if (!result.Applied)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                ForegroundExplicitRetouchDiagnosticsPolicy.FormatThrottleSkipMessage(
+                    surface,
+                    result.Reason));
+        }
     }
 
     private void OnPhotoUnifiedTransformChanged(

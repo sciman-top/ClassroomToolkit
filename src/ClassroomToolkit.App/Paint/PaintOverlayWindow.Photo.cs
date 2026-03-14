@@ -34,73 +34,26 @@ public partial class PaintOverlayWindow
 
     private void LoadCurrentPageIfExists(bool allowDiskFallback = true, bool preferInteractiveFastPath = false)
     {
-        if (IsCrossPageFirstInputTraceActive())
+        var result = InkPageLoadCoordinator.Apply(
+            photoCacheScopeActive: _currentCacheScope == InkCacheScope.Photo,
+            inkCacheEnabled: _inkCacheEnabled,
+            inkShowEnabled: _inkShowEnabled,
+            currentCacheKey: _currentCacheKey,
+            allowDiskFallback: allowDiskFallback,
+            hasInkPersistence: _inkPersistence != null,
+            preferInteractiveFastPath: preferInteractiveFastPath,
+            tryGetCachedStrokes: (string cacheKey, out List<InkStrokeData> strokes) => _photoCache.TryGet(cacheKey, out strokes),
+            tryLoadInkFromSidecar: TryLoadInkFromSidecar,
+            purgePersistedInkForHiddenCurrentPage: PurgePersistedInkForHiddenCurrentPageIfNeeded,
+            clearInkSurfaceState: ClearInkSurfaceState,
+            applyInkStrokes: ApplyInkStrokes,
+            markTraceStage: IsCrossPageFirstInputTraceActive()
+                ? (stage, detail) => MarkCrossPageFirstInputStage(stage, detail)
+                : null);
+
+        if (result.AppliedCachedStrokes)
         {
-            MarkCrossPageFirstInputStage(
-                "load-enter",
-                $"allowDisk={allowDiskFallback} preferFast={preferInteractiveFastPath}");
-        }
-        if (_currentCacheScope != InkCacheScope.Photo)
-        {
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-skip", "scope!=photo");
-            }
-            return;
-        }
-        if (!_inkCacheEnabled)
-        {
-            ClearInkSurfaceState();
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-clear", "cache-disabled");
-            }
-            return;
-        }
-        // If "显示笔迹" is off, don't load previously saved ink
-        if (!_inkShowEnabled)
-        {
-            PurgePersistedInkForHiddenCurrentPageIfNeeded();
-            ClearInkSurfaceState();
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-clear", "ink-hidden");
-            }
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(_currentCacheKey))
-        {
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-skip", "empty-cache-key");
-            }
-            return;
-        }
-        if (_photoCache.TryGet(_currentCacheKey, out var cached))
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkCache] Loaded {cached.Count} strokes for key={_currentCacheKey}");
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-cache-hit", $"strokes={cached.Count}");
-            }
-            ApplyInkStrokes(cached, preferInteractiveFastPath);
-            return;
-        }
-        // Method A fallback: showing persisted ink is independent from save-toggle.
-        if (InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback)
-            && _inkPersistence != null
-            && TryLoadInkFromSidecar())
-        {
-            if (IsCrossPageFirstInputTraceActive())
-            {
-                MarkCrossPageFirstInputStage("load-sidecar-hit");
-            }
-            return;
-        }
-        ClearInkSurfaceState();
-        if (IsCrossPageFirstInputTraceActive())
-        {
-            MarkCrossPageFirstInputStage("load-clear", "cache-miss");
+            System.Diagnostics.Debug.WriteLine($"[InkCache] Loaded {result.LoadedStrokeCount} strokes for key={_currentCacheKey}");
         }
     }
 
@@ -195,42 +148,30 @@ public partial class PaintOverlayWindow
     private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes, bool preferInteractiveFastPath = false)
     {
         var applySw = Stopwatch.StartNew();
-        if (IsCrossPageFirstInputTraceActive())
-        {
-            MarkCrossPageFirstInputStage(
-                "apply-enter",
-                $"strokes={strokes.Count} preferFast={preferInteractiveFastPath}");
-        }
-        _inkStrokes.Clear();
-        if (preferInteractiveFastPath)
-        {
-            _inkStrokes.AddRange(strokes);
-        }
-        else
-        {
-            _inkStrokes.AddRange(CloneInkStrokes(strokes));
-        }
-
-        var fastApplied = TryApplyNeighborInkBitmapForCurrentPage(strokes, preferInteractiveFastPath);
-        if (!fastApplied)
-        {
-            if (IsCrossPageFirstInputTraceActive())
+        InkStrokeApplyCoordinator.Apply(
+            strokes: strokes,
+            preferInteractiveFastPath: preferInteractiveFastPath,
+            clearRuntimeStrokes: _inkStrokes.Clear,
+            addRuntimeStrokes: runtimeStrokes =>
             {
-                MarkCrossPageFirstInputStage("apply-redraw");
-            }
-            RedrawInkSurface();
-        }
-        else if (IsCrossPageFirstInputTraceActive())
-        {
-            MarkCrossPageFirstInputStage("apply-fast-bitmap");
-        }
-
-        MarkCurrentInkPageLoaded(_inkStrokes);
-        _perfApplyStrokes.Add(applySw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
-        if (IsCrossPageFirstInputTraceActive())
-        {
-            MarkCrossPageFirstInputStage("apply-exit", $"ms={applySw.Elapsed.TotalMilliseconds:F2}");
-        }
+                if (preferInteractiveFastPath)
+                {
+                    _inkStrokes.AddRange(runtimeStrokes);
+                }
+                else
+                {
+                    _inkStrokes.AddRange(CloneInkStrokes(runtimeStrokes));
+                }
+            },
+            tryApplyNeighborInkBitmapForCurrentPage: TryApplyNeighborInkBitmapForCurrentPage,
+            redrawInkSurface: RedrawInkSurface,
+            markCurrentInkPageLoaded: () => MarkCurrentInkPageLoaded(_inkStrokes),
+            recordPerfMilliseconds: (elapsedMs, onDispatcher) => _perfApplyStrokes.Add(elapsedMs, onDispatcher),
+            getElapsedMilliseconds: () => applySw.Elapsed.TotalMilliseconds,
+            dispatcherCheckAccess: Dispatcher.CheckAccess,
+            markTraceStage: IsCrossPageFirstInputTraceActive()
+                ? (stage, detail) => MarkCrossPageFirstInputStage(stage, detail)
+                : null);
     }
 
     private bool TryApplyNeighborInkBitmapForCurrentPage(IReadOnlyList<InkStrokeData> strokes, bool interactiveSwitch)

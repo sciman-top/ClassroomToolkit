@@ -1563,32 +1563,18 @@ public partial class PaintOverlayWindow
         string mode,
         bool emitAbortDiagnostics)
     {
-        var fallbackDecision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
-            dispatchScheduled: false,
-            dispatcherCheckAccess: Dispatcher.CheckAccess(),
-            dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-            dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-        if (fallbackDecision.ShouldRunInline)
-        {
-            ExecuteCrossPageDisplayUpdateRun(
-                source,
-                mode: $"{mode}-inline-fallback",
-                emitAbortDiagnostics: emitAbortDiagnostics);
-            return;
-        }
-
-        if (fallbackDecision.ShouldQueueReplay)
-        {
-            var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(kind, source);
-            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
-                ref _crossPageReplayState,
-                replayQueueDecision);
-            _inkDiagnostics?.OnCrossPageUpdateEvent(
-                "recover",
-                source,
-                "dispatch-failed-queue-replay");
-            TryFlushCrossPageReplay();
-        }
+        _ = CrossPageDisplayUpdateDispatchFailureCoordinator.Apply(
+            ref _crossPageReplayState,
+            kind,
+            source,
+            mode,
+            emitAbortDiagnostics,
+            executeCrossPageDisplayUpdateRun: ExecuteCrossPageDisplayUpdateRun,
+            emitDiagnostics: (action, eventSource, detail) => _inkDiagnostics?.OnCrossPageUpdateEvent(action, eventSource, detail),
+            flushCrossPageReplay: TryFlushCrossPageReplay,
+            dispatcherCheckAccess: Dispatcher.CheckAccess,
+            dispatcherShutdownStarted: () => Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: () => Dispatcher.HasShutdownFinished);
     }
 
     private void ExecuteCrossPageDisplayUpdateRun(
@@ -1666,28 +1652,18 @@ public partial class PaintOverlayWindow
 
     private void TryFlushCrossPageReplay()
     {
-        var replayPending = HasCrossPageReplayPending();
-        if (!CrossPageUpdateReplayPolicy.ShouldFlushReplay(
-                replayPending,
-                _crossPageDisplayUpdateState.Pending,
-                _photoModeActive,
-                IsCrossPageDisplaySettingEnabled(),
-                IsCrossPageInteractionActive()))
+        var flushPlan = CrossPageReplayFlushCoordinator.Resolve(
+            replayState: _crossPageReplayState,
+            crossPageUpdatePending: _crossPageDisplayUpdateState.Pending,
+            photoModeActive: _photoModeActive,
+            crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled(),
+            interactionActive: IsCrossPageInteractionActive());
+        if (!flushPlan.ShouldFlush || !flushPlan.HasDispatchTarget)
         {
             return;
         }
 
-        var target = CrossPageReplayDispatchPolicy.Resolve(
-            _crossPageReplayState.VisualSyncReplayPending,
-            _crossPageReplayState.InteractionReplayPending,
-            _crossPageReplayState.LastDispatchTarget,
-            _crossPageReplayState.PreferInteractionReplay);
-        if (target == CrossPageReplayDispatchTarget.None)
-        {
-            return;
-        }
-
-        TryScheduleCrossPageReplayDispatch(target);
+        TryScheduleCrossPageReplayDispatch(flushPlan.DispatchTarget);
     }
 
     private bool HasCrossPageReplayPending()
@@ -1704,52 +1680,14 @@ public partial class PaintOverlayWindow
 
     private void TryScheduleCrossPageReplayDispatch(CrossPageReplayDispatchTarget target)
     {
-        if (!CrossPageReplayPendingStateUpdater.TryMarkDispatchScheduled(
-                ref _crossPageReplayState,
-                target))
-        {
-            return;
-        }
-        var source = CrossPageReplayDispatchRequestPolicy.ResolveSource(target);
-        if (string.IsNullOrWhiteSpace(source))
-        {
-            CrossPageReplayPendingStateUpdater.MarkDispatchFailed(
-                ref _crossPageReplayState,
-                target);
-            return;
-        }
-
-        var scheduled = TryBeginInvoke(
-            () => RequestCrossPageDisplayUpdate(source),
-            DispatcherPriority.Background);
-        if (scheduled)
-        {
-            return;
-        }
-        var fallbackDecision = CrossPageReplayDispatchScheduleFallbackPolicy.Resolve(
-            dispatchScheduled: false,
-            dispatcherCheckAccess: Dispatcher.CheckAccess(),
-            dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-            dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-        if (fallbackDecision.ShouldRunInline)
-        {
-            try
-            {
-                RequestCrossPageDisplayUpdate(source);
-                return;
-            }
-            catch
-            {
-                // Fall through to replay requeue.
-            }
-        }
-
-        if (fallbackDecision.ShouldRequeuePending || fallbackDecision.ShouldRunInline)
-        {
-            CrossPageReplayPendingStateUpdater.MarkDispatchFailed(
-                ref _crossPageReplayState,
-                target);
-        }
+        _ = CrossPageReplayDispatchCoordinator.Apply(
+            ref _crossPageReplayState,
+            target,
+            requestCrossPageDisplayUpdate: RequestCrossPageDisplayUpdate,
+            tryBeginInvoke: TryBeginInvoke,
+            dispatcherCheckAccess: Dispatcher.CheckAccess,
+            dispatcherShutdownStarted: () => Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: () => Dispatcher.HasShutdownFinished);
     }
 
     private void ResetCrossPageReplayState()
@@ -1950,115 +1888,25 @@ public partial class PaintOverlayWindow
         bool singlePerPointerUp = false,
         int? delayOverrideMs = null)
     {
-        var scheduleGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeSchedule(
-            IsCrossPageDisplayActive(),
-            IsCrossPageInteractionActive());
-        if (!scheduleGate.ShouldProceed)
-        {
-            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, scheduleGate.Reason ?? CrossPageDeferredDiagnosticReason.Inactive);
-            return;
-        }
-
-        var targetDelayMs = CrossPagePostInputDelayPolicy.ResolveMs(
-            source,
-            _photoPostInputRefreshDelayMs,
-            fallbackDelayMs: CrossPageRuntimeDefaults.PostInputRefreshDelayMs,
-            delayOverrideMs: delayOverrideMs);
-
-        var elapsedMs = (GetCurrentUtcTimestamp() - _lastCrossPagePointerUpUtc).TotalMilliseconds;
-        if (elapsedMs >= targetDelayMs || _lastCrossPagePointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
-        {
-            if (singlePerPointerUp && !TryAcquirePostInputRefreshSlot(out var seqImmediate))
-            {
-                _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, $"already-refreshed seq={seqImmediate}");
-                return;
-            }
-            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(source));
-            return;
-        }
-
-        var delay = Math.Max(1, (int)Math.Ceiling(targetDelayMs - elapsedMs));
-        _inkDiagnostics?.OnCrossPageUpdateEvent("defer-schedule", source, $"delayMs={delay}");
-        var token = Interlocked.Increment(ref _crossPagePostInputRefreshToken);
-        _ = System.Threading.Tasks.Task.Run(async () =>
-        {
-            try
-            {
-                await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
-                    ex.GetType().Name);
-                var recoverySource = CrossPageUpdateSources.WithImmediate(source);
-                var scheduledRecovery = TryBeginInvoke(
-                    () => RequestCrossPageDisplayUpdate(recoverySource),
-                    DispatcherPriority.Background);
-                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-                    recoveryDispatchScheduled: scheduledRecovery,
-                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
-                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-                if (recoveryDecision.ShouldRecoverInline)
-                {
-                    RequestCrossPageDisplayUpdate(recoverySource);
-                    _inkDiagnostics?.OnCrossPageUpdateEvent(
-                        "defer-recover",
-                        source,
-                        CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(tokenMatched: true));
-                }
-                else
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, detail);
-                }
-                return;
-            }
-
-            var scheduled = TryBeginInvoke(() =>
-            {
-                if (token != _crossPagePostInputRefreshToken)
-                {
-                    return;
-                }
-                var delayedDispatchGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeDelayedDispatch(
-                    IsCrossPageDisplayActive(),
-                    IsCrossPageInteractionActive());
-                if (!delayedDispatchGate.ShouldProceed)
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, delayedDispatchGate.Reason ?? CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
-                    return;
-                }
-                if (singlePerPointerUp && !TryAcquirePostInputRefreshSlot(out var seqDelayed))
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-skip", source, $"already-refreshed seq={seqDelayed}");
-                    return;
-                }
-                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithDelayed(source));
-            }, DispatcherPriority.Background);
-            if (!scheduled)
-            {
-                var recoverySource = CrossPageUpdateSources.WithImmediate(source);
-                var scheduledRecovery = TryBeginInvoke(
-                    () => RequestCrossPageDisplayUpdate(recoverySource),
-                    DispatcherPriority.Background);
-                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-                    recoveryDispatchScheduled: scheduledRecovery,
-                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
-                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-                if (recoveryDecision.ShouldRecoverInline)
-                {
-                    RequestCrossPageDisplayUpdate(recoverySource);
-                }
-                else
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent(
-                        "defer-abort",
-                        source,
-                        "delayed-dispatch-failed");
-                }
-            }
-        });
+        _ = CrossPageDeferredRefreshCoordinator.ScheduleAsync(
+            source: source,
+            singlePerPointerUp: singlePerPointerUp,
+            delayOverrideMs: delayOverrideMs,
+            configuredDelayMs: _photoPostInputRefreshDelayMs,
+            lastPointerUpUtc: _lastCrossPagePointerUpUtc,
+            getCurrentUtcTimestamp: GetCurrentUtcTimestamp,
+            isCrossPageDisplayActive: IsCrossPageDisplayActive,
+            isCrossPageInteractionActive: IsCrossPageInteractionActive,
+            tryAcquirePostInputRefreshSlot: TryAcquirePostInputRefreshSlot,
+            requestCrossPageDisplayUpdate: RequestCrossPageDisplayUpdate,
+            tryBeginInvoke: TryBeginInvoke,
+            delayAsync: static delay => System.Threading.Tasks.Task.Delay(delay),
+            incrementRefreshToken: () => Interlocked.Increment(ref _crossPagePostInputRefreshToken),
+            readRefreshToken: () => _crossPagePostInputRefreshToken,
+            dispatcherCheckAccess: Dispatcher.CheckAccess,
+            dispatcherShutdownStarted: () => Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: () => Dispatcher.HasShutdownFinished,
+            diagnostics: (action, eventSource, detail) => _inkDiagnostics?.OnCrossPageUpdateEvent(action, eventSource, detail));
     }
 
     private void ApplyCrossPagePointerUpFastRefresh(
@@ -2086,28 +1934,15 @@ public partial class PaintOverlayWindow
     private bool TryAcquirePostInputRefreshSlot(out long pointerUpSequence)
     {
         pointerUpSequence = Interlocked.Read(ref _crossPagePointerUpSequence);
-        if (_lastCrossPagePointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
-        {
-            return true;
-        }
-
-        while (true)
-        {
-            var appliedSequence = Interlocked.Read(ref _crossPagePostInputRefreshAppliedSequence);
-            if (appliedSequence == pointerUpSequence)
-            {
-                return false;
-            }
-
-            var exchanged = Interlocked.CompareExchange(
+        var result = CrossPagePostInputRefreshSlotCoordinator.TryAcquire(
+            pointerUpSequence: pointerUpSequence,
+            lastPointerUpUtc: _lastCrossPagePointerUpUtc,
+            readAppliedSequence: () => Interlocked.Read(ref _crossPagePostInputRefreshAppliedSequence),
+            compareExchangeAppliedSequence: (nextValue, comparand) => Interlocked.CompareExchange(
                 ref _crossPagePostInputRefreshAppliedSequence,
-                pointerUpSequence,
-                appliedSequence);
-            if (exchanged == appliedSequence)
-            {
-                return true;
-            }
-        }
+                nextValue,
+                comparand));
+        return result.Acquired;
     }
 
     private void HideNeighborSlotForPage(int pageIndex)
@@ -2220,88 +2055,24 @@ public partial class PaintOverlayWindow
 
     private void ScheduleCrossPageDisplayUpdateForMissingNeighborPages(int missingCount)
     {
-        var nowUtc = GetCurrentUtcTimestamp();
-        var decision = CrossPageMissingNeighborRefreshPolicy.Resolve(
-            _photoModeActive,
-            IsCrossPageDisplaySettingEnabled(),
+        _ = CrossPageMissingNeighborRefreshCoordinator.ScheduleAsync(
+            missingCount: missingCount,
+            photoModeActive: _photoModeActive,
+            crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled(),
             interactionActive: IsCrossPageInteractionActive(),
-            missingCount,
-            _lastCrossPageMissingBitmapRefreshUtc,
-            nowUtc);
-        if (!decision.ShouldSchedule)
-        {
-            return;
-        }
-
-        _lastCrossPageMissingBitmapRefreshUtc = decision.LastScheduledUtc;
-        _inkDiagnostics?.OnCrossPageUpdateEvent("defer-schedule", CrossPageUpdateSources.NeighborMissing, $"count={missingCount}");
-        var token = Interlocked.Increment(ref _crossPageMissingBitmapRefreshToken);
-        _ = System.Threading.Tasks.Task.Run(async () =>
-        {
-            try
-            {
-                await System.Threading.Tasks.Task.Delay(decision.DelayMs).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
-                    ex.GetType().Name);
-                var recoverySource = CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.NeighborMissingDelayed);
-                var scheduledRecovery = TryBeginInvoke(
-                    () => RequestCrossPageDisplayUpdate(recoverySource),
-                    DispatcherPriority.Background);
-                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-                    recoveryDispatchScheduled: scheduledRecovery,
-                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
-                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-                if (recoveryDecision.ShouldRecoverInline)
-                {
-                    RequestCrossPageDisplayUpdate(recoverySource);
-                }
-                else
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", CrossPageUpdateSources.NeighborMissingDelayed, detail);
-                }
-                return;
-            }
-
-            var scheduled = TryBeginInvoke(() =>
-            {
-                if (token != _crossPageMissingBitmapRefreshToken)
-                {
-                    return;
-                }
-                if (!IsCrossPageDisplayActive())
-                {
-                    return;
-                }
-                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.NeighborMissingDelayed);
-            }, DispatcherPriority.Background);
-            if (!scheduled)
-            {
-                var recoverySource = CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.NeighborMissingDelayed);
-                var scheduledRecovery = TryBeginInvoke(
-                    () => RequestCrossPageDisplayUpdate(recoverySource),
-                    DispatcherPriority.Background);
-                var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-                    recoveryDispatchScheduled: scheduledRecovery,
-                    dispatcherCheckAccess: Dispatcher.CheckAccess(),
-                    dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-                    dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-                if (recoveryDecision.ShouldRecoverInline)
-                {
-                    RequestCrossPageDisplayUpdate(recoverySource);
-                }
-                else
-                {
-                    _inkDiagnostics?.OnCrossPageUpdateEvent(
-                        "defer-abort",
-                        CrossPageUpdateSources.NeighborMissingDelayed,
-                        "missing-neighbor-delayed-dispatch-failed");
-                }
-            }
-        });
+            lastScheduledUtc: _lastCrossPageMissingBitmapRefreshUtc,
+            nowUtc: GetCurrentUtcTimestamp(),
+            isCrossPageDisplayActive: IsCrossPageDisplayActive,
+            updateLastScheduledUtc: value => _lastCrossPageMissingBitmapRefreshUtc = value,
+            requestCrossPageDisplayUpdate: RequestCrossPageDisplayUpdate,
+            tryBeginInvoke: TryBeginInvoke,
+            delayAsync: static delay => System.Threading.Tasks.Task.Delay(delay),
+            incrementRefreshToken: () => Interlocked.Increment(ref _crossPageMissingBitmapRefreshToken),
+            readRefreshToken: () => _crossPageMissingBitmapRefreshToken,
+            dispatcherCheckAccess: Dispatcher.CheckAccess,
+            dispatcherShutdownStarted: () => Dispatcher.HasShutdownStarted,
+            dispatcherShutdownFinished: () => Dispatcher.HasShutdownFinished,
+            diagnostics: (action, source, detail) => _inkDiagnostics?.OnCrossPageUpdateEvent(action, source, detail));
     }
 
     private void TryPrimeNeighborInkCache(int pageIndex, BitmapSource pageBitmap)

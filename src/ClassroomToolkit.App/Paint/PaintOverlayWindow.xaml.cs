@@ -1044,44 +1044,19 @@ public partial class PaintOverlayWindow : Window
 
     public void UpdateInkShowEnabled(bool enabled)
     {
-        var transitionPlan = InkShowUpdateTransitionPolicy.Resolve(
-            _inkShowEnabled,
-            enabled,
-            _photoModeActive);
-        if (!transitionPlan.ShouldApplySetting)
-        {
-            return;
-        }
-
-        _inkShowEnabled = enabled;
-        if (transitionPlan.ShouldReturnAfterSetting)
-        {
-            return;
-        }
-
-        if (transitionPlan.ShouldClearInkState)
-        {
-            PurgePersistedInkForHiddenCurrentDocumentIfNeeded();
-            ClearInkSurfaceState();
-            ClearNeighborInkVisuals(clearSlotIdentity: true);
-            _neighborInkCache.Clear();
-            _neighborInkRenderPending.Clear();
-            _neighborInkSidecarLoadPending.Clear();
-            if (transitionPlan.RequestCrossPageUpdateForDisabled)
-            {
-                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowDisabled);
-            }
-            return;
-        }
-
-        if (transitionPlan.ShouldLoadCurrentPage)
-        {
-            LoadCurrentPageIfExists();
-        }
-        if (transitionPlan.RequestCrossPageUpdateForEnabled)
-        {
-            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowEnabled);
-        }
+        InkShowTransitionCoordinator.Apply(
+            currentInkShowEnabled: _inkShowEnabled,
+            requestedEnabled: enabled,
+            photoModeActive: _photoModeActive,
+            setInkShowEnabled: nextEnabled => _inkShowEnabled = nextEnabled,
+            purgePersistedInkForHiddenCurrentDocument: PurgePersistedInkForHiddenCurrentDocumentIfNeeded,
+            clearInkSurfaceState: ClearInkSurfaceState,
+            clearNeighborInkVisuals: () => ClearNeighborInkVisuals(clearSlotIdentity: true),
+            clearNeighborInkCache: () => _neighborInkCache.Clear(),
+            clearNeighborInkRenderPending: () => _neighborInkRenderPending.Clear(),
+            clearNeighborInkSidecarLoadPending: () => _neighborInkSidecarLoadPending.Clear(),
+            loadCurrentPageIfExists: () => LoadCurrentPageIfExists(),
+            requestCrossPageDisplayUpdate: RequestCrossPageDisplayUpdate);
     }
 
     public void UpdateInkRecordEnabled(bool enabled)
@@ -1139,44 +1114,21 @@ public partial class PaintOverlayWindow : Window
 
     public void UpdateCrossPageDisplayEnabled(bool enabled)
     {
-        var flagUpdate = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
-            IsCrossPageDisplaySettingEnabled(),
-            enabled);
-        if (!flagUpdate.ShouldApply)
-        {
-            return;
-        }
-        _crossPageDisplayEnabled = flagUpdate.NextCrossPageDisplayEnabled;
-        var photoInkModeActive = IsPhotoInkModeActive();
-        var togglePlan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
-            photoInkModeActive: photoInkModeActive,
-            crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled(),
+        CrossPageDisplayToggleTransitionCoordinator.Apply(
+            currentCrossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled(),
+            requestedEnabled: enabled,
+            photoInkModeActive: IsPhotoInkModeActive(),
             photoDocumentIsPdf: _photoDocumentIsPdf,
-            photoUnifiedTransformReady: _photoUnifiedTransformReady);
-        ResetCrossPageNormalizedWidth();
-        if (togglePlan.ShouldRestoreUnifiedTransformAndRedraw)
-        {
-            RestoreUnifiedPhotoTransformAndRequestRedraw();
-        }
-        if (togglePlan.ShouldSaveUnifiedTransformState)
-        {
-            SavePhotoTransformState(userAdjusted: _photoUserTransformDirty);
-            UpdateCurrentPageWidthNormalization();
-        }
-        if (togglePlan.ShouldResetReplayAndClearNeighbors)
-        {
-            ResetCrossPageReplayState();
-            ClearNeighborPages();
-            UpdateCurrentPageWidthNormalization();
-        }
-        if (togglePlan.ShouldRefreshImageSequenceSource)
-        {
-            RefreshCurrentImageSequenceSourceAfterCrossPageToggle();
-        }
-        if (togglePlan.ShouldReloadPdfInkCache)
-        {
-            ReloadPdfInkCacheAfterCrossPageToggle();
-        }
+            photoUnifiedTransformReady: _photoUnifiedTransformReady,
+            setCrossPageDisplayEnabled: nextEnabled => _crossPageDisplayEnabled = nextEnabled,
+            resetCrossPageNormalizedWidth: ResetCrossPageNormalizedWidth,
+            restoreUnifiedTransformAndRedraw: RestoreUnifiedPhotoTransformAndRequestRedraw,
+            saveUnifiedTransformState: () => SavePhotoTransformState(userAdjusted: _photoUserTransformDirty),
+            updateCurrentPageWidthNormalization: () => UpdateCurrentPageWidthNormalization(),
+            resetCrossPageReplayState: ResetCrossPageReplayState,
+            clearNeighborPages: ClearNeighborPages,
+            refreshCurrentImageSequenceSourceAfterToggle: RefreshCurrentImageSequenceSourceAfterCrossPageToggle,
+            reloadPdfInkCacheAfterToggle: ReloadPdfInkCacheAfterCrossPageToggle);
     }
 
     private void RestoreUnifiedPhotoTransformAndRequestRedraw()

@@ -1,6 +1,6 @@
 # ClassroomToolkit 重构交接说明（handover）
 
-最后更新：2026-03-13  
+最后更新：2026-03-14  
 当前主线：`终态最佳架构 + 全功能零回归`
 
 ## 1. 统一口径
@@ -25,12 +25,26 @@
 - `MainWindow.xaml` 已完成一轮策略化收口（退出计划 / Ink 清理候选目录 / Launcher topmost 时间戳）并补齐定向单测。
 - `MainWindow.xaml` 的 Launcher 运行时 fallback 日志判断已由独立策略接管，减少主链内联分支。
 - `MainWindow.Paint` 已完成一轮策略化收口（窗口创建/早退判定、Session 违例日志门控、PhotoClose owner 断链门控）并补齐定向单测。
+- `MainWindow.Paint` 已继续完成 toolbar direct-repair 调度协调收口：`ToolbarInteractionDirectRepairExecutionCoordinator` 接管后台调度、rerun 与 failure-plan 协调，热点文件内不再保留整段过程式调度分支。
+- `MainWindow.Photo` 已继续完成 image-manager state-change transition 收口：`ImageManagerStateChangeTransitionCoordinator` 接管 overlay normalize 调度/同步 fallback 与 surface-apply 协调，热点文件内不再保留该恢复链的过程式调度分支。
+- `MainWindow.Photo` 已继续完成 foreground retouch 收口：`ForegroundSurfaceRetouchCoordinator` 接管 overlay-activation retouch 与 explicit-foreground retouch 的节流、状态写回与最终 apply 协调，热点文件内不再保留该前台补触链的过程式判定分支。
+- `MainWindow.Photo` 已继续完成 image-manager owner-sync / open-close transition 收口：`ImageManagerVisibilityTransitionCoordinator` 接管 image-manager open/close transition 的 owner/show/close/surface 协调，`PhotoModeTransitionCoordinator` 接管 photo-mode change 下的 image-manager suppress、toolbar state、owner-sync 与 surface 协调。
 - `MainWindow.Photo` 已完成一轮策略化收口（Ink 覆盖开关门控、焦点门控、owner 同步门控、统一变换变更判定、ImageManager surface 触发门控）并补齐定向单测。
 - `PaintOverlayWindow.Presentation` 已完成一轮共享准入策略收口（焦点监控激活、导航发送准入、键盘派发门控），减少 WPS/Office 导航链重复分支。
 - `PaintOverlayWindow.Presentation` 已继续完成一轮核心门控策略收口（通道可用性、全屏类型决策、WPS hook 启用门控），并接线替换到主路径。
 - `PaintOverlayWindow.Presentation` 的剩余 tail 已按既有实现完成验证闭环：`PresentationFocusRestorePolicy`、`OverlayPresentationCommandRouter` 与相关 Presentation 定向过滤测试、`ArchitectureDependencyTests` 已通过，可从执行图中视为完成。
 - `PaintOverlayWindow.xaml` 已完成一轮运行时门控策略收口（Ink 显示切换、Topmost 应用门控、焦点解析门控、WPS Raw 兜底目标判定、Ink 缓存/保存更新计划）并补齐定向单测。
 - `PaintOverlayWindow.xaml` 已继续完成一轮运行时状态策略收口（Photo 变换记忆门控、统一变换运行时应用门控、Dispatcher 调度可用性门控）并补齐定向单测。
+- `PaintOverlayWindow.xaml` 已继续完成 cross-page display toggle 收口：`CrossPageDisplayToggleTransitionCoordinator` 接管跨页显示切换中的标志更新、统一变换恢复/保存、邻页清理、图片源刷新与 PDF ink cache reload 协调，窗口壳内不再保留整段过程式切换分支。
+- `PaintOverlayWindow.xaml` 已继续完成 ink-show transition 收口：`InkShowTransitionCoordinator` 接管显示笔迹开关中的设置变更、隐藏时清空/缓存清理、显示时当前页加载与跨页刷新请求协调，窗口壳内不再保留整段过程式开关分支。
+- `PaintOverlayWindow.Photo` 已继续完成 ink page-load 收口：`InkPageLoadCoordinator` 接管当前页笔迹加载中的 cache-scope 判断、显示状态判断、cache-hit、sidecar-fallback 与 clear-state 分支协调，热点文件内不再保留整段入口决策分支。
+- `PaintOverlayWindow.Photo` 已继续完成 ink stroke-apply 收口：`InkStrokeApplyCoordinator` 接管当前页笔迹应用中的运行时集合更新、fast-path vs redraw 分支，以及 loaded-state/perf 记账协调，热点文件内不再保留整段应用分支。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 deferred refresh 收口：`CrossPageDeferredRefreshCoordinator` 接管 post-input delay gate、延迟分发、单次 pointer-up 去重与失败恢复协调，跨页窗口文件内不再保留整段延迟刷新调度分支。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 post-input refresh-slot 收口：`CrossPagePostInputRefreshSlotCoordinator` 接管 pointer-up sequence 的 CAS acquire 语义（unset/matched/success/retry），跨页窗口文件内不再保留内联 CAS 循环。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 missing-neighbor refresh 收口：`CrossPageMissingNeighborRefreshCoordinator` 接管缺失邻页的 policy 判定、延迟分发与失败恢复协调，跨页窗口文件内不再保留整段邻页缺失刷新调度分支。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 replay dispatch 收口：`CrossPageReplayDispatchCoordinator` 接管 replay 分发的调度、inline fallback 与失败 requeue 协调，跨页窗口文件内不再保留整段 replay dispatch 分支。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 replay flush 收口：`CrossPageReplayFlushCoordinator` 接管 replay flush 的 gate 判定与 dispatch-target 选择协调，跨页窗口文件内不再保留整段 flush 入口分支。
+- `PaintOverlayWindow.Photo.CrossPage` 已继续完成 dispatch-failure 收口：`CrossPageDisplayUpdateDispatchFailureCoordinator` 接管分发失败下的 inline fallback、replay queue 与 replay flush 协调，跨页窗口文件内不再保留整段 dispatch-failure 分支。
 - `PaintOverlayWindow.Input` 已完成一轮输入路由策略收口（滚轮/键盘路由决策统一、鼠标来源门控统一）并补齐定向单测。
 - `PaintOverlayWindow.Input` 已继续完成 pointer-up 后置动作执行计划收口（追踪/刷新/回放/刷新来源聚合），并将右键/触笔来源门控并入统一路径。
 - `PaintOverlayWindow.Input` 已继续完成触笔时间戳状态收口（`StylusSampleTimestampState` + `StylusSampleTimestampPolicy` + `StylusSampleTimestampStateUpdater`），批次跨度估算/单调递增/状态写回已统一到单一状态路径并补齐定向单测。

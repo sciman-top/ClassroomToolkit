@@ -1,6 +1,6 @@
 {
     "project":  "ClassroomToolkit",
-    "updated_at":  "2026-03-13",
+    "updated_at":  "2026-03-14",
     "mode":  "repo-local-autonomous-refactor-loop",
     "scope":  {
                   "goal":  "unattended automated closure of the remaining target-architecture gap up to the final manual-regression gate",
@@ -812,6 +812,620 @@
                       "verify":  {
                                      "commands":  [
                                                       "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow|FullyQualifiedName~FloatingDispatchQueue|FullyQualifiedName~Launcher|FullyQualifiedName~ZOrderQueue|FullyQualifiedName~ArchitectureDependencyTests\""
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-toolbar-direct-repair-coordination-tail",
+                      "title":  "Close MainWindow toolbar direct-repair dispatch coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-tail-stage",
+                      "priority":  1,
+                      "order":  411,
+                      "depends_on":  [
+                                         "mainwindow-scattered-state-consolidation-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the remaining MainWindow.Paint toolbar direct-repair dispatch tail by moving background scheduling, rerun, and failure-plan coordination into ToolbarInteractionDirectRepairExecutionCoordinator and re-running the focused MainWindow and ArchitectureDependency test filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+                                         "src/ClassroomToolkit.App/Windowing/ToolbarInteractionDirectRepairExecutionCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/App/ToolbarInteractionDirectRepairExecutionCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*ToolbarInteraction*",
+                                         "tests/ClassroomToolkit.Tests/*FloatingTopmost*"
+                                     ],
+                      "done_when":  [
+                                        "Toolbar direct-repair background dispatch, rerun, and failure-plan handling no longer live inline in MainWindow.Paint.cs",
+                                        "The direct-repair path is coordinated through a dedicated Windowing unit",
+                                        "Targeted ToolbarInteraction, FloatingTopmost, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ToolbarInteractionDirectRepairExecutionCoordinatorTests|FullyQualifiedName~ToolbarInteraction|FullyQualifiedName~FloatingTopmost|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-photo-image-manager-surface-tail",
+                      "title":  "Close MainWindow photo and image-manager surface coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-tail-stage",
+                      "priority":  1,
+                      "order":  412,
+                      "depends_on":  [
+                                         "mainwindow-toolbar-direct-repair-coordination-tail"
+                                     ],
+                      "status_hint":  "deferred",
+                      "summary":  "Deferred as oversized and split into child tasks for image-manager state-change transition closure and the remaining foreground-retouch/owner-sync coordination tail.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Windowing/",
+                                         "tests/ClassroomToolkit.Tests/*ImageManager*",
+                                         "tests/ClassroomToolkit.Tests/*Foreground*",
+                                         "tests/ClassroomToolkit.Tests/*FloatingWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Image-manager surface transitions and explicit foreground retouch no longer depend on large inline MainWindow.Photo coordination branches",
+                                        "Owner and surface coordination are covered by focused policy, coordinator, or executor tests",
+                                        "Targeted ImageManager, Foreground, FloatingWindow, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManager|FullyQualifiedName~Foreground|FullyQualifiedName~FloatingWindow|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-image-manager-state-change-transition-tail",
+                      "title":  "Close MainWindow image-manager state-change transition tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-photo-image-manager-surface-tail",
+                      "priority":  1,
+                      "order":  413,
+                      "depends_on":  [
+                                         "mainwindow-toolbar-direct-repair-coordination-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the image-manager state-change transition slice by moving normalize scheduling/fallback and surface-apply coordination into ImageManagerStateChangeTransitionCoordinator and re-running the focused MainWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/Windowing/ImageManagerStateChangeTransitionCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/App/ImageManagerStateChangeTransitionCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*ImageManagerStateChange*",
+                                         "tests/ClassroomToolkit.Tests/*Foreground*",
+                                         "tests/ClassroomToolkit.Tests/*MainWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Image-manager state-change normalize scheduling and immediate fallback no longer live inline in MainWindow.Photo.cs",
+                                        "Surface-apply coordination for that state-change path is covered by a dedicated coordinator test",
+                                        "Targeted ImageManagerStateChange, Foreground, FloatingWindow, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManagerStateChangeTransitionCoordinatorTests|FullyQualifiedName~ImageManagerStateChange|FullyQualifiedName~Foreground|FullyQualifiedName~FloatingWindow|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-foreground-retouch-owner-sync-tail",
+                      "title":  "Close MainWindow foreground retouch and owner-sync coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-photo-image-manager-surface-tail",
+                      "priority":  1,
+                      "order":  414,
+                      "depends_on":  [
+                                         "mainwindow-image-manager-state-change-transition-tail"
+                                     ],
+                      "status_hint":  "deferred",
+                      "summary":  "Deferred as oversized after splitting the foreground-retouch/overlay-activation retouch slice away from the remaining image-manager owner-sync coordination tail.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Windowing/",
+                                         "tests/ClassroomToolkit.Tests/*Foreground*",
+                                         "tests/ClassroomToolkit.Tests/*OverlayActivation*",
+                                         "tests/ClassroomToolkit.Tests/*FloatingOwner*",
+                                         "tests/ClassroomToolkit.Tests/*MainWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Foreground explicit retouch and overlay-activation retouch no longer depend on large inline MainWindow.Photo coordination branches",
+                                        "Image-manager owner-sync and related surface retouch decisions are covered by focused policy, coordinator, or executor tests",
+                                        "Targeted Foreground, OverlayActivation, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Foreground|FullyQualifiedName~OverlayActivation|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-foreground-retouch-tail",
+                      "title":  "Close MainWindow foreground and overlay-activation retouch tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-foreground-retouch-owner-sync-tail",
+                      "priority":  1,
+                      "order":  415,
+                      "depends_on":  [
+                                         "mainwindow-image-manager-state-change-transition-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the MainWindow.Photo foreground-retouch slice by moving overlay-activation retouch and explicit-foreground retouch coordination into ForegroundSurfaceRetouchCoordinator and re-running the focused MainWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/Windowing/ForegroundSurfaceRetouchCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/App/ForegroundSurfaceRetouchCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*Foreground*",
+                                         "tests/ClassroomToolkit.Tests/*OverlayActivation*",
+                                         "tests/ClassroomToolkit.Tests/*MainWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Overlay-activation retouch and explicit-foreground retouch no longer depend on large inline MainWindow.Photo coordination branches",
+                                        "Retouch throttle/state-update/apply coordination is covered by a dedicated coordinator test",
+                                        "Targeted Foreground, OverlayActivation, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ForegroundSurfaceRetouchCoordinatorTests|FullyQualifiedName~Foreground|FullyQualifiedName~OverlayActivation|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-image-manager-owner-sync-tail",
+                      "title":  "Close MainWindow image-manager owner-sync coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "mainwindow-foreground-retouch-owner-sync-tail",
+                      "priority":  1,
+                      "order":  416,
+                      "depends_on":  [
+                                         "mainwindow-foreground-retouch-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the MainWindow.Photo image-manager owner-sync tail by moving image-manager open/close transition coordination into ImageManagerVisibilityTransitionCoordinator and photo-mode owner-sync coordination into PhotoModeTransitionCoordinator, then re-running the focused MainWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Windowing/",
+                                         "tests/ClassroomToolkit.Tests/*ImageManager*",
+                                         "tests/ClassroomToolkit.Tests/*FloatingOwner*",
+                                         "tests/ClassroomToolkit.Tests/*MainWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Image-manager owner attach/detach and related open/close transition coordination no longer depend on large inline MainWindow.Photo branches",
+                                        "Owner-sync and surface coordination are covered by focused policy, coordinator, or executor tests",
+                                        "Targeted ImageManager, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManager|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-display-toggle-tail",
+                      "title":  "Close PaintOverlayWindow cross-page display toggle coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  417,
+                      "depends_on":  [
+                                         "mainwindow-image-manager-owner-sync-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page display toggle shell tail by moving flag update and runtime action coordination into CrossPageDisplayToggleTransitionCoordinator, then re-running the focused PaintOverlayWindow/CrossPage/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageDisplayToggleTransitionCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageDisplayToggleTransitionCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*CrossPageDisplayToggle*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Cross-page display toggle no longer mixes flag updates and runtime action dispatch inline inside PaintOverlayWindow.xaml.cs",
+                                        "The toggle path is covered by a dedicated coordinator test with enable, disable, and no-op branches",
+                                        "Targeted CrossPageDisplayToggle, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDisplayToggleTransitionCoordinatorTests|FullyQualifiedName~CrossPageDisplayToggle|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-inkshow-transition-tail",
+                      "title":  "Close PaintOverlayWindow ink-show transition coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  418,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-display-toggle-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow ink-show transition shell tail by moving show-ink setting, clear/load actions, and cross-page refresh requests into InkShowTransitionCoordinator, then re-running the focused InkShow/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Paint/InkShowTransitionCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/InkShowTransitionCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*InkShow*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "Ink-show toggle no longer mixes setting mutation, clear/load actions, and cross-page update dispatch inline inside PaintOverlayWindow.xaml.cs",
+                                        "The show-ink toggle path is covered by a dedicated coordinator test with no-op, non-photo, disable, and enable branches",
+                                        "Targeted InkShow, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkShowTransitionCoordinatorTests|FullyQualifiedName~InkShowUpdateTransitionPolicyTests|FullyQualifiedName~PhotoShowInkOverlayChangePolicy|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-ink-page-load-tail",
+                      "title":  "Close PaintOverlayWindow ink page-load coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  419,
+                      "depends_on":  [
+                                         "paintoverlay-inkshow-transition-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow ink page-load shell tail by moving cache-hit, sidecar-fallback, and clear-state branching into InkPageLoadCoordinator, then re-running the focused InkPageLoad/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/Paint/InkPageLoadCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/InkPageLoadCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*InkPageLoad*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "LoadCurrentPageIfExists no longer mixes cache scope checks, ink visibility checks, sidecar fallback, and clear/apply dispatch inline inside PaintOverlayWindow.Photo.cs",
+                                        "The page-load path is covered by a dedicated coordinator test with skip, clear, cache-hit, sidecar-hit, and cache-miss branches",
+                                        "Targeted InkPageLoad, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkPageLoadCoordinatorTests|FullyQualifiedName~InkPersistenceTogglePolicyTests|FullyQualifiedName~CrossPageInkFastPathSelectorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-ink-stroke-apply-tail",
+                      "title":  "Close PaintOverlayWindow ink stroke-apply coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  420,
+                      "depends_on":  [
+                                         "paintoverlay-ink-page-load-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow ink stroke-apply shell tail by moving runtime stroke update, fast-path vs redraw branching, and loaded-state/perf bookkeeping into InkStrokeApplyCoordinator, then re-running the focused InkStrokeApply/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs",
+                                         "src/ClassroomToolkit.App/Paint/InkStrokeApplyCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/InkStrokeApplyCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*InkStrokeApply*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "ApplyInkStrokes no longer mixes runtime collection update, fast-path vs redraw branching, and loaded-state/perf bookkeeping inline inside PaintOverlayWindow.Photo.cs",
+                                        "The stroke-apply path is covered by a dedicated coordinator test for redraw, fast-path, and trace branches",
+                                        "Targeted InkStrokeApply, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkStrokeApplyCoordinatorTests|FullyQualifiedName~CrossPageInkFastPathSelectorTests|FullyQualifiedName~InkPageLoadCoordinatorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-deferred-refresh-tail",
+                      "title":  "Close PaintOverlayWindow cross-page deferred refresh coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  421,
+                      "depends_on":  [
+                                         "paintoverlay-ink-stroke-apply-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page deferred refresh tail by moving post-input delay gating, delayed dispatch, and failure recovery coordination into CrossPageDeferredRefreshCoordinator, then re-running the focused CrossPageDeferredRefresh/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageDeferredRefreshCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageDeferredRefreshCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*CrossPageDeferredRefresh*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "ScheduleCrossPageDisplayUpdateAfterInputSettles no longer mixes gate checks, delay timing, delayed dispatch, and failure recovery inline inside PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "The deferred refresh path is covered by a dedicated coordinator test for skip, immediate, delayed, and failure-recovery branches",
+                                        "Targeted CrossPageDeferredRefresh, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshGatePolicyTests|FullyQualifiedName~CrossPageDelayedDispatchFailureRecoveryPolicyTests|FullyQualifiedName~CrossPageDelayedDispatchFailureDiagnosticsPolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-postinput-slot-tail",
+                      "title":  "Close PaintOverlayWindow cross-page post-input refresh-slot coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  422,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-deferred-refresh-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page post-input refresh-slot tail by moving pointer-up sequence CAS acquire logic into CrossPagePostInputRefreshSlotCoordinator, then re-running the focused CrossPagePostInputSlot/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPagePostInputRefreshSlotCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPagePostInputRefreshSlotCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*CrossPagePostInput*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "TryAcquirePostInputRefreshSlot no longer embeds the pointer-up sequence CAS loop inline in PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "Refresh-slot acquire semantics are covered by a dedicated coordinator test for unset, matched, CAS success, and CAS retry branches",
+                                        "Targeted CrossPagePostInputSlot, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPagePostInputRefreshSlotCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshGatePolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-missing-neighbor-refresh-tail",
+                      "title":  "Close PaintOverlayWindow cross-page missing-neighbor refresh coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  423,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-postinput-slot-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page missing-neighbor refresh tail by moving policy-based scheduling, delayed dispatch, and failure recovery coordination into CrossPageMissingNeighborRefreshCoordinator, then re-running the focused MissingNeighborRefresh/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageMissingNeighborRefreshCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageMissingNeighborRefreshCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*MissingNeighborRefresh*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "ScheduleCrossPageDisplayUpdateForMissingNeighborPages no longer mixes policy decision, delayed scheduling, and failure recovery inline inside PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "Missing-neighbor refresh flow is covered by a dedicated coordinator test for skip, delayed run, delay failure recovery, and dispatch failure recovery branches",
+                                        "Targeted MissingNeighborRefresh, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageMissingNeighborRefreshCoordinatorTests|FullyQualifiedName~CrossPageMissingNeighborRefreshPolicyTests|FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDelayedDispatchFailureRecoveryPolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-replay-dispatch-tail",
+                      "title":  "Close PaintOverlayWindow cross-page replay dispatch coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  424,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-missing-neighbor-refresh-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page replay dispatch tail by moving replay dispatch scheduling, inline fallback, and requeue-on-failure coordination into CrossPageReplayDispatchCoordinator, then re-running the focused ReplayDispatch/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageReplayDispatchCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageReplayDispatchCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*ReplayDispatch*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "TryScheduleCrossPageReplayDispatch no longer mixes replay state mutation, dispatcher scheduling, inline fallback, and requeue handling inline in PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "Replay dispatch flow is covered by a dedicated coordinator test for scheduled, inline, requeue, and inline-throw branches",
+                                        "Targeted ReplayDispatch, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageReplayDispatchCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchPolicyTests|FullyQualifiedName~CrossPageReplayDispatchScheduleFallbackPolicy|FullyQualifiedName~CrossPageReplayPendingStateUpdaterTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-replay-flush-tail",
+                      "title":  "Close PaintOverlayWindow cross-page replay flush coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  425,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-replay-dispatch-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page replay flush tail by moving flush-gate and dispatch-target resolution into CrossPageReplayFlushCoordinator, then re-running the focused ReplayFlush/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageReplayFlushCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageReplayFlushCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*ReplayFlush*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "TryFlushCrossPageReplay no longer mixes replay-pending gate checks and dispatch-target selection inline in PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "Replay flush decision path is covered by a dedicated coordinator test for skip, visual-sync, and interaction-preferred branches",
+                                        "Targeted ReplayFlush, ReplayDispatch, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageReplayFlushCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchPolicyTests|FullyQualifiedName~CrossPageUpdateReplayPolicyTests|FullyQualifiedName~CrossPageReplayPendingStateUpdaterTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+                                       "docs/validation/2026-03-06-target-architecture-progress.md",
+                                       "docs/handover.md"
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-crosspage-dispatch-failure-tail",
+                      "title":  "Close PaintOverlayWindow cross-page dispatch-failure coordination tail",
+                      "stage":  "runtime-tail",
+                      "parent_id":  "cross-page-tail",
+                      "priority":  1,
+                      "order":  426,
+                      "depends_on":  [
+                                         "paintoverlay-crosspage-replay-flush-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Closed the PaintOverlayWindow cross-page dispatch-failure tail by moving inline-fallback, replay-queue, and replay-flush-on-failure coordination into CrossPageDisplayUpdateDispatchFailureCoordinator, then re-running the focused DispatchFailure/PaintOverlayWindow/ArchitectureDependency filter.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                         "src/ClassroomToolkit.App/Paint/CrossPageDisplayUpdateDispatchFailureCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/CrossPageDisplayUpdateDispatchFailureCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/*DispatchFailure*",
+                                         "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+                                     ],
+                      "done_when":  [
+                                        "HandleCrossPageDisplayUpdateDispatchFailure no longer mixes inline fallback, replay queue decision, diagnostics, and replay flush trigger inline in PaintOverlayWindow.Photo.CrossPage.cs",
+                                        "Dispatch-failure handling is covered by a dedicated coordinator test for inline, queue+flush, and interaction queue branches",
+                                        "Targeted DispatchFailure, ReplayQueue, PaintOverlayWindow, and ArchitectureDependency tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDisplayUpdateDispatchFailureCoordinatorTests|FullyQualifiedName~CrossPageDisplayUpdateDispatchFailureFallbackPolicyTests|FullyQualifiedName~CrossPageReplayQueuePolicyTests|FullyQualifiedName~CrossPageReplayFlushCoordinatorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
                                                   ]
                                  },
                       "doc_sync":  [

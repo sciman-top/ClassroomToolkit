@@ -1,7 +1,7 @@
 ﻿{
     "project":  "ClassroomToolkit",
     "mode":  "autonomous-refactor-loop",
-    "updated_at":  "2026-03-13T12:18:27.4311151Z",
+    "updated_at":  "2026-03-15T00:18:52.0573679+08:00",
     "current_task":  null,
     "tasks":  {
                   "phase0-baseline":  {
@@ -119,6 +119,86 @@
                                                                         "attempts":  1,
                                                                         "last_summary":  "Consolidated remaining MainWindow runtime writebacks into dedicated updaters and passed updater-focused tests (6/6) plus the task filter (166/166)."
                                                                     },
+                  "mainwindow-toolbar-direct-repair-coordination-tail":  {
+                                                                              "status":  "completed",
+                                                                              "attempts":  1,
+                                                                              "last_summary":  "Moved MainWindow.Paint toolbar direct-repair background scheduling, rerun, and failure-plan coordination into ToolbarInteractionDirectRepairExecutionCoordinator and passed the targeted ToolbarInteraction/FloatingTopmost/MainWindow/ArchitectureDependency filter (189/189)."
+                                                                          },
+                  "mainwindow-photo-image-manager-surface-tail":  {
+                                                                        "status":  "deferred",
+                                                                        "attempts":  1,
+                                                                        "last_summary":  "Deferred as oversized after splitting into child tasks: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail."
+                                                                    },
+                  "mainwindow-image-manager-state-change-transition-tail":  {
+                                                                                "status":  "completed",
+                                                                                "attempts":  1,
+                                                                                "last_summary":  "Moved MainWindow.Photo image-manager state-change normalize scheduling/fallback and surface-apply coordination into ImageManagerStateChangeTransitionCoordinator and passed the targeted filter (121/121)."
+                                                                            },
+                  "mainwindow-foreground-retouch-owner-sync-tail":  {
+                                                                         "status":  "deferred",
+                                                                         "attempts":  1,
+                                                                         "last_summary":  "Deferred as oversized after splitting into child tasks: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail."
+                                                                    },
+                  "mainwindow-foreground-retouch-tail":  {
+                                                              "status":  "completed",
+                                                              "attempts":  1,
+                                                              "last_summary":  "Moved MainWindow.Photo overlay-activation retouch and explicit-foreground retouch coordination into ForegroundSurfaceRetouchCoordinator and passed the targeted filter (146/146)."
+                                                          },
+                  "mainwindow-image-manager-owner-sync-tail":  {
+                                                                    "status":  "completed",
+                                                                    "attempts":  1,
+                                                                    "last_summary":  "Moved MainWindow.Photo image-manager open/close transition coordination into ImageManagerVisibilityTransitionCoordinator and photo-mode owner-sync coordination into PhotoModeTransitionCoordinator, then passed the targeted filter (129/129)."
+                                                                    },
+                  "paintoverlay-crosspage-display-toggle-tail":  {
+                                                                      "status":  "completed",
+                                                                      "attempts":  1,
+                                                                      "last_summary":  "Moved PaintOverlayWindow cross-page display toggle flag update and runtime action coordination into CrossPageDisplayToggleTransitionCoordinator and passed the targeted filter (17/17)."
+                                                                  },
+                  "paintoverlay-inkshow-transition-tail":  {
+                                                              "status":  "completed",
+                                                              "attempts":  1,
+                                                              "last_summary":  "Moved PaintOverlayWindow ink-show setting, clear/load actions, and cross-page refresh coordination into InkShowTransitionCoordinator and passed the targeted filter (18/18)."
+                                                          },
+                  "paintoverlay-ink-page-load-tail":  {
+                                                          "status":  "completed",
+                                                          "attempts":  1,
+                                                          "last_summary":  "Moved PaintOverlayWindow ink page-load cache-hit, sidecar-fallback, and clear-state branching into InkPageLoadCoordinator and passed the targeted filter (28/28)."
+                                                      },
+                  "paintoverlay-ink-stroke-apply-tail":  {
+                                                             "status":  "completed",
+                                                             "attempts":  1,
+                                                             "last_summary":  "Moved PaintOverlayWindow ink stroke runtime update, fast-path vs redraw branching, and loaded-state/perf bookkeeping into InkStrokeApplyCoordinator and passed the targeted filter (23/23)."
+                                                         },
+                  "paintoverlay-crosspage-deferred-refresh-tail":  {
+                                                                       "status":  "completed",
+                                                                       "attempts":  1,
+                                                                       "last_summary":  "Moved PaintOverlayWindow cross-page post-input deferred refresh gating, delayed dispatch, and failure recovery coordination into CrossPageDeferredRefreshCoordinator and passed the targeted filter (20/20)."
+                                                                   },
+                  "paintoverlay-crosspage-postinput-slot-tail":  {
+                                                                       "status":  "completed",
+                                                                       "attempts":  1,
+                                                                       "last_summary":  "Moved PaintOverlayWindow cross-page post-input refresh-slot CAS acquire logic into CrossPagePostInputRefreshSlotCoordinator and passed the targeted filter (18/18)."
+                                                                   },
+                  "paintoverlay-crosspage-missing-neighbor-refresh-tail":  {
+                                                                                "status":  "completed",
+                                                                                "attempts":  1,
+                                                                                "last_summary":  "Moved PaintOverlayWindow cross-page missing-neighbor scheduling, delayed dispatch, and failure recovery coordination into CrossPageMissingNeighborRefreshCoordinator and passed the targeted filter (25/25)."
+                                                                            },
+                  "paintoverlay-crosspage-replay-dispatch-tail":  {
+                                                                      "status":  "completed",
+                                                                      "attempts":  1,
+                                                                      "last_summary":  "Moved PaintOverlayWindow cross-page replay dispatch scheduling, inline fallback, and requeue coordination into CrossPageReplayDispatchCoordinator and passed the targeted filter (31/31)."
+                                                                  },
+                  "paintoverlay-crosspage-replay-flush-tail":  {
+                                                                   "status":  "completed",
+                                                                   "attempts":  1,
+                                                                   "last_summary":  "Moved PaintOverlayWindow cross-page replay flush gating and dispatch-target resolution into CrossPageReplayFlushCoordinator and passed the targeted filter (40/40)."
+                                                               },
+                  "paintoverlay-crosspage-dispatch-failure-tail":  {
+                                                                       "status":  "completed",
+                                                                       "attempts":  1,
+                                                                       "last_summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21)."
+                                                                   },
                   "sqlite-history-domain-extension-tail":  {
                                                                "status":  "deferred",
                                                                "attempts":  1,
@@ -615,7 +695,231 @@
                         "summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2227/2227), full Release passed (2227/2227), and acceptance/progress/handover/matrix docs were synced.",
                         "reason":  "",
                         "recorded_at":  "2026-03-13T12:18:27.4361341Z"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-toolbar-direct-repair-coordination-tail",
+                        "summary":  "Executor started task mainwindow-toolbar-direct-repair-coordination-tail for MainWindow.Paint toolbar direct-repair dispatch coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:12:50.3136067+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "mainwindow-toolbar-direct-repair-coordination-tail",
+                        "summary":  "Moved MainWindow.Paint toolbar direct-repair background scheduling, rerun, and failure-plan coordination into ToolbarInteractionDirectRepairExecutionCoordinator and passed the targeted filter (189/189).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:12:50.3136067+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-photo-image-manager-surface-tail",
+                        "summary":  "Executor started task mainwindow-photo-image-manager-surface-tail for MainWindow.Photo image-manager surface coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:17:55.3374907+08:00"
+                    },
+                    {
+                        "action":  "defer",
+                        "task_id":  "mainwindow-photo-image-manager-surface-tail",
+                        "summary":  "Deferred mainwindow-photo-image-manager-surface-tail as oversized and split it into child tasks: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail.",
+                        "reason":  "oversized-split",
+                        "recorded_at":  "2026-03-14T23:17:55.3374907+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-image-manager-state-change-transition-tail",
+                        "summary":  "Executor started task mainwindow-image-manager-state-change-transition-tail for MainWindow.Photo image-manager state-change transition closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:17:55.3374907+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "mainwindow-image-manager-state-change-transition-tail",
+                        "summary":  "Moved MainWindow.Photo image-manager state-change normalize scheduling/fallback and surface-apply coordination into ImageManagerStateChangeTransitionCoordinator and passed the targeted filter (121/121).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:17:55.3374907+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-foreground-retouch-owner-sync-tail",
+                        "summary":  "Executor started task mainwindow-foreground-retouch-owner-sync-tail for MainWindow.Photo foreground retouch and owner-sync coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:22:56.4268328+08:00"
+                    },
+                    {
+                        "action":  "defer",
+                        "task_id":  "mainwindow-foreground-retouch-owner-sync-tail",
+                        "summary":  "Deferred mainwindow-foreground-retouch-owner-sync-tail as oversized and split it into child tasks: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail.",
+                        "reason":  "oversized-split",
+                        "recorded_at":  "2026-03-14T23:22:56.4268328+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-foreground-retouch-tail",
+                        "summary":  "Executor started task mainwindow-foreground-retouch-tail for MainWindow.Photo foreground and overlay-activation retouch closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:22:56.4268328+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "mainwindow-foreground-retouch-tail",
+                        "summary":  "Moved MainWindow.Photo overlay-activation retouch and explicit-foreground retouch coordination into ForegroundSurfaceRetouchCoordinator and passed the targeted filter (146/146).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:22:56.4268328+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-image-manager-owner-sync-tail",
+                        "summary":  "Executor started task mainwindow-image-manager-owner-sync-tail for MainWindow.Photo image-manager owner-sync and open-close transition coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:29:24.4698351+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "mainwindow-image-manager-owner-sync-tail",
+                        "summary":  "Moved MainWindow.Photo image-manager open/close transition coordination into ImageManagerVisibilityTransitionCoordinator and photo-mode owner-sync coordination into PhotoModeTransitionCoordinator, then passed the targeted filter (129/129).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:29:24.4698351+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-display-toggle-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-display-toggle-tail for PaintOverlayWindow cross-page display toggle shell coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:36:09.7587707+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-display-toggle-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page display toggle flag update and runtime action coordination into CrossPageDisplayToggleTransitionCoordinator and passed the targeted filter (17/17).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:36:09.7587707+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-inkshow-transition-tail",
+                        "summary":  "Executor started task paintoverlay-inkshow-transition-tail for PaintOverlayWindow ink-show transition coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:39:31.3632780+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-inkshow-transition-tail",
+                        "summary":  "Moved PaintOverlayWindow ink-show setting, clear/load actions, and cross-page refresh coordination into InkShowTransitionCoordinator and passed the targeted filter (18/18).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:39:31.3632780+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-ink-page-load-tail",
+                        "summary":  "Executor started task paintoverlay-ink-page-load-tail for PaintOverlayWindow ink page-load coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:44:59.1721934+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-ink-page-load-tail",
+                        "summary":  "Moved PaintOverlayWindow ink page-load cache-hit, sidecar-fallback, and clear-state branching into InkPageLoadCoordinator and passed the targeted filter (28/28).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:44:59.1721934+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-ink-stroke-apply-tail",
+                        "summary":  "Executor started task paintoverlay-ink-stroke-apply-tail for PaintOverlayWindow ink stroke-apply coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-14T23:55:50.8607179+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-ink-stroke-apply-tail",
+                        "summary":  "Moved PaintOverlayWindow ink stroke runtime update, fast-path vs redraw branching, and loaded-state/perf bookkeeping into InkStrokeApplyCoordinator and passed the targeted filter (23/23).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-14T23:55:50.8607179+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-deferred-refresh-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-deferred-refresh-tail for PaintOverlayWindow cross-page deferred refresh coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:02:26.7074401+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-deferred-refresh-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page post-input deferred refresh gating, delayed dispatch, and failure recovery coordination into CrossPageDeferredRefreshCoordinator and passed the targeted filter (20/20).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:02:26.7074401+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-postinput-slot-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-postinput-slot-tail for PaintOverlayWindow cross-page post-input refresh-slot coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:06:35.6424467+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-postinput-slot-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page post-input refresh-slot CAS acquire logic into CrossPagePostInputRefreshSlotCoordinator and passed the targeted filter (18/18).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:06:35.6424467+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-missing-neighbor-refresh-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-missing-neighbor-refresh-tail for PaintOverlayWindow cross-page missing-neighbor refresh coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:09:54.7440876+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-missing-neighbor-refresh-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page missing-neighbor scheduling, delayed dispatch, and failure recovery coordination into CrossPageMissingNeighborRefreshCoordinator and passed the targeted filter (25/25).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:09:54.7440876+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-replay-dispatch-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-replay-dispatch-tail for PaintOverlayWindow cross-page replay dispatch coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:13:03.3787730+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-replay-dispatch-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page replay dispatch scheduling, inline fallback, and requeue coordination into CrossPageReplayDispatchCoordinator and passed the targeted filter (31/31).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:13:03.3787730+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-replay-flush-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-replay-flush-tail for PaintOverlayWindow cross-page replay flush coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:15:46.9002292+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-replay-flush-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page replay flush gating and dispatch-target resolution into CrossPageReplayFlushCoordinator and passed the targeted filter (40/40).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:15:46.9002292+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-crosspage-dispatch-failure-tail",
+                        "summary":  "Executor started task paintoverlay-crosspage-dispatch-failure-tail for PaintOverlayWindow cross-page dispatch-failure coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-15T00:18:52.0573679+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-crosspage-dispatch-failure-tail",
+                        "summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-15T00:18:52.0573679+08:00"
                     }
                 ],
-    "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2227/2227), full Release passed (2227/2227), and acceptance/progress/handover/matrix docs were synced."
+    "last_summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21)."
 }
