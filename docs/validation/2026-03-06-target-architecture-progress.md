@@ -1,6 +1,6 @@
 ﻿# 终态最佳架构进度映射（M1-M5）
 
-最后更新：2026-03-14  
+最后更新：2026-03-15  
 状态：active  
 对应主方案：`docs/plans/2026-03-06-best-target-architecture-plan.md`
 
@@ -95,8 +95,8 @@
 ## 4. 当前硬指标
 
 - App 层直接引用 `ClassroomToolkit.Interop` 的文件数：`6`
-- 全量 Debug 测试：`2227/2227`（最新冻结复检，通过）
-- 全量 Release 测试：`2227/2227`（最新冻结复检，通过）
+- 全量 Debug 测试：`2413/2413`（最新冻结复检，通过）
+- 全量 Release 测试：`2413/2413`（最新冻结复检，通过）
 
 ### 4.1 当前结构现实
 
@@ -176,8 +176,8 @@ CPU 主路径保持稳定可发布；GPU 路径维持双门控可选启用，探
 ## 8. 最近验证证据
 
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"`：通过（`5/5`，`automated-freeze-recheck-after-gap-closure`，2026-03-13）
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：通过（`2227/2227`，`automated-freeze-recheck-after-gap-closure`，2026-03-13）
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：通过（`2227/2227`，`automated-freeze-recheck-after-gap-closure`，2026-03-13）
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：通过（`2413/2413`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：通过（`2413/2413`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"`：失败（`4/5`，`ArchitectureDependencyTests.AppLayer_ShouldAvoidInfraNamespace_OutsideCompositionRoot` 报告新增 App->Infra 直连：`InkHistoryPersistenceBridge.cs`、`PaintOverlayWindow.Export.cs`、`PaintWindowFactory.cs`）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：失败（`2226/2227`，同一 ArchitectureDependencyTests 守卫失败）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：失败（`2226/2227`，同一 ArchitectureDependencyTests 守卫失败）

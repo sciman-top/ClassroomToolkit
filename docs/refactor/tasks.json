@@ -1649,7 +1649,7 @@
                                          "ink-gpu-release-strategy-tail"
                                      ],
                       "status_hint":  "completed",
-                      "summary":  "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2227/2227), and full Release (2227/2227), with acceptance/progress/handover/matrix docs synced.",
+                      "summary":  "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2413/2413), and full Release (2413/2413), with acceptance/progress/handover/matrix docs synced.",
                       "file_hints":  [
                                          "docs/validation/target-architecture-final-acceptance.md",
                                          "docs/validation/2026-03-06-target-architecture-progress.md",

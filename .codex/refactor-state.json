@@ -227,7 +227,7 @@
                   "automated-freeze-recheck-after-gap-closure":  {
                                                                      "status":  "completed",
                                                                      "attempts":  2,
-                                                                     "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2227/2227), full Release passed (2227/2227), and acceptance/progress/handover/matrix docs were synced."
+                                                                     "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2413/2413), full Release passed (2413/2413), and acceptance/progress/handover/matrix docs were synced."
                                                                  }
               },
     "blocked":  [
