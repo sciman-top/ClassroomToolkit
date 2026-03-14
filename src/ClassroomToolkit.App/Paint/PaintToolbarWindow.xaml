@@ -23,6 +23,9 @@
             <Setter Property="Height" Value="30"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -102,16 +105,19 @@
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0" 
                                   Style="{StaticResource Style_ColorBubble}" 
+                                  ToolTip="长按更换颜色"
                                   Click="OnColorClick" 
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}"/>
                     
                     <ToggleButton x:Name="QuickColor2Button" Background="{StaticResource Brush_Pen_Red}" Tag="1" 
                                   Style="{StaticResource Style_ColorBubble}" 
+                                  ToolTip="长按更换颜色"
                                   Click="OnColorClick" 
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}"/>
                     
                     <ToggleButton x:Name="QuickColor3Button" Background="{StaticResource Brush_Pen_Blue}" Tag="2" 
                                   Style="{StaticResource Style_ColorBubble}" 
+                                  ToolTip="长按更换颜色"
                                   Click="OnColorClick" 
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}"/>
                 </StackPanel>

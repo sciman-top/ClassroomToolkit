@@ -159,6 +159,15 @@ public sealed class AppSettingsService
             settings.PhotoManagerWindowWidth = GetInt(paint, "photo_manager_window_width", settings.PhotoManagerWindowWidth);
             settings.PhotoManagerWindowHeight = GetInt(paint, "photo_manager_window_height", settings.PhotoManagerWindowHeight);
             settings.PhotoManagerLeftPanelRatio = GetDouble(paint, "photo_manager_left_panel_ratio", settings.PhotoManagerLeftPanelRatio);
+            settings.PhotoManagerLeftPanelWidth = GetInt(paint, "photo_manager_left_panel_width", settings.PhotoManagerLeftPanelWidth);
+            settings.PhotoManagerThumbnailSize = GetDouble(
+                paint,
+                "photo_manager_thumbnail_size",
+                settings.PhotoManagerThumbnailSize);
+            settings.PhotoManagerListMode = GetBool(
+                paint,
+                "photo_manager_list_mode",
+                settings.PhotoManagerListMode);
             settings.PhotoUnifiedTransformEnabled = GetBool(
                 paint,
                 "photo_unified_transform_enabled",
@@ -294,6 +303,9 @@ public sealed class AppSettingsService
         paint["photo_manager_window_width"] = settings.PhotoManagerWindowWidth.ToString(CultureInfo.InvariantCulture);
         paint["photo_manager_window_height"] = settings.PhotoManagerWindowHeight.ToString(CultureInfo.InvariantCulture);
         paint["photo_manager_left_panel_ratio"] = settings.PhotoManagerLeftPanelRatio.ToString("0.####", CultureInfo.InvariantCulture);
+        paint["photo_manager_left_panel_width"] = settings.PhotoManagerLeftPanelWidth.ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_thumbnail_size"] = settings.PhotoManagerThumbnailSize.ToString("0.##", CultureInfo.InvariantCulture);
+        paint["photo_manager_list_mode"] = settings.PhotoManagerListMode ? "True" : "False";
         paint["photo_unified_transform_enabled"] = settings.PhotoUnifiedTransformEnabled ? "True" : "False";
         paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
         paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);

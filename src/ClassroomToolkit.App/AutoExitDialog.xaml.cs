@@ -26,16 +26,12 @@ public partial class AutoExitDialog : Window
             return;
         }
         Minutes = minutes;
-        // 不设置 DialogResult，直接关闭窗口
-        // 调用方会通过 SafeShowDialog 的返回值知道结果
-        Close();
+        DialogResult = true;
     }
 
     private void OnCancel(object sender, RoutedEventArgs e)
     {
-        // 不设置 DialogResult，直接关闭窗口
-        // 调用方会通过 SafeShowDialog 的返回值知道结果
-        Close();
+        DialogResult = false;
     }
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)

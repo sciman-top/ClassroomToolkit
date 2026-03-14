@@ -99,7 +99,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         ToolbarWindow.ApplySettings(settings);
         WireToolbarBehaviorEvents();
         
-        ApplyInitialOverlaySettings(settings);
+        ApplyInitialOverlaySettings(settings, ResolvePreferredPrimaryToolMode());
     }
 
     private void WireOverlayWindowEvents()
@@ -310,11 +310,24 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     private void OnToolbarPhotoOpenRequested() => PhotoOpenRequested?.Invoke();
 
-    private void ApplyInitialOverlaySettings(AppSettings settings)
+    private PaintToolMode ResolvePreferredPrimaryToolMode()
+    {
+        var mode = ToolbarWindow?.CurrentMode ?? PaintToolMode.Brush;
+        return mode switch
+        {
+            PaintToolMode.Cursor => PaintToolMode.Cursor,
+            PaintToolMode.Eraser => PaintToolMode.Eraser,
+            PaintToolMode.RegionErase => PaintToolMode.RegionErase,
+            PaintToolMode.Brush => PaintToolMode.Brush,
+            _ => PaintToolMode.Brush
+        };
+    }
+
+    private void ApplyInitialOverlaySettings(AppSettings settings, PaintToolMode preferredPrimaryMode)
     {
         if (OverlayWindow == null || ToolbarWindow == null) return;
         
-        OverlayWindow.SetMode(PaintToolMode.Brush);
+        OverlayWindow.SetMode(preferredPrimaryMode);
         OverlayWindow.SetBrush(settings.BrushColor, settings.BrushSize, settings.BrushOpacity);
         OverlayWindow.SetClassroomWritingMode(settings.ClassroomWritingMode);
         OverlayWindow.RestoreStylusAdaptiveState(
@@ -433,8 +446,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     public void ApplySettings(AppSettings settings)
     {
-        ApplyInitialOverlaySettings(settings);
         ToolbarWindow?.ApplySettings(settings);
+        ApplyInitialOverlaySettings(settings, ResolvePreferredPrimaryToolMode());
     }
 
     public void CaptureToolbarPosition(AppSettings settings, bool save = true)

@@ -11,6 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Settings;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
@@ -20,9 +21,14 @@ namespace ClassroomToolkit.App.Photos;
 public partial class ImageManagerWindow : Window
 {
     private const double DefaultLeftRatio = 2.0 / 7.0;
-    private const double MinLeftRatio = 0.22;
-    private const double MaxLeftRatio = 0.46;
+    private const double MinLeftRatio = 0.05;
+    private const double MaxLeftRatio = 0.95;
     private const double NarrowWindowThreshold = 1100.0;
+    private const double DefaultThumbnailSize = 120.0;
+    private const double MinThumbnailSize = 90.0;
+    private const double MaxThumbnailSize = 420.0;
+    private const double DefaultWindowWidth = 1100.0;
+    private const double DefaultWindowHeight = 700.0;
 
     private IntPtr _hwnd;
     private readonly List<ImageItem> _navigableCache = new();
@@ -34,12 +40,16 @@ public partial class ImageManagerWindow : Window
     private bool _suppressKeyboardNavigation;
     private bool _layoutApplying;
     private double _preferredLeftRatio = DefaultLeftRatio;
+    private int _preferredLeftPanelWidth;
+    private double _restoredWindowWidth = DefaultWindowWidth;
+    private double _restoredWindowHeight = DefaultWindowHeight;
 
     public ImageManagerViewModel ViewModel { get; }
 
     public event Action<IReadOnlyList<string>, int>? ImageSelected;
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
     public event Action<IReadOnlyList<string>>? RecentsChanged;
+    public event Action<double, int>? LeftPanelLayoutChanged;
 
     public ImageManagerWindow(IReadOnlyList<string> favorites, IReadOnlyList<string> recents)
     {
@@ -58,11 +68,21 @@ public partial class ImageManagerWindow : Window
         SetViewMode(listMode: false);
         Loaded += (_, _) => InitializeTree();
         Loaded += (_, _) => InitializeDefaultFolder();
+        Loaded += (_, _) => EnterInitialMaximizedState();
         Loaded += (_, _) => ApplyAdaptiveLayout();
+        Loaded += (_, _) => UpdateWindowStateToggleButton();
         PreviewKeyDown += OnPreviewKeyDown;
         Closing += (_, _) => BeginClose();
-        SizeChanged += (_, _) => ApplyAdaptiveLayout();
-        StateChanged += (_, _) => ApplyAdaptiveLayout();
+        SizeChanged += (_, _) =>
+        {
+            TrackRestoredWindowSize();
+            ApplyAdaptiveLayout();
+        };
+        StateChanged += (_, _) =>
+        {
+            ApplyAdaptiveLayout();
+            UpdateWindowStateToggleButton();
+        };
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
@@ -82,21 +102,39 @@ public partial class ImageManagerWindow : Window
         if (settings.PhotoManagerWindowWidth > 0)
         {
             Width = settings.PhotoManagerWindowWidth;
+            _restoredWindowWidth = settings.PhotoManagerWindowWidth;
         }
         if (settings.PhotoManagerWindowHeight > 0)
         {
             Height = settings.PhotoManagerWindowHeight;
+            _restoredWindowHeight = settings.PhotoManagerWindowHeight;
         }
 
         _preferredLeftRatio = NormalizeLeftRatio(settings.PhotoManagerLeftPanelRatio, DefaultLeftRatio);
+        _preferredLeftPanelWidth = Math.Max(0, settings.PhotoManagerLeftPanelWidth);
+        if (ThumbnailSizeSlider != null)
+        {
+            ThumbnailSizeSlider.Value = NormalizeThumbnailSize(settings.PhotoManagerThumbnailSize, DefaultThumbnailSize);
+        }
+        SetViewMode(settings.PhotoManagerListMode);
     }
 
     public void CaptureLayoutSettings(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        settings.PhotoManagerWindowWidth = (int)Math.Round(ActualWidth > 0 ? ActualWidth : Width);
-        settings.PhotoManagerWindowHeight = (int)Math.Round(ActualHeight > 0 ? ActualHeight : Height);
-        settings.PhotoManagerLeftPanelRatio = NormalizeLeftRatio(CalculateCurrentLeftRatio(), _preferredLeftRatio);
+        UpdatePreferredLeftLayoutFromCurrent();
+        var width = WindowState == WindowState.Normal
+            ? (ActualWidth > 0 ? ActualWidth : Width)
+            : _restoredWindowWidth;
+        var height = WindowState == WindowState.Normal
+            ? (ActualHeight > 0 ? ActualHeight : Height)
+            : _restoredWindowHeight;
+        settings.PhotoManagerWindowWidth = (int)Math.Round(width);
+        settings.PhotoManagerWindowHeight = (int)Math.Round(height);
+        settings.PhotoManagerLeftPanelRatio = _preferredLeftRatio;
+        settings.PhotoManagerLeftPanelWidth = _preferredLeftPanelWidth;
+        settings.PhotoManagerThumbnailSize = NormalizeThumbnailSize(ThumbnailSizeSlider?.Value ?? DefaultThumbnailSize, DefaultThumbnailSize);
+        settings.PhotoManagerListMode = ViewModel.ListMode;
     }
 
     private async void InitializeTree()
@@ -670,6 +708,8 @@ public partial class ImageManagerWindow : Window
     {
         if (_isClosing) return;
         _isClosing = true;
+        UpdatePreferredLeftLayoutFromCurrent();
+        LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
         _thumbnailCts?.Cancel();
     }
 
@@ -743,10 +783,18 @@ public partial class ImageManagerWindow : Window
         WindowPlacementExecutor.TryRefreshFrame(hwnd);
     }
 
+    private void OnMainColumnSplitterDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        UpdatePreferredLeftLayoutFromCurrent();
+    }
+
     private void OnMainColumnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        _preferredLeftRatio = NormalizeLeftRatio(CalculateCurrentLeftRatio(), _preferredLeftRatio);
-        ApplyAdaptiveLayout();
+        Dispatcher.BeginInvoke(() =>
+        {
+            UpdatePreferredLeftLayoutFromCurrent();
+            LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
+        }, DispatcherPriority.Background);
     }
 
     private void ApplyAdaptiveLayout()
@@ -774,20 +822,26 @@ public partial class ImageManagerWindow : Window
                 effectiveRatio = Math.Min(effectiveRatio, 0.27);
             }
 
-            var desiredLeft = available * effectiveRatio;
-            var boundedLeft = Math.Clamp(desiredLeft, LeftColumn.MinWidth, LeftColumn.MaxWidth);
             var minRight = RightColumn.MinWidth > 0 ? RightColumn.MinWidth : 560.0;
+            var desiredLeft = _preferredLeftPanelWidth > 0
+                ? _preferredLeftPanelWidth
+                : available * effectiveRatio;
+            var maxLeft = double.IsInfinity(LeftColumn.MaxWidth) ? available - minRight : LeftColumn.MaxWidth;
+            maxLeft = Math.Max(LeftColumn.MinWidth, Math.Min(maxLeft, available - minRight));
+            var boundedLeft = Math.Clamp(desiredLeft, LeftColumn.MinWidth, maxLeft);
 
             if (available - boundedLeft < minRight)
             {
                 boundedLeft = Math.Max(LeftColumn.MinWidth, available - minRight);
             }
 
-            boundedLeft = Math.Clamp(boundedLeft, LeftColumn.MinWidth, LeftColumn.MaxWidth);
+            boundedLeft = Math.Clamp(boundedLeft, LeftColumn.MinWidth, maxLeft);
             var boundedRight = Math.Max(minRight, available - boundedLeft);
 
             LeftColumn.Width = new GridLength(Math.Round(boundedLeft), GridUnitType.Pixel);
             RightColumn.Width = new GridLength(Math.Round(boundedRight), GridUnitType.Pixel);
+            _preferredLeftRatio = boundedLeft / available;
+            _preferredLeftPanelWidth = (int)Math.Round(boundedLeft);
         }
         finally
         {
@@ -799,8 +853,23 @@ public partial class ImageManagerWindow : Window
     {
         var splitterWidth = Math.Max(0, SplitterColumn.ActualWidth > 0 ? SplitterColumn.ActualWidth : 6);
         var total = Math.Max(1, RootGrid.ActualWidth - splitterWidth);
-        var left = LeftColumn.ActualWidth > 0 ? LeftColumn.ActualWidth : LeftColumn.Width.Value;
+        var left = LeftColumn.ActualWidth > 0
+            ? LeftColumn.ActualWidth
+            : (LeftColumn.Width.IsAbsolute ? LeftColumn.Width.Value : LeftColumn.MinWidth);
         return left / total;
+    }
+
+    private void UpdatePreferredLeftLayoutFromCurrent()
+    {
+        if (!IsLoaded || RootGrid == null)
+        {
+            return;
+        }
+
+        _preferredLeftRatio = NormalizeLeftRatio(CalculateCurrentLeftRatio(), _preferredLeftRatio);
+        _preferredLeftPanelWidth = LeftColumn.ActualWidth > 0
+            ? (int)Math.Round(LeftColumn.ActualWidth)
+            : (int)Math.Round(LeftColumn.Width.IsAbsolute ? LeftColumn.Width.Value : 0);
     }
 
     private static double NormalizeLeftRatio(double ratio, double fallback)
@@ -810,6 +879,146 @@ public partial class ImageManagerWindow : Window
             return fallback;
         }
         return Math.Clamp(ratio, MinLeftRatio, MaxLeftRatio);
+    }
+
+    private static double NormalizeThumbnailSize(double size, double fallback)
+    {
+        if (double.IsNaN(size) || double.IsInfinity(size) || size <= 0)
+        {
+            return fallback;
+        }
+        return Math.Clamp(size, MinThumbnailSize, MaxThumbnailSize);
+    }
+
+    private void EnterInitialMaximizedState()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        WindowState = WindowState.Maximized;
+    }
+
+    private void TrackRestoredWindowSize()
+    {
+        if (WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        if (width > 0)
+        {
+            _restoredWindowWidth = width;
+        }
+        if (height > 0)
+        {
+            _restoredWindowHeight = height;
+        }
+    }
+
+    private void OnRestoreWindowClick(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            RestoreWindowToManagedBounds();
+            return;
+        }
+
+        WindowState = WindowState.Maximized;
+    }
+
+    private void OnCloseWindowClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (e.ClickCount == 2)
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                RestoreWindowToManagedBounds();
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+            }
+            e.Handled = true;
+            return;
+        }
+
+        if (WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+        }
+        catch
+        {
+            // Ignore drag exceptions from transient mouse capture state.
+        }
+    }
+
+    private void RestoreWindowToManagedBounds()
+    {
+        if (WindowState == WindowState.Normal)
+        {
+            return;
+        }
+
+        WindowState = WindowState.Normal;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            var plan = ImageManagerRestoreBoundsPolicy.Resolve(
+                restoredWidth: _restoredWindowWidth,
+                restoredHeight: _restoredWindowHeight,
+                defaultWidth: DefaultWindowWidth,
+                defaultHeight: DefaultWindowHeight,
+                minWidth: MinWidth,
+                minHeight: MinHeight,
+                workArea: SystemParameters.WorkArea);
+
+            Width = plan.Width;
+            Height = plan.Height;
+            if (!double.IsNaN(plan.Left))
+            {
+                Left = plan.Left;
+            }
+            if (!double.IsNaN(plan.Top))
+            {
+                Top = plan.Top;
+            }
+
+            TrackRestoredWindowSize();
+            ApplyAdaptiveLayout();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void UpdateWindowStateToggleButton()
+    {
+        if (WindowStateToggleButton == null)
+        {
+            return;
+        }
+
+        WindowStateToggleButton.Content = WindowState == WindowState.Maximized ? "还原" : "最大化";
     }
 }
 

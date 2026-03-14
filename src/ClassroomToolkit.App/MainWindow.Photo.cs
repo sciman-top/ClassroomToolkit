@@ -88,6 +88,7 @@ public partial class MainWindow
         imageManagerWindow.ImageSelected += OnImageSelected;
         imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
         imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
+        imageManagerWindow.LeftPanelLayoutChanged += OnImageManagerLeftPanelLayoutChanged;
         imageManagerWindow.ShowInkOverlayChanged += OnImageManagerShowInkOverlayChanged;
         imageManagerWindow.StateChanged += OnImageManagerStateChanged;
         imageManagerWindow.Activated += OnImageManagerWindowActivated;
@@ -186,6 +187,7 @@ public partial class MainWindow
         closedWindow.ImageSelected -= OnImageSelected;
         closedWindow.FavoritesChanged -= OnPhotoFavoritesChanged;
         closedWindow.RecentsChanged -= OnPhotoRecentsChanged;
+        closedWindow.LeftPanelLayoutChanged -= OnImageManagerLeftPanelLayoutChanged;
         closedWindow.ShowInkOverlayChanged -= OnImageManagerShowInkOverlayChanged;
         closedWindow.StateChanged -= OnImageManagerStateChanged;
         closedWindow.Activated -= OnImageManagerWindowActivated;
@@ -337,6 +339,13 @@ public partial class MainWindow
     private void OnPhotoRecentsChanged(IReadOnlyList<string> recents)
     {
         _settings.PhotoRecentFolders = recents.ToList();
+        SaveSettings();
+    }
+
+    private void OnImageManagerLeftPanelLayoutChanged(double ratio, int width)
+    {
+        _settings.PhotoManagerLeftPanelRatio = ratio;
+        _settings.PhotoManagerLeftPanelWidth = width;
         SaveSettings();
     }
 

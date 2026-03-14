@@ -83,6 +83,9 @@ public sealed class AppSettings
     public int PhotoManagerWindowWidth { get; set; } = 0;
     public int PhotoManagerWindowHeight { get; set; } = 0;
     public double PhotoManagerLeftPanelRatio { get; set; } = 2.0 / 7.0;
+    public int PhotoManagerLeftPanelWidth { get; set; } = 0;
+    public double PhotoManagerThumbnailSize { get; set; } = 120.0;
+    public bool PhotoManagerListMode { get; set; } = false;
     public bool PhotoUnifiedTransformEnabled { get; set; } = false;
     public double PhotoUnifiedScaleX { get; set; } = 1.0;
     public double PhotoUnifiedScaleY { get; set; } = 1.0;

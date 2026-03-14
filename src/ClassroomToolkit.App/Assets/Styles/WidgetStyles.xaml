@@ -623,6 +623,9 @@
         <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
+        <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+        <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -652,6 +655,9 @@
         <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
+        <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+        <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
