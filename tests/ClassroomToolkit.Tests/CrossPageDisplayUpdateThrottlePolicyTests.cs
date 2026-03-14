@@ -22,27 +22,36 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
         decision.DelayMs.Should().Be(CrossPageDisplayUpdateThrottleDefaults.ImmediateDelayMs);
     }
 
-    [Theory]
-    [InlineData(true, false, 5.1, 24, 23)]
-    [InlineData(false, true, 10.0, 24, 18)]
-    public void Resolve_ShouldReturnDelayed_WhenThrottleActiveAndElapsedNotEnough(
-        bool photoPanning,
-        bool crossPageDragging,
-        double elapsedMs,
-        int draggingMinIntervalMs,
-        int expectedDelay)
+    [Fact]
+    public void Resolve_ShouldReturnDelayed_WhenPhotoPanThrottleActiveAndElapsedNotEnough()
     {
         var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
             updatePending: false,
-            photoPanning: photoPanning,
-            crossPageDragging: crossPageDragging,
+            photoPanning: true,
+            crossPageDragging: false,
             inkOperationActive: false,
-            elapsedMs: elapsedMs,
-            draggingMinIntervalMs: draggingMinIntervalMs,
+            elapsedMs: 5.1,
+            draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(expectedDelay);
+        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs - 5);
+    }
+
+    [Fact]
+    public void Resolve_ShouldReturnDelayed_WhenCrossPageDragThrottleActiveAndElapsedNotEnough()
+    {
+        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+            updatePending: false,
+            photoPanning: false,
+            crossPageDragging: true,
+            inkOperationActive: false,
+            elapsedMs: 10.0,
+            draggingMinIntervalMs: 24,
+            normalMinIntervalMs: 16);
+
+        decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
+        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs - 10);
     }
 
     [Fact]
@@ -69,7 +78,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             photoPanning: true,
             crossPageDragging: false,
             inkOperationActive: false,
-            elapsedMs: 28,
+            elapsedMs: CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs,
             draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 

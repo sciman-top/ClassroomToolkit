@@ -5,18 +5,25 @@ internal static class CrossPageNeighborInkFramePolicy
     internal static CrossPageNeighborInkFrameDecision Resolve(
         bool slotPageChanged,
         bool hasCurrentInkFrame,
+        bool hasTargetInkStrokes,
         bool holdInkReplacement,
         bool usedPreservedInkFrame,
         bool hasResolvedInkBitmap)
     {
+        if (!hasTargetInkStrokes && !hasResolvedInkBitmap)
+        {
+            return new CrossPageNeighborInkFrameDecision(
+                ClearCurrentFrame: true,
+                AllowResolvedInkReplacement: false,
+                KeepVisible: false);
+        }
+
         var keepExistingFrame = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
             slotPageChanged,
             hasCurrentInkFrame);
-        var preserveCurrentUntilReplacement = slotPageChanged && hasCurrentInkFrame && !hasResolvedInkBitmap;
         var preservePreservedUntilReplacement = usedPreservedInkFrame && !hasResolvedInkBitmap;
         var clearCurrentFrame = !keepExistingFrame
             && !holdInkReplacement
-            && !preserveCurrentUntilReplacement
             && !preservePreservedUntilReplacement;
         var allowResolvedInkReplacement = hasResolvedInkBitmap
             && !holdInkReplacement
@@ -24,7 +31,10 @@ internal static class CrossPageNeighborInkFramePolicy
                 slotPageChanged,
                 hasCurrentInkFrame,
                 usedPreservedInkFrame);
-        var keepVisible = hasCurrentInkFrame || usedPreservedInkFrame || allowResolvedInkReplacement || holdInkReplacement;
+        var keepVisible = keepExistingFrame
+            || preservePreservedUntilReplacement
+            || allowResolvedInkReplacement
+            || holdInkReplacement;
 
         return new CrossPageNeighborInkFrameDecision(
             ClearCurrentFrame: clearCurrentFrame,

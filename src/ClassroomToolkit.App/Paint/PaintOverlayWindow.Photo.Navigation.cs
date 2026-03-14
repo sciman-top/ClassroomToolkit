@@ -384,6 +384,7 @@ public partial class PaintOverlayWindow
             ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: !IsPhotoInkModeActive());
             SyncPhotoInteractiveRefreshAnchor();
         }
+        UpdatePhotoInkClip();
     }
 
     private void RefreshPhotoBackgroundVisibility()
@@ -392,6 +393,43 @@ public partial class PaintOverlayWindow
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
             hasBackgroundSource: PhotoBackground.Source != null);
+        UpdatePhotoInkClip();
+    }
+
+    private void UpdatePhotoInkClip()
+    {
+        Rect clipBounds = Rect.Empty;
+        if (PhotoBackground.Source is BitmapSource bitmap)
+        {
+            var usePhotoTransform = ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
+            var currentPageScreenRect = Rect.Empty;
+            if (!usePhotoTransform)
+            {
+                _ = TryBuildImageScreenRect(bitmap, _photoContentTransform, out currentPageScreenRect);
+            }
+
+            clipBounds = PhotoInkCurrentPageClipPolicy.ResolveBounds(
+                photoInkModeActive: IsPhotoInkModeActive(),
+                crossPageDisplayActive: IsCrossPageDisplayActive(),
+                usePhotoTransform: usePhotoTransform,
+                currentPageScreenRect: currentPageScreenRect,
+                pageWidthDip: GetBitmapDisplayWidthInDip(bitmap),
+                pageHeightDip: GetBitmapDisplayHeightInDip(bitmap));
+        }
+
+        if (clipBounds.IsEmpty)
+        {
+            RasterImage.Clip = null;
+            return;
+        }
+
+        if (RasterImage.Clip is RectangleGeometry rectangleClip)
+        {
+            rectangleClip.Rect = clipBounds;
+            return;
+        }
+
+        RasterImage.Clip = new RectangleGeometry(clipBounds);
     }
 
     private IntPtr ResolveOverlayWindowHandle()
@@ -700,6 +738,7 @@ public partial class PaintOverlayWindow
         }
         // Apply new position
         _photoTranslate.Y = newTranslateY;
+        UpdatePhotoInkClip();
 
         if (IsCrossPageDisplayActive())
         {
@@ -954,7 +993,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        var neighborBitmap = previousPageBitmap ?? GetNeighborPageBitmapForRender(previousPage);
+        var neighborBitmap = previousPageBitmap ?? GetNeighborPageBitmapForRender(previousPage, allowSynchronousResolve: true);
         if (neighborBitmap == null)
         {
             return;

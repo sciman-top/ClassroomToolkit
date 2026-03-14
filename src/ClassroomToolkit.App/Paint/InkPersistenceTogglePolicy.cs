@@ -2,9 +2,9 @@ namespace ClassroomToolkit.App.Paint;
 
 internal static class InkPersistenceTogglePolicy
 {
-    internal static bool ShouldLoadPersistedInk(bool allowDiskFallback, bool inkSaveEnabled)
+    internal static bool ShouldLoadPersistedInk(bool allowDiskFallback)
     {
-        return allowDiskFallback && inkSaveEnabled;
+        return allowDiskFallback;
     }
 
     internal static bool ShouldTrackWal(bool inkSaveEnabled)

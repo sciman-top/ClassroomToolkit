@@ -60,6 +60,7 @@ public partial class PaintOverlayWindow
         // If "显示笔迹" is off, don't load previously saved ink
         if (!_inkShowEnabled)
         {
+            PurgePersistedInkForHiddenCurrentPageIfNeeded();
             ClearInkSurfaceState();
             if (IsCrossPageFirstInputTraceActive())
             {
@@ -85,8 +86,8 @@ public partial class PaintOverlayWindow
             ApplyInkStrokes(cached, preferInteractiveFastPath);
             return;
         }
-        // Method A fallback: only load persisted ink when save-toggle allows persistence.
-        if (InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback, _inkSaveEnabled)
+        // Method A fallback: showing persisted ink is independent from save-toggle.
+        if (InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback)
             && _inkPersistence != null
             && TryLoadInkFromSidecar())
         {
@@ -100,6 +101,94 @@ public partial class PaintOverlayWindow
         if (IsCrossPageFirstInputTraceActive())
         {
             MarkCrossPageFirstInputStage("load-clear", "cache-miss");
+        }
+    }
+
+    private void PurgePersistedInkForHiddenCurrentDocumentIfNeeded()
+    {
+        PurgePersistedInkForHiddenSourceIfNeeded(_currentDocumentPath);
+    }
+
+    private void PurgePersistedInkForHiddenCurrentPageIfNeeded()
+    {
+        PurgePersistedInkForHiddenPageIfNeeded(_currentDocumentPath, _currentPageIndex);
+    }
+
+    private void PurgePersistedInkForHiddenSourceIfNeeded(string sourcePath)
+    {
+        if (!_inkSaveEnabled || _inkShowEnabled || _inkPersistence == null || string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return;
+        }
+
+        try
+        {
+            var inkDoc = _inkPersistence.LoadInkForFile(sourcePath);
+            if (inkDoc?.Pages == null || inkDoc.Pages.Count == 0)
+            {
+                return;
+            }
+
+            var removedCount = 0;
+            var keptCount = 0;
+            foreach (var page in inkDoc.Pages.ToList())
+            {
+                if (PurgePersistedInkForHiddenPageIfNeeded(sourcePath, page.PageIndex))
+                {
+                    removedCount++;
+                }
+                else
+                {
+                    keptCount++;
+                }
+            }
+            System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Hidden-source purge summary: source={sourcePath}, removed={removedCount}, kept={keptCount}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-source purge failed: source={sourcePath}, error={ex.Message}");
+        }
+    }
+
+    private bool PurgePersistedInkForHiddenPageIfNeeded(string sourcePath, int pageIndex)
+    {
+        if (!_inkSaveEnabled || _inkShowEnabled || _inkPersistence == null || string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return false;
+        }
+
+        if (WasPageModifiedInSession(sourcePath, pageIndex))
+        {
+            return false;
+        }
+
+        try
+        {
+            var existing = _inkPersistence.LoadInkPageForFile(sourcePath, pageIndex);
+            if (existing == null || existing.Count == 0)
+            {
+                return false;
+            }
+
+            _inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>());
+            _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
+            MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
+
+            var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
+            if (!string.IsNullOrWhiteSpace(cacheKey))
+            {
+                _photoCache.Remove(cacheKey);
+                InvalidateNeighborInkCache(cacheKey);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
+            return false;
         }
     }
 

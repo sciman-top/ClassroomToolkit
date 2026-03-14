@@ -7,18 +7,19 @@ namespace ClassroomToolkit.Tests;
 public sealed class CrossPageNeighborInkFramePolicyTests
 {
     [Fact]
-    public void Resolve_ShouldClear_WhenSlotChangedAndNotHeld()
+    public void Resolve_ShouldClearCurrentFrame_WhenSlotChangedWithoutResolvedInk()
     {
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: true,
             hasCurrentInkFrame: true,
+            hasTargetInkStrokes: false,
             holdInkReplacement: false,
             usedPreservedInkFrame: false,
             hasResolvedInkBitmap: false);
 
-        decision.ClearCurrentFrame.Should().BeFalse();
+        decision.ClearCurrentFrame.Should().BeTrue();
         decision.AllowResolvedInkReplacement.Should().BeFalse();
-        decision.KeepVisible.Should().BeTrue();
+        decision.KeepVisible.Should().BeFalse();
     }
 
     [Fact]
@@ -27,6 +28,7 @@ public sealed class CrossPageNeighborInkFramePolicyTests
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: true,
             hasCurrentInkFrame: true,
+            hasTargetInkStrokes: true,
             holdInkReplacement: true,
             usedPreservedInkFrame: false,
             hasResolvedInkBitmap: true);
@@ -42,6 +44,7 @@ public sealed class CrossPageNeighborInkFramePolicyTests
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: true,
             hasCurrentInkFrame: false,
+            hasTargetInkStrokes: true,
             holdInkReplacement: false,
             usedPreservedInkFrame: false,
             hasResolvedInkBitmap: true);
@@ -57,6 +60,7 @@ public sealed class CrossPageNeighborInkFramePolicyTests
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: true,
             hasCurrentInkFrame: false,
+            hasTargetInkStrokes: true,
             holdInkReplacement: false,
             usedPreservedInkFrame: true,
             hasResolvedInkBitmap: false);
@@ -72,7 +76,24 @@ public sealed class CrossPageNeighborInkFramePolicyTests
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: true,
             hasCurrentInkFrame: false,
+            hasTargetInkStrokes: false,
             holdInkReplacement: false,
+            usedPreservedInkFrame: false,
+            hasResolvedInkBitmap: false);
+
+        decision.ClearCurrentFrame.Should().BeTrue();
+        decision.AllowResolvedInkReplacement.Should().BeFalse();
+        decision.KeepVisible.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Resolve_ShouldClearCurrentFrame_WhenTargetPageHasNoInkEvenIfSlotDidNotChange()
+    {
+        var decision = CrossPageNeighborInkFramePolicy.Resolve(
+            slotPageChanged: false,
+            hasCurrentInkFrame: true,
+            hasTargetInkStrokes: false,
+            holdInkReplacement: true,
             usedPreservedInkFrame: false,
             hasResolvedInkBitmap: false);
 

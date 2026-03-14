@@ -6,13 +6,11 @@ namespace ClassroomToolkit.Tests;
 public sealed class InkPersistenceTogglePolicyTests
 {
     [Theory]
-    [InlineData(true, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, false)]
-    public void ShouldLoadPersistedInk_ShouldRespectSaveToggle(bool allowDiskFallback, bool inkSaveEnabled, bool expected)
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void ShouldLoadPersistedInk_ShouldFollowDiskFallbackGate(bool allowDiskFallback, bool expected)
     {
-        InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback, inkSaveEnabled)
+        InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback)
             .Should().Be(expected);
     }
 

@@ -147,8 +147,18 @@ public partial class PaintOverlayWindow
 
     private void ClearInkSurfaceState()
     {
+        _activeRenderer?.Reset();
+        _visualHost.Clear();
+        _strokeInProgress = false;
+        _isErasing = false;
+        _lastEraserPoint = null;
+        _lastCalligraphyPreviewPoint = null;
+        _lastBrushInputSample = null;
+        _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _inkStrokes.Clear();
         ResetInkHistory();
+        ClearSurface();
+        _hasDrawing = false;
         RedrawInkSurface();
         MarkCurrentInkPageLoaded(_inkStrokes);
     }

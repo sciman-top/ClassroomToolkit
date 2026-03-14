@@ -19,10 +19,10 @@ internal static class CrossPageNeighborPageFramePolicy
                 CollapseSlot: false);
         }
 
-        if (hasCurrentFrame && (slotPageChanged || interactionActive))
+        if (hasCurrentFrame && interactionActive && !slotPageChanged)
         {
-            // Target page bitmap is temporarily unavailable: preserve current slot frame
-            // to avoid one-frame page disappear/flicker during cross-page interactions.
+            // Keep same-page slot stable during active interaction to avoid transient flicker.
+            // For slot remap (different page), never keep old page frame on the new slot.
             return new CrossPageNeighborPageFrameDecision(
                 HoldCurrentFrame: true,
                 CollapseSlot: false);

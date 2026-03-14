@@ -49,6 +49,7 @@ public partial class PaintOverlayWindow
             return false;
         }
         SchedulePhotoTransformSave(userAdjusted: true);
+        UpdatePhotoInkClip();
         RequestPhotoTransformInkRedraw();
         return true;
     }
@@ -148,6 +149,7 @@ public partial class PaintOverlayWindow
             _lastInkRedrawPhotoTranslateY);
         _photoInkPanCompensation.X = delta.X;
         _photoInkPanCompensation.Y = delta.Y;
+        UpdatePhotoInkClip();
     }
 
     private void ResetPhotoInkPanCompensation(bool syncToCurrentPhotoTranslate)
@@ -160,6 +162,7 @@ public partial class PaintOverlayWindow
             _lastInkRedrawPhotoTranslateY = _photoTranslate.Y;
             SyncPhotoInteractiveRefreshAnchor();
         }
+        UpdatePhotoInkClip();
     }
 
     private WpfPoint ToPhotoSpace(WpfPoint point)
@@ -371,7 +374,8 @@ public partial class PaintOverlayWindow
                     out var minY,
                     out var maxY,
                     out _,
-                    includeSlack: allowResistance))
+                    includeSlack: allowResistance,
+                    preferCachedDuringInteraction: allowResistance))
             {
                 var originalX = _photoTranslate.X;
                 var originalY = _photoTranslate.Y;

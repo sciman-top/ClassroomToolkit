@@ -902,8 +902,10 @@ public partial class PaintOverlayWindow
     {
         if (!TryAdmitPhotoManipulation(e, CaptureInputInteractionState()))
         {
+            _photoManipulating = false;
             return;
         }
+        _photoManipulating = true;
         e.ManipulationContainer = OverlayRoot;
         e.Mode = ManipulationModes.Scale | ManipulationModes.Translate;
     }
@@ -913,8 +915,10 @@ public partial class PaintOverlayWindow
         var interactionState = CaptureInputInteractionState();
         if (!TryAdmitPhotoManipulation(e, interactionState))
         {
+            _photoManipulating = false;
             return;
         }
+        _photoManipulating = true;
         // Re-check at delta time to prevent gesture pan from racing with active ink operations.
         if (IsInkOperationActive())
         {
@@ -967,6 +971,22 @@ public partial class PaintOverlayWindow
         {
             RequestCrossPageDisplayUpdate(CrossPageUpdateSources.ManipulationDelta);
         }
+    }
+
+    private void OnManipulationCompleted(object? sender, ManipulationCompletedEventArgs e)
+    {
+        _photoManipulating = false;
+        if (!TryAdmitPhotoManipulation(e, CaptureInputInteractionState()))
+        {
+            return;
+        }
+
+        ApplyPhotoPanBounds(allowResistance: false);
+        if (IsCrossPageDisplayActive())
+        {
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.ManipulationDelta));
+        }
+        SchedulePhotoTransformSave(userAdjusted: true);
     }
 
     private bool TryAdmitPhotoManipulation(

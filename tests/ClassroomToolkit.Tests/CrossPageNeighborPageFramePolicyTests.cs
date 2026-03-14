@@ -20,7 +20,7 @@ public sealed class CrossPageNeighborPageFramePolicyTests
     }
 
     [Fact]
-    public void Resolve_ShouldHoldCurrent_WhenSlotChangedAndCurrentFrameExists()
+    public void Resolve_ShouldCollapse_WhenSlotChangedAndTargetFrameMissing()
     {
         var decision = CrossPageNeighborPageFramePolicy.Resolve(
             slotPageChanged: true,
@@ -28,8 +28,8 @@ public sealed class CrossPageNeighborPageFramePolicyTests
             hasResolvedTargetFrame: false,
             interactionActive: false);
 
-        decision.HoldCurrentFrame.Should().BeTrue();
-        decision.CollapseSlot.Should().BeFalse();
+        decision.HoldCurrentFrame.Should().BeFalse();
+        decision.CollapseSlot.Should().BeTrue();
     }
 
     [Fact]

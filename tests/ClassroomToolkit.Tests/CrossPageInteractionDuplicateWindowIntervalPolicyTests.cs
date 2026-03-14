@@ -29,10 +29,18 @@ public sealed class CrossPageInteractionDuplicateWindowIntervalPolicyTests
     }
 
     [Fact]
-    public void ResolveMs_ShouldKeepDefaultForOtherSources()
+    public void ResolveMs_ShouldIncreaseForApplyScale()
     {
         CrossPageInteractionDuplicateWindowIntervalPolicy.ResolveMs(
             CrossPageUpdateSources.ApplyScale,
+            defaultMs: 8).Should().Be(CrossPageInteractionDuplicateWindowIntervalThresholds.PhotoPanLikeMs);
+    }
+
+    [Fact]
+    public void ResolveMs_ShouldKeepDefaultForOtherSources()
+    {
+        CrossPageInteractionDuplicateWindowIntervalPolicy.ResolveMs(
+            CrossPageUpdateSources.UndoSnapshot,
             defaultMs: 8).Should().Be(8);
     }
 }

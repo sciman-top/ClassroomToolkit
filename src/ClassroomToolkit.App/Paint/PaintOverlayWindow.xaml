@@ -91,12 +91,10 @@
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中"
-                                Visibility="Collapsed">
+                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
                             <TextBlock Text="适宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
                         </Button>
-                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="46" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）"
-                                Visibility="Collapsed">
+                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="46" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）">
                             <TextBlock Text="导出" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
                         </Button>
                     </StackPanel>
@@ -104,7 +102,7 @@
 
                 <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14"
                         Style="{StaticResource Style_FullscreenShellHintBadge}">
-                    <TextBlock Text="左侧为主操作区 · 右侧为翻页快捷区"
+                    <TextBlock Text="左右侧均支持翻页、适宽与导出"
                                Foreground="{StaticResource Brush_Text_Secondary}"
                                FontSize="11"/>
                 </Border>

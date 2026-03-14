@@ -8,7 +8,8 @@ internal static class CrossPageInteractionDuplicateWindowIntervalPolicy
     {
         if (baseSource.StartsWith(CrossPageUpdateSources.PhotoPan, StringComparison.Ordinal)
             || baseSource.StartsWith(CrossPageUpdateSources.ManipulationDelta, StringComparison.Ordinal)
-            || baseSource.StartsWith(CrossPageUpdateSources.StepViewport, StringComparison.Ordinal))
+            || baseSource.StartsWith(CrossPageUpdateSources.StepViewport, StringComparison.Ordinal)
+            || baseSource.StartsWith(CrossPageUpdateSources.ApplyScale, StringComparison.Ordinal))
         {
             return CrossPageDuplicateWindowIntervalPolicy.Resolve(
                 defaultMs,

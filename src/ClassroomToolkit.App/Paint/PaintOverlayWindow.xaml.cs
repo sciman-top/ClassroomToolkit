@@ -156,6 +156,7 @@ public partial class PaintOverlayWindow : Window
     private double _lastPhotoInteractiveRefreshTranslateX;
     private double _lastPhotoInteractiveRefreshTranslateY;
     private bool _photoPanning;
+    private bool _photoManipulating;
     private bool _photoPanHadEffectiveMovement;
     private bool _photoRightClickPending;
     private WpfPoint _photoRightClickStart;
@@ -227,6 +228,20 @@ public partial class PaintOverlayWindow : Window
     private int _interactiveSwitchPinnedNeighborPage;
     private DateTime _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     private double _crossPageNormalizedWidthDip;
+    private bool _crossPageBoundsCacheValid;
+    private bool _crossPageBoundsCacheIncludeSlack;
+    private int _crossPageBoundsCacheCurrentPage;
+    private int _crossPageBoundsCacheTotalPages;
+    private double _crossPageBoundsCacheViewportWidth;
+    private double _crossPageBoundsCacheViewportHeight;
+    private double _crossPageBoundsCacheNormalizedWidthDip;
+    private double _crossPageBoundsCacheScaleX;
+    private double _crossPageBoundsCacheScaleY;
+    private double _crossPageBoundsCacheMinX;
+    private double _crossPageBoundsCacheMaxX;
+    private double _crossPageBoundsCacheMinY;
+    private double _crossPageBoundsCacheMaxY;
+    private DateTime _crossPageBoundsCacheUpdatedUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     private TransformGroup? _photoContentTransform;
     private readonly SessionCoordinator _sessionCoordinator;
 
@@ -334,6 +349,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.IsManipulationEnabled = true;
         OverlayRoot.ManipulationStarting += OnManipulationStarting;
         OverlayRoot.ManipulationDelta += OnManipulationDelta;
+        OverlayRoot.ManipulationCompleted += OnManipulationCompleted;
         OverlayRoot.StylusDown += OnStylusDown;
         OverlayRoot.StylusMove += OnStylusMove;
         OverlayRoot.StylusUp += OnStylusUp;
@@ -1045,8 +1061,12 @@ public partial class PaintOverlayWindow : Window
 
         if (transitionPlan.ShouldClearInkState)
         {
+            PurgePersistedInkForHiddenCurrentDocumentIfNeeded();
             ClearInkSurfaceState();
+            ClearNeighborInkVisuals(clearSlotIdentity: true);
             _neighborInkCache.Clear();
+            _neighborInkRenderPending.Clear();
+            _neighborInkSidecarLoadPending.Clear();
             if (transitionPlan.RequestCrossPageUpdateForDisabled)
             {
                 RequestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowDisabled);

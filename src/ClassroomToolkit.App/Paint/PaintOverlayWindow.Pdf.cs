@@ -177,10 +177,13 @@ public partial class PaintOverlayWindow
         return true;
     }
 
-    private bool TryGetCachedPdfPageBitmap(int pageIndex, out BitmapSource? bitmap)
+    private bool TryGetCachedPdfPageBitmap(
+        int pageIndex,
+        out BitmapSource? bitmap,
+        int tryEnterTimeoutMs = PhotoDocumentRuntimeDefaults.PdfCacheTryEnterTimeoutMs)
     {
         bitmap = null;
-        if (!Monitor.TryEnter(_pdfRenderLock, PhotoDocumentRuntimeDefaults.PdfCacheTryEnterTimeoutMs))
+        if (!Monitor.TryEnter(_pdfRenderLock, Math.Max(0, tryEnterTimeoutMs)))
         {
             return false;
         }
@@ -226,7 +229,7 @@ public partial class PaintOverlayWindow
         {
             return 0;
         }
-        if (TryGetCachedPdfPageBitmap(pageIndex, out var cached))
+        if (TryGetCachedPdfPageBitmap(pageIndex, out var cached, tryEnterTimeoutMs: 0))
         {
             return GetScaledPageHeight(cached);
         }

@@ -151,6 +151,7 @@ public partial class PaintOverlayWindow
             {
                 _inkExport.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
             }
+            PurgePersistedInkForHiddenSourceIfNeeded(sourcePath);
             _inkDiagnostics?.OnSyncPersist();
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Saved {strokes.Count} strokes for page {pageIndex} of {sourcePath}");
             return true;
@@ -235,6 +236,7 @@ public partial class PaintOverlayWindow
                             snapshot.SourcePath,
                             snapshot.PageIndex,
                             snapshot.SnapshotHash);
+                        PurgePersistedInkForHiddenSourceIfNeeded(snapshot.SourcePath);
                         _inkDiagnostics?.OnAutoSavePersistResult(persisted);
                     });
                     return;
@@ -762,6 +764,8 @@ public partial class PaintOverlayWindow
             return null;
         }
 
+        PurgePersistedInkForHiddenSourceIfNeeded(sourceFilePath);
+
         var inkDoc = _inkPersistence.LoadInkForFile(sourceFilePath) ?? new InkDocumentData
         {
             SourcePath = sourceFilePath
@@ -783,7 +787,11 @@ public partial class PaintOverlayWindow
         if (includeRuntimeCachePages || IsPageDirtyForExportOverlay(sourceFilePath, _currentPageIndex))
         {
             FinalizeActiveInkOperation();
-            InkExportSnapshotBuilder.UpsertPageStrokes(inkDoc, sourceFilePath, _currentPageIndex, CloneCommittedInkStrokes());
+            InkExportSnapshotBuilder.UpsertPageStrokes(
+                inkDoc,
+                sourceFilePath,
+                _currentPageIndex,
+                CloneCommittedInkStrokes());
         }
         ApplyExportScopeFilter(inkDoc);
         return inkDoc;
