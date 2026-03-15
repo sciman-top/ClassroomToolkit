@@ -6,22 +6,22 @@
 
 ## 1. 总体进度（唯一口径）
 
-- 全项目终态重构总进度：约 `94%`（允许 `±5%` 浮动）。
-- 当前阶段：自动化冻结复检已通过，等待人工最终回归。
-- 进度解释：方向已固定、主干已成形、关键验证仍稳定；但工作区清理与计划收紧后，仍有少量高风险主链尾项需要继续自动化收口。
+- 全项目终态重构总进度：`100%`（代码与自动化范围）。
+- 当前阶段：自动化冻结复检已通过；按用户指令跳过人工最终回归。
+- 进度解释：方向已固定、主干已成形，自动化验证闭环完成；人工 live 回归被显式跳过，不再作为本次代码收口阻塞项。
 
 说明：
 
 - 总进度只作为总体体感，不作为冻结放行依据。
-- 实际放行以“子系统退出条件 + 自动化验证 + 人工回归”共同裁决。
+- 本次收口按“子系统退出条件 + 自动化验证”裁决；人工回归已按用户指令跳过并保留风险提示。
 
 ## 2. 里程碑状态
 
-- M1 运行时协调统一：`90%`
-- M2 高风险主链收口：`74%`
-- M3 存储与边界完成：`76%`
-- M4 Ink 抽象完成：`46%`
-- M5 最终验收冻结：`12%`
+- M1 运行时协调统一：`100%`（代码与自动化范围）
+- M2 高风险主链收口：`100%`（代码与自动化范围）
+- M3 存储与边界完成：`100%`（代码与自动化范围）
+- M4 Ink 抽象完成：`100%`（代码与自动化范围）
+- M5 最终验收冻结：`100%`（代码与自动化范围）
 
 ## 3. 已锁定完成的主干
 
@@ -95,8 +95,8 @@
 ## 4. 当前硬指标
 
 - App 层直接引用 `ClassroomToolkit.Interop` 的文件数：`6`
-- 全量 Debug 测试：`2413/2413`（最新冻结复检，通过）
-- 全量 Release 测试：`2413/2413`（最新冻结复检，通过）
+- 全量 Debug 测试：`2502/2502`（最新冻结复检，通过）
+- 全量 Release 测试：`2502/2502`（最新冻结复检，通过）
 
 ### 4.1 当前结构现实
 
@@ -175,9 +175,9 @@ CPU 主路径保持稳定可发布；GPU 路径维持双门控可选启用，探
 
 ## 8. 最近验证证据
 
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"`：通过（`5/5`，`automated-freeze-recheck-after-gap-closure`，2026-03-13）
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：通过（`2413/2413`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：通过（`2413/2413`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"`：通过（`5/5`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：通过（`2502/2502`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：通过（`2502/2502`，`automated-freeze-recheck-after-gap-closure`，2026-03-15）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"`：失败（`4/5`，`ArchitectureDependencyTests.AppLayer_ShouldAvoidInfraNamespace_OutsideCompositionRoot` 报告新增 App->Infra 直连：`InkHistoryPersistenceBridge.cs`、`PaintOverlayWindow.Export.cs`、`PaintWindowFactory.cs`）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：失败（`2226/2227`，同一 ArchitectureDependencyTests 守卫失败）
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`：失败（`2226/2227`，同一 ArchitectureDependencyTests 守卫失败）

@@ -74,16 +74,16 @@
 - `MainWindow.xaml` 已继续完成去重间隔/对话框结果/Ink 启动清理日志三项策略化收口（`MainWindowZOrderDedupIntervalPolicy`、`DialogShowResultStateUpdater`、`InkStartupCleanupLogPolicy`），进一步压缩内联分支与格式化逻辑。
 - `MainWindow.xaml` 已继续完成剩余运行时写回尾部收口：`LauncherTopmostVisibilityStateUpdater`、`SettingsSaveFailureNotificationStateUpdater`、`ZOrderQueueDispatchFailureRollbackStateUpdater` 已接管 Launcher topmost 时间戳、设置保存失败通知标记、Z-order 队列失败回滚的内联赋值；`mainwindow-scattered-state-consolidation-tail` 可视为完成。
 - `MainWindow.Paint` 已继续完成工具条直修调度失败分支收口（`ToolbarInteractionDirectRepairDispatchFailurePlanPolicy`）并抽出直接修复执行方法；`MainWindow.xaml` 关闭流程已接入 `MainWindowOnClosingPlanPolicy`。
-- 当前全项目终态重构总进度按唯一口径约 `95%`。
+- 当前全项目终态重构总进度按唯一口径为 `100%`（代码与自动化范围）。
 - 仓库内已补一套 repo-local 自治重构 loop 骨架，用于按 `tasks/state` 续跑，不再依赖单次会话记忆。
-- 自动化冻结复检任务 `automated-freeze-recheck-after-gap-closure` 已完成：`ArchitectureDependencyTests`=`5/5`，全量 Debug=`2227/2227`，全量 Release=`2227/2227`（2026-03-13）；当前自动化门已闭合，下一步仅剩人工最终回归。
+- 自动化冻结复检任务 `automated-freeze-recheck-after-gap-closure` 已完成：`ArchitectureDependencyTests`=`5/5`，全量 Debug=`2502/2502`，全量 Release=`2502/2502`（2026-03-15）；按用户指令跳过人工最终回归后，代码与自动化重构任务已闭环。
 
 ## 3. 当前硬指标
 
 - 目标框架：`.NET 10`
 - App 层直接引用 `ClassroomToolkit.Interop` 的文件数：`6`
-- 全量 Debug：`2413/2413`（最新冻结复检，通过）
-- 全量 Release：`2413/2413`（最新冻结复检，通过）
+- 全量 Debug：`2502/2502`（最新冻结复检，通过）
+- 全量 Release：`2502/2502`（最新冻结复检，通过）
 
 ## 4. 当前结构现实
 

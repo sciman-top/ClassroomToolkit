@@ -1,6 +1,6 @@
 {
     "project":  "ClassroomToolkit",
-    "updated_at":  "2026-03-14",
+    "updated_at":  "2026-03-15",
     "mode":  "repo-local-autonomous-refactor-loop",
     "scope":  {
                   "goal":  "unattended automated closure of the remaining target-architecture gap up to the final manual-regression gate",
@@ -1649,7 +1649,7 @@
                                          "ink-gpu-release-strategy-tail"
                                      ],
                       "status_hint":  "completed",
-                      "summary":  "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2413/2413), and full Release (2413/2413), with acceptance/progress/handover/matrix docs synced.",
+                      "summary":  "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2502/2502), and full Release (2502/2502), with acceptance/progress/handover/matrix docs synced.",
                       "file_hints":  [
                                          "docs/validation/target-architecture-final-acceptance.md",
                                          "docs/validation/2026-03-06-target-architecture-progress.md",
@@ -1690,7 +1690,7 @@
                                          "automated-freeze-recheck-after-gap-closure"
                                      ],
                       "status_hint":  "omitted",
-                      "summary":  "Real PPT, WPS, image, PDF, whiteboard, and window-relationship regression in a live environment.",
+                      "summary":  "Real PPT, WPS, image, PDF, whiteboard, and window-relationship regression in a live environment (omitted in this run by explicit user instruction).",
                       "file_hints":  [
                                          "docs/validation/target-architecture-final-acceptance.md",
                                          "docs/validation/templates/classroom-pilot-acceptance-template.md"
@@ -1714,4 +1714,3 @@
                   }
               ]
 }
-

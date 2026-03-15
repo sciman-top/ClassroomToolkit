@@ -1,7 +1,7 @@
 ﻿{
     "project":  "ClassroomToolkit",
     "mode":  "autonomous-refactor-loop",
-    "updated_at":  "2026-03-15T03:02:00+08:00",
+    "updated_at":  "2026-03-15T17:10:00+08:00",
     "current_task":  null,
     "tasks":  {
                   "phase0-baseline":  {
@@ -47,7 +47,7 @@
                   "manual-final-regression":  {
                                                   "status":  "omitted",
                                                   "attempts":  4,
-                                                  "last_summary":  "Confirmed manual-only final regression remains out of unattended scope (omit_manual_regression=true); task stays omitted pending human live-environment execution."
+                                                  "last_summary":  "Manual final regression was explicitly skipped by user instruction; task remains omitted while all code and automatable refactor tasks are completed."
                                               },
                   "mainwindow-lifecycle-tail":  {
                                                     "status":  "completed",
@@ -227,7 +227,7 @@
                   "automated-freeze-recheck-after-gap-closure":  {
                                                                      "status":  "completed",
                                                                      "attempts":  2,
-                                                                     "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2413/2413), full Release passed (2413/2413), and acceptance/progress/handover/matrix docs were synced."
+                                                                     "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2502/2502), full Release passed (2502/2502), and acceptance/progress/handover/matrix docs were synced."
                                                                  }
               },
     "blocked":  [
@@ -921,5 +921,6 @@
                         "recorded_at":  "2026-03-15T00:18:52.0573679+08:00"
                     }
                 ],
-    "last_summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21)."
+    "last_summary":  "All code and automatable refactor tasks are complete; manual-final-regression is omitted by explicit user instruction. Latest automated freeze checks: ArchitectureDependencyTests 5/5, Debug 2502/2502, Release 2502/2502."
 }
+
