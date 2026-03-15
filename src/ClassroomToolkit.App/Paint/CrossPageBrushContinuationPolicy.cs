@@ -28,15 +28,27 @@ internal static class CrossPageBrushContinuationPolicy
             return new Decision(currentInput, currentInput, false);
         }
 
-        var seamY = targetPage > currentPage
+        var forwardToNextPage = targetPage > currentPage;
+        var seamY = forwardToNextPage
             ? currentPageTop + currentPageHeight
             : currentPageTop;
         if (!TryCreateBridgeSample(previousInput.Value, currentInput, seamY, out var bridgeSample))
         {
+            if (ShouldClampFinalizeSampleToSeam(currentInput.Position.Y, seamY, forwardToNextPage))
+            {
+                var finalizeSample = CreateSeamClampedFinalizeSample(currentInput, seamY);
+                var continuationSeedFallback = CreateContinuationSeed(finalizeSample, currentInput, forwardToNextPage);
+                var shouldReplayFallback = !AreClose(
+                    continuationSeedFallback.Position,
+                    currentInput.Position,
+                    toleranceDip: CrossPageBrushContinuationDefaults.ReplayDistanceToleranceDip);
+                return new Decision(finalizeSample, continuationSeedFallback, shouldReplayFallback);
+            }
+
             return new Decision(currentInput, currentInput, false);
         }
 
-        var continuationSeed = CreateContinuationSeed(bridgeSample, currentInput, targetPage > currentPage);
+        var continuationSeed = CreateContinuationSeed(bridgeSample, currentInput, forwardToNextPage);
         var shouldReplayCurrent = !AreClose(
             continuationSeed.Position,
             currentInput.Position,
@@ -121,6 +133,31 @@ internal static class CrossPageBrushContinuationPolicy
             bridgeSample.AltitudeRadians,
             bridgeSample.TiltXRadians,
             bridgeSample.TiltYRadians);
+    }
+
+    private static bool ShouldClampFinalizeSampleToSeam(
+        double currentY,
+        double seamY,
+        bool forwardToNextPage)
+    {
+        return forwardToNextPage
+            ? currentY > seamY
+            : currentY < seamY;
+    }
+
+    private static BrushInputSample CreateSeamClampedFinalizeSample(
+        BrushInputSample sample,
+        double seamY)
+    {
+        return new BrushInputSample(
+            new WpfPoint(sample.Position.X, seamY),
+            sample.TimestampTicks,
+            sample.Pressure,
+            sample.HasPressure,
+            sample.AzimuthRadians,
+            sample.AltitudeRadians,
+            sample.TiltXRadians,
+            sample.TiltYRadians);
     }
 
     private static double ResolveContinuationOffsetDip(double deltaYFromSeam)

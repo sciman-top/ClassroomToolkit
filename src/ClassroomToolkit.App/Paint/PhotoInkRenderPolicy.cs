@@ -18,8 +18,9 @@ internal static class PhotoInkRenderPolicy
     internal static bool ShouldRequestImmediateRedraw(
         bool photoModeActive,
         Transform? rasterRenderTransform,
-        Transform? photoContentTransform)
+        Transform? photoContentTransform,
+        bool crossPageBrushContinuationActive = false)
     {
-        return false;
+        return photoModeActive && crossPageBrushContinuationActive;
     }
 }

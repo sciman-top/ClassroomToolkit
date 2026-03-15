@@ -165,6 +165,7 @@ public partial class PaintOverlayWindow
             },
             tryApplyNeighborInkBitmapForCurrentPage: TryApplyNeighborInkBitmapForCurrentPage,
             redrawInkSurface: RedrawInkSurface,
+            finalizeFastAppliedInkSurface: FinalizeFastAppliedInkSurface,
             markCurrentInkPageLoaded: () => MarkCurrentInkPageLoaded(_inkStrokes),
             recordPerfMilliseconds: (elapsedMs, onDispatcher) => _perfApplyStrokes.Add(elapsedMs, onDispatcher),
             getElapsedMilliseconds: () => applySw.Elapsed.TotalMilliseconds,
@@ -172,6 +173,13 @@ public partial class PaintOverlayWindow
             markTraceStage: IsCrossPageFirstInputTraceActive()
                 ? (stage, detail) => MarkCrossPageFirstInputStage(stage, detail)
                 : null);
+    }
+
+    private void FinalizeFastAppliedInkSurface()
+    {
+        _lastInkRedrawUtc = GetCurrentUtcTimestamp();
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: IsPhotoInkModeActive());
+        OnInkRedrawCompleted();
     }
 
     private bool TryApplyNeighborInkBitmapForCurrentPage(IReadOnlyList<InkStrokeData> strokes, bool interactiveSwitch)

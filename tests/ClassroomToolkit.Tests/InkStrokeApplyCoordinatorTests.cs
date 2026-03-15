@@ -26,6 +26,7 @@ public sealed class InkStrokeApplyCoordinatorTests
             addRuntimeStrokes: added => runtimeStrokes = added,
             tryApplyNeighborInkBitmapForCurrentPage: static (_, _) => false,
             redrawInkSurface: () => redrawCount++,
+            finalizeFastAppliedInkSurface: static () => { },
             markCurrentInkPageLoaded: () => markLoadedCount++,
             recordPerfMilliseconds: (elapsedMs, onDispatcher) =>
             {
@@ -51,6 +52,7 @@ public sealed class InkStrokeApplyCoordinatorTests
     {
         var redrawCount = 0;
         var markLoadedCount = 0;
+        var finalizeSurfaceCount = 0;
 
         var result = InkStrokeApplyCoordinator.Apply(
             strokes: new List<InkStrokeData> { new() },
@@ -59,6 +61,7 @@ public sealed class InkStrokeApplyCoordinatorTests
             addRuntimeStrokes: static _ => { },
             tryApplyNeighborInkBitmapForCurrentPage: static (_, interactiveSwitch) => interactiveSwitch,
             redrawInkSurface: () => redrawCount++,
+            finalizeFastAppliedInkSurface: () => finalizeSurfaceCount++,
             markCurrentInkPageLoaded: () => markLoadedCount++,
             recordPerfMilliseconds: static (_, _) => { },
             getElapsedMilliseconds: static () => 3.2,
@@ -67,7 +70,29 @@ public sealed class InkStrokeApplyCoordinatorTests
         result.UsedInteractiveFastPathCopy.Should().BeTrue();
         result.RedrewInkSurface.Should().BeFalse();
         redrawCount.Should().Be(0);
+        finalizeSurfaceCount.Should().Be(1);
         markLoadedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void Apply_ShouldNotFinalizeFastAppliedSurface_WhenRedrawPathRuns()
+    {
+        var finalizeSurfaceCount = 0;
+
+        InkStrokeApplyCoordinator.Apply(
+            strokes: new List<InkStrokeData> { new() },
+            preferInteractiveFastPath: false,
+            clearRuntimeStrokes: static () => { },
+            addRuntimeStrokes: static _ => { },
+            tryApplyNeighborInkBitmapForCurrentPage: static (_, _) => false,
+            redrawInkSurface: static () => { },
+            finalizeFastAppliedInkSurface: () => finalizeSurfaceCount++,
+            markCurrentInkPageLoaded: static () => { },
+            recordPerfMilliseconds: static (_, _) => { },
+            getElapsedMilliseconds: static () => 2.4,
+            dispatcherCheckAccess: static () => true);
+
+        finalizeSurfaceCount.Should().Be(0);
     }
 
     [Fact]
@@ -82,6 +107,7 @@ public sealed class InkStrokeApplyCoordinatorTests
             addRuntimeStrokes: static _ => { },
             tryApplyNeighborInkBitmapForCurrentPage: static (_, _) => false,
             redrawInkSurface: static () => { },
+            finalizeFastAppliedInkSurface: static () => { },
             markCurrentInkPageLoaded: static () => { },
             recordPerfMilliseconds: static (_, _) => { },
             getElapsedMilliseconds: static () => 8.8,

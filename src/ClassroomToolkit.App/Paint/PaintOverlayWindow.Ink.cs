@@ -39,6 +39,7 @@ public partial class PaintOverlayWindow
         PushHistory();
         CaptureStrokeContext();
         _strokeInProgress = true;
+        _activeBrushStrokeUsesCrossPageContinuation = false;
         var color = EffectiveBrushColor();
         _activeRenderer.Initialize(color, _brushSize, color.A);
         _activeRenderer.OnDown(input);
@@ -49,7 +50,7 @@ public partial class PaintOverlayWindow
         _lastCalligraphyPreviewPoint = position;
     }
 
-    private void BeginBrushStrokeContinuation(BrushInputSample input)
+    private void BeginBrushStrokeContinuation(BrushInputSample input, bool renderInitialPreview)
     {
         var position = input.Position;
         EnsureActiveRenderer();
@@ -59,12 +60,16 @@ public partial class PaintOverlayWindow
         }
 
         _strokeInProgress = true;
+        _activeBrushStrokeUsesCrossPageContinuation = true;
         var color = EffectiveBrushColor();
         _activeRenderer.Initialize(color, _brushSize, color.A);
         _activeRenderer.OnDown(input);
         _lastBrushInputSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
-        RenderBrushPreview();
+        if (renderInitialPreview)
+        {
+            RenderBrushPreview();
+        }
         _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
         _lastCalligraphyPreviewPoint = position;
     }
@@ -119,6 +124,8 @@ public partial class PaintOverlayWindow
         _activeRenderer.Reset();
         _visualHost.Clear();
         _strokeInProgress = false;
+        var usedCrossPageContinuation = _activeBrushStrokeUsesCrossPageContinuation;
+        _activeBrushStrokeUsesCrossPageContinuation = false;
         _lastBrushInputSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _lastCalligraphyPreviewPoint = null;
@@ -127,7 +134,8 @@ public partial class PaintOverlayWindow
             && PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
                 RasterImage.RenderTransform,
-                _photoContentTransform))
+                _photoContentTransform,
+                usedCrossPageContinuation))
         {
             RequestInkRedraw();
         }
@@ -436,29 +444,31 @@ public partial class PaintOverlayWindow
         if (region.Width > InkInputRuntimeDefaults.RegionEraseMinSideDip
             && region.Height > InkInputRuntimeDefaults.RegionEraseMinSideDip)
         {
-            EraseRectAcrossVisibleCrossPages(region);
+            var changed = EraseRectAcrossVisibleCrossPages(region);
+            if (changed)
+            {
+                NotifyInkStateChanged(updateActiveSnapshot: true);
+            }
         }
-        NotifyInkStateChanged(updateActiveSnapshot: true);
     }
 
-    private void EraseRectAcrossVisibleCrossPages(Rect region)
+    private bool EraseRectAcrossVisibleCrossPages(Rect region)
     {
         if (!CrossPageRegionErasePolicy.ShouldUseCrossPageErase(
                 IsPhotoInkModeActive(),
                 IsCrossPageDisplayActive()))
         {
-            EraseRect(region);
-            return;
+            return EraseRect(region);
         }
 
         var currentPage = GetCurrentPageIndexForCrossPage();
         var pages = ResolveCrossPagePagesIntersectingRegion(region, currentPage);
         if (pages.Count == 0)
         {
-            EraseRect(region);
-            return;
+            return EraseRect(region);
         }
 
+        var anyChanged = false;
         var batchOrder = CrossPageRegionEraseOrderPolicy.ResolveBatchOrder(
             pages,
             currentPage);
@@ -468,12 +478,24 @@ public partial class PaintOverlayWindow
             {
                 continue;
             }
-            EraseRect(region);
-            NotifyInkStateChanged(updateActiveSnapshot: true, notifyContext: false);
+            var pageChanged = EraseRect(region);
+            anyChanged |= pageChanged;
+            if (!pageChanged)
+            {
+                continue;
+            }
+            NotifyInkStateChanged(
+                updateActiveSnapshot: true,
+                notifyContext: false,
+                syncCrossPageVisual: false);
         }
 
-        PrimeVisibleNeighborInkSlots();
-        RequestCrossPageDisplayUpdate(CrossPageUpdateSources.RegionEraseCrossPage);
+        if (anyChanged)
+        {
+            PrimeVisibleNeighborInkSlots();
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.RegionEraseCrossPage);
+        }
+        return anyChanged;
     }
 
     private bool TryNavigateCrossPageForRegionErase(int targetPage)
@@ -508,11 +530,13 @@ public partial class PaintOverlayWindow
             persistToSidecar: false,
             finalizeActiveOperation: false);
 
+        var navigationPlan = CrossPageRegionEraseNavigationPolicy.Resolve();
+
         NavigateToPage(
             targetPage,
             _photoTranslate.Y + offset,
-            interactiveSwitch: true,
-            deferCrossPageDisplayUpdate: true);
+            interactiveSwitch: navigationPlan.InteractiveSwitch,
+            deferCrossPageDisplayUpdate: navigationPlan.DeferCrossPageDisplayUpdate);
 
         return GetCurrentPageIndexForCrossPage() == targetPage;
     }
@@ -626,19 +650,18 @@ public partial class PaintOverlayWindow
         EraseGeometry(geometry);
     }
 
-    private void EraseRect(Rect region)
+    private bool EraseRect(Rect region)
     {
         if (IsPhotoInkModeActive())
         {
-            EraseGeometry(new RectangleGeometry(region));
-            return;
+            return EraseGeometry(new RectangleGeometry(region));
         }
         var eraseGeometry = new RectangleGeometry(region);
-        ApplyInkErase(eraseGeometry);
+        var changed = ApplyInkErase(eraseGeometry);
         EnsureRasterSurface();
         if (_rasterSurface == null)
         {
-            return;
+            return changed || !_inkRecordEnabled;
         }
         var dpi = VisualTreeHelper.GetDpi(this);
         var rect = new Int32Rect(
@@ -649,12 +672,13 @@ public partial class PaintOverlayWindow
         rect = IntersectRects(rect, new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight));
         if (rect.Width <= 0 || rect.Height <= 0)
         {
-            return;
+            return changed || !_inkRecordEnabled;
         }
         var stride = rect.Width * 4;
         var clear = new byte[stride * rect.Height];
         _rasterSurface.WritePixels(rect, clear, stride, 0);
         _hasDrawing = true;
+        return changed || !_inkRecordEnabled;
     }
 
     private void ClearRegionSelection()
@@ -885,16 +909,23 @@ public partial class PaintOverlayWindow
         for (int i = _inkStrokes.Count - 1; i >= 0; i--)
         {
             var stroke = _inkStrokes[i];
+            var geometryPathChanged = false;
+            var bloomGeometryChanged = false;
+            var ribbonGeometryChanged = false;
             var updatedPath = ExcludeGeometryWithFallback(stroke.GeometryPath, erasePrimary, eraseFallback);
             if (!InkStrokeEraseUpdater.TryApplyUpdatedGeometryPath(stroke, updatedPath, out var strokeRemoved))
             {
-                continue;
+                strokeRemoved = false;
             }
-            if (strokeRemoved)
+            else if (strokeRemoved)
             {
                 _inkStrokes.RemoveAt(i);
                 changed = true;
                 continue;
+            }
+            else
+            {
+                geometryPathChanged = true;
             }
 
             if (stroke.Blooms.Count > 0)
@@ -906,10 +937,15 @@ public partial class PaintOverlayWindow
                     if (string.IsNullOrWhiteSpace(bloomUpdated))
                     {
                         stroke.Blooms.RemoveAt(j);
+                        bloomGeometryChanged = true;
                         changed = true;
                         continue;
                     }
-                    bloom.GeometryPath = bloomUpdated;
+                    if (!string.Equals(bloomUpdated, bloom.GeometryPath, StringComparison.Ordinal))
+                    {
+                        bloom.GeometryPath = bloomUpdated;
+                        bloomGeometryChanged = true;
+                    }
                 }
             }
             if (stroke.Ribbons.Count > 0)
@@ -923,6 +959,7 @@ public partial class PaintOverlayWindow
                     {
                         stroke.Ribbons.RemoveAt(j);
                         ribbonsChanged = true;
+                        ribbonGeometryChanged = true;
                         changed = true;
                         continue;
                     }
@@ -930,6 +967,7 @@ public partial class PaintOverlayWindow
                     {
                         ribbon.GeometryPath = ribbonUpdated;
                         ribbonsChanged = true;
+                        ribbonGeometryChanged = true;
                         changed = true;
                     }
                 }
@@ -938,7 +976,13 @@ public partial class PaintOverlayWindow
                     stroke.CachedRibbonGeometries = null;
                 }
             }
-            changed = true;
+            if (InkEraseStrokeChangePolicy.ShouldMarkStrokeChanged(
+                    geometryPathChanged,
+                    bloomGeometryChanged,
+                    ribbonGeometryChanged))
+            {
+                changed = true;
+            }
         }
         return changed;
     }
@@ -1027,14 +1071,20 @@ public partial class PaintOverlayWindow
             boardActive: IsBoardActive());
     }
 
-    private void NotifyInkStateChanged(bool updateActiveSnapshot, bool notifyContext = true)
+    private void NotifyInkStateChanged(
+        bool updateActiveSnapshot,
+        bool notifyContext = true,
+        bool syncCrossPageVisual = true)
     {
         if (updateActiveSnapshot)
         {
             UpdateActiveCacheSnapshot();
         }
         SetInkCacheDirty();
-        ApplyCrossPageInkVisualSync(CrossPageInkVisualSyncTrigger.InkStateChanged);
+        if (syncCrossPageVisual && !_suppressCrossPageVisualSync)
+        {
+            ApplyCrossPageInkVisualSync(CrossPageInkVisualSyncTrigger.InkStateChanged);
+        }
         if (notifyContext)
         {
             SetInkContextDirty();

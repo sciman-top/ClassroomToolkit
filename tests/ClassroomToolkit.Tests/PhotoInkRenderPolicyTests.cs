@@ -15,7 +15,8 @@ public sealed class PhotoInkRenderPolicyTests
         var result = PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
             photoModeActive: true,
             rasterRenderTransform: rasterTransform,
-            photoContentTransform: photoTransform);
+            photoContentTransform: photoTransform,
+            crossPageBrushContinuationActive: false);
 
         result.Should().BeFalse();
     }
@@ -29,7 +30,8 @@ public sealed class PhotoInkRenderPolicyTests
         var result = PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
             photoModeActive: false,
             rasterRenderTransform: rasterTransform,
-            photoContentTransform: photoTransform);
+            photoContentTransform: photoTransform,
+            crossPageBrushContinuationActive: true);
 
         result.Should().BeFalse();
     }
@@ -43,9 +45,25 @@ public sealed class PhotoInkRenderPolicyTests
         var result = PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
             photoModeActive: true,
             rasterRenderTransform: rasterTransform,
-            photoContentTransform: photoTransform);
+            photoContentTransform: photoTransform,
+            crossPageBrushContinuationActive: false);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldRequestImmediateRedraw_ShouldReturnTrue_WhenPhotoModeActiveAndCrossPageContinuationActive()
+    {
+        var photoTransform = new TransformGroup();
+        var rasterTransform = Transform.Identity;
+
+        var result = PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+            photoModeActive: true,
+            rasterRenderTransform: rasterTransform,
+            photoContentTransform: photoTransform,
+            crossPageBrushContinuationActive: true);
+
+        result.Should().BeTrue();
     }
 
     [Fact]

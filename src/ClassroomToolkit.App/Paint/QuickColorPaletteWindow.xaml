@@ -19,7 +19,7 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4" />
+                                CornerRadius="6" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -28,7 +28,7 @@
     <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="12" Padding="6,4"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.5"/>
+            <StaticResource ResourceKey="Shadow_Popup_Light"/>
         </Border.Effect>
         <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
             <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />

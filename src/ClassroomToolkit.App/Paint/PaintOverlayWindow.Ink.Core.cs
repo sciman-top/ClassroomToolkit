@@ -67,7 +67,9 @@ public partial class PaintOverlayWindow
     private BrushInputSample? _lastBrushInputSample;
     private BrushInputSample? _pendingCrossPageBrushContinuationSample;
     private bool _pendingCrossPageBrushReplayCurrentInput;
+    private bool _activeBrushStrokeUsesCrossPageContinuation;
     private bool _suppressImmediatePhotoInkRedraw;
+    private bool _suppressCrossPageVisualSync;
     private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
     private int _brushPredictionHorizonMs = 8;
     private readonly IInkRendererFactory _inkRendererFactory;

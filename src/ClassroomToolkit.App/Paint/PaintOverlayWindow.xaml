@@ -27,7 +27,7 @@
                         <SolidColorBrush Color="{StaticResource Color_Bg_Overlay}"/>
                     </Border.Background>
                     <DockPanel Margin="12,0" VerticalAlignment="Top" Height="38">
-                        <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="19" Padding="16,0" Height="30" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="18" Padding="16,0" Height="36" VerticalAlignment="Center" Margin="10,0,0,0">
                              <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                             </Border.Effect>
@@ -70,11 +70,11 @@
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
-                            <TextBlock Text="适宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
+                        <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
+                            <Path Data="{StaticResource Icon_FitWidth}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
-                        <Button x:Name="ExportInkButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="46" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）">
-                            <TextBlock Text="导出" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
+                        <Button x:Name="ExportInkButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）">
+                            <Path Data="{StaticResource Icon_Export}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
                     </StackPanel>
                 </Border>
@@ -91,11 +91,11 @@
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="46" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
-                            <TextBlock Text="适宽" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
+                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,2" ToolTip="宽度适配并居中">
+                            <Path Data="{StaticResource Icon_FitWidth}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
-                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="46" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）">
-                            <TextBlock Text="导出" Foreground="{StaticResource Brush_Text_Primary}" FontSize="11" FontWeight="SemiBold"/>
+                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="导出当前目录笔迹合成图片（含清理失效旧图）">
+                            <Path Data="{StaticResource Icon_Export}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
                     </StackPanel>
                 </Border>

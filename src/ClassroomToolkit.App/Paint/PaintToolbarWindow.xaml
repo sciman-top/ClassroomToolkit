@@ -36,7 +36,7 @@
                             <!-- 颜色圆点 -->
                             <Border x:Name="Dot" Width="22" Height="22" CornerRadius="11"
                                     Background="{TemplateBinding Background}"
-                                    BorderBrush="White" BorderThickness="2">
+                                    BorderBrush="{StaticResource Brush_Border_Strong}" BorderThickness="2">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" Opacity="0.1"/>
                                 </Border.Effect>
@@ -67,24 +67,27 @@
             BorderBrush="{StaticResource Brush_Border}"
             BorderThickness="1" 
             CornerRadius="26" 
-            Height="52" 
+            Height="48" 
             Padding="12,6" 
             MouseLeftButtonDown="OnToolbarDrag"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}"> <!-- ADDED: Default light text -->
         
         <Border.Effect>
-            <!-- 改为黑色阴影，消除原本的青色发光 -->
-            <DropShadowEffect Color="#000000" Opacity="0.4" BlurRadius="20" ShadowDepth="4"/>
+            <!-- 黑色阴影，流涩不沉重 -->
+            <DropShadowEffect Color="#000000" Opacity="0.30" BlurRadius="18" ShadowDepth="3"/>
         </Border.Effect>
 
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <!-- 1. 拖动把手 -->
             <Grid Width="20" Background="Transparent" Cursor="SizeAll" Margin="0,0,4,0" ToolTip="按住拖动">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.3">
-                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="0,2"/>
-                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="0,2"/>
-                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="0,2"/>
-                </StackPanel>
+                <WrapPanel Width="12" Orientation="Horizontal" HorizontalAlignment="Center" Opacity="0.5">
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                </WrapPanel>
             </Grid>
 
             <!-- 2. 指针模式 (使用 Style_IconButton_Active) -->
@@ -140,7 +143,7 @@
                 </StackPanel>
             </Border>
 
-            <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border}" Margin="10,0"/>
+            <Rectangle Width="1" Height="24" Fill="{StaticResource Brush_Border_Strong}" Margin="10,0" Opacity="0.45"/>
 
             <!-- 5. 常用操作 -->
             <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销（PDF/图片支持跨页）">

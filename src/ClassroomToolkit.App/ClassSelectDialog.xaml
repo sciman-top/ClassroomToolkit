@@ -13,7 +13,7 @@
     <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
+            <StaticResource ResourceKey="Shadow_Dialog"/>
         </Border.Effect>
 
         <Grid>
@@ -39,7 +39,7 @@
                         HorizontalAlignment="Right" 
                         Margin="0,0,8,0"
                         Width="32" Height="32">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
 
@@ -49,7 +49,7 @@
             <!-- 2. 班级列表 -->
             <ListBox x:Name="ClassList" Grid.Row="1" 
                      Margin="16" 
-                     Height="200"
+                     MaxHeight="240" MinHeight="120"
                      Style="{StaticResource Style_CleanListBox}"/>
 
             <!-- 3. 底部按钮 -->

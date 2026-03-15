@@ -95,20 +95,22 @@
                     <ItemsControl x:Name="StudentItems">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel ItemWidth="102" ItemHeight="56" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                <WrapPanel ItemWidth="96" ItemHeight="50" Orientation="Horizontal" HorizontalAlignment="Center"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:StudentListItem}">
+                                <!-- 学生卡片模板：已点名添加 ✓ 角标 -->
                                 <Button Style="{StaticResource Style_StudentCard_Modern}" Click="OnStudentClick" ToolTip="{Binding DisplayText}">
                                     <Grid Margin="6,4">
+                                        <!-- 主内容 -->
                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                             <TextBlock Text="{Binding StudentName}" 
                                                        FontSize="12" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"
                                                        TextAlignment="Center"
                                                        HorizontalAlignment="Center"
-                                                       MaxWidth="90">
+                                                       MaxWidth="88">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{StaticResource Brush_Student_Waiting}"/>
@@ -132,12 +134,29 @@
                                                 <Style TargetType="StackPanel">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Called}" Value="True">
-                                                            <Setter Property="Opacity" Value="0.82"/>
+                                                            <Setter Property="Opacity" Value="0.72"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </StackPanel.Style>
                                         </StackPanel>
+                                        <!-- Checked mark -->
+                                        <Path Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" 
+                                              Fill="{StaticResource Brush_Success}"
+                                              Stretch="Uniform" Width="14" Height="14"
+                                              HorizontalAlignment="Right" VerticalAlignment="Top"
+                                              Margin="0,-2,-2,0">
+                                              <Path.Style>
+                                                  <Style TargetType="Path">
+                                                      <Setter Property="Visibility" Value="Collapsed"/>
+                                                      <Style.Triggers>
+                                                          <DataTrigger Binding="{Binding Called}" Value="True">
+                                                              <Setter Property="Visibility" Value="Visible"/>
+                                                          </DataTrigger>
+                                                      </Style.Triggers>
+                                                  </Style>
+                                              </Path.Style>
+                                        </Path>
                                     </Grid>
                                 </Button>
                             </DataTemplate>
@@ -150,10 +169,10 @@
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Primary}" Margin="0,0,8,0" BorderBrush="Transparent"/>
+                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="10" Height="10" Margin="0,0,8,0"/>
                         <TextBlock Text="亮色待点" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
                         
-                        <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource Brush_Disabled}" Margin="0,0,8,0" BorderBrush="Transparent"/>
+                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" Fill="{StaticResource Brush_Text_Tertiary}" Stretch="Uniform" Width="10" Height="10" Margin="0,0,8,0"/>
                         <TextBlock Text="灰色已点" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     </StackPanel>
                     

@@ -25,12 +25,23 @@ public partial class PaintOverlayWindow
 
     private Geometry NormalizeInteractiveInkGeometry(Geometry geometry)
     {
-        if (!ShouldRenderInteractiveInkInPhotoSpace())
+        if (ShouldRenderInteractiveInkInPhotoSpace())
         {
-            return geometry;
+            return ToPhotoGeometry(geometry) ?? geometry;
         }
 
-        return ToPhotoGeometry(geometry) ?? geometry;
+        if (PhotoInkPanCompensationGeometryPolicy.ShouldApplyCompensation(
+                IsPhotoInkModeActive(),
+                RasterImage.RenderTransform,
+                _photoInkPanCompensation))
+        {
+            return PhotoInkPanCompensationGeometryPolicy.AdjustToRasterSpace(
+                geometry,
+                _photoInkPanCompensation.X,
+                _photoInkPanCompensation.Y);
+        }
+
+        return geometry;
     }
 
     private class DrawingVisualHost : FrameworkElement
@@ -157,15 +168,16 @@ public partial class PaintOverlayWindow
         RenderAndBlend(renderGeometry, null, pen, erase: false, null);
     }
 
-    private void EraseGeometry(Geometry geometry)
+    private bool EraseGeometry(Geometry geometry)
     {
         var changed = ApplyInkErase(geometry);
         if (!changed && _inkRecordEnabled)
         {
-            return;
+            return false;
         }
         var renderGeometry = NormalizeInteractiveInkGeometry(geometry);
         RenderAndBlend(renderGeometry, MediaBrushes.White, null, erase: true, null);
+        return changed || !_inkRecordEnabled;
     }
 
     private void RenderAndBlend(Geometry geometry, MediaBrush? fill, MediaPen? pen, bool erase, MediaBrush? opacityMask, Geometry? clipGeometry = null)

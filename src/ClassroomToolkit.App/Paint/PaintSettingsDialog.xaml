@@ -14,7 +14,7 @@
         Topmost="True">
 
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="52"
+        <shell:WindowChrome CaptionHeight="48"
                             ResizeBorderThickness="8"
                             CornerRadius="0"
                             GlassFrameThickness="0"
@@ -36,21 +36,15 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="52" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="画笔设置" FontWeight="Bold" Margin="24,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="18"/>
-                <Button Style="{StaticResource Style_IconButton}"
-                        Click="OnCancel"
-                        HorizontalAlignment="Right"
-                        Margin="0,0,16,0"
-                        Width="36"
-                        Height="36"
-                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="画笔设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <!-- 分隔线 -->
-            <Rectangle Grid.Row="0" VerticalAlignment="Bottom" Height="1" Fill="{StaticResource Brush_Border}" Margin="24,0"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 -->
             <ScrollViewer Grid.Row="1"
@@ -328,7 +322,17 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- PDF、图片的设置 -->
-                    <Border x:Name="PhotoPdfSettingsCard" Grid.Row="0" Grid.Column="0" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="0,0,6,0" Background="{StaticResource Brush_Surface_Primary}">
+                    <Border x:Name="PhotoPdfSettingsCard" Grid.Row="0" Grid.Column="0" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,6,0" Background="{StaticResource Brush_Surface_Primary}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <Border.Effect>
                             <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                         </Border.Effect>
@@ -397,7 +401,17 @@
                     </Border>
 
                     <!-- WPS 演示文稿兼容性 -->
-                    <Border x:Name="WpsSettingsCard" Grid.Row="0" Grid.Column="1" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="16" Margin="6,0,0,0" Background="{StaticResource Brush_Surface_Primary}">
+                    <Border x:Name="WpsSettingsCard" Grid.Row="0" Grid.Column="1" BorderThickness="1" CornerRadius="12" Padding="16" Margin="6,0,0,0" Background="{StaticResource Brush_Surface_Primary}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <Border.Effect>
                             <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                         </Border.Effect>
@@ -441,16 +455,10 @@
             </ScrollViewer>
 
             <!-- 3. 按钮 -->
-            <Grid Grid.Row="2" Margin="24,0,24,24">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="96" Margin="0,0,12,0" Click="OnCancel"/>
-                    <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="96" Click="OnConfirm"/>
-                </StackPanel>
-            </Grid>
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

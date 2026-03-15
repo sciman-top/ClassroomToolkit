@@ -87,7 +87,7 @@ public sealed class CrossPageNeighborInkFramePolicyTests
     }
 
     [Fact]
-    public void Resolve_ShouldClearCurrentFrame_WhenTargetPageHasNoInkEvenIfSlotDidNotChange()
+    public void Resolve_ShouldKeepCurrentFrame_WhenTargetInkIsUnresolvedAndSlotDidNotChange()
     {
         var decision = CrossPageNeighborInkFramePolicy.Resolve(
             slotPageChanged: false,
@@ -97,8 +97,50 @@ public sealed class CrossPageNeighborInkFramePolicyTests
             usedPreservedInkFrame: false,
             hasResolvedInkBitmap: false);
 
-        decision.ClearCurrentFrame.Should().BeTrue();
+        decision.ClearCurrentFrame.Should().BeFalse();
         decision.AllowResolvedInkReplacement.Should().BeFalse();
-        decision.KeepVisible.Should().BeFalse();
+        decision.KeepVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ShouldKeepCurrentFrame_WhenTargetInkIsUnresolvedButHoldRequested()
+    {
+        var decision = CrossPageNeighborInkFramePolicy.Resolve(
+            slotPageChanged: true,
+            hasCurrentInkFrame: true,
+            hasTargetInkStrokes: false,
+            holdInkReplacement: true,
+            usedPreservedInkFrame: false,
+            hasResolvedInkBitmap: false);
+
+        decision.ClearCurrentFrame.Should().BeFalse();
+        decision.AllowResolvedInkReplacement.Should().BeFalse();
+        decision.KeepVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldClearWhenUnresolved_ShouldReturnTrue_WhenDecisionRequiresClearAndInkIsUnresolved()
+    {
+        var decision = new CrossPageNeighborInkFrameDecision(
+            ClearCurrentFrame: true,
+            AllowResolvedInkReplacement: false,
+            KeepVisible: false);
+
+        CrossPageNeighborInkFramePolicy.ShouldClearWhenUnresolved(
+            decision,
+            hasResolvedInkBitmap: false).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldClearWhenUnresolved_ShouldReturnFalse_WhenResolvedInkBitmapExists()
+    {
+        var decision = new CrossPageNeighborInkFrameDecision(
+            ClearCurrentFrame: true,
+            AllowResolvedInkReplacement: true,
+            KeepVisible: true);
+
+        CrossPageNeighborInkFramePolicy.ShouldClearWhenUnresolved(
+            decision,
+            hasResolvedInkBitmap: true).Should().BeFalse();
     }
 }

@@ -8,7 +8,8 @@ internal static class StylusMoveExecutionPolicy
         bool inkOperationActive,
         bool hasStylusPoints,
         PaintToolMode mode,
-        bool strokeInProgress)
+        bool strokeInProgress,
+        bool crossPageDisplayActive)
     {
         if (photoLoading || handledByPhotoPan || !inkOperationActive)
         {
@@ -24,7 +25,9 @@ internal static class StylusMoveExecutionPolicy
                 ShouldMarkHandled: true);
         }
 
-        if (mode == PaintToolMode.Brush && strokeInProgress)
+        if (mode == PaintToolMode.Brush
+            && strokeInProgress
+            && !crossPageDisplayActive)
         {
             return new StylusMoveExecutionPlan(
                 StylusMoveExecutionAction.HandleBrushBatch,

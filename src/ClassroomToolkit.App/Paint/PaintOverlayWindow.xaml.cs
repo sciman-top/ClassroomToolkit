@@ -208,6 +208,9 @@ public partial class PaintOverlayWindow : Window
     private bool _crossPageDragging;
     private bool _crossPageTranslateClamped;
     private bool _crossPageUpdateDeferredByInkInput;
+    private int _lastInputSwitchFromPage;
+    private int _lastInputSwitchToPage;
+    private DateTime _lastInputSwitchUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     private int _photoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputRefreshDefaultMs;
     private DateTime _lastCrossPagePointerUpUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     private int _crossPagePostInputRefreshToken;

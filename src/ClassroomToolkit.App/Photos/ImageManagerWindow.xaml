@@ -47,7 +47,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="0" CornerRadius="0">
+    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="12" CornerRadius="16">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -57,6 +57,7 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                    <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="资源与名单管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
@@ -154,19 +155,29 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <Button x:Name="BackButton" Content="后退" Width="60" Height="30" Margin="0,0,6,0"
-                                    Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                            <Button x:Name="ForwardButton" Content="前进" Width="60" Height="30" Margin="0,0,6,0"
-                                    Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
-                            <Button x:Name="UpButton" Content="向上" Width="60" Height="30" Margin="0,0,10,0"
-                                    Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" FontSize="13" Padding="0"/>
+                            <Button x:Name="BackButton" ToolTip="后退" Width="36" Height="30" Margin="0,0,6,0"
+                                    Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                                <Path Data="{StaticResource Icon_Back}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
+                            </Button>
+                            <Button x:Name="ForwardButton" ToolTip="前进" Width="36" Height="30" Margin="0,0,6,0"
+                                    Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                                <Path Data="{StaticResource Icon_Forward}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
+                            </Button>
+                            <Button x:Name="UpButton" ToolTip="向上" Width="36" Height="30" Margin="0,0,10,0"
+                                    Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                                <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="16" Height="16"/>
+                            </Button>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" Content="列表" Width="60" Height="30" Margin="0,0,6,0"
-                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
-                            <ToggleButton x:Name="ThumbnailViewButton" Content="缩略图" Width="70" Height="30" Margin="0,0,10,0"
-                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" FontSize="13" Padding="0"/>
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="36" Height="30" Margin="0,0,6,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
+                                <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform" Width="16" Height="16"/>
+                            </ToggleButton>
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="36" Height="30" Margin="0,0,10,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
+                                <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform" Width="16" Height="16"/>
+                            </ToggleButton>
                             <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
@@ -202,9 +213,10 @@
                                             Height="{Binding ElementName=ThumbnailSizeSlider, Path=Value, Converter={StaticResource ThumbnailSizeRatio}}">
                                         <Grid>
                                             <!-- 文件夹图标：固定大小，居中，不随 Slider 缩放 -->
-                                            <TextBlock Text="📁" FontSize="48" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                       Visibility="{Binding IsFolder, Converter={StaticResource FolderVisibilityConverter}}"
-                                                       Foreground="{StaticResource Brush_Primary}"/> <!-- 给个主题色更好看 -->
+                                            <Path Data="{StaticResource Icon_Folder}" Fill="{StaticResource Brush_Primary}" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" Width="48" Height="48"
+                                                  Stretch="Uniform"
+                                                  Visibility="{Binding IsFolder, Converter={StaticResource FolderVisibilityConverter}}"/>
                                             
                                             <!-- 图片/PDF：填满容器 -->
                                             <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"

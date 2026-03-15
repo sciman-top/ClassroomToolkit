@@ -17,7 +17,11 @@
         <Image x:Name="PhotoImage" 
                Stretch="Uniform" 
                StretchDirection="DownOnly"
-               SizeChanged="OnPhotoSizeChanged"/>
+               SizeChanged="OnPhotoSizeChanged">
+            <Image.Effect>
+                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
+            </Image.Effect>
+        </Image>
 
         <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
         <Border x:Name="LoadingMask" Background="Transparent" Visibility="Collapsed" Panel.ZIndex="100"/>
@@ -40,26 +44,23 @@
         <Button x:Name="CloseButtonLeft" 
                 Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
-                Opacity="0.3"
-                Width="56"
-                Height="56"
+                Opacity="0.5"
+                Width="64"
+                Height="64"
                 Visibility="Collapsed"/>
         <Button x:Name="CloseButtonRight" 
                 Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
-                Opacity="0.45"
-                Width="56"
-                Height="56"/>
+                Opacity="0.6"
+                Width="64"
+                Height="64"/>
 
-        <TextBlock x:Name="CloseHintText"
-                   Text="单击背景或右下角关闭"
-                   FontSize="16"
-                   Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"
-                   Panel.ZIndex="10">
-            <TextBlock.Effect>
-                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-            </TextBlock.Effect>
-        </TextBlock>
+        <Border x:Name="CloseHintText" Background="{StaticResource Brush_OverlayMask}" CornerRadius="16" Padding="16,8" Panel.ZIndex="10">
+            <TextBlock Text="单击背景或右下角关闭" FontSize="14" Foreground="White" Opacity="0.9"/>
+            <Border.Effect>
+                <StaticResource ResourceKey="Shadow_Floating"/>
+            </Border.Effect>
+        </Border>
     </Canvas>
 </Window>
 

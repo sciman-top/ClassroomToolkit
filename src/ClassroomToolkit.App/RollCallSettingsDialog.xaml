@@ -25,14 +25,18 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="48" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="点名设置" FontWeight="SemiBold" Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="16"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,12,0" Width="36" Height="36">
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                    <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
+                    <TextBlock Text="点名设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                </StackPanel>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
-                          Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}"/>
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 (TabControl) -->
             <TabControl x:Name="SettingsTabs" Grid.Row="1" Margin="20,16,20,16" BorderThickness="0" Background="Transparent">
@@ -73,12 +77,12 @@
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="学生信息:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,16">
-                                <CheckBox x:Name="ShowIdCheck" Content="显示学号" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,24,0"/>
-                                <CheckBox x:Name="ShowNameCheck" Content="显示姓名" Foreground="{StaticResource Brush_Text_Primary}"/>
+                                <CheckBox x:Name="ShowIdCheck" Content="显示学号" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                                <CheckBox x:Name="ShowNameCheck" Content="显示姓名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
                             </StackPanel>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="照片显示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="ShowPhotoCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="ShowPhotoCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Content="启用学生照片显示"
                                       Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
 
@@ -129,7 +133,7 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="语音播报:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名时朗读姓名" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名时朗读姓名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnSpeechToggleChanged" Unchecked="OnSpeechToggleChanged"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="语音引擎:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
@@ -180,7 +184,7 @@
 
                             <!-- 点名按键 -->
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="遥控点名:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控点名" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控点名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="触发按键:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
@@ -188,7 +192,7 @@
 
                             <!-- 分组切换 -->
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="分组切换:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteGroupSwitchCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控切换分组" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="RemoteGroupSwitchCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控切换分组" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteGroupSwitchChanged" Unchecked="OnRemoteGroupSwitchChanged" />
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="切换按键:" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
@@ -232,14 +236,14 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="结束提示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="TimerSoundCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="计时结束播放音效" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="TimerSoundCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="计时结束播放音效" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="选择音效:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="TimerSoundCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="中途提示:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="每隔一段时间提示" Foreground="{StaticResource Brush_Text_Primary}"
+                            <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="每隔一段时间提示" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="提示音效:" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
@@ -257,9 +261,9 @@
             </TabControl>
 
             <!-- 3. 底部按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,0,20,20">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,12,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>

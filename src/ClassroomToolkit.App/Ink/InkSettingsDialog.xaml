@@ -14,7 +14,7 @@
     <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="8" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="40" ShadowDepth="12" Opacity="0.5"/>
+            <StaticResource ResourceKey="Shadow_Dialog"/>
         </Border.Effect>
 
         <Grid>
@@ -49,9 +49,9 @@
                 <TextBox x:Name="InkPhotoPathBox" Height="28"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="90" Margin="0,0,10,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="90" Click="OnConfirm"/>
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>

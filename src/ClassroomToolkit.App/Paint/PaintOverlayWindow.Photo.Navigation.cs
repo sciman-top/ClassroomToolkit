@@ -398,17 +398,20 @@ public partial class PaintOverlayWindow
 
     private void UpdatePhotoInkClip()
     {
-        Rect clipBounds = Rect.Empty;
+        Rect rasterClipBounds = Rect.Empty;
+        Rect previewClipBounds = Rect.Empty;
         if (PhotoBackground.Source is BitmapSource bitmap)
         {
             var usePhotoTransform = ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
-            var currentPageScreenRect = Rect.Empty;
-            if (!usePhotoTransform)
-            {
-                _ = TryBuildImageScreenRect(bitmap, _photoContentTransform, out currentPageScreenRect);
-            }
-
-            clipBounds = PhotoInkCurrentPageClipPolicy.ResolveBounds(
+            _ = TryBuildImageScreenRect(bitmap, _photoContentTransform, out var currentPageScreenRect);
+            rasterClipBounds = PhotoInkCurrentPageClipPolicy.ResolveBounds(
+                photoInkModeActive: IsPhotoInkModeActive(),
+                crossPageDisplayActive: IsCrossPageDisplayActive(),
+                usePhotoTransform: usePhotoTransform,
+                currentPageScreenRect: currentPageScreenRect,
+                pageWidthDip: GetBitmapDisplayWidthInDip(bitmap),
+                pageHeightDip: GetBitmapDisplayHeightInDip(bitmap));
+            previewClipBounds = PhotoInkPreviewClipPolicy.ResolveBounds(
                 photoInkModeActive: IsPhotoInkModeActive(),
                 crossPageDisplayActive: IsCrossPageDisplayActive(),
                 usePhotoTransform: usePhotoTransform,
@@ -417,19 +420,31 @@ public partial class PaintOverlayWindow
                 pageHeightDip: GetBitmapDisplayHeightInDip(bitmap));
         }
 
-        if (clipBounds.IsEmpty)
+        if (rasterClipBounds.IsEmpty)
         {
             RasterImage.Clip = null;
-            return;
         }
-
-        if (RasterImage.Clip is RectangleGeometry rectangleClip)
+        else if (RasterImage.Clip is RectangleGeometry rectangleClip)
         {
-            rectangleClip.Rect = clipBounds;
-            return;
+            rectangleClip.Rect = rasterClipBounds;
+        }
+        else
+        {
+            RasterImage.Clip = new RectangleGeometry(rasterClipBounds);
         }
 
-        RasterImage.Clip = new RectangleGeometry(clipBounds);
+        if (previewClipBounds.IsEmpty)
+        {
+            _visualHost.Clip = null;
+        }
+        else if (_visualHost.Clip is RectangleGeometry previewClip)
+        {
+            previewClip.Rect = previewClipBounds;
+        }
+        else
+        {
+            _visualHost.Clip = new RectangleGeometry(previewClipBounds);
+        }
     }
 
     private IntPtr ResolveOverlayWindowHandle()
@@ -627,7 +642,8 @@ public partial class PaintOverlayWindow
         BitmapSource? preloadedBitmap = null,
         bool deferCrossPageDisplayUpdate = false,
         int? previousPageIndexForInteractiveSwitch = null,
-        BitmapSource? previousPageBitmapForInteractiveSwitch = null)
+        BitmapSource? previousPageBitmapForInteractiveSwitch = null,
+        bool clearPreservedNeighborInkFrames = false)
     {
         if (IsCrossPageFirstInputTraceActive())
         {
@@ -641,6 +657,12 @@ public partial class PaintOverlayWindow
             _currentPageIndex = newPageIndex;
             _currentCacheKey = BuildPdfCacheKey(_currentDocumentPath, _currentPageIndex);
             ResetInkHistory();
+            _photoTranslate.Y = PhotoNavigationInkLoadTranslatePolicy.ResolveTranslateYBeforeLoad(
+                _photoTranslate.Y,
+                newTranslateY,
+                pageChanged: beforeCurrentPage != newPageIndex,
+                photoInkModeActive: IsPhotoInkModeActive(),
+                crossPageDisplayActive: IsCrossPageDisplayActive());
             if (IsCrossPageFirstInputTraceActive())
             {
                 MarkCrossPageFirstInputStage("navigate-load-start", "doc=pdf");
@@ -697,6 +719,12 @@ public partial class PaintOverlayWindow
                 _currentDocumentPath = newPath;
                 _currentCacheKey = BuildPhotoCacheKey(newPath);
                 ResetInkHistory();
+                _photoTranslate.Y = PhotoNavigationInkLoadTranslatePolicy.ResolveTranslateYBeforeLoad(
+                    _photoTranslate.Y,
+                    newTranslateY,
+                    pageChanged: beforeCurrentPage != newPageIndex,
+                    photoInkModeActive: IsPhotoInkModeActive(),
+                    crossPageDisplayActive: IsCrossPageDisplayActive());
                 if (IsCrossPageFirstInputTraceActive())
                 {
                     MarkCrossPageFirstInputStage("navigate-image-switch-start");
@@ -738,19 +766,77 @@ public partial class PaintOverlayWindow
         }
         // Apply new position
         _photoTranslate.Y = newTranslateY;
-        UpdatePhotoInkClip();
+        var viewportSyncAction = PhotoNavigationInkViewportSyncPolicy.ResolveAction(
+            IsPhotoInkModeActive(),
+            interactiveSwitch);
+        if (viewportSyncAction == PhotoNavigationInkViewportSyncAction.UpdatePanCompensation)
+        {
+            UpdatePhotoInkPanCompensation();
+        }
+        else if (viewportSyncAction == PhotoNavigationInkViewportSyncAction.ResetPanCompensation)
+        {
+            // Page switch loads a page-specific raster; carrying previous-page pan compensation
+            // can shift the entire current page ink layer out of view until a later redraw.
+            ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: true);
+        }
+        else
+        {
+            UpdatePhotoInkClip();
+        }
+
+        var currentPageAfterNavigation = GetCurrentPageIndexForCrossPage();
+        var pageChanged = beforeCurrentPage != currentPageAfterNavigation;
+        var previousPageForNeighborSeed = previousPageIndexForInteractiveSwitch.GetValueOrDefault(beforeCurrentPage);
+        var preservedPageForMutationClear = CrossPageMutationNeighborRetentionPolicy.ResolvePreservedPage(
+            clearPreservedNeighborInkFrames,
+            pageChanged,
+            previousPageForNeighborSeed,
+            currentPageAfterNavigation);
+        if (CrossPageNavigationCurrentInkRefreshPolicy.ShouldRequest(
+                pageChanged,
+                interactiveSwitch,
+                IsPhotoInkModeActive(),
+                _mode))
+        {
+            RequestPhotoTransformInkRedraw();
+        }
 
         if (IsCrossPageDisplayActive())
         {
+            if (clearPreservedNeighborInkFrames && pageChanged)
+            {
+                // Prevent old/new page ink carryover across a mutation-triggered seam switch.
+                // RenderNeighborPages may preserve previous slot ink frames for continuity,
+                // but this switch requires hard page ownership boundaries.
+                ClearNeighborInkVisuals(
+                    clearSlotIdentity: true,
+                    preservePageIndex: preservedPageForMutationClear);
+                if (CrossPageMutationNeighborSeedPolicy.ShouldSeedPreviousPageAfterClear(
+                        clearPreservedNeighborInkFrames,
+                        pageChanged,
+                        previousPageForNeighborSeed,
+                        currentPageAfterNavigation))
+                {
+                    // Re-seed previous page neighbor frame immediately after clear to avoid
+                    // old-page self-ink one-frame flash during fast seam crossing.
+                    TrySeedNeighborFrameForInteractiveSwitch(
+                        previousPageForNeighborSeed,
+                        previousPageBitmapForInteractiveSwitch);
+                }
+            }
             if (interactiveSwitch)
             {
                 // Keep pointer-down path lightweight: full boundary computation walks all pages and
                 // may synchronously load uncached bitmaps from disk, which causes first-stroke stalls.
-                if (beforeCurrentPage != GetCurrentPageIndexForCrossPage())
+                if (pageChanged)
                 {
-                    // Keep existing neighbor transforms untouched during the switch tick.
-                    // Re-basing old slots against a new anchor can transiently scramble page order.
-                    HideNeighborSlotForPage(GetCurrentPageIndexForCrossPage());
+                    // For brush cross-page input, keep the target page's previous neighbor slot
+                    // visible until the next formal cross-page refresh. This avoids a one-switch
+                    // blank current page when the current raster has not yet been rehydrated.
+                    if (CrossPageCurrentPageSeedSlotHidePolicy.ShouldHide(_mode))
+                    {
+                        HideNeighborSlotForPage(GetCurrentPageIndexForCrossPage());
+                    }
                 }
                 if (IsCrossPageFirstInputTraceActive())
                 {
@@ -777,9 +863,8 @@ public partial class PaintOverlayWindow
         InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
         if (interactiveSwitch)
         {
-            var previousPage = previousPageIndexForInteractiveSwitch.GetValueOrDefault(beforeCurrentPage);
             TrySeedNeighborFrameForInteractiveSwitch(
-                previousPage,
+                previousPageForNeighborSeed,
                 previousPageBitmapForInteractiveSwitch);
 
             var refreshMode = CrossPageInteractiveSwitchRefreshPolicy.Resolve(_mode, deferCrossPageDisplayUpdate);

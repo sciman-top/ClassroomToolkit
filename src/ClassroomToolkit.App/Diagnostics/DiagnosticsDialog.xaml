@@ -11,16 +11,6 @@
         Background="{x:Null}"
         Topmost="True">
 
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Colors.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Icons.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/WidgetStyles.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
-    
     <Border Style="{StaticResource Style_ManagementShellWindowBorder}" TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>

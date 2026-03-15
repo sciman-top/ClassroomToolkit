@@ -70,11 +70,20 @@ public partial class PaintOverlayWindow
         _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     }
 
-    private void ClearNeighborInkVisuals(bool clearSlotIdentity = false)
+    private void ClearNeighborInkVisuals(bool clearSlotIdentity = false, int preservePageIndex = 0)
     {
+        var preserveUid = preservePageIndex > 0
+            ? preservePageIndex.ToString(CultureInfo.InvariantCulture)
+            : string.Empty;
         for (var i = 0; i < _neighborInkImages.Count; i++)
         {
             var inkImg = _neighborInkImages[i];
+            if (!string.IsNullOrWhiteSpace(preserveUid)
+                && string.Equals(inkImg.Uid, preserveUid, StringComparison.Ordinal))
+            {
+                inkImg.Visibility = inkImg.Source != null ? Visibility.Visible : Visibility.Collapsed;
+                continue;
+            }
             TryAssignFrameSource(inkImg, null, forceAssign: true);
             inkImg.Visibility = Visibility.Collapsed;
             if (clearSlotIdentity)
@@ -84,8 +93,17 @@ public partial class PaintOverlayWindow
             }
         }
 
-        _interactiveSwitchPinnedNeighborPage = 0;
-        _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
+        if (!string.IsNullOrWhiteSpace(preserveUid))
+        {
+            _interactiveSwitchPinnedNeighborPage = preservePageIndex;
+            _interactiveSwitchPinnedNeighborInkHoldUntilUtc = GetCurrentUtcTimestamp()
+                .AddMilliseconds(CrossPageRuntimeDefaults.NeighborPagesClearGraceMs);
+        }
+        else
+        {
+            _interactiveSwitchPinnedNeighborPage = 0;
+            _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
+        }
     }
 
     private void ClearNeighborImageCache()
@@ -860,7 +878,11 @@ public partial class PaintOverlayWindow
                 TryAssignFrameSource(img, bitmap);
                 img.Visibility = Visibility.Visible;
             }
-            else if (!shouldReplacePageFrame && img.Source is BitmapSource keepBitmap)
+            else if (img.Source is BitmapSource keepBitmap
+                     && CrossPageInteractivePageReplacementPolicy.ShouldReuseCurrentFrame(
+                         shouldReplacePageFrame,
+                         slotPageChanged,
+                         hasCurrentFrame))
             {
                 bitmap = keepBitmap;
                 img.Visibility = Visibility.Visible;
@@ -901,6 +923,26 @@ public partial class PaintOverlayWindow
                 continue;
             }
             var inkImg = _neighborInkImages[i];
+            if (bitmap != null)
+            {
+                var baseTop = top - _photoTranslate.Y;
+                var pageScaleRatio = 1.0;
+                if (!_photoDocumentIsPdf && normalizedWidthDip > 0)
+                {
+                    var pageWidthDip = GetBitmapDisplayWidthInDip(bitmap);
+                    if (pageWidthDip > 0)
+                    {
+                        pageScaleRatio = normalizedWidthDip / pageWidthDip;
+                    }
+                }
+                img.Tag = baseTop;
+                inkImg.Tag = baseTop;
+                img.Uid = pageUid;
+                inkImg.Uid = pageUid;
+                // Bind slot identity/transform before ink bitmap replacement so async neighbor-ink
+                // apply always targets the correct page slot without one-frame old-position flashes.
+                ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
+            }
             var baseHoldInkReplacement = CrossPageInteractiveInkFrameHoldPolicy.ShouldHoldReplacement(
                 pageIndex,
                 _interactiveSwitchPinnedNeighborPage,
@@ -933,6 +975,14 @@ public partial class PaintOverlayWindow
                         holdInkReplacement,
                         usedPreservedInkFrame,
                         hasResolvedInkBitmap: inkBitmap != null);
+                    if (CrossPageNeighborInkFramePolicy.ShouldClearWhenUnresolved(
+                            frameDecision,
+                            hasResolvedInkBitmap: inkBitmap != null))
+                    {
+                        // Slot remapped to a page without resolved target ink:
+                        // clear stale old-page frame immediately to avoid ghost duplication.
+                        TryAssignFrameSource(inkImg, null);
+                    }
                     if (inkBitmap != null
                         && !holdInkReplacement
                         && (frameDecision.AllowResolvedInkReplacement
@@ -974,11 +1024,26 @@ public partial class PaintOverlayWindow
                     {
                         TryAssignFrameSource(inkImg, interactiveInkBitmap);
                     }
-                    else if (slotPageChanged && inkImg.Source != null)
+                    else if (slotPageChanged)
                     {
-                        // Slot remapped to a different page: never keep old-page ink on top of new-page bitmap.
-                        // Prefer a brief empty frame over cross-page ghost duplication.
-                        TryAssignFrameSource(inkImg, null);
+                        var hasPreservedInkFrame = preservedInkFrames.TryGetValue(pageUid, out var remapPreservedInkBitmap);
+                        var remapAction = CrossPageInteractiveInkSlotRemapPolicy.Resolve(
+                            slotPageChanged: true,
+                            hasResolvedInkBitmap: interactiveInkBitmap != null,
+                            hasCurrentInkFrame: inkImg.Source != null,
+                            hasPreservedInkFrame: hasPreservedInkFrame,
+                            inkOperationActive: IsInkOperationActive());
+                        if (remapAction == CrossPageInteractiveInkSlotRemapAction.UsePreservedFrame && hasPreservedInkFrame)
+                        {
+                            usedPreservedInkFrame = true;
+                            TryAssignFrameSource(inkImg, remapPreservedInkBitmap);
+                        }
+                        else if (remapAction == CrossPageInteractiveInkSlotRemapAction.ClearCurrentFrame)
+                        {
+                            // Slot remapped to a different page and no preserved target frame available.
+                            // Clear old-page ink to avoid cross-page ghost duplication.
+                            TryAssignFrameSource(inkImg, null);
+                        }
                         if (interactiveInkBitmap == null)
                         {
                             RequestDeferredNeighborInkRender(pageIndex, bitmap);
@@ -1024,25 +1089,6 @@ public partial class PaintOverlayWindow
                 inkImg.Visibility = noBitmapDecision.KeepVisible && inkImg.Source != null
                     ? Visibility.Visible
                     : Visibility.Collapsed;
-            }
-            if (bitmap != null)
-            {
-                var baseTop = top - _photoTranslate.Y;
-                var pageScaleRatio = 1.0;
-                if (!_photoDocumentIsPdf && normalizedWidthDip > 0)
-                {
-                    var pageWidthDip = GetBitmapDisplayWidthInDip(bitmap);
-                    if (pageWidthDip > 0)
-                    {
-                        pageScaleRatio = normalizedWidthDip / pageWidthDip;
-                    }
-                }
-                img.Tag = baseTop;
-                inkImg.Tag = baseTop;
-                img.Uid = pageUid;
-                inkImg.Uid = pageUid;
-                // Apply same transform as current page
-                ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
             }
         }
 

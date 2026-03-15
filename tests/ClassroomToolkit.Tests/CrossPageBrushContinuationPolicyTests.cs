@@ -101,4 +101,42 @@ public sealed class CrossPageBrushContinuationPolicyTests
 
         decision.ContinuationSeed.Position.Y.Should().BeApproximately(200.08, 0.001);
     }
+
+    [Fact]
+    public void Resolve_ShouldClampFinalizeSampleToSeam_WhenBridgeCannotBeInterpolatedAndCurrentIsBeyondSeam()
+    {
+        var previous = BrushInputSample.CreatePointer(new WpfPoint(120, 230), timestampTicks: 100);
+        var current = BrushInputSample.CreatePointer(new WpfPoint(128, 236), timestampTicks: 110);
+
+        var decision = CrossPageBrushContinuationPolicy.Resolve(
+            current,
+            previous,
+            currentPageTop: 0,
+            currentPageHeight: 200,
+            currentPage: 2,
+            targetPage: 3);
+
+        decision.FinalizeSample.Position.Y.Should().BeApproximately(200, 0.001);
+        decision.ContinuationSeed.Position.Y.Should().BeGreaterThan(200);
+        decision.ShouldReplayCurrentInputAfterResume.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ShouldNotClamp_WhenBridgeCannotBeInterpolatedButCurrentHasNotCrossedSeam()
+    {
+        var previous = BrushInputSample.CreatePointer(new WpfPoint(80, 160), timestampTicks: 100);
+        var current = BrushInputSample.CreatePointer(new WpfPoint(90, 170), timestampTicks: 110);
+
+        var decision = CrossPageBrushContinuationPolicy.Resolve(
+            current,
+            previous,
+            currentPageTop: 0,
+            currentPageHeight: 200,
+            currentPage: 2,
+            targetPage: 3);
+
+        decision.FinalizeSample.Should().Be(current);
+        decision.ContinuationSeed.Should().Be(current);
+        decision.ShouldReplayCurrentInputAfterResume.Should().BeFalse();
+    }
 }

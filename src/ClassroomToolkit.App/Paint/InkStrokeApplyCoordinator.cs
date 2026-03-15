@@ -19,6 +19,7 @@ internal static class InkStrokeApplyCoordinator
         Action<IReadOnlyList<InkStrokeData>> addRuntimeStrokes,
         Func<IReadOnlyList<InkStrokeData>, bool, bool> tryApplyNeighborInkBitmapForCurrentPage,
         Action redrawInkSurface,
+        Action finalizeFastAppliedInkSurface,
         Action markCurrentInkPageLoaded,
         Action<double, bool> recordPerfMilliseconds,
         Func<double> getElapsedMilliseconds,
@@ -30,6 +31,7 @@ internal static class InkStrokeApplyCoordinator
         ArgumentNullException.ThrowIfNull(addRuntimeStrokes);
         ArgumentNullException.ThrowIfNull(tryApplyNeighborInkBitmapForCurrentPage);
         ArgumentNullException.ThrowIfNull(redrawInkSurface);
+        ArgumentNullException.ThrowIfNull(finalizeFastAppliedInkSurface);
         ArgumentNullException.ThrowIfNull(markCurrentInkPageLoaded);
         ArgumentNullException.ThrowIfNull(recordPerfMilliseconds);
         ArgumentNullException.ThrowIfNull(getElapsedMilliseconds);
@@ -51,6 +53,7 @@ internal static class InkStrokeApplyCoordinator
         else
         {
             markTraceStage?.Invoke("apply-fast-bitmap", null);
+            finalizeFastAppliedInkSurface();
         }
 
         markCurrentInkPageLoaded();

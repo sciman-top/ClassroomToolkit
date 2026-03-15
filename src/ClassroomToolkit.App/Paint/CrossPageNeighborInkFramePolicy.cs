@@ -12,10 +12,13 @@ internal static class CrossPageNeighborInkFramePolicy
     {
         if (!hasTargetInkStrokes && !hasResolvedInkBitmap)
         {
+            var retainCurrentFrame = holdInkReplacement
+                || usedPreservedInkFrame
+                || (hasCurrentInkFrame && !slotPageChanged);
             return new CrossPageNeighborInkFrameDecision(
-                ClearCurrentFrame: true,
+                ClearCurrentFrame: !retainCurrentFrame,
                 AllowResolvedInkReplacement: false,
-                KeepVisible: false);
+                KeepVisible: retainCurrentFrame);
         }
 
         var keepExistingFrame = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
@@ -40,5 +43,12 @@ internal static class CrossPageNeighborInkFramePolicy
             ClearCurrentFrame: clearCurrentFrame,
             AllowResolvedInkReplacement: allowResolvedInkReplacement,
             KeepVisible: keepVisible);
+    }
+
+    internal static bool ShouldClearWhenUnresolved(
+        CrossPageNeighborInkFrameDecision decision,
+        bool hasResolvedInkBitmap)
+    {
+        return decision.ClearCurrentFrame && !hasResolvedInkBitmap;
     }
 }

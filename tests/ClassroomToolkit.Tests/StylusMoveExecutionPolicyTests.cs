@@ -6,12 +6,13 @@ namespace ClassroomToolkit.Tests;
 public sealed class StylusMoveExecutionPolicyTests
 {
     [Theory]
-    [InlineData(true, false, true, true, (int)PaintToolMode.Brush, true, (int)StylusMoveExecutionAction.None, false)]
-    [InlineData(false, true, true, true, (int)PaintToolMode.Brush, true, (int)StylusMoveExecutionAction.None, false)]
-    [InlineData(false, false, false, true, (int)PaintToolMode.Brush, true, (int)StylusMoveExecutionAction.None, false)]
-    [InlineData(false, false, true, false, (int)PaintToolMode.Brush, true, (int)StylusMoveExecutionAction.HandlePointerPosition, true)]
-    [InlineData(false, false, true, true, (int)PaintToolMode.Brush, true, (int)StylusMoveExecutionAction.HandleBrushBatch, true)]
-    [InlineData(false, false, true, true, (int)PaintToolMode.Eraser, false, (int)StylusMoveExecutionAction.HandleStylusPointsIndividually, true)]
+    [InlineData(true, false, true, true, (int)PaintToolMode.Brush, true, false, (int)StylusMoveExecutionAction.None, false)]
+    [InlineData(false, true, true, true, (int)PaintToolMode.Brush, true, false, (int)StylusMoveExecutionAction.None, false)]
+    [InlineData(false, false, false, true, (int)PaintToolMode.Brush, true, false, (int)StylusMoveExecutionAction.None, false)]
+    [InlineData(false, false, true, false, (int)PaintToolMode.Brush, true, false, (int)StylusMoveExecutionAction.HandlePointerPosition, true)]
+    [InlineData(false, false, true, true, (int)PaintToolMode.Brush, true, false, (int)StylusMoveExecutionAction.HandleBrushBatch, true)]
+    [InlineData(false, false, true, true, (int)PaintToolMode.Eraser, false, false, (int)StylusMoveExecutionAction.HandleStylusPointsIndividually, true)]
+    [InlineData(false, false, true, true, (int)PaintToolMode.Brush, true, true, (int)StylusMoveExecutionAction.HandleStylusPointsIndividually, true)]
     public void Resolve_ShouldReturnExpectedPlan(
         bool photoLoading,
         bool handledByPhotoPan,
@@ -19,6 +20,7 @@ public sealed class StylusMoveExecutionPolicyTests
         bool hasStylusPoints,
         int mode,
         bool strokeInProgress,
+        bool crossPageDisplayActive,
         int expectedAction,
         bool expectedHandled)
     {
@@ -28,7 +30,8 @@ public sealed class StylusMoveExecutionPolicyTests
             inkOperationActive,
             hasStylusPoints,
             (PaintToolMode)mode,
-            strokeInProgress);
+            strokeInProgress,
+            crossPageDisplayActive);
 
         ((int)plan.Action).Should().Be(expectedAction);
         plan.ShouldMarkHandled.Should().Be(expectedHandled);

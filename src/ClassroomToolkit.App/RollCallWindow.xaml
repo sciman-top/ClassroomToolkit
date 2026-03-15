@@ -47,11 +47,11 @@
                             Click="OnToggleModeClick"
                             Padding="12,6"
                             Margin="0,0,12,0"
-                            Height="34"
+                            Height="32"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <Path Fill="{StaticResource Brush_Primary}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0">
+                            <Path Fill="{StaticResource Brush_Primary}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,7,0">
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
@@ -71,7 +71,7 @@
                     <Button Style="{StaticResource Style_SecondaryButton}"
                             Click="OnClassSelectClick"
                             Padding="12,6"
-                            Height="34"
+                            Height="32"
                             MinWidth="110"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1"
@@ -82,11 +82,11 @@
 
                 <!-- 右侧：窗口控制 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,16,0">
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置" Width="36" Height="36">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform" Width="20" Height="20"/>
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="设置" Width="32" Height="32">
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform" Width="17" Height="17"/>
                     </Button>
                     
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭" Width="36" Height="36" Margin="4,0,0,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭" Width="32" Height="32" Margin="4,0,0,0">
                         <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
@@ -124,9 +124,10 @@
                                 <TextBlock x:Name="BigNameText"
                                            Text="{Binding CurrentStudentName}"
                                            Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                           FontSize="100"
+                                           FontSize="72"
                                            FontWeight="Heavy"
                                            FontFamily="Microsoft YaHei UI"
+                                           FontStretch="Expanded"
                                            Foreground="{StaticResource Brush_Text_Primary}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
@@ -139,7 +140,7 @@
                                 <!-- 学号 -->
                                 <TextBlock Text="{Binding CurrentStudentId}"
                                            Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="46"
+                                           FontSize="20"
                                            Foreground="{StaticResource Brush_Text_Secondary}"
                                            FontWeight="Bold"
                                            TextAlignment="Center"
@@ -197,7 +198,7 @@
                                 <TextBlock Text="{Binding TimeDisplay}"
                                            Foreground="{StaticResource Gradient_Timer_Display}"
                                            FontFamily="Consolas, Courier New"
-                                           FontWeight="Bold">
+                                           FontWeight="Black">
                                      <TextBlock.Effect>
                                          <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                                      </TextBlock.Effect>
@@ -307,17 +308,41 @@
                 </Grid>
             </Border>
 
-            <!-- 5. 加载占位 -->
+            <!-- 5. 加载占位（旋转圆弧指示器） -->
             <Grid Grid.RowSpan="3"
                   Panel.ZIndex="100"
                   Background="{StaticResource Brush_OverlayMask}"
                   Visibility="{Binding IsDataLoaded, ElementName=NameWindow, Converter={StaticResource InverseBoolToVis}}">
-                <TextBlock Text="加载中..."
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Foreground="White"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- 旋转圆弧 -->
+                    <Border Width="48" Height="48" HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <RotateTransform x:Name="LoadingRotate" Angle="0"/>
+                        </Border.RenderTransform>
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="LoadingRotate"
+                                                         Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360" Duration="0:0:1.0"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
+                        <Ellipse Width="48" Height="48"
+                                 Stroke="{StaticResource Brush_Primary}"
+                                 StrokeThickness="3"
+                                 StrokeDashArray="20 10"
+                                 Opacity="0.85"/>
+                    </Border>
+                    <TextBlock Text="加载中"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource Brush_Text_Secondary}"
+                               HorizontalAlignment="Center"
+                               Margin="0,10,0,0"/>
+                </StackPanel>
             </Grid>
         </Grid>
     </Border>

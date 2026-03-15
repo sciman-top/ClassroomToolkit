@@ -45,4 +45,22 @@ public sealed class CrossPageInteractivePageReplacementPolicyTests
             slotPageChanged: false,
             hasCurrentFrame: false).Should().BeTrue();
     }
+
+    [Fact]
+    public void ShouldReuseCurrentFrame_ShouldReturnFalse_WhenSlotChanged()
+    {
+        CrossPageInteractivePageReplacementPolicy.ShouldReuseCurrentFrame(
+            shouldReplacePageFrame: false,
+            slotPageChanged: true,
+            hasCurrentFrame: true).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldReuseCurrentFrame_ShouldReturnTrue_WhenSlotStableAndTargetNotReplaced()
+    {
+        CrossPageInteractivePageReplacementPolicy.ShouldReuseCurrentFrame(
+            shouldReplacePageFrame: false,
+            slotPageChanged: false,
+            hasCurrentFrame: true).Should().BeTrue();
+    }
 }

@@ -31,19 +31,19 @@
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 -->
-            <Border Grid.Row="1" Margin="20,16,20,16" Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="8" Padding="16,16" BorderBrush="Transparent">
+            <Border Grid.Row="1" Margin="16,12,16,12" Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="8" Padding="14,14" BorderBrush="Transparent">
                 <StackPanel>
                     <!-- App Header -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Width="40" Height="40" CornerRadius="8" Background="{StaticResource Brush_Primary}" Margin="0,0,12,0" BorderBrush="Transparent">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <Border Width="48" Height="48" CornerRadius="12" Background="{StaticResource Brush_Primary}" Margin="0,0,16,0" BorderBrush="Transparent">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_RollCall}" Fill="{StaticResource Brush_Text_Primary}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="课堂工具箱" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}"/>
-                            <TextBlock x:Name="VersionText" Text="Version -" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,2,0,0"/>
+                            <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="Black" Foreground="{StaticResource Brush_Text_Primary}"/>
+                            <TextBlock x:Name="VersionText" Text="Version -" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush_Primary}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -72,12 +72,12 @@
                 <Button Content="复制信息"
                         Style="{StaticResource Style_DialogShellSecondaryActionButton}"
                         Padding="0"
-                        Height="30"
+                        Height="32"
                         Click="OnCopyInfoClick"/>
                 <Button Content="关闭"
                         Style="{StaticResource Style_DialogShellPrimaryActionButton}"
                         Padding="0"
-                        Height="30"
+                        Height="32"
                         Click="OnCloseClick"/>
             </StackPanel>
         </Grid>

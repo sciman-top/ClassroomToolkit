@@ -22,4 +22,19 @@ internal static class CrossPageInteractivePageReplacementPolicy
 
         return true;
     }
+
+    internal static bool ShouldReuseCurrentFrame(
+        bool shouldReplacePageFrame,
+        bool slotPageChanged,
+        bool hasCurrentFrame)
+    {
+        if (shouldReplacePageFrame || !hasCurrentFrame)
+        {
+            return false;
+        }
+
+        // Slot remap means this visual slot now points to another page.
+        // Reusing old frame here causes cross-page ghost duplication.
+        return !slotPageChanged;
+    }
 }

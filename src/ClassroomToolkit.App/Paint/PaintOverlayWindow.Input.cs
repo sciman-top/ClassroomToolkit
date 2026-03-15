@@ -544,6 +544,28 @@ public partial class PaintOverlayWindow
                 page => GetScaledHeightForInteractiveSwitchClamp(page, normalizedWidthDip, targetPageHeight),
                 fallbackPageHeight: targetPageHeight);
         }
+        var nowUtc = GetCurrentUtcTimestamp();
+        var seamY = targetPage > currentPage
+            ? currentPageTop + currentPageHeight
+            : currentPageTop;
+        if (CrossPageInputSwitchBounceGuardPolicy.ShouldSuppress(
+                currentPage,
+                targetPage,
+                _lastInputSwitchFromPage,
+                _lastInputSwitchToPage,
+                _lastInputSwitchUtc,
+                nowUtc,
+                input.Position.Y,
+                seamY,
+                CrossPageInputSwitchThresholds.ReverseSwitchSeamBandDip,
+                CrossPageInputSwitchThresholds.ReverseSwitchCooldownMs))
+        {
+            _inkDiagnostics?.OnCrossPageUpdateEvent(
+                "skip",
+                "input-switch-bounce-guard",
+                $"from={currentPage} to={targetPage}");
+            return false;
+        }
 
         BeginCrossPageFirstInputTrace(currentPage, targetPage);
         MarkCrossPageFirstInputStage("switch-resolved", $"offset={offset:F2} top={targetTop:F2}");
@@ -566,11 +588,14 @@ public partial class PaintOverlayWindow
         }
 
         var previousPointerPosition = _lastPointerPosition;
+        var switchTriggeredByActiveInkMutation = _strokeInProgress || _isErasing || _isRegionSelecting;
         if (continuationDecision.HasValue)
         {
             _lastPointerPosition = continuationDecision.Value.FinalizeSample.Position;
         }
         MarkCrossPageFirstInputStage("save-old-page-start");
+        var previousSuppressCrossPageVisualSync = _suppressCrossPageVisualSync;
+        _suppressCrossPageVisualSync = true;
         _suppressImmediatePhotoInkRedraw = true;
         try
         {
@@ -578,25 +603,47 @@ public partial class PaintOverlayWindow
                 forceBackground: false,
                 persistToSidecar: false,
                 finalizeActiveOperation: true);
+            _lastPointerPosition = previousPointerPosition;
+            MarkCrossPageFirstInputStage("save-old-page-end");
+            MarkCrossPageFirstInputStage("navigate-start");
+            var switchNavigationPlan = CrossPageInputSwitchNavigationPolicy.Resolve(
+                _mode,
+                _strokeInProgress,
+                _isErasing,
+                _isRegionSelecting,
+                inputTriggeredByActiveInkMutation: switchTriggeredByActiveInkMutation);
+            var clearPreservedNeighborInkFrames = CrossPageMutationNeighborInkCarryoverPolicy.ShouldClearPreservedNeighborInkFrames(
+                pageChanged: currentPage != targetPage,
+                interactiveSwitch: switchNavigationPlan.InteractiveSwitch,
+                inputTriggeredByActiveInkMutation: switchTriggeredByActiveInkMutation,
+                mode: _mode);
+            NavigateToPage(
+                targetPage,
+                targetTop,
+                interactiveSwitch: switchNavigationPlan.InteractiveSwitch,
+                preloadedBitmap: preloadedBitmap,
+                deferCrossPageDisplayUpdate: switchNavigationPlan.InteractiveSwitch
+                    ? executionPlan.DeferCrossPageDisplayUpdate
+                    : switchNavigationPlan.DeferCrossPageDisplayUpdate,
+                previousPageIndexForInteractiveSwitch: currentPage,
+                previousPageBitmapForInteractiveSwitch: currentBitmap,
+                clearPreservedNeighborInkFrames: clearPreservedNeighborInkFrames);
+            if (GetCurrentPageIndexForCrossPage() == targetPage)
+            {
+                _lastInputSwitchFromPage = currentPage;
+                _lastInputSwitchToPage = targetPage;
+                _lastInputSwitchUtc = nowUtc;
+            }
+            _pendingCrossPageBrushContinuationSample = continuationSeed;
+            _pendingCrossPageBrushReplayCurrentInput = replayCurrentInputAfterResume;
+            MarkCrossPageFirstInputStage("navigate-end", $"activePage={GetCurrentPageIndexForCrossPage()}");
         }
         finally
         {
+            _lastPointerPosition = previousPointerPosition;
             _suppressImmediatePhotoInkRedraw = false;
+            _suppressCrossPageVisualSync = previousSuppressCrossPageVisualSync;
         }
-        _lastPointerPosition = previousPointerPosition;
-        MarkCrossPageFirstInputStage("save-old-page-end");
-        MarkCrossPageFirstInputStage("navigate-start");
-        NavigateToPage(
-            targetPage,
-            targetTop,
-            interactiveSwitch: true,
-            preloadedBitmap: preloadedBitmap,
-            deferCrossPageDisplayUpdate: executionPlan.DeferCrossPageDisplayUpdate,
-            previousPageIndexForInteractiveSwitch: currentPage,
-            previousPageBitmapForInteractiveSwitch: currentBitmap);
-        _pendingCrossPageBrushContinuationSample = continuationSeed;
-        _pendingCrossPageBrushReplayCurrentInput = replayCurrentInputAfterResume;
-        MarkCrossPageFirstInputStage("navigate-end", $"activePage={GetCurrentPageIndexForCrossPage()}");
         return true;
     }
 
@@ -764,7 +811,47 @@ public partial class PaintOverlayWindow
         _lastPointerPosition = position;
         var switchedPage = TrySwitchActiveImagePageForInput(input);
         ResumeCrossPageInputOperationAfterSwitch(switchedPage, input);
+        if (ShouldSuppressCrossPageOutOfPageBrushMove(input, switchedPage))
+        {
+            _inkDiagnostics?.OnCrossPageUpdateEvent(
+                "skip",
+                "out-of-page-brush-move",
+                $"page={GetCurrentPageIndexForCrossPage()} y={position.Y:0.##}");
+            return;
+        }
         HandlePointerMoveByTool(input);
+    }
+
+    private bool ShouldSuppressCrossPageOutOfPageBrushMove(BrushInputSample input, bool switchedPageThisFrame)
+    {
+        if (PhotoBackground.Source is not BitmapSource currentBitmap)
+        {
+            return false;
+        }
+        if (!TryBuildImageScreenRect(currentBitmap, _photoContentTransform, out var currentPageRect))
+        {
+            return false;
+        }
+
+        currentPageRect.Inflate(
+            CrossPageInputSwitchThresholds.OutOfPageMoveSuppressMarginDip,
+            CrossPageInputSwitchThresholds.OutOfPageMoveSuppressMarginDip);
+        var pointerInsideCurrentPageRect = currentPageRect.Contains(input.Position);
+        var recentSwitchGraceActive = false;
+        if (_lastInputSwitchUtc != CrossPageRuntimeDefaults.UnsetTimestampUtc)
+        {
+            var elapsedMs = (GetCurrentUtcTimestamp() - _lastInputSwitchUtc).TotalMilliseconds;
+            recentSwitchGraceActive = elapsedMs >= 0
+                && elapsedMs <= CrossPageInputSwitchThresholds.OutOfPageMoveSuppressPostSwitchGraceMs;
+        }
+        return CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
+            crossPageDisplayActive: IsCrossPageDisplayActive(),
+            mode: _mode,
+            strokeInProgress: _strokeInProgress,
+            switchedPageThisFrame: switchedPageThisFrame,
+            recentSwitchGraceActive: recentSwitchGraceActive,
+            hasCurrentPageRect: true,
+            pointerInsideCurrentPageRect: pointerInsideCurrentPageRect);
     }
 
     private void HandlePointerMoveByTool(BrushInputSample input)
@@ -1028,11 +1115,12 @@ public partial class PaintOverlayWindow
 
         if (executionPlan.Action == CrossPageInputResumeAction.BeginBrushContinuation)
         {
-            BeginBrushStrokeContinuation(seed);
-            if (executionPlan.ShouldUpdateBrushAfterContinuation)
-            {
-                UpdateBrushStroke(input);
-            }
+            // Cross-page resume can carry a seam seed from the previous frame.
+            // Skip seed-only preview draw to avoid one-frame page-cross flash.
+            _visualHost.Clear();
+            BeginBrushStrokeContinuation(seed, renderInitialPreview: false);
+            // Keep the current input sample update in the normal pointer-move path only.
+            // This avoids a cross-page switch frame doing two preview updates with the same sample.
             return;
         }
 
@@ -1176,13 +1264,15 @@ public partial class PaintOverlayWindow
     {
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Move);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
+        var interactionState = CaptureInputInteractionState();
         var executionPlan = StylusMoveExecutionPolicy.Resolve(
             _photoLoading,
             handledByPhotoPan,
             IsInkOperationActive(),
             stylusPoints.Count > 0,
             _mode,
-            _strokeInProgress);
+            _strokeInProgress,
+            interactionState.CrossPageDisplayActive);
         switch (executionPlan.Action)
         {
             case StylusMoveExecutionAction.None:
