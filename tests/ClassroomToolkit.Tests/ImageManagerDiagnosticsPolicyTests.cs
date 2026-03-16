@@ -51,4 +51,62 @@ public sealed class ImageManagerDiagnosticsPolicyTests
         message.Should().Contain(@"path=C:\data\photos");
         message.Should().Contain("msg=io");
     }
+
+    [Fact]
+    public void FormatFileAttributeReadFailureMessage_ShouldContainPathExceptionAndMessage()
+    {
+        var message = ImageManagerDiagnosticsPolicy.FormatFileAttributeReadFailureMessage(
+            @"C:\data\photos\a.jpg",
+            "UnauthorizedAccessException",
+            "denied");
+
+        message.Should().Contain("[ImageManager] file-attribute-read-failed");
+        message.Should().Contain(@"path=C:\data\photos\a.jpg");
+        message.Should().Contain("ex=UnauthorizedAccessException");
+        message.Should().Contain("msg=denied");
+    }
+
+    [Fact]
+    public void FormatThumbnailLoadFailureMessage_ShouldContainPathSourceExceptionAndMessage()
+    {
+        var message = ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
+            @"C:\data\photos\a.pdf",
+            "pdf",
+            "IOException",
+            "broken");
+
+        message.Should().Contain("[ImageManager] thumbnail-load-failed");
+        message.Should().Contain(@"path=C:\data\photos\a.pdf");
+        message.Should().Contain("source=pdf");
+        message.Should().Contain("ex=IOException");
+        message.Should().Contain("msg=broken");
+    }
+
+    [Fact]
+    public void FormatPdfMetadataReadFailureMessage_ShouldContainPathExceptionAndMessage()
+    {
+        var message = ImageManagerDiagnosticsPolicy.FormatPdfMetadataReadFailureMessage(
+            @"C:\data\photos\a.pdf",
+            "InvalidDataException",
+            "invalid");
+
+        message.Should().Contain("[ImageManager] pdf-metadata-read-failed");
+        message.Should().Contain(@"path=C:\data\photos\a.pdf");
+        message.Should().Contain("ex=InvalidDataException");
+        message.Should().Contain("msg=invalid");
+    }
+
+    [Fact]
+    public void FormatModifiedTimeReadFailureMessage_ShouldContainPathExceptionAndMessage()
+    {
+        var message = ImageManagerDiagnosticsPolicy.FormatModifiedTimeReadFailureMessage(
+            @"C:\data\photos\a.jpg",
+            "IOException",
+            "busy");
+
+        message.Should().Contain("[ImageManager] modified-time-read-failed");
+        message.Should().Contain(@"path=C:\data\photos\a.jpg");
+        message.Should().Contain("ex=IOException");
+        message.Should().Contain("msg=busy");
+    }
 }

@@ -1,0 +1,74 @@
+using FluentAssertions;
+
+namespace ClassroomToolkit.Tests.App;
+
+public sealed class RollCallWindowLifecycleSubscriptionContractTests
+{
+    [Fact]
+    public void RollCallWindow_ShouldSubscribePaintModeEvents_WithNamedHandlers()
+    {
+        var source = File.ReadAllText(GetSourcePath("RollCallWindow.xaml.cs"));
+
+        source.Should().Contain("PaintModeManager.Instance.PaintModeChanged += OnPaintModeChanged;");
+        source.Should().Contain("PaintModeManager.Instance.IsDrawingChanged += OnDrawingStateChanged;");
+        source.Should().Contain("_viewModel.GroupButtons.CollectionChanged += OnGroupButtonsCollectionChanged;");
+        source.Should().Contain("_windowBoundsSaveTimer.Tick += OnWindowBoundsSaveTick;");
+        source.Should().Contain("_hoverCheckTimer.Tick += OnHoverCheckTimerTick;");
+        source.Should().Contain("SizeChanged += OnWindowSizeChanged;");
+        source.Should().Contain("LocationChanged += OnWindowLocationChanged;");
+        source.Should().Contain("SourceInitialized += OnSourceInitialized;");
+        source.Should().Contain("IsVisibleChanged += OnWindowVisibilityChanged;");
+        source.Should().NotContain("SourceInitialized += (_, _) =>");
+        source.Should().NotContain("IsVisibleChanged += (_, _) =>");
+    }
+
+    [Fact]
+    public void RollCallWindow_ShouldUnsubscribeExternalEvents_OnClosing()
+    {
+        var source = File.ReadAllText(GetSourcePath("RollCallWindow.Windowing.cs"));
+
+        source.Should().Contain("PaintModeManager.Instance.PaintModeChanged -= OnPaintModeChanged;");
+        source.Should().Contain("PaintModeManager.Instance.IsDrawingChanged -= OnDrawingStateChanged;");
+        source.Should().Contain("_speechService.SpeechUnavailable -= OnSpeechUnavailable;");
+        source.Should().Contain("_hoverCheckTimer.Stop();");
+        source.Should().Contain("_windowBoundsSaveTimer.Tick -= OnWindowBoundsSaveTick;");
+        source.Should().Contain("_hoverCheckTimer.Tick -= OnHoverCheckTimerTick;");
+        source.Should().Contain("SizeChanged -= OnWindowSizeChanged;");
+        source.Should().Contain("LocationChanged -= OnWindowLocationChanged;");
+        source.Should().Contain("SourceInitialized -= OnSourceInitialized;");
+        source.Should().Contain("IsVisibleChanged -= OnWindowVisibilityChanged;");
+        source.Should().Contain("_groupOverlay.Closed -= OnGroupOverlayClosed;");
+        source.Should().Contain("overlay.Closed -= OnGroupOverlayClosed;");
+        source.Should().Contain("_viewModel.GroupButtons.CollectionChanged -= OnGroupButtonsCollectionChanged;");
+        source.Should().Contain("_viewModel.TimerCompleted -= OnTimerCompleted;");
+        source.Should().Contain("_viewModel.ReminderTriggered -= OnReminderTriggered;");
+        source.Should().Contain("_viewModel.DataLoadFailed -= OnDataLoadFailed;");
+        source.Should().Contain("_viewModel.DataSaveFailed -= OnDataSaveFailed;");
+        source.Should().NotContain("_groupOverlay.Closed += (s, e) => _groupOverlay = null;");
+    }
+
+    private static string GetSourcePath(string fileName)
+    {
+        return Path.Combine(
+            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+            "src",
+            "ClassroomToolkit.App",
+            fileName);
+    }
+
+    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
+    {
+        var current = start;
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+}

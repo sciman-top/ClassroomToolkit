@@ -1,4 +1,5 @@
 using System.Windows;
+using ClassroomToolkit.App;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Diagnostics;
@@ -22,7 +23,7 @@ public partial class DiagnosticsDialog : Window
             BorderFixHelper.FixAllBorders(this);
             System.Diagnostics.Debug.WriteLine("DiagnosticsDialog: 构造函数中修复完成");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"DiagnosticsDialog 构造函数修复失败: {ex.Message}");
         }
@@ -36,7 +37,7 @@ public partial class DiagnosticsDialog : Window
             {
                 BorderBrushDiagnostic.CheckAllBorders(this);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"BorderBrush 诊断失败: {ex.Message}");
             }

@@ -125,4 +125,29 @@ public sealed class CrossPageMissingNeighborRefreshCoordinatorTests
         result.RecoveredInlineAfterFailure.Should().BeFalse();
         events.Should().Contain(e => e.Contains("missing-neighbor-delayed-dispatch-failed"));
     }
+
+    [Fact]
+    public async Task ScheduleAsync_ShouldRethrowFatal_WhenDelayThrowsFatalException()
+    {
+        var act = async () => await CrossPageMissingNeighborRefreshCoordinator.ScheduleAsync(
+            missingCount: 2,
+            photoModeActive: true,
+            crossPageDisplayEnabled: true,
+            interactionActive: false,
+            lastScheduledUtc: CrossPageRuntimeDefaults.UnsetTimestampUtc,
+            nowUtc: DateTime.UtcNow,
+            isCrossPageDisplayActive: static () => true,
+            updateLastScheduledUtc: static _ => { },
+            requestCrossPageDisplayUpdate: static _ => { },
+            tryBeginInvoke: static (_, _) => false,
+            delayAsync: static _ => Task.FromException(new BadImageFormatException("fatal-delay")),
+            incrementRefreshToken: static () => 5,
+            readRefreshToken: static () => 5,
+            dispatcherCheckAccess: static () => true,
+            dispatcherShutdownStarted: static () => false,
+            dispatcherShutdownFinished: static () => false,
+            diagnostics: static (_, _, _) => { });
+
+        await act.Should().ThrowAsync<BadImageFormatException>();
+    }
 }

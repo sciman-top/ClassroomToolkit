@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Helpers;
 
@@ -20,7 +21,7 @@ public static class WindowExtensions
             dialog.Show();
             return dialog.DialogResult;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"WindowExtensions.SafeShowDialog failed: {ex.GetType().Name} - {ex.Message}");

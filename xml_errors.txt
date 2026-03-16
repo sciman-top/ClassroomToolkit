@@ -1,2 +1,0 @@
-Error in e:/PythonProject/ClassroomToolkit/src/ClassroomToolkit.App\Paint\PaintSettingsDialog.xaml: mismatched tag: line 453, column 14
-Error in e:/PythonProject/ClassroomToolkit/src/ClassroomToolkit.App\Photos\ImageManagerWindow.xaml: mismatched tag: line 213, column 46

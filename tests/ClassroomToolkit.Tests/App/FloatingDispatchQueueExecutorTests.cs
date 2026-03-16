@@ -125,4 +125,28 @@ public class FloatingDispatchQueueExecutorTests
         callbackCalled.Should().BeTrue();
         nextState.Should().Be(FloatingDispatchQueueState.Default);
     }
+
+    [Fact]
+    public void RequestApply_ShouldRethrowFatal_WhenDispatchThrowsFatal()
+    {
+        var act = () => FloatingDispatchQueueExecutor.RequestApply(
+            FloatingDispatchQueueState.Default,
+            forceEnforceZOrder: true,
+            queueApply: () => throw new BadImageFormatException("fatal"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
+    [Fact]
+    public void ExecuteQueuedApply_ShouldRethrowFatal_WhenFailureCallbackThrowsFatal()
+    {
+        var act = () => FloatingDispatchQueueExecutor.ExecuteQueuedApply(
+            new FloatingDispatchQueueState(
+                ApplyQueued: true,
+                ForceEnforceZOrder: true),
+            apply: _ => throw new InvalidOperationException("boom"),
+            onFailure: _ => throw new BadImageFormatException("fatal-callback"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

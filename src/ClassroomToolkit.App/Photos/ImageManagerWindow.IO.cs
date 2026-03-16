@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -22,8 +23,13 @@ public partial class ImageManagerWindow
             var attributes = File.GetAttributes(path);
             return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatFileAttributeReadFailureMessage(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
             return false;
         }
     }
@@ -41,8 +47,14 @@ public partial class ImageManagerWindow
             bitmap.Freeze();
             return bitmap;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
+                    path,
+                    sourceType: "image",
+                    ex.GetType().Name,
+                    ex.Message));
             return null;
         }
     }
@@ -54,8 +66,14 @@ public partial class ImageManagerWindow
             using var doc = PdfDocumentHost.Open(path);
             return doc.RenderPage(1, 96);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
+                    path,
+                    sourceType: "pdf",
+                    ex.GetType().Name,
+                    ex.Message));
             return null;
         }
     }
@@ -67,8 +85,13 @@ public partial class ImageManagerWindow
             using var doc = PdfDocumentHost.Open(path);
             return doc.PageCount;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatPdfMetadataReadFailureMessage(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
             return 0;
         }
     }
@@ -79,8 +102,13 @@ public partial class ImageManagerWindow
         {
             return File.GetLastWriteTime(path);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            System.Diagnostics.Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatModifiedTimeReadFailureMessage(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
             return DateTime.MinValue;
         }
     }
@@ -128,7 +156,7 @@ public partial class ImageManagerWindow
                 list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"ImageManager: IO Error: {ex.Message}");
         }

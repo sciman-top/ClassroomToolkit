@@ -13,6 +13,7 @@ using System.IO;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Paint.Brushes;
 using IoPath = System.IO.Path;
@@ -468,29 +469,26 @@ public partial class PaintOverlayWindow
             return;
         }
         var token = Interlocked.Increment(ref _photoFullscreenBoundsToken);
-        _ = System.Threading.Tasks.Task.Run(async () =>
-        {
-            var delays = new[] { 30, 120, 280 };
-            foreach (var delayMs in delays)
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.SchedulePhotoFullscreenBoundsEnforcement",
+            async _ =>
             {
-                try
+                var delays = new[] { 30, 120, 280 };
+                foreach (var delayMs in delays)
                 {
-                    await System.Threading.Tasks.Task.Delay(delayMs).ConfigureAwait(false);
-                }
-                catch
-                {
-                    return;
-                }
-                TryBeginInvoke(() =>
-                {
-                    if (token != _photoFullscreenBoundsToken || !IsPhotoFullscreenActive)
+                    await Task.Delay(delayMs).ConfigureAwait(false);
+                    TryBeginInvoke(() =>
                     {
-                        return;
-                    }
-                    ApplyPhotoWindowBounds(fullscreen: true);
-                }, DispatcherPriority.Render);
-            }
-        });
+                        if (token != _photoFullscreenBoundsToken || !IsPhotoFullscreenActive)
+                        {
+                            return;
+                        }
+                        ApplyPhotoWindowBounds(fullscreen: true);
+                    }, DispatcherPriority.Render);
+                }
+            },
+            onError: ex => Debug.WriteLine(
+                $"[PhotoBounds] fullscreen-enforcement failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private void OnPhotoTitleBarDrag(object sender, MouseButtonEventArgs e)
@@ -518,7 +516,7 @@ public partial class PaintOverlayWindow
         {
             DragMove();
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore drag exceptions.
         }
@@ -1266,3 +1264,4 @@ public partial class PaintOverlayWindow
         return screenRect;
     }
 }
+

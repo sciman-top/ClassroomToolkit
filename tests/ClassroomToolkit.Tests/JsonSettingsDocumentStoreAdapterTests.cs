@@ -82,6 +82,38 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
         }
     }
 
+    [Fact]
+    public void Save_ShouldThrow_WhenPreviousLoadFailedAndTargetExists()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{invalid-json");
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+
+            var loaded = adapter.Load();
+            loaded.Should().BeEmpty();
+
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "12"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be("{invalid-json");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         return TestPathHelper.CreateDirectory("ctool_json_store");

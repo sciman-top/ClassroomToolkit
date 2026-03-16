@@ -31,7 +31,7 @@ public sealed class RollCallWorkbookUseCase
 
             return new RollCallWorkbookLoadResult(result.Workbook, states, null);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ApplicationExceptionFilterPolicy.IsNonFatal(ex))
         {
             var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
             var fallbackWorkbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster }, "班级1");

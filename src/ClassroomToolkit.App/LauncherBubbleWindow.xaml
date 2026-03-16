@@ -13,20 +13,14 @@
     <Grid Background="Transparent">
         <!-- 悬浮球主体 -->
         <Border x:Name="BubbleBorder"
+                Style="{StaticResource Style_BubbleShellRoot}"
                 Width="46" Height="46" 
                 CornerRadius="23"
-                BorderThickness="1.5"
-                BorderBrush="{StaticResource Brush_Border_Strong}"
-                Background="{StaticResource Brush_Surface_Primary}"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}"
                 RenderTransformOrigin="0.5,0.5">
             <Border.RenderTransform>
                 <TranslateTransform x:Name="BubbleTranslate" Y="0"/>
             </Border.RenderTransform>
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="4" Opacity="0.45"/>
-            </Border.Effect>
-            
             <!-- 图标 -->
             <Grid>
                  <Path Data="{StaticResource Icon_Apps}" 

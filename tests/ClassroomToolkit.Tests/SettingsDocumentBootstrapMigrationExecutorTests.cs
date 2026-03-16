@@ -60,4 +60,17 @@ public sealed class SettingsDocumentBootstrapMigrationExecutorTests
         result.Should().BeFalse();
         logged.Should().BeTrue();
     }
+
+    [Fact]
+    public void TryMigrate_ShouldRethrowFatalException()
+    {
+        var act = () => SettingsDocumentBootstrapMigrationExecutor.TryMigrate(
+            new SettingsDocumentBootstrapMigrationDecision(ShouldMigrate: true),
+            "a.ini",
+            "b.json",
+            (_, _, _) => throw new BadImageFormatException("fatal"),
+            _ => { });
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

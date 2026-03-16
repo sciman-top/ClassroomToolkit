@@ -72,7 +72,7 @@ internal static class CrossPageReplayDispatchCoordinator
                     RequeuedPending: false,
                     Source: source);
             }
-            catch
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 // fall through to requeue
             }

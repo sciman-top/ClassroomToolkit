@@ -38,6 +38,24 @@ public sealed class OverlayWindowsXamlContractTests
 
         photoXaml.Should().Contain("Shadow_Floating");
         photoXaml.Should().Contain("Shadow_Card_Subtle");
+        photoXaml.Should().Contain("Style_FullscreenShellHintBadge");
+    }
+
+    [Fact]
+    public void FloatingWindows_ShouldReuseSharedBubbleAndPaletteStyles()
+    {
+        var toolbarXaml = File.ReadAllText(GetXamlPath("Paint", "PaintToolbarWindow.xaml"));
+        var paletteXaml = File.ReadAllText(GetXamlPath("Paint", "QuickColorPaletteWindow.xaml"));
+        var paletteCode = File.ReadAllText(GetSourcePath("Paint", "QuickColorPaletteWindow.xaml.cs"));
+        var bubbleXaml = File.ReadAllText(GetXamlPath("LauncherBubbleWindow.xaml"));
+        var groupOverlayXaml = File.ReadAllText(GetXamlPath("Photos", "RollCallGroupOverlayWindow.xaml"));
+
+        toolbarXaml.Should().Contain("Style_ColorBubbleToggle");
+        toolbarXaml.Should().NotContain("x:Key=\"Style_ColorBubble\"");
+        paletteCode.Should().Contain("Style_ColorPaletteButton");
+        paletteXaml.Should().NotContain("x:Key=\"ColorBlockButtonStyle\"");
+        bubbleXaml.Should().Contain("Style_BubbleShellRoot");
+        groupOverlayXaml.Should().Contain("Style_BubbleShellRoot");
     }
 
     private static string GetPaintOverlayWindowXamlPath()
@@ -58,6 +76,22 @@ public sealed class OverlayWindowsXamlContractTests
             "ClassroomToolkit.App",
             "Photos",
             "PhotoOverlayWindow.xaml");
+    }
+
+    private static string GetXamlPath(params string[] segments)
+    {
+        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName;
+        var full = new List<string> { root, "src", "ClassroomToolkit.App" };
+        full.AddRange(segments);
+        return Path.Combine(full.ToArray());
+    }
+
+    private static string GetSourcePath(params string[] segments)
+    {
+        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName;
+        var full = new List<string> { root, "src", "ClassroomToolkit.App" };
+        full.AddRange(segments);
+        return Path.Combine(full.ToArray());
     }
 
     private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)

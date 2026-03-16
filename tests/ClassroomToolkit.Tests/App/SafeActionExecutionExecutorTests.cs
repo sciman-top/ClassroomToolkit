@@ -40,4 +40,23 @@ public sealed class SafeActionExecutionExecutorTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public void TryExecute_ShouldRethrowFatalException_WhenActionThrowsFatal()
+    {
+        var act = () => SafeActionExecutionExecutor.TryExecute(
+            () => throw new BadImageFormatException("fatal"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
+    [Fact]
+    public void TryExecute_ShouldRethrowFatalException_WhenFailureCallbackThrowsFatal()
+    {
+        var act = () => SafeActionExecutionExecutor.TryExecute(
+            () => throw new InvalidOperationException("boom"),
+            _ => throw new BadImageFormatException("fatal-callback"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

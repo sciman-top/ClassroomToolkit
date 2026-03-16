@@ -75,9 +75,19 @@ internal static class FloatingTopmostDriftRepairExecutor
         {
             applyTopmostNoActivate(window, true, enforceZOrder);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
         {
-            onFailure?.Invoke(ex);
+            if (onFailure != null)
+            {
+                try
+                {
+                    onFailure(ex);
+                }
+                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
+                {
+                    // Keep repair flow isolated from diagnostics callback failures.
+                }
+            }
         }
     }
 }

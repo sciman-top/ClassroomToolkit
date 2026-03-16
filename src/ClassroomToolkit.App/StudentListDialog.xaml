@@ -16,50 +16,6 @@
     <Window.Resources>
         <SolidColorBrush x:Key="Brush_Student_Waiting" Color="{StaticResource Color_Accent_Primary}"/>
         <SolidColorBrush x:Key="Brush_Student_Called" Color="{StaticResource Color_Text_Tertiary}"/>
-        
-        <!-- 本地专用：学生卡片 - Modern Adaptation -->
-        <Style x:Key="Style_StudentCard_Modern" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" 
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
-                                <Setter TargetName="bd" Property="Effect" Value="{StaticResource Shadow_Card}"/>
-                                <!-- 微上浮 -->
-                                <Setter TargetName="bd" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <TranslateTransform Y="-1"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                                <Setter TargetName="bd" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <TranslateTransform Y="1"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <!-- 主窗口容器 -->
@@ -75,14 +31,16 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <Border Background="{StaticResource Brush_InputBackground}" CornerRadius="6" Padding="6" BorderBrush="Transparent">
-                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Width="14" Height="14" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}"
+                              Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="班级名单" Style="{StaticResource Style_ManagementShellTitleText}" Margin="10,0,0,0"/>
                     <TextBlock Text="（点击姓名可切换状态）" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="8,2,0,0"/>
                 </StackPanel>
                 
                 <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnCloseClick">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
                 
                 <Border Style="{StaticResource Style_ManagementShellDivider}"/>
@@ -95,13 +53,13 @@
                     <ItemsControl x:Name="StudentItems">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel ItemWidth="96" ItemHeight="50" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                <UniformGrid Columns="10"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:StudentListItem}">
                                 <!-- 学生卡片模板：已点名添加 ✓ 角标 -->
-                                <Button Style="{StaticResource Style_StudentCard_Modern}" Click="OnStudentClick" ToolTip="{Binding DisplayText}">
+                                <Button Style="{StaticResource Style_StudentCardButton}" Click="OnStudentClick" ToolTip="{Binding DisplayText}">
                                     <Grid Margin="6,4">
                                         <!-- 主内容 -->
                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -140,23 +98,6 @@
                                                 </Style>
                                             </StackPanel.Style>
                                         </StackPanel>
-                                        <!-- Checked mark -->
-                                        <Path Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" 
-                                              Fill="{StaticResource Brush_Success}"
-                                              Stretch="Uniform" Width="14" Height="14"
-                                              HorizontalAlignment="Right" VerticalAlignment="Top"
-                                              Margin="0,-2,-2,0">
-                                              <Path.Style>
-                                                  <Style TargetType="Path">
-                                                      <Setter Property="Visibility" Value="Collapsed"/>
-                                                      <Style.Triggers>
-                                                          <DataTrigger Binding="{Binding Called}" Value="True">
-                                                              <Setter Property="Visibility" Value="Visible"/>
-                                                          </DataTrigger>
-                                                      </Style.Triggers>
-                                                  </Style>
-                                              </Path.Style>
-                                        </Path>
                                     </Grid>
                                 </Button>
                             </DataTemplate>
@@ -169,10 +110,10 @@
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="10" Height="10" Margin="0,0,8,0"/>
+                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
                         <TextBlock Text="亮色待点" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
                         
-                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" Fill="{StaticResource Brush_Text_Tertiary}" Stretch="Uniform" Width="10" Height="10" Margin="0,0,8,0"/>
+                        <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" Fill="{StaticResource Brush_Text_Tertiary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
                         <TextBlock Text="灰色已点" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     </StackPanel>
                     
@@ -185,4 +126,3 @@
         </Grid>
     </Border>
 </Window>
-

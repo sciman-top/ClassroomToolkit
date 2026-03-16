@@ -115,7 +115,7 @@ public static class PresentationDiagnosticsProbe
             hook.Stop();
             return started;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
             error = ex.Message;
             return false;
@@ -138,7 +138,7 @@ public static class PresentationDiagnosticsProbe
             hook.Stop();
             return active;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
             error = ex.Message;
             return false;

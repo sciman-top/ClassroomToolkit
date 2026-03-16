@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Threading;
+using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
@@ -104,6 +105,11 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public void Stop()
     {
+        _interceptEnabled = false;
+        _blockOnly = false;
+        _interceptKeyboard = true;
+        _interceptWheel = true;
+        _emitWheelOnBlock = true;
         Interlocked.Increment(ref _dispatchGeneration);
         if (_keyboardHook != IntPtr.Zero)
         {
@@ -115,13 +121,6 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             UnhookWindowsHookEx(_mouseHook);
             _mouseHook = IntPtr.Zero;
         }
-        _interceptEnabled = false;
-
-
-        _blockOnly = false;
-        _interceptKeyboard = true;
-        _interceptWheel = true;
-        _emitWheelOnBlock = true;
     }
 
     public void Dispose()
@@ -169,7 +168,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             }
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
         {
             RecordCallbackException("keyboard", ex);
             return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
@@ -219,7 +218,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             }
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
         {
             RecordCallbackException("mouse", ex);
             return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
@@ -278,22 +277,26 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     private void QueueNavigationRequest(int direction, string source)
     {
-        var generation = Volatile.Read(ref _dispatchGeneration);
-        _ = Task.Run(() =>
+        if (_disposed || !_interceptEnabled)
         {
-            try
+            return;
+        }
+        var generation = Volatile.Read(ref _dispatchGeneration);
+        InteropBackgroundDispatchExecutor.Queue(
+            $"WpsSlideshowNavigationHook.QueueNavigationRequest.{source}",
+            () =>
             {
-                if (_disposed || generation != Volatile.Read(ref _dispatchGeneration))
+                if (_disposed || !_interceptEnabled || generation != Volatile.Read(ref _dispatchGeneration))
                 {
                     return;
                 }
-                NavigationRequested?.Invoke(direction, source);
-            }
-            catch (Exception ex)
-            {
-                RecordCallbackException($"{source}_async", ex);
-            }
-        });
+                InteropEventDispatchPolicy.InvokeSafely(
+                    NavigationRequested,
+                    direction,
+                    source,
+                    "WpsSlideshowNavigationHook.NavigationRequested");
+            },
+            ex => RecordCallbackException($"{source}_async", ex));
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]

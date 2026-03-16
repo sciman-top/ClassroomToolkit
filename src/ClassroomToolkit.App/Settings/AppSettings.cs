@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using MediaColors = System.Windows.Media.Colors;
@@ -22,7 +23,7 @@ public sealed class AppSettings
     public bool RollCallTimerSoundEnabled { get; set; } = true;
     public string RollCallTimerSoundVariant { get; set; } = "gentle";
     public bool RollCallTimerReminderEnabled { get; set; } = false;
-    public int RollCallTimerReminderIntervalMinutes { get; set; } = 0;
+    public int RollCallTimerReminderIntervalMinutes { get; set; } = 3;
     public string RollCallTimerReminderSoundVariant { get; set; } = "soft_beep";
     public string RollCallMode { get; set; } = "roll_call";
     public string RollCallTimerMode { get; set; } = "countdown";
@@ -39,7 +40,7 @@ public sealed class AppSettings
     public int RollCallNameFontSize { get; set; } = 60;
     public int RollCallTimerFontSize { get; set; } = 56;
     public bool RollCallSpeechEnabled { get; set; } = false;
-    public string RollCallSpeechEngine { get; set; } = "pyttsx3";
+    public string RollCallSpeechEngine { get; set; } = "sapi";
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
     public string RemotePresenterKey { get; set; } = "tab";
@@ -51,16 +52,18 @@ public sealed class AppSettings
     public string WpsInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
-    public int WpsDebounceMs { get; set; } = 200;
+    public int WpsDebounceMs { get; set; } = PaintPresetDefaults.WpsDebounceBalancedMs;
     public bool PresentationLockStrategyWhenDegraded { get; set; } = true;
-    public int LauncherX { get; set; } = 120;
-    public int LauncherY { get; set; } = 120;
-    public int LauncherBubbleX { get; set; } = 120;
-    public int LauncherBubbleY { get; set; } = 120;
+    public bool PresetRecommendationInitialized { get; set; } = false;
+    public bool UiDefaultsOptimized { get; set; } = false;
+    public int LauncherX { get; set; } = UnsetPosition;
+    public int LauncherY { get; set; } = UnsetPosition;
+    public int LauncherBubbleX { get; set; } = UnsetPosition;
+    public int LauncherBubbleY { get; set; } = UnsetPosition;
     public bool LauncherMinimized { get; set; } = false;
     public int LauncherAutoExitSeconds { get; set; } = 2400;
-    public int PaintToolbarX { get; set; } = 260;
-    public int PaintToolbarY { get; set; } = 260;
+    public int PaintToolbarX { get; set; } = UnsetPosition;
+    public int PaintToolbarY { get; set; } = UnsetPosition;
     public double PaintToolbarScale { get; set; } = 1.0;
     public bool InkCacheEnabled { get; set; } = true;
     public bool InkSaveEnabled { get; set; } = false;
@@ -69,11 +72,11 @@ public sealed class AppSettings
     public bool InkRecordEnabled { get; set; } = false;
     public bool InkReplayPreviousEnabled { get; set; } = false;
     public int InkRetentionDays { get; set; } = 30;
-    public string InkPhotoRootPath { get; set; } = @"D:\ClassroomToolkit\Ink\Photos";
+    public string InkPhotoRootPath { get; set; } = ResolveDefaultInkPhotoRootPath();
     public List<string> PhotoFavoriteFolders { get; set; } = new();
     public List<string> PhotoRecentFolders { get; set; } = new();
-    public bool PhotoRememberTransform { get; set; } = false;
-    public bool PhotoCrossPageDisplay { get; set; } = false;
+    public bool PhotoRememberTransform { get; set; } = true;
+    public bool PhotoCrossPageDisplay { get; set; } = true;
     public bool PhotoInputTelemetryEnabled { get; set; } = false;
     public int PhotoNeighborPrefetchRadiusMax { get; set; } = 4;
     public int PhotoPostInputRefreshDelayMs { get; set; } = 120;
@@ -99,7 +102,7 @@ public sealed class AppSettings
     public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
     public WhiteboardBrushPreset WhiteboardPreset { get; set; } = WhiteboardBrushPreset.Smooth;
     public CalligraphyBrushPreset CalligraphyPreset { get; set; } = CalligraphyBrushPreset.Sharp;
-    public string PresetScheme { get; set; } = "custom";
+    public string PresetScheme { get; set; } = PresetSchemeDefaults.Balanced;
     public ClassroomWritingMode ClassroomWritingMode { get; set; } = ClassroomWritingMode.Balanced;
     public int StylusAdaptivePressureProfile { get; set; } = 0;
     public int StylusAdaptiveSampleRateTier { get; set; } = 0;
@@ -142,5 +145,28 @@ public sealed class AppSettings
     private static string ToHex(MediaColor color)
     {
         return string.Create(CultureInfo.InvariantCulture, $"#{color.R:X2}{color.G:X2}{color.B:X2}");
+    }
+
+    public static string ResolveDefaultInkPhotoRootPath()
+    {
+        var pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        if (!string.IsNullOrWhiteSpace(pictures))
+        {
+            return Path.Combine(pictures, "ClassroomToolkit", "Ink", "Photos");
+        }
+
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (!string.IsNullOrWhiteSpace(documents))
+        {
+            return Path.Combine(documents, "ClassroomToolkit", "Ink", "Photos");
+        }
+
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(local))
+        {
+            return Path.Combine(local, "ClassroomToolkit", "Ink", "Photos");
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "Ink", "Photos");
     }
 }

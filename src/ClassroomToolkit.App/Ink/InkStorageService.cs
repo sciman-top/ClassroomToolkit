@@ -5,13 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ClassroomToolkit.App;
 using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
 public sealed class InkStorageService
 {
-    private const string DefaultRootPath = @"D:\ClassroomToolkit\Ink";
+    private static readonly string DefaultRootPath = ResolveDefaultRootPath();
     private const string PagesFolderName = "pages";
     private const string DefaultPhotosFolderName = "Photos";
 
@@ -259,7 +260,7 @@ public sealed class InkStorageService
             {
                 Directory.Delete(folder, recursive: true);
             }
-            catch
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 // Ignore cleanup failures.
             }
@@ -317,5 +318,16 @@ public sealed class InkStorageService
         {
             File.Copy(tempPath, targetPath, overwrite: true);
         }
+    }
+
+    private static string ResolveDefaultRootPath()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(local))
+        {
+            return Path.Combine(local, "ClassroomToolkit", "Ink");
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "Ink");
     }
 }

@@ -56,6 +56,32 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         ComputeInkHash(persisted).Should().Be(hash);
     }
 
+    [Fact]
+    public void RecoverDirectory_ShouldRethrowFatalException_WhenHashProviderThrowsFatal()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_fatal.png");
+        File.WriteAllText(sourcePath, "x");
+        var strokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M0,0 L1,1",
+                ColorHex = "#00FF00",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        _wal.Upsert(sourcePath, 1, strokes, "hash");
+
+        var act = () => _wal.RecoverDirectory(
+            _tempDir,
+            _persistence,
+            _ => throw new BadImageFormatException("fatal-hash-provider"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
     {
         if (strokes == null || strokes.Count == 0)

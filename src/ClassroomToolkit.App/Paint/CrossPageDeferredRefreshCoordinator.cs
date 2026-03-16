@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -109,7 +110,7 @@ internal static class CrossPageDeferredRefreshCoordinator
         {
             await delayAsync(delay).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return RecoverAfterDelayFailure(
                 source,

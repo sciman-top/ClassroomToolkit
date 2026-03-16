@@ -1241,7 +1241,7 @@ public partial class PaintOverlayWindow
         {
             _inkWal.Upsert(sourcePath, pageIndex, CloneInkStrokes(strokes), hash);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore WAL write failures; main flow should continue.
         }
@@ -1253,7 +1253,7 @@ public partial class PaintOverlayWindow
         {
             _inkWal.Remove(sourcePath, pageIndex);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore WAL cleanup failures.
         }
@@ -1281,7 +1281,7 @@ public partial class PaintOverlayWindow
                 System.Diagnostics.Debug.WriteLine($"[InkWAL] Recovered {recovered} pending pages in {directoryPath}");
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkWAL] Recover failed: {ex.Message}");
         }
@@ -1380,3 +1380,5 @@ public partial class PaintOverlayWindow
         _inkMonitor.Interval = TimeSpan.FromMilliseconds(targetMs);
     }
 }
+
+

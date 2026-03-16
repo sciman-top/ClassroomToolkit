@@ -21,12 +21,10 @@
                             UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
-        <Border.Effect>
-            <!-- 统一的深浮层阴影 -->
-            <StaticResource ResourceKey="Shadow_Dialog_Heavy"/>
-        </Border.Effect>
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}"
+            Background="{StaticResource Brush_Window_Atmosphere}"
+            Margin="10"
+            Effect="{StaticResource Shadow_Dialog_Heavy}">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -48,7 +46,7 @@
 
             <!-- 2. 内容 -->
             <ScrollViewer Grid.Row="1"
-                          Margin="24,20,24,16"
+                          Margin="20,16,20,14"
                           Padding="0,0,12,0"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
@@ -57,25 +55,6 @@
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
                         <TabItem Header="预设与笔触">
                             <StackPanel Margin="0,12,0,0">
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="PresetBrushSectionStateText"
-                                               Text="本页状态：未修改"
-                                               Foreground="{StaticResource Brush_Text_Secondary}"
-                                               VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1"
-                                            x:Name="ResetPresetBrushSectionButton"
-                                            Content="恢复本节初始值"
-                                            Padding="12,0"
-                                            Height="30"
-                                            MinWidth="110"
-                                            Style="{StaticResource Style_SecondaryButton}"
-                                            Click="OnResetPresetBrushSectionClick"/>
-                                </Grid>
-
                 <!-- 基础画笔参数 -->
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
@@ -104,7 +83,11 @@
                     <StackPanel Grid.Column="1">
                         <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
                         <Expander Header="毛笔高级（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
-                            <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
+                            <Border Style="{StaticResource Style_SettingCardBorder}"
+                                    Margin="0,8,0,0"
+                                    Padding="10"
+                                    Background="{StaticResource Brush_Surface_Secondary}"
+                                    CornerRadius="8">
                                 <StackPanel>
                                     <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
                                     <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
@@ -124,7 +107,10 @@
                 </Grid>
 
                 <Expander x:Name="WritingModeOverrideExpander" Header="书写模式（子项覆盖）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
-                    <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="10" Padding="12" Margin="0,8,0,0" Background="{StaticResource Brush_Surface_Secondary}">
+                    <Border Style="{StaticResource Style_SettingCardBorder}"
+                            Margin="0,8,0,0"
+                            Padding="12"
+                            Background="{StaticResource Brush_Surface_Secondary}">
                         <StackPanel>
                             <TextBlock Text="总预设入口在“预设方案”；此处仅用于按需覆盖书写手感。"
                                        Foreground="{StaticResource Brush_Text_Secondary}"
@@ -144,7 +130,7 @@
                     </Border>
                 </Expander>
 
-                <Border BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="{StaticResource Brush_Surface_Primary}">
+                <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="预设方案" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
                         <TextBlock Text="这是总预设入口，会联动书写模式及场景参数。"
@@ -161,7 +147,7 @@
                             <ComboBox x:Name="PresetSchemeCombo" Height="34" SelectionChanged="OnPresetSchemeChanged"/>
                             <Button Grid.Column="1"
                                     x:Name="ReapplyPresetButton"
-                                    Content="重应用"
+                                    Content="应用所选"
                                     Margin="8,0,0,0"
                                     Padding="12,0"
                                     Height="34"
@@ -201,7 +187,7 @@
                                        TextWrapping="Wrap"/>
                             <Button Grid.Column="1"
                                     x:Name="ApplyRecommendedPresetButton"
-                                    Content="应用推荐"
+                                    Content="套用推荐"
                                     Margin="12,0,0,0"
                                     Padding="12,0"
                                     Height="30"
@@ -248,69 +234,40 @@
                             </StackPanel>
                         </TabItem>
 
-                        <TabItem Header="高级">
+                        <TabItem Header="工具">
                             <StackPanel Margin="0,12,0,0">
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="AdvancedSectionStateText"
-                                               Text="本页状态：未修改"
-                                               Foreground="{StaticResource Brush_Text_Secondary}"
-                                               VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1"
-                                            x:Name="ResetAdvancedSectionButton"
-                                            Content="恢复本节初始值"
-                                            Padding="12,0"
-                                            Height="30"
-                                            MinWidth="110"
-                                            Style="{StaticResource Style_SecondaryButton}"
-                                            Click="OnResetAdvancedSectionClick"/>
-                                </Grid>
+                                <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="界面与工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="这里只保留影响工具显示和切换方式的设置。"
+                                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                                   FontSize="12"
+                                                   Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                                            <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="36"/>
+                                        </Grid>
 
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="36"/>
-                </Grid>
-
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="36"/>
-                </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                                            <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="36"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
 
                             </StackPanel>
                         </TabItem>
 
                         <TabItem Header="场景兼容">
                             <StackPanel Margin="0,12,0,0">
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="SceneSectionStateText"
-                                               Text="本页状态：未修改"
-                                               Foreground="{StaticResource Brush_Text_Secondary}"
-                                               VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1"
-                                            x:Name="ResetSceneSectionButton"
-                                            Content="恢复本节初始值"
-                                            Padding="12,0"
-                                            Height="30"
-                                            MinWidth="110"
-                                            Style="{StaticResource Style_SecondaryButton}"
-                                            Click="OnResetSceneSectionClick"/>
-                                </Grid>
-
                 <Grid x:Name="SceneCardsGrid" Margin="0,8,0,0" SizeChanged="OnSceneCardsGridSizeChanged">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -322,22 +279,14 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- PDF、图片的设置 -->
-                    <Border x:Name="PhotoPdfSettingsCard" Grid.Row="0" Grid.Column="0" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,6,0" Background="{StaticResource Brush_Surface_Primary}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Border.Effect>
-                            <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-                        </Border.Effect>
+                    <Border x:Name="PhotoPdfSettingsCard"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Style="{StaticResource Style_SettingCardBorder}"
+                            Padding="16"
+                            Margin="0,0,6,0">
                         <StackPanel>
-                            <TextBlock Text="pdf、图片的设置" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                            <TextBlock Text="PDF/图片" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
                             <CheckBox x:Name="InkSaveCheck" Content="保存笔迹" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
@@ -401,22 +350,14 @@
                     </Border>
 
                     <!-- WPS 演示文稿兼容性 -->
-                    <Border x:Name="WpsSettingsCard" Grid.Row="0" Grid.Column="1" BorderThickness="1" CornerRadius="12" Padding="16" Margin="6,0,0,0" Background="{StaticResource Brush_Surface_Primary}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border}"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Border.Effect>
-                            <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-                        </Border.Effect>
+                    <Border x:Name="WpsSettingsCard"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Style="{StaticResource Style_SettingCardBorder}"
+                            Padding="16"
+                            Margin="6,0,0,0">
                         <StackPanel>
-                            <TextBlock Text="WPS 演示文稿兼容性" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                            <TextBlock Text="WPS 演示文稿" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
 
                             <!-- WPS 兼容策略 -->
                             <Grid Margin="0,0,0,12">
@@ -428,7 +369,7 @@
                                 <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
                             </Grid>
                             <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶 (检测到全屏放映时)" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶（检测到全屏放映时）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
 
                             <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
@@ -456,6 +397,8 @@
 
             <!-- 3. 按钮 -->
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="重置当前标签" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
+                <Button Content="恢复全部默认" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
                 <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>

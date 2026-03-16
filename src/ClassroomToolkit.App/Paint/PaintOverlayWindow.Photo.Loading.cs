@@ -67,7 +67,7 @@ public partial class PaintOverlayWindow
             }
             return bitmap;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return null;
         }
@@ -97,7 +97,7 @@ public partial class PaintOverlayWindow
             }
             return decoder.Frames[0].PixelWidth;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return 0;
         }
@@ -131,7 +131,7 @@ public partial class PaintOverlayWindow
             ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
             return true;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             PhotoBackground.Source = null;
             RefreshPhotoBackgroundVisibility();
@@ -163,3 +163,4 @@ public partial class PaintOverlayWindow
         UpdateOverlayHitTestVisibility();
     }
 }
+

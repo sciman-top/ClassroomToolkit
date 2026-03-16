@@ -338,7 +338,7 @@ public partial class PaintOverlayWindow
             {
                 _dispatcher.BeginInvoke(new Action(Drain), DispatcherPriority.Background);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 Interlocked.Exchange(ref _refreshRunning, 0);
                 System.Diagnostics.Debug.WriteLine(
@@ -412,3 +412,4 @@ public partial class PaintOverlayWindow
         }
     }
 }
+

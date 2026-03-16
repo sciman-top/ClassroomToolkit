@@ -26,7 +26,7 @@ public partial class AboutDialog : Window
             {
                 Process.Start(new ProcessStartInfo(e.Uri!.AbsoluteUri) { UseShellExecute = true });
             }
-            catch
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 // 忽略无法打开的链接。
             }
@@ -68,7 +68,7 @@ public partial class AboutDialog : Window
         {
             System.Windows.Clipboard.SetText(payload);
         }
-        catch
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             // Ignore clipboard failures in locked environments.
         }

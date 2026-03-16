@@ -49,7 +49,7 @@ public partial class QuickColorPaletteWindow : Window
                 BorderBrush = new SolidColorBrush(GetContrastBorderColor(option.Color)),
                 BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
                 ToolTip = option.Name,
-                Style = (Style)FindResource("ColorBlockButtonStyle")
+                Style = (Style)FindResource("Style_ColorPaletteButton")
             };
             button.Click += (_, _) => SelectColor(option.Color);
             OptionsPanel.Children.Add(button);

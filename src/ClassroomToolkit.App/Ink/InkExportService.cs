@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ClassroomToolkit.App;
 using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.App.Ink;
@@ -64,7 +65,7 @@ public sealed class InkExportService
             SaveImage(composite, outputPath, options);
             return outputPath;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkExport] Failed to export page {pageIndex} of {sourcePath}: {ex.Message}");
             return null;
@@ -106,7 +107,7 @@ public sealed class InkExportService
                 ExportImageFile(sourcePath, inkDoc, options, result);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             result.FailedCount++;
             System.Diagnostics.Debug.WriteLine($"[InkExport] Failed to export file {sourcePath}: {ex.Message}");
@@ -227,7 +228,7 @@ public sealed class InkExportService
                 deleted++;
                 manifestDirty = true;
             }
-            catch
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 continue;
             }
@@ -359,7 +360,7 @@ public sealed class InkExportService
                 deleted++;
                 manifestDirty = true;
             }
-            catch
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 continue;
             }
@@ -411,7 +412,7 @@ public sealed class InkExportService
         {
             pdfDoc = PdfDocumentHost.Open(sourcePath);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             if (manifestDirty)
             {
@@ -583,7 +584,7 @@ public sealed class InkExportService
             using var doc = PdfDocumentHost.Open(sourcePath);
             return doc.RenderPage(pageIndex, dpi);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return null;
         }
@@ -601,7 +602,7 @@ public sealed class InkExportService
             bitmap.Freeze();
             return bitmap;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return null;
         }
@@ -614,7 +615,7 @@ public sealed class InkExportService
             using var doc = PdfDocumentHost.Open(sourcePath);
             return doc.PageCount;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return 0;
         }
@@ -873,7 +874,7 @@ public sealed class InkExportService
                 File.Delete(outputPath);
                 dirty = true;
             }
-            catch
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 continue;
             }
@@ -895,7 +896,7 @@ public sealed class InkExportService
             var rightFull = Path.GetFullPath(right);
             return string.Equals(leftFull, rightFull, StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
         }
@@ -912,7 +913,7 @@ public sealed class InkExportService
         {
             sourceTicks = File.Exists(sourcePath) ? File.GetLastWriteTimeUtc(sourcePath).Ticks : 0L;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             sourceTicks = 0L;
         }
@@ -968,7 +969,7 @@ public sealed class InkExportService
                 ? new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -994,7 +995,7 @@ public sealed class InkExportService
             }
             return rendered;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return null;
         }
@@ -1019,7 +1020,7 @@ public sealed class InkExportService
             });
             File.WriteAllText(path, json);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             // Ignore manifest write failures; export output is still valid.
         }
@@ -1163,3 +1164,6 @@ public sealed class InkExportService
         };
     }
 }
+
+
+

@@ -2,10 +2,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using ClassroomToolkit.Interop;
+using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
-public sealed class Win32PresentationResolver
+public sealed class Win32PresentationResolver : IPresentationTargetResolver
 {
     public PresentationTarget ResolveForeground()
     {
@@ -294,7 +295,7 @@ public sealed class Win32PresentationResolver
             using var process = Process.GetProcessById((int)processId);
             return process.ProcessName + ".exe";
         }
-        catch
+        catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
         {
             return string.Empty;
         }

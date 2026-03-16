@@ -9,7 +9,7 @@ public partial class InkSettingsDialog : Window
     public bool InkRecordEnabled { get; private set; }
     public bool InkReplayPreviousEnabled { get; private set; }
     public int InkRetentionDays { get; private set; }
-    public string InkPhotoRootPath { get; private set; } = @"D:\ClassroomToolkit\Ink\Photos";
+    public string InkPhotoRootPath { get; private set; } = AppSettings.ResolveDefaultInkPhotoRootPath();
 
     public InkSettingsDialog(AppSettings settings)
     {
@@ -61,7 +61,7 @@ public partial class InkSettingsDialog : Window
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return @"D:\ClassroomToolkit\Ink\Photos";
+            return AppSettings.ResolveDefaultInkPhotoRootPath();
         }
         return value.Trim();
     }

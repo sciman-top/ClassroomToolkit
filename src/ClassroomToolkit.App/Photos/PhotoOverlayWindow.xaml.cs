@@ -209,7 +209,7 @@ public partial class PhotoOverlayWindow : Window
             
             return bitmap;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap: {path}. Error: {ex.Message}");
             return null;
@@ -217,3 +217,4 @@ public partial class PhotoOverlayWindow : Window
     }
 
 }
+

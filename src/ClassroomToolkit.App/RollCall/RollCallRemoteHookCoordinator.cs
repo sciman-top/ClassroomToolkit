@@ -40,6 +40,10 @@ internal sealed class RollCallRemoteHookCoordinator
         {
             return new RollCallRemoteHookStartResult(Started: false, ShouldNotifyUnavailable: false);
         }
+        if (!request.ShouldKeepActive())
+        {
+            return new RollCallRemoteHookStartResult(Started: false, ShouldNotifyUnavailable: false);
+        }
 
         var bindings = _resolveBindings(request.ConfiguredKey, request.FallbackToken);
         var started = await _registerHookAsync(bindings, request.Handler, request.ShouldKeepActive);

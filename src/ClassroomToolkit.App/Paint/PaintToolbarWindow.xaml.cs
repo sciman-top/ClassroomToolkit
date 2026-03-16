@@ -473,7 +473,7 @@ public partial class PaintToolbarWindow : Window
         {
             return (MediaColor)MediaColorConverter.ConvertFromString(value);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return fallback;
         }
@@ -528,7 +528,7 @@ public partial class PaintToolbarWindow : Window
             {
                 DragMove();
             }
-            catch
+            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
             {
                 // 忽略异常
             }
@@ -585,3 +585,4 @@ public partial class PaintToolbarWindow : Window
     }
 
 }
+

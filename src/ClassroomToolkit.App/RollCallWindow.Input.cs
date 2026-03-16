@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Models;
@@ -155,22 +156,16 @@ public partial class RollCallWindow
         {
             Action handler = () =>
             {
-                 Dispatcher.Invoke(() =>
-                 {
-                     if (!_viewModel.IsRollCallMode) return;
-                     
-                     if (_viewModel.TryRollNext(out var message))
-                     {
-                         UpdatePhotoDisplay();
-                         SpeakStudentName();
-                         ScheduleRollStateSave();
-                         return;
-                     }
-                     if (!string.IsNullOrWhiteSpace(message))
-                     {
-                         ShowRollCallMessage(message);
-                     }
-                 });
+                EnqueueRemoteHookUiAction("roll", () =>
+                {
+                    RollCallRemoteHookActionExecutionCoordinator.ExecuteRoll(
+                        _viewModel.IsRollCallMode,
+                        _viewModel.TryRollNext,
+                        () => UpdatePhotoDisplay(),
+                        SpeakStudentName,
+                        ScheduleRollStateSave,
+                        ShowRollCallMessage);
+                });
             };
 
             var request = new RollCallRemoteHookStartRequest(
@@ -179,18 +174,25 @@ public partial class RollCallWindow
                 FallbackToken: "tab",
                 Handler: handler,
                 ShouldKeepActive: () => isCurrent() && ShouldEnableRemotePresenterHook(),
-                AlreadyUnavailableNotified: _remoteHookUnavailableNotified,
+                AlreadyUnavailableNotified: RemoteHookUnavailableNotificationPolicy.IsNotified(ref _remoteHookUnavailableNotifiedState),
                 NotifyUnavailableOnFailure: true);
             var result = await _remoteHookCoordinator.TryStartAsync(request);
+            if (result.Started)
+            {
+                RemoteHookUnavailableNotificationPolicy.Reset(ref _remoteHookUnavailableNotifiedState);
+            }
             if (result.ShouldNotifyUnavailable)
             {
                  NotifyRemoteHookError();
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"StartKeyboardHookCoreAsync failed: {ex}");
-            NotifyRemoteHookError();
+            if (isCurrent() && ShouldEnableRemotePresenterHook())
+            {
+                NotifyRemoteHookError();
+            }
         }
     }
 
@@ -205,13 +207,13 @@ public partial class RollCallWindow
         {
             Action handler = () =>
             {
-                Dispatcher.Invoke(() =>
+                EnqueueRemoteHookUiAction("group-switch", () =>
                 {
-                    if (!_viewModel.IsRollCallMode) return;
-                    
-                    _viewModel.SwitchToNextGroup();
-                    ShowGroupOverlay();
-                    ScheduleRollStateSave();
+                    RollCallRemoteHookActionExecutionCoordinator.ExecuteGroupSwitch(
+                        _viewModel.IsRollCallMode,
+                        _viewModel.SwitchToNextGroup,
+                        ShowGroupOverlay,
+                        ScheduleRollStateSave);
                 });
             };
             var request = new RollCallRemoteHookStartRequest(
@@ -224,22 +226,68 @@ public partial class RollCallWindow
                 NotifyUnavailableOnFailure: false);
             await _remoteHookCoordinator.TryStartAsync(request);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"StartGroupSwitchHookCoreAsync failed: {ex}");
         }
     }
 
+    private void EnqueueRemoteHookUiAction(string operation, Action action)
+    {
+        if (!RollCallRemoteHookDispatchPolicy.CanDispatch(
+                Dispatcher.HasShutdownStarted,
+                Dispatcher.HasShutdownFinished))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchSkippedMessage(
+                    operation,
+                    "dispatcher-unavailable"));
+            return;
+        }
+
+        try
+        {
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    action,
+                    ex => System.Diagnostics.Debug.WriteLine(
+                        RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                            operation,
+                            ex.GetType().Name,
+                            ex.Message)));
+            }));
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                    operation,
+                    ex.GetType().Name,
+                    ex.Message));
+        }
+    }
+
     private void NotifyRemoteHookError()
     {
-        if (_remoteHookUnavailableNotified) return;
-        _remoteHookUnavailableNotified = true;
-        _ = Dispatcher.InvokeAsync(() =>
+        if (!RemoteHookUnavailableNotificationPolicy.ShouldNotify(ref _remoteHookUnavailableNotifiedState))
         {
-            var owner = System.Windows.Application.Current?.MainWindow;
-            var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
-            ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
-        });
+            return;
+        }
+
+        try
+        {
+            _ = Dispatcher.InvokeAsync(() =>
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
+                ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
+            });
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine($"NotifyRemoteHookError dispatch failed: {ex.Message}");
+        }
     }
 
     private void UpdateRemoteHookState()
@@ -275,3 +323,4 @@ public partial class RollCallWindow
         }
     }
 }
+

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using ClassroomToolkit.App;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
@@ -22,7 +23,7 @@ public sealed partial class RollCallViewModel
 
         DateTime writeTimeUtc;
         try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
@@ -105,7 +106,7 @@ public sealed partial class RollCallViewModel
 
         DateTime writeTimeUtc;
         try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
@@ -148,7 +149,7 @@ public sealed partial class RollCallViewModel
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine(
                     RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(

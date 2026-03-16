@@ -31,6 +31,31 @@ public sealed class RollCallRemoteHookCoordinatorTests
     }
 
     [Fact]
+    public async Task TryStartAsync_ShouldSkipRegistration_WhenNoLongerActive()
+    {
+        var registerCalls = 0;
+        var coordinator = CreateCoordinator(
+            onRegister: (_, _, _) =>
+            {
+                registerCalls++;
+                return Task.FromResult(true);
+            });
+
+        var result = await coordinator.TryStartAsync(new RollCallRemoteHookStartRequest(
+            ShouldEnable: true,
+            ConfiguredKey: "tab",
+            FallbackToken: "tab",
+            Handler: () => { },
+            ShouldKeepActive: () => false,
+            AlreadyUnavailableNotified: false,
+            NotifyUnavailableOnFailure: true));
+
+        result.Started.Should().BeFalse();
+        result.ShouldNotifyUnavailable.Should().BeFalse();
+        registerCalls.Should().Be(0);
+    }
+
+    [Fact]
     public async Task TryStartAsync_ShouldNotifyUnavailable_WhenRegistrationFailsAndNotNotified()
     {
         var registerCalls = 0;

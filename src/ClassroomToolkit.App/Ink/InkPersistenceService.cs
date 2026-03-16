@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ClassroomToolkit.App;
 using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
@@ -249,7 +250,7 @@ public sealed class InkPersistenceService
                 InvalidateCache(jsonFile);
                 deleted++;
             }
-            catch
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 // Ignore cleanup failures.
             }
@@ -370,7 +371,7 @@ public sealed class InkPersistenceService
                 File.Delete(jsonPath);
             }
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             // Ignore deletion failures.
         }
@@ -424,7 +425,7 @@ public sealed class InkPersistenceService
         {
             return File.GetLastWriteTimeUtc(path);
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return DateTime.MinValue;
         }

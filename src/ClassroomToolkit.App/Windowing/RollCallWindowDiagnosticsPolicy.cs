@@ -36,4 +36,14 @@ internal static class RollCallWindowDiagnosticsPolicy
     {
         return $"[RollCallWindow] confirm-show-failed op={operation} ex={exceptionType} msg={message}";
     }
+
+    internal static string FormatRemoteHookDispatchFailureMessage(string operation, string exceptionType, string message)
+    {
+        return $"[RollCallWindow] remote-hook-dispatch-failed op={operation} ex={exceptionType} msg={message}";
+    }
+
+    internal static string FormatRemoteHookDispatchSkippedMessage(string operation, string reason)
+    {
+        return $"[RollCallWindow] remote-hook-dispatch-skipped op={operation} reason={reason}";
+    }
 }

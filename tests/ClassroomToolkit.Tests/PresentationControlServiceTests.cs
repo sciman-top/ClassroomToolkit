@@ -103,6 +103,94 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
+    public void TrySendToTarget_ShouldReturnFalse_WhenValidatorThrowsRecoverableException()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new ThrowingValidator(new InvalidOperationException("validator-boom")));
+        var target = new PresentationTarget(
+            new IntPtr(1234),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Auto,
+            AllowWps = true
+        };
+
+        var result = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TrySendToTarget_ShouldRethrowFatalException_WhenValidatorThrowsFatalException()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new Win32PresentationResolver(),
+            new ThrowingValidator(new BadImageFormatException("fatal-validator")));
+        var target = new PresentationTarget(
+            new IntPtr(1234),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Auto,
+            AllowWps = true
+        };
+
+        var act = () => service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
+    [Fact]
+    public void TrySendForeground_ShouldReturnFalse_WhenResolverThrowsRecoverableException()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new ThrowingResolver(new InvalidOperationException("resolver-boom")),
+            new MockValidator());
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Auto,
+            AllowWps = true,
+            AllowOffice = true
+        };
+
+        var result = service.TrySendForeground(PresentationCommand.Next, options);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TrySendForeground_ShouldRethrowFatalException_WhenResolverThrowsFatalException()
+    {
+        var service = new PresentationControlService(
+            new PresentationControlPlanner(new PresentationClassifier()),
+            new PresentationCommandMapper(),
+            new RecordingInputSender(),
+            new ThrowingResolver(new BadImageFormatException("resolver-fatal")),
+            new MockValidator());
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Auto,
+            AllowWps = true,
+            AllowOffice = true
+        };
+
+        var act = () => service.TrySendForeground(PresentationCommand.Next, options);
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
+    [Fact]
     public void WpsWheelForwardDisabled_WhenDowngradedToMessage_ShouldSendKeyDownOnly()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
@@ -469,6 +557,45 @@ public sealed class PresentationControlServiceTests
     private sealed class MockValidator : IPresentationWindowValidator
     {
         public bool IsWindowValid(IntPtr hwnd) => true;
+    }
+
+    private sealed class ThrowingValidator : IPresentationWindowValidator
+    {
+        private readonly Exception _exception;
+
+        public ThrowingValidator(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public bool IsWindowValid(IntPtr hwnd)
+        {
+            throw _exception;
+        }
+    }
+
+    private sealed class ThrowingResolver : IPresentationTargetResolver
+    {
+        private readonly Exception _exception;
+
+        public ThrowingResolver(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public PresentationTarget ResolveForeground()
+        {
+            throw _exception;
+        }
+
+        public PresentationTarget ResolvePresentationTarget(
+            PresentationClassifier classifier,
+            bool allowWps,
+            bool allowOffice,
+            uint? excludeProcessId = null)
+        {
+            throw _exception;
+        }
     }
 
     private sealed class StrategyAwareInputSender : IInputSender

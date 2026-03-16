@@ -41,13 +41,28 @@ public static class RollStateSerializer
 
     public static string SerializeWorkbookStates(Dictionary<string, ClassRollState> states)
     {
+        var revision = DateTime.UtcNow.Ticks;
+        var updatedAtUtc = DateTime.UtcNow;
+        return SerializeWorkbookStates(states, revision, updatedAtUtc);
+    }
+
+    public static string SerializeWorkbookStates(
+        Dictionary<string, ClassRollState> states,
+        long revision,
+        DateTime updatedAtUtc)
+    {
         var payload = states ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
         var snapshot = new Dictionary<string, ClassRollState>(payload.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in payload)
         {
             snapshot[pair.Key] = CloneWithVersion(pair.Value, CurrentVersion);
         }
-        return JsonSerializer.Serialize(snapshot, Options);
+
+        var envelope = new WorkbookRollStateEnvelope(
+            revision,
+            updatedAtUtc.ToUniversalTime().ToString("O"),
+            snapshot);
+        return JsonSerializer.Serialize(envelope, Options);
     }
 
     public static Dictionary<string, ClassRollState> DeserializeWorkbookStates(string? json)
@@ -58,6 +73,18 @@ public static class RollStateSerializer
         }
         try
         {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("states", out var statesNode)
+                && statesNode.ValueKind == JsonValueKind.Object)
+            {
+                var states = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(
+                    statesNode.GetRawText(),
+                    Options);
+                return states ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+            }
+
             var result = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(json, Options);
             return result ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
         }
@@ -68,6 +95,53 @@ public static class RollStateSerializer
         catch (NotSupportedException)
         {
             return new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    public static bool TryReadWorkbookMetadata(
+        string? json,
+        out long? revision,
+        out DateTime? updatedAtUtc)
+    {
+        revision = null;
+        updatedAtUtc = null;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (root.TryGetProperty("revision", out var revisionNode)
+                && revisionNode.ValueKind == JsonValueKind.Number
+                && revisionNode.TryGetInt64(out var parsedRevision))
+            {
+                revision = parsedRevision;
+            }
+
+            if (root.TryGetProperty("updatedAtUtc", out var updatedAtNode)
+                && updatedAtNode.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(
+                    updatedAtNode.GetString(),
+                    null,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out var parsedUpdatedAt))
+            {
+                updatedAtUtc = parsedUpdatedAt.ToUniversalTime();
+            }
+
+            return revision.HasValue || updatedAtUtc.HasValue;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -91,4 +165,9 @@ public static class RollStateSerializer
         cloned.GlobalDrawn = new List<string>(state.GlobalDrawn);
         return cloned;
     }
+
+    private sealed record WorkbookRollStateEnvelope(
+        long Revision,
+        string UpdatedAtUtc,
+        Dictionary<string, ClassRollState> States);
 }

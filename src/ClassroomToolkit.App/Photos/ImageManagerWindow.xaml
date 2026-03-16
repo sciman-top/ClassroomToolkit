@@ -19,32 +19,6 @@
         <local:FolderVisibilityConverter x:Key="FolderVisibilityConverter"/>
         <local:FileVisibilityConverter x:Key="FileVisibilityConverter"/>
         <local:PdfBackgroundConverter x:Key="PdfBackgroundConverter"/>
-        <Style x:Key="ImageTileListViewItemStyle"
-               TargetType="ListViewItem"
-               BasedOn="{StaticResource Style_ListViewItem_SelectionUnified}">
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListViewItem">
-                        <Border x:Name="bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="12" CornerRadius="16">
@@ -57,9 +31,10 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="资源与名单管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="资源管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="76" Height="30" Margin="0,0,8,0"
@@ -165,18 +140,21 @@
                             </Button>
                             <Button x:Name="UpButton" ToolTip="向上" Width="36" Height="30" Margin="0,0,10,0"
                                     Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" Padding="0">
-                                <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="16" Height="16"/>
+                                <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                                      Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                             </Button>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
                             <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="36" Height="30" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
-                                <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform" Width="16" Height="16"/>
+                                <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
+                                      Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                             </ToggleButton>
                             <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="36" Height="30" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
-                                <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform" Width="16" Height="16"/>
+                                <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
+                                      Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                             </ToggleButton>
                             <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -191,7 +169,8 @@
                     </Grid>
                 </DockPanel>
 
-                <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top" Text="未选择目录或目录为空，请在左侧选择文件夹后查看。"
+                <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
+                           Text="当前没有可显示内容，请先在左侧选择文件夹。"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
                     <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
@@ -199,7 +178,7 @@
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               Foreground="{StaticResource Brush_Text_Primary}"
-                              ItemContainerStyle="{StaticResource ImageTileListViewItemStyle}">
+                              ItemContainerStyle="{StaticResource Style_ManagementThumbnailListViewItem}">
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel IsItemsHost="True" />
@@ -264,7 +243,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="统一管理壳层：头部、内容区与底部信息栏已对齐。"
+                    <TextBlock Text="统一管理图片、PDF 与名单资源。"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

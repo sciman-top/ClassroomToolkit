@@ -11,6 +11,7 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallSettingsDialog : Window
 {
+    private readonly IReadOnlyList<string> _availableClasses;
     private readonly record struct DisplayTabState(
         bool ShowId,
         bool ShowName,
@@ -60,20 +61,21 @@ public partial class RollCallSettingsDialog : Window
     public bool RollCallSpeechEnabled { get; private set; }
     public string RollCallTimerSoundVariant { get; private set; } = "gentle";
     public string RollCallTimerReminderSoundVariant { get; private set; } = "soft_beep";
-    public string RollCallSpeechEngine { get; private set; } = "pyttsx3";
+    public string RollCallSpeechEngine { get; private set; } = "sapi";
     public string RollCallSpeechVoiceId { get; private set; } = string.Empty;
     public string RollCallSpeechOutputId { get; private set; } = string.Empty;
 
     public RollCallSettingsDialog(AppSettings settings, IReadOnlyList<string> availableClasses)
     {
         InitializeComponent();
+        _availableClasses = availableClasses ?? Array.Empty<string>();
         _initialVoiceId = settings.RollCallSpeechVoiceId ?? string.Empty;
         _initialOutputId = settings.RollCallSpeechOutputId ?? string.Empty;
         ShowIdCheck.IsChecked = settings.RollCallShowId;
         ShowNameCheck.IsChecked = settings.RollCallShowName;
         ShowPhotoCheck.IsChecked = settings.RollCallShowPhoto;
         PhotoDurationSlider.Value = Math.Max(0, Math.Min(10, settings.RollCallPhotoDurationSeconds));
-        BuildPhotoSharedCombo(availableClasses, settings.RollCallPhotoSharedClass);
+        BuildPhotoSharedCombo(_availableClasses, settings.RollCallPhotoSharedClass);
 
         SpeechCheck.IsChecked = settings.RollCallSpeechEnabled;
         BuildSpeechEngineCombo(settings.RollCallSpeechEngine);
@@ -82,11 +84,11 @@ public partial class RollCallSettingsDialog : Window
 
         TimerSoundCheck.IsChecked = settings.RollCallTimerSoundEnabled;
         BuildTimerSoundCombo(settings.RollCallTimerSoundVariant);
-        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "bell";
+        RollCallTimerSoundVariant = settings.RollCallTimerSoundVariant ?? "gentle";
 
         ReminderSoundCheck.IsChecked = settings.RollCallTimerReminderEnabled;
         BuildReminderSoundCombo(settings.RollCallTimerReminderSoundVariant);
-        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "short_bell";
+        RollCallTimerReminderSoundVariant = settings.RollCallTimerReminderSoundVariant ?? "soft_beep";
         var interval = settings.RollCallTimerReminderIntervalMinutes;
         if (interval <= 0)
         {
@@ -166,30 +168,6 @@ public partial class RollCallSettingsDialog : Window
         UpdateTabDirtyStates();
     }
 
-    private void OnResetDisplayTabClick(object sender, RoutedEventArgs e)
-    {
-        ApplyDisplayTabState(_initialDisplayTabState);
-        UpdateTabDirtyStates();
-    }
-
-    private void OnResetSpeechTabClick(object sender, RoutedEventArgs e)
-    {
-        ApplySpeechTabState(_initialSpeechTabState);
-        UpdateTabDirtyStates();
-    }
-
-    private void OnResetRemoteTabClick(object sender, RoutedEventArgs e)
-    {
-        ApplyRemoteTabState(_initialRemoteTabState);
-        UpdateTabDirtyStates();
-    }
-
-    private void OnResetTimerTabClick(object sender, RoutedEventArgs e)
-    {
-        ApplyTimerTabState(_initialTimerTabState);
-        UpdateTabDirtyStates();
-    }
-
     private void AttachDirtyTrackingHandlers()
     {
         ShowIdCheck.Checked += (_, _) => UpdateTabDirtyStates();
@@ -224,7 +202,7 @@ public partial class RollCallSettingsDialog : Window
     {
         return new SpeechTabState(
             SpeechEnabled: SpeechCheck.IsChecked == true,
-            SpeechEngine: GetSelectedValue(SpeechEngineCombo, "pyttsx3"),
+            SpeechEngine: GetSelectedValue(SpeechEngineCombo, "sapi"),
             SpeechVoiceId: GetSelectedValue(SpeechVoiceCombo, string.Empty),
             SpeechOutputId: GetSelectedValue(SpeechOutputCombo, string.Empty));
     }
@@ -242,9 +220,9 @@ public partial class RollCallSettingsDialog : Window
     {
         return new TimerTabState(
             TimerSoundEnabled: TimerSoundCheck.IsChecked == true,
-            TimerSoundVariant: GetSelectedValue(TimerSoundCombo, "bell"),
+            TimerSoundVariant: GetSelectedValue(TimerSoundCombo, "gentle"),
             ReminderSoundEnabled: ReminderSoundCheck.IsChecked == true,
-            ReminderSoundVariant: GetSelectedValue(ReminderSoundCombo, "short_bell"),
+            ReminderSoundVariant: GetSelectedValue(ReminderSoundCombo, "soft_beep"),
             ReminderIntervalMinutes: (int)Math.Round(ReminderIntervalSlider.Value));
     }
 
@@ -313,9 +291,9 @@ public partial class RollCallSettingsDialog : Window
         try
         {
             TimerSoundCheck.IsChecked = state.TimerSoundEnabled;
-            SelectComboValue(TimerSoundCombo, state.TimerSoundVariant, "bell");
+            SelectComboValue(TimerSoundCombo, state.TimerSoundVariant, "gentle");
             ReminderSoundCheck.IsChecked = state.ReminderSoundEnabled;
-            SelectComboValue(ReminderSoundCombo, state.ReminderSoundVariant, "short_bell");
+            SelectComboValue(ReminderSoundCombo, state.ReminderSoundVariant, "soft_beep");
             ReminderIntervalSlider.Value = Math.Clamp(state.ReminderIntervalMinutes, 1, 20);
         }
         finally
@@ -333,21 +311,6 @@ public partial class RollCallSettingsDialog : Window
         {
             return;
         }
-
-        var displayDirty = IsDisplayTabDirty();
-        var speechDirty = IsSpeechTabDirty();
-        var remoteDirty = IsRemoteTabDirty();
-        var timerDirty = IsTimerTabDirty();
-
-        DisplayTabStateText.Text = displayDirty ? "本页状态：已修改" : "本页状态：未修改";
-        SpeechTabStateText.Text = speechDirty ? "本页状态：已修改" : "本页状态：未修改";
-        RemoteTabStateText.Text = remoteDirty ? "本页状态：已修改" : "本页状态：未修改";
-        TimerTabStateText.Text = timerDirty ? "本页状态：已修改" : "本页状态：未修改";
-
-        ResetDisplayTabButton.IsEnabled = displayDirty;
-        ResetSpeechTabButton.IsEnabled = speechDirty;
-        ResetRemoteTabButton.IsEnabled = remoteDirty;
-        ResetTimerTabButton.IsEnabled = timerDirty;
     }
 
     private bool IsDisplayTabDirty()
@@ -437,22 +400,8 @@ public partial class RollCallSettingsDialog : Window
             return;
         }
 
-        var engine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
-        if (engine == "pyttsx3")
-        {
-            SpeechOutputCombo.IsEnabled = false;
-            SpeechOutputCombo.ToolTip = "pyttsx3 不支持切换输出设备。";
-        }
-        else if (SpeechOutputCombo.Items.Count > 0)
-        {
-            SpeechOutputCombo.IsEnabled = true;
-            SpeechOutputCombo.ToolTip = string.Empty;
-        }
-        else
-        {
-            SpeechOutputCombo.IsEnabled = false;
-            SpeechOutputCombo.ToolTip = "未检测到可用的输出设备。";
-        }
+        SpeechOutputCombo.IsEnabled = false;
+        SpeechOutputCombo.ToolTip = "当前版本暂不支持输出设备选择。";
 
         if (SpeechVoiceCombo.Items.Count == 0)
         {
@@ -501,14 +450,14 @@ public partial class RollCallSettingsDialog : Window
         RollCallPhotoDurationSeconds = (int)Math.Round(PhotoDurationSlider.Value);
         RollCallPhotoSharedClass = GetSelectedValue(PhotoSharedCombo, string.Empty);
         RollCallTimerSoundEnabled = TimerSoundCheck.IsChecked == true;
-        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "bell");
+        RollCallTimerSoundVariant = GetSelectedValue(TimerSoundCombo, "gentle");
         RollCallTimerReminderEnabled = ReminderSoundCheck.IsChecked == true;
         RollCallTimerReminderIntervalMinutes = (int)Math.Round(ReminderIntervalSlider.Value);
-        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "short_bell");
+        RollCallTimerReminderSoundVariant = GetSelectedValue(ReminderSoundCombo, "soft_beep");
         RollCallSpeechEnabled = SpeechCheck.IsChecked == true;
-        RollCallSpeechEngine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
+        RollCallSpeechEngine = GetSelectedValue(SpeechEngineCombo, "sapi");
         RollCallSpeechVoiceId = GetSelectedValue(SpeechVoiceCombo, _initialVoiceId);
-        RollCallSpeechOutputId = GetSelectedValue(SpeechOutputCombo, _initialOutputId);
+        RollCallSpeechOutputId = string.Empty;
         RollCallRemoteEnabled = RemoteEnabledCheck.IsChecked == true;
         RollCallRemoteGroupSwitchEnabled = RemoteGroupSwitchCheck.IsChecked == true;
         RemotePresenterKey = keyText;
@@ -519,6 +468,130 @@ public partial class RollCallSettingsDialog : Window
     private void OnCancel(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+    }
+
+    private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        ApplyDefaultSettingsForCurrentTab();
+    }
+
+    private void OnRestoreAllDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "将恢复点名设置窗口中的全部默认参数，是否继续？",
+            "恢复全部默认",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        ApplyDefaultSettings();
+    }
+
+    private void ApplyDefaultSettingsForCurrentTab()
+    {
+        var defaults = new AppSettings();
+        var tabIndex = SettingsTabs?.SelectedIndex ?? 0;
+        _suppressDirtyTracking = true;
+        try
+        {
+            switch (tabIndex)
+            {
+                case 0:
+                    ShowIdCheck.IsChecked = defaults.RollCallShowId;
+                    ShowNameCheck.IsChecked = defaults.RollCallShowName;
+                    ShowPhotoCheck.IsChecked = defaults.RollCallShowPhoto;
+                    PhotoDurationSlider.Value = Math.Clamp(defaults.RollCallPhotoDurationSeconds, 0, 10);
+                    BuildPhotoSharedCombo(_availableClasses, defaults.RollCallPhotoSharedClass);
+                    break;
+                case 1:
+                    SpeechCheck.IsChecked = defaults.RollCallSpeechEnabled;
+                    BuildSpeechEngineCombo(defaults.RollCallSpeechEngine);
+                    BuildVoiceCombo(defaults.RollCallSpeechVoiceId);
+                    SelectComboValue(SpeechVoiceCombo, defaults.RollCallSpeechVoiceId, string.Empty);
+                    BuildOutputCombo(defaults.RollCallSpeechEngine, defaults.RollCallSpeechOutputId);
+                    SelectComboValue(SpeechOutputCombo, defaults.RollCallSpeechOutputId, string.Empty);
+                    break;
+                case 2:
+                    RemoteEnabledCheck.IsChecked = defaults.RollCallRemoteEnabled;
+                    BuildRemoteKeyCombo(defaults.RemotePresenterKey);
+                    RemoteGroupSwitchCheck.IsChecked = defaults.RollCallRemoteGroupSwitchEnabled;
+                    BuildRemoteGroupSwitchKeyCombo(defaults.RemoteGroupSwitchKey);
+                    break;
+                case 3:
+                    TimerSoundCheck.IsChecked = defaults.RollCallTimerSoundEnabled;
+                    BuildTimerSoundCombo(defaults.RollCallTimerSoundVariant);
+                    ReminderSoundCheck.IsChecked = defaults.RollCallTimerReminderEnabled;
+                    BuildReminderSoundCombo(defaults.RollCallTimerReminderSoundVariant);
+                    var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0 ? 3 : defaults.RollCallTimerReminderIntervalMinutes;
+                    ReminderIntervalSlider.Value = Math.Clamp(reminderInterval, 1, 20);
+                    break;
+                default:
+                    ApplyDefaultSettings();
+                    return;
+            }
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdatePhotoDurationLabel();
+        UpdatePhotoControls();
+        UpdateTimerControls();
+        UpdateReminderIntervalLabel();
+        UpdateSpeechControls();
+        UpdateRemoteKeyEnabled();
+        UpdateRemoteGroupSwitchEnabled();
+        UpdateTabDirtyStates();
+    }
+
+    private void ApplyDefaultSettings()
+    {
+        var defaults = new AppSettings();
+        _suppressDirtyTracking = true;
+        try
+        {
+            ShowIdCheck.IsChecked = defaults.RollCallShowId;
+            ShowNameCheck.IsChecked = defaults.RollCallShowName;
+            ShowPhotoCheck.IsChecked = defaults.RollCallShowPhoto;
+            PhotoDurationSlider.Value = Math.Clamp(defaults.RollCallPhotoDurationSeconds, 0, 10);
+            BuildPhotoSharedCombo(_availableClasses, defaults.RollCallPhotoSharedClass);
+
+            SpeechCheck.IsChecked = defaults.RollCallSpeechEnabled;
+            BuildSpeechEngineCombo(defaults.RollCallSpeechEngine);
+            BuildVoiceCombo(defaults.RollCallSpeechVoiceId);
+            SelectComboValue(SpeechVoiceCombo, defaults.RollCallSpeechVoiceId, string.Empty);
+            BuildOutputCombo(defaults.RollCallSpeechEngine, defaults.RollCallSpeechOutputId);
+            SelectComboValue(SpeechOutputCombo, defaults.RollCallSpeechOutputId, string.Empty);
+
+            TimerSoundCheck.IsChecked = defaults.RollCallTimerSoundEnabled;
+            BuildTimerSoundCombo(defaults.RollCallTimerSoundVariant);
+            ReminderSoundCheck.IsChecked = defaults.RollCallTimerReminderEnabled;
+            BuildReminderSoundCombo(defaults.RollCallTimerReminderSoundVariant);
+            var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0 ? 3 : defaults.RollCallTimerReminderIntervalMinutes;
+            ReminderIntervalSlider.Value = Math.Clamp(reminderInterval, 1, 20);
+
+            RemoteEnabledCheck.IsChecked = defaults.RollCallRemoteEnabled;
+            BuildRemoteKeyCombo(defaults.RemotePresenterKey);
+            RemoteGroupSwitchCheck.IsChecked = defaults.RollCallRemoteGroupSwitchEnabled;
+            BuildRemoteGroupSwitchKeyCombo(defaults.RemoteGroupSwitchKey);
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
+
+        UpdatePhotoDurationLabel();
+        UpdatePhotoControls();
+        UpdateTimerControls();
+        UpdateReminderIntervalLabel();
+        UpdateSpeechControls();
+        UpdateRemoteKeyEnabled();
+        UpdateRemoteGroupSwitchEnabled();
+        UpdateTabDirtyStates();
     }
 
     private void BuildPhotoSharedCombo(IReadOnlyList<string> classes, string? current)
@@ -587,13 +660,12 @@ public partial class RollCallSettingsDialog : Window
     {
         var items = new[]
         {
-            new ComboOption("pyttsx3", "pyttsx3（默认，跟随系统输出）"),
-            new ComboOption("sapi", "SAPI（win32com，可选输出设备）")
+            new ComboOption("sapi", "系统语音（SAPI）")
         };
         SpeechEngineCombo.ItemsSource = items;
         SpeechEngineCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechEngineCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechEngineCombo.SelectedValue = string.IsNullOrWhiteSpace(current) ? "pyttsx3" : current;
+        SpeechEngineCombo.SelectedValue = "sapi";
     }
 
     private void BuildSapiVoices(List<ComboOption> voices)
@@ -623,23 +695,11 @@ public partial class RollCallSettingsDialog : Window
     private void BuildVoiceCombo(string? current)
     {
         var voices = new List<ComboOption>();
-        var engine = GetSelectedValue(SpeechEngineCombo, "pyttsx3");
-        
         try
         {
-            if (engine == "pyttsx3")
-            {
-                // 对于 pyttsx3，我们需要通过 Python 获取语音列表
-                // 这里先使用 SAPI 作为后备，显示所有可用的语音
-                BuildSapiVoices(voices);
-            }
-            else
-            {
-                // 对于 SAPI，直接使用 SpeechSynthesizer
-                BuildSapiVoices(voices);
-            }
+            BuildSapiVoices(voices);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             voices.Clear();
         }
@@ -647,30 +707,19 @@ public partial class RollCallSettingsDialog : Window
         if (voices.Count == 0)
         {
             voices.Add(new ComboOption(string.Empty, "暂无可选发音人"));
-            SpeechVoiceCombo.IsEnabled = false;
-        }
-        else
-        {
-            SpeechVoiceCombo.IsEnabled = true;
         }
 
         SpeechVoiceCombo.ItemsSource = voices;
         SpeechVoiceCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechVoiceCombo.SelectedValuePath = nameof(ComboOption.Value);
 
-        if (voices.Count == 0)
-        {
-            SpeechVoiceCombo.SelectedValue = string.Empty;
-        }
-        else
-        {
-            var target = string.IsNullOrWhiteSpace(current) ? _initialVoiceId : current;
-            if (!voices.Any(option => option.Value.Equals(target, StringComparison.OrdinalIgnoreCase)))
-            {
-                target = voices[0].Value;
-            }
-            SpeechVoiceCombo.SelectedValue = target;
-        }
+        var decision = RollCallVoiceSelectionPolicy.Resolve(
+            voices.Select(option => option.Value).ToList(),
+            preferredVoiceId: current,
+            fallbackVoiceId: _initialVoiceId);
+
+        SpeechVoiceCombo.IsEnabled = decision.IsVoiceSelectionEnabled;
+        SpeechVoiceCombo.SelectedValue = decision.SelectedVoiceId;
     }
 
     /// <summary>
@@ -694,7 +743,7 @@ public partial class RollCallSettingsDialog : Window
 
             return englishName;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return cultureName.ToUpperInvariant();
         }
@@ -779,7 +828,7 @@ public partial class RollCallSettingsDialog : Window
                 results.Add(new RegistryVoice(name, cultureName, gender, enabled));
             }
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore registry access errors to avoid breaking the settings dialog.
         }
@@ -813,7 +862,7 @@ public partial class RollCallSettingsDialog : Window
             {
                 return new CultureInfo(lcid).Name;
             }
-            catch
+            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
             {
                 return string.Empty;
             }
@@ -824,11 +873,11 @@ public partial class RollCallSettingsDialog : Window
     private void BuildOutputCombo(string? engine, string? current)
     {
         var items = new List<ComboOption>();
-        items.Add(new ComboOption(string.Empty, "当前引擎不支持输出选择"));
+        items.Add(new ComboOption(string.Empty, "当前版本暂不支持输出设备选择"));
         SpeechOutputCombo.ItemsSource = items;
         SpeechOutputCombo.DisplayMemberPath = nameof(ComboOption.Label);
         SpeechOutputCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechOutputCombo.SelectedValue = current ?? _initialOutputId;
+        SpeechOutputCombo.SelectedValue = string.Empty;
         UpdateSpeechControls();
     }
 
@@ -844,7 +893,7 @@ public partial class RollCallSettingsDialog : Window
         TimerSoundCombo.ItemsSource = items;
         TimerSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         TimerSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        TimerSoundCombo.SelectedValue = current ?? "bell";
+        TimerSoundCombo.SelectedValue = current ?? "gentle";
     }
 
     private void BuildReminderSoundCombo(string? current)
@@ -858,7 +907,7 @@ public partial class RollCallSettingsDialog : Window
         ReminderSoundCombo.ItemsSource = items;
         ReminderSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);
         ReminderSoundCombo.SelectedValuePath = nameof(ComboOption.Value);
-        ReminderSoundCombo.SelectedValue = current ?? "short_bell";
+        ReminderSoundCombo.SelectedValue = current ?? "soft_beep";
     }
 
     private void UpdateReminderIntervalLabel()
@@ -928,3 +977,4 @@ public partial class RollCallSettingsDialog : Window
         }
     }
 }
+

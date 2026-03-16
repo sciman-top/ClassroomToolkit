@@ -1,7 +1,7 @@
 ﻿{
     "project":  "ClassroomToolkit",
     "mode":  "autonomous-refactor-loop",
-    "updated_at":  "2026-03-15T17:10:00+08:00",
+    "updated_at":  "2026-03-16T22:02:20.4863509+08:00",
     "current_task":  null,
     "tasks":  {
                   "phase0-baseline":  {
@@ -228,6 +228,81 @@
                                                                      "status":  "completed",
                                                                      "attempts":  2,
                                                                      "last_summary":  "Completed post-gap automated freeze recheck: ArchitectureDependencyTests passed (5/5), full Debug passed (2502/2502), full Release passed (2502/2502), and acceptance/progress/handover/matrix docs were synced."
+                                                                 },
+                  "rollcall-remote-hook-action-coordination-tail":  {
+                                                                         "status":  "completed",
+                                                                         "attempts":  1,
+                                                                         "last_summary":  "Extracted RollCallWindow.Input remote roll/group-switch inline branches into RollCallRemoteHookActionExecutionCoordinator and passed targeted remote-hook plus full Debug verification (2594/2594)."
+                                                                     },
+                  "rollcall-remote-hook-stale-guard-tail":  {
+                                                                   "status":  "completed",
+                                                                   "attempts":  1,
+                                                                   "last_summary":  "Added pre-registration ShouldKeepActive guard in RollCallRemoteHookCoordinator so stale generations skip registration and unavailable notification; passed targeted filter (19/19) and Debug build."
+                                                                     },
+                  "paintoverlay-wps-hook-unavailable-notification-tail":  {
+                                                                               "status":  "completed",
+                                                                               "attempts":  1,
+                                                                               "last_summary":  "Replaced PaintOverlayWindow WPS hook unavailable bool gate with atomic notification policy and recovery reset wiring, then passed targeted policy+architecture tests (8/8) and full Debug suite (2598/2598)."
+                                                                     },
+                  "globalhook-lifecycle-hardening-tail":  {
+                                                                "status":  "completed",
+                                                                "attempts":  1,
+                                                                "last_summary":  "Hardened GlobalHookService lifecycle: dispose-aware registration short-circuit, synchronized active-hook tracking, resilient stop/unregister, and passed targeted tests (8/8) plus full Debug suite (2601/2601)."
+                                                                     },
+                  "speechservice-unavailable-notification-rearm-tail":  {
+                                                                             "status":  "completed",
+                                                                             "attempts":  1,
+                                                                             "last_summary":  "Replaced SpeechService unavailable bool gate with atomic notification policy, rearmed on successful speak path, and passed targeted tests (16/16) plus full Debug suite (2606/2606)."
+                                                                     },
+                  "rollcall-settings-save-notification-policy-tail":  {
+                                                                           "status":  "completed",
+                                                                           "attempts":  1,
+                                                                           "last_summary":  "Aligned RollCallWindow settings-save failure flow with SettingsSaveFailureNotificationPolicy/StateUpdater and passed targeted contract/policy tests (9/9) plus full Debug suite (2608/2608)."
+                                                                     },
+                  "mainwindow-settings-save-notification-contract-tail":  {
+                                                                               "status":  "completed",
+                                                                               "attempts":  1,
+                                                                               "last_summary":  "Added MainWindow settings-save notification source contract tests and passed targeted contract/policy tests (11/11) plus full Debug suite (2610/2610)."
+                                                                     },
+                  "globalhook-unavailable-callback-resilience-tail":  {
+                                                                           "status":  "completed",
+                                                                           "attempts":  1,
+                                                                           "last_summary":  "Hardened GlobalHookService HookUnavailable callback dispatch with recoverable-callback isolation and fatal propagation, then passed targeted tests (10/10) plus full Debug suite (2612/2612)."
+                                                                     },
+                  "globalhook-unavailable-callback-contract-tail":  {
+                                                                         "status":  "completed",
+                                                                         "attempts":  1,
+                                                                         "last_summary":  "Added GlobalHookService source contracts for HookUnavailable invocation-list dispatch and recoverable callback isolation semantics; passed targeted tests (12/12) plus full Debug suite (2614/2614)."
+                                                                     },
+                  "paintoverlay-wps-hook-unavailable-contract-tail":  {
+                                                                          "status":  "completed",
+                                                                          "attempts":  1,
+                                                                          "last_summary":  "Added PaintOverlay WPS-hook unavailable source contracts for atomic notify gate and recovery/reset rearm semantics; passed targeted tests (10/10) plus full Debug suite (2616/2616)."
+                                                                     },
+                  "interop-background-dispatch-error-callback-resilience-tail":  {
+                                                                                     "status":  "completed",
+                                                                                     "attempts":  1,
+                                                                                     "last_summary":  "Hardened InteropBackgroundDispatchExecutor to isolate non-fatal onError callback failures and added regression coverage proving callback failures do not block subsequent queued work; targeted tests passed (8/8) plus full Debug suite (2617/2617)."
+                                                                                 },
+                  "interop-hook-event-dispatch-resilience-tail":  {
+                                                                        "status":  "completed",
+                                                                        "attempts":  1,
+                                                                        "last_summary":  "Added InteropEventDispatchPolicy and wired KeyboardHook/WpsSlideshowNavigationHook event dispatch through safe invocation-list isolation; targeted tests passed (12/12) plus full Debug suite (2621/2621)."
+                                                                    },
+                  "interop-hook-event-dispatch-contract-tail":  {
+                                                                     "status":  "completed",
+                                                                     "attempts":  1,
+                                                                     "last_summary":  "Added source-level contract tests locking hook event dispatch through InteropEventDispatchPolicy and passed targeted tests (11/11) plus full Debug suite (2623/2623)."
+                                                                 },
+                  "interop-background-dispatch-contract-tail":  {
+                                                                     "status":  "completed",
+                                                                     "attempts":  1,
+                                                                     "last_summary":  "Added source-level contract tests locking InteropBackgroundDispatchExecutor worker/queue error paths to InvokeOnErrorSafely and passed targeted tests (10/10) plus full Debug suite (2625/2625)."
+                                                                 },
+                  "interop-hook-direct-invoke-ban-contract-tail":  {
+                                                                         "status":  "completed",
+                                                                         "attempts":  1,
+                                                                         "last_summary":  "Strengthened hook dispatch contracts to forbid direct BindingTriggered/NavigationRequested invocation and passed targeted tests (11/11) plus full Debug suite (2625/2625)."
                                                                  }
               },
     "blocked":  [
@@ -919,8 +994,218 @@
                         "summary":  "Moved PaintOverlayWindow cross-page dispatch-failure inline fallback, replay-queue, and replay-flush coordination into CrossPageDisplayUpdateDispatchFailureCoordinator and passed the targeted filter (21/21).",
                         "reason":  "completed",
                         "recorded_at":  "2026-03-15T00:18:52.0573679+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "rollcall-remote-hook-action-coordination-tail",
+                        "summary":  "Executor started task rollcall-remote-hook-action-coordination-tail for RollCallWindow remote-hook action coordination closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:13:11.8259844+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "rollcall-remote-hook-action-coordination-tail",
+                        "summary":  "Extracted RollCallWindow.Input remote roll/group-switch inline branches into RollCallRemoteHookActionExecutionCoordinator and passed targeted remote-hook filter (18/18) plus full Debug suite (2594/2594).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:13:11.8259844+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "rollcall-remote-hook-stale-guard-tail",
+                        "summary":  "Executor started task rollcall-remote-hook-stale-guard-tail for RollCall remote-hook stale-generation guard closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:16:29.9669701+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "rollcall-remote-hook-stale-guard-tail",
+                        "summary":  "Added pre-registration ShouldKeepActive guard in RollCallRemoteHookCoordinator and covered stale-generation no-register path; targeted filter passed (19/19) with Debug build success.",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:16:29.9669701+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-wps-hook-unavailable-notification-tail",
+                        "summary":  "Executor started task paintoverlay-wps-hook-unavailable-notification-tail for PaintOverlay WPS-hook unavailable notification guard closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:20:51.0517372+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-wps-hook-unavailable-notification-tail",
+                        "summary":  "Replaced PaintOverlayWindow WPS hook unavailable bool gate with WpsHookUnavailableNotificationPolicy, reset notification state on recovery/reset paths, and passed targeted (8/8) plus full Debug suite (2598/2598).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:20:51.0517372+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "globalhook-lifecycle-hardening-tail",
+                        "summary":  "Executor started task globalhook-lifecycle-hardening-tail for GlobalHookService lifecycle race hardening closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:24:55.1406704+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "globalhook-lifecycle-hardening-tail",
+                        "summary":  "Hardened GlobalHookService with dispose-aware register short-circuit, synchronized active-hook tracking and resilient stop/unregister behavior; targeted tests passed (8/8) and full Debug suite passed (2601/2601).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:24:55.1406704+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "speechservice-unavailable-notification-rearm-tail",
+                        "summary":  "Executor started task speechservice-unavailable-notification-rearm-tail for SpeechService unavailable-notification gate rearm closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:28:52.0286824+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "speechservice-unavailable-notification-rearm-tail",
+                        "summary":  "Replaced SpeechService unavailable bool gate with SpeechServiceUnavailableNotificationPolicy, reset gate on successful speak path, and passed targeted tests (16/16) plus full Debug suite (2606/2606).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:28:52.0286824+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "rollcall-settings-save-notification-policy-tail",
+                        "summary":  "Executor started task rollcall-settings-save-notification-policy-tail for RollCall settings-save notification policy closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:31:47.7357160+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "rollcall-settings-save-notification-policy-tail",
+                        "summary":  "Aligned RollCallWindow settings-save failure flow with SettingsSaveFailureNotificationPolicy/StateUpdater and passed targeted tests (9/9) plus full Debug suite (2608/2608).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:31:47.7357160+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "mainwindow-settings-save-notification-contract-tail",
+                        "summary":  "Executor started task mainwindow-settings-save-notification-contract-tail for MainWindow settings-save notification contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:34:29.1546480+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "mainwindow-settings-save-notification-contract-tail",
+                        "summary":  "Added MainWindow settings-save notification source contract tests and passed targeted tests (11/11) plus full Debug suite (2610/2610).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:34:29.1546480+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "globalhook-unavailable-callback-resilience-tail",
+                        "summary":  "Executor started task globalhook-unavailable-callback-resilience-tail for GlobalHookService unavailable-callback dispatch resilience closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:36:51.9982923+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "globalhook-unavailable-callback-resilience-tail",
+                        "summary":  "Hardened GlobalHookService HookUnavailable dispatch to isolate recoverable subscriber failures and preserve fatal propagation; targeted tests passed (10/10) and full Debug suite passed (2612/2612).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:36:51.9982923+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "globalhook-unavailable-callback-contract-tail",
+                        "summary":  "Executor started task globalhook-unavailable-callback-contract-tail for GlobalHookService HookUnavailable source-contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:39:20.4066780+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "globalhook-unavailable-callback-contract-tail",
+                        "summary":  "Added GlobalHookService source contracts for HookUnavailable invocation-list dispatch and recoverable callback isolation semantics; targeted tests passed (12/12) and full Debug suite passed (2614/2614).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:39:20.4066780+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "paintoverlay-wps-hook-unavailable-contract-tail",
+                        "summary":  "Executor started task paintoverlay-wps-hook-unavailable-contract-tail for PaintOverlay WPS-hook unavailable source-contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:41:15.3057526+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "paintoverlay-wps-hook-unavailable-contract-tail",
+                        "summary":  "Added PaintOverlay WPS-hook unavailable source contracts for atomic notify gate and recovery/reset rearm semantics; targeted tests passed (10/10) and full Debug suite passed (2616/2616).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:41:15.3057526+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "interop-background-dispatch-error-callback-resilience-tail",
+                        "summary":  "Executor started task interop-background-dispatch-error-callback-resilience-tail for Interop background dispatch error-callback resilience closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:46:04.0636651+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "interop-background-dispatch-error-callback-resilience-tail",
+                        "summary":  "Hardened InteropBackgroundDispatchExecutor onError callback isolation in both worker-failure and queue-failure paths, added regression coverage for throwing error callback, and passed targeted tests (8/8) plus full Debug suite (2617/2617).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:46:04.0636651+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "interop-hook-event-dispatch-resilience-tail",
+                        "summary":  "Executor started task interop-hook-event-dispatch-resilience-tail for Interop hook event-dispatch resilience closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:50:30.9460277+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "interop-hook-event-dispatch-resilience-tail",
+                        "summary":  "Added InteropEventDispatchPolicy and wired KeyboardHook/WpsSlideshowNavigationHook to isolate recoverable subscriber failures while preserving fatal propagation; targeted tests passed (12/12) plus full Debug suite (2621/2621).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:50:30.9460277+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "interop-hook-event-dispatch-contract-tail",
+                        "summary":  "Executor started task interop-hook-event-dispatch-contract-tail for Interop hook event-dispatch source-contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:57:34.7872235+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "interop-hook-event-dispatch-contract-tail",
+                        "summary":  "Added source-level contracts that lock KeyboardHook/WpsSlideshowNavigationHook event dispatch through InteropEventDispatchPolicy and passed targeted tests (11/11) plus full Debug suite (2623/2623).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:57:34.7872235+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "interop-background-dispatch-contract-tail",
+                        "summary":  "Executor started task interop-background-dispatch-contract-tail for Interop background dispatch source-contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T21:59:54.3894994+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "interop-background-dispatch-contract-tail",
+                        "summary":  "Added source-level contracts locking InteropBackgroundDispatchExecutor worker/queue error paths to InvokeOnErrorSafely and passed targeted tests (10/10) plus full Debug suite (2625/2625).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T21:59:54.3894994+08:00"
+                    },
+                    {
+                        "action":  "start",
+                        "task_id":  "interop-hook-direct-invoke-ban-contract-tail",
+                        "summary":  "Executor started task interop-hook-direct-invoke-ban-contract-tail for Interop hook direct-invoke ban contract closure.",
+                        "reason":  "",
+                        "recorded_at":  "2026-03-16T22:02:20.4863509+08:00"
+                    },
+                    {
+                        "action":  "complete",
+                        "task_id":  "interop-hook-direct-invoke-ban-contract-tail",
+                        "summary":  "Strengthened Interop hook source contracts to forbid direct BindingTriggered/NavigationRequested invocation and passed targeted tests (11/11) plus full Debug suite (2625/2625).",
+                        "reason":  "completed",
+                        "recorded_at":  "2026-03-16T22:02:20.4863509+08:00"
                     }
                 ],
-    "last_summary":  "All code and automatable refactor tasks are complete; manual-final-regression is omitted by explicit user instruction. Latest automated freeze checks: ArchitectureDependencyTests 5/5, Debug 2502/2502, Release 2502/2502."
+    "last_summary":  "Completed interop-hook-direct-invoke-ban-contract-tail by strengthening source contracts to forbid direct hook event invocation. Latest checks: targeted tests 11/11 and full Debug suite 2625/2625."
 }
 

@@ -29,7 +29,7 @@ public sealed class InkHistorySqliteStoreAdapter
         {
             result = _bridge.LoadOrCreate(sourcePath, pageIndex);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkHistorySqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
             var fallbackJson = TryReadSnapshot(dbPath, sourcePath, pageIndex);
@@ -90,7 +90,7 @@ public sealed class InkHistorySqliteStoreAdapter
             var scalar = command.ExecuteScalar();
             return scalar as string;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkHistorySqlite] read failed: {ex.GetType().Name} - {ex.Message}");
             return null;
@@ -132,7 +132,7 @@ public sealed class InkHistorySqliteStoreAdapter
             command.Parameters.AddWithValue("$updatedAtUtc", DateTime.UtcNow.ToString("O"));
             command.ExecuteNonQuery();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkHistorySqlite] write failed: {ex.GetType().Name} - {ex.Message}");
         }

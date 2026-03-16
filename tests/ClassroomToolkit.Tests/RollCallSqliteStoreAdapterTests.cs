@@ -1,5 +1,6 @@
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Domain.Models;
+using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Infra.Storage;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
@@ -18,18 +19,19 @@ public sealed class RollCallSqliteStoreAdapterTests
     }
 
     [Fact]
-    public void LoadOrCreate_ShouldPreferSqliteState_WhenSqliteHasData()
+    public void LoadOrCreate_ShouldPreferBridgeState_WhenBridgeAndSqliteBothHaveData()
     {
         var workbook = CreateWorkbook();
         var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: "{\"from\":\"excel\"}"));
         var dbPath = CreateTempDbPath();
+        var workbookPath = TestPathHelper.CreateFilePath("ctool_rollcall_workbook_missing", ".xlsx");
         SeedSqliteState(dbPath, "{\"from\":\"sqlite\"}");
         var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
 
-        var actual = adapter.LoadOrCreate("students.xlsx");
+        var actual = adapter.LoadOrCreate(workbookPath);
 
         bridge.LoadCalls.Should().Be(1);
-        actual.RollStateJson.Should().Be("{\"from\":\"sqlite\"}");
+        actual.RollStateJson.Should().Be("{\"from\":\"excel\"}");
         actual.Workbook.Should().BeSameAs(workbook);
     }
 
@@ -45,6 +47,90 @@ public sealed class RollCallSqliteStoreAdapterTests
 
         actual.RollStateJson.Should().Be("{\"from\":\"excel\"}");
         ReadSqliteState(dbPath).Should().Be("{\"from\":\"excel\"}");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferSqliteState_WhenSqliteRevisionIsNewer()
+    {
+        var workbook = CreateWorkbook();
+        var authorityJson = CreateVersionedRollStateJson(revision: 100, updatedAtUtc: new DateTime(2026, 3, 16, 8, 0, 0, DateTimeKind.Utc), currentStudent: "excel");
+        var cacheJson = CreateVersionedRollStateJson(revision: 200, updatedAtUtc: new DateTime(2026, 3, 16, 7, 0, 0, DateTimeKind.Utc), currentStudent: "sqlite");
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: authorityJson));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteState(dbPath, cacheJson, new DateTime(2026, 3, 16, 7, 0, 0, DateTimeKind.Utc), revision: 200);
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate(TestPathHelper.CreateFilePath("ctool_rollcall_workbook_missing", ".xlsx"));
+        var states = RollStateSerializer.DeserializeWorkbookStates(actual.RollStateJson);
+
+        states["班级1"].CurrentStudent.Should().Be("sqlite");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferBridgeState_WhenBridgeRevisionIsNewer()
+    {
+        var workbook = CreateWorkbook();
+        var authorityJson = CreateVersionedRollStateJson(revision: 300, updatedAtUtc: new DateTime(2026, 3, 16, 8, 0, 0, DateTimeKind.Utc), currentStudent: "excel");
+        var cacheJson = CreateVersionedRollStateJson(revision: 200, updatedAtUtc: new DateTime(2026, 3, 16, 9, 0, 0, DateTimeKind.Utc), currentStudent: "sqlite");
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: authorityJson));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteState(dbPath, cacheJson, new DateTime(2026, 3, 16, 9, 0, 0, DateTimeKind.Utc), revision: 200);
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate(TestPathHelper.CreateFilePath("ctool_rollcall_workbook_missing", ".xlsx"));
+        var states = RollStateSerializer.DeserializeWorkbookStates(actual.RollStateJson);
+
+        states["班级1"].CurrentStudent.Should().Be("excel");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldFallbackToSqliteState_WhenBridgeStateMissing()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: null));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteState(dbPath, "{\"from\":\"sqlite\"}");
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate("students.xlsx");
+
+        actual.RollStateJson.Should().Be("{\"from\":\"sqlite\"}");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferSqliteState_WhenSqliteStateIsNewerAndBothHaveTimestamps()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: "{\"from\":\"excel\"}"));
+        var dbPath = CreateTempDbPath();
+        var workbookPath = CreateTempWorkbookPath();
+        var authorityTimestamp = new DateTime(2026, 3, 16, 8, 0, 0, DateTimeKind.Utc);
+        var sqliteTimestamp = authorityTimestamp.AddMinutes(5);
+        File.SetLastWriteTimeUtc(workbookPath, authorityTimestamp);
+        SeedSqliteState(dbPath, "{\"from\":\"sqlite\"}", sqliteTimestamp);
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate(workbookPath);
+
+        actual.RollStateJson.Should().Be("{\"from\":\"sqlite\"}");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferBridgeState_WhenBridgeStateIsNewerAndBothHaveTimestamps()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: "{\"from\":\"excel\"}"));
+        var dbPath = CreateTempDbPath();
+        var workbookPath = CreateTempWorkbookPath();
+        var authorityTimestamp = new DateTime(2026, 3, 16, 8, 0, 0, DateTimeKind.Utc);
+        var sqliteTimestamp = authorityTimestamp.AddMinutes(-5);
+        File.SetLastWriteTimeUtc(workbookPath, authorityTimestamp);
+        SeedSqliteState(dbPath, "{\"from\":\"sqlite\"}", sqliteTimestamp);
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate(workbookPath);
+
+        actual.RollStateJson.Should().Be("{\"from\":\"excel\"}");
     }
 
     [Fact]
@@ -110,6 +196,18 @@ public sealed class RollCallSqliteStoreAdapterTests
         loaded.Workbook.GetActiveRoster().Students.Should().HaveCount(2);
     }
 
+    [Fact]
+    public void LoadOrCreate_ShouldRethrow_WhenBridgeThrowsFatalException()
+    {
+        var dbPath = CreateTempDbPath();
+        SeedSqliteState(dbPath, "{\"seed\":1}");
+        var adapter = new RollCallSqliteStoreAdapter(new FatalThrowingRollCallStore(), _ => dbPath);
+
+        Action act = () => _ = adapter.LoadOrCreate("students.xlsx");
+
+        act.Should().Throw<AccessViolationException>();
+    }
+
     private static StudentWorkbook CreateWorkbook()
     {
         return new StudentWorkbook(
@@ -126,7 +224,14 @@ public sealed class RollCallSqliteStoreAdapterTests
         return Path.Combine(dir, "students.rollcall.sqlite3");
     }
 
-    private static void SeedSqliteState(string dbPath, string? state)
+    private static string CreateTempWorkbookPath()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_rollcall_workbook", ".xlsx");
+        File.WriteAllText(path, "stub");
+        return path;
+    }
+
+    private static void SeedSqliteState(string dbPath, string? state, DateTime? updatedAtUtc = null, long? revision = null)
     {
         var connectionString = $"Data Source={dbPath}";
         using var connection = new SqliteConnection(connectionString);
@@ -140,6 +245,7 @@ public sealed class RollCallSqliteStoreAdapterTests
                 (
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     roll_state_json TEXT NULL,
+                    revision INTEGER NOT NULL DEFAULT 0,
                     updated_at_utc TEXT NOT NULL
                 );
                 """;
@@ -149,14 +255,16 @@ public sealed class RollCallSqliteStoreAdapterTests
         using var command = connection.CreateCommand();
         command.CommandText =
             """
-            INSERT INTO roll_call_state(id, roll_state_json, updated_at_utc)
-            VALUES(1, $json, $updated)
+            INSERT INTO roll_call_state(id, roll_state_json, revision, updated_at_utc)
+            VALUES(1, $json, $revision, $updated)
             ON CONFLICT(id) DO UPDATE SET
                 roll_state_json = excluded.roll_state_json,
+                revision = excluded.revision,
                 updated_at_utc = excluded.updated_at_utc;
             """;
         command.Parameters.AddWithValue("$json", state ?? string.Empty);
-        command.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
+        command.Parameters.AddWithValue("$revision", revision ?? 0L);
+        command.Parameters.AddWithValue("$updated", (updatedAtUtc ?? DateTime.UtcNow).ToString("O"));
         command.ExecuteNonQuery();
     }
 
@@ -173,6 +281,21 @@ public sealed class RollCallSqliteStoreAdapterTests
         command.CommandText = "SELECT roll_state_json FROM roll_call_state WHERE id = 1 LIMIT 1;";
         var scalar = command.ExecuteScalar();
         return scalar as string;
+    }
+
+    private static string CreateVersionedRollStateJson(long revision, DateTime updatedAtUtc, string currentStudent)
+    {
+        return RollStateSerializer.SerializeWorkbookStates(
+            new Dictionary<string, ClassRollState>
+            {
+                ["班级1"] = new ClassRollState
+                {
+                    CurrentGroup = "一组",
+                    CurrentStudent = currentStudent
+                }
+            },
+            revision,
+            updatedAtUtc);
     }
 
     private sealed class FakeRollCallStore : IRollCallWorkbookStore
@@ -217,6 +340,19 @@ public sealed class RollCallSqliteStoreAdapterTests
         public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
         {
             throw new IOException("bridge-failure");
+        }
+    }
+
+    private sealed class FatalThrowingRollCallStore : IRollCallWorkbookStore
+    {
+        public RollCallWorkbookStoreLoadData LoadOrCreate(string path)
+        {
+            throw new AccessViolationException("fatal-bridge-failure");
+        }
+
+        public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
+        {
+            throw new AccessViolationException("fatal-bridge-failure");
         }
     }
 }

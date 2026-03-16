@@ -10,11 +10,9 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}"
+            Margin="10"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
-        <Border.Effect>
-            <StaticResource ResourceKey="Shadow_Dialog"/>
-        </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -24,27 +22,19 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 标题栏 -->
-            <Grid Grid.Row="0" Height="40" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="选择班级" 
-                           VerticalAlignment="Center" 
-                           HorizontalAlignment="Left" 
-                           Margin="16,0" 
-                           FontSize="14" 
-                           FontWeight="Bold" 
-                           Foreground="{StaticResource Brush_Text_Primary}"/>
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="选择班级" Style="{StaticResource Style_DialogShellTitleText}"/>
                 
                 <!-- 关闭按钮 (其实也是取消) -->
-                <Button Style="{StaticResource Style_IconButton}" 
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" 
                         Click="OnCancel"
-                        HorizontalAlignment="Right" 
-                        Margin="0,0,8,0"
-                        Width="32" Height="32">
+                        ToolTip="关闭班级选择">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
 
             <!-- 分割线 -->
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 班级列表 -->
             <ListBox x:Name="ClassList" Grid.Row="1" 
@@ -53,9 +43,9 @@
                      Style="{StaticResource Style_CleanListBox}"/>
 
             <!-- 3. 底部按钮 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
-                <Button Content="取消" Style="{StaticResource Style_SecondaryButton}" Width="80" Margin="0,0,10,0" Click="OnCancel"/>
-                <Button Content="确定" Style="{StaticResource Style_PrimaryButton}" Width="80" Click="OnConfirm"/>
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>

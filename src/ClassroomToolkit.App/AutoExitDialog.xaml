@@ -23,16 +23,17 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="启动器设置" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭启动器设置">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <!-- 2. 内容 -->
             <StackPanel Grid.Row="1" Margin="20,16,20,16">
-                <TextBlock Text="自动关闭时间 (分钟)" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
-                <TextBlock Text="设置为 0 则不自动关闭" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,8"/>
+                <TextBlock Text="自动关闭时间（分钟）" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
+                <TextBlock Text="设为 0 时不自动关闭。" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,8"/>
                 
                 <TextBox x:Name="MinutesBox" Padding="8" />
             </StackPanel>

@@ -40,4 +40,27 @@ public sealed class RollStateSerializerTests
         var restored = RollStateSerializer.DeserializeClassState("{invalid");
         restored.Should().BeNull();
     }
+
+    [Fact]
+    public void SerializeWorkbookStates_ShouldIncludeRevisionMetadata()
+    {
+        var json = RollStateSerializer.SerializeWorkbookStates(new Dictionary<string, ClassRollState>());
+
+        var found = RollStateSerializer.TryReadWorkbookMetadata(json, out var revision, out var updatedAtUtc);
+
+        found.Should().BeTrue();
+        revision.Should().NotBeNull();
+        updatedAtUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DeserializeWorkbookStates_ShouldSupportLegacyDictionaryPayload()
+    {
+        var legacyJson = "{\"班级1\":{\"currentGroup\":\"一组\"}}";
+
+        var states = RollStateSerializer.DeserializeWorkbookStates(legacyJson);
+
+        states.Should().ContainKey("班级1");
+        states["班级1"].CurrentGroup.Should().Be("一组");
+    }
 }

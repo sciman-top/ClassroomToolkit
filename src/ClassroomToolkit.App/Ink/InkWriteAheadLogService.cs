@@ -123,7 +123,7 @@ public sealed class InkWriteAheadLogService
                         recovered++;
                     }
                 }
-                catch
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     // Keep WAL entry for next attempt.
                 }
@@ -169,7 +169,7 @@ public sealed class InkWriteAheadLogService
                 ? new Dictionary<string, InkWalEntry>(parsed, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
         }
@@ -199,7 +199,7 @@ public sealed class InkWriteAheadLogService
             File.WriteAllText(temp, json);
             File.Move(temp, walPath, overwrite: true);
         }
-        catch
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             // Ignore WAL persistence errors.
         }

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.Services.Input;
 
@@ -59,5 +60,13 @@ public partial class RemoteKeyDialog : Window
     private void OnCancel(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+    }
+
+    private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
     }
 }

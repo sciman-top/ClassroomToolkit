@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 
@@ -71,7 +72,7 @@ public partial class MainWindow
         {
             DragMove();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 LauncherDragDiagnosticsPolicy.FormatDragMoveFailureMessage(
@@ -126,6 +127,14 @@ public partial class MainWindow
 
     private void ApplyLauncherPosition()
     {
+        if (_settings.LauncherX == AppSettings.UnsetPosition
+            || _settings.LauncherY == AppSettings.UnsetPosition)
+        {
+            WindowPlacementHelper.CenterOnVirtualScreen(this);
+            EnsureWithinWorkArea();
+            return;
+        }
+
         Left = _settings.LauncherX;
         Top = _settings.LauncherY;
         EnsureWithinWorkArea();
@@ -220,8 +229,12 @@ public partial class MainWindow
         var minimizeDecision = LauncherVisibilityTransitionPolicy.ResolveMinimizeDecision(
             CaptureLauncherMinimizeTransitionContext(_bubbleWindow));
         var transitionPlan = minimizeDecision.Plan;
+        var hasSavedBubblePosition = _settings.LauncherBubbleX != AppSettings.UnsetPosition
+            && _settings.LauncherBubbleY != AppSettings.UnsetPosition;
         var target = fromSettings
-            ? new System.Windows.Point(_settings.LauncherBubbleX, _settings.LauncherBubbleY)
+            ? (hasSavedBubblePosition
+                ? new System.Windows.Point(_settings.LauncherBubbleX, _settings.LauncherBubbleY)
+                : new System.Windows.Point(Left + Width / 2, Top + Height / 2))
             : new System.Windows.Point(Left + Width / 2, Top + Height / 2);
         _bubbleWindow.PlaceNear(target);
         System.Diagnostics.Debug.WriteLine(

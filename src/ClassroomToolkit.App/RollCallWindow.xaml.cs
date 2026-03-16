@@ -60,8 +60,8 @@ public partial class RollCallWindow : Window
     private bool _allowClose;
     private bool _timerStateApplied;
     private bool _rollStateDirty;
-    private bool _speechUnavailableNotified;
-    private bool _remoteHookUnavailableNotified;
+    private int _speechUnavailableNotifiedState;
+    private int _remoteHookUnavailableNotifiedState;
     private bool _initialized;
     private bool _dataLoaded;
     private bool _settingsSaveFailedNotified;
@@ -98,29 +98,18 @@ public partial class RollCallWindow : Window
             RollCallRemoteHookBindingPolicy.ResolveTokens,
             () => _hookService.UnregisterAll());
         _speechService = speechService;
+        _speechService.SpeechUnavailable += OnSpeechUnavailable;
         _rollCallWorkbookUseCase = rollCallWorkbookUseCase;
         ApplyWindowBounds(settings);
         
         _viewModel = new RollCallViewModel(dataPath, _rollCallWorkbookUseCase);
         DataContext = _viewModel;
-        _viewModel.GroupButtons.CollectionChanged += (_, _) => UpdateMinWindowSize();
+        _viewModel.GroupButtons.CollectionChanged += OnGroupButtonsCollectionChanged;
         
         Loaded += OnLoaded;
-        SourceInitialized += (_, _) =>
-        {
-            _hwnd = new WindowInteropHelper(this).Handle;
-            UpdateWindowTransparency();
-        };
+        SourceInitialized += OnSourceInitialized;
         MouseEnter += OnWindowMouseEnter;
         MouseLeave += OnWindowMouseLeave;
-        IsVisibleChanged += (_, _) =>
-        {
-            if (IsVisible)
-            {
-                WindowPlacementHelper.EnsureVisible(this);
-                UpdateWindowTransparency();
-            }
-        };
         Closing += OnClosing;
         PreviewKeyDown += OnPreviewKeyDown;
 
@@ -141,13 +130,13 @@ public partial class RollCallWindow : Window
         {
             Interval = TimeSpan.FromMilliseconds(240)
         };
-        _windowBoundsSaveTimer.Tick += (_, _) => SaveWindowBoundsIfNeeded();
+        _windowBoundsSaveTimer.Tick += OnWindowBoundsSaveTick;
         
         _hoverCheckTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(120)
         };
-        _hoverCheckTimer.Tick += (_, _) => UpdateHoverState();
+        _hoverCheckTimer.Tick += OnHoverCheckTimerTick;
 
         OpenRemoteKeyCommand = new RelayCommand(OpenRemoteKeyDialog);
         _viewModel.TimerCompleted += OnTimerCompleted;
@@ -155,11 +144,11 @@ public partial class RollCallWindow : Window
         _viewModel.DataLoadFailed += OnDataLoadFailed;
         _viewModel.DataSaveFailed += OnDataSaveFailed;
 
-        PaintModeManager.Instance.PaintModeChanged += _ => UpdateWindowTransparency();
-        PaintModeManager.Instance.IsDrawingChanged += _ => UpdateWindowTransparency();
+        PaintModeManager.Instance.PaintModeChanged += OnPaintModeChanged;
+        PaintModeManager.Instance.IsDrawingChanged += OnDrawingStateChanged;
 
-        SizeChanged += (_, _) => ScheduleWindowBoundsSave();
-        LocationChanged += (_, _) => ScheduleWindowBoundsSave();
+        SizeChanged += OnWindowSizeChanged;
+        LocationChanged += OnWindowLocationChanged;
         
         IsVisibleChanged += OnWindowVisibilityChanged;
         StateChanged += OnWindowStateChanged;
@@ -243,6 +232,48 @@ public partial class RollCallWindow : Window
         return _hookService.RegisterHookAsync(tokens, callback, shouldKeepActive);
     }
 
+    private void OnPaintModeChanged(bool _)
+    {
+        UpdateWindowTransparency();
+    }
+
+    private void OnDrawingStateChanged(bool _)
+    {
+        UpdateWindowTransparency();
+    }
+
+    private void OnGroupButtonsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        UpdateMinWindowSize();
+    }
+
+    private void OnWindowBoundsSaveTick(object? sender, EventArgs e)
+    {
+        SaveWindowBoundsIfNeeded();
+    }
+
+    private void OnHoverCheckTimerTick(object? sender, EventArgs e)
+    {
+        UpdateHoverState();
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ScheduleWindowBoundsSave();
+    }
+
+    private void OnWindowLocationChanged(object? sender, EventArgs e)
+    {
+        ScheduleWindowBoundsSave();
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        UpdateWindowTransparency();
+        SourceInitialized -= OnSourceInitialized;
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized)
@@ -267,7 +298,7 @@ public partial class RollCallWindow : Window
             UpdateMinWindowSize();
             UpdateWindowTransparency();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             _initialized = false;
             System.Diagnostics.Debug.WriteLine(
@@ -282,3 +313,4 @@ public partial class RollCallWindow : Window
         }
     }
 }
+

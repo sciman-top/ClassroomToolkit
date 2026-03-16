@@ -92,4 +92,39 @@ public sealed class FloatingTopmostDriftRepairExecutorTests
         failures[0].Should().BeOfType<InvalidOperationException>();
         failures[0].Message.Should().Be("boom");
     }
+
+    [Fact]
+    public void Apply_ShouldRethrowFatal_WhenRepairThrowsFatalException()
+    {
+        var act = () => FloatingTopmostDriftRepairExecutor.Apply(
+            new FloatingTopmostDriftRepairPlan(
+                RepairToolbar: true,
+                RepairRollCall: false,
+                RepairLauncher: false),
+            toolbarWindow: null,
+            rollCallWindow: null,
+            launcherWindow: null,
+            enforceZOrder: false,
+            applyTopmostNoActivate: (_, _, _) => throw new BadImageFormatException("fatal"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
+
+    [Fact]
+    public void Apply_ShouldRethrowFatal_WhenFailureCallbackThrowsFatalException()
+    {
+        var act = () => FloatingTopmostDriftRepairExecutor.Apply(
+            new FloatingTopmostDriftRepairPlan(
+                RepairToolbar: true,
+                RepairRollCall: false,
+                RepairLauncher: false),
+            toolbarWindow: null,
+            rollCallWindow: null,
+            launcherWindow: null,
+            enforceZOrder: false,
+            applyTopmostNoActivate: (_, _, _) => throw new InvalidOperationException("boom"),
+            onFailure: _ => throw new BadImageFormatException("fatal-callback"));
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

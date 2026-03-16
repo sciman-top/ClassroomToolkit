@@ -102,7 +102,7 @@ public sealed class IniSettingsStore
                 content = File.ReadAllLines(sourcePath, encoding);
                 return true;
             }
-            catch
+            catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
             {
                 content = Array.Empty<string>();
                 return false;

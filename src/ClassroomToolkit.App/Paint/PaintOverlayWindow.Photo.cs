@@ -98,7 +98,7 @@ public partial class PaintOverlayWindow
             System.Diagnostics.Debug.WriteLine(
                 $"[InkPersist] Hidden-source purge summary: source={sourcePath}, removed={removedCount}, kept={keptCount}");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-source purge failed: source={sourcePath}, error={ex.Message}");
         }
@@ -138,7 +138,7 @@ public partial class PaintOverlayWindow
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
             return false;
@@ -319,7 +319,7 @@ public partial class PaintOverlayWindow
         {
             return $"img|{IoPath.GetFullPath(sourcePath)}";
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return $"img|{sourcePath}";
         }
@@ -344,7 +344,7 @@ public partial class PaintOverlayWindow
         {
             return $"pdf|{IoPath.GetFullPath(sourcePath)}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return $"pdf|{sourcePath}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
         }
@@ -377,3 +377,5 @@ public partial class PaintOverlayWindow
     public bool IsWhiteboardActive => IsBoardActive();
     public bool IsPresentationFullscreenActive => _presentationFullscreenActive;
 }
+
+

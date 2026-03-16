@@ -24,13 +24,14 @@
 
     <Grid Margin="5">
         <Border x:Name="OverlayBorder" 
+                Style="{StaticResource Style_BubbleShellRoot}"
                 CornerRadius="10" 
                 Padding="14,6"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Opacity="0"
                 IsHitTestVisible="False"
-                Background="{StaticResource Brush_Surface_Primary}">
+                MinWidth="88">
 
             <TextBlock x:Name="GroupNameText" 
                        Foreground="{StaticResource Brush_Text_Primary}"

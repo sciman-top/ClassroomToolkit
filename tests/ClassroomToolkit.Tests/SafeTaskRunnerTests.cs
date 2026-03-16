@@ -77,4 +77,39 @@ public sealed class SafeTaskRunnerTests
 
         onErrorCalled.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task Run_ShouldSwallowRecoverableOnErrorException()
+    {
+        Func<Task> act = async () =>
+        {
+            await SafeTaskRunner.Run(
+                "test.run.onerror.recoverable",
+                _ => throw new InvalidOperationException("boom"),
+                onError: _ => throw new ApplicationException("callback-failed"));
+        };
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Run_ShouldRethrowFatalException_WhenActionThrowsFatal()
+    {
+        var task = SafeTaskRunner.Run(
+            "test.run.fatal",
+            _ => throw new BadImageFormatException("fatal"));
+
+        await task.Awaiting(t => t).Should().ThrowAsync<BadImageFormatException>();
+    }
+
+    [Fact]
+    public async Task Run_ShouldRethrowFatalException_WhenOnErrorThrowsFatal()
+    {
+        var task = SafeTaskRunner.Run(
+            "test.run.onerror.fatal",
+            _ => throw new InvalidOperationException("boom"),
+            onError: _ => throw new BadImageFormatException("fatal-callback"));
+
+        await task.Awaiting(t => t).Should().ThrowAsync<BadImageFormatException>();
+    }
 }

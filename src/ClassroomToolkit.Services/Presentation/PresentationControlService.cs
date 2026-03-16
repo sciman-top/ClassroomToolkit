@@ -8,7 +8,7 @@ public sealed class PresentationControlService
     private readonly PresentationControlPlanner _planner;
     private readonly PresentationCommandMapper _mapper;
     private readonly IInputSender _inputSender;
-    private readonly Win32PresentationResolver _resolver;
+    private readonly IPresentationTargetResolver _resolver;
     private readonly IPresentationWindowValidator _validator;
     private long _lastWpsCommandTick;
     private PresentationCommand? _lastWpsCommandType;
@@ -22,7 +22,7 @@ public sealed class PresentationControlService
         PresentationControlPlanner planner,
         PresentationCommandMapper mapper,
         IInputSender inputSender,
-        Win32PresentationResolver resolver,
+        IPresentationTargetResolver resolver,
         IPresentationWindowValidator validator,
         IForegroundWindowController? foregroundController = null)
     {
@@ -58,6 +58,25 @@ public sealed class PresentationControlService
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        try
+        {
+            return TrySendForegroundCore(command, options);
+        }
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                PresentationControlDiagnosticsPolicy.FormatSendFailureMessage(
+                    operation: "foreground",
+                    command,
+                    target: IntPtr.Zero,
+                    exceptionType: ex.GetType().Name,
+                    message: ex.Message));
+            return false;
+        }
+    }
+
+    private bool TrySendForegroundCore(PresentationCommand command, PresentationControlOptions options)
+    {
         var target = _resolver.ResolveForeground();
         if (!IsForegroundCandidate(target, options))
         {
@@ -118,6 +137,27 @@ public sealed class PresentationControlService
     }
 
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        try
+        {
+            return TrySendToTargetCore(target, command, options);
+        }
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                PresentationControlDiagnosticsPolicy.FormatSendFailureMessage(
+                    operation: "target",
+                    command,
+                    target: target.Handle,
+                    exceptionType: ex.GetType().Name,
+                    message: ex.Message));
+            return false;
+        }
+    }
+
+    private bool TrySendToTargetCore(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 

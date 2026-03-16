@@ -8,6 +8,7 @@ namespace ClassroomToolkit.App;
 public partial class TimerSetDialog : Window
 {
     private const int MaxMinutes = 150;
+    private const int MaxSliderMinutes = 25;
     private bool _updating;
     private DispatcherTimer? _repeatTimer;
 
@@ -34,7 +35,7 @@ public partial class TimerSetDialog : Window
             return;
         }
         minutes = Math.Clamp(minutes, 0, MaxMinutes);
-        SetMinutes(minutes, updateSlider: minutes <= 25);
+        SetMinutes(minutes, updateSlider: true);
     }
 
     private void OnMinutesSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -57,7 +58,7 @@ public partial class TimerSetDialog : Window
             minutes = 0;
         }
         minutes = Math.Min(minutes + 1, MaxMinutes);
-        SetMinutes(minutes, updateSlider: minutes <= 25);
+        SetMinutes(minutes, updateSlider: true);
     }
 
     private void OnMinutesDownClick(object sender, RoutedEventArgs e)
@@ -71,7 +72,7 @@ public partial class TimerSetDialog : Window
             minutes = 0;
         }
         minutes = Math.Max(minutes - 1, 0);
-        SetMinutes(minutes, updateSlider: minutes <= 25);
+        SetMinutes(minutes, updateSlider: true);
     }
 
     private void OnMinutesUpMouseDown(object sender, MouseButtonEventArgs e)
@@ -159,7 +160,7 @@ public partial class TimerSetDialog : Window
         MinutesBox.Text = minutes.ToString();
         if (updateSlider)
         {
-            MinutesSlider.Value = Math.Min(minutes, 25);
+            MinutesSlider.Value = Math.Min(minutes, MaxSliderMinutes);
         }
         _updating = false;
     }
@@ -172,7 +173,7 @@ public partial class TimerSetDialog : Window
         }
 
         var clamped = Math.Clamp(minutes, 0, MaxMinutes);
-        SetMinutes(clamped, updateSlider: clamped <= 25);
+        SetMinutes(clamped, updateSlider: true);
         SetSeconds(0);
     }
 

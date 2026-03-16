@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace ClassroomToolkit.Services.Input;
 
 public class GlobalHookService : IDisposable
 {
+    private readonly object _syncRoot = new();
     private readonly List<KeyboardHook> _activeHooks = new();
     private bool _disposed;
 
@@ -23,10 +25,27 @@ public class GlobalHookService : IDisposable
         ArgumentNullException.ThrowIfNull(callback);
         ArgumentNullException.ThrowIfNull(shouldKeepActive);
 
-        var fallback = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
         var bindings = bindingTokens
-            .Select(token => KeyBindingParser.ParseOrDefault(token, fallback))
+            .Select(token =>
+            {
+                if (KeyBindingParser.TryParse(token, out var parsed) && parsed != null)
+                {
+                    return parsed;
+                }
+
+                Debug.WriteLine($"[GlobalHookService] Skip invalid binding token: '{token}'.");
+                return null;
+            })
+            .Where(binding => binding != null)
+            .Select(binding => binding!)
+            .Distinct()
             .ToArray();
+
+        if (bindings.Length == 0)
+        {
+            NotifyHookUnavailable();
+            return Task.FromResult(false);
+        }
 
         return RegisterHookAsync(bindings, _ => callback(), shouldKeepActive);
     }
@@ -36,13 +55,18 @@ public class GlobalHookService : IDisposable
         Action<KeyBinding> callback,
         Func<bool> shouldKeepActive)
     {
+        if (IsDisposed())
+        {
+            return false;
+        }
+
         var startedHooks = new List<KeyboardHook>();
         bool success = true;
         int lastError = 0;
 
         foreach (var binding in bindings)
         {
-            if (!shouldKeepActive())
+            if (IsDisposed() || !shouldKeepActive())
             {
                 CleanupHooks(startedHooks, callback);
                 return false;
@@ -57,10 +81,10 @@ public class GlobalHookService : IDisposable
             
             await hook.StartAsync();
             
-            if (!shouldKeepActive())
+            if (IsDisposed() || !shouldKeepActive())
             {
                 hook.BindingTriggered -= callback;
-                hook.Stop();
+                TryStopHook(hook, "register-aborted");
                 CleanupHooks(startedHooks, callback);
                 return false;
             }
@@ -75,18 +99,21 @@ public class GlobalHookService : IDisposable
             startedHooks.Add(hook);
         }
 
-        if (!shouldKeepActive())
+        if (IsDisposed() || !shouldKeepActive())
         {
             CleanupHooks(startedHooks, callback);
             return false;
         }
 
-        _activeHooks.AddRange(startedHooks);
+        if (!TryTrackActiveHooks(startedHooks))
+        {
+            CleanupHooks(startedHooks, callback);
+            return false;
+        }
 
         if (!success)
         {
-            // Notify failure if any hook failed to start
-            HookUnavailable?.Invoke();
+            NotifyHookUnavailable();
             return false;
         }
 
@@ -95,22 +122,8 @@ public class GlobalHookService : IDisposable
 
     public void UnregisterAll()
     {
-        foreach (var hook in _activeHooks)
-        {
-            // We need to clear event handlers too if we can access the original callback
-            // But here we might just Stop them.
-            // Ideally we should track the callback to unsubscribe.
-            // For simple usage, just Stop is often enough if the hook object is discarded.
-            // However, to be safe, KeyboardHook inside Interop might need explicit unsubscribe if it holds refs.
-            // Let's assume Stop() is sufficient for the Hook resource.
-            // But to avoid leaked delegates in C#, we should clear BindingTriggered if possible.
-            // Since we don't track the callback per hook easily here without a wrapper class,
-            // we rely on the fact that KeyboardHook.Stop() should disable the native hook.
-            hook.Stop();
-        }
-        // In a real refactor we might want a wrapper object to hold (Hook, Callback) pairs.
-        // For now, clearing the list is the main step.
-        _activeHooks.Clear();
+        var hooks = DrainActiveHooks();
+        StopHooks(hooks, "unregister-all");
     }
 
     private void CleanupHooks(List<KeyboardHook> hooks, Action<KeyBinding> callback)
@@ -118,15 +131,119 @@ public class GlobalHookService : IDisposable
         foreach (var hook in hooks)
         {
             hook.BindingTriggered -= callback;
-            hook.Stop();
+            TryStopHook(hook, "cleanup");
         }
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        UnregisterAll();
+        List<KeyboardHook>? hooks = null;
+        lock (_syncRoot)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            if (_activeHooks.Count > 0)
+            {
+                hooks = new List<KeyboardHook>(_activeHooks);
+                _activeHooks.Clear();
+            }
+        }
+
+        if (hooks is not null)
+        {
+            StopHooks(hooks, "dispose");
+        }
+
         GC.SuppressFinalize(this);
+    }
+
+    private bool IsDisposed()
+    {
+        lock (_syncRoot)
+        {
+            return _disposed;
+        }
+    }
+
+    private bool TryTrackActiveHooks(List<KeyboardHook> hooks)
+    {
+        lock (_syncRoot)
+        {
+            if (_disposed)
+            {
+                return false;
+            }
+
+            _activeHooks.AddRange(hooks);
+            return true;
+        }
+    }
+
+    private List<KeyboardHook> DrainActiveHooks()
+    {
+        lock (_syncRoot)
+        {
+            if (_activeHooks.Count == 0)
+            {
+                return [];
+            }
+
+            var hooks = new List<KeyboardHook>(_activeHooks);
+            _activeHooks.Clear();
+            return hooks;
+        }
+    }
+
+    private static void StopHooks(IEnumerable<KeyboardHook> hooks, string reason)
+    {
+        foreach (var hook in hooks)
+        {
+            TryStopHook(hook, reason);
+        }
+    }
+
+    private static void TryStopHook(KeyboardHook hook, string reason)
+    {
+        try
+        {
+            hook.Stop();
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[GlobalHookService] Stop hook failed ({reason}): {ex.Message}");
+        }
+    }
+
+    private static bool IsNonFatal(Exception ex)
+    {
+        return ex is not (
+            OutOfMemoryException
+            or AppDomainUnloadedException
+            or BadImageFormatException
+            or CannotUnloadAppDomainException
+            or InvalidProgramException
+            or StackOverflowException
+            or AccessViolationException);
+    }
+
+    private void NotifyHookUnavailable()
+    {
+        var handlers = HookUnavailable?.GetInvocationList();
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var callback in handlers)
+        {
+            try
+            {
+                ((Action)callback)();
+            }
+            catch (Exception ex) when (IsNonFatal(ex))
+            {
+                Debug.WriteLine($"[GlobalHookService] HookUnavailable callback failed: {ex.Message}");
+            }
+        }
     }
 }

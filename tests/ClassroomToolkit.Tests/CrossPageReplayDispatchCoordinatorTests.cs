@@ -102,4 +102,25 @@ public sealed class CrossPageReplayDispatchCoordinatorTests
         result.RequeuedPending.Should().BeTrue();
         state.VisualSyncReplayPending.Should().BeTrue();
     }
+
+    [Fact]
+    public void Apply_ShouldRethrowFatal_WhenInlineFallbackThrowsFatal()
+    {
+        var state = new CrossPageReplayRuntimeState(
+            VisualSyncReplayPending: true,
+            InteractionReplayPending: false,
+            PreferInteractionReplay: false,
+            LastDispatchTarget: CrossPageReplayDispatchTarget.None);
+
+        var act = () => CrossPageReplayDispatchCoordinator.Apply(
+            ref state,
+            CrossPageReplayDispatchTarget.VisualSync,
+            requestCrossPageDisplayUpdate: static _ => throw new BadImageFormatException("fatal"),
+            tryBeginInvoke: static (_, _) => false,
+            dispatcherCheckAccess: static () => true,
+            dispatcherShutdownStarted: static () => false,
+            dispatcherShutdownFinished: static () => false);
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

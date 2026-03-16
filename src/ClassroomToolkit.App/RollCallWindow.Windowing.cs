@@ -30,7 +30,7 @@ public partial class RollCallWindow
             {
                 DragMove();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine(
                     RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
@@ -67,7 +67,7 @@ public partial class RollCallWindow
             DragMove();
             e.Handled = true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
@@ -108,12 +108,34 @@ public partial class RollCallWindow
         _stopwatch.Stop();
         _rollStateSaveTimer.Stop();
         _windowBoundsSaveTimer.Stop();
+        _hoverCheckTimer.Stop();
         _rollStateDirty = false;
+        Loaded -= OnLoaded;
+        Closing -= OnClosing;
+        PreviewKeyDown -= OnPreviewKeyDown;
+        SourceInitialized -= OnSourceInitialized;
+        MouseEnter -= OnWindowMouseEnter;
+        MouseLeave -= OnWindowMouseLeave;
+        IsVisibleChanged -= OnWindowVisibilityChanged;
+        StateChanged -= OnWindowStateChanged;
+        _windowBoundsSaveTimer.Tick -= OnWindowBoundsSaveTick;
+        _hoverCheckTimer.Tick -= OnHoverCheckTimerTick;
+        SizeChanged -= OnWindowSizeChanged;
+        LocationChanged -= OnWindowLocationChanged;
+        _viewModel.GroupButtons.CollectionChanged -= OnGroupButtonsCollectionChanged;
+        _viewModel.TimerCompleted -= OnTimerCompleted;
+        _viewModel.ReminderTriggered -= OnReminderTriggered;
+        _viewModel.DataLoadFailed -= OnDataLoadFailed;
+        _viewModel.DataSaveFailed -= OnDataSaveFailed;
+        PaintModeManager.Instance.PaintModeChanged -= OnPaintModeChanged;
+        PaintModeManager.Instance.IsDrawingChanged -= OnDrawingStateChanged;
+        _speechService.SpeechUnavailable -= OnSpeechUnavailable;
         _remoteHookStartGate.NextGeneration();
         StopKeyboardHook();
         ClosePhotoOverlay();
         if (_groupOverlay != null)
         {
+            _groupOverlay.Closed -= OnGroupOverlayClosed;
             ExecuteRollCallSafe("close-group-overlay-window", _groupOverlay.Close);
             _groupOverlay = null;
         }
@@ -240,6 +262,12 @@ public partial class RollCallWindow
 
     private void OnWindowVisibilityChanged(object? sender, DependencyPropertyChangedEventArgs e)
     {
+        if (IsVisible)
+        {
+            WindowPlacementHelper.EnsureVisible(this);
+            UpdateWindowTransparency();
+        }
+
         UpdateGroupNameDisplay();
     }
 
@@ -273,7 +301,7 @@ public partial class RollCallWindow
             if (_groupOverlay == null)
             {
                 _groupOverlay = new RollCallGroupOverlayWindow();
-                _groupOverlay.Closed += (s, e) => _groupOverlay = null;
+                _groupOverlay.Closed += OnGroupOverlayClosed;
             }
             ExecuteGroupOverlaySafe(
                 "show-group",
@@ -286,6 +314,19 @@ public partial class RollCallWindow
             {
                 ExecuteGroupOverlaySafe("hide-group", _groupOverlay.HideGroup);
             }
+        }
+    }
+
+    private void OnGroupOverlayClosed(object? sender, EventArgs e)
+    {
+        if (sender is RollCallGroupOverlayWindow overlay)
+        {
+            overlay.Closed -= OnGroupOverlayClosed;
+        }
+
+        if (ReferenceEquals(_groupOverlay, sender))
+        {
+            _groupOverlay = null;
         }
     }
 
@@ -410,3 +451,4 @@ public partial class RollCallWindow
             desired.Height + margin.Top + margin.Bottom);
     }
 }
+

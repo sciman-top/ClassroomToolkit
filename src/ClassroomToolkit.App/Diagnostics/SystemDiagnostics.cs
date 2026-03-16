@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
+using ClassroomToolkit.App;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Services.Presentation;
@@ -170,7 +171,7 @@ public static class SystemDiagnostics
             File.Delete(filePath);
             return true;
         }
-        catch
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return false;
         }
@@ -184,7 +185,7 @@ public static class SystemDiagnostics
             using var synth = new SpeechSynthesizer();
             return synth.GetInstalledVoices().Count;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             error = ex.Message;
             return -1;

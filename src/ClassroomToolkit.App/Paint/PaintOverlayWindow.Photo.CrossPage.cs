@@ -11,6 +11,7 @@ using System.Threading;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Utilities;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -250,6 +251,10 @@ public partial class PaintOverlayWindow
                 {
                     return;
                 }
+                if (_photoSequencePaths.Count == 0 || pageIndex < 1 || pageIndex > _photoSequencePaths.Count)
+                {
+                    return;
+                }
                 var path = _photoSequencePaths[pageIndex - 1];
                 var bitmap = TryLoadBitmapSource(path, downsampleToMonitor: true);
                 if (bitmap == null)
@@ -475,12 +480,14 @@ public partial class PaintOverlayWindow
         var totalPages = GetTotalPageCount();
         if (totalPages <= 1)
         {
+            ClearNeighborPages();
             return;
         }
         var currentPage = GetCurrentPageIndexForCrossPage();
         var currentBitmap = PhotoBackground.Source as BitmapSource;
         if (currentBitmap == null)
         {
+            ClearNeighborPages();
             return;
         }
         var viewportHeight = OverlayRoot.ActualHeight;
@@ -492,6 +499,7 @@ public partial class PaintOverlayWindow
         var currentPageHeight = GetScaledPageHeight(currentBitmap, normalizedWidthDip);
         if (currentPageHeight <= 0)
         {
+            ClearNeighborPages();
             return;
         }
         _neighborPageHeightCache[currentPage] = currentPageHeight;
@@ -1499,67 +1507,91 @@ public partial class PaintOverlayWindow
                 ref _crossPageDisplayUpdateState,
                 nowUtc);
             var delay = dispatchDecision.DelayMs;
-            _ = System.Threading.Tasks.Task.Run(async () =>
-            {
-                try
+            _ = SafeTaskRunner.Run(
+                "PaintOverlayWindow.CrossPageDisplayUpdate.Delayed",
+                async _ =>
                 {
-                    await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
-                        ex.GetType().Name);
-                    var scheduledRecovery = TryBeginInvoke(() =>
+                    try
                     {
-                        RecoverCrossPageDelayedDispatchFailure(
-                            request.Kind,
-                            source,
-                            token,
-                            detail);
-                    }, DispatcherPriority.Background);
-                    var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-                        recoveryDispatchScheduled: scheduledRecovery,
-                        dispatcherCheckAccess: Dispatcher.CheckAccess(),
-                        dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
-                        dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
-                    if (recoveryDecision.ShouldRecoverInline)
-                    {
-                        var tokenMatched = CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
-                            _crossPageDisplayUpdateState,
-                            token);
-                        RecoverCrossPageDelayedDispatchFailure(
-                            request.Kind,
-                            source,
-                            token,
-                            CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
-                                tokenMatched));
+                        await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
                     }
-                    return;
-                }
-                var scheduled = TryBeginInvoke(() =>
-                {
-                    if (!CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
-                            _crossPageDisplayUpdateState,
-                            token))
+                    catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                     {
+                        var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                            ex.GetType().Name);
+                        var scheduledRecovery = TryBeginInvoke(() =>
+                        {
+                            RecoverCrossPageDelayedDispatchFailure(
+                                request.Kind,
+                                source,
+                                token,
+                                detail);
+                        }, DispatcherPriority.Background);
+                        var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                            recoveryDispatchScheduled: scheduledRecovery,
+                            dispatcherCheckAccess: Dispatcher.CheckAccess(),
+                            dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
+                            dispatcherShutdownFinished: Dispatcher.HasShutdownFinished);
+                        if (recoveryDecision.ShouldRecoverInline)
+                        {
+                            var tokenMatched = CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
+                                _crossPageDisplayUpdateState,
+                                token);
+                            RecoverCrossPageDelayedDispatchFailure(
+                                request.Kind,
+                                source,
+                                token,
+                                CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
+                                    tokenMatched));
+                        }
                         return;
                     }
-                    CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
-                    ExecuteCrossPageDisplayUpdateRun(
-                        source,
-                        mode: "delayed",
-                        emitAbortDiagnostics: false);
-                }, DispatcherPriority.Render);
-                if (!scheduled)
+                    var scheduled = TryBeginInvoke(() =>
+                    {
+                        if (!CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
+                                _crossPageDisplayUpdateState,
+                                token))
+                        {
+                            return;
+                        }
+                        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+                        ExecuteCrossPageDisplayUpdateRun(
+                            source,
+                            mode: "delayed",
+                            emitAbortDiagnostics: false);
+                    }, DispatcherPriority.Render);
+                    if (!scheduled)
+                    {
+                        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+                        HandleCrossPageDisplayUpdateDispatchFailure(
+                            request.Kind,
+                            source,
+                            mode: "delayed",
+                            emitAbortDiagnostics: false);
+                    }
+                },
+                onError: ex =>
                 {
                     CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
-                    HandleCrossPageDisplayUpdateDispatchFailure(
-                        request.Kind,
-                        source,
-                        mode: "delayed",
-                        emitAbortDiagnostics: false);
-                }
-            });
+                    var scheduledFailure = TryBeginInvoke(() =>
+                    {
+                        HandleCrossPageDisplayUpdateDispatchFailure(
+                            request.Kind,
+                            source,
+                            mode: "delayed-task-fault",
+                            emitAbortDiagnostics: false);
+                    }, DispatcherPriority.Background);
+                    if (!scheduledFailure)
+                    {
+                        HandleCrossPageDisplayUpdateDispatchFailure(
+                            request.Kind,
+                            source,
+                            mode: "delayed-task-fault",
+                            emitAbortDiagnostics: false);
+                    }
+                    Debug.WriteLine(
+                        $"[CrossPage] delayed-dispatch task fault ex={ex.GetType().Name} msg={ex.Message} source={source}");
+                });
             return;
         }
         CrossPageDisplayUpdatePendingStateUpdater.MarkDirectScheduled(ref _crossPageDisplayUpdateState, nowUtc);
@@ -1654,7 +1686,7 @@ public partial class PaintOverlayWindow
             UpdateCrossPageDisplay();
             TryFlushCrossPageReplay();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             var replayQueueDecision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(source);
             CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
@@ -1875,6 +1907,13 @@ public partial class PaintOverlayWindow
             try
             {
                 if (!IsCrossPageDisplayActive() || !_inkShowEnabled || !_inkCacheEnabled)
+                {
+                    _neighborInkCache.Remove(cacheKey);
+                    return;
+                }
+                var expectedCacheKey = BuildNeighborInkCacheKey(pageIndex);
+                if (string.IsNullOrWhiteSpace(expectedCacheKey)
+                    || !string.Equals(cacheKey, expectedCacheKey, StringComparison.Ordinal))
                 {
                     _neighborInkCache.Remove(cacheKey);
                     return;
@@ -2219,6 +2258,7 @@ public partial class PaintOverlayWindow
         return Math.Clamp(radius, CrossPageNeighborPrefetchRadiusMin, _neighborPrefetchRadiusMaxSetting);
     }
 }
+
 
 
 

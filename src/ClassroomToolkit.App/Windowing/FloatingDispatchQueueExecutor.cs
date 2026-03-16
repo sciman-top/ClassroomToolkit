@@ -21,7 +21,7 @@ internal static class FloatingDispatchQueueExecutor
             {
                 dispatched = queueApply();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
             {
                 onDispatchFailure?.Invoke(ex);
                 dispatched = false;
@@ -53,7 +53,7 @@ internal static class FloatingDispatchQueueExecutor
         {
             apply(state.ForceEnforceZOrder);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
         {
             if (onFailure != null)
             {
@@ -61,7 +61,7 @@ internal static class FloatingDispatchQueueExecutor
                 {
                     onFailure(ex);
                 }
-                catch
+                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
                 {
                     // Keep queue state recovery isolated from diagnostics callback failures.
                 }

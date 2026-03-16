@@ -9,10 +9,25 @@ public sealed class SettingsDialogsXamlContractTests
     {
         var paintSettingsXaml = File.ReadAllText(GetXamlPath("Paint", "PaintSettingsDialog.xaml"));
         var rollCallSettingsXaml = File.ReadAllText(GetXamlPath("RollCallSettingsDialog.xaml"));
+        var classSelectXaml = File.ReadAllText(GetXamlPath("ClassSelectDialog.xaml"));
+        var inkSettingsXaml = File.ReadAllText(GetXamlPath("Ink", "InkSettingsDialog.xaml"));
+        var remoteKeyXaml = File.ReadAllText(GetXamlPath("RemoteKeyDialog.xaml"));
+        var autoExitXaml = File.ReadAllText(GetXamlPath("AutoExitDialog.xaml"));
+        var timerSetXaml = File.ReadAllText(GetXamlPath("TimerSetDialog.xaml"));
 
         paintSettingsXaml.Should().Contain("Brush_Surface_Secondary");
-        paintSettingsXaml.Should().Contain("Brush_Surface_Primary");
+        paintSettingsXaml.Should().Contain("Style_DialogShellWindowBorder");
+        paintSettingsXaml.Should().Contain("Style_SettingCardBorder");
         rollCallSettingsXaml.Should().Contain("Brush_Window_Atmosphere");
+        rollCallSettingsXaml.Should().Contain("Style_DialogShellWindowBorder");
+        rollCallSettingsXaml.Should().Contain("Style_SettingCardBorder");
+        classSelectXaml.Should().Contain("Style_DialogShellWindowBorder");
+        inkSettingsXaml.Should().Contain("Style_DialogShellWindowBorder");
+        inkSettingsXaml.Should().Contain("Size_Icon_Glyph_MD");
+        remoteKeyXaml.Should().Contain("Style_DialogShellCloseButton");
+        autoExitXaml.Should().Contain("Size_Icon_Glyph_MD");
+        timerSetXaml.Should().Contain("Style_DialogShellCloseButton");
+        timerSetXaml.Should().Contain("Style_SettingCardBorder");
     }
 
     [Fact]

@@ -70,7 +70,7 @@ public sealed class ComObjectManager : IDisposable
                 {
                     Marshal.ReleaseComObject(comObject);
                 }
-                catch
+                catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
                 {
                     // 吞噬释放异常，避免终止应用
                 }
@@ -102,7 +102,7 @@ public sealed class ComObjectManager : IDisposable
                         Marshal.ReleaseComObject(_comObjects[i]);
                     }
                 }
-                catch
+                catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
                 {
                     // 静默处理释放异常，确保所有对象都尝试释放
                 }

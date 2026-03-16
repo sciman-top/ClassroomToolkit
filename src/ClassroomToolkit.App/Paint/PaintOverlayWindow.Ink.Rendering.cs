@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Utilities;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -752,45 +753,45 @@ public partial class PaintOverlayWindow
             var delay = Math.Max(
                 InkRuntimeTimingDefaults.RedrawDispatchDelayMinMs,
                 (int)Math.Ceiling(InkRedrawMinIntervalMs - elapsedMs));
-            _ = System.Threading.Tasks.Task.Run(async () =>
-            {
-                try
+            _ = SafeTaskRunner.Run(
+                "PaintOverlayWindow.RequestInkRedraw.Throttled",
+                async _ =>
                 {
                     await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
-                }
-                catch
-                {
-                    return;
-                }
-                var scheduled = TryBeginInvoke(() =>
-                {
-                    if (token != _inkRedrawToken)
+                    var scheduled = TryBeginInvoke(() =>
                     {
-                        return;
+                        if (token != _inkRedrawToken)
+                        {
+                            return;
+                        }
+                        _redrawPending = false;
+                        if (_redrawInProgress)
+                        {
+                            return;
+                        }
+                        _redrawInProgress = true;
+                        try
+                        {
+                            _lastInkRedrawUtc = GetCurrentUtcTimestamp();
+                            RedrawInkSurface();
+                            OnInkRedrawCompleted();
+                            _inkDiagnostics?.OnRedrawCompleted((GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds);
+                        }
+                        finally
+                        {
+                            _redrawInProgress = false;
+                        }
+                    }, DispatcherPriority.Render);
+                    if (!scheduled)
+                    {
+                        _redrawPending = false;
                     }
+                },
+                onError: ex =>
+                {
                     _redrawPending = false;
-                    if (_redrawInProgress)
-                    {
-                        return;
-                    }
-                    _redrawInProgress = true;
-                    try
-                    {
-                        _lastInkRedrawUtc = GetCurrentUtcTimestamp();
-                        RedrawInkSurface();
-                        OnInkRedrawCompleted();
-                        _inkDiagnostics?.OnRedrawCompleted((GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds);
-                    }
-                    finally
-                    {
-                        _redrawInProgress = false;
-                    }
-                }, DispatcherPriority.Render);
-                if (!scheduled)
-                {
-                    _redrawPending = false;
-                }
-            });
+                    Debug.WriteLine($"[InkRedraw] throttled-dispatch failed: {ex.GetType().Name} - {ex.Message}");
+                });
             return;
         }
         _redrawPending = true;

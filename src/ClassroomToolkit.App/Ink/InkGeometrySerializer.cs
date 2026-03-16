@@ -25,9 +25,10 @@ public static class InkGeometrySerializer
         {
             return Geometry.Parse(data);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return null;
         }
     }
 }
+

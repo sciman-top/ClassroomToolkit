@@ -17,7 +17,9 @@ public sealed class StudentWorkbook
                 {
                     continue;
                 }
-                _classes[pair.Key.Trim()] = pair.Value;
+
+                var className = pair.Key.Trim();
+                _classes[className] = pair.Value ?? new ClassRoster(className, Array.Empty<StudentRecord>());
             }
         }
         if (_classes.Count == 0)
@@ -49,7 +51,9 @@ public sealed class StudentWorkbook
         {
             return;
         }
-        _classes[className.Trim()] = roster;
+
+        var normalizedName = className.Trim();
+        _classes[normalizedName] = roster ?? new ClassRoster(normalizedName, Array.Empty<StudentRecord>());
         ActiveClass = ResolveActiveClass(ActiveClass);
     }
 

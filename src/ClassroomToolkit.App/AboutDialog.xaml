@@ -23,9 +23,9 @@
             <!-- 1. 标题栏 - 紧凑精致版 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="关于" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick" ToolTip="关闭关于窗口">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
-                          Width="{StaticResource Size_Icon_Glyph_XS}" Height="{StaticResource Size_Icon_Glyph_XS}"/>
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
@@ -34,7 +34,7 @@
             <Border Grid.Row="1" Margin="16,12,16,12" Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="8" Padding="14,14" BorderBrush="Transparent">
                 <StackPanel>
                     <!-- App Header -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <Border Width="48" Height="48" CornerRadius="12" Background="{StaticResource Brush_Primary}" Margin="0,0,16,0" BorderBrush="Transparent">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Glow_Primary"/>
@@ -43,27 +43,39 @@
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="18" FontWeight="Black" Foreground="{StaticResource Brush_Text_Primary}"/>
-                            <TextBlock x:Name="VersionText" Text="Version -" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush_Primary}" Margin="0,2,0,0"/>
+                            <TextBlock x:Name="VersionText" Text="版本 -" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush_Primary}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Margin="0,0,0,6" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">作者：广州番禺王耀强</TextBlock>
-                    <TextBlock Margin="0,0,0,6" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">公众号：sciman逸居</TextBlock>
-                    <TextBlock Margin="0,0,0,6" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12">"初中物理教研"Q群：323728546</TextBlock>
+                    <Border Style="{StaticResource Style_SettingCardBorder}" Background="{StaticResource Brush_Surface_Primary}" Padding="12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="作者" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12"/>
+                            <TextBlock Text="广州番禺王耀强" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,8"/>
+                            <TextBlock Text="公众号" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12"/>
+                            <TextBlock Text="sciman逸居" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,8"/>
+                            <TextBlock Text="交流群" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12"/>
+                            <TextBlock Text="初中物理教研 Q群：323728546" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
 
-                    <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                        <TextBlock>
-                            <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman</Hyperlink>
-                        </TextBlock>
-                    </WrapPanel>
+                    <Border Style="{StaticResource Style_SettingCardBorder}" Background="{StaticResource Brush_Surface_Primary}" Padding="12" Margin="0">
+                        <StackPanel>
+                            <TextBlock Text="链接" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="0,0,0,8"/>
+                            <WrapPanel Orientation="Horizontal">
+                                <TextBlock Text="知乎主页：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                                <TextBlock>
+                                    <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman</Hyperlink>
+                                </TextBlock>
+                            </WrapPanel>
 
-                    <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
-                        <TextBlock>
-                            <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomTools</Hyperlink>
-                        </TextBlock>
-                    </WrapPanel>
+                            <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12"/>
+                                <TextBlock>
+                                    <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomTools</Hyperlink>
+                                </TextBlock>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
 
@@ -73,11 +85,13 @@
                         Style="{StaticResource Style_DialogShellSecondaryActionButton}"
                         Padding="0"
                         Height="32"
+                        ToolTip="复制软件信息"
                         Click="OnCopyInfoClick"/>
                 <Button Content="关闭"
                         Style="{StaticResource Style_DialogShellPrimaryActionButton}"
                         Padding="0"
                         Height="32"
+                        ToolTip="关闭关于窗口"
                         Click="OnCloseClick"/>
             </StackPanel>
         </Grid>

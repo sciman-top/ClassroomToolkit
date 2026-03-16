@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Threading;
 using ClassroomToolkit.Interop.Presentation;
+using ClassroomToolkit.Interop.Utilities;
 
 public sealed class KeyboardHook : IDisposable
 {
@@ -26,6 +27,7 @@ public sealed class KeyboardHook : IDisposable
     private VirtualKey? _pendingSuppressedKey;
     private int _callbackExceptionCount;
     private long _lastExceptionLogTick;
+    private volatile bool _acceptEvents;
 
     public bool IsActive => _hookId != IntPtr.Zero;
 
@@ -70,6 +72,7 @@ public sealed class KeyboardHook : IDisposable
             if (_hookId != IntPtr.Zero)
             {
                 LastError = 0;
+                _acceptEvents = true;
                 RefreshModifierState();
                 return;
             }
@@ -87,6 +90,7 @@ public sealed class KeyboardHook : IDisposable
 
     public void Stop()
     {
+        _acceptEvents = false;
         if (_hookId == IntPtr.Zero)
         {
             return;
@@ -116,7 +120,7 @@ public sealed class KeyboardHook : IDisposable
         var startTime = Stopwatch.GetTimestamp();
         try
         {
-            if (nCode < 0 || lParam == IntPtr.Zero)
+            if (!_acceptEvents || nCode < 0 || lParam == IntPtr.Zero)
             {
                 return CallNextHookEx(_hookId, nCode, wParam, lParam);
             }
@@ -142,8 +146,15 @@ public sealed class KeyboardHook : IDisposable
                     var binding = new KeyBinding(key.Value, modifiers);
                     if (TargetBinding != null && binding.Equals(TargetBinding))
                     {
+                        if (!_acceptEvents)
+                        {
+                            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+                        }
                         bindingMatched = true;
-                        BindingTriggered?.Invoke(binding);
+                        InteropEventDispatchPolicy.InvokeSafely(
+                            BindingTriggered,
+                            binding,
+                            "KeyboardHook.BindingTriggered");
                     }
                 }
             }
@@ -162,7 +173,7 @@ public sealed class KeyboardHook : IDisposable
             }
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InteropExceptionFilterPolicy.IsNonFatal(ex))
         {
             RecordCallbackException("keyboard", ex);
             return CallNextHookEx(_hookId, nCode, wParam, lParam);

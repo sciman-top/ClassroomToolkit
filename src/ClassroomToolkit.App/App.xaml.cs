@@ -43,7 +43,7 @@ public partial class App : WpfApplication
         {
             GlobalBorderFixer.FixAllBordersImmediately();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             LogException(ex, "GlobalBorderFixer Initial Fix");
         }
@@ -59,7 +59,11 @@ public partial class App : WpfApplication
         services.AddSingleton<ISettingsDocumentStore>(provider =>
         {
             var configuration = provider.GetRequiredService<IConfigurationService>();
-            TryBootstrapSettingsDocumentMigration(configuration);
+            var fallbackToIni = TryBootstrapSettingsDocumentMigration(configuration);
+            if (fallbackToIni)
+            {
+                return new SettingsDocumentStoreAdapter(configuration.SettingsIniPath);
+            }
             return configuration.SettingsDocumentFormat switch
             {
                 SettingsDocumentFormat.Json => new JsonSettingsDocumentStoreAdapter(configuration.SettingsDocumentPath),
@@ -78,7 +82,31 @@ public partial class App : WpfApplication
         });
         services.AddSingleton<RollCallWorkbookUseCase>();
         services.AddSingleton<AppSettingsService>();
-        services.AddSingleton(provider => provider.GetRequiredService<AppSettingsService>().Load());
+        services.AddSingleton(provider =>
+        {
+            var settingsService = provider.GetRequiredService<AppSettingsService>();
+            var settings = settingsService.Load();
+            var presetInitialization = Paint.PresetSchemeInitializationPolicy.Resolve(settings);
+            var uiDefaultsInitialization = Settings.UiDefaultsBootstrapOptimizationPolicy.Resolve(settings);
+            if (presetInitialization.ShouldPersist || uiDefaultsInitialization.ShouldPersist)
+            {
+                try
+                {
+                    settingsService.Save(settings);
+                    Debug.WriteLine(
+                        $"[PresetInit] persisted auto-init applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason}");
+                    Debug.WriteLine(
+                        $"[UiDefaultsInit] persisted inkPathOptimized={uiDefaultsInitialization.InkPathOptimized} launcherReset={uiDefaultsInitialization.LauncherPositionReset} toolbarReset={uiDefaultsInitialization.PaintToolbarPositionReset} rollCallFontOptimized={uiDefaultsInitialization.RollCallFontOptimized}");
+                }
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    Debug.WriteLine(
+                        $"[PresetInit] persist failed applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason} error={ex.Message}");
+                }
+            }
+
+            return settings;
+        });
         services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
         services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
         services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
@@ -107,19 +135,28 @@ public partial class App : WpfApplication
         _services = services.BuildServiceProvider();
     }
 
-    private static void TryBootstrapSettingsDocumentMigration(IConfigurationService configuration)
+    private static bool TryBootstrapSettingsDocumentMigration(IConfigurationService configuration)
     {
         var decision = SettingsDocumentBootstrapMigrationPolicy.Resolve(
             configuration.SettingsDocumentFormat,
             File.Exists(configuration.SettingsDocumentPath),
             File.Exists(configuration.SettingsIniPath));
-        SettingsDocumentBootstrapMigrationExecutor.TryMigrate(
+        var migrated = SettingsDocumentBootstrapMigrationExecutor.TryMigrate(
             decision,
             configuration.SettingsIniPath,
             configuration.SettingsDocumentPath,
             (iniPath, jsonPath, overwriteJson) =>
                 new SettingsDocumentMigrationService().MigrateIniToJson(iniPath, jsonPath, overwriteJson).Migrated,
             message => Debug.WriteLine(message));
+
+        var fallbackToIni = decision.ShouldMigrate && !migrated;
+        if (fallbackToIni)
+        {
+            Debug.WriteLine(
+                $"[SettingsMigration] bootstrap migration failed; fallback to INI source={configuration.SettingsIniPath}");
+        }
+
+        return fallbackToIni;
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -132,34 +169,46 @@ public partial class App : WpfApplication
         {
             if (e.ExceptionObject is Exception ex)
             {
-                HandleCriticalException(ex, "AppDomain.UnhandledException");
+                HandleGlobalException(
+                    ex,
+                    "AppDomain.UnhandledException",
+                    AppGlobalExceptionHandlingPolicy.ResolveForBackground(ex));
             }
         };
 
         // 3. Task（异步任务）未观察到的异常
         TaskScheduler.UnobservedTaskException += (s, e) =>
         {
-            HandleCriticalException(e.Exception, "TaskScheduler.UnobservedTaskException");
+            HandleGlobalException(
+                e.Exception,
+                "TaskScheduler.UnobservedTaskException",
+                AppGlobalExceptionHandlingPolicy.ResolveForBackground(e.Exception));
             e.SetObserved(); // 标记为已观察，防止进程退出（在某些 .NET 版本行为不同）
         };
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        if (IsFatalException(e.Exception))
-        {
-            LogException(e.Exception, "Dispatcher.UnhandledException.Fatal");
-            e.Handled = false;
-            return;
-        }
-
-        e.Handled = true; // 非致命异常优先降级处理，防止应用直接崩溃
-        HandleCriticalException(e.Exception, "Dispatcher.UnhandledException");
+        var decision = AppGlobalExceptionHandlingPolicy.ResolveForDispatcher(e.Exception);
+        e.Handled = decision.ShouldMarkDispatcherHandled;
+        HandleGlobalException(
+            e.Exception,
+            decision.IsFatal
+                ? "Dispatcher.UnhandledException.Fatal"
+                : "Dispatcher.UnhandledException",
+            decision);
     }
 
-    private void HandleCriticalException(Exception ex, string source)
+    private void HandleGlobalException(
+        Exception ex,
+        string source,
+        AppGlobalExceptionHandlingDecision decision)
     {
         LogException(ex, source);
+        if (decision.Action != AppGlobalExceptionAction.NotifyUser)
+        {
+            return;
+        }
 
         if (Dispatcher == null || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
@@ -204,20 +253,12 @@ public partial class App : WpfApplication
             }
             System.Diagnostics.Debug.WriteLine($"[Exception][{source}] {ex.Message}");
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // 如果写日志也失败了，最后退路只有 Debug
             System.Diagnostics.Debug.WriteLine($"致命错误记录失败: {ex.Message}");
         }
     }
 
-    private static bool IsFatalException(Exception ex)
-    {
-        return ex is OutOfMemoryException
-            or AppDomainUnloadedException
-            or BadImageFormatException
-            or CannotUnloadAppDomainException
-            or InvalidProgramException
-            or StackOverflowException;
-    }
 }
+

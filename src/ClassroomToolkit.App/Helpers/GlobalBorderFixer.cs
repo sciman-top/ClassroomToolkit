@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Helpers
 {
@@ -37,7 +38,7 @@ namespace ClassroomToolkit.App.Helpers
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"GlobalBorderFixer 错误: {ex.Message}");
             }

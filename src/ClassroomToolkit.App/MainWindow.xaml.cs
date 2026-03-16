@@ -13,6 +13,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
@@ -408,7 +409,7 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(action, priority);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 DispatcherBeginInvokeDiagnosticsPolicy.FormatFailureMessage(
@@ -658,7 +659,7 @@ public partial class MainWindow : Window
                 {
                     BorderFixHelper.FixAllBorders(window);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine(
                         BorderFixDiagnosticsPolicy.FormatFailureMessage(
@@ -716,7 +717,7 @@ public partial class MainWindow : Window
             _settingsService.Save(_settings);
             SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
             SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
@@ -733,7 +734,12 @@ public partial class MainWindow : Window
 
     private void ScheduleInkCleanup()
     {
-        _ = System.Threading.Tasks.Task.Run(TriggerInkCleanup);
+        _ = SafeTaskRunner.Run(
+            "MainWindow.ScheduleInkCleanup",
+            _ => TriggerInkCleanup(),
+            _backgroundTasksCancellation.Token,
+            ex => System.Diagnostics.Debug.WriteLine(
+                InkStartupCleanupLogPolicy.FormatFailureMessage(ex.Message)));
     }
 
     private void TriggerInkCleanup()
@@ -762,7 +768,7 @@ public partial class MainWindow : Window
                 System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatDeletionSummary(summary));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatFailureMessage(ex.Message));
         }
@@ -782,6 +788,7 @@ public partial class MainWindow : Window
         }
     }
 }
+
 
 
 

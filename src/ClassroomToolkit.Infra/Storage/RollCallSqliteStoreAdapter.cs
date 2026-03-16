@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Domain.Models;
+using ClassroomToolkit.Domain.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace ClassroomToolkit.Infra.Storage;
@@ -20,6 +22,7 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
 
     private readonly IRollCallWorkbookStore _bridge;
     private readonly Func<string, string> _dbPathResolver;
+    private readonly record struct RollStateSnapshot(string? Json, long? Revision, DateTime? UpdatedAtUtc);
 
     public RollCallSqliteStoreAdapter()
         : this(new RollCallWorkbookStoreAdapter(), ResolveDbPath)
@@ -45,7 +48,7 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
         {
             result = _bridge.LoadOrCreate(path);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[RollCallSqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
             if (TryReadWorkbookSnapshotPackage(dbPath, out var workbookFromSnapshot, out var rollStateFromSnapshot))
@@ -59,10 +62,21 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
             throw;
         }
 
-        var sqliteState = TryReadRollState(dbPath);
-        var effectiveRollState = !string.IsNullOrWhiteSpace(sqliteState)
-            ? sqliteState
-            : result.RollStateJson;
+        var sqliteSnapshot = TryReadRollStateSnapshot(dbPath);
+        RollStateSerializer.TryReadWorkbookMetadata(
+            result.RollStateJson,
+            out var authorityRevision,
+            out var authorityMetadataUpdatedAtUtc);
+        var authorityUpdatedAtUtc = authorityMetadataUpdatedAtUtc ?? TryReadAuthorityUpdatedAtUtc(path);
+        var effectiveRollState = RollStateVersionArbitrationPolicy.Resolve(
+            authorityStateJson: result.RollStateJson,
+            authorityRevision: authorityRevision,
+            authorityUpdatedAtUtc: authorityUpdatedAtUtc,
+            cacheStateJson: sqliteSnapshot.Json,
+            cacheRevision: sqliteSnapshot.Revision,
+            cacheUpdatedAtUtc: sqliteSnapshot.UpdatedAtUtc,
+            log: message => Debug.WriteLine(message),
+            source: "RollCallSqlite");
 
         TryWriteSnapshotPackage(dbPath, result.Workbook, effectiveRollState);
 
@@ -84,30 +98,41 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
         return Path.Combine(directory, $"{fileName}.rollcall.sqlite3");
     }
 
-    private static string? TryReadRollState(string dbPath)
+    private static RollStateSnapshot TryReadRollStateSnapshot(string dbPath)
     {
         try
         {
             if (!File.Exists(dbPath))
             {
-                return null;
+                return default;
             }
 
             using var connection = CreateOpenConnection(dbPath);
             EnsureSchema(connection);
 
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT roll_state_json FROM roll_call_state WHERE id = $id LIMIT 1;";
+            command.CommandText = "SELECT roll_state_json, revision, updated_at_utc FROM roll_call_state WHERE id = $id LIMIT 1;";
             command.Parameters.AddWithValue("$id", SingletonRowId);
-            var scalar = command.ExecuteScalar();
-            return scalar is string value && !string.IsNullOrWhiteSpace(value)
-                ? value
-                : null;
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+            {
+                return default;
+            }
+
+            var value = reader.IsDBNull(0) ? null : reader.GetString(0);
+            long? revision = reader.IsDBNull(1) ? null : reader.GetInt64(1);
+            var updatedAtRaw = reader.IsDBNull(2) ? null : reader.GetString(2);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return default;
+            }
+
+            return new RollStateSnapshot(value, revision, TryParseUtcTimestamp(updatedAtRaw));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[RollCallSqlite] read failed: {ex.GetType().Name} - {ex.Message}");
-            return null;
+            return default;
         }
     }
 
@@ -145,10 +170,10 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
             }
 
             workbook = ToWorkbook(snapshot);
-            rollStateJson = TryReadRollState(dbPath);
+            rollStateJson = TryReadRollStateSnapshot(dbPath).Json;
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[RollCallSqlite] snapshot read failed: {ex.GetType().Name} - {ex.Message}");
             return false;
@@ -161,6 +186,12 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
         {
             using var connection = CreateOpenConnection(dbPath);
             EnsureSchema(connection);
+            RollStateSerializer.TryReadWorkbookMetadata(
+                rollStateJson,
+                out var rollStateRevision,
+                out var rollStateUpdatedAtUtc);
+            var effectiveRevision = rollStateRevision ?? DateTime.UtcNow.Ticks;
+            var effectiveUpdatedAtUtc = (rollStateUpdatedAtUtc ?? DateTime.UtcNow).ToUniversalTime().ToString("O");
 
             using var transaction = connection.BeginTransaction();
             var snapshotJson = JsonSerializer.Serialize(FromWorkbook(workbook), SnapshotJsonOptions);
@@ -195,21 +226,23 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
                 upsertState.Transaction = transaction;
                 upsertState.CommandText =
                     """
-                    INSERT INTO roll_call_state(id, roll_state_json, updated_at_utc)
-                    VALUES($id, $json, $updated)
+                    INSERT INTO roll_call_state(id, roll_state_json, revision, updated_at_utc)
+                    VALUES($id, $json, $revision, $updated)
                     ON CONFLICT(id) DO UPDATE SET
                         roll_state_json = excluded.roll_state_json,
+                        revision = excluded.revision,
                         updated_at_utc = excluded.updated_at_utc;
                     """;
                 upsertState.Parameters.AddWithValue("$id", SingletonRowId);
                 upsertState.Parameters.AddWithValue("$json", rollStateJson);
-                upsertState.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
+                upsertState.Parameters.AddWithValue("$revision", effectiveRevision);
+                upsertState.Parameters.AddWithValue("$updated", effectiveUpdatedAtUtc);
                 upsertState.ExecuteNonQuery();
             }
 
             transaction.Commit();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[RollCallSqlite] snapshot write failed: {ex.GetType().Name} - {ex.Message}");
         }
@@ -237,6 +270,7 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
             (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 roll_state_json TEXT NULL,
+                revision INTEGER NOT NULL DEFAULT 0,
                 updated_at_utc TEXT NOT NULL
             );
 
@@ -248,6 +282,7 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
             );
             """;
         command.ExecuteNonQuery();
+        EnsureColumnExists(connection, "roll_call_state", "revision", "INTEGER NOT NULL DEFAULT 0");
     }
 
     private static WorkbookSnapshot FromWorkbook(StudentWorkbook workbook)
@@ -312,4 +347,75 @@ public sealed class RollCallSqliteStoreAdapter : IRollCallWorkbookStore
         string RowId,
         string RowKey,
         Dictionary<string, string>? ExtraFields);
+
+    private static DateTime? TryReadAuthorityUpdatedAtUtc(string workbookPath)
+    {
+        try
+        {
+            var fullWorkbookPath = Path.GetFullPath(workbookPath);
+            if (!File.Exists(fullWorkbookPath))
+            {
+                return null;
+            }
+
+            return File.GetLastWriteTimeUtc(fullWorkbookPath);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[RollCallSqlite] authority timestamp read failed: {ex.GetType().Name} - {ex.Message}");
+            return null;
+        }
+    }
+
+    private static DateTime? TryParseUtcTimestamp(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        if (!DateTime.TryParse(
+                raw,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out var parsed))
+        {
+            return null;
+        }
+
+        return parsed.ToUniversalTime();
+    }
+
+    private static void EnsureColumnExists(
+        SqliteConnection connection,
+        string tableName,
+        string columnName,
+        string columnDefinition)
+    {
+        if (HasColumn(connection, tableName, columnName))
+        {
+            return;
+        }
+
+        using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
+        alter.ExecuteNonQuery();
+    }
+
+    private static bool HasColumn(SqliteConnection connection, string tableName, string columnName)
+    {
+        using var pragma = connection.CreateCommand();
+        pragma.CommandText = $"PRAGMA table_info('{tableName}');";
+        using var reader = pragma.ExecuteReader();
+        while (reader.Read())
+        {
+            var name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+            if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

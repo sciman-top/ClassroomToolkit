@@ -427,9 +427,11 @@
     <!-- Shared Button Family Base -->
     <Style x:Key="Style_ButtonFamilyBase" TargetType="Button">
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="Padding" Value="10,5"/> <!-- Compact Padding -->
+        <Setter Property="Padding" Value="12,6"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
     </Style>
 
     <!-- [Style_PrimaryButton] - Radiant Gradient & Glass -->
@@ -445,10 +447,10 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
+                            CornerRadius="8">
                         <Grid>
                             <!-- Inner Shine -->
-                            <Border BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="5" Opacity="{StaticResource Opacity_Effect_InnerShine}"/>
+                            <Border BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="7" Opacity="{StaticResource Opacity_Effect_InnerShine}"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Grid>
                     </Border>
@@ -457,6 +459,11 @@
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Gradient_Primary_Hover}"/>
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                             <Setter Property="Effect" Value="{StaticResource Shadow_Glow_Primary}"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                              <Setter Property="Effect" Value="{x:Null}"/>
@@ -519,13 +526,23 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                            CornerRadius="8">
+                        <Grid>
+                            <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
+                                    Background="#18FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Text_Tertiary}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
@@ -557,13 +574,23 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                            CornerRadius="8">
+                        <Grid>
+                            <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
+                                    Background="#14FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Text_Tertiary}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
@@ -599,14 +626,24 @@
                             Background="{TemplateBinding Background}" 
                             BorderBrush="{TemplateBinding BorderBrush}" 
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                            CornerRadius="8">
+                        <Grid>
+                            <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
+                                    Background="#10FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Grid>
                     </Border>
                      <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Gradient_Danger}"/>
                             <Setter Property="Foreground" Value="White"/>
                             <Setter Property="Effect" Value="{StaticResource Shadow_Danger_Glow}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Opacity" Value="{StaticResource Opacity_State_Pressed}"/>
@@ -631,12 +668,13 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="Transparent">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
                                     <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
@@ -669,12 +707,13 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="Transparent">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                              <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
                              <Setter Property="RenderTransform">
                                  <Setter.Value>
                                      <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
@@ -708,6 +747,7 @@
         <Setter Property="Height" Value="{StaticResource Size_Shell_TitleBar_Dialog}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Margin" Value="0"/>
+        <Setter Property="Opacity" Value="0.98"/>
     </Style>
 
     <Style x:Key="Style_DialogShellTitleText" TargetType="TextBlock">
@@ -746,6 +786,10 @@
         <Setter Property="Width" Value="{StaticResource Size_Button_Action_Regular}"/>
     </Style>
 
+    <Style x:Key="Style_DialogShellSecondaryActionButton_Wide" TargetType="Button" BasedOn="{StaticResource Style_DialogShellSecondaryActionButton}">
+        <Setter Property="Width" Value="120"/>
+    </Style>
+
     <!-- [ManagementShell] -->
     <Style x:Key="Style_ManagementShellWindowBorder" TargetType="Border" BasedOn="{StaticResource Style_DialogShellWindowBorder}">
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_Management}"/>
@@ -773,8 +817,9 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_ManagementContent}"/>
+        <Setter Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
     </Style>
 
     <Style x:Key="Style_ManagementShellFooterBorder" TargetType="Border">
@@ -810,6 +855,7 @@
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_WorkTitleBar}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Opacity" Value="0.98"/>
     </Style>
 
     <Style x:Key="Style_WorkShellContentHost" TargetType="Grid">
@@ -823,6 +869,369 @@
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="Padding" Value="6,4"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_WorkBottomBar}"/>
+        <Setter Property="Effect" Value="{StaticResource Shadow_Floating}"/>
+    </Style>
+
+    <Style x:Key="Style_WorkShellHeroTileButton" TargetType="Button">
+        <Setter Property="Width" Value="76"/>
+        <Setter Property="Height" Value="84"/>
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="Background" Value="{StaticResource Gradient_Hero_Glow}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="glow"
+                                Margin="10"
+                                CornerRadius="18"
+                                Background="{StaticResource Brush_Primary}"
+                                Opacity="0"
+                                Effect="{StaticResource Shadow_Glow_Primary}"/>
+                        <Border x:Name="border"
+                                Margin="2"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="18">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="12"/>
+                                </Grid.RowDefinitions>
+
+                                <Border x:Name="iconBg"
+                                        Grid.Row="0"
+                                        Width="34"
+                                        Height="34"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="11"
+                                        Background="{StaticResource Brush_Surface_Primary}">
+                                    <Border Width="24"
+                                            Height="24"
+                                            CornerRadius="8"
+                                            Background="{StaticResource Brush_InputBackground}">
+                                        <Path x:Name="icon"
+                                              Width="{StaticResource Size_Icon_Glyph_LG}"
+                                              Height="{StaticResource Size_Icon_Glyph_LG}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Data="{TemplateBinding Tag}"
+                                              Fill="{StaticResource Brush_Primary}"
+                                              Stretch="Uniform"/>
+                                    </Border>
+                                </Border>
+
+                                <TextBlock Grid.Row="1"
+                                           HorizontalAlignment="Center"
+                                           Text="{TemplateBinding Content}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource Brush_Text_Secondary}"/>
+
+                                <Border x:Name="AccentLine"
+                                        Grid.RowSpan="3"
+                                        Height="2"
+                                        Margin="16,0"
+                                        VerticalAlignment="Bottom"
+                                        Background="{StaticResource Brush_Primary}"
+                                        CornerRadius="1"
+                                        Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.45"/>
+                            <Setter TargetName="AccentLine" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="iconBg" Property="Background" Value="{StaticResource Brush_Primary}"/>
+                            <Setter TargetName="icon" Property="Fill" Value="{StaticResource Brush_Text_Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="1"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.22"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_WorkShellMiniButton" TargetType="Button">
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Margin" Value="2"/>
+        <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <Path x:Name="ico"
+                              Width="{StaticResource Size_Icon_Glyph_MD}"
+                              Height="{StaticResource Size_Icon_Glyph_MD}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Data="{TemplateBinding Tag}"
+                              Fill="{StaticResource Brush_Text_Tertiary}"
+                              Stretch="Uniform"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
+                            <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_WorkShellMiniDangerButton" TargetType="Button" BasedOn="{StaticResource Style_WorkShellMiniButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <Path x:Name="ico"
+                              Width="{StaticResource Size_Icon_Glyph_MD}"
+                              Height="{StaticResource Size_Icon_Glyph_MD}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Data="{TemplateBinding Tag}"
+                              Fill="{StaticResource Brush_Text_Tertiary}"
+                              Stretch="Uniform"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Danger_Surface}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
+                            <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Danger}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_SettingCardBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Padding" Value="14"/>
+        <Setter Property="Margin" Value="0,0,0,14"/>
+        <Setter Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                <Setter Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Style_StudentCardButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
+        <Setter Property="Margin" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="12">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
+                            <Setter TargetName="bd" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-1"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter TargetName="bd" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="1"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ListViewItem_SelectionUnified" TargetType="ListViewItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <GridViewRowPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ManagementThumbnailListViewItem"
+           TargetType="ListViewItem"
+           BasedOn="{StaticResource Style_ListViewItem_SelectionUnified}">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ColorBubbleToggle" TargetType="ToggleButton">
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="Margin" Value="2,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
+        <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+        <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <Ellipse x:Name="Ring"
+                                 Width="30"
+                                 Height="30"
+                                 Opacity="0"
+                                 Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"
+                                 StrokeThickness="2"/>
+                        <Border x:Name="Dot"
+                                Width="22"
+                                Height="22"
+                                CornerRadius="11"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{StaticResource Brush_Border_Strong}"
+                                BorderThickness="2">
+                            <Border.Effect>
+                                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
+                            </Border.Effect>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="0.5"/>
+                            <Setter TargetName="Dot" Property="Width" Value="24"/>
+                            <Setter TargetName="Dot" Property="Height" Value="24"/>
+                            <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Dot" Property="Width" Value="24"/>
+                            <Setter TargetName="Dot" Property="Height" Value="24"/>
+                            <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ColorPaletteButton" TargetType="Button">
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Height" Value="22"/>
+        <Setter Property="Margin" Value="2,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="7">
+                        <Border.Effect>
+                            <StaticResource ResourceKey="Shadow_Card_Subtle"/>
+                        </Border.Effect>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- [OverlayShell] -->
@@ -1063,34 +1472,6 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                             <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style x:Key="Style_ListViewItem_SelectionUnified" TargetType="ListViewItem">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Padding" Value="8,6"/>
-        <Setter Property="Margin" Value="0,1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ListViewItem">
-                    <Border x:Name="bd"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="4"
-                            Padding="{TemplateBinding Padding}">
-                        <GridViewRowPresenter VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>

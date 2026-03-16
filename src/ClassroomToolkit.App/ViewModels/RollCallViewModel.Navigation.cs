@@ -1,4 +1,5 @@
 using ClassroomToolkit.App.Models;
+using ClassroomToolkit.App;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Utilities;
@@ -228,7 +229,7 @@ public sealed partial class RollCallViewModel
         {
             _workbookUseCase.Save(_dataPath, _workbook, _classStates);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}");
         }

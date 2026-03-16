@@ -3,7 +3,6 @@ using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace ClassroomToolkit.Tests;
 
@@ -48,6 +47,17 @@ public sealed class RollCallWorkbookUseCaseTests
     }
 
     [Fact]
+    public void Load_ShouldRethrow_WhenStoreThrowsFatalException()
+    {
+        var store = new StubStore(exception: new AccessViolationException("fatal"));
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        Action act = () => _ = useCase.Load("students.xlsx");
+
+        act.Should().Throw<AccessViolationException>();
+    }
+
+    [Fact]
     public void Save_ShouldSerializeStates_AndDelegateToStore()
     {
         var workbook = new StudentWorkbook(
@@ -75,7 +85,7 @@ public sealed class RollCallWorkbookUseCaseTests
         useCase.Save("students.xlsx", workbook, states);
 
         store.SavedPath.Should().Be("students.xlsx");
-        var parsed = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(store.SavedRollStateJson!);
+        var parsed = RollStateSerializer.DeserializeWorkbookStates(store.SavedRollStateJson!);
         parsed.Should().NotBeNull();
         parsed!.Should().ContainKey("班级1");
     }

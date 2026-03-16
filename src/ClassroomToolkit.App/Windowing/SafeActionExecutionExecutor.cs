@@ -11,7 +11,7 @@ internal static class SafeActionExecutionExecutor
             action();
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
         {
             if (onFailure != null)
             {
@@ -19,7 +19,7 @@ internal static class SafeActionExecutionExecutor
                 {
                     onFailure(ex);
                 }
-                catch
+                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
                 {
                 }
             }

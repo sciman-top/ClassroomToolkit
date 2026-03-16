@@ -175,7 +175,7 @@ public partial class PaintOverlayWindow
                 return true;
             }
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore invalid persisted color payload.
         }
@@ -293,3 +293,4 @@ public partial class PaintOverlayWindow
         return path.GetWidenedPathGeometry(pen);
     }
 }
+

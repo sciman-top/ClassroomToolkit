@@ -101,9 +101,10 @@ internal static class StylusOrientationResolver
             max = info.Maximum;
             return double.IsFinite(raw) && double.IsFinite(min) && double.IsFinite(max);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return false;
         }
     }
 }
+

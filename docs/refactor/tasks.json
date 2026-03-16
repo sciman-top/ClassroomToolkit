@@ -1,6 +1,6 @@
 {
     "project":  "ClassroomToolkit",
-    "updated_at":  "2026-03-15",
+    "updated_at":  "2026-03-16",
     "mode":  "repo-local-autonomous-refactor-loop",
     "scope":  {
                   "goal":  "unattended automated closure of the remaining target-architecture gap up to the final manual-regression gate",
@@ -1681,13 +1681,535 @@
                                    }
                   },
                   {
+                      "id":  "rollcall-remote-hook-action-coordination-tail",
+                      "title":  "Close RollCall remote-hook action coordination tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  445,
+                      "depends_on":  [
+                                         "automated-freeze-recheck-after-gap-closure"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Extracted RollCallWindow.Input remote roll/group-switch inline branches into RollCallRemoteHookActionExecutionCoordinator and passed targeted plus full Debug verification.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/RollCallWindow.Input.cs",
+                                         "src/ClassroomToolkit.App/RollCall/RollCallRemoteHookActionExecutionCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/RollCallRemoteHookActionExecutionCoordinatorTests.cs",
+                                         "tests/ClassroomToolkit.Tests/App/RollCallRemoteHookLifecycleContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "Remote roll and group-switch hook handlers no longer keep inline branch logic in RollCallWindow.Input",
+                                        "Coordinator-level tests cover remote roll and group-switch behavior",
+                                        "Targeted and full Debug verification pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallRemoteHookActionExecutionCoordinatorTests|FullyQualifiedName~RollCallRemoteHookCoordinatorTests|FullyQualifiedName~RollCallRemoteHookLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "rollcall-remote-hook-stale-guard-tail",
+                      "title":  "Close RollCall remote-hook stale-generation guard tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  446,
+                      "depends_on":  [
+                                         "rollcall-remote-hook-action-coordination-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added a pre-registration active-generation guard in RollCallRemoteHookCoordinator so stale generations skip hook registration and unavailable notification, with focused coverage.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/RollCall/RollCallRemoteHookCoordinator.cs",
+                                         "tests/ClassroomToolkit.Tests/RollCallRemoteHookCoordinatorTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "TryStartAsync exits early when ShouldKeepActive is already false before registration",
+                                        "Stale-generation path does not register hooks or emit unavailable notification",
+                                        "Remote-hook targeted tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallRemoteHookCoordinatorTests|FullyQualifiedName~RollCallRemoteHookActionExecutionCoordinatorTests|FullyQualifiedName~RollCallRemoteHookLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet build ClassroomToolkit.sln -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-wps-hook-unavailable-notification-tail",
+                      "title":  "Close PaintOverlay WPS-hook unavailable notification tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  447,
+                      "depends_on":  [
+                                         "rollcall-remote-hook-stale-guard-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Replaced PaintOverlayWindow WPS hook unavailable bool gate with atomic notification policy and recovery reset wiring, then verified with focused and full Debug tests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                         "src/ClassroomToolkit.App/Paint/WpsHookUnavailableNotificationPolicy.cs",
+                                         "tests/ClassroomToolkit.Tests/App/WpsHookUnavailableNotificationPolicyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "WPS hook unavailable notification uses atomic one-shot policy instead of inline bool gate",
+                                        "Notification gate resets when WPS hook mode/targets are reset or hook recovers",
+                                        "Targeted policy and architecture guard tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WpsHookUnavailableNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "globalhook-lifecycle-hardening-tail",
+                      "title":  "Close GlobalHookService lifecycle hardening tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  448,
+                      "depends_on":  [
+                                         "paintoverlay-wps-hook-unavailable-notification-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Hardened GlobalHookService lifecycle by short-circuiting registration after dispose, guarding active-hook tracking with synchronization, and making stop/unregister paths resilient to non-fatal stop errors.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+                                         "tests/ClassroomToolkit.Tests/GlobalHookServiceTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "RegisterHookAsync exits safely when service is disposed or inactive",
+                                        "Dispose and UnregisterAll are idempotent under lifecycle races",
+                                        "GlobalHookService targeted tests and architecture guard pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "speechservice-unavailable-notification-rearm-tail",
+                      "title":  "Close SpeechService unavailable-notification rearm tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  449,
+                      "depends_on":  [
+                                         "globalhook-lifecycle-hardening-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Replaced SpeechService unavailable bool gate with atomic notification policy and rearm-on-success wiring, plus policy/conformance tests.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Services/Speech/SpeechService.cs",
+                                         "src/ClassroomToolkit.Services/Speech/SpeechServiceUnavailableNotificationPolicy.cs",
+                                         "src/ClassroomToolkit.Services/Properties/InternalsVisibleTo.cs",
+                                         "tests/ClassroomToolkit.Tests/SpeechServiceUnavailableNotificationPolicyTests.cs",
+                                         "tests/ClassroomToolkit.Tests/SpeechServiceLifecycleContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "SpeechService failure notification uses atomic one-shot policy",
+                                        "SpeechService rearms notification gate after successful speak path",
+                                        "SpeechService targeted and full Debug tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~SpeechServiceUnavailableNotificationPolicyTests|FullyQualifiedName~SpeechServiceLifecycleContractTests|FullyQualifiedName~SpeechServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "rollcall-settings-save-notification-policy-tail",
+                      "title":  "Close RollCall settings-save notification policy tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  450,
+                      "depends_on":  [
+                                         "speechservice-unavailable-notification-rearm-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Aligned RollCallWindow settings-save failure notification flow with SettingsSaveFailureNotificationPolicy/StateUpdater and added source contract coverage.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/RollCallWindow.State.cs",
+                                         "tests/ClassroomToolkit.Tests/App/RollCallSettingsSaveNotificationContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "RollCallWindow settings-save failure path is policy-driven instead of inline boolean branching",
+                                        "Successful save path resets failure notification via state updater",
+                                        "Targeted contract/policy tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallSettingsSaveNotificationContractTests|FullyQualifiedName~SettingsSaveFailureNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "mainwindow-settings-save-notification-contract-tail",
+                      "title":  "Close MainWindow settings-save notification contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  451,
+                      "depends_on":  [
+                                         "rollcall-settings-save-notification-policy-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added MainWindow settings-save notification source contract tests to lock policy-driven flow and successful-save reset behavior.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                         "tests/ClassroomToolkit.Tests/App/MainWindowSettingsSaveNotificationContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "MainWindow settings-save path remains policy-driven for failure notification",
+                                        "MainWindow successful save path keeps state-updater reset contract",
+                                        "Targeted contract/policy tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindowSettingsSaveNotificationContractTests|FullyQualifiedName~RollCallSettingsSaveNotificationContractTests|FullyQualifiedName~SettingsSaveFailureNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "globalhook-unavailable-callback-resilience-tail",
+                      "title":  "Close GlobalHookService unavailable-callback resilience tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  452,
+                      "depends_on":  [
+                                         "mainwindow-settings-save-notification-contract-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Hardened GlobalHookService unavailable callback dispatch to isolate recoverable subscriber failures and keep later subscribers running, with fatal exception pass-through preserved.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+                                         "tests/ClassroomToolkit.Tests/GlobalHookServiceTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "HookUnavailable dispatch iterates invocation list with recoverable callback isolation",
+                                        "Recoverable callback failures do not block later subscribers",
+                                        "Fatal callback failures still propagate and tests pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "globalhook-unavailable-callback-contract-tail",
+                      "title":  "Close GlobalHookService unavailable-callback contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  453,
+                      "depends_on":  [
+                                         "globalhook-unavailable-callback-resilience-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added source-level contract tests to lock GlobalHookService HookUnavailable invocation-list dispatch and recoverable callback-failure isolation semantics.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+                                         "tests/ClassroomToolkit.Tests/GlobalHookServiceLifecycleContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "HookUnavailable dispatch keeps invocation-list iteration contract",
+                                        "Recoverable callback failure isolation behavior is contract-guarded",
+                                        "Targeted GlobalHookService tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "paintoverlay-wps-hook-unavailable-contract-tail",
+                      "title":  "Close PaintOverlay WPS-hook unavailable contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  454,
+                      "depends_on":  [
+                                         "globalhook-unavailable-callback-contract-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added source contracts to lock PaintOverlay WPS-hook unavailable notification semantics: atomic gate on notify and gate reset on recovery/reset paths.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+                                         "tests/ClassroomToolkit.Tests/App/PaintOverlayWpsHookUnavailableContractTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "PaintOverlay WPS-hook unavailable notify path keeps atomic policy gate contract",
+                                        "PaintOverlay WPS-hook recovery/reset paths keep notification rearm contract",
+                                        "Targeted WPS policy/contract tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~PaintOverlayWpsHookUnavailableContractTests|FullyQualifiedName~WpsHookUnavailableNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "interop-background-dispatch-error-callback-resilience-tail",
+                      "title":  "Close Interop background dispatch error-callback resilience tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  455,
+                      "depends_on":  [
+                                         "paintoverlay-wps-hook-unavailable-contract-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Hardened InteropBackgroundDispatchExecutor to isolate non-fatal onError callback failures so worker error-handling callbacks cannot crash or block later dispatch work.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Interop/Utilities/InteropBackgroundDispatchExecutor.cs",
+                                         "tests/ClassroomToolkit.Tests/InteropBackgroundDispatchExecutorTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "InteropBackgroundDispatchExecutor worker and queue failure paths invoke onError through safe non-fatal isolation",
+                                        "onError callback exceptions do not block subsequent background dispatch execution",
+                                        "Targeted interop dispatch tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "interop-hook-event-dispatch-resilience-tail",
+                      "title":  "Close Interop hook event-dispatch resilience tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  456,
+                      "depends_on":  [
+                                         "interop-background-dispatch-error-callback-resilience-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added InteropEventDispatchPolicy and wired KeyboardHook/WpsSlideshowNavigationHook event dispatch through recoverable-subscriber isolation so one non-fatal subscriber no longer blocks later subscribers.",
+                      "file_hints":  [
+                                         "src/ClassroomToolkit.Interop/Utilities/InteropEventDispatchPolicy.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs",
+                                         "tests/ClassroomToolkit.Tests/InteropEventDispatchPolicyTests.cs"
+                                     ],
+                      "done_when":  [
+                                        "KeyboardHook BindingTriggered dispatch uses interop event-dispatch policy",
+                                        "WpsSlideshowNavigationHook NavigationRequested dispatch uses interop event-dispatch policy",
+                                        "Recoverable subscriber exceptions are isolated while fatal exceptions still propagate",
+                                        "Targeted interop event/dispatch tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "interop-hook-event-dispatch-contract-tail",
+                      "title":  "Close Interop hook event-dispatch contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  457,
+                      "depends_on":  [
+                                         "interop-hook-event-dispatch-resilience-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added source-level contracts to lock KeyboardHook/WpsSlideshowNavigationHook event dispatch through InteropEventDispatchPolicy so future edits cannot regress to direct subscriber invocation.",
+                      "file_hints":  [
+                                         "tests/ClassroomToolkit.Tests/InteropHookEventDispatchContractTests.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs"
+                                     ],
+                      "done_when":  [
+                                        "KeyboardHook source contract enforces InteropEventDispatchPolicy for BindingTriggered dispatch",
+                                        "WpsSlideshowNavigationHook source contract enforces InteropEventDispatchPolicy for NavigationRequested dispatch",
+                                        "Targeted interop contract/policy tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "interop-background-dispatch-contract-tail",
+                      "title":  "Close Interop background-dispatch contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  458,
+                      "depends_on":  [
+                                         "interop-hook-event-dispatch-contract-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Added source-level contracts to lock InteropBackgroundDispatchExecutor error paths to InvokeOnErrorSafely so future edits cannot regress to direct onError invocation.",
+                      "file_hints":  [
+                                         "tests/ClassroomToolkit.Tests/InteropBackgroundDispatchContractTests.cs",
+                                         "src/ClassroomToolkit.Interop/Utilities/InteropBackgroundDispatchExecutor.cs"
+                                     ],
+                      "done_when":  [
+                                        "Worker failure path source contract enforces InvokeOnErrorSafely dispatch",
+                                        "Queue failure path source contract enforces InvokeOnErrorSafely dispatch",
+                                        "Targeted interop background-dispatch contract tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropBackgroundDispatchContractTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
+                      "id":  "interop-hook-direct-invoke-ban-contract-tail",
+                      "title":  "Close Interop hook direct-invoke ban contract tail",
+                      "stage":  "runtime-tail",
+                      "priority":  1,
+                      "order":  459,
+                      "depends_on":  [
+                                         "interop-background-dispatch-contract-tail"
+                                     ],
+                      "status_hint":  "completed",
+                      "summary":  "Strengthened hook event-dispatch contracts to explicitly ban direct BindingTriggered/NavigationRequested invocation so regressions to raw event invoke are blocked.",
+                      "file_hints":  [
+                                         "tests/ClassroomToolkit.Tests/InteropHookEventDispatchContractTests.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+                                         "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs"
+                                     ],
+                      "done_when":  [
+                                        "KeyboardHook contract forbids direct BindingTriggered?.Invoke usage",
+                                        "WpsSlideshowNavigationHook contract forbids direct NavigationRequested?.Invoke usage",
+                                        "Targeted interop hook contract tests and full Debug suite pass"
+                                    ],
+                      "verify":  {
+                                     "commands":  [
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+                                                      "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+                                                  ]
+                                 },
+                      "doc_sync":  [
+
+                                   ],
+                      "mutation":  {
+                                       "allow_split":  true,
+                                       "allow_reorder_within_stage":  true
+                                   }
+                  },
+                  {
                       "id":  "manual-final-regression",
                       "title":  "Real manual final regression",
                       "stage":  "manual-regression",
                       "priority":  100,
                       "order":  500,
                       "depends_on":  [
-                                         "automated-freeze-recheck-after-gap-closure"
+                                         "interop-hook-direct-invoke-ban-contract-tail"
                                      ],
                       "status_hint":  "omitted",
                       "summary":  "Real PPT, WPS, image, PDF, whiteboard, and window-relationship regression in a live environment (omitted in this run by explicit user instruction).",

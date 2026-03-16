@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Threading;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Utilities;
 
@@ -48,10 +49,21 @@ internal static class SafeTaskRunner
             {
                 Debug.WriteLine($"[SafeTaskRunner][{normalizedSource}] canceled.");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 Debug.WriteLine($"[SafeTaskRunner][{normalizedSource}] failed: {ex.GetType().Name} - {ex.Message}");
-                onError?.Invoke(ex);
+                if (onError != null)
+                {
+                    try
+                    {
+                        onError(ex);
+                    }
+                    catch (Exception callbackEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(callbackEx))
+                    {
+                        Debug.WriteLine(
+                            $"[SafeTaskRunner][{normalizedSource}] onError failed: {callbackEx.GetType().Name} - {callbackEx.Message}");
+                    }
+                }
             }
         }, CancellationToken.None);
     }

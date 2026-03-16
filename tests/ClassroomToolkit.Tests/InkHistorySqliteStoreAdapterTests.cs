@@ -81,6 +81,18 @@ public sealed class InkHistorySqliteStoreAdapterTests
         File.Exists(dbPath).Should().BeFalse();
     }
 
+    [Fact]
+    public void LoadOrCreate_ShouldRethrow_WhenBridgeThrowsFatalException()
+    {
+        var dbPath = CreateTempDbPath();
+        SeedSqliteSnapshot(dbPath, "lesson-fatal.pptx", 1, "[{\"seed\":1}]");
+        var adapter = new InkHistorySqliteStoreAdapter(new FatalThrowingInkHistoryStoreBridge(), _ => dbPath);
+
+        Action act = () => _ = adapter.LoadOrCreate("lesson-fatal.pptx", 1);
+
+        act.Should().Throw<AccessViolationException>();
+    }
+
     private static string CreateTempDbPath()
     {
         var dir = TestPathHelper.CreateDirectory("ctool_ink_history_sqlite");
@@ -192,6 +204,19 @@ public sealed class InkHistorySqliteStoreAdapterTests
         public void Save(string sourcePath, int pageIndex, string? strokesJson)
         {
             throw new IOException("bridge-failure");
+        }
+    }
+
+    private sealed class FatalThrowingInkHistoryStoreBridge : IInkHistoryStoreBridge
+    {
+        public InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex)
+        {
+            throw new AccessViolationException("fatal-bridge-failure");
+        }
+
+        public void Save(string sourcePath, int pageIndex, string? strokesJson)
+        {
+            throw new AccessViolationException("fatal-bridge-failure");
         }
     }
 }

@@ -108,7 +108,7 @@ public partial class PaintOverlayWindow : Window
     private bool _wpsHookInterceptWheel = true;
     private bool _wpsHookBlockOnly;
     private bool _wpsForceMessageFallback;
-    private bool _wpsHookUnavailableNotified;
+    private int _wpsHookUnavailableNotifiedState;
     private DateTime _wpsNavBlockUntil = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = PresentationRuntimeDefaults.UnsetTimestampUtc;
@@ -1077,17 +1077,11 @@ public partial class PaintOverlayWindow : Window
         _inkRetentionDays = Math.Max(0, days);
         if (_inkRetentionDays > 0 && _inkRecordEnabled)
         {
-            _ = System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    _inkStorage.CleanupOldRecords(_inkRetentionDays);
-                }
-                catch
-                {
-                    // Ignore cleanup failures.
-                }
-            });
+            _ = SafeTaskRunner.Run(
+                "PaintOverlayWindow.UpdateInkRetentionDays",
+                _ => _inkStorage.CleanupOldRecords(_inkRetentionDays),
+                onError: ex => System.Diagnostics.Debug.WriteLine(
+                    $"[InkStorage] retention-cleanup failed: {ex.GetType().Name} - {ex.Message}"));
         }
     }
 
@@ -1269,7 +1263,7 @@ public partial class PaintOverlayWindow : Window
             Dispatcher.BeginInvoke(action, priority);
             return true;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             return false;
         }
@@ -1295,3 +1289,4 @@ public partial class PaintOverlayWindow : Window
     }
 
 }
+

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using ClassroomToolkit.Application.Abstractions;
 
 namespace ClassroomToolkit.Infra.Settings;
@@ -7,6 +8,7 @@ namespace ClassroomToolkit.Infra.Settings;
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private readonly string _path;
+    private int _lastLoadSucceeded = 1;
 
     public JsonSettingsDocumentStoreAdapter(string path)
     {
@@ -18,6 +20,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     {
         if (!File.Exists(_path))
         {
+            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -55,18 +58,22 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 result[sectionNode.Name] = section;
             }
 
+            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
             return result;
         }
         catch (JsonException)
         {
+            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
         catch (IOException)
         {
+            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
         catch (UnauthorizedAccessException)
         {
+            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -74,6 +81,11 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
         ArgumentNullException.ThrowIfNull(data);
+        if (File.Exists(_path) && Volatile.Read(ref _lastLoadSucceeded) == 0)
+        {
+            throw new InvalidOperationException(
+                "Settings load previously failed; refusing to overwrite existing JSON settings file.");
+        }
 
         var parent = Path.GetDirectoryName(_path);
         if (!string.IsNullOrWhiteSpace(parent))
@@ -87,31 +99,43 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         };
 
         var tempPath = $"{_path}.{Guid.NewGuid():N}.tmp";
-        using (var stream = File.Open(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-        using (var writer = new Utf8JsonWriter(stream, options))
+        try
         {
-            writer.WriteStartObject();
-            foreach (var section in data.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+            using (var stream = File.Open(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new Utf8JsonWriter(stream, options))
             {
-                writer.WritePropertyName(section.Key);
                 writer.WriteStartObject();
-                foreach (var item in section.Value.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+                foreach (var section in data.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
                 {
-                    writer.WriteString(item.Key, item.Value);
+                    writer.WritePropertyName(section.Key);
+                    writer.WriteStartObject();
+                    foreach (var item in section.Value.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+                    {
+                        writer.WriteString(item.Key, item.Value);
+                    }
+                    writer.WriteEndObject();
                 }
                 writer.WriteEndObject();
+                writer.Flush();
             }
-            writer.WriteEndObject();
-            writer.Flush();
-        }
 
-        if (File.Exists(_path))
+            if (File.Exists(_path))
+            {
+                File.Replace(tempPath, _path, null);
+            }
+            else
+            {
+                File.Move(tempPath, _path);
+            }
+
+            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
+        }
+        finally
         {
-            File.Copy(tempPath, _path, overwrite: true);
-            File.Delete(tempPath);
-            return;
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
-
-        File.Move(tempPath, _path);
     }
 }

@@ -38,7 +38,7 @@ public sealed partial class RollCallViewModel : ViewModelBase
     private bool _speechEnabled;
     private string _timerSoundVariant = "gentle";
     private string _timerReminderSoundVariant = "soft_beep";
-    private string _speechEngine = "pyttsx3";
+    private string _speechEngine = "sapi";
     private string _speechVoiceId = string.Empty;
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
@@ -265,7 +265,14 @@ public sealed partial class RollCallViewModel : ViewModelBase
     public string SpeechEngine
     {
         get => _speechEngine;
-        set => SetField(ref _speechEngine, value ?? "pyttsx3");
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value)
+                || string.Equals(value.Trim(), "pyttsx3", StringComparison.OrdinalIgnoreCase)
+                ? "sapi"
+                : value.Trim();
+            SetField(ref _speechEngine, normalized);
+        }
     }
 
     public string SpeechVoiceId

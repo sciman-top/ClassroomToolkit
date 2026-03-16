@@ -121,15 +121,18 @@ public partial class RollCallWindow
         try
         {
             _settingsService.Save(_settings);
-            _settingsSaveFailedNotified = false;
+            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            if (_settingsSaveFailedNotified)
+            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
+                ref _settingsSaveFailedNotified,
+                notificationPlan);
+            if (!notificationPlan.ShouldNotify)
             {
                 return;
             }
-            _settingsSaveFailedNotified = true;
             var owner = System.Windows.Application.Current?.MainWindow;
             var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
             ShowRollCallInfoMessageSafe("settings-save-failed", detail, owner);
@@ -256,6 +259,11 @@ public partial class RollCallWindow
     {
         ShowRollCallInfoMessageSafe("rollcall-message", message);
     }
+
+    private void OnSpeechUnavailable()
+    {
+        NotifySpeechError();
+    }
     
     private async void SpeakStudentName()
     {
@@ -268,7 +276,7 @@ public partial class RollCallWindow
 
             await _speechService.SpeakAsync(name, _viewModel.SpeechVoiceId);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"SpeakStudentName failed: {ex.Message}");
             NotifySpeechError();
@@ -277,16 +285,24 @@ public partial class RollCallWindow
 
     private void NotifySpeechError()
     {
-        if (_speechUnavailableNotified)
+        if (!SpeechUnavailableNotificationPolicy.ShouldNotify(ref _speechUnavailableNotifiedState))
         {
             return;
         }
-        _speechUnavailableNotified = true;
-        _ = Dispatcher.InvokeAsync(() =>
+
+        try
         {
-            var owner = System.Windows.Application.Current?.MainWindow;
-            var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
-            ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
-        });
+            _ = Dispatcher.InvokeAsync(() =>
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
+                ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
+            });
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine($"NotifySpeechError dispatch failed: {ex.Message}");
+        }
     }
 }
+

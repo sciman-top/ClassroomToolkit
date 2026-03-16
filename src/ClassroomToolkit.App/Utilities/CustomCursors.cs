@@ -455,10 +455,11 @@ public static class CustomCursors
                     File.Delete(path);
                 }
             }
-            catch
+            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
             {
                 // Ignore cleanup failures.
             }
         }
     }
 }
+

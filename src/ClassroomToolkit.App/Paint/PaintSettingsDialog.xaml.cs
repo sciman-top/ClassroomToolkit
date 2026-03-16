@@ -233,7 +233,7 @@ public partial class PaintSettingsDialog : Window
             BorderFixHelper.FixAllBorders(this);
             System.Diagnostics.Debug.WriteLine("PaintSettingsDialog: 构造函数中修复完成");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}");
         }
@@ -430,6 +430,107 @@ public partial class PaintSettingsDialog : Window
         DialogResult = false;
     }
 
+    private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        ApplyDefaultSettingsForCurrentTab();
+    }
+
+    private void OnRestoreAllDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "将恢复画笔设置窗口中的全部默认参数，是否继续？",
+            "恢复全部默认",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        ApplyDefaultSettings();
+    }
+
+    private void ApplyDefaultSettingsForCurrentTab()
+    {
+        var defaults = new AppSettings();
+        var tabIndex = SettingsTabControl?.SelectedIndex ?? 0;
+        var defaultPreset = ResolveInitialPresetScheme(defaults);
+
+        _suppressPresetSelectionChanged = true;
+        _suppressPresetAutoCustom = true;
+        _suppressSectionDirtyTracking = true;
+        try
+        {
+            switch (tabIndex)
+            {
+                case 0:
+                    SelectComboByTag(PresetSchemeCombo, defaultPreset, PresetSchemeDefaults.Custom);
+                    _currentPresetScheme = defaultPreset;
+                    if (!IsCustomScheme(defaultPreset))
+                    {
+                        // Keep preset selection and managed parameters consistent.
+                        ApplyPresetScheme(defaultPreset);
+                    }
+                    SelectBrushStyle(defaults.BrushStyle);
+                    SelectWhiteboardPreset(defaults.WhiteboardPreset);
+                    SelectCalligraphyPreset(defaults.CalligraphyPreset);
+                    SelectClassroomWritingMode(defaults.ClassroomWritingMode);
+                    CalligraphyInkBloomCheck.IsChecked = defaults.CalligraphyInkBloomEnabled;
+                    CalligraphySealCheck.IsChecked = defaults.CalligraphySealEnabled;
+                    BrushSizeSlider.Value = Clamp(defaults.BrushSize, 1, 50);
+                    EraserSizeSlider.Value = Clamp(defaults.EraserSize, 6, 60);
+                    BrushOpacitySlider.Value = ToPercent(defaults.BrushOpacity);
+                    CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
+                    break;
+                case 1:
+                    SelectShapeType(defaults.ShapeType);
+                    SelectComboByTag(ToolbarScaleCombo, FindNearestScale(defaults.PaintToolbarScale));
+                    break;
+                case 2:
+                    SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
+                    SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+                    WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
+                    LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
+                    ForceForegroundCheck.IsChecked = defaults.ForcePresentationForegroundOnFullscreen;
+                    InkSaveCheck.IsChecked = defaults.InkSaveEnabled;
+                    SelectInkExportScope(defaults.InkExportScope);
+                    SelectIntCombo(ExportParallelCombo, defaults.InkExportMaxParallelFiles, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
+                    SelectIntCombo(NeighborPrefetchCombo, defaults.PhotoNeighborPrefetchRadiusMax, fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);
+                    SelectIntCombo(PostInputRefreshDelayCombo, defaults.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
+                    SelectDoubleCombo(WheelZoomBaseCombo, defaults.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
+                    SelectDoubleCombo(GestureSensitivityCombo, defaults.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+                    PhotoInputTelemetryCheck.IsChecked = defaults.PhotoInputTelemetryEnabled;
+                    PhotoRememberTransformCheck.IsChecked = defaults.PhotoRememberTransform;
+                    PhotoCrossPageDisplayCheck.IsChecked = defaults.PhotoCrossPageDisplay;
+                    break;
+                default:
+                    ApplyDefaultSettings();
+                    return;
+            }
+        }
+        finally
+        {
+            _suppressPresetSelectionChanged = false;
+            _suppressPresetAutoCustom = false;
+            _suppressSectionDirtyTracking = false;
+        }
+
+        UpdateCalligraphyOptionState();
+        UpdateBrushSizeLabel();
+        UpdateBrushOpacityLabel();
+        UpdateEraserSizeLabel();
+        UpdateCalligraphyOverlayThresholdLabel();
+        UpdateClassroomWritingModeHint(ResolveClassroomWritingMode());
+        if (tabIndex == 0 && IsCustomScheme(defaultPreset))
+        {
+            SaveCurrentAsCustomSnapshot();
+        }
+
+        UpdatePresetHint(GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom));
+        ApplySceneCardsLayout(SceneCardsGrid?.ActualWidth ?? 0);
+        UpdateSectionDirtyStates();
+    }
+
     private void OnPresetSchemeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         if (_suppressPresetSelectionChanged)
@@ -485,24 +586,6 @@ public partial class PaintSettingsDialog : Window
         }
 
         SelectComboByTag(PresetSchemeCombo, _presetRecommendation.Scheme, PresetSchemeDefaults.Balanced);
-    }
-
-    private void OnResetPresetBrushSectionClick(object sender, RoutedEventArgs e)
-    {
-        ApplyPresetBrushSectionState(_initialPresetBrushSectionState);
-        UpdateSectionDirtyStates();
-    }
-
-    private void OnResetSceneSectionClick(object sender, RoutedEventArgs e)
-    {
-        ApplySceneSectionState(_initialSceneSectionState);
-        UpdateSectionDirtyStates();
-    }
-
-    private void OnResetAdvancedSectionClick(object sender, RoutedEventArgs e)
-    {
-        ApplyAdvancedSectionState(_initialAdvancedSectionState);
-        UpdateSectionDirtyStates();
     }
 
     private void OnRestoreCustomPresetClick(object sender, RoutedEventArgs e)
@@ -943,39 +1026,75 @@ public partial class PaintSettingsDialog : Window
         }
     }
 
+    private void ApplyDefaultSettings()
+    {
+        var defaults = new AppSettings();
+        var defaultPreset = ResolveInitialPresetScheme(defaults);
+
+        _suppressPresetSelectionChanged = true;
+        _suppressPresetAutoCustom = true;
+        _suppressSectionDirtyTracking = true;
+        try
+        {
+            SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
+            SelectComboByTag(PresetSchemeCombo, defaultPreset, PresetSchemeDefaults.Custom);
+            _currentPresetScheme = defaultPreset;
+            SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+            WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
+            LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
+            ForceForegroundCheck.IsChecked = defaults.ForcePresentationForegroundOnFullscreen;
+
+            InkSaveCheck.IsChecked = defaults.InkSaveEnabled;
+            SelectInkExportScope(defaults.InkExportScope);
+            SelectIntCombo(ExportParallelCombo, defaults.InkExportMaxParallelFiles, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
+            SelectIntCombo(NeighborPrefetchCombo, defaults.PhotoNeighborPrefetchRadiusMax, fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);
+            SelectIntCombo(PostInputRefreshDelayCombo, defaults.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
+            SelectDoubleCombo(WheelZoomBaseCombo, defaults.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
+            SelectDoubleCombo(GestureSensitivityCombo, defaults.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+            PhotoInputTelemetryCheck.IsChecked = defaults.PhotoInputTelemetryEnabled;
+            PhotoRememberTransformCheck.IsChecked = defaults.PhotoRememberTransform;
+            PhotoCrossPageDisplayCheck.IsChecked = defaults.PhotoCrossPageDisplay;
+
+            SelectBrushStyle(defaults.BrushStyle);
+            SelectWhiteboardPreset(defaults.WhiteboardPreset);
+            SelectCalligraphyPreset(defaults.CalligraphyPreset);
+            SelectClassroomWritingMode(defaults.ClassroomWritingMode);
+            CalligraphyInkBloomCheck.IsChecked = defaults.CalligraphyInkBloomEnabled;
+            CalligraphySealCheck.IsChecked = defaults.CalligraphySealEnabled;
+            BrushSizeSlider.Value = Clamp(defaults.BrushSize, 1, 50);
+            EraserSizeSlider.Value = Clamp(defaults.EraserSize, 6, 60);
+            BrushOpacitySlider.Value = ToPercent(defaults.BrushOpacity);
+            CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
+            SelectShapeType(defaults.ShapeType);
+            SelectComboByTag(ToolbarScaleCombo, FindNearestScale(defaults.PaintToolbarScale));
+        }
+        finally
+        {
+            _suppressPresetSelectionChanged = false;
+            _suppressPresetAutoCustom = false;
+            _suppressSectionDirtyTracking = false;
+        }
+
+        UpdateCalligraphyOptionState();
+        UpdateBrushSizeLabel();
+        UpdateBrushOpacityLabel();
+        UpdateEraserSizeLabel();
+        UpdateCalligraphyOverlayThresholdLabel();
+        UpdateClassroomWritingModeHint(defaults.ClassroomWritingMode);
+        if (IsCustomScheme(defaultPreset))
+        {
+            SaveCurrentAsCustomSnapshot();
+        }
+        UpdatePresetHint(defaultPreset);
+        ApplySceneCardsLayout(SceneCardsGrid?.ActualWidth ?? 0);
+        UpdateSectionDirtyStates();
+    }
+
     private void UpdateSectionDirtyStates()
     {
         if (_suppressSectionDirtyTracking)
         {
             return;
-        }
-
-        bool presetDirty = IsPresetBrushSectionDirty();
-        bool sceneDirty = IsSceneSectionDirty();
-        bool advancedDirty = IsAdvancedSectionDirty();
-        if (PresetBrushSectionStateText != null)
-        {
-            PresetBrushSectionStateText.Text = presetDirty ? "本页状态：已修改" : "本页状态：未修改";
-        }
-        if (SceneSectionStateText != null)
-        {
-            SceneSectionStateText.Text = sceneDirty ? "本页状态：已修改" : "本页状态：未修改";
-        }
-        if (AdvancedSectionStateText != null)
-        {
-            AdvancedSectionStateText.Text = advancedDirty ? "本页状态：已修改" : "本页状态：未修改";
-        }
-        if (ResetPresetBrushSectionButton != null)
-        {
-            ResetPresetBrushSectionButton.IsEnabled = presetDirty;
-        }
-        if (ResetSceneSectionButton != null)
-        {
-            ResetSceneSectionButton.IsEnabled = sceneDirty;
-        }
-        if (ResetAdvancedSectionButton != null)
-        {
-            ResetAdvancedSectionButton.IsEnabled = advancedDirty;
         }
     }
 
@@ -1460,3 +1579,4 @@ public partial class PaintSettingsDialog : Window
         return fallback;
     }
 }
+

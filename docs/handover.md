@@ -76,7 +76,7 @@
 - `MainWindow.Paint` 已继续完成工具条直修调度失败分支收口（`ToolbarInteractionDirectRepairDispatchFailurePlanPolicy`）并抽出直接修复执行方法；`MainWindow.xaml` 关闭流程已接入 `MainWindowOnClosingPlanPolicy`。
 - 当前全项目终态重构总进度按唯一口径为 `100%`（代码与自动化范围）。
 - 仓库内已补一套 repo-local 自治重构 loop 骨架，用于按 `tasks/state` 续跑，不再依赖单次会话记忆。
-- 自动化冻结复检任务 `automated-freeze-recheck-after-gap-closure` 已完成：`ArchitectureDependencyTests`=`5/5`，全量 Debug=`2502/2502`，全量 Release=`2502/2502`（2026-03-15）；按用户指令跳过人工最终回归后，代码与自动化重构任务已闭环。
+- 自动化冻结复检任务 `automated-freeze-recheck-after-gap-closure` 已完成：`ArchitectureDependencyTests`=`5/5`，全量 Debug=`2227/2227`，全量 Release=`2227/2227`（2026-03-13）；当前自动化门已闭合，下一步仅剩人工最终回归。
 
 ## 3. 当前硬指标
 
@@ -168,3 +168,4 @@
 - 仓库当前是长期脏工作区，接手前先看 `git status`，但不要回滚不属于当前任务的改动。
 - 默认连续执行，不做阶段性汇报；仅在真实阻塞时暂停。
 - 若主方案 / 主进度 / handover / ADR 发生冲突，按优先级裁决，不得先回退到旧方案。
+

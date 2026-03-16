@@ -172,7 +172,7 @@ public sealed class StudentPhotoResolver
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }

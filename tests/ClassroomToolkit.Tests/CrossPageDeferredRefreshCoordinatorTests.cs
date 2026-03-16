@@ -181,4 +181,34 @@ public sealed class CrossPageDeferredRefreshCoordinatorTests
         requested.Should().Be(CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.PostInput));
         events.Should().Contain(e => e.StartsWith("defer-recover:"));
     }
+
+    [Fact]
+    public async Task ScheduleAsync_ShouldRethrowFatal_WhenDelayThrowsFatalException()
+    {
+        var act = async () => await CrossPageDeferredRefreshCoordinator.ScheduleAsync(
+            source: CrossPageUpdateSources.PostInput,
+            singlePerPointerUp: false,
+            delayOverrideMs: 200,
+            configuredDelayMs: 120,
+            lastPointerUpUtc: DateTime.UtcNow,
+            getCurrentUtcTimestamp: () => DateTime.UtcNow,
+            isCrossPageDisplayActive: static () => true,
+            isCrossPageInteractionActive: static () => false,
+            tryAcquirePostInputRefreshSlot: (out long seq) =>
+            {
+                seq = 0;
+                return true;
+            },
+            requestCrossPageDisplayUpdate: static _ => { },
+            tryBeginInvoke: static (_, _) => false,
+            delayAsync: static _ => Task.FromException(new BadImageFormatException("fatal-delay")),
+            incrementRefreshToken: static () => 1,
+            readRefreshToken: static () => 1,
+            dispatcherCheckAccess: static () => true,
+            dispatcherShutdownStarted: static () => false,
+            dispatcherShutdownFinished: static () => false,
+            diagnostics: static (_, _, _) => { });
+
+        await act.Should().ThrowAsync<BadImageFormatException>();
+    }
 }

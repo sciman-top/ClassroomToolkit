@@ -10,12 +10,18 @@ public sealed class MainWindowXamlContractTests
         var xaml = File.ReadAllText(GetMainWindowXamlPath());
 
         xaml.Should().Contain("Style_WorkShellWindowBorder");
+        xaml.Should().Contain("Style_WorkShellHeroTileButton");
+        xaml.Should().Contain("Style_WorkShellMiniButton");
+        xaml.Should().Contain("Style_WorkShellMiniDangerButton");
         xaml.Should().Contain("x:Name=\"PaintButton\"");
         xaml.Should().Contain("x:Name=\"RollCallButton\"");
         xaml.Should().Contain("x:Name=\"MinimizeButton\"");
         xaml.Should().Contain("x:Name=\"SettingsButton\"");
         xaml.Should().Contain("x:Name=\"AboutButton\"");
         xaml.Should().Contain("x:Name=\"ExitButton\"");
+        xaml.Should().NotContain("x:Key=\"Style_HeroTile\"");
+        xaml.Should().NotContain("x:Key=\"Style_MiniTool\"");
+        xaml.Should().NotContain("x:Key=\"Style_MiniDanger\"");
     }
 
     [Fact]
@@ -23,20 +29,18 @@ public sealed class MainWindowXamlContractTests
     {
         var xaml = File.ReadAllText(GetMainWindowXamlPath());
 
-        var requiredTokens = new[]
+        var requiredReferences = new[]
         {
-            "Brush_Surface_Primary",
-            "Brush_Surface_Secondary",
-            "Brush_InputBackground",
-            "Brush_Border_Subtle",
+            "Style_WorkShellHeroTileButton",
+            "Style_WorkShellMiniButton",
+            "Style_WorkShellMiniDangerButton",
             "Brush_Border_Strong",
-            "Shadow_Glow_Primary",
             "Shadow_Dialog"
         };
 
-        foreach (var token in requiredTokens)
+        foreach (var token in requiredReferences)
         {
-            xaml.Should().Contain(token, $"MainWindow should consume Stage A token '{token}'");
+            xaml.Should().Contain(token, $"MainWindow should consume shared Stage A reference '{token}'");
         }
     }
 

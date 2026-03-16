@@ -156,7 +156,7 @@ public partial class PaintOverlayWindow
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Saved {strokes.Count} strokes for page {pageIndex} of {sourcePath}");
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             errorMessage = ex.Message;
             var fallbackStrokes = preparedStrokes ?? new List<InkStrokeData>();
@@ -251,7 +251,7 @@ public partial class PaintOverlayWindow
                 {
                     await Task.Delay(InkSidecarAutoSaveRetryDelayMs * attempt).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[InkPersist] Auto-save retry delay interrupted: {ex.GetType().Name} - {ex.Message}");
@@ -288,7 +288,7 @@ public partial class PaintOverlayWindow
             }
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             if (logFailure)
             {
@@ -346,7 +346,7 @@ public partial class PaintOverlayWindow
             }
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkPersist] PromptAndLoad failed: {ex.Message}");
             return false;
@@ -386,7 +386,7 @@ public partial class PaintOverlayWindow
             MarkInkPageLoaded(sourcePath, pageIndex, strokes);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Load page failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
             return false;
@@ -748,7 +748,7 @@ public partial class PaintOverlayWindow
                 sizeWeight = Math.Max(1, new FileInfo(sourcePath).Length / (512 * 1024));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[InkExport] Estimate workload fallback for '{sourcePath}': {ex.GetType().Name} - {ex.Message}");
@@ -928,3 +928,4 @@ public partial class PaintOverlayWindow
         return InkExportSnapshotBuilder.TryParseCacheKey(cacheKey, out sourcePath, out pageIndex);
     }
 }
+

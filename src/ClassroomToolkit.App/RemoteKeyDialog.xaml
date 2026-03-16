@@ -17,8 +17,12 @@
             </Grid.RowDefinitions>
 
             <!-- Title Bar -->
-            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}">
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="遥控键设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭遥控键设置">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
@@ -33,10 +37,10 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="预设：" VerticalAlignment="Center" Margin="0,0,12,16" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="预设键位" VerticalAlignment="Center" Margin="0,0,12,16" Foreground="{StaticResource Brush_Text_Secondary}"/>
                 <ComboBox Grid.Row="0" Grid.Column="1" x:Name="PresetCombo" Margin="0,0,0,16" SelectionChanged="OnPresetChanged" Height="34"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="自定义：" VerticalAlignment="Center" Margin="0,0,12,16" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="自定义按键" VerticalAlignment="Center" Margin="0,0,12,16" Foreground="{StaticResource Brush_Text_Secondary}"/>
                 <TextBox Grid.Row="1" Grid.Column="1" x:Name="CustomBox" Margin="0,0,0,16" Height="34" VerticalContentAlignment="Center"/>
 
                 <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource Style_DialogShellActionBar}" Margin="0,4,0,0">

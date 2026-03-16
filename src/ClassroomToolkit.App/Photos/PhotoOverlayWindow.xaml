@@ -47,16 +47,24 @@
                 Opacity="0.5"
                 Width="64"
                 Height="64"
-                Visibility="Collapsed"/>
+                ToolTip="关闭全屏预览"
+                Visibility="Collapsed">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
         <Button x:Name="CloseButtonRight" 
                 Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
                 Opacity="0.6"
                 Width="64"
-                Height="64"/>
+                Height="64"
+                ToolTip="关闭全屏预览">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
 
-        <Border x:Name="CloseHintText" Background="{StaticResource Brush_OverlayMask}" CornerRadius="16" Padding="16,8" Panel.ZIndex="10">
-            <TextBlock Text="单击背景或右下角关闭" FontSize="14" Foreground="White" Opacity="0.9"/>
+        <Border x:Name="CloseHintText" Style="{StaticResource Style_FullscreenShellHintBadge}" Padding="16,8" Panel.ZIndex="10">
+            <TextBlock Text="单击背景或关闭按钮即可退出" FontSize="14" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
             <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>
             </Border.Effect>

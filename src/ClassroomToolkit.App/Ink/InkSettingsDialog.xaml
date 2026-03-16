@@ -11,11 +11,8 @@
         Background="{x:Null}"
         Topmost="True">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="16" Margin="8" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}" Margin="8"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
-        <Border.Effect>
-            <StaticResource ResourceKey="Shadow_Dialog"/>
-        </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -24,13 +21,14 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Height="44" Background="Transparent" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="笔迹记录与回看" FontWeight="SemiBold" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="15"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancel" HorizontalAlignment="Right" Margin="0,0,10,0" Width="30" Height="30">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="12" Height="12"/>
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="笔迹记录与回看" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭笔迹设置">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
-            <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{StaticResource Brush_Border}"/>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <StackPanel Grid.Row="1" Margin="16,14">
                 <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录/回看" Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Primary}"/>

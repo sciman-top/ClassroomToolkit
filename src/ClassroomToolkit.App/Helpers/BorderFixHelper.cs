@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Helpers
 {
@@ -20,7 +21,7 @@ namespace ClassroomToolkit.App.Helpers
                 FixBordersRecursive(window);
                 System.Diagnostics.Debug.WriteLine("BorderFixHelper: 所有 Border 控件已检查并修复");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"BorderFixHelper 错误: {ex.Message}");
             }
@@ -64,7 +65,7 @@ namespace ClassroomToolkit.App.Helpers
                         var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
                         System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border '{name}' (父元素: {parentName})");
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                     {
                         System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border 失败 - {ex.Message}");
                         
@@ -75,7 +76,7 @@ namespace ClassroomToolkit.App.Helpers
                             border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                             System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 使用 ClearValue 方法修复 Border '{border.Name}'");
                         }
-                        catch (Exception ex2)
+                        catch (Exception ex2) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex2))
                         {
                             System.Diagnostics.Debug.WriteLine($"BorderFixHelper: ClearValue 方法也失败 - {ex2.Message}");
                         }
@@ -105,7 +106,7 @@ namespace ClassroomToolkit.App.Helpers
                     System.Diagnostics.Debug.WriteLine("BorderFixHelper: 修复主窗口完成");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复主窗口失败: {ex.Message}");
             }
@@ -121,7 +122,7 @@ namespace ClassroomToolkit.App.Helpers
                     FixAllBorders(window);
                     System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 加载时修复完成");
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine($"BorderFixHelper 加载修复失败: {ex.Message}");
                 }
@@ -136,13 +137,13 @@ namespace ClassroomToolkit.App.Helpers
                             FixAllBorders(window);
                             System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 窗口 {window.GetType().Name} 延迟修复完成");
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                         {
                             System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟修复失败: {ex.Message}");
                         }
                     }), System.Windows.Threading.DispatcherPriority.Loaded);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟调度失败: {ex.Message}");
                 }

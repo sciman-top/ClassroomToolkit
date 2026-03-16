@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Settings;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
@@ -154,7 +155,7 @@ public partial class ImageManagerWindow : Window
                     path = drive.RootDirectory.FullName;
                     header = drive.Name;
                 }
-                catch
+                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
                 {
                     continue;
                 }
@@ -179,7 +180,7 @@ public partial class ImageManagerWindow : Window
                 FolderTree.Items.Add(node);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: InitializeTree Error: {ex}");
             FolderTree.Items.Clear();
@@ -213,7 +214,7 @@ public partial class ImageManagerWindow : Window
         {
             result = dialog.ShowDialog();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatFavoriteFolderDialogFailureMessage(
@@ -395,7 +396,7 @@ public partial class ImageManagerWindow : Window
                 OpenFolder(parentDir.FullName, addToRecents: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatUpNavigationFailureMessage(
@@ -620,7 +621,7 @@ public partial class ImageManagerWindow : Window
             EmptyHintText.Visibility = ViewModel.Images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"ImageManager: LoadImages Error: {ex}");
             if (requestId == Volatile.Read(ref _loadImagesRequestId))
@@ -646,28 +647,35 @@ public partial class ImageManagerWindow : Window
 
     private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token, int requestId)
     {
-        _ = Task.Run(async () =>
-        {
-            try { await _thumbnailSemaphore.WaitAsync(token); }
-            catch (OperationCanceledException) { return; }
-
-            if (token.IsCancellationRequested || _isClosing)
+        _ = SafeTaskRunner.Run(
+            "ImageManagerWindow.QueueThumbnailLoad",
+            async _ =>
             {
-                _thumbnailSemaphore.Release();
-                return;
-            }
+                try { await _thumbnailSemaphore.WaitAsync(token); }
+                catch (OperationCanceledException) { return; }
 
-            ImageSource? thumbnail = null;
-            try { thumbnail = isPdf ? LoadPdfThumbnail(item.Path) : LoadThumbnail(item.Path); }
-            finally { _thumbnailSemaphore.Release(); }
+                if (token.IsCancellationRequested || _isClosing)
+                {
+                    _thumbnailSemaphore.Release();
+                    return;
+                }
 
-            if (thumbnail == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
-            {
-                return;
-            }
+                ImageSource? thumbnail = null;
+                try { thumbnail = isPdf ? LoadPdfThumbnail(item.Path) : LoadThumbnail(item.Path); }
+                finally { _thumbnailSemaphore.Release(); }
 
-            await TryDispatchThumbnailUpdateAsync(item, thumbnail, token, requestId);
-        }, token);
+                if (thumbnail == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
+                {
+                    return;
+                }
+
+                await TryDispatchThumbnailUpdateAsync(item, thumbnail, token, requestId);
+            },
+            token,
+            ex => Debug.WriteLine(
+                ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
+                    item.Path,
+                    ex.Message)));
     }
 
     private async Task TryDispatchThumbnailUpdateAsync(
@@ -695,7 +703,7 @@ public partial class ImageManagerWindow : Window
                 }
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
@@ -757,7 +765,7 @@ public partial class ImageManagerWindow : Window
                 if (!string.IsNullOrWhiteSpace(name)) item.Items.Add(CreateFolderNode(dir, name));
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
@@ -965,7 +973,7 @@ public partial class ImageManagerWindow : Window
         {
             DragMove();
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // Ignore drag exceptions from transient mouse capture state.
         }
@@ -1054,3 +1062,5 @@ public sealed class PdfBackgroundConverter : System.Windows.Data.IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         => System.Windows.Data.Binding.DoNothing;
 }
+
+

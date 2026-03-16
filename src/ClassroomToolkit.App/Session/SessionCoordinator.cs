@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Session;
 
@@ -72,7 +73,7 @@ public sealed class SessionCoordinator
         {
             _effectRunner.Run(transition);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[SessionCoordinator] effect runner failed: {ex.GetType().Name}: {ex.Message}");
         }

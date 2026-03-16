@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Utilities;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -46,50 +47,54 @@ public partial class PaintOverlayWindow
     private void StartPdfOpenAsync(string sourcePath)
     {
         var token = Interlocked.Increment(ref _photoLoadToken);
-        _ = System.Threading.Tasks.Task.Run(() =>
-        {
-            if (!TryOpenPdfDocumentCore(sourcePath, out var document, out var pageCount))
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.StartPdfOpenAsync",
+            _ =>
             {
-                var scheduled = TryBeginInvoke(() =>
+                if (!TryOpenPdfDocumentCore(sourcePath, out var document, out var pageCount))
                 {
-                    if (token != _photoLoadToken)
+                    var scheduled = TryBeginInvoke(() =>
                     {
+                        if (token != _photoLoadToken)
+                        {
+                            return;
+                        }
+                        HidePhotoLoadingOverlay();
+                        ExitPhotoMode();
+                    }, DispatcherPriority.Normal);
+                    if (!scheduled && document != null)
+                    {
+                        document.Dispose();
+                    }
+                    return;
+                }
+                var openedDocument = document!;
+                var scheduledApply = TryBeginInvoke(() =>
+                {
+                    if (token != _photoLoadToken
+                        || !IsPdfModeActive()
+                        || !string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        openedDocument.Dispose();
+                        return;
+                    }
+                    ApplyPdfDocument(openedDocument, pageCount);
+                    _lastPdfNavigationDirection = 1;
+                    if (!RenderPdfPage(_currentPageIndex))
+                    {
+                        HidePhotoLoadingOverlay();
+                        ExitPhotoMode();
                         return;
                     }
                     HidePhotoLoadingOverlay();
-                    ExitPhotoMode();
-                }, DispatcherPriority.Normal);
-                if (!scheduled && document != null)
-                {
-                    document.Dispose();
-                }
-                return;
-            }
-            var openedDocument = document!;
-            var scheduledApply = TryBeginInvoke(() =>
-            {
-                if (token != _photoLoadToken
-                    || !IsPdfModeActive()
-                    || !string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
+                }, DispatcherPriority.Render);
+                if (!scheduledApply)
                 {
                     openedDocument.Dispose();
-                    return;
                 }
-                ApplyPdfDocument(openedDocument, pageCount);
-                _lastPdfNavigationDirection = 1;
-                if (!RenderPdfPage(_currentPageIndex))
-                {
-                    HidePhotoLoadingOverlay();
-                    ExitPhotoMode();
-                    return;
-                }
-                HidePhotoLoadingOverlay();
-            }, DispatcherPriority.Render);
-            if (!scheduledApply)
-            {
-                openedDocument.Dispose();
-            }
-        });
+            },
+            onError: ex => System.Diagnostics.Debug.WriteLine(
+                $"[PdfOpen] async-open failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private static bool TryOpenPdfDocumentCore(string path, out PdfDocumentHost? document, out int pageCount)
@@ -100,7 +105,7 @@ public partial class PaintOverlayWindow
         {
             document = PdfDocumentHost.Open(path);
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             document?.Dispose();
             return false;
@@ -357,27 +362,31 @@ public partial class PaintOverlayWindow
             return;
         }
         var token = _pdfPrefetchToken;
-        _ = System.Threading.Tasks.Task.Run(async () =>
-        {
-            try
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.SchedulePdfPrefetch",
+            async _ =>
             {
-                var crossPageDisplayActive = ShouldRefreshCrossPagePdfDisplay();
-                var delay = PdfPrefetchTimingPolicy.ResolveInitialDelayMs(crossPageDisplayActive);
-                if (delay > 0)
+                try
                 {
-                    await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
+                    var crossPageDisplayActive = ShouldRefreshCrossPagePdfDisplay();
+                    var delay = PdfPrefetchTimingPolicy.ResolveInitialDelayMs(crossPageDisplayActive);
+                    if (delay > 0)
+                    {
+                        await Task.Delay(delay).ConfigureAwait(false);
+                    }
+                    if (token != _pdfPrefetchToken || !IsPdfModeActive())
+                    {
+                        return;
+                    }
+                    PrefetchPdfNeighbors(pageIndex, direction, token);
                 }
-                if (token != _pdfPrefetchToken || !IsPdfModeActive())
+                finally
                 {
-                    return;
+                    OnPdfPrefetchCompleted(token);
                 }
-                PrefetchPdfNeighbors(pageIndex, direction, token);
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
-            }
-        });
+            },
+            onError: ex => System.Diagnostics.Debug.WriteLine(
+                $"[PdfPrefetch] schedule failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private void SchedulePdfVisiblePrefetch(IReadOnlyList<int> pageIndexes)
@@ -403,38 +412,52 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        _ = System.Threading.Tasks.Task.Run(() =>
-        {
-            try
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.SchedulePdfVisiblePrefetch",
+            _unusedToken =>
             {
-                foreach (var pageIndex in unique)
+                try
                 {
-                    if (token != _pdfVisiblePrefetchToken)
+                    foreach (var pageIndex in unique)
                     {
-                        return;
-                    }
-                    if (TryGetCachedPdfPageBitmap(pageIndex, out _))
-                    {
-                        continue;
-                    }
-                    GetPdfPageBitmap(pageIndex);
-                }
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
-                if (token == _pdfVisiblePrefetchToken)
-                {
-                    TryBeginInvoke(() =>
-                    {
-                        if (ShouldRefreshCrossPagePdfDisplay())
+                        if (token != _pdfVisiblePrefetchToken)
                         {
-                            UpdateCrossPageDisplay();
+                            return;
                         }
-                    }, DispatcherPriority.Background);
+                        if (TryGetCachedPdfPageBitmap(pageIndex, out _))
+                        {
+                            continue;
+                        }
+                        GetPdfPageBitmap(pageIndex);
+                    }
                 }
-            }
-        });
+                finally
+                {
+                    OnPdfVisiblePrefetchCompleted(token);
+                }
+            },
+            onError: ex => System.Diagnostics.Debug.WriteLine(
+                $"[PdfPrefetch] visible-prefetch failed: {ex.GetType().Name} - {ex.Message}"));
+    }
+
+    private void OnPdfPrefetchCompleted(int token)
+    {
+        Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
+    }
+
+    private void OnPdfVisiblePrefetchCompleted(int token)
+    {
+        Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
+        if (token == _pdfVisiblePrefetchToken)
+        {
+            TryBeginInvoke(() =>
+            {
+                if (ShouldRefreshCrossPagePdfDisplay())
+                {
+                    UpdateCrossPageDisplay();
+                }
+            }, DispatcherPriority.Background);
+        }
     }
 
     private void PrefetchPdfNeighbors(int pageIndex, int direction, int token)
@@ -499,3 +522,4 @@ public partial class PaintOverlayWindow
 
     #endregion
 }
+

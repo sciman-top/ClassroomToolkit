@@ -20,8 +20,9 @@
         <StackPanel Margin="16">
             <Grid Margin="0,0,0,12">
                 <TextBlock Text="选择画板颜色" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" Width="24" Height="24">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="10" Height="10"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" Width="24" Height="24" ToolTip="关闭颜色选择">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />

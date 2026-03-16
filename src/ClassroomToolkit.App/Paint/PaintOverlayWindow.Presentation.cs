@@ -278,7 +278,7 @@ public partial class PaintOverlayWindow
         _presentationService.ResetWpsAutoFallback();
         _presentationService.ResetOfficeAutoFallback();
         _wpsForceMessageFallback = false;
-        _wpsHookUnavailableNotified = false;
+        WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
     }
@@ -312,7 +312,7 @@ public partial class PaintOverlayWindow
         if (!allowWps)
         {
             _wpsForceMessageFallback = false;
-            _wpsHookUnavailableNotified = false;
+            WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
         }
         _presentationService.ResetOfficeAutoFallback();
         UpdateWpsNavHookState();
@@ -680,7 +680,7 @@ public partial class PaintOverlayWindow
                 {
                     _wpsNavHookActive = await _wpsNavHook.StartAsync();
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
                     _wpsNavHookActive = false;
@@ -698,6 +698,7 @@ public partial class PaintOverlayWindow
             else
             {
                 _wpsForceMessageFallback = false;
+                WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
             }
             LogPresentationState($"wps-hook-enabled:{sendMode}");
             return;
@@ -769,11 +770,10 @@ public partial class PaintOverlayWindow
 
     private void NotifyWpsHookUnavailable()
     {
-        if (_wpsHookUnavailableNotified)
+        if (!WpsHookUnavailableNotificationPolicy.ShouldNotify(ref _wpsHookUnavailableNotifiedState))
         {
             return;
         }
-        _wpsHookUnavailableNotified = true;
         var scheduled = TryBeginInvoke(() =>
         {
             SafeActionExecutionExecutor.TryExecute(
@@ -918,3 +918,4 @@ public partial class PaintOverlayWindow
     }
 
 }
+

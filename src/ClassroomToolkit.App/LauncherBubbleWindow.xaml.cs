@@ -163,7 +163,7 @@ public partial class LauncherBubbleWindow : Window
             Left = newX;
             Top = newY;
         }
-        catch
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
         {
             // 忽略拖动过程中的异常
         }
@@ -196,7 +196,7 @@ public partial class LauncherBubbleWindow : Window
                     var center = new System.Windows.Point(Left + Width / 2, Top + Height / 2);
                     PlaceNear(center);
                 }
-                catch
+                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
                 {
                     // 忽略吸附过程中的异常
                 }
@@ -207,3 +207,4 @@ public partial class LauncherBubbleWindow : Window
     }
 
 }
+
