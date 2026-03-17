@@ -30,13 +30,14 @@
 ### F-3 Medium: COM lifecycle manager lacks dedicated behavior tests
 
 - File: `src/ClassroomToolkit.Interop/Utilities/ComObjectManager.cs`
-- Status: Open
+- Status: Partially fixed (contract tests added)
 - Evidence:
   - No direct `ComObjectManager` test file in current test suite.
 - Recommendation:
-  - Add tests for dedup, release/dispose idempotency, disposed-track behavior.
+  - Added `ComObjectManagerContractTests` for dedup/release/dispose/disposed-track source contracts.
+  - Next can add runtime COM integration tests in isolated environment.
 
 ## Next Actions
 
-1. Implement F-3 tests (`ComObjectManagerTests`).
-2. Refactor F-2 retry sleep strategy with cancellation-aware overload.
+1. Refactor F-2 retry sleep strategy with cancellation-aware overload.
+2. Evaluate whether to add runtime COM integration tests for `ComObjectManager`.

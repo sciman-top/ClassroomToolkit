@@ -17,6 +17,13 @@
   - verifies event handler delegates to async worker
   - verifies shutdown-safe catches are present
 
+3. Added `ComObjectManager` lifecycle contract tests
+- File: `tests/ClassroomToolkit.Tests/ComObjectManagerContractTests.cs`
+- Coverage:
+  - track guard for non-COM and disposed manager path
+  - release path with non-fatal exception guard
+  - dispose reverse-order release and state clearing contract
+
 ## Verification Commands
 
 1. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerWindowFolderExpandLifecycleContractTests"`
@@ -25,7 +32,10 @@
 2. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "FullyQualifiedName~ImageManager"`
 - Result: PASS (86/86)
 
+3. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ComObjectManagerContractTests"`
+- Result: PASS (3/3)
+
 ## Residual Risks
 
 - `WindowInteropRetryExecutor` still uses blocking sleep.
-- `ComObjectManager` still lacks dedicated tests.
+- `ComObjectManager` runtime COM integration tests are still missing (source-contract tests已补齐).
