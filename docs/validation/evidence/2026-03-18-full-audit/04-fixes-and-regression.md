@@ -24,6 +24,13 @@
   - release path with non-fatal exception guard
   - dispose reverse-order release and state clearing contract
 
+4. Added cancellation-aware retry path in window interop executor
+- File: `src/ClassroomToolkit.App/Windowing/WindowInteropRetryExecutor.cs`
+- Change:
+  - `Execute` and `ExecuteWithValue` now accept optional `CancellationToken`.
+  - Retry wait path now checks cancellation via wait handle before next attempt.
+  - Existing call sites remain backward compatible.
+
 ## Verification Commands
 
 1. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerWindowFolderExpandLifecycleContractTests"`
@@ -35,7 +42,9 @@
 3. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ComObjectManagerContractTests"`
 - Result: PASS (3/3)
 
+4. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~WindowInteropRetryExecutorTests"`
+- Result: PASS (10/10)
+
 ## Residual Risks
 
-- `WindowInteropRetryExecutor` still uses blocking sleep.
 - `ComObjectManager` runtime COM integration tests are still missing (source-contract tests已补齐).

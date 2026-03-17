@@ -1,5 +1,6 @@
 using ClassroomToolkit.App.Windowing;
 using FluentAssertions;
+using System.Threading;
 using Xunit;
 
 namespace ClassroomToolkit.Tests.App;
@@ -113,5 +114,44 @@ public sealed class WindowInteropRetryExecutorTests
         result.Should().BeTrue();
         value.Should().Be(42);
         callCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Execute_ShouldStopRetry_WhenCancellationRequested()
+    {
+        using var cts = new CancellationTokenSource();
+        var callCount = 0;
+
+        var result = WindowInteropRetryExecutor.Execute(
+            _ =>
+            {
+                callCount++;
+                return (false, 5);
+            },
+            (_, errorCode) =>
+            {
+                cts.Cancel();
+                return errorCode == 5;
+            },
+            cts.Token);
+
+        result.Should().BeFalse();
+        callCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void ExecuteWithValue_ShouldStopRetry_WhenTokenAlreadyCanceled()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var result = WindowInteropRetryExecutor.ExecuteWithValue<int>(
+            _ => (false, 0, 5),
+            (_, errorCode) => errorCode == 5,
+            out var value,
+            cts.Token);
+
+        result.Should().BeFalse();
+        value.Should().Be(default);
     }
 }

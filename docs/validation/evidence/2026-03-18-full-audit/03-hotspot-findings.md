@@ -21,11 +21,12 @@
 ### F-2 Medium: Retry executor uses blocking sleep without cancellation admission
 
 - File: `src/ClassroomToolkit.App/Windowing/WindowInteropRetryExecutor.cs:69`
-- Status: Open
+- Status: Fixed in working tree (cancellation-aware overload added)
 - Evidence:
-  - Retry loop uses `Thread.Sleep(retrySleepMs)` without cancellation token.
+  - Original retry loop used `Thread.Sleep(retrySleepMs)` without cancellation token.
 - Recommendation:
-  - Introduce cancellation-aware retry overload or pluggable wait strategy.
+  - Implemented cancellation-aware overloads for `Execute/ExecuteWithValue`.
+  - Added cancellation-path tests in `WindowInteropRetryExecutorTests`.
 
 ### F-3 Medium: COM lifecycle manager lacks dedicated behavior tests
 
@@ -39,5 +40,4 @@
 
 ## Next Actions
 
-1. Refactor F-2 retry sleep strategy with cancellation-aware overload.
-2. Evaluate whether to add runtime COM integration tests for `ComObjectManager`.
+1. Evaluate whether to add runtime COM integration tests for `ComObjectManager`.
