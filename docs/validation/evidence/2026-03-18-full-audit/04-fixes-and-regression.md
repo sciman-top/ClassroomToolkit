@@ -31,6 +31,13 @@
   - Retry wait path now checks cancellation via wait handle before next attempt.
   - Existing call sites remain backward compatible.
 
+5. Added runtime COM integration tests
+- File: `tests/ClassroomToolkit.Tests/ComObjectManagerIntegrationTests.cs`
+- Coverage:
+  - tracked COM object release idempotency
+  - disposed manager `Track` behavior on COM object
+  - fallback creation across multiple COM providers
+
 ## Verification Commands
 
 1. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerWindowFolderExpandLifecycleContractTests"`
@@ -45,6 +52,9 @@
 4. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~WindowInteropRetryExecutorTests"`
 - Result: PASS (10/10)
 
+5. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ComObjectManager"`
+- Result: PASS (5/5)
+
 ## Residual Risks
 
-- `ComObjectManager` runtime COM integration tests are still missing (source-contract tests已补齐).
+- No blocker-level residual risk from current Round-1 findings.

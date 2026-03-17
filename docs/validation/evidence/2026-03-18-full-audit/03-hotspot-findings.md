@@ -31,13 +31,13 @@
 ### F-3 Medium: COM lifecycle manager lacks dedicated behavior tests
 
 - File: `src/ClassroomToolkit.Interop/Utilities/ComObjectManager.cs`
-- Status: Partially fixed (contract tests added)
+- Status: Fixed in working tree (contract + runtime integration tests)
 - Evidence:
   - No direct `ComObjectManager` test file in current test suite.
 - Recommendation:
   - Added `ComObjectManagerContractTests` for dedup/release/dispose/disposed-track source contracts.
-  - Next can add runtime COM integration tests in isolated environment.
+  - Added `ComObjectManagerIntegrationTests` for runtime COM object release/idempotency checks.
 
 ## Next Actions
 
-1. Evaluate whether to add runtime COM integration tests for `ComObjectManager`.
+1. Continue next-round review on remaining Interop and storage hotspots.
