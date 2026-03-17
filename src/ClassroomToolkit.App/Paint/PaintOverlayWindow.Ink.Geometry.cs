@@ -166,21 +166,23 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        try
+        var parseResult = PaintActionInvoker.TryInvoke(() =>
         {
             var parsed = System.Windows.Media.ColorConverter.ConvertFromString(colorHex);
             if (parsed is MediaColor value)
             {
-                color = value;
-                return true;
+                return (Parsed: true, Color: value);
             }
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+
+            return (Parsed: false, Color: default(MediaColor));
+        }, fallback: (Parsed: false, Color: default(MediaColor)));
+        if (!parseResult.Parsed)
         {
-            // Ignore invalid persisted color payload.
+            return false;
         }
 
-        return false;
+        color = parseResult.Color;
+        return true;
     }
 
     private Shape? CreateShape(PaintShapeType type)

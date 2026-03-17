@@ -1,4 +1,5 @@
 using System.Windows;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -27,11 +28,15 @@ internal static class WindowStateTransitionExecutor
         Func<TTarget?, WindowState, bool> applyState)
         where TTarget : class
     {
+        ArgumentNullException.ThrowIfNull(applyState);
+
         if (target == null)
         {
             return false;
         }
 
-        return applyState(target, targetState);
+        return SafeActionExecutionExecutor.TryExecute(
+            () => applyState(target, targetState),
+            fallback: false);
     }
 }

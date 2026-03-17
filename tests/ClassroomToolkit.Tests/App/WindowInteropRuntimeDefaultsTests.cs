@@ -9,6 +9,6 @@ public sealed class WindowInteropRuntimeDefaultsTests
     [Fact]
     public void RetrySleepMs_ShouldMatchStabilizedValue()
     {
-        WindowInteropRuntimeDefaults.RetrySleepMs.Should().Be(1);
+        WindowInteropRuntimeDefaults.RetrySleepMs.Should().Be(0);
     }
 }

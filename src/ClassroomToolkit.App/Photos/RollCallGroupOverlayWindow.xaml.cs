@@ -15,17 +15,27 @@ public partial class RollCallGroupOverlayWindow : Window
         {
             Interval = TimeSpan.FromSeconds(2.5)
         };
-        _autoCloseTimer.Tick += (s, e) => 
-        {
-            _autoCloseTimer.Stop();
-            if (!_isPersistent)
-            {
-                Hide();
-            }
-        };
+        _autoCloseTimer.Tick += OnAutoCloseTimerTick;
+        Closed += OnOverlayClosed;
         
         Left = 0;
         Top = 0;
+    }
+
+    private void OnAutoCloseTimerTick(object? sender, EventArgs e)
+    {
+        _autoCloseTimer.Stop();
+        if (!_isPersistent)
+        {
+            Hide();
+        }
+    }
+
+    private void OnOverlayClosed(object? sender, EventArgs e)
+    {
+        _autoCloseTimer.Stop();
+        _autoCloseTimer.Tick -= OnAutoCloseTimerTick;
+        Closed -= OnOverlayClosed;
     }
 
     public void ShowGroup(string groupName, bool persistent = false)

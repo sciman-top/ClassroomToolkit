@@ -23,7 +23,8 @@ public sealed class AppSettingsService
 
     public AppSettings Load()
     {
-        var data = _store.Load();
+        var data = _store.Load()
+            ?? new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         var settings = new AppSettings();
 
         if (data.TryGetValue("RollCallTimer", out var roll))
@@ -231,7 +232,10 @@ public sealed class AppSettingsService
 
     public void Save(AppSettings settings)
     {
-        var data = _store.Load();
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var data = _store.Load()
+            ?? new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         var roll = GetOrCreate(data, "RollCallTimer");
         roll["show_id"] = settings.RollCallShowId ? "True" : "False";
         roll["show_name"] = settings.RollCallShowName ? "True" : "False";

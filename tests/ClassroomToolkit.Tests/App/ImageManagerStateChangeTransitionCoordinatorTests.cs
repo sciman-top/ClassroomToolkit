@@ -72,4 +72,42 @@ public sealed class ImageManagerStateChangeTransitionCoordinatorTests
         normalizeCalls.Should().Be(1);
         surfaceCalls.Should().Be(0);
     }
+
+    [Fact]
+    public void Apply_ShouldFallbackWithoutThrow_WhenSchedulerThrowsNonFatal()
+    {
+        var normalizeCalls = 0;
+
+        Action act = () =>
+        {
+            var result = ImageManagerStateChangeTransitionCoordinator.Apply(
+                new ImageManagerStateChangeDecision(
+                    NormalizeOverlayWindowState: true,
+                    RequestZOrderApply: false,
+                    ForceEnforceZOrder: false),
+                () => normalizeCalls++,
+                _ => throw new InvalidOperationException("schedule-failed"),
+                _ => { });
+
+            result.NormalizationExecution.Should().Be(ImageManagerStateChangeNormalizationExecutionKind.ImmediateFallback);
+        };
+
+        act.Should().NotThrow();
+        normalizeCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public void Apply_ShouldSkipSurfaceDecision_WhenSurfaceDelegateThrowsNonFatal()
+    {
+        var result = ImageManagerStateChangeTransitionCoordinator.Apply(
+            new ImageManagerStateChangeDecision(
+                NormalizeOverlayWindowState: true,
+                RequestZOrderApply: true,
+                ForceEnforceZOrder: false),
+            () => { },
+            _ => true,
+            _ => throw new InvalidOperationException("surface-failed"));
+
+        result.AppliedSurfaceDecision.Should().BeFalse();
+    }
 }

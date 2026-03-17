@@ -362,4 +362,49 @@ public sealed class InkPersistenceServiceTests : IDisposable
         var dirInfo = new DirectoryInfo(inkFolder);
         (dirInfo.Attributes & FileAttributes.Hidden).Should().Be(FileAttributes.Hidden);
     }
+
+    [Fact]
+    public void ListAndCleanup_ShouldHandleInvalidDirectoryPath()
+    {
+        var service = new InkPersistenceService();
+        var invalidPath = "\0invalid-dir";
+
+        service.ListFilesWithInk(invalidPath).Should().BeEmpty();
+        service.CleanupOrphanSidecarsInDirectory(invalidPath).Should().Be(0);
+    }
+
+    [Fact]
+    public void Persistence_ShouldUseIgnoreInaccessibleEnumerationOptions_ForSidecarScans()
+    {
+        var source = File.ReadAllText(GetPersistenceSourcePath());
+
+        source.Should().Contain("IgnoreInaccessible = true");
+        source.Should().Contain("Directory.EnumerateFiles(inkFolder, \"*.ink.json\", TopLevelIgnoreInaccessibleOptions)");
+    }
+
+    private static string GetPersistenceSourcePath()
+    {
+        return Path.Combine(
+            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+            "src",
+            "ClassroomToolkit.App",
+            "Ink",
+            "InkPersistenceService.cs");
+    }
+
+    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
+    {
+        var current = start;
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
 }

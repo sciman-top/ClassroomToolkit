@@ -16,6 +16,11 @@ namespace ClassroomToolkit.App.Ink;
 public sealed class InkPersistenceService
 {
     private const string InkFolderName = ".ctk-ink";
+    private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true
+    };
 
     private readonly JsonSerializerOptions _options;
     private readonly object _cacheLock = new();
@@ -194,7 +199,7 @@ public sealed class InkPersistenceService
             return Array.Empty<string>();
         }
         var result = new List<string>();
-        foreach (var jsonFile in Directory.GetFiles(inkFolder, "*.ink.json"))
+        foreach (var jsonFile in EnumerateInkSidecarFilesSafe(inkFolder))
         {
             // filename is e.g. "lecture.pdf.ink.json" → source file is "lecture.pdf"
             var jsonName = Path.GetFileName(jsonFile);
@@ -229,7 +234,7 @@ public sealed class InkPersistenceService
         }
 
         var deleted = 0;
-        foreach (var jsonFile in Directory.GetFiles(inkFolder, "*.ink.json"))
+        foreach (var jsonFile in EnumerateInkSidecarFilesSafe(inkFolder))
         {
             var jsonName = Path.GetFileName(jsonFile);
             var sourceName = jsonName.Replace(".ink.json", string.Empty);
@@ -244,16 +249,14 @@ public sealed class InkPersistenceService
                 continue;
             }
 
-            try
-            {
-                File.Delete(jsonFile);
-                InvalidateCache(jsonFile);
-                deleted++;
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            if (!TryDeleteFileSafe(jsonFile))
             {
                 // Ignore cleanup failures.
+                continue;
             }
+
+            InvalidateCache(jsonFile);
+            deleted++;
         }
 
         return deleted;
@@ -364,16 +367,9 @@ public sealed class InkPersistenceService
 
     private static void DeleteJsonFile(string jsonPath)
     {
-        try
+        if (File.Exists(jsonPath))
         {
-            if (File.Exists(jsonPath))
-            {
-                File.Delete(jsonPath);
-            }
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            // Ignore deletion failures.
+            _ = TryDeleteFileSafe(jsonPath);
         }
     }
 
@@ -402,7 +398,7 @@ public sealed class InkPersistenceService
         {
             if (File.Exists(tempPath))
             {
-                File.Delete(tempPath);
+                _ = TryDeleteFileSafe(tempPath);
             }
         }
     }
@@ -428,6 +424,31 @@ public sealed class InkPersistenceService
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return DateTime.MinValue;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateInkSidecarFilesSafe(string inkFolder)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(inkFolder, "*.ink.json", TopLevelIgnoreInaccessibleOptions);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static bool TryDeleteFileSafe(string path)
+    {
+        try
+        {
+            File.Delete(path);
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return false;
         }
     }
 

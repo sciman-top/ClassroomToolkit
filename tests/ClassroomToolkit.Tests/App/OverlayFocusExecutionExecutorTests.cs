@@ -7,6 +7,32 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class OverlayFocusExecutionExecutorTests
 {
     [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenTryActivateIsNull()
+    {
+        var act = () => OverlayFocusExecutionExecutor.Apply(
+            target: "overlay",
+            shouldActivate: true,
+            shouldKeyboardFocus: true,
+            tryActivate: null!,
+            tryKeyboardFocus: (_, _) => true);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenTryKeyboardFocusIsNull()
+    {
+        var act = () => OverlayFocusExecutionExecutor.Apply(
+            target: "overlay",
+            shouldActivate: true,
+            shouldKeyboardFocus: true,
+            tryActivate: (_, _) => true,
+            tryKeyboardFocus: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Resolve_ShouldReturnInputFlags()
     {
         var decision = OverlayFocusExecutionExecutor.Resolve(
@@ -94,5 +120,25 @@ public sealed class OverlayFocusExecutionExecutorTests
 
         activateTarget.Should().BeNull();
         focusTarget.Should().BeNull();
+    }
+
+    [Fact]
+    public void Apply_ShouldContinueToKeyboardFocus_WhenActivateThrowsNonFatal()
+    {
+        var focusCalled = false;
+
+        Action act = () => OverlayFocusExecutionExecutor.Apply(
+            target: "overlay",
+            shouldActivate: true,
+            shouldKeyboardFocus: true,
+            tryActivate: (_, _) => throw new InvalidOperationException("activate-failed"),
+            tryKeyboardFocus: (_, _) =>
+            {
+                focusCalled = true;
+                return true;
+            });
+
+        act.Should().NotThrow();
+        focusCalled.Should().BeTrue();
     }
 }

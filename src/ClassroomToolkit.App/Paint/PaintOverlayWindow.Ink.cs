@@ -16,6 +16,7 @@ using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -1237,26 +1238,14 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        try
-        {
-            _inkWal.Upsert(sourcePath, pageIndex, CloneInkStrokes(strokes), hash);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            // Ignore WAL write failures; main flow should continue.
-        }
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () => _inkWal.Upsert(sourcePath, pageIndex, CloneInkStrokes(strokes), hash));
     }
 
     private void ClearInkWalSnapshot(string sourcePath, int pageIndex)
     {
-        try
-        {
-            _inkWal.Remove(sourcePath, pageIndex);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            // Ignore WAL cleanup failures.
-        }
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () => _inkWal.Remove(sourcePath, pageIndex));
     }
 
     private void RecoverInkWalForDirectory(string sourcePath)
@@ -1268,23 +1257,21 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        try
-        {
-            var directoryPath = System.IO.Path.GetDirectoryName(sourcePath);
-            if (string.IsNullOrWhiteSpace(directoryPath))
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                return;
-            }
-            var recovered = _inkWal.RecoverDirectory(directoryPath, _inkPersistence, ComputeInkHash);
-            if (recovered > 0)
-            {
-                System.Diagnostics.Debug.WriteLine($"[InkWAL] Recovered {recovered} pending pages in {directoryPath}");
-            }
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkWAL] Recover failed: {ex.Message}");
-        }
+                var directoryPath = System.IO.Path.GetDirectoryName(sourcePath);
+                if (string.IsNullOrWhiteSpace(directoryPath))
+                {
+                    return;
+                }
+                var recovered = _inkWal.RecoverDirectory(directoryPath, _inkPersistence, ComputeInkHash);
+                if (recovered > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[InkWAL] Recovered {recovered} pending pages in {directoryPath}");
+                }
+            },
+            ex => System.Diagnostics.Debug.WriteLine($"[InkWAL] Recover failed: {ex.Message}"));
     }
 
     private bool WasPageModifiedInSession(string sourcePath, int pageIndex)

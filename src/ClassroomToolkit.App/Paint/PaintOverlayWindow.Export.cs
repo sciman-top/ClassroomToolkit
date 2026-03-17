@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using MessageBox = System.Windows.MessageBox;
 
@@ -89,6 +90,9 @@ public partial class PaintOverlayWindow
         InkExportOptions? exportOptions = null,
         ClassroomToolkit.Infra.Storage.InkHistorySqliteStoreAdapter? inkHistorySqliteAdapter = null)
     {
+        ArgumentNullException.ThrowIfNull(persistence);
+        ArgumentNullException.ThrowIfNull(export);
+
         _inkPersistence = persistence;
         _inkHistorySqliteAdapter = inkHistorySqliteAdapter;
         _inkExport = export;
@@ -128,7 +132,9 @@ public partial class PaintOverlayWindow
         {
             return true;
         }
-        try
+        string? localError = null;
+        var persisted = SafeActionExecutionExecutor.TryExecute(
+            () =>
         {
             var strokes = preparedStrokes;
             if (strokes == null)
@@ -142,7 +148,7 @@ public partial class PaintOverlayWindow
             var persistedHash = ComputeInkHash(persistedStrokes);
             if (!string.Equals(hash, persistedHash, StringComparison.Ordinal))
             {
-                errorMessage = $"hash-mismatch expected={hash} actual={persistedHash}";
+                localError = $"hash-mismatch expected={hash} actual={persistedHash}";
                 TrackInkWalSnapshot(sourcePath, pageIndex, strokes, hash);
                 return false;
             }
@@ -155,15 +161,17 @@ public partial class PaintOverlayWindow
             _inkDiagnostics?.OnSyncPersist();
             System.Diagnostics.Debug.WriteLine($"[InkPersist] Saved {strokes.Count} strokes for page {pageIndex} of {sourcePath}");
             return true;
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            errorMessage = ex.Message;
-            var fallbackStrokes = preparedStrokes ?? new List<InkStrokeData>();
-            TrackInkWalSnapshot(sourcePath, pageIndex, fallbackStrokes, ComputeInkHash(fallbackStrokes));
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] Save failed: {ex.Message}");
-            return false;
-        }
+        },
+            fallback: false,
+            onFailure: ex =>
+            {
+                localError = ex.Message;
+                var fallbackStrokes = preparedStrokes ?? new List<InkStrokeData>();
+                TrackInkWalSnapshot(sourcePath, pageIndex, fallbackStrokes, ComputeInkHash(fallbackStrokes));
+                System.Diagnostics.Debug.WriteLine($"[InkPersist] Save failed: {ex.Message}");
+            });
+        errorMessage = localError;
+        return persisted;
     }
 
     private void ScheduleSidecarAutoSave()
@@ -247,14 +255,8 @@ public partial class PaintOverlayWindow
                     break;
                 }
 
-                try
+                if (!await TryDelayAutoSaveRetryAsync(InkSidecarAutoSaveRetryDelayMs * attempt).ConfigureAwait(false))
                 {
-                    await Task.Delay(InkSidecarAutoSaveRetryDelayMs * attempt).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[InkPersist] Auto-save retry delay interrupted: {ex.GetType().Name} - {ex.Message}");
                     return;
                 }
             }
@@ -277,26 +279,43 @@ public partial class PaintOverlayWindow
         });
     }
 
-    private bool TryPersistSidecarSnapshot(SidecarPersistSnapshot snapshot, bool logFailure)
+    private static async Task<bool> TryDelayAutoSaveRetryAsync(int delayMs)
     {
         try
         {
-            snapshot.Persistence.SaveInkForFile(snapshot.SourcePath, snapshot.PageIndex, snapshot.Strokes);
-            if (snapshot.Strokes.Count == 0 && _inkExport != null)
-            {
-                _inkExport.RemoveCompositeOutputsForPage(snapshot.SourcePath, snapshot.PageIndex);
-            }
+            await Task.Delay(delayMs).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            if (logFailure)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[InkPersist] Auto-save failed after retries: source={snapshot.SourcePath}, page={snapshot.PageIndex}, error={ex.Message}");
-            }
+            System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Auto-save retry delay interrupted: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
+    }
+
+    private bool TryPersistSidecarSnapshot(SidecarPersistSnapshot snapshot, bool logFailure)
+    {
+        return SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                snapshot.Persistence.SaveInkForFile(snapshot.SourcePath, snapshot.PageIndex, snapshot.Strokes);
+                if (snapshot.Strokes.Count == 0 && _inkExport != null)
+                {
+                    _inkExport.RemoveCompositeOutputsForPage(snapshot.SourcePath, snapshot.PageIndex);
+                }
+
+                return true;
+            },
+            fallback: false,
+            onFailure: ex =>
+            {
+                if (logFailure)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[InkPersist] Auto-save failed after retries: source={snapshot.SourcePath}, page={snapshot.PageIndex}, error={ex.Message}");
+                }
+            });
     }
 
     /// <summary>
@@ -337,20 +356,19 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        try
-        {
-            var pageIndex = _photoDocumentIsPdf ? _currentPageIndex : 1;
-            if (TryLoadSidecarPageInkToCache(filePath, pageIndex, out var currentPageStrokes, allowWhenSaveDisabled: true))
+        return SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                ApplyInkStrokes(currentPageStrokes);
-            }
-            return true;
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] PromptAndLoad failed: {ex.Message}");
-            return false;
-        }
+                var pageIndex = _photoDocumentIsPdf ? _currentPageIndex : 1;
+                if (TryLoadSidecarPageInkToCache(filePath, pageIndex, out var currentPageStrokes, allowWhenSaveDisabled: true))
+                {
+                    ApplyInkStrokes(currentPageStrokes);
+                }
+
+                return true;
+            },
+            fallback: false,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine($"[InkPersist] PromptAndLoad failed: {ex.Message}"));
     }
 
     private bool TryLoadSidecarPageInkToCache(
@@ -369,28 +387,37 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        try
+        var loadResult = SafeActionExecutionExecutor.TryExecute(
+            () =>
         {
             var loaded = LoadInkHistorySnapshot(sourcePath, pageIndex, _inkPersistence);
             if (loaded == null || loaded.Count == 0)
             {
-                return false;
+                return (Loaded: false, Strokes: new List<InkStrokeData>());
             }
 
-            strokes = CloneInkStrokes(loaded);
+            var clonedStrokes = CloneInkStrokes(loaded);
             var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
             if (!string.IsNullOrWhiteSpace(cacheKey))
             {
-                _photoCache.Set(cacheKey, strokes);
+                _photoCache.Set(cacheKey, clonedStrokes);
             }
-            MarkInkPageLoaded(sourcePath, pageIndex, strokes);
-            return true;
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+
+            MarkInkPageLoaded(sourcePath, pageIndex, clonedStrokes);
+            return (Loaded: true, Strokes: clonedStrokes);
+        },
+            fallback: (Loaded: false, Strokes: new List<InkStrokeData>()),
+            onFailure: ex =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[InkPersist] Load page failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
+            });
+        if (!loadResult.Loaded)
         {
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] Load page failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
             return false;
         }
+
+        strokes = loadResult.Strokes;
+        return true;
     }
 
     private bool TryLoadNeighborInkFromSidecarIntoCache(int pageIndex)
@@ -557,6 +584,10 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        if (Volatile.Read(ref _overlayClosed) != 0)
+        {
+            return;
+        }
 
         // Freeze any in-progress pointer action before building export snapshots.
         FinalizeActiveInkOperation();
@@ -681,79 +712,104 @@ public partial class PaintOverlayWindow
 
         var exportOptions = _inkExportOptions;
         var exportService = _inkExport;
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
 
-        Task.Run(() =>
-        {
-            var outputs = new ConcurrentBag<string>();
-            var exportedCount = 0;
-            var skippedCount = 0;
-            var failedCount = 0;
-            var total = exportQueue.Count;
-            var completed = 0;
-            var adaptiveParallel = Math.Max(1, Math.Min(4, Math.Max(1, Environment.ProcessorCount / 2)));
-            var configuredParallel = exportOptions.MaxParallelFiles > 0 ? exportOptions.MaxParallelFiles : adaptiveParallel;
-            var maxParallel = Math.Max(1, Math.Min(configuredParallel, Math.Max(1, total)));
-            var parallelOptions = new ParallelOptions
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.ExportDirectory",
+            token =>
             {
-                MaxDegreeOfParallelism = maxParallel
-            };
+                token.ThrowIfCancellationRequested();
+                var outputs = new ConcurrentBag<string>();
+                var exportedCount = 0;
+                var skippedCount = 0;
+                var failedCount = 0;
+                var total = exportQueue.Count;
+                var completed = 0;
+                var adaptiveParallel = Math.Max(1, Math.Min(4, Math.Max(1, Environment.ProcessorCount / 2)));
+                var configuredParallel = exportOptions.MaxParallelFiles > 0 ? exportOptions.MaxParallelFiles : adaptiveParallel;
+                var maxParallel = Math.Max(1, Math.Min(configuredParallel, Math.Max(1, total)));
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = maxParallel,
+                    CancellationToken = token
+                };
 
-            Parallel.ForEach(exportQueue, parallelOptions, sourcePath =>
+                Parallel.ForEach(exportQueue, parallelOptions, sourcePath =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    var inkDoc = exportSnapshotDocs.TryGetValue(sourcePath, out var mapped) ? mapped : null;
+                    var fileResult = exportService.ExportAllPagesForFileDetailed(sourcePath, inkDoc, exportOptions);
+                    LogExportAudit(sourcePath, inkDoc);
+                    foreach (var output in fileResult.OutputPaths)
+                    {
+                        outputs.Add(output);
+                    }
+                    Interlocked.Add(ref exportedCount, fileResult.ExportedCount);
+                    Interlocked.Add(ref skippedCount, fileResult.SkippedCount);
+                    Interlocked.Add(ref failedCount, fileResult.FailedCount);
+
+                    var done = Interlocked.Increment(ref completed);
+                    DispatchExportUiUpdate("directory-progress-update", () =>
+                    {
+                        progressText.Text = $"正在导出 ({done}/{total}, 并发 {maxParallel}): {Path.GetFileName(sourcePath)}";
+                    });
+                });
+
+                DispatchExportUiUpdate("directory-export-complete", () =>
+                {
+                    if (progressWindowShown)
+                    {
+                        SafeActionExecutionExecutor.TryExecute(
+                            progressWindow.Close,
+                            ex => System.Diagnostics.Debug.WriteLine(
+                                $"[InkExport][progress-window-close] failed: {ex.GetType().Name} - {ex.Message}"));
+                    }
+                    ShowExportMessageSafe(
+                        "export-directory-complete",
+                        $"导出完成：新增 {exportedCount}，跳过 {skippedCount}，失败 {failedCount}\n输出文件 {outputs.Count} 个。",
+                        "导出完成",
+                        MessageBoxImage.Information);
+                });
+            },
+            lifecycleToken,
+            ex =>
             {
-                var inkDoc = exportSnapshotDocs.TryGetValue(sourcePath, out var mapped) ? mapped : null;
-                var fileResult = exportService.ExportAllPagesForFileDetailed(sourcePath, inkDoc, exportOptions);
-                LogExportAudit(sourcePath, inkDoc);
-                foreach (var output in fileResult.OutputPaths)
+                DispatchExportUiUpdate("directory-export-failed", () =>
                 {
-                    outputs.Add(output);
-                }
-                Interlocked.Add(ref exportedCount, fileResult.ExportedCount);
-                Interlocked.Add(ref skippedCount, fileResult.SkippedCount);
-                Interlocked.Add(ref failedCount, fileResult.FailedCount);
+                    if (progressWindowShown)
+                    {
+                        SafeActionExecutionExecutor.TryExecute(
+                            progressWindow.Close,
+                            closeEx => System.Diagnostics.Debug.WriteLine(
+                                $"[InkExport][progress-window-close] failed: {closeEx.GetType().Name} - {closeEx.Message}"));
+                    }
 
-                var done = Interlocked.Increment(ref completed);
-                DispatchExportUiUpdate("directory-progress-update", () =>
-                {
-                    progressText.Text = $"正在导出 ({done}/{total}, 并发 {maxParallel}): {Path.GetFileName(sourcePath)}";
+                    ShowExportMessageSafe(
+                        "export-directory-failed",
+                        $"导出过程中出现异常：{ex.Message}",
+                        "导出失败",
+                        MessageBoxImage.Warning);
                 });
             });
-
-            DispatchExportUiUpdate("directory-export-complete", () =>
-            {
-                if (progressWindowShown)
-                {
-                    SafeActionExecutionExecutor.TryExecute(
-                        progressWindow.Close,
-                        ex => System.Diagnostics.Debug.WriteLine(
-                            $"[InkExport][progress-window-close] failed: {ex.GetType().Name} - {ex.Message}"));
-                }
-                ShowExportMessageSafe(
-                    "export-directory-complete",
-                    $"导出完成：新增 {exportedCount}，跳过 {skippedCount}，失败 {failedCount}\n输出文件 {outputs.Count} 个。",
-                    "导出完成",
-                    MessageBoxImage.Information);
-            });
-        });
     }
 
     private static long EstimateExportWorkload(string sourcePath, InkDocumentData? inkDoc)
     {
         var hasInkPages = inkDoc?.Pages?.Count(page => page.Strokes?.Count > 0) ?? 0;
         var pageWeight = Math.Max(1, hasInkPages);
-        long sizeWeight = 1;
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(sourcePath) && File.Exists(sourcePath))
+        var sizeWeight = SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                sizeWeight = Math.Max(1, new FileInfo(sourcePath).Length / (512 * 1024));
-            }
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"[InkExport] Estimate workload fallback for '{sourcePath}': {ex.GetType().Name} - {ex.Message}");
-            sizeWeight = 1;
-        }
+                if (!string.IsNullOrWhiteSpace(sourcePath) && File.Exists(sourcePath))
+                {
+                    return Math.Max(1, new FileInfo(sourcePath).Length / (512 * 1024));
+                }
+
+                return 1L;
+            },
+            fallback: 1L,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkExport] Estimate workload fallback for '{sourcePath}': {ex.GetType().Name} - {ex.Message}"));
         return pageWeight * sizeWeight;
     }
 

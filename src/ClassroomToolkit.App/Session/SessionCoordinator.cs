@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using ClassroomToolkit.App;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Session;
 
@@ -43,17 +44,29 @@ public sealed class SessionCoordinator
 
     public UiSessionTransition Dispatch(UiSessionEvent sessionEvent)
     {
-        if (sessionEvent == null)
-        {
-            throw new ArgumentNullException(nameof(sessionEvent));
-        }
+        ArgumentNullException.ThrowIfNull(sessionEvent);
 
         UiSessionTransition transition;
+        var skipEffects = false;
         lock (_sync)
         {
             var previous = _currentState;
-            var current = UiSessionReducer.Reduce(previous, sessionEvent);
-            _lastViolations = UiSessionInvariants.Validate(current);
+            UiSessionState current;
+            try
+            {
+                current = UiSessionReducer.Reduce(previous, sessionEvent);
+                _lastViolations = UiSessionInvariants.Validate(current);
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                current = previous;
+                _lastViolations =
+                [
+                    $"session-reducer-failed:{ex.GetType().Name}:{ex.Message}"
+                ];
+                skipEffects = true;
+            }
+
             transition = new UiSessionTransition(
                 Id: ++_transitionId,
                 OccurredAtUtc: DateTime.UtcNow,
@@ -69,14 +82,14 @@ public sealed class SessionCoordinator
                 $"[SessionCoordinator] invariant violations #{transition.Id}: {string.Join(" | ", _lastViolations)}");
         }
 
-        try
+        if (skipEffects)
         {
-            _effectRunner.Run(transition);
+            return transition;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            Debug.WriteLine($"[SessionCoordinator] effect runner failed: {ex.GetType().Name}: {ex.Message}");
-        }
+
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () => _effectRunner.Run(transition),
+            ex => Debug.WriteLine($"[SessionCoordinator] effect runner failed: {ex.GetType().Name}: {ex.Message}"));
 
         return transition;
     }

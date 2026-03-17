@@ -28,20 +28,29 @@ public partial class DiagnosticsDialog : Window
             System.Diagnostics.Debug.WriteLine($"DiagnosticsDialog 构造函数修复失败: {ex.Message}");
         }
         
-        Loaded += (_, _) => 
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+
+        // 再次诊断 BorderBrush 问题
+        try
         {
-            WindowPlacementHelper.EnsureVisible(this);
-            
-            // 再次诊断 BorderBrush 问题
-            try
-            {
-                BorderBrushDiagnostic.CheckAllBorders(this);
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                System.Diagnostics.Debug.WriteLine($"BorderBrush 诊断失败: {ex.Message}");
-            }
-        };
+            BorderBrushDiagnostic.CheckAllBorders(this);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine($"BorderBrush 诊断失败: {ex.Message}");
+        }
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnCopyClick(object sender, RoutedEventArgs e)
@@ -66,7 +75,7 @@ public partial class DiagnosticsDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

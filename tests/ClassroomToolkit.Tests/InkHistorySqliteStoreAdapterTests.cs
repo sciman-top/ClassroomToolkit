@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using ClassroomToolkit.Infra.Storage;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
@@ -33,6 +34,28 @@ public sealed class InkHistorySqliteStoreAdapterTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldThrowArgumentException_WhenSourcePathIsBlank()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-a.pptx", 1, null, CreatedTemplate: false)));
+
+        var act = () => adapter.LoadOrCreate(" ", 1);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldThrowArgumentOutOfRangeException_WhenPageIndexIsNegative()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-a.pptx", 1, null, CreatedTemplate: false)));
+
+        var act = () => adapter.LoadOrCreate("lesson-a.pptx", -1);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void Save_ShouldDelegateAndPersist_ToSqlite()
     {
         var bridge = new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-b.pptx", 2, null, CreatedTemplate: false));
@@ -46,6 +69,28 @@ public sealed class InkHistorySqliteStoreAdapterTests
         bridge.LastSavePageIndex.Should().Be(2);
         bridge.LastSavedStrokesJson.Should().Be("[{\"state\":1}]");
         ReadSqliteSnapshot(dbPath, "lesson-b.pptx", 2).Should().Be("[{\"state\":1}]");
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentException_WhenSourcePathIsBlank()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-b.pptx", 2, null, CreatedTemplate: false)));
+
+        var act = () => adapter.Save(" ", 2, "[{\"state\":1}]");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentOutOfRangeException_WhenPageIndexIsNegative()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-b.pptx", 2, null, CreatedTemplate: false)));
+
+        var act = () => adapter.Save("lesson-b.pptx", -1, "[{\"state\":1}]");
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -91,6 +136,52 @@ public sealed class InkHistorySqliteStoreAdapterTests
         Action act = () => _ = adapter.LoadOrCreate("lesson-fatal.pptx", 1);
 
         act.Should().Throw<AccessViolationException>();
+    }
+
+    [Fact]
+    public void Save_ShouldFallbackToDefaultPath_WhenResolverReturnsBlank()
+    {
+        var bridge = new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-e.pptx", 5, null, CreatedTemplate: false));
+        var tempDir = TestPathHelper.CreateDirectory("ctool_ink_history_sqlite_fallback_blank");
+        var sourcePath = Path.Combine(tempDir, "lesson-e.pptx");
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => " ");
+
+        Action act = () => adapter.Save(sourcePath, 5, "[{\"fallback\":1}]");
+
+        act.Should().NotThrow();
+        var fallbackDbPath = Path.Combine(tempDir, "lesson-e.inkhistory.sqlite3");
+        File.Exists(fallbackDbPath).Should().BeTrue();
+        ReadSqliteSnapshot(fallbackDbPath, sourcePath, 5).Should().Be("[{\"fallback\":1}]");
+    }
+
+    [Fact]
+    public void Save_ShouldFallbackToDefaultPath_WhenResolverThrowsNonFatal()
+    {
+        var bridge = new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-f.pptx", 6, null, CreatedTemplate: false));
+        var tempDir = TestPathHelper.CreateDirectory("ctool_ink_history_sqlite_fallback_throw");
+        var sourcePath = Path.Combine(tempDir, "lesson-f.pptx");
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => throw new IOException("resolver-failure"));
+
+        Action act = () => adapter.Save(sourcePath, 6, "[{\"fallback\":2}]");
+
+        act.Should().NotThrow();
+        var fallbackDbPath = Path.Combine(tempDir, "lesson-f.inkhistory.sqlite3");
+        File.Exists(fallbackDbPath).Should().BeTrue();
+        ReadSqliteSnapshot(fallbackDbPath, sourcePath, 6).Should().Be("[{\"fallback\":2}]");
+    }
+
+    [Fact]
+    public void ResolveDbPath_ShouldFallback_WhenSourcePathIsInvalid()
+    {
+        var method = typeof(InkHistorySqliteStoreAdapter).GetMethod(
+            "ResolveDbPath",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+
+        var act = () => (string)method!.Invoke(null, ["\0invalid-path"])!;
+
+        var dbPath = act.Should().NotThrow().Subject;
+        dbPath.Should().Be(Path.Combine(AppContext.BaseDirectory, "inkhistory.inkhistory.sqlite3"));
     }
 
     private static string CreateTempDbPath()

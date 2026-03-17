@@ -116,6 +116,35 @@ public sealed class SettingsDocumentMigrationServiceTests
         }
     }
 
+    [Fact]
+    public void MigrateIniToJson_ShouldCreateUniqueBackups_OnRepeatedOverwrite()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var iniPath = Path.Combine(tempDir, "settings.ini");
+            var jsonPath = Path.Combine(tempDir, "settings.json");
+            File.WriteAllText(iniPath, "[Paint]\nbrush_base_size=12\n", Encoding.UTF8);
+            File.WriteAllText(jsonPath, "{\"Paint\":{\"brush_base_size\":\"8\"}}", Encoding.UTF8);
+
+            const int runs = 4;
+            for (var index = 0; index < runs; index++)
+            {
+                var service = new SettingsDocumentMigrationService();
+                var result = service.MigrateIniToJson(iniPath, jsonPath, overwriteJson: true);
+                result.Migrated.Should().BeTrue();
+                result.BackupPath.Should().NotBeNullOrWhiteSpace();
+            }
+
+            var backups = Directory.GetFiles(tempDir, "settings.bak-*.json", SearchOption.TopDirectoryOnly);
+            backups.Should().HaveCount(runs);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         return TestPathHelper.CreateDirectory("ctool_settings_migrate");

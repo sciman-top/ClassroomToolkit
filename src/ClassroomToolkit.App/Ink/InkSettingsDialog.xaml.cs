@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Ink;
@@ -18,9 +19,22 @@ public partial class InkSettingsDialog : Window
         InkReplayPreviousCheck.IsChecked = settings.InkReplayPreviousEnabled;
         InkRetentionDaysBox.Text = settings.InkRetentionDays.ToString();
         InkPhotoPathBox.Text = settings.InkPhotoRootPath;
-        InkRecordCheck.Checked += (_, _) => UpdateInkRecordState();
-        InkRecordCheck.Unchecked += (_, _) => UpdateInkRecordState();
+        InkRecordCheck.Checked += OnInkRecordToggleChanged;
+        InkRecordCheck.Unchecked += OnInkRecordToggleChanged;
+        Closed += OnDialogClosed;
         UpdateInkRecordState();
+    }
+
+    private void OnInkRecordToggleChanged(object? sender, RoutedEventArgs e)
+    {
+        UpdateInkRecordState();
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        InkRecordCheck.Checked -= OnInkRecordToggleChanged;
+        InkRecordCheck.Unchecked -= OnInkRecordToggleChanged;
+        Closed -= OnDialogClosed;
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
@@ -53,7 +67,7 @@ public partial class InkSettingsDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 

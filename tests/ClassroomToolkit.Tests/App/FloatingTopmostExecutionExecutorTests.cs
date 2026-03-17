@@ -56,4 +56,34 @@ public sealed class FloatingTopmostExecutionExecutorTests
             (true, true),
             (false, true));
     }
+
+    [Fact]
+    public void Apply_ShouldContinue_WhenSingleWindowTopmostApplyThrowsNonFatal()
+    {
+        var plan = new FloatingTopmostExecutionPlan(
+            ToolbarTopmost: true,
+            RollCallTopmost: true,
+            LauncherTopmost: true,
+            ImageManagerTopmost: true,
+            EnforceZOrder: false);
+        var callCount = 0;
+
+        Action act = () => FloatingTopmostExecutionExecutor.Apply(
+            plan,
+            toolbarWindow: null,
+            rollCallWindow: null,
+            launcherWindow: null,
+            imageManagerWindow: null,
+            (window, enabled, enforceZOrder) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    throw new InvalidOperationException("topmost-failed");
+                }
+            });
+
+        act.Should().NotThrow();
+        callCount.Should().Be(4);
+    }
 }

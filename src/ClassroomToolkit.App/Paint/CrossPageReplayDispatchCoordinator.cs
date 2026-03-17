@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -63,18 +64,20 @@ internal static class CrossPageReplayDispatchCoordinator
             dispatcherShutdownFinished: dispatcherShutdownFinished());
         if (fallbackDecision.ShouldRunInline)
         {
-            try
+            var inlineFallbackSucceeded = SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    requestCrossPageDisplayUpdate(source);
+                    return true;
+                },
+                fallback: false);
+            if (inlineFallbackSucceeded)
             {
-                requestCrossPageDisplayUpdate(source);
                 return new CrossPageReplayDispatchExecutionResult(
                     ScheduledDispatch: false,
                     RanInlineFallback: true,
                     RequeuedPending: false,
                     Source: source);
-            }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                // fall through to requeue
             }
         }
 

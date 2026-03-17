@@ -627,19 +627,7 @@ public partial class PaintOverlayWindow
             {
                 Interval = TimeSpan.FromMilliseconds(PhotoTransformTimingDefaults.TransformSaveDebounceMs)
             };
-            _photoTransformSaveTimer.Tick += (_, _) =>
-            {
-                _photoTransformSaveTimer?.Stop();
-                if (!_photoTransformSavePending)
-                {
-                    _photoTransformSaveUserAdjusted = false;
-                    return;
-                }
-                var adjusted = _photoTransformSaveUserAdjusted;
-                _photoTransformSavePending = false;
-                _photoTransformSaveUserAdjusted = false;
-                SavePhotoTransformState(adjusted);
-            };
+            _photoTransformSaveTimer.Tick += OnPhotoTransformSaveTimerTick;
         }
         _photoTransformSaveTimer.Stop();
         _photoTransformSaveTimer.Start();
@@ -674,18 +662,34 @@ public partial class PaintOverlayWindow
             {
                 Interval = TimeSpan.FromMilliseconds(PhotoTransformTimingDefaults.UnifiedTransformBroadcastDebounceMs)
             };
-            _photoUnifiedTransformSaveTimer.Tick += (_, _) =>
-            {
-                _photoUnifiedTransformSaveTimer?.Stop();
-                PhotoUnifiedTransformChanged?.Invoke(
-                    _pendingUnifiedScaleX,
-                    _pendingUnifiedScaleY,
-                    _pendingUnifiedTranslateX,
-                    _pendingUnifiedTranslateY);
-            };
+            _photoUnifiedTransformSaveTimer.Tick += OnPhotoUnifiedTransformSaveTimerTick;
         }
         _photoUnifiedTransformSaveTimer.Stop();
         _photoUnifiedTransformSaveTimer.Start();
+    }
+
+    private void OnPhotoTransformSaveTimerTick(object? sender, EventArgs e)
+    {
+        _photoTransformSaveTimer?.Stop();
+        if (!_photoTransformSavePending)
+        {
+            _photoTransformSaveUserAdjusted = false;
+            return;
+        }
+        var adjusted = _photoTransformSaveUserAdjusted;
+        _photoTransformSavePending = false;
+        _photoTransformSaveUserAdjusted = false;
+        SavePhotoTransformState(adjusted);
+    }
+
+    private void OnPhotoUnifiedTransformSaveTimerTick(object? sender, EventArgs e)
+    {
+        _photoUnifiedTransformSaveTimer?.Stop();
+        PhotoUnifiedTransformChanged?.Invoke(
+            _pendingUnifiedScaleX,
+            _pendingUnifiedScaleY,
+            _pendingUnifiedTranslateX,
+            _pendingUnifiedTranslateY);
     }
 
     private double ResolvePhotoViewportWidth()

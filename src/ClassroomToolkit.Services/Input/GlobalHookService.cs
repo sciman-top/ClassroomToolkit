@@ -47,7 +47,7 @@ public class GlobalHookService : IDisposable
             return Task.FromResult(false);
         }
 
-        return RegisterHookAsync(bindings, _ => callback(), shouldKeepActive);
+        return RegisterHookAsync(bindings, _ => TryInvokeBindingCallback(callback), shouldKeepActive);
     }
 
     public async Task<bool> RegisterHookAsync(
@@ -55,48 +55,73 @@ public class GlobalHookService : IDisposable
         Action<KeyBinding> callback,
         Func<bool> shouldKeepActive)
     {
+        ArgumentNullException.ThrowIfNull(bindings);
+        ArgumentNullException.ThrowIfNull(callback);
+        ArgumentNullException.ThrowIfNull(shouldKeepActive);
+
         if (IsDisposed())
         {
             return false;
         }
 
         var startedHooks = new List<KeyboardHook>();
-        bool success = true;
-        int lastError = 0;
 
-        foreach (var binding in bindings)
+        try
         {
-            if (IsDisposed() || !shouldKeepActive())
+            foreach (var binding in bindings)
             {
-                CleanupHooks(startedHooks, callback);
-                return false;
-            }
+                if (IsDisposed() || !shouldKeepActive())
+                {
+                    CleanupHooks(startedHooks, callback);
+                    return false;
+                }
 
-            var hook = new KeyboardHook
-            {
-                TargetBinding = binding,
-                SuppressWhenMatched = true
-            };
-            hook.BindingTriggered += callback;
-            
-            await hook.StartAsync();
-            
-            if (IsDisposed() || !shouldKeepActive())
-            {
-                hook.BindingTriggered -= callback;
-                TryStopHook(hook, "register-aborted");
-                CleanupHooks(startedHooks, callback);
-                return false;
-            }
+                var hook = new KeyboardHook
+                {
+                    TargetBinding = binding,
+                    SuppressWhenMatched = true
+                };
+                hook.BindingTriggered += callback;
 
-            if (!hook.IsActive)
-            {
-                success = false;
-                lastError = hook.LastError;
-                // If one fails, we might decide to stop all or keep partial.
-                // For now, let's keep trying others but mark failure.
+                try
+                {
+                    await hook.StartAsync();
+                }
+                catch (Exception ex) when (IsNonFatal(ex))
+                {
+                    Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.Message}");
+                    hook.BindingTriggered -= callback;
+                    TryStopHook(hook, "register-failed");
+                    CleanupHooks(startedHooks, callback);
+                    NotifyHookUnavailable();
+                    return false;
+                }
+
+                if (IsDisposed() || !shouldKeepActive())
+                {
+                    hook.BindingTriggered -= callback;
+                    TryStopHook(hook, "register-aborted");
+                    CleanupHooks(startedHooks, callback);
+                    return false;
+                }
+
+                if (!hook.IsActive)
+                {
+                    hook.BindingTriggered -= callback;
+                    TryStopHook(hook, "register-inactive");
+                    CleanupHooks(startedHooks, callback);
+                    NotifyHookUnavailable();
+                    return false;
+                }
+                startedHooks.Add(hook);
             }
-            startedHooks.Add(hook);
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[GlobalHookService] Register bindings failed: {ex.Message}");
+            CleanupHooks(startedHooks, callback);
+            NotifyHookUnavailable();
+            return false;
         }
 
         if (IsDisposed() || !shouldKeepActive())
@@ -108,12 +133,6 @@ public class GlobalHookService : IDisposable
         if (!TryTrackActiveHooks(startedHooks))
         {
             CleanupHooks(startedHooks, callback);
-            return false;
-        }
-
-        if (!success)
-        {
-            NotifyHookUnavailable();
             return false;
         }
 
@@ -206,7 +225,7 @@ public class GlobalHookService : IDisposable
     {
         try
         {
-            hook.Stop();
+            hook.Dispose();
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
@@ -224,6 +243,18 @@ public class GlobalHookService : IDisposable
             or InvalidProgramException
             or StackOverflowException
             or AccessViolationException);
+    }
+
+    private static void TryInvokeBindingCallback(Action callback)
+    {
+        try
+        {
+            callback();
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[GlobalHookService] Binding callback failed: {ex.Message}");
+        }
     }
 
     private void NotifyHookUnavailable()

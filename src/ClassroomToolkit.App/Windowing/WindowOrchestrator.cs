@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace ClassroomToolkit.App.Windowing;
@@ -6,6 +7,8 @@ public sealed class WindowOrchestrator : IWindowOrchestrator
 {
     public bool TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface)
     {
+        ArgumentNullException.ThrowIfNull(surfaceStack);
+
         if (surface == ZOrderSurface.None)
         {
             return false;
@@ -28,6 +31,8 @@ public sealed class WindowOrchestrator : IWindowOrchestrator
         bool whiteboardActive,
         bool imageManagerVisible)
     {
+        ArgumentNullException.ThrowIfNull(surfaceStack);
+
         for (int i = surfaceStack.Count - 1; i >= 0; i--)
         {
             if (!IsSurfaceActive(surfaceStack[i], photoActive, presentationFullscreen, whiteboardActive, imageManagerVisible))
@@ -44,6 +49,8 @@ public sealed class WindowOrchestrator : IWindowOrchestrator
         bool whiteboardActive,
         bool imageManagerVisible)
     {
+        ArgumentNullException.ThrowIfNull(surfaceStack);
+
         for (int i = surfaceStack.Count - 1; i >= 0; i--)
         {
             var surface = surfaceStack[i];

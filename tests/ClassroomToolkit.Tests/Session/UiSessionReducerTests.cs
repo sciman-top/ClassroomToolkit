@@ -7,6 +7,22 @@ namespace ClassroomToolkit.Tests.Session;
 public sealed class UiSessionReducerTests
 {
     [Fact]
+    public void Reduce_ShouldThrow_WhenCurrentStateIsNull()
+    {
+        Action act = () => UiSessionReducer.Reduce(null!, new MarkInkDirtyEvent());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Reduce_ShouldThrow_WhenSessionEventIsNull()
+    {
+        Action act = () => UiSessionReducer.Reduce(UiSessionState.Default, null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Reduce_ShouldEnableOverlayAndHybridNavigation_WhenEnterPresentationInCursorMode()
     {
         var cursorState = UiSessionReducer.Reduce(

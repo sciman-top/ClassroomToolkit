@@ -7,6 +7,18 @@ namespace ClassroomToolkit.Tests.App;
 public class FloatingSingleOwnerExecutionExecutorTests
 {
     [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenApplyActionIsNull()
+    {
+        var act = () => FloatingSingleOwnerExecutionExecutor.Apply(
+            FloatingOwnerBindingAction.AttachOverlay,
+            child: "child",
+            overlayOwner: "overlay",
+            applyAction: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Apply_ShouldForwardActionToExecutor()
     {
         var called = false;
@@ -38,5 +50,17 @@ public class FloatingSingleOwnerExecutionExecutorTests
             applyAction: (_, _, action) => action == FloatingOwnerBindingAction.None);
 
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Apply_ShouldReturnFalse_WhenApplyActionThrowsNonFatal()
+    {
+        var result = FloatingSingleOwnerExecutionExecutor.Apply(
+            FloatingOwnerBindingAction.AttachOverlay,
+            child: "child",
+            overlayOwner: "overlay",
+            applyAction: (_, _, _) => throw new InvalidOperationException("owner-bind-failed"));
+
+        result.Should().BeFalse();
     }
 }

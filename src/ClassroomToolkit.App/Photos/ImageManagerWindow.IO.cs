@@ -10,33 +10,76 @@ namespace ClassroomToolkit.App.Photos;
 
 public partial class ImageManagerWindow
 {
+    private enum MediaFileKind
+    {
+        None = 0,
+        Pdf = 1,
+        Image = 2
+    }
+
+    private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true
+    };
+
     private static bool IsPdfFile(string path)
     {
-        var ext = Path.GetExtension(path);
-        return ext != null && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+        return GetMediaFileKind(path.AsSpan()) == MediaFileKind.Pdf;
+    }
+
+    private static MediaFileKind GetMediaFileKind(ReadOnlySpan<char> text)
+    {
+        if (text.IsEmpty)
+        {
+            return MediaFileKind.None;
+        }
+
+        var dotIndex = text.LastIndexOf('.');
+        if (dotIndex < 0 || dotIndex >= text.Length - 1)
+        {
+            return MediaFileKind.None;
+        }
+
+        var extension = text[dotIndex..];
+        if (extension.Equals(".pdf".AsSpan(), StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaFileKind.Pdf;
+        }
+
+        if (extension.Equals(".png".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".jpg".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".jpeg".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".bmp".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".gif".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".webp".AsSpan(), StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaFileKind.Image;
+        }
+
+        return MediaFileKind.None;
     }
 
     private static bool IsHiddenFile(string path)
     {
-        try
+        return ExecuteIoSafe(
+            () =>
         {
             var attributes = File.GetAttributes(path);
             return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
+        },
+            fallback: false,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatFileAttributeReadFailureMessage(
                     path,
                     ex.GetType().Name,
-                    ex.Message));
-            return false;
-        }
+                    ex.Message)));
     }
 
     private static ImageSource? LoadThumbnail(string path)
     {
-        try
+        return ExecuteIoSafe<ImageSource?>(
+            () =>
         {
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
@@ -46,120 +89,204 @@ public partial class ImageManagerWindow
             bitmap.EndInit();
             bitmap.Freeze();
             return bitmap;
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
+        },
+            fallback: null,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
                     path,
                     sourceType: "image",
                     ex.GetType().Name,
-                    ex.Message));
-            return null;
-        }
+                    ex.Message)));
     }
 
-    private static ImageSource? LoadPdfThumbnail(string path)
+    private static (ImageSource? Thumbnail, int PageCount) LoadPdfPreview(string path)
     {
-        try
+        return ExecuteIoSafe(
+            () =>
         {
             using var doc = PdfDocumentHost.Open(path);
-            return doc.RenderPage(1, 96);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
+            return (doc.RenderPage(1, 96), doc.PageCount);
+        },
+            fallback: (null, 0),
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
                     path,
                     sourceType: "pdf",
                     ex.GetType().Name,
-                    ex.Message));
-            return null;
-        }
-    }
-
-    private static int TryGetPdfPageCount(string path)
-    {
-        try
-        {
-            using var doc = PdfDocumentHost.Open(path);
-            return doc.PageCount;
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatPdfMetadataReadFailureMessage(
-                    path,
-                    ex.GetType().Name,
-                    ex.Message));
-            return 0;
-        }
+                    ex.Message)));
     }
 
     private static DateTime GetModifiedTime(string path)
     {
-        try
-        {
-            return File.GetLastWriteTime(path);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
+        return ExecuteIoSafe(
+            () => File.GetLastWriteTime(path),
+            fallback: DateTime.MinValue,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatModifiedTimeReadFailureMessage(
                     path,
                     ex.GetType().Name,
-                    ex.Message));
-            return DateTime.MinValue;
+                    ex.Message)));
+    }
+
+    private static void ExecuteIoSafe(Action action, Action<Exception> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        try
+        {
+            action();
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            onFailure(ex);
+        }
+    }
+
+    private static TResult ExecuteIoSafe<TResult>(
+        Func<TResult> action,
+        TResult fallback,
+        Action<Exception> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        try
+        {
+            return action();
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            onFailure(ex);
+            return fallback;
         }
     }
 
     private List<ImageItem>? ScanDirectory(string folder, System.Threading.CancellationToken token)
     {
         var list = new List<ImageItem>();
-        try
+        if (token.IsCancellationRequested)
         {
-            // 1. Folders
-            var dirs = Directory.EnumerateDirectories(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(d => !IsHiddenFile(d) && !Path.GetFileName(d).StartsWith("."))
-                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase);
+            return null;
+        }
 
-            foreach (var dir in dirs)
+        AppendFolderEntries(list, folder, token);
+        if (token.IsCancellationRequested) return null;
+        AppendFileEntries(list, folder, token);
+
+        return list;
+    }
+
+    private static void AppendFolderEntries(List<ImageItem> list, string folder, System.Threading.CancellationToken token)
+    {
+        ExecuteIoSafe(
+            () =>
+        {
+            var directories = new List<string>();
+            foreach (var directory in Directory.EnumerateDirectories(folder, "*", TopLevelIgnoreInaccessibleOptions))
             {
-                if (token.IsCancellationRequested) return null;
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var name = Path.GetFileName(directory);
+                if (name.StartsWith(".", StringComparison.Ordinal) || IsHiddenFile(directory))
+                {
+                    continue;
+                }
+
+                directories.Add(directory);
+            }
+
+            directories.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (var dir in directories)
+            {
                 var modified = GetModifiedTime(dir);
                 list.Add(new ImageItem(dir, null, isFolder: true, pageCount: 0, modified: modified, isImage: false));
             }
+        },
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"ImageManager: Folder scan failed: {ex.GetType().Name} - {ex.Message}"));
+    }
 
-            // 2. PDFs
-            var pdfs = Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly)
-                .Where(f => !IsHiddenFile(f))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+    private static void AppendFileEntries(List<ImageItem> list, string folder, System.Threading.CancellationToken token)
+    {
+        ExecuteIoSafe(
+            () =>
+        {
+            var pdfs = new List<string>();
+            var images = new List<string>();
+            foreach (var file in Directory.EnumerateFiles(folder, "*.*", TopLevelIgnoreInaccessibleOptions))
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                if (IsDotPrefixedFileName(file.AsSpan()))
+                {
+                    continue;
+                }
+
+                var kind = GetMediaFileKind(file.AsSpan());
+                if (kind == MediaFileKind.None)
+                {
+                    continue;
+                }
+                if (IsHiddenFile(file))
+                {
+                    continue;
+                }
+                if (kind == MediaFileKind.Pdf)
+                {
+                    pdfs.Add(file);
+                    continue;
+                }
+                if (kind == MediaFileKind.Image)
+                {
+                    images.Add(file);
+                }
+            }
+
+            pdfs.Sort(StringComparer.OrdinalIgnoreCase);
+            images.Sort(StringComparer.OrdinalIgnoreCase);
 
             foreach (var file in pdfs)
             {
-                if (token.IsCancellationRequested) return null;
-                var pageCount = TryGetPdfPageCount(file);
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var modified = GetModifiedTime(file);
-                list.Add(new ImageItem(file, null, isFolder: false, pageCount: pageCount, modified: modified, isImage: false));
+                // Defer heavy PDF metadata probing to thumbnail worker to keep initial folder scan responsive.
+                list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: false));
             }
 
-            // 3. Images
-            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
-            var imgs = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(f => !IsHiddenFile(f) && imageExtensions.Contains(Path.GetExtension(f)?.ToLowerInvariant()))
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var file in imgs)
+            foreach (var file in images)
             {
-                if (token.IsCancellationRequested) return null;
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var modified = GetModifiedTime(file);
                 list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true));
             }
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        },
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"ImageManager: File scan failed: {ex.GetType().Name} - {ex.Message}"));
+    }
+
+    private static bool IsDotPrefixedFileName(ReadOnlySpan<char> path)
+    {
+        if (path.IsEmpty)
         {
-            System.Diagnostics.Debug.WriteLine($"ImageManager: IO Error: {ex.Message}");
+            return false;
         }
-        return list;
+
+        var separatorIndex = path.LastIndexOfAny('\\', '/');
+        var fileName = separatorIndex >= 0 ? path[(separatorIndex + 1)..] : path;
+        return !fileName.IsEmpty && fileName[0] == '.';
     }
 }

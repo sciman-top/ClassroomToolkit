@@ -14,6 +14,7 @@ internal static class RollStateVersionArbitrationPolicy
         Action<string>? log,
         string source)
     {
+        var logSource = string.IsNullOrWhiteSpace(source) ? "unknown" : source;
         var hasAuthorityState = !string.IsNullOrWhiteSpace(authorityStateJson);
         var hasCacheState = !string.IsNullOrWhiteSpace(cacheStateJson);
 
@@ -31,13 +32,15 @@ internal static class RollStateVersionArbitrationPolicy
         {
             if (cacheRevision.Value > authorityRevision.Value)
             {
-                log?.Invoke(
-                    $"[{source}] prefer cache roll-state by revision authority={authorityRevision.Value} cache={cacheRevision.Value}");
+                TryLog(
+                    log,
+                    $"[{logSource}] prefer cache roll-state by revision authority={authorityRevision.Value} cache={cacheRevision.Value}");
                 return cacheStateJson;
             }
 
-            log?.Invoke(
-                $"[{source}] prefer authority roll-state by revision authority={authorityRevision.Value} cache={cacheRevision.Value}");
+            TryLog(
+                log,
+                $"[{logSource}] prefer authority roll-state by revision authority={authorityRevision.Value} cache={cacheRevision.Value}");
             return authorityStateJson;
         }
 
@@ -45,22 +48,41 @@ internal static class RollStateVersionArbitrationPolicy
         {
             if (cacheUpdatedAtUtc.Value > authorityUpdatedAtUtc.Value)
             {
-                log?.Invoke(
-                    $"[{source}] prefer cache roll-state by timestamp authority={authorityUpdatedAtUtc:O} cache={cacheUpdatedAtUtc:O}");
+                TryLog(
+                    log,
+                    $"[{logSource}] prefer cache roll-state by timestamp authority={authorityUpdatedAtUtc:O} cache={cacheUpdatedAtUtc:O}");
                 return cacheStateJson;
             }
 
-            log?.Invoke(
-                $"[{source}] prefer authority roll-state by timestamp authority={authorityUpdatedAtUtc:O} cache={cacheUpdatedAtUtc:O}");
+            TryLog(
+                log,
+                $"[{logSource}] prefer authority roll-state by timestamp authority={authorityUpdatedAtUtc:O} cache={cacheUpdatedAtUtc:O}");
             return authorityStateJson;
         }
 
         if (!string.Equals(authorityStateJson, cacheStateJson, StringComparison.Ordinal))
         {
-            log?.Invoke(
-                $"[{source}] roll-state conflict without complete timestamp metadata; fallback to authority state.");
+            TryLog(
+                log,
+                $"[{logSource}] roll-state conflict without complete timestamp metadata; fallback to authority state.");
         }
 
         return authorityStateJson;
+    }
+
+    private static void TryLog(Action<string>? log, string message)
+    {
+        if (log == null)
+        {
+            return;
+        }
+
+        try
+        {
+            log(message);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+        }
     }
 }

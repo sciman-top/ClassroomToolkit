@@ -26,7 +26,7 @@ public partial class PaintOverlayWindow
         {
             return null;
         }
-        try
+        return PaintActionInvoker.TryInvoke<BitmapSource?>(() =>
         {
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
@@ -66,11 +66,7 @@ public partial class PaintOverlayWindow
                 return converted;
             }
             return bitmap;
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return null;
-        }
+        }, fallback: null);
     }
 
     private static bool RequiresPixelFormatNormalization(PixelFormat format)
@@ -87,7 +83,7 @@ public partial class PaintOverlayWindow
 
     private static int TryReadImagePixelWidth(string path)
     {
-        try
+        return PaintActionInvoker.TryInvoke(() =>
         {
             using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
@@ -96,11 +92,7 @@ public partial class PaintOverlayWindow
                 return 0;
             }
             return decoder.Frames[0].PixelWidth;
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return 0;
-        }
+        }, fallback: 0);
     }
 
     private bool TrySetPhotoBackground(string imagePath)
@@ -111,7 +103,7 @@ public partial class PaintOverlayWindow
             RefreshPhotoBackgroundVisibility();
             return false;
         }
-        try
+        return PaintActionInvoker.TryInvoke(() =>
         {
             var bitmap = TryLoadBitmapSource(imagePath, downsampleToMonitor: IsCrossPageDisplayActive());
             if (bitmap == null)
@@ -130,13 +122,11 @@ public partial class PaintOverlayWindow
             }
             ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
             return true;
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        }, fallback: false, onFailure: _ =>
         {
             PhotoBackground.Source = null;
             RefreshPhotoBackgroundVisibility();
-            return false;
-        }
+        });
     }
 
     private void ShowPhotoLoadingOverlay(string message)

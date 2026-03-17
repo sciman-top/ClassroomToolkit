@@ -17,6 +17,8 @@ public sealed class PresentationControlPlanner
         PresentationControlOptions options,
         PresentationCommand command)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var type = Classifier.Classify(info);
         if (type == PresentationType.Wps && !options.AllowWps)
         {

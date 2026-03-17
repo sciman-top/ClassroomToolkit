@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -12,12 +13,19 @@ internal static class AuxWindowKeyRoutingHandler
         bool canRoutePresentationInput,
         Action<Key> forwardPresentationKey)
     {
+        ArgumentNullException.ThrowIfNull(tryHandlePhotoKey);
+        ArgumentNullException.ThrowIfNull(forwardPresentationKey);
+
         if (!overlayVisible)
         {
             return false;
         }
 
-        if (tryHandlePhotoKey(key))
+        var photoHandled = SafeActionExecutionExecutor.TryExecute(
+            () => tryHandlePhotoKey(key),
+            fallback: false);
+
+        if (photoHandled)
         {
             return true;
         }
@@ -27,7 +35,12 @@ internal static class AuxWindowKeyRoutingHandler
             return false;
         }
 
-        forwardPresentationKey(key);
-        return true;
+        return SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                forwardPresentationKey(key);
+                return true;
+            },
+            fallback: false);
     }
 }

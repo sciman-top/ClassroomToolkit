@@ -6,6 +6,14 @@ namespace ClassroomToolkit.Tests;
 public sealed class JsonSettingsDocumentStoreAdapterTests
 {
     [Fact]
+    public void Constructor_ShouldThrow_WhenPathIsBlank()
+    {
+        Action act = () => _ = new JsonSettingsDocumentStoreAdapter(" ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
     public void Load_ShouldReturnEmpty_WhenFileMissing()
     {
         var path = TestPathHelper.CreateFilePath("ctool_json_store", ".json");
@@ -112,6 +120,43 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
         {
             Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void Save_ShouldTreatNullSectionDictionary_AsEmptySection()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = null!
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().NotThrow();
+            var loaded = adapter.Load();
+            loaded.Should().ContainKey("Paint");
+            loaded["Paint"].Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldReturnEmpty_WhenPathIsInvalid()
+    {
+        var adapter = new JsonSettingsDocumentStoreAdapter("\0invalid-path.json");
+
+        var act = () => adapter.Load();
+
+        var data = act.Should().NotThrow().Subject;
+        data.Should().BeEmpty();
     }
 
     private static string CreateTempDirectory()

@@ -1,3 +1,5 @@
+using System;
+
 namespace ClassroomToolkit.App.Windowing;
 
 internal static class FloatingZOrderApplyExecutor
@@ -41,6 +43,8 @@ internal static class FloatingZOrderApplyExecutor
         bool forceEnforceZOrder,
         Action<bool> requestApply)
     {
+        ArgumentNullException.ThrowIfNull(requestApply);
+
         if (!requestZOrderApply)
         {
             return false;

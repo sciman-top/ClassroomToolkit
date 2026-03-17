@@ -10,21 +10,11 @@ internal static class WindowInteropRetryExecutor
         ArgumentNullException.ThrowIfNull(attemptAction);
         ArgumentNullException.ThrowIfNull(shouldRetry);
 
-        for (var attempt = 1; ; attempt++)
-        {
-            var result = attemptAction(attempt);
-            if (result.Success)
-            {
-                return true;
-            }
-
-            if (!shouldRetry(attempt, result.ErrorCode))
-            {
-                return false;
-            }
-
-            Thread.Sleep(WindowInteropRuntimeDefaults.RetrySleepMs);
-        }
+        var succeeded = ExecuteCore(
+            attempt => ResolveAttempt(attemptAction, attempt),
+            shouldRetry,
+            out _);
+        return succeeded;
     }
 
     internal static bool ExecuteWithValue<T>(
@@ -35,22 +25,65 @@ internal static class WindowInteropRetryExecutor
         ArgumentNullException.ThrowIfNull(attemptAction);
         ArgumentNullException.ThrowIfNull(shouldRetry);
 
+        return ExecuteCore(
+            attempt => ResolveAttempt(attemptAction, attempt),
+            shouldRetry,
+            out value);
+    }
+
+    private static bool ExecuteCore<TValue>(
+        Func<int, (bool Invoked, bool Success, TValue Value, int ErrorCode)> attempt,
+        Func<int, int, bool> shouldRetry,
+        out TValue value)
+    {
         value = default!;
-        for (var attempt = 1; ; attempt++)
+
+        for (var retryAttempt = 1; ; retryAttempt++)
         {
-            var result = attemptAction(attempt);
+            var result = SafeActionExecutionExecutor.TryExecute(
+                () => attempt(retryAttempt),
+                fallback: (Invoked: false, Success: false, Value: default!, ErrorCode: 0));
+            if (!result.Invoked)
+            {
+                return false;
+            }
+
             if (result.Success)
             {
                 value = result.Value;
                 return true;
             }
 
-            if (!shouldRetry(attempt, result.ErrorCode))
+            var retry = SafeActionExecutionExecutor.TryExecute(
+                () => shouldRetry(retryAttempt, result.ErrorCode),
+                fallback: false);
+
+            if (!retry)
             {
                 return false;
             }
 
-            Thread.Sleep(WindowInteropRuntimeDefaults.RetrySleepMs);
+            var retrySleepMs = WindowInteropRuntimeDefaults.RetrySleepMs;
+            if (retrySleepMs > 0)
+            {
+                Thread.Sleep(retrySleepMs);
+            }
         }
+    }
+
+    private static (bool Invoked, bool Success, bool Value, int ErrorCode) ResolveAttempt(
+        Func<int, (bool Success, int ErrorCode)> attemptAction,
+        int attempt)
+    {
+        var attemptResult = attemptAction(attempt);
+        return (Invoked: true, attemptResult.Success, Value: attemptResult.Success, attemptResult.ErrorCode);
+    }
+
+    private static (bool Invoked, bool Success, TValue Value, int ErrorCode) ResolveAttempt<TValue>(
+        Func<int, (bool Success, TValue Value, int ErrorCode)> attemptAction,
+        int attempt)
+    {
+        var attemptResult = attemptAction(attempt);
+        return (Invoked: true, attemptResult.Success, attemptResult.Value, attemptResult.ErrorCode);
     }
 }

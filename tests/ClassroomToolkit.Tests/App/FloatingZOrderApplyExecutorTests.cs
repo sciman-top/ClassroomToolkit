@@ -7,6 +7,17 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class FloatingZOrderApplyExecutorTests
 {
     [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenRequestApplyIsNull()
+    {
+        var act = () => FloatingZOrderApplyExecutor.Apply(
+            requestZOrderApply: true,
+            forceEnforceZOrder: false,
+            requestApply: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Apply_ShouldInvokeRequest_WhenRequested()
     {
         var requested = false;

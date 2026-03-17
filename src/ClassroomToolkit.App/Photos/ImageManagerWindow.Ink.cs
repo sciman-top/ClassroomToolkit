@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using ClassroomToolkit.App.Ink;
 
@@ -10,9 +11,12 @@ namespace ClassroomToolkit.App.Photos;
 /// </summary>
 public partial class ImageManagerWindow
 {
+    private static readonly TimeSpan InkCleanupThrottleWindow = TimeSpan.FromSeconds(30);
     private InkPersistenceService? _inkPersistence;
     private InkExportService? _inkExport;
     private InkStrokeRenderer? _inkRenderer;
+    private readonly Dictionary<string, DateTime> _inkCleanupRunTimes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _inkCleanupLock = new();
     public event Action<bool>? ShowInkOverlayChanged;
 
     /// <summary>
@@ -57,9 +61,65 @@ public partial class ImageManagerWindow
             return new ImageManagerInkCleanupSummary(0, 0);
         }
 
+        if (!TryBeginInkCleanup(folder))
+        {
+            return new ImageManagerInkCleanupSummary(0, 0);
+        }
+
         return ImageManagerInkCleanupExecutor.Cleanup(
             folder,
             _inkPersistence.CleanupOrphanSidecarsInDirectory,
             _inkExport.CleanupOrphanCompositeOutputsInDirectory);
+    }
+
+    private bool TryBeginInkCleanup(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return false;
+        }
+
+        lock (_inkCleanupLock)
+        {
+            var now = DateTime.UtcNow;
+            CompactInkCleanupRunTimes(now);
+            if (_inkCleanupRunTimes.TryGetValue(folder, out var lastRun)
+                && now - lastRun < InkCleanupThrottleWindow)
+            {
+                return false;
+            }
+
+            _inkCleanupRunTimes[folder] = now;
+            return true;
+        }
+    }
+
+    private void CompactInkCleanupRunTimes(DateTime now)
+    {
+        if (_inkCleanupRunTimes.Count < 256)
+        {
+            return;
+        }
+
+        var expireBefore = now - TimeSpan.FromMinutes(10);
+        List<string>? staleKeys = null;
+        foreach (var pair in _inkCleanupRunTimes)
+        {
+            if (pair.Value < expireBefore)
+            {
+                staleKeys ??= new List<string>();
+                staleKeys.Add(pair.Key);
+            }
+        }
+
+        if (staleKeys == null)
+        {
+            return;
+        }
+
+        foreach (var staleKey in staleKeys)
+        {
+            _inkCleanupRunTimes.Remove(staleKey);
+        }
     }
 }

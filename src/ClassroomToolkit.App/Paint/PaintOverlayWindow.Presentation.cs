@@ -676,15 +676,7 @@ public partial class PaintOverlayWindow
             _wpsHookInterceptWheel = interceptWheel;
             if (!_wpsNavHookActive)
             {
-                try
-                {
-                    _wpsNavHookActive = await _wpsNavHook.StartAsync();
-                }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
-                    _wpsNavHookActive = false;
-                }
+                _wpsNavHookActive = await TryStartWpsNavHookSafeAsync().ConfigureAwait(false);
             }
             if (!isCurrent())
             {
@@ -709,6 +701,24 @@ public partial class PaintOverlayWindow
         }
         StopWpsNavHook();
         LogPresentationState("wps-hook-disabled");
+    }
+
+    private async Task<bool> TryStartWpsNavHookSafeAsync()
+    {
+        if (_wpsNavHook == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await _wpsNavHook.StartAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
+            return false;
+        }
     }
 
     private void StopWpsNavHook()

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using ClassroomToolkit.App.Helpers;
 
 using MediaColor = System.Windows.Media.Color;
 using WpfButton = System.Windows.Controls.Button;
@@ -47,10 +48,11 @@ public partial class BoardColorDialog : Window
                 BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
                 FontWeight = FontWeights.SemiBold,
                 Cursor = System.Windows.Input.Cursors.Hand,
+                Tag = option.Color,
                 // 为了简单，我们直接设置圆角
                 Template = CreateButtonTemplate(option.Color)
             };
-            button.Click += (_, _) => SelectColor(option.Color);
+            button.Click += OnColorOptionClick;
             OptionsPanel.Children.Add(button);
         }
         if (OptionsPanel.Children.Count > 0
@@ -85,11 +87,21 @@ public partial class BoardColorDialog : Window
         DialogResult = true;
     }
 
+    private void OnColorOptionClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton { Tag: MediaColor color })
+        {
+            return;
+        }
+
+        SelectColor(color);
+    }
+
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 

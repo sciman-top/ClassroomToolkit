@@ -76,7 +76,7 @@ public static class SettingsMigrator
         var fileName = Path.GetFileNameWithoutExtension(path);
         var ext = Path.GetExtension(path);
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-        var backupName = $"{fileName}.bak-{timestamp}{ext}";
+        var backupName = $"{fileName}.bak-{timestamp}-{Guid.NewGuid():N}{ext}";
         var backupPath = Path.Combine(directory, backupName);
         try
         {

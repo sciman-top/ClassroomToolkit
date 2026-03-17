@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
@@ -228,15 +229,13 @@ public partial class PaintSettingsDialog : Window
         MaxWidth = Math.Max(560, SystemParameters.WorkArea.Width - 24);
         
         // 在构造函数中立即修复 BorderBrush 问题
-        try
-        {
-            BorderFixHelper.FixAllBorders(this);
-            System.Diagnostics.Debug.WriteLine("PaintSettingsDialog: 构造函数中修复完成");
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}");
-        }
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                BorderFixHelper.FixAllBorders(this);
+                System.Diagnostics.Debug.WriteLine("PaintSettingsDialog: 构造函数中修复完成");
+            },
+            ex => System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}"));
         
         BrushColor = settings.BrushColor;
         foreach (var (label, value) in WpsModeChoices)
@@ -359,19 +358,8 @@ public partial class PaintSettingsDialog : Window
         UpdateBrushOpacityLabel();
         UpdateEraserSizeLabel();
         UpdateCalligraphyOverlayThresholdLabel();
-        Loaded += (_, _) =>
-        {
-            WindowPlacementHelper.EnsureVisible(this);
-            if (_sizeToContentCommitted)
-            {
-                return;
-            }
-
-            _sizeToContentCommitted = true;
-            _ = Dispatcher.InvokeAsync(
-                () => SizeToContent = System.Windows.SizeToContent.Manual,
-                System.Windows.Threading.DispatcherPriority.ContextIdle);
-        };
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
 
         InitializeCustomSnapshotIfNeeded();
         AttachPresetManagedControlHandlers();
@@ -384,6 +372,35 @@ public partial class PaintSettingsDialog : Window
         _initialAdvancedSectionState = CaptureAdvancedSectionStateFromControls();
         _suppressSectionDirtyTracking = false;
         UpdateSectionDirtyStates();
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+        if (_sizeToContentCommitted)
+        {
+            return;
+        }
+        if (!DispatcherInvokeAvailabilityPolicy.CanBeginInvoke(
+                Dispatcher.HasShutdownStarted,
+                Dispatcher.HasShutdownFinished))
+        {
+            return;
+        }
+
+        _sizeToContentCommitted = true;
+        _ = Dispatcher.InvokeAsync(
+            () => SizeToContent = System.Windows.SizeToContent.Manual,
+            System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        DetachSectionDirtyTrackingHandlers();
+        DetachPresetManagedControlHandlers();
+        ClassroomWritingModeCombo.SelectionChanged -= OnClassroomWritingModeChanged;
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
@@ -728,47 +745,118 @@ public partial class PaintSettingsDialog : Window
         LockStrategyOnDegradeCheck.Unchecked += OnPresetManagedToggleChanged;
     }
 
+    private void DetachPresetManagedControlHandlers()
+    {
+        WpsModeCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        WpsDebounceCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        PostInputRefreshDelayCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        WheelZoomBaseCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        GestureSensitivityCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        WpsWheelCheck.Checked -= OnPresetManagedToggleChanged;
+        WpsWheelCheck.Unchecked -= OnPresetManagedToggleChanged;
+        LockStrategyOnDegradeCheck.Checked -= OnPresetManagedToggleChanged;
+        LockStrategyOnDegradeCheck.Unchecked -= OnPresetManagedToggleChanged;
+    }
+
     private void AttachSectionDirtyTrackingHandlers()
     {
-        BrushStyleCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        WhiteboardPresetCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        CalligraphyPresetCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        PresetSchemeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        ClassroomWritingModeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        BrushSizeSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
-        BrushOpacitySlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
-        EraserSizeSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
-        CalligraphyInkBloomCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        CalligraphyInkBloomCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        CalligraphySealCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        CalligraphySealCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        CalligraphyOverlayThresholdSlider.ValueChanged += (_, _) => UpdateSectionDirtyStates();
+        BrushStyleCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        WhiteboardPresetCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        CalligraphyPresetCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        PresetSchemeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        ClassroomWritingModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        InkExportScopeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        ExportParallelCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        NeighborPrefetchCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        PostInputRefreshDelayCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        WheelZoomBaseCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        GestureSensitivityCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        WpsModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        WpsDebounceCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        ShapeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        ToolbarScaleCombo.SelectionChanged += OnSectionDirtySelectionChanged;
 
-        InkSaveCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        InkSaveCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        InkExportScopeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        ExportParallelCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        PhotoCrossPageDisplayCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        PhotoCrossPageDisplayCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        PhotoRememberTransformCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        PhotoRememberTransformCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        PhotoInputTelemetryCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        PhotoInputTelemetryCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        NeighborPrefetchCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        PostInputRefreshDelayCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        WheelZoomBaseCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        GestureSensitivityCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        WpsModeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        WpsWheelCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        WpsWheelCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        ForceForegroundCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        ForceForegroundCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
-        WpsDebounceCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        LockStrategyOnDegradeCheck.Checked += (_, _) => UpdateSectionDirtyStates();
-        LockStrategyOnDegradeCheck.Unchecked += (_, _) => UpdateSectionDirtyStates();
+        BrushSizeSlider.ValueChanged += OnSectionDirtyValueChanged;
+        BrushOpacitySlider.ValueChanged += OnSectionDirtyValueChanged;
+        EraserSizeSlider.ValueChanged += OnSectionDirtyValueChanged;
+        CalligraphyOverlayThresholdSlider.ValueChanged += OnSectionDirtyValueChanged;
 
-        ShapeCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
-        ToolbarScaleCombo.SelectionChanged += (_, _) => UpdateSectionDirtyStates();
+        CalligraphyInkBloomCheck.Checked += OnSectionDirtyRoutedChanged;
+        CalligraphyInkBloomCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        CalligraphySealCheck.Checked += OnSectionDirtyRoutedChanged;
+        CalligraphySealCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        InkSaveCheck.Checked += OnSectionDirtyRoutedChanged;
+        InkSaveCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        PhotoCrossPageDisplayCheck.Checked += OnSectionDirtyRoutedChanged;
+        PhotoCrossPageDisplayCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        PhotoRememberTransformCheck.Checked += OnSectionDirtyRoutedChanged;
+        PhotoRememberTransformCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        PhotoInputTelemetryCheck.Checked += OnSectionDirtyRoutedChanged;
+        PhotoInputTelemetryCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        WpsWheelCheck.Checked += OnSectionDirtyRoutedChanged;
+        WpsWheelCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        ForceForegroundCheck.Checked += OnSectionDirtyRoutedChanged;
+        ForceForegroundCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        LockStrategyOnDegradeCheck.Checked += OnSectionDirtyRoutedChanged;
+        LockStrategyOnDegradeCheck.Unchecked += OnSectionDirtyRoutedChanged;
+    }
+
+    private void DetachSectionDirtyTrackingHandlers()
+    {
+        BrushStyleCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        WhiteboardPresetCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        CalligraphyPresetCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        PresetSchemeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        ClassroomWritingModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        InkExportScopeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        ExportParallelCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        NeighborPrefetchCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        PostInputRefreshDelayCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        WheelZoomBaseCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        GestureSensitivityCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        WpsModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        WpsDebounceCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        ShapeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        ToolbarScaleCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+
+        BrushSizeSlider.ValueChanged -= OnSectionDirtyValueChanged;
+        BrushOpacitySlider.ValueChanged -= OnSectionDirtyValueChanged;
+        EraserSizeSlider.ValueChanged -= OnSectionDirtyValueChanged;
+        CalligraphyOverlayThresholdSlider.ValueChanged -= OnSectionDirtyValueChanged;
+
+        CalligraphyInkBloomCheck.Checked -= OnSectionDirtyRoutedChanged;
+        CalligraphyInkBloomCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        CalligraphySealCheck.Checked -= OnSectionDirtyRoutedChanged;
+        CalligraphySealCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        InkSaveCheck.Checked -= OnSectionDirtyRoutedChanged;
+        InkSaveCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        PhotoCrossPageDisplayCheck.Checked -= OnSectionDirtyRoutedChanged;
+        PhotoCrossPageDisplayCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        PhotoRememberTransformCheck.Checked -= OnSectionDirtyRoutedChanged;
+        PhotoRememberTransformCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        PhotoInputTelemetryCheck.Checked -= OnSectionDirtyRoutedChanged;
+        PhotoInputTelemetryCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        WpsWheelCheck.Checked -= OnSectionDirtyRoutedChanged;
+        WpsWheelCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        ForceForegroundCheck.Checked -= OnSectionDirtyRoutedChanged;
+        ForceForegroundCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        LockStrategyOnDegradeCheck.Checked -= OnSectionDirtyRoutedChanged;
+        LockStrategyOnDegradeCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+    }
+
+    private void OnSectionDirtySelectionChanged(object? sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        UpdateSectionDirtyStates();
+    }
+
+    private void OnSectionDirtyValueChanged(object? sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateSectionDirtyStates();
+    }
+
+    private void OnSectionDirtyRoutedChanged(object? sender, RoutedEventArgs e)
+    {
+        UpdateSectionDirtyStates();
     }
 
     private void DemotePresetToCustomWhenManuallyOverridden()
@@ -1302,7 +1390,7 @@ public partial class PaintSettingsDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 

@@ -7,6 +7,25 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class FloatingOwnerExecutionExecutorTests
 {
     [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenApplyActionIsNull()
+    {
+        var plan = new FloatingOwnerExecutionPlan(
+            ToolbarAction: FloatingOwnerBindingAction.AttachOverlay,
+            RollCallAction: FloatingOwnerBindingAction.AttachOverlay,
+            ImageManagerAction: FloatingOwnerBindingAction.AttachOverlay);
+
+        var act = () => FloatingOwnerExecutionExecutor.Apply(
+            plan,
+            new object(),
+            new object(),
+            new object(),
+            new object(),
+            applyAction: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Apply_ShouldExecutePlan_ForEachFloatingWindow()
     {
         var owner = new OwnerValue();
@@ -34,6 +53,36 @@ public sealed class FloatingOwnerExecutionExecutorTests
         toolbar.Owner.Should().Be(owner);
         rollCall.Owner.Should().BeNull();
         imageManager.Owner.Should().BeNull();
+    }
+
+    [Fact]
+    public void Apply_ShouldContinue_WhenOneApplyActionThrowsNonFatal()
+    {
+        var plan = new FloatingOwnerExecutionPlan(
+            ToolbarAction: FloatingOwnerBindingAction.AttachOverlay,
+            RollCallAction: FloatingOwnerBindingAction.AttachOverlay,
+            ImageManagerAction: FloatingOwnerBindingAction.AttachOverlay);
+        var callCount = 0;
+
+        Action act = () => FloatingOwnerExecutionExecutor.Apply(
+            plan,
+            new object(),
+            new object(),
+            new object(),
+            new object(),
+            (target, owner, action) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    throw new InvalidOperationException("apply-failed");
+                }
+
+                return true;
+            });
+
+        act.Should().NotThrow();
+        callCount.Should().Be(3);
     }
 
     private sealed class OwnerTarget

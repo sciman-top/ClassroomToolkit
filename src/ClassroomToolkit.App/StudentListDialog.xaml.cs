@@ -17,6 +17,7 @@ public partial class StudentListDialog : Window
         _students = students ?? Array.Empty<StudentListItem>();
         StudentItems.ItemsSource = _students;
         Loaded += OnWindowLoaded;
+        Closed += OnWindowClosed;
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -25,6 +26,12 @@ public partial class StudentListDialog : Window
         AdjustWindowSize();
 
         WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        Loaded -= OnWindowLoaded;
+        Closed -= OnWindowClosed;
     }
 
     /// <summary>
@@ -87,7 +94,7 @@ public partial class StudentListDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

@@ -15,11 +15,13 @@ public sealed class RollCallWorkbookUseCase
 
     public RollCallWorkbookUseCase(IRollCallWorkbookStore store)
     {
-        _store = store;
+        _store = store ?? throw new ArgumentNullException(nameof(store));
     }
 
     public RollCallWorkbookLoadResult Load(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         try
         {
             var result = _store.LoadOrCreate(path);
@@ -44,6 +46,10 @@ public sealed class RollCallWorkbookUseCase
 
     public void Save(string path, StudentWorkbook workbook, IReadOnlyDictionary<string, ClassRollState> classStates)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentNullException.ThrowIfNull(classStates);
+
         var payload = new Dictionary<string, ClassRollState>(classStates, StringComparer.OrdinalIgnoreCase);
         var rollStateJson = RollStateSerializer.SerializeWorkbookStates(payload);
         _store.Save(workbook, path, rollStateJson);

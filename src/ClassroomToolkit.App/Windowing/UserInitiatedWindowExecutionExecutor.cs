@@ -1,4 +1,5 @@
 using System.Windows;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -32,6 +33,10 @@ internal static class UserInitiatedWindowExecutionExecutor
         Func<TWindow?, bool, bool> tryActivate)
         where TWindow : class
     {
-        return tryActivate(window, shouldActivate);
+        ArgumentNullException.ThrowIfNull(tryActivate);
+
+        return SafeActionExecutionExecutor.TryExecute(
+            () => tryActivate(window, shouldActivate),
+            fallback: false);
     }
 }

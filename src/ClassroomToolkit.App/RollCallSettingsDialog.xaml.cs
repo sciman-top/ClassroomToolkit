@@ -115,7 +115,20 @@ public partial class RollCallSettingsDialog : Window
         _initialTimerTabState = CaptureTimerTabState();
         _suppressDirtyTracking = false;
         UpdateTabDirtyStates();
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        DetachDirtyTrackingHandlers();
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnRemoteEnabledChanged(object sender, RoutedEventArgs e)
@@ -170,22 +183,48 @@ public partial class RollCallSettingsDialog : Window
 
     private void AttachDirtyTrackingHandlers()
     {
-        ShowIdCheck.Checked += (_, _) => UpdateTabDirtyStates();
-        ShowIdCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
-        ShowNameCheck.Checked += (_, _) => UpdateTabDirtyStates();
-        ShowNameCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
-        PhotoSharedCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        ShowIdCheck.Checked += OnDirtyTrackingRoutedChanged;
+        ShowIdCheck.Unchecked += OnDirtyTrackingRoutedChanged;
+        ShowNameCheck.Checked += OnDirtyTrackingRoutedChanged;
+        ShowNameCheck.Unchecked += OnDirtyTrackingRoutedChanged;
+        SpeechCheck.Checked += OnDirtyTrackingRoutedChanged;
+        SpeechCheck.Unchecked += OnDirtyTrackingRoutedChanged;
 
-        SpeechCheck.Checked += (_, _) => UpdateTabDirtyStates();
-        SpeechCheck.Unchecked += (_, _) => UpdateTabDirtyStates();
-        SpeechVoiceCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
-        SpeechOutputCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        PhotoSharedCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        SpeechVoiceCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        SpeechOutputCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        RemoteKeyCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        RemoteGroupSwitchKeyCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        TimerSoundCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+        ReminderSoundCombo.SelectionChanged += OnDirtyTrackingSelectionChanged;
+    }
 
-        RemoteKeyCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
-        RemoteGroupSwitchKeyCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+    private void DetachDirtyTrackingHandlers()
+    {
+        ShowIdCheck.Checked -= OnDirtyTrackingRoutedChanged;
+        ShowIdCheck.Unchecked -= OnDirtyTrackingRoutedChanged;
+        ShowNameCheck.Checked -= OnDirtyTrackingRoutedChanged;
+        ShowNameCheck.Unchecked -= OnDirtyTrackingRoutedChanged;
+        SpeechCheck.Checked -= OnDirtyTrackingRoutedChanged;
+        SpeechCheck.Unchecked -= OnDirtyTrackingRoutedChanged;
 
-        TimerSoundCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
-        ReminderSoundCombo.SelectionChanged += (_, _) => UpdateTabDirtyStates();
+        PhotoSharedCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        SpeechVoiceCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        SpeechOutputCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        RemoteKeyCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        RemoteGroupSwitchKeyCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        TimerSoundCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+        ReminderSoundCombo.SelectionChanged -= OnDirtyTrackingSelectionChanged;
+    }
+
+    private void OnDirtyTrackingRoutedChanged(object? sender, RoutedEventArgs e)
+    {
+        UpdateTabDirtyStates();
+    }
+
+    private void OnDirtyTrackingSelectionChanged(object? sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        UpdateTabDirtyStates();
     }
 
     private DisplayTabState CaptureDisplayTabState()
@@ -973,7 +1012,7 @@ public partial class RollCallSettingsDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

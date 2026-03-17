@@ -4,6 +4,7 @@ using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Infra.Storage;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
+using System.Reflection;
 using Xunit;
 
 namespace ClassroomToolkit.Tests;
@@ -16,6 +17,17 @@ public sealed class RollCallSqliteStoreAdapterTests
         Action act = () => _ = new RollCallSqliteStoreAdapter(null!);
 
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldThrowArgumentException_WhenPathIsBlank()
+    {
+        var adapter = new RollCallSqliteStoreAdapter(new FakeRollCallStore(
+            new RollCallWorkbookStoreLoadData(CreateWorkbook(), CreatedTemplate: false, RollStateJson: null)));
+
+        var act = () => adapter.LoadOrCreate(" ");
+
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -165,6 +177,42 @@ public sealed class RollCallSqliteStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenWorkbookIsNull()
+    {
+        var adapter = new RollCallSqliteStoreAdapter(new FakeRollCallStore(
+            new RollCallWorkbookStoreLoadData(CreateWorkbook(), CreatedTemplate: false, RollStateJson: null)));
+
+        var act = () => adapter.Save(null!, "students.xlsx", "{\"state\":1}");
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentException_WhenPathIsBlank()
+    {
+        var adapter = new RollCallSqliteStoreAdapter(new FakeRollCallStore(
+            new RollCallWorkbookStoreLoadData(CreateWorkbook(), CreatedTemplate: false, RollStateJson: null)));
+
+        var act = () => adapter.Save(CreateWorkbook(), " ", "{\"state\":1}");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ResolveDbPath_ShouldFallback_WhenWorkbookPathIsInvalid()
+    {
+        var method = typeof(RollCallSqliteStoreAdapter).GetMethod(
+            "ResolveDbPath",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+
+        var act = () => (string)method!.Invoke(null, ["\0invalid-path"])!;
+
+        var dbPath = act.Should().NotThrow().Subject;
+        dbPath.Should().Be(Path.Combine(AppContext.BaseDirectory, "students.rollcall.sqlite3"));
+    }
+
+    [Fact]
     public void LoadOrCreate_ShouldFallbackToSqliteSnapshot_WhenBridgeThrows()
     {
         var workbook = new StudentWorkbook(
@@ -206,6 +254,40 @@ public sealed class RollCallSqliteStoreAdapterTests
         Action act = () => _ = adapter.LoadOrCreate("students.xlsx");
 
         act.Should().Throw<AccessViolationException>();
+    }
+
+    [Fact]
+    public void Save_ShouldFallbackToDefaultPath_WhenResolverReturnsBlank()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: null));
+        var tempDir = TestPathHelper.CreateDirectory("ctool_rollcall_sqlite_fallback_blank");
+        var workbookPath = Path.Combine(tempDir, "students.xlsx");
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => " ");
+
+        Action act = () => adapter.Save(workbook, workbookPath, "{\"fallback\":1}");
+
+        act.Should().NotThrow();
+        var fallbackDbPath = Path.Combine(tempDir, "students.rollcall.sqlite3");
+        File.Exists(fallbackDbPath).Should().BeTrue();
+        ReadSqliteState(fallbackDbPath).Should().Be("{\"fallback\":1}");
+    }
+
+    [Fact]
+    public void Save_ShouldFallbackToDefaultPath_WhenResolverThrowsNonFatal()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeRollCallStore(new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: null));
+        var tempDir = TestPathHelper.CreateDirectory("ctool_rollcall_sqlite_fallback_throw");
+        var workbookPath = Path.Combine(tempDir, "students.xlsx");
+        var adapter = new RollCallSqliteStoreAdapter(bridge, _ => throw new IOException("resolver-failure"));
+
+        Action act = () => adapter.Save(workbook, workbookPath, "{\"fallback\":2}");
+
+        act.Should().NotThrow();
+        var fallbackDbPath = Path.Combine(tempDir, "students.rollcall.sqlite3");
+        File.Exists(fallbackDbPath).Should().BeTrue();
+        ReadSqliteState(fallbackDbPath).Should().Be("{\"fallback\":2}");
     }
 
     private static StudentWorkbook CreateWorkbook()

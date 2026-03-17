@@ -247,6 +247,8 @@ public partial class PaintOverlayWindow : Window
     private DateTime _crossPageBoundsCacheUpdatedUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     private TransformGroup? _photoContentTransform;
     private readonly SessionCoordinator _sessionCoordinator;
+    private readonly CancellationTokenSource _overlayLifecycleCancellation = new();
+    private int _overlayClosed;
 
 
     public event Action<string, DateTime>? InkContextChanged;
@@ -291,31 +293,17 @@ public partial class PaintOverlayWindow : Window
         {
             Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
         };
-        _presentationFocusMonitor.Tick += (_, _) => MonitorPresentationFocus();
+        _presentationFocusMonitor.Tick += OnPresentationFocusMonitorTick;
         _inkMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
         };
-        _inkMonitor.Tick += (_, _) => _refreshOrchestrator.RequestRefresh("poll");
+        _inkMonitor.Tick += OnInkMonitorTick;
         _inkSidecarAutoSaveTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(InkSidecarAutoSaveDelayMs)
         };
-        _inkSidecarAutoSaveTimer.Tick += (_, _) =>
-        {
-            _inkSidecarAutoSaveTimer?.Stop();
-            if (IsInkOperationActive())
-            {
-                _inkDiagnostics?.OnAutoSaveDeferred("timer-active-operation");
-                ScheduleSidecarAutoSave();
-                return;
-            }
-            if (!TryCaptureSidecarPersistSnapshot(requireDirty: true, out var snapshot) || snapshot == null)
-            {
-                return;
-            }
-            QueueSidecarAutoSave(snapshot);
-        };
+        _inkSidecarAutoSaveTimer.Tick += OnInkSidecarAutoSaveTimerTick;
         _perfMonitor = new PerfStats("MonitorInkContext");
         _perfSavePage = new PerfStats("SavePage");
         _perfLoadPage = new PerfStats("LoadPage");
@@ -325,28 +313,14 @@ public partial class PaintOverlayWindow : Window
         _perfApplyStrokes = new PerfStats("ApplyStrokes");
         
         KeyDown += OnKeyDown;
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
-        IsVisibleChanged += (_, _) =>
-        {
-            if (IsVisible)
-            {
-                WindowPlacementHelper.EnsureVisible(this);
-            }
-        };
-        SourceInitialized += (_, _) =>
-        {
-            _hwnd = new WindowInteropHelper(this).Handle;
-            _lastAppliedInputPassthroughEnabled = null;
-            _lastAppliedFocusBlocked = null;
-            UpdateInputPassthrough();
-            UpdateFocusAcceptance();
-        };
+        Loaded += OnOverlayLoaded;
+        IsVisibleChanged += OnOverlayVisibleChanged;
+        SourceInitialized += OnOverlaySourceInitialized;
         OverlayRoot.MouseLeftButtonDown += OnMouseDown;
         OverlayRoot.MouseMove += OnMouseMove;
         OverlayRoot.MouseLeftButtonUp += OnMouseUp;
         OverlayRoot.MouseRightButtonDown += OnRightButtonDown;
         OverlayRoot.MouseRightButtonUp += OnRightButtonUp;
-        OverlayRoot.MouseMove += OnRightButtonMove;
         OverlayRoot.MouseLeave += OnOverlayMouseLeave;
         OverlayRoot.LostMouseCapture += OnOverlayLostMouseCapture;
         OverlayRoot.IsManipulationEnabled = true;
@@ -357,7 +331,6 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.StylusMove += OnStylusMove;
         OverlayRoot.StylusUp += OnStylusUp;
         MouseWheel += OnMouseWheel;
-        Loaded += (_, _) => EnsureRasterSurface();
         SizeChanged += OnWindowSizeChanged;
         StateChanged += OnWindowStateChanged;
         UpdateBoardBackground();
@@ -390,21 +363,110 @@ public partial class PaintOverlayWindow : Window
                 applyWidgetVisibility: ApplySessionWidgetVisibility,
                 onTransition: LogSessionTransition));
         DispatchSessionEvent(new SwitchToolModeEvent(MapSessionToolMode(_mode)));
-        Closed += (_, _) =>
+        Closed += OnOverlayClosed;
+    }
+
+    private void OnOverlayLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+        EnsureRasterSurface();
+    }
+
+    private void OnPresentationFocusMonitorTick(object? sender, EventArgs e)
+    {
+        MonitorPresentationFocus();
+    }
+
+    private void OnInkMonitorTick(object? sender, EventArgs e)
+    {
+        _refreshOrchestrator.RequestRefresh("poll");
+    }
+
+    private void OnInkSidecarAutoSaveTimerTick(object? sender, EventArgs e)
+    {
+        _inkSidecarAutoSaveTimer?.Stop();
+        if (IsInkOperationActive())
         {
-            SaveCurrentPageIfNeeded();
-            _inkSidecarAutoSaveTimer?.Stop();
-            _wpsNavHookStateGate.NextGeneration();
-            StopWpsNavHook();
-            _presentationFocusMonitor.Stop();
-            _inkMonitor.Stop();
-        };
-        IsVisibleChanged += (_, _) =>
+            _inkDiagnostics?.OnAutoSaveDeferred("timer-active-operation");
+            ScheduleSidecarAutoSave();
+            return;
+        }
+        if (!TryCaptureSidecarPersistSnapshot(requireDirty: true, out var snapshot) || snapshot == null)
         {
-            UpdateWpsNavHookState();
-            UpdateFocusAcceptance();
-            UpdatePresentationFocusMonitor();
-        };
+            return;
+        }
+        QueueSidecarAutoSave(snapshot);
+    }
+
+    private void OnOverlayVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
+        {
+            WindowPlacementHelper.EnsureVisible(this);
+        }
+
+        UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
+        UpdatePresentationFocusMonitor();
+    }
+
+    private void OnOverlaySourceInitialized(object? sender, EventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        _lastAppliedInputPassthroughEnabled = null;
+        _lastAppliedFocusBlocked = null;
+        UpdateInputPassthrough();
+        UpdateFocusAcceptance();
+    }
+
+    private void OnOverlayClosed(object? sender, EventArgs e)
+    {
+        Interlocked.Exchange(ref _overlayClosed, 1);
+        _overlayLifecycleCancellation.Cancel();
+        Closed -= OnOverlayClosed;
+        KeyDown -= OnKeyDown;
+        Loaded -= OnOverlayLoaded;
+        IsVisibleChanged -= OnOverlayVisibleChanged;
+        SourceInitialized -= OnOverlaySourceInitialized;
+        MouseWheel -= OnMouseWheel;
+        SizeChanged -= OnWindowSizeChanged;
+        StateChanged -= OnWindowStateChanged;
+        OverlayRoot.MouseLeftButtonDown -= OnMouseDown;
+        OverlayRoot.MouseMove -= OnMouseMove;
+        OverlayRoot.MouseLeftButtonUp -= OnMouseUp;
+        OverlayRoot.MouseRightButtonDown -= OnRightButtonDown;
+        OverlayRoot.MouseRightButtonUp -= OnRightButtonUp;
+        OverlayRoot.MouseLeave -= OnOverlayMouseLeave;
+        OverlayRoot.LostMouseCapture -= OnOverlayLostMouseCapture;
+        OverlayRoot.ManipulationStarting -= OnManipulationStarting;
+        OverlayRoot.ManipulationDelta -= OnManipulationDelta;
+        OverlayRoot.ManipulationCompleted -= OnManipulationCompleted;
+        OverlayRoot.StylusDown -= OnStylusDown;
+        OverlayRoot.StylusMove -= OnStylusMove;
+        OverlayRoot.StylusUp -= OnStylusUp;
+        SaveCurrentPageIfNeeded();
+        _photoTransformSaveTimer?.Stop();
+        _photoTransformSaveTimer?.Tick -= OnPhotoTransformSaveTimerTick;
+        _photoUnifiedTransformSaveTimer?.Stop();
+        _photoUnifiedTransformSaveTimer?.Tick -= OnPhotoUnifiedTransformSaveTimerTick;
+        _presentationFocusMonitor.Tick -= OnPresentationFocusMonitorTick;
+        _inkMonitor.Tick -= OnInkMonitorTick;
+        _inkSidecarAutoSaveTimer?.Tick -= OnInkSidecarAutoSaveTimerTick;
+        _inkSidecarAutoSaveTimer?.Stop();
+        _inkSidecarAutoSaveGate.NextGeneration();
+        _wpsNavHookStateGate.NextGeneration();
+        StopWpsNavHook();
+        if (_wpsNavHook != null && _wpsNavHook.Available)
+        {
+            _wpsNavHook.NavigationRequested -= OnWpsNavHookRequested;
+            _wpsNavHook.Dispose();
+        }
+        _wpsNavHookStateGate.Dispose();
+        _inkSidecarAutoSaveGate.Dispose();
+        _presentationFocusMonitor.Stop();
+        _inkMonitor.Stop();
+        ClosePdfDocument();
+        _overlayLifecycleCancellation.Dispose();
     }
 
     public void SetMode(PaintToolMode mode)
@@ -1077,9 +1139,11 @@ public partial class PaintOverlayWindow : Window
         _inkRetentionDays = Math.Max(0, days);
         if (_inkRetentionDays > 0 && _inkRecordEnabled)
         {
+            var lifecycleToken = _overlayLifecycleCancellation.Token;
             _ = SafeTaskRunner.Run(
                 "PaintOverlayWindow.UpdateInkRetentionDays",
                 _ => _inkStorage.CleanupOldRecords(_inkRetentionDays),
+                lifecycleToken,
                 onError: ex => System.Diagnostics.Debug.WriteLine(
                     $"[InkStorage] retention-cleanup failed: {ex.GetType().Name} - {ex.Message}"));
         }
@@ -1252,21 +1316,19 @@ public partial class PaintOverlayWindow : Window
 
     private bool TryBeginInvoke(Action action, DispatcherPriority priority)
     {
+        ArgumentNullException.ThrowIfNull(action);
+
         if (!DispatcherInvokeAvailabilityPolicy.CanBeginInvoke(
                 Dispatcher.HasShutdownStarted,
                 Dispatcher.HasShutdownFinished))
         {
             return false;
         }
-        try
+        return PaintActionInvoker.TryInvoke(() =>
         {
             Dispatcher.BeginInvoke(action, priority);
             return true;
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return false;
-        }
+        }, fallback: false);
     }
 
     private void RecoverOverlayFullscreenBounds()

@@ -130,6 +130,11 @@ namespace ClassroomToolkit.App.Helpers
                 // 延迟再次执行，确保动态创建的控件也被修复
                 try
                 {
+                    if (window.Dispatcher.HasShutdownStarted || window.Dispatcher.HasShutdownFinished)
+                    {
+                        return;
+                    }
+
                     window.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         try

@@ -1,4 +1,5 @@
 using System.Windows;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -30,8 +31,21 @@ internal static class FloatingOwnerExecutionExecutor
         where TTarget : class
         where TOwner : class
     {
-        applyAction(toolbarWindow, overlayOwner, plan.ToolbarAction);
-        applyAction(rollCallWindow, overlayOwner, plan.RollCallAction);
-        applyAction(imageManagerWindow, overlayOwner, plan.ImageManagerAction);
+        ArgumentNullException.ThrowIfNull(applyAction);
+
+        TryApply(toolbarWindow, overlayOwner, plan.ToolbarAction, applyAction);
+        TryApply(rollCallWindow, overlayOwner, plan.RollCallAction, applyAction);
+        TryApply(imageManagerWindow, overlayOwner, plan.ImageManagerAction, applyAction);
+    }
+
+    private static void TryApply<TTarget, TOwner>(
+        TTarget? target,
+        TOwner? overlayOwner,
+        FloatingOwnerBindingAction action,
+        Func<TTarget?, TOwner?, FloatingOwnerBindingAction, bool> applyAction)
+        where TTarget : class
+        where TOwner : class
+    {
+        _ = SafeActionExecutionExecutor.TryExecute(() => applyAction(target, overlayOwner, action));
     }
 }

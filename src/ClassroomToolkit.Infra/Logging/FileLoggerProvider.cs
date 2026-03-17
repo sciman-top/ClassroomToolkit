@@ -8,16 +8,19 @@ namespace ClassroomToolkit.Infra.Logging;
 
 public class FileLoggerProvider : ILoggerProvider
 {
+    private readonly record struct LogQueueItem(DateTime Timestamp, string Message);
+
     private readonly string _logDirectory;
     private readonly Func<DateTime> _nowProvider;
     private readonly ConcurrentDictionary<string, FileLogger> _loggers = new();
-    private readonly BlockingCollection<string> _messageQueue = new();
+    private readonly BlockingCollection<LogQueueItem> _messageQueue = new();
     private readonly Task _processQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _disposeState;
 
     public FileLoggerProvider(string logDirectory, Func<DateTime>? nowProvider = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
         _logDirectory = logDirectory;
         _nowProvider = nowProvider ?? (() => DateTime.Now);
         if (!Directory.Exists(_logDirectory))
@@ -34,10 +37,23 @@ public class FileLoggerProvider : ILoggerProvider
 
     public ILogger CreateLogger(string categoryName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(categoryName);
         return _loggers.GetOrAdd(categoryName, name => new FileLogger(name, this));
     }
 
-    internal void EnqueueMessage(string message)
+    internal DateTime GetCurrentTime()
+    {
+        try
+        {
+            return _nowProvider();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return DateTime.Now;
+        }
+    }
+
+    internal void EnqueueMessage(DateTime timestamp, string message)
     {
         if (Volatile.Read(ref _disposeState) != 0
             || _cancellationTokenSource.IsCancellationRequested
@@ -48,7 +64,7 @@ public class FileLoggerProvider : ILoggerProvider
 
         try
         {
-            _messageQueue.Add(message);
+            _messageQueue.Add(new LogQueueItem(timestamp, message));
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -60,13 +76,13 @@ public class FileLoggerProvider : ILoggerProvider
     {
         try
         {
-            foreach (var message in _messageQueue.GetConsumingEnumerable(_cancellationTokenSource.Token))
+            foreach (var item in _messageQueue.GetConsumingEnumerable())
             {
                 try
                 {
-                    var logFile = Path.Combine(_logDirectory, $"app_{_nowProvider():yyyyMMdd}.log");
+                    var logFile = Path.Combine(_logDirectory, $"app_{item.Timestamp:yyyyMMdd}.log");
                     // Simple append, could be optimized with buffering
-                    File.AppendAllText(logFile, message + Environment.NewLine, Encoding.UTF8);
+                    File.AppendAllText(logFile, item.Message + Environment.NewLine, Encoding.UTF8);
                 }
                 catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
@@ -76,7 +92,11 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (OperationCanceledException) when (_cancellationTokenSource.IsCancellationRequested)
         {
-            // Expected during provider disposal.
+            // Expected when the provider forces cancellation after a shutdown timeout.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when queue resources are disposed during shutdown races.
         }
     }
 
@@ -85,15 +105,6 @@ public class FileLoggerProvider : ILoggerProvider
         if (Interlocked.Exchange(ref _disposeState, 1) != 0)
         {
             return;
-        }
-
-        try
-        {
-            _cancellationTokenSource.Cancel();
-        }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-        {
-            // Ignore
         }
 
         try
@@ -107,7 +118,11 @@ public class FileLoggerProvider : ILoggerProvider
 
         try
         {
-            _processQueueTask.Wait(1000);
+            if (!_processQueueTask.Wait(3000))
+            {
+                _cancellationTokenSource.Cancel();
+                _processQueueTask.Wait(1000);
+            }
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -127,6 +142,8 @@ public class FileLogger : ILogger
 
     public FileLogger(string categoryName, FileLoggerProvider provider)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(categoryName);
+        ArgumentNullException.ThrowIfNull(provider);
         _categoryName = categoryName;
         _provider = provider;
     }
@@ -142,19 +159,31 @@ public class FileLogger : ILogger
         Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
+        ArgumentNullException.ThrowIfNull(formatter);
+
         if (!IsEnabled(logLevel))
         {
             return;
         }
 
-        var message = formatter(state, exception);
-        var logRecord = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{logLevel}] [{_categoryName}] {message}";
+        string message;
+        try
+        {
+            message = formatter(state, exception);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return;
+        }
+
+        var now = _provider.GetCurrentTime();
+        var logRecord = $"[{now:yyyy-MM-dd HH:mm:ss.fff}] [{logLevel}] [{_categoryName}] {message}";
         
         if (exception != null)
         {
              logRecord += Environment.NewLine + exception.ToString();
         }
 
-        _provider.EnqueueMessage(logRecord);
+        _provider.EnqueueMessage(now, logRecord);
     }
 }

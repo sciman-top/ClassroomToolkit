@@ -128,7 +128,7 @@ public static class PresentationDiagnosticsProbe
         try
         {
             using var hook = new KeyboardHook();
-            hook.Start();
+            hook.StartAsync().GetAwaiter().GetResult();
             var active = hook.IsActive;
             if (!active && hook.LastError != 0)
             {

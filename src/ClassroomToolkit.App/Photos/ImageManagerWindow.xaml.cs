@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Settings;
@@ -30,16 +31,24 @@ public partial class ImageManagerWindow : Window
     private const double MaxThumbnailSize = 420.0;
     private const double DefaultWindowWidth = 1100.0;
     private const double DefaultWindowHeight = 700.0;
+    private const int ThumbnailRefreshDebounceMilliseconds = 90;
+    private const int ImageAppendBatchSize = 48;
+    private const int FolderNodeRenderBatchSize = 64;
+    private static readonly int ThumbnailWorkerConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
 
     private IntPtr _hwnd;
     private readonly List<ImageItem> _navigableCache = new();
+    private string[] _navigablePathsCache = [];
     private bool _navigableDirty = true;
     private bool _isClosing;
     private CancellationTokenSource? _thumbnailCts;
-    private readonly SemaphoreSlim _thumbnailSemaphore = new(2);
+    private readonly SemaphoreSlim _thumbnailSemaphore = new(ThumbnailWorkerConcurrency);
+    private readonly CancellationTokenSource _lifecycleCancellation = new();
     private int _loadImagesRequestId;
     private bool _suppressKeyboardNavigation;
     private bool _layoutApplying;
+    private bool _closeCompleted;
+    private readonly DispatcherTimer _thumbnailRefreshDebounceTimer;
     private double _preferredLeftRatio = DefaultLeftRatio;
     private int _preferredLeftPanelWidth;
     private double _restoredWindowWidth = DefaultWindowWidth;
@@ -67,28 +76,61 @@ public partial class ImageManagerWindow : Window
         ViewModel.LoadFolderList(ViewModel.Recents, recents);
 
         SetViewMode(listMode: false);
-        Loaded += (_, _) => InitializeTree();
-        Loaded += (_, _) => InitializeDefaultFolder();
-        Loaded += (_, _) => EnterInitialMaximizedState();
-        Loaded += (_, _) => ApplyAdaptiveLayout();
-        Loaded += (_, _) => UpdateWindowStateToggleButton();
+        Loaded += OnWindowLoaded;
         PreviewKeyDown += OnPreviewKeyDown;
-        Closing += (_, _) => BeginClose();
-        SizeChanged += (_, _) =>
-        {
-            TrackRestoredWindowSize();
-            ApplyAdaptiveLayout();
-        };
-        StateChanged += (_, _) =>
-        {
-            ApplyAdaptiveLayout();
-            UpdateWindowStateToggleButton();
-        };
-        SourceInitialized += (_, _) =>
-        {
-            _hwnd = new WindowInteropHelper(this).Handle;
-            RemoveMinimizeButton();
-        };
+        Closing += OnWindowClosing;
+        Closed += OnWindowClosed;
+        SizeChanged += OnWindowSizeChanged;
+        StateChanged += OnWindowStateChanged;
+        SourceInitialized += OnWindowSourceInitialized;
+
+        _thumbnailRefreshDebounceTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(ThumbnailRefreshDebounceMilliseconds),
+            DispatcherPriority.Background,
+            OnThumbnailRefreshDebounceTick,
+            Dispatcher);
+        _thumbnailRefreshDebounceTimer.Stop();
+    }
+
+    private void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = SafeTaskRunner.Run(
+            "ImageManagerWindow.InitializeTree",
+            token => InitializeTreeAsync(token),
+            _lifecycleCancellation.Token,
+            onError: ex => Debug.WriteLine($"ImageManager: InitializeTree Error: {ex}"));
+        InitializeDefaultFolder();
+        EnterInitialMaximizedState();
+        ApplyAdaptiveLayout();
+        UpdateWindowStateToggleButton();
+    }
+
+    private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        BeginClose();
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        CompleteClose();
+    }
+
+    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        TrackRestoredWindowSize();
+        ApplyAdaptiveLayout();
+    }
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        ApplyAdaptiveLayout();
+        UpdateWindowStateToggleButton();
+    }
+
+    private void OnWindowSourceInitialized(object? sender, EventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        RemoveMinimizeButton();
     }
 
     public void SetKeyboardNavigationSuppressed(bool suppressed)
@@ -138,16 +180,17 @@ public partial class ImageManagerWindow : Window
         settings.PhotoManagerListMode = ViewModel.ListMode;
     }
 
-    private async void InitializeTree()
+    private async Task InitializeTreeAsync(CancellationToken cancellationToken)
     {
         FolderTree.Items.Clear();
         FolderTree.Items.Add(new TreeViewItem { Header = "加载中..." });
         try
         {
-            var drives = await Task.Run(() => DriveInfo.GetDrives());
+            var drives = await Task.Run(() => DriveInfo.GetDrives(), cancellationToken);
             var nodes = new List<TreeViewItem>();
             foreach (var drive in drives)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 string path;
                 string header;
                 try
@@ -179,6 +222,10 @@ public partial class ImageManagerWindow : Window
             {
                 FolderTree.Items.Add(node);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || _isClosing)
+        {
+            // Window is closing; suppress cancellation noise from background init.
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -235,7 +282,7 @@ public partial class ImageManagerWindow : Window
             return;
         }
         ViewModel.Favorites.Remove(selected);
-        FavoritesChanged?.Invoke(ViewModel.Favorites.Select(item => item.Path).ToList());
+        FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites));
     }
 
     private void OnFavoritesSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -285,7 +332,7 @@ public partial class ImageManagerWindow : Window
         }
         if (ViewModel.CurrentIndex >= 0)
         {
-            ImageSelected?.Invoke(navigableItems.Select(image => image.Path).ToList(), ViewModel.CurrentIndex);
+            ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex);
         }
     }
 
@@ -424,6 +471,19 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
+
+        _thumbnailRefreshDebounceTimer.Stop();
+        _thumbnailRefreshDebounceTimer.Start();
+    }
+
+    private void OnThumbnailRefreshDebounceTick(object? sender, EventArgs e)
+    {
+        _thumbnailRefreshDebounceTimer.Stop();
+        if (ViewModel is null || ViewModel.ListMode || _isClosing)
+        {
+            return;
+        }
+
         ImageList?.Items.Refresh();
     }
 
@@ -438,7 +498,7 @@ public partial class ImageManagerWindow : Window
             return;
         }
         ViewModel.Favorites.Insert(0, new FolderItem(path));
-        FavoritesChanged?.Invoke(ViewModel.Favorites.Select(item => item.Path).ToList());
+        FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites));
     }
 
     private void OpenFolder(string path, bool addToRecents = true, bool navigate = true)
@@ -448,6 +508,17 @@ public partial class ImageManagerWindow : Window
             ShowEmptyState();
             return;
         }
+
+        if (string.Equals(ViewModel.CurrentFolder, folder, StringComparison.OrdinalIgnoreCase))
+        {
+            if (addToRecents)
+            {
+                UpdateRecents(folder);
+            }
+            ViewModel.UpdateNavigationStates();
+            return;
+        }
+
         if (navigate && !string.IsNullOrEmpty(ViewModel.CurrentFolder) && !string.Equals(ViewModel.CurrentFolder, folder, StringComparison.OrdinalIgnoreCase))
         {
             ViewModel.BackStack.Add(ViewModel.CurrentFolder);
@@ -560,6 +631,12 @@ public partial class ImageManagerWindow : Window
 
     private void UpdateRecents(string path)
     {
+        if (ViewModel.Recents.Count > 0 &&
+            string.Equals(ViewModel.Recents[0].Path, path, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         var existing = ViewModel.Recents.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
         if (existing != null)
         {
@@ -570,7 +647,7 @@ public partial class ImageManagerWindow : Window
         {
             ViewModel.Recents.RemoveAt(ViewModel.Recents.Count - 1);
         }
-        RecentsChanged?.Invoke(ViewModel.Recents.Select(item => item.Path).ToList());
+        RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents));
     }
 
     private void StartLoadImages(string folder)
@@ -608,19 +685,16 @@ public partial class ImageManagerWindow : Window
                     $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={loadResult.cleanupSummary.SidecarsDeleted} composites={loadResult.cleanupSummary.CompositesDeleted}");
             }
 
-            foreach (var item in result)
-            {
-                ViewModel.Images.Add(item);
-                if (!item.IsFolder)
-                {
-                    QueueThumbnailLoad(item, item.IsPdf, token, requestId);
-                }
-            }
+            await AppendScanResultsAsync(result, token, requestId);
 
             ViewModel.CurrentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
             EmptyHintText.Visibility = ViewModel.Images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested || _isClosing) { }
+        catch (ObjectDisposedException)
+        {
+            // Token/dispatcher resources may be disposed during rapid window shutdown.
+        }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"ImageManager: LoadImages Error: {ex}");
@@ -647,29 +721,48 @@ public partial class ImageManagerWindow : Window
 
     private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token, int requestId)
     {
+        if (token.IsCancellationRequested || _isClosing || requestId != Volatile.Read(ref _loadImagesRequestId))
+        {
+            return;
+        }
+
         _ = SafeTaskRunner.Run(
             "ImageManagerWindow.QueueThumbnailLoad",
             async _ =>
             {
                 try { await _thumbnailSemaphore.WaitAsync(token); }
                 catch (OperationCanceledException) { return; }
+                catch (ObjectDisposedException) { return; }
 
                 if (token.IsCancellationRequested || _isClosing)
                 {
-                    _thumbnailSemaphore.Release();
+                    TryReleaseThumbnailSemaphore();
                     return;
                 }
 
                 ImageSource? thumbnail = null;
-                try { thumbnail = isPdf ? LoadPdfThumbnail(item.Path) : LoadThumbnail(item.Path); }
-                finally { _thumbnailSemaphore.Release(); }
+                int pageCount = item.PageCount;
+                try
+                {
+                    if (isPdf)
+                    {
+                        var preview = LoadPdfPreview(item.Path);
+                        thumbnail = preview.Thumbnail;
+                        pageCount = preview.PageCount;
+                    }
+                    else
+                    {
+                        thumbnail = LoadThumbnail(item.Path);
+                    }
+                }
+                finally { TryReleaseThumbnailSemaphore(); }
 
                 if (thumbnail == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
                 {
                     return;
                 }
 
-                await TryDispatchThumbnailUpdateAsync(item, thumbnail, token, requestId);
+                await TryDispatchThumbnailUpdateAsync(item, thumbnail, pageCount, token, requestId);
             },
             token,
             ex => Debug.WriteLine(
@@ -681,6 +774,7 @@ public partial class ImageManagerWindow : Window
     private async Task TryDispatchThumbnailUpdateAsync(
         ImageItem item,
         ImageSource thumbnail,
+        int pageCount,
         CancellationToken token,
         int requestId)
     {
@@ -691,7 +785,15 @@ public partial class ImageManagerWindow : Window
                 if (!_isClosing && !token.IsCancellationRequested && requestId == Volatile.Read(ref _loadImagesRequestId))
                 {
                     item.Thumbnail = thumbnail;
+                    if (item.IsPdf && pageCount > 0)
+                    {
+                        item.PageCount = pageCount;
+                    }
                 }
+                return;
+            }
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+            {
                 return;
             }
 
@@ -700,8 +802,12 @@ public partial class ImageManagerWindow : Window
                 if (!_isClosing && !token.IsCancellationRequested && requestId == Volatile.Read(ref _loadImagesRequestId))
                 {
                     item.Thumbnail = thumbnail;
+                    if (item.IsPdf && pageCount > 0)
+                    {
+                        item.PageCount = pageCount;
+                    }
                 }
-            });
+            }, DispatcherPriority.Background);
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -716,9 +822,53 @@ public partial class ImageManagerWindow : Window
     {
         if (_isClosing) return;
         _isClosing = true;
+        _lifecycleCancellation.Cancel();
         UpdatePreferredLeftLayoutFromCurrent();
         LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
         _thumbnailCts?.Cancel();
+    }
+
+    private void CompleteClose()
+    {
+        if (_closeCompleted)
+        {
+            return;
+        }
+
+        _closeCompleted = true;
+        Loaded -= OnWindowLoaded;
+        PreviewKeyDown -= OnPreviewKeyDown;
+        Closing -= OnWindowClosing;
+        Closed -= OnWindowClosed;
+        SizeChanged -= OnWindowSizeChanged;
+        StateChanged -= OnWindowStateChanged;
+        SourceInitialized -= OnWindowSourceInitialized;
+        _thumbnailRefreshDebounceTimer.Stop();
+        _thumbnailRefreshDebounceTimer.Tick -= OnThumbnailRefreshDebounceTick;
+        _thumbnailCts?.Cancel();
+        _thumbnailCts?.Dispose();
+        _thumbnailCts = null;
+        try
+        {
+            _thumbnailSemaphore.Dispose();
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: thumbnail semaphore dispose failed: {ex.Message}");
+        }
+        _lifecycleCancellation.Dispose();
+    }
+
+    private void TryReleaseThumbnailSemaphore()
+    {
+        try
+        {
+            _thumbnailSemaphore.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when background workers race with window shutdown.
+        }
     }
 
     public bool TryNavigate(int direction)
@@ -728,7 +878,7 @@ public partial class ImageManagerWindow : Window
         var next = ViewModel.CurrentIndex + direction;
         if (next < 0 || next >= navigableItems.Count) return false;
         ViewModel.CurrentIndex = next;
-        ImageSelected?.Invoke(navigableItems.Select(image => image.Path).ToList(), ViewModel.CurrentIndex);
+        ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex);
         return true;
     }
 
@@ -737,10 +887,52 @@ public partial class ImageManagerWindow : Window
         if (_navigableDirty)
         {
             _navigableCache.Clear();
-            _navigableCache.AddRange(ViewModel.Images.Where(item => !item.IsFolder && (item.IsPdf || item.IsImage)));
+            foreach (var item in ViewModel.Images)
+            {
+                if (!item.IsFolder && (item.IsPdf || item.IsImage))
+                {
+                    _navigableCache.Add(item);
+                }
+            }
+            var paths = new string[_navigableCache.Count];
+            for (var i = 0; i < _navigableCache.Count; i++)
+            {
+                paths[i] = _navigableCache[i].Path;
+            }
+            _navigablePathsCache = paths;
             _navigableDirty = false;
         }
         return _navigableCache;
+    }
+
+    private IReadOnlyList<string> GetNavigablePaths()
+    {
+        if (_navigableDirty)
+        {
+            _ = GetNavigableItems();
+        }
+
+        return _navigablePathsCache;
+    }
+
+    private static List<string> CreateFolderPathSnapshot(IEnumerable<FolderItem> items)
+    {
+        var capacity = items switch
+        {
+            ICollection<FolderItem> collection => collection.Count,
+            IReadOnlyCollection<FolderItem> readOnlyCollection => readOnlyCollection.Count,
+            _ => 0
+        };
+        var result = capacity > 0 ? new List<string>(capacity) : new List<string>();
+        foreach (var item in items)
+        {
+            if (item?.Path is string path)
+            {
+                result.Add(path);
+            }
+        }
+
+        return result;
     }
 
     private static TreeViewItem CreateFolderNode(string path, string header)
@@ -751,19 +943,38 @@ public partial class ImageManagerWindow : Window
         return item;
     }
 
-    private static void OnFolderExpanded(object sender, RoutedEventArgs e)
+    private static async void OnFolderExpanded(object sender, RoutedEventArgs e)
     {
         if (sender is not TreeViewItem item || item.Items.Count != 1 || item.Items[0] is not TreeViewItem placeholder) return;
         if (placeholder.Header is not string text || !text.Contains("\u52a0\u8f7d\u4e2d")) return;
         item.Items.Clear();
         if (item.Tag is not string path || string.IsNullOrWhiteSpace(path)) return;
+
+        List<string> directories;
         try
         {
-            foreach (var dir in Directory.GetDirectories(path))
+            directories = await Task.Run(() =>
             {
-                var name = Path.GetFileName(dir);
-                if (!string.IsNullOrWhiteSpace(name)) item.Items.Add(CreateFolderNode(dir, name));
-            }
+                var result = new List<string>();
+                foreach (var dir in Directory.EnumerateDirectories(path, "*", TopLevelIgnoreInaccessibleOptions))
+                {
+                    var name = Path.GetFileName(dir);
+                    if (string.IsNullOrWhiteSpace(name) || name.StartsWith(".", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (IsHiddenFile(dir))
+                    {
+                        continue;
+                    }
+
+                    result.Add(dir);
+                }
+
+                result.Sort(StringComparer.OrdinalIgnoreCase);
+                return result;
+            });
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -771,6 +982,56 @@ public partial class ImageManagerWindow : Window
                 ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
                     path,
                     ex.Message));
+            return;
+        }
+
+        for (var i = 0; i < directories.Count; i += FolderNodeRenderBatchSize)
+        {
+            var upperBound = Math.Min(i + FolderNodeRenderBatchSize, directories.Count);
+            for (var j = i; j < upperBound; j++)
+            {
+                var dir = directories[j];
+                var name = Path.GetFileName(dir);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    item.Items.Add(CreateFolderNode(dir, name));
+                }
+            }
+
+            if (upperBound < directories.Count)
+            {
+                await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+            }
+        }
+    }
+
+    private async Task AppendScanResultsAsync(
+        IReadOnlyList<ImageItem> result,
+        CancellationToken token,
+        int requestId)
+    {
+        for (var i = 0; i < result.Count; i += ImageAppendBatchSize)
+        {
+            if (token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId) || _isClosing)
+            {
+                return;
+            }
+
+            var upperBound = Math.Min(i + ImageAppendBatchSize, result.Count);
+            for (var j = i; j < upperBound; j++)
+            {
+                var item = result[j];
+                ViewModel.Images.Add(item);
+                if (!item.IsFolder)
+                {
+                    QueueThumbnailLoad(item, item.IsPdf, token, requestId);
+                }
+            }
+
+            if (upperBound < result.Count)
+            {
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+            }
         }
     }
 
@@ -798,11 +1059,22 @@ public partial class ImageManagerWindow : Window
 
     private void OnMainColumnSplitterDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        Dispatcher.BeginInvoke(() =>
+        if (_isClosing || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
-            UpdatePreferredLeftLayoutFromCurrent();
-            LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
-        }, DispatcherPriority.Background);
+            return;
+        }
+        try
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                UpdatePreferredLeftLayoutFromCurrent();
+                LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
+            }, DispatcherPriority.Background);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: deferred splitter update dispatch failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void ApplyAdaptiveLayout()
@@ -969,14 +1241,7 @@ public partial class ImageManagerWindow : Window
             return;
         }
 
-        try
-        {
-            DragMove();
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            // Ignore drag exceptions from transient mouse capture state.
-        }
+        _ = this.SafeDragMove();
     }
 
     private void RestoreWindowToManagedBounds()
@@ -987,36 +1252,47 @@ public partial class ImageManagerWindow : Window
         }
 
         WindowState = WindowState.Normal;
-        Dispatcher.BeginInvoke(() =>
+        if (_isClosing || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
-            if (WindowState != WindowState.Normal)
+            return;
+        }
+        try
+        {
+            Dispatcher.BeginInvoke(() =>
             {
-                return;
-            }
+                if (WindowState != WindowState.Normal)
+                {
+                    return;
+                }
 
-            var plan = ImageManagerRestoreBoundsPolicy.Resolve(
-                restoredWidth: _restoredWindowWidth,
-                restoredHeight: _restoredWindowHeight,
-                defaultWidth: DefaultWindowWidth,
-                defaultHeight: DefaultWindowHeight,
-                minWidth: MinWidth,
-                minHeight: MinHeight,
-                workArea: SystemParameters.WorkArea);
+                var plan = ImageManagerRestoreBoundsPolicy.Resolve(
+                    restoredWidth: _restoredWindowWidth,
+                    restoredHeight: _restoredWindowHeight,
+                    defaultWidth: DefaultWindowWidth,
+                    defaultHeight: DefaultWindowHeight,
+                    minWidth: MinWidth,
+                    minHeight: MinHeight,
+                    workArea: SystemParameters.WorkArea);
 
-            Width = plan.Width;
-            Height = plan.Height;
-            if (!double.IsNaN(plan.Left))
-            {
-                Left = plan.Left;
-            }
-            if (!double.IsNaN(plan.Top))
-            {
-                Top = plan.Top;
-            }
+                Width = plan.Width;
+                Height = plan.Height;
+                if (!double.IsNaN(plan.Left))
+                {
+                    Left = plan.Left;
+                }
+                if (!double.IsNaN(plan.Top))
+                {
+                    Top = plan.Top;
+                }
 
-            TrackRestoredWindowSize();
-            ApplyAdaptiveLayout();
-        }, DispatcherPriority.Loaded);
+                TrackRestoredWindowSize();
+                ApplyAdaptiveLayout();
+            }, DispatcherPriority.Loaded);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: restore bounds dispatch failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void UpdateWindowStateToggleButton()

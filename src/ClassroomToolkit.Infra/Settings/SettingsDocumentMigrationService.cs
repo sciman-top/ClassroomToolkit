@@ -71,6 +71,6 @@ public sealed class SettingsDocumentMigrationService
         var fileName = Path.GetFileNameWithoutExtension(targetPath);
         var extension = Path.GetExtension(targetPath);
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-        return Path.Combine(directory, $"{fileName}.bak-{timestamp}{extension}");
+        return Path.Combine(directory, $"{fileName}.bak-{timestamp}-{Guid.NewGuid():N}{extension}");
     }
 }

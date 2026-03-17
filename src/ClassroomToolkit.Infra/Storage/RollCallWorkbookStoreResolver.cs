@@ -28,10 +28,7 @@ public static class RollCallWorkbookStoreResolver
         out BusinessStorageBackend selectedBackend,
         Func<bool, bool> sqliteAvailabilityEvaluator)
     {
-        if (sqliteAvailabilityEvaluator == null)
-        {
-            throw new ArgumentNullException(nameof(sqliteAvailabilityEvaluator));
-        }
+        ArgumentNullException.ThrowIfNull(sqliteAvailabilityEvaluator);
 
         var sqliteAvailable = ResolveSqliteAvailability(
             experimentalSqliteEnabled,
@@ -52,11 +49,14 @@ public static class RollCallWorkbookStoreResolver
         bool experimentalSqliteEnabled,
         Func<bool, bool> sqliteAvailabilityEvaluator)
     {
-        if (sqliteAvailabilityEvaluator == null)
+        ArgumentNullException.ThrowIfNull(sqliteAvailabilityEvaluator);
+        try
         {
-            throw new ArgumentNullException(nameof(sqliteAvailabilityEvaluator));
+            return sqliteAvailabilityEvaluator(experimentalSqliteEnabled);
         }
-
-        return sqliteAvailabilityEvaluator(experimentalSqliteEnabled);
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return false;
+        }
     }
 }

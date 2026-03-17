@@ -26,7 +26,7 @@ public sealed class InkExportService
     private readonly InkPersistenceService _persistenceService;
     public InkExportService(InkPersistenceService persistenceService)
     {
-        _persistenceService = persistenceService;
+        _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
     }
 
     public sealed class InkExportRunResult
@@ -47,6 +47,8 @@ public sealed class InkExportService
         List<InkStrokeData> strokes,
         InkExportOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         if (string.IsNullOrWhiteSpace(sourcePath) || strokes == null || strokes.Count == 0)
         {
             return null;
@@ -90,6 +92,8 @@ public sealed class InkExportService
         InkDocumentData? inkDoc,
         InkExportOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var result = new InkExportRunResult();
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
@@ -124,6 +128,8 @@ public sealed class InkExportService
         InkExportOptions options,
         IProgress<(int current, int total, string fileName)>? progress = null)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var allOutputs = new List<string>();
         if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
         {
@@ -132,7 +138,7 @@ public sealed class InkExportService
 
         var filesWithInk = _persistenceService.ListFilesWithInk(directoryPath);
         var filesWithInkSet = new HashSet<string>(
-            filesWithInk.Select(static p => Path.GetFullPath(p)),
+            filesWithInk.Select(NormalizePathOrOriginal),
             StringComparer.OrdinalIgnoreCase);
         CleanupCompositeOutputsForFilesWithoutInk(directoryPath, filesWithInkSet);
 
@@ -172,7 +178,7 @@ public sealed class InkExportService
         }
 
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var outputPath in Directory.GetFiles(exportDir))
+        foreach (var outputPath in GetFilesSafely(exportDir))
         {
             var fileName = Path.GetFileName(outputPath);
             if (!TryResolveSourcePathFromCompositeName(directoryPath, fileName, out var sourcePath))
@@ -209,7 +215,7 @@ public sealed class InkExportService
         var manifest = LoadExportManifest(exportDir);
         var manifestDirty = false;
         var deleted = 0;
-        foreach (var outputPath in Directory.GetFiles(exportDir))
+        foreach (var outputPath in GetFilesSafely(exportDir))
         {
             var fileName = Path.GetFileName(outputPath);
             if (!TryResolveSourcePathFromCompositeName(directoryPath, fileName, out var sourcePath))
@@ -222,16 +228,12 @@ public sealed class InkExportService
                 continue;
             }
 
-            try
-            {
-                File.Delete(outputPath);
-                deleted++;
-                manifestDirty = true;
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            if (!TryDeleteOutputFileSafe(outputPath))
             {
                 continue;
             }
+            deleted++;
+            manifestDirty = true;
 
             if (manifest.Remove(GetManifestKey(outputPath)))
             {
@@ -261,6 +263,8 @@ public sealed class InkExportService
     /// </summary>
     public List<string> GetExistingOutputPaths(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var existing = new List<string>();
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
@@ -333,7 +337,7 @@ public sealed class InkExportService
         var manifestDirty = false;
         var deleted = 0;
         var sourceDir = Path.GetDirectoryName(sourcePath) ?? string.Empty;
-        foreach (var outputPath in Directory.GetFiles(exportDir))
+        foreach (var outputPath in GetFilesSafely(exportDir))
         {
             var fileName = Path.GetFileName(outputPath);
             if (!TryResolveSourcePathFromCompositeName(sourceDir, fileName, out var resolvedSourcePath))
@@ -354,16 +358,12 @@ public sealed class InkExportService
                 }
             }
 
-            try
-            {
-                File.Delete(outputPath);
-                deleted++;
-                manifestDirty = true;
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            if (!TryDeleteOutputFileSafe(outputPath))
             {
                 continue;
             }
+            deleted++;
+            manifestDirty = true;
 
             if (manifest.Remove(GetManifestKey(outputPath)))
             {
@@ -771,6 +771,19 @@ public sealed class InkExportService
                && string.Equals(recorded, fingerprint, StringComparison.Ordinal);
     }
 
+    private static bool TryDeleteOutputFileSafe(string path)
+    {
+        try
+        {
+            File.Delete(path);
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return false;
+        }
+    }
+
     private static void CleanupCompositeOutputsForFilesWithoutInk(string directoryPath, HashSet<string> filesWithInkSet)
     {
         var exportDir = Path.Combine(directoryPath, ExportFolderName);
@@ -789,7 +802,7 @@ public sealed class InkExportService
         var manifestDirty = false;
         foreach (var sourcePath in filesWithComposite)
         {
-            if (filesWithInkSet.Contains(Path.GetFullPath(sourcePath)))
+            if (filesWithInkSet.Contains(NormalizePathOrOriginal(sourcePath)))
             {
                 continue;
             }
@@ -821,7 +834,7 @@ public sealed class InkExportService
         }
 
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var outputPath in Directory.GetFiles(exportDir))
+        foreach (var outputPath in GetFilesSafely(exportDir))
         {
             var fileName = Path.GetFileName(outputPath);
             if (!TryResolveSourcePathFromCompositeName(directoryPath, fileName, out var sourcePath))
@@ -851,7 +864,7 @@ public sealed class InkExportService
 
         var dirty = false;
         var sourceDir = Path.GetDirectoryName(sourcePath) ?? string.Empty;
-        foreach (var outputPath in Directory.GetFiles(exportDir))
+        foreach (var outputPath in GetFilesSafely(exportDir))
         {
             var fileName = Path.GetFileName(outputPath);
             if (!TryResolveSourcePathFromCompositeName(sourceDir, fileName, out var resolvedSourcePath))
@@ -869,15 +882,11 @@ public sealed class InkExportService
                 continue;
             }
 
-            try
-            {
-                File.Delete(outputPath);
-                dirty = true;
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            if (!TryDeleteOutputFileSafe(outputPath))
             {
                 continue;
             }
+            dirty = true;
 
             if (manifest.Remove(GetManifestKey(outputPath)))
             {
@@ -890,15 +899,37 @@ public sealed class InkExportService
 
     private static bool PathsEqual(string left, string right)
     {
+        var leftFull = GetFullPathOrOriginal(left);
+        var rightFull = GetFullPathOrOriginal(right);
+        return string.Equals(leftFull, rightFull, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePathOrOriginal(string path)
+    {
+        return GetFullPathOrOriginal(path);
+    }
+
+    private static string GetFullPathOrOriginal(string path)
+    {
         try
         {
-            var leftFull = Path.GetFullPath(left);
-            var rightFull = Path.GetFullPath(right);
-            return string.Equals(leftFull, rightFull, StringComparison.OrdinalIgnoreCase);
+            return Path.GetFullPath(path);
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+            return path;
+        }
+    }
+
+    private static IReadOnlyList<string> GetFilesSafely(string directoryPath)
+    {
+        try
+        {
+            return Directory.GetFiles(directoryPath);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return Array.Empty<string>();
         }
     }
 
@@ -1164,6 +1195,7 @@ public sealed class InkExportService
         };
     }
 }
+
 
 
 

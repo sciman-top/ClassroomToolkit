@@ -22,6 +22,55 @@ public sealed class GlobalHookServiceLifecycleContractTests
         source.Should().Contain("HookUnavailable callback failed");
     }
 
+    [Fact]
+    public void GlobalHookService_ShouldCleanupStartedHooks_WhenStartThrowsRecoverableException()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("Start hook failed");
+        source.Should().Contain("CleanupHooks(startedHooks, callback);");
+        source.Should().Contain("NotifyHookUnavailable();");
+    }
+
+    [Fact]
+    public void GlobalHookService_ShouldDisposeHookInstances_WhenStopping()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("hook.Dispose();");
+    }
+
+    [Fact]
+    public void GlobalHookService_ShouldRollbackAllStartedHooks_WhenAnyHookIsInactive()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("register-inactive");
+        source.Should().Contain("CleanupHooks(startedHooks, callback);");
+        source.Should().Contain("NotifyHookUnavailable();");
+        source.Should().Contain("return false;");
+    }
+
+    [Fact]
+    public void GlobalHookService_ShouldCleanupStartedHooks_WhenBindingEnumerationThrowsRecoverableException()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("Register bindings failed");
+        source.Should().Contain("CleanupHooks(startedHooks, callback);");
+        source.Should().Contain("NotifyHookUnavailable();");
+    }
+
+    [Fact]
+    public void GlobalHookService_ShouldIsolateRecoverableBindingCallbackFailure()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("TryInvokeBindingCallback(callback)");
+        source.Should().Contain("private static void TryInvokeBindingCallback(Action callback)");
+        source.Should().Contain("Binding callback failed");
+    }
+
     private static string GetSourcePath()
     {
         return Path.Combine(

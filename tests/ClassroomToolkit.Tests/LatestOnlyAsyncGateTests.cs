@@ -73,4 +73,46 @@ public sealed class LatestOnlyAsyncGateTests
 
         maxRunning.Should().Be(1);
     }
+
+    [Fact]
+    public async Task RunAsync_ShouldNoop_WhenDisposed()
+    {
+        var gate = new LatestOnlyAsyncGate();
+        var generation = gate.NextGeneration();
+        gate.Dispose();
+        var ran = false;
+
+        await gate.RunAsync(generation, _ =>
+        {
+            ran = true;
+            return Task.CompletedTask;
+        });
+
+        ran.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Dispose_ShouldBeIdempotent()
+    {
+        var gate = new LatestOnlyAsyncGate();
+
+        var act = () =>
+        {
+            gate.Dispose();
+            gate.Dispose();
+        };
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task RunAsync_ShouldThrowArgumentNullException_WhenActionIsNull()
+    {
+        var gate = new LatestOnlyAsyncGate();
+        var generation = gate.NextGeneration();
+
+        var act = () => gate.RunAsync(generation, null!);
+
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
 }

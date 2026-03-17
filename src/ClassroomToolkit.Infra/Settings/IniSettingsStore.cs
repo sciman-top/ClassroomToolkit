@@ -9,6 +9,7 @@ public sealed class IniSettingsStore
 
     public IniSettingsStore(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         _path = path;
     }
 
@@ -127,6 +128,8 @@ public sealed class IniSettingsStore
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
+        ArgumentNullException.ThrowIfNull(data);
+
         var builder = new StringBuilder();
         foreach (var section in data)
         {
@@ -157,9 +160,16 @@ public sealed class IniSettingsStore
         }
         finally
         {
-            if (File.Exists(tempPath))
+            try
             {
-                File.Delete(tempPath);
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+            {
+                // temp cleanup best-effort; never mask primary write exception
             }
         }
     }

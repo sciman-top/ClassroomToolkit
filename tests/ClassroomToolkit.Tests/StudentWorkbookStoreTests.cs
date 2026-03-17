@@ -33,8 +33,100 @@ public sealed class StudentWorkbookStoreTests
         {
             if (File.Exists(tempPath))
             {
-                File.Delete(tempPath);
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (IOException)
+                {
+                }
             }
         }
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenWorkbookIsNull()
+    {
+        var store = new StudentWorkbookStore();
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_null", ".xlsx");
+
+        var act = () => store.Save(null!, tempPath, rollStateJson: null);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldThrowArgumentException_WhenPathIsBlank()
+    {
+        var store = new StudentWorkbookStore();
+
+        var act = () => store.LoadOrCreate(" ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Save_ShouldUseBestEffortTempCleanup()
+    {
+        var source = File.ReadAllText(GetStoreSourcePath());
+
+        source.Should().Contain("Best-effort cleanup for temp workbook files.");
+        source.Should().Contain("catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))");
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldFallbackToTemplate_WhenWorkbookFileIsCorrupted()
+    {
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_corrupt", ".xlsx");
+        try
+        {
+            File.WriteAllText(tempPath, "not-an-xlsx");
+            var store = new StudentWorkbookStore();
+
+            var loaded = store.LoadOrCreate(tempPath);
+
+            loaded.CreatedTemplate.Should().BeFalse();
+            loaded.Workbook.ClassNames.Should().Contain("班级1");
+            loaded.Workbook.GetActiveRoster().Students.Should().NotBeEmpty();
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (IOException)
+                {
+                }
+            }
+        }
+    }
+
+    private static string GetStoreSourcePath()
+    {
+        return Path.Combine(
+            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+            "src",
+            "ClassroomToolkit.Infra",
+            "Storage",
+            "StudentWorkbookStore.cs");
+    }
+
+    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
+    {
+        var current = start;
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
     }
 }

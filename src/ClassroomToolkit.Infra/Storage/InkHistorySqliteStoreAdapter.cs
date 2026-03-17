@@ -23,7 +23,10 @@ public sealed class InkHistorySqliteStoreAdapter
 
     public InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex, bool writeSnapshot = true)
     {
-        var dbPath = _dbPathResolver(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentOutOfRangeException.ThrowIfNegative(pageIndex);
+
+        var dbPath = ResolveDbPathSafe(sourcePath);
         InkHistoryLoadResult result;
         try
         {
@@ -52,17 +55,58 @@ public sealed class InkHistorySqliteStoreAdapter
 
     public void Save(string sourcePath, int pageIndex, string? strokesJson)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentOutOfRangeException.ThrowIfNegative(pageIndex);
+
         _bridge.Save(sourcePath, pageIndex, strokesJson);
-        var dbPath = _dbPathResolver(sourcePath);
+        var dbPath = ResolveDbPathSafe(sourcePath);
         TryWriteSnapshot(dbPath, sourcePath, pageIndex, strokesJson);
+    }
+
+    private string ResolveDbPathSafe(string sourcePath)
+    {
+        try
+        {
+            var resolved = _dbPathResolver(sourcePath);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+
+            Debug.WriteLine("[InkHistorySqlite] resolver returned empty path; fallback to default path policy.");
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkHistorySqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        return ResolveDbPath(sourcePath);
     }
 
     private static string ResolveDbPath(string sourcePath)
     {
-        var fullSourcePath = Path.GetFullPath(sourcePath);
-        var directory = Path.GetDirectoryName(fullSourcePath) ?? AppContext.BaseDirectory;
-        var fileName = Path.GetFileNameWithoutExtension(fullSourcePath);
-        return Path.Combine(directory, $"{fileName}.inkhistory.sqlite3");
+        const string fallbackFileName = "inkhistory";
+        try
+        {
+            var fullSourcePath = Path.GetFullPath(sourcePath);
+            var directory = Path.GetDirectoryName(fullSourcePath);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                directory = AppContext.BaseDirectory;
+            }
+
+            var fileName = Path.GetFileNameWithoutExtension(fullSourcePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = fallbackFileName;
+            }
+
+            return Path.Combine(directory, $"{fileName}.inkhistory.sqlite3");
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return Path.Combine(AppContext.BaseDirectory, $"{fallbackFileName}.inkhistory.sqlite3");
+        }
     }
 
     private static string? TryReadSnapshot(string dbPath, string sourcePath, int pageIndex)

@@ -8,6 +8,16 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class WindowOrchestratorTests
 {
     [Fact]
+    public void TouchSurface_ShouldThrow_WhenSurfaceStackIsNull()
+    {
+        var orchestrator = new WindowOrchestrator();
+
+        Action act = () => orchestrator.TouchSurface(null!, ZOrderSurface.Whiteboard);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void TouchSurface_ShouldMoveSurfaceToStackTail()
     {
         var orchestrator = new WindowOrchestrator();
@@ -74,5 +84,35 @@ public sealed class WindowOrchestratorTests
             imageManagerVisible: false);
 
         stack.Should().ContainSingle().Which.Should().Be(ZOrderSurface.Whiteboard);
+    }
+
+    [Fact]
+    public void PruneSurfaceStack_ShouldThrow_WhenSurfaceStackIsNull()
+    {
+        var orchestrator = new WindowOrchestrator();
+
+        Action act = () => orchestrator.PruneSurfaceStack(
+            null!,
+            photoActive: false,
+            presentationFullscreen: false,
+            whiteboardActive: false,
+            imageManagerVisible: false);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ResolveFrontSurface_ShouldThrow_WhenSurfaceStackIsNull()
+    {
+        var orchestrator = new WindowOrchestrator();
+
+        Action act = () => _ = orchestrator.ResolveFrontSurface(
+            null!,
+            photoActive: false,
+            presentationFullscreen: false,
+            whiteboardActive: false,
+            imageManagerVisible: false);
+
+        act.Should().Throw<ArgumentNullException>();
     }
 }

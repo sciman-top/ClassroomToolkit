@@ -114,4 +114,24 @@ public sealed class InkShowTransitionCoordinatorTests
         loadCount.Should().Be(1);
         requestedSource.Should().Be(CrossPageUpdateSources.InkShowEnabled);
     }
+
+    [Fact]
+    public void Apply_ShouldNotThrow_WhenCallbacksThrowNonFatal()
+    {
+        Action act = () => _ = InkShowTransitionCoordinator.Apply(
+            currentInkShowEnabled: false,
+            requestedEnabled: true,
+            photoModeActive: true,
+            setInkShowEnabled: _ => throw new InvalidOperationException("set-failed"),
+            purgePersistedInkForHiddenCurrentDocument: () => throw new InvalidOperationException("purge-failed"),
+            clearInkSurfaceState: () => throw new InvalidOperationException("surface-failed"),
+            clearNeighborInkVisuals: () => throw new InvalidOperationException("visuals-failed"),
+            clearNeighborInkCache: () => throw new InvalidOperationException("cache-failed"),
+            clearNeighborInkRenderPending: () => throw new InvalidOperationException("render-failed"),
+            clearNeighborInkSidecarLoadPending: () => throw new InvalidOperationException("sidecar-failed"),
+            loadCurrentPageIfExists: () => throw new InvalidOperationException("load-failed"),
+            requestCrossPageDisplayUpdate: _ => throw new InvalidOperationException("cross-page-failed"));
+
+        act.Should().NotThrow();
+    }
 }

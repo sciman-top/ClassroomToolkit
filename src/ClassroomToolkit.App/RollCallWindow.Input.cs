@@ -245,27 +245,25 @@ public partial class RollCallWindow
             return;
         }
 
-        try
-        {
-            _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                SafeActionExecutionExecutor.TryExecute(
-                    action,
-                    ex => System.Diagnostics.Debug.WriteLine(
-                        RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
-                            operation,
-                            ex.GetType().Name,
-                            ex.Message)));
-            }));
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
+                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    SafeActionExecutionExecutor.TryExecute(
+                        action,
+                        ex => System.Diagnostics.Debug.WriteLine(
+                            RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                                operation,
+                                ex.GetType().Name,
+                                ex.Message)));
+                }));
+            },
+            ex => System.Diagnostics.Debug.WriteLine(
                 RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
                     operation,
                     ex.GetType().Name,
-                    ex.Message));
-        }
+                    ex.Message)));
     }
 
     private void NotifyRemoteHookError()
@@ -274,20 +272,28 @@ public partial class RollCallWindow
         {
             return;
         }
+        if (!RollCallRemoteHookDispatchPolicy.CanDispatch(
+                Dispatcher.HasShutdownStarted,
+                Dispatcher.HasShutdownFinished))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchSkippedMessage(
+                    "remote-hook-unavailable",
+                    "dispatcher-unavailable"));
+            return;
+        }
 
-        try
-        {
-            _ = Dispatcher.InvokeAsync(() =>
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                var owner = System.Windows.Application.Current?.MainWindow;
-                var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
-                ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
-            });
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"NotifyRemoteHookError dispatch failed: {ex.Message}");
-        }
+                _ = Dispatcher.InvokeAsync(() =>
+                {
+                    var owner = System.Windows.Application.Current?.MainWindow;
+                    var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
+                    ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
+                });
+            },
+            ex => System.Diagnostics.Debug.WriteLine($"NotifyRemoteHookError dispatch failed: {ex.Message}"));
     }
 
     private void UpdateRemoteHookState()

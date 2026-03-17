@@ -14,11 +14,16 @@ public sealed class StudentWorkbookStoreBridge : IStudentWorkbookStoreBridge
 
     public StudentWorkbookLoadResult LoadOrCreate(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         return _store.LoadOrCreate(path);
     }
 
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
+        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         _store.Save(workbook, path, rollStateJson);
     }
 }

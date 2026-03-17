@@ -1061,6 +1061,9 @@
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="Margin" Value="4"/>
+        <Setter Property="Height" Value="56"/>
+        <Setter Property="MinHeight" Value="56"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Template">

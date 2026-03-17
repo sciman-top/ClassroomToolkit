@@ -12,6 +12,7 @@ using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.App.Windowing;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -40,6 +41,11 @@ public partial class PaintOverlayWindow
 
     private bool IsCrossPageDisplayActive()
     {
+        if (Volatile.Read(ref _overlayClosed) != 0)
+        {
+            return false;
+        }
+
         return PhotoInteractionModePolicy.IsCrossPageDisplayActive(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
@@ -1421,6 +1427,12 @@ public partial class PaintOverlayWindow
 
     private void RequestCrossPageDisplayUpdate(string source = CrossPageUpdateSources.Unspecified)
     {
+        if (Volatile.Read(ref _overlayClosed) != 0)
+        {
+            _inkDiagnostics?.OnCrossPageUpdateEvent("skip", source, "overlay-closed");
+            return;
+        }
+
         var admissionDecision = CrossPageRequestAdmissionPolicy.Resolve(
             crossPageDisplayActive: IsCrossPageDisplayActive(),
             photoLoading: _photoLoading,
@@ -1507,18 +1519,22 @@ public partial class PaintOverlayWindow
                 ref _crossPageDisplayUpdateState,
                 nowUtc);
             var delay = dispatchDecision.DelayMs;
+            var lifecycleToken = _overlayLifecycleCancellation.Token;
             _ = SafeTaskRunner.Run(
                 "PaintOverlayWindow.CrossPageDisplayUpdate.Delayed",
-                async _ =>
+                async cancellationToken =>
                 {
-                    try
+                    var delayOutcome = await TryAwaitCrossPageDelayedDispatchAsync(
+                        delay,
+                        cancellationToken).ConfigureAwait(false);
+                    if (!delayOutcome.ShouldContinue)
                     {
-                        await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
-                    }
-                    catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                    {
-                        var detail = CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
-                            ex.GetType().Name);
+                        if (string.IsNullOrWhiteSpace(delayOutcome.FailureDetail))
+                        {
+                            return;
+                        }
+
+                        var detail = delayOutcome.FailureDetail;
                         var scheduledRecovery = TryBeginInvoke(() =>
                         {
                             RecoverCrossPageDelayedDispatchFailure(
@@ -1546,6 +1562,7 @@ public partial class PaintOverlayWindow
                         }
                         return;
                     }
+
                     var scheduled = TryBeginInvoke(() =>
                     {
                         if (!CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(
@@ -1570,6 +1587,7 @@ public partial class PaintOverlayWindow
                             emitAbortDiagnostics: false);
                     }
                 },
+                lifecycleToken,
                 onError: ex =>
                 {
                     CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
@@ -1611,6 +1629,29 @@ public partial class PaintOverlayWindow
                 source,
                 mode: "direct",
                 emitAbortDiagnostics: true);
+        }
+    }
+
+    private static async Task<(bool ShouldContinue, string? FailureDetail)> TryAwaitCrossPageDelayedDispatchAsync(
+        int delayMs,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await System.Threading.Tasks.Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return (ShouldContinue: true, FailureDetail: null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return (ShouldContinue: false, FailureDetail: null);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return (
+                ShouldContinue: false,
+                FailureDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                    ex.GetType().Name));
         }
     }
 
@@ -1681,22 +1722,25 @@ public partial class PaintOverlayWindow
         {
             MarkCrossPageFirstInputStage("crosspage-update-run", mode);
         }
-        try
-        {
-            UpdateCrossPageDisplay();
-            TryFlushCrossPageReplay();
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            var replayQueueDecision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(source);
-            CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
-                ref _crossPageReplayState,
-                replayQueueDecision);
-            _inkDiagnostics?.OnCrossPageUpdateEvent(
-                "recover",
-                source,
-                $"run-failed ex={ex.GetType().Name}");
-        }
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                UpdateCrossPageDisplay();
+                TryFlushCrossPageReplay();
+                return true;
+            },
+            fallback: false,
+            onFailure: ex =>
+            {
+                var replayQueueDecision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(source);
+                CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
+                    ref _crossPageReplayState,
+                    replayQueueDecision);
+                _inkDiagnostics?.OnCrossPageUpdateEvent(
+                    "recover",
+                    source,
+                    $"run-failed ex={ex.GetType().Name}");
+            });
     }
 
     private void ApplyNeighborSharedTransform(

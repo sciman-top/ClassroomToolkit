@@ -14,7 +14,7 @@ public sealed class PresentationCommandMapper
             PresentationCommand.Last => new KeyBinding(VirtualKey.End, KeyModifiers.None),
             PresentationCommand.BlackScreenToggle => new KeyBinding(VirtualKey.B, KeyModifiers.None),
             PresentationCommand.WhiteScreenToggle => new KeyBinding(VirtualKey.W, KeyModifiers.None),
-            _ => new KeyBinding(VirtualKey.Tab, KeyModifiers.None)
+            _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unsupported presentation command.")
         };
     }
 }

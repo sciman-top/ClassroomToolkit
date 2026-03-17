@@ -7,13 +7,14 @@ namespace ClassroomToolkit.App.Photos;
 public sealed class ImageItem : INotifyPropertyChanged
 {
     private ImageSource? _thumbnail;
+    private int _pageCount;
 
     public ImageItem(string path, ImageSource? thumbnail, bool isFolder, int pageCount, DateTime modified, bool isImage)
     {
         Path = path;
         _thumbnail = thumbnail;
         IsFolder = isFolder;
-        PageCount = pageCount;
+        _pageCount = pageCount;
         Modified = modified;
         IsImage = isImage;
     }
@@ -38,7 +39,23 @@ public sealed class ImageItem : INotifyPropertyChanged
 
     public bool IsFolder { get; }
 
-    public int PageCount { get; }
+    public int PageCount
+    {
+        get => _pageCount;
+        set
+        {
+            if (_pageCount == value)
+            {
+                return;
+            }
+
+            _pageCount = value;
+            OnPropertyChanged(nameof(PageCount));
+            OnPropertyChanged(nameof(PageBadge));
+            OnPropertyChanged(nameof(PageBadgeVisibility));
+            OnPropertyChanged(nameof(PageLabel));
+        }
+    }
 
     public DateTime Modified { get; }
 

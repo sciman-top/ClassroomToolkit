@@ -26,14 +26,6 @@ public partial class RollCallWindow
             return;
         }
         
-        // 参考 Python 版本的策略：当学生ID变化时，先隐藏上一张照片
-        if (_lastPhotoStudentId != studentId)
-        {
-            // 完全关闭并销毁照片覆盖窗口，确保没有任何残留
-            ClosePhotoOverlay();
-            _photoOverlay = null;
-        }
-        
         _lastPhotoStudentId = studentId;
         var resolver = EnsurePhotoResolver();
         var className = ResolvePhotoClassName();
@@ -124,11 +116,9 @@ public partial class RollCallWindow
 
     private void OnPhotoClosed(string? studentId)
     {
-        if (string.IsNullOrWhiteSpace(studentId) || _photoResolver == null)
-        {
-            return;
-        }
-        var className = ResolvePhotoClassName();
-        _photoResolver.InvalidateStudentCache(className, studentId);
+        _ = studentId;
+        // Do not invalidate resolver cache on regular overlay close.
+        // Frequent close/show cycles are part of normal roll-call flow; clearing the whole
+        // class index here causes repeated directory re-index and visible latency spikes.
     }
 }

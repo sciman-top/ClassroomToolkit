@@ -59,4 +59,36 @@ public sealed class SafeActionExecutionExecutorTests
 
         act.Should().Throw<BadImageFormatException>();
     }
+
+    [Fact]
+    public void TryExecuteOfT_ShouldReturnValue_WhenFuncSucceeds()
+    {
+        var result = SafeActionExecutionExecutor.TryExecute(() => 42, fallback: -1);
+
+        result.Should().Be(42);
+    }
+
+    [Fact]
+    public void TryExecuteOfT_ShouldReturnFallbackAndInvokeFailure_WhenFuncThrows()
+    {
+        var captured = default(Exception);
+
+        var result = SafeActionExecutionExecutor.TryExecute(
+            () => throw new InvalidOperationException("boom"),
+            fallback: -1,
+            onFailure: ex => captured = ex);
+
+        result.Should().Be(-1);
+        captured.Should().BeOfType<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void TryExecuteOfT_ShouldRethrowFatalException_WhenFuncThrowsFatal()
+    {
+        var act = () => SafeActionExecutionExecutor.TryExecute(
+            () => throw new BadImageFormatException("fatal"),
+            fallback: false);
+
+        act.Should().Throw<BadImageFormatException>();
+    }
 }

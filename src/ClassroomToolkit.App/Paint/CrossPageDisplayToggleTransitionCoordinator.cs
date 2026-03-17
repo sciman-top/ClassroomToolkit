@@ -47,7 +47,7 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
             return default;
         }
 
-        setCrossPageDisplayEnabled(flagUpdate.NextCrossPageDisplayEnabled);
+        PaintActionInvoker.TryInvoke(() => setCrossPageDisplayEnabled(flagUpdate.NextCrossPageDisplayEnabled));
 
         var togglePlan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
             photoInkModeActive: photoInkModeActive,
@@ -55,34 +55,34 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
             photoDocumentIsPdf: photoDocumentIsPdf,
             photoUnifiedTransformReady: photoUnifiedTransformReady);
 
-        resetCrossPageNormalizedWidth();
+        PaintActionInvoker.TryInvoke(resetCrossPageNormalizedWidth);
 
         if (togglePlan.ShouldRestoreUnifiedTransformAndRedraw)
         {
-            restoreUnifiedTransformAndRedraw();
+            PaintActionInvoker.TryInvoke(restoreUnifiedTransformAndRedraw);
         }
 
         if (togglePlan.ShouldSaveUnifiedTransformState)
         {
-            saveUnifiedTransformState();
-            updateCurrentPageWidthNormalization();
+            PaintActionInvoker.TryInvoke(saveUnifiedTransformState);
+            PaintActionInvoker.TryInvoke(updateCurrentPageWidthNormalization);
         }
 
         if (togglePlan.ShouldResetReplayAndClearNeighbors)
         {
-            resetCrossPageReplayState();
-            clearNeighborPages();
-            updateCurrentPageWidthNormalization();
+            PaintActionInvoker.TryInvoke(resetCrossPageReplayState);
+            PaintActionInvoker.TryInvoke(clearNeighborPages);
+            PaintActionInvoker.TryInvoke(updateCurrentPageWidthNormalization);
         }
 
         if (togglePlan.ShouldRefreshImageSequenceSource)
         {
-            refreshCurrentImageSequenceSourceAfterToggle();
+            PaintActionInvoker.TryInvoke(refreshCurrentImageSequenceSourceAfterToggle);
         }
 
         if (togglePlan.ShouldReloadPdfInkCache)
         {
-            reloadPdfInkCacheAfterToggle();
+            PaintActionInvoker.TryInvoke(reloadPdfInkCacheAfterToggle);
         }
 
         return new CrossPageDisplayToggleTransitionExecutionResult(
@@ -94,4 +94,5 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
             RefreshedImageSequenceSource: togglePlan.ShouldRefreshImageSequenceSource,
             ReloadedPdfInkCache: togglePlan.ShouldReloadPdfInkCache);
     }
+
 }

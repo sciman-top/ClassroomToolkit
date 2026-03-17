@@ -1,3 +1,5 @@
+using System;
+
 namespace ClassroomToolkit.App.Windowing;
 
 internal static class OverlayFullscreenBoundsRecoveryExecutor
@@ -8,13 +10,17 @@ internal static class OverlayFullscreenBoundsRecoveryExecutor
         Action applyImmediateBounds,
         Action applyDeferredBounds)
     {
+        ArgumentNullException.ThrowIfNull(normalizeWindowState);
+        ArgumentNullException.ThrowIfNull(applyImmediateBounds);
+        ArgumentNullException.ThrowIfNull(applyDeferredBounds);
+
         if (!shouldRecover)
         {
             return;
         }
 
-        normalizeWindowState(true);
-        applyImmediateBounds();
-        applyDeferredBounds();
+        _ = SafeActionExecutionExecutor.TryExecute(() => normalizeWindowState(true));
+        _ = SafeActionExecutionExecutor.TryExecute(applyImmediateBounds);
+        _ = SafeActionExecutionExecutor.TryExecute(applyDeferredBounds);
     }
 }

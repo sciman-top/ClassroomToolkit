@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Threading;
 using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Interop.Utilities;
 
@@ -28,6 +27,7 @@ public sealed class KeyboardHook : IDisposable
     private int _callbackExceptionCount;
     private long _lastExceptionLogTick;
     private volatile bool _acceptEvents;
+    private volatile bool _disposed;
 
     public bool IsActive => _hookId != IntPtr.Zero;
 
@@ -46,16 +46,20 @@ public sealed class KeyboardHook : IDisposable
 
     public void Start()
     {
-        StartCore(async: false).GetAwaiter().GetResult();
+        StartCore().GetAwaiter().GetResult();
     }
 
     public Task StartAsync()
     {
-        return StartCore(async: true);
+        return StartCore();
     }
 
-    private async Task StartCore(bool async)
+    private async Task StartCore()
     {
+        if (_disposed)
+        {
+            return;
+        }
         if (!OperatingSystem.IsWindows())
         {
             return;
@@ -68,6 +72,11 @@ public sealed class KeyboardHook : IDisposable
         const int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
+            if (_disposed)
+            {
+                Stop();
+                return;
+            }
             _hookId = SetHook(_hookProc);
             if (_hookId != IntPtr.Zero)
             {
@@ -80,10 +89,7 @@ public sealed class KeyboardHook : IDisposable
             if (attempt < maxRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200ms
-                if (async)
-                    await Task.Delay(delayMs);
-                else
-                    Thread.Sleep(delayMs);
+                await Task.Delay(delayMs).ConfigureAwait(false);
             }
         }
     }
@@ -91,11 +97,22 @@ public sealed class KeyboardHook : IDisposable
     public void Stop()
     {
         _acceptEvents = false;
+        BindingTriggered = null;
+        TargetBinding = null;
         if (_hookId == IntPtr.Zero)
         {
+            LastError = 0;
             return;
         }
-        UnhookWindowsHookEx(_hookId);
+        if (!UnhookWindowsHookEx(_hookId))
+        {
+            LastError = Marshal.GetLastWin32Error();
+            Debug.WriteLine($"[KeyboardHook] Unhook failed with error={LastError}");
+        }
+        else
+        {
+            LastError = 0;
+        }
         _hookId = IntPtr.Zero;
         _pendingSuppressedKey = null;
     }
@@ -111,6 +128,11 @@ public sealed class KeyboardHook : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+        _disposed = true;
         Stop();
         GC.SuppressFinalize(this);
     }
@@ -120,7 +142,7 @@ public sealed class KeyboardHook : IDisposable
         var startTime = Stopwatch.GetTimestamp();
         try
         {
-            if (!_acceptEvents || nCode < 0 || lParam == IntPtr.Zero)
+            if (_disposed || !_acceptEvents || nCode < 0 || lParam == IntPtr.Zero)
             {
                 return CallNextHookEx(_hookId, nCode, wParam, lParam);
             }

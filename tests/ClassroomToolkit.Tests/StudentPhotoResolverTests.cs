@@ -102,4 +102,126 @@ public sealed class StudentPhotoResolverTests
             }
         }
     }
+
+    [Fact]
+    public void ResolvePhotoPath_ShouldDetectNewFile_WhenWarmCacheMisses()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_cache_refresh");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var studentId = "1002";
+        var target = Path.Combine(classDirectory, $"{studentId}.jpg");
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            resolver.ResolvePhotoPath(className, studentId).Should().BeNull();
+            File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
+
+            var result = resolver.ResolvePhotoPath(className, studentId);
+
+            result.Should().Be(target);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Dispose_ShouldBeIdempotent_AndAllowSafeCallsAfterDispose()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_dispose");
+        var resolver = new StudentPhotoResolver(rootPath);
+
+        resolver.Dispose();
+        resolver.Dispose();
+
+        var act = () =>
+        {
+            resolver.WarmupCache(["ClassA"]);
+            var path = resolver.ResolvePhotoPath("ClassA", "1001");
+            resolver.InvalidateStudentCache("ClassA", "1001");
+            path.Should().BeNull();
+        };
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldBeSafe_DuringConcurrentWarmup()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_concurrent");
+        try
+        {
+            for (var i = 0; i < 8; i++)
+            {
+                var classDir = Path.Combine(rootPath, $"Class{i}");
+                Directory.CreateDirectory(classDir);
+                File.WriteAllBytes(Path.Combine(classDir, "1001.jpg"), new byte[] { 0x01, 0x02, 0x03 });
+            }
+
+            var resolver = new StudentPhotoResolver(rootPath);
+            var warmupTasks = Enumerable.Range(0, 16)
+                .Select(_ => Task.Run(() => resolver.WarmupCache()))
+                .ToArray();
+
+            var act = async () =>
+            {
+                resolver.Dispose();
+                resolver.Dispose();
+                await Task.WhenAll(warmupTasks);
+            };
+
+            await act.Should().NotThrowAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Resolver_ShouldUseIgnoreInaccessibleEnumeration_ForWarmupAndIndex()
+    {
+        var source = File.ReadAllText(GetResolverSourcePath());
+
+        source.Should().Contain("IgnoreInaccessible = true");
+        source.Should().Contain("Directory.EnumerateDirectories(_rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
+        source.Should().Contain("Directory.EnumerateFiles(directory, \"*\", TopLevelIgnoreInaccessibleOptions)");
+    }
+
+    private static string GetResolverSourcePath()
+    {
+        return Path.Combine(
+            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+            "src",
+            "ClassroomToolkit.App",
+            "Photos",
+            "StudentPhotoResolver.cs");
+    }
+
+    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
+    {
+        var current = start;
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
 }

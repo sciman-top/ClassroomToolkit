@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -69,15 +68,12 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
         diagnostics("defer-schedule", CrossPageUpdateSources.NeighborMissing, $"count={missingCount}");
         var token = incrementRefreshToken();
 
-        try
-        {
-            await delayAsync(decision.DelayMs).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(decision.DelayMs, delayAsync).ConfigureAwait(false);
+        if (!delayOutcome.Success)
         {
             return RecoverAfterFailure(
                 source: CrossPageUpdateSources.NeighborMissingDelayed,
-                failureDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(ex.GetType().Name),
+                failureDetail: delayOutcome.FailureDetail!,
                 requestCrossPageDisplayUpdate: requestCrossPageDisplayUpdate,
                 tryBeginInvoke: tryBeginInvoke,
                 dispatcherCheckAccess: dispatcherCheckAccess,

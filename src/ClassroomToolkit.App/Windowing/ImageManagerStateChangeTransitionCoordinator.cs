@@ -33,10 +33,14 @@ internal static class ImageManagerStateChangeTransitionCoordinator
                 AppliedSurfaceDecision: false);
         }
 
-        var scheduled = tryScheduleOverlayNormalization(applyOverlayNormalization);
+        var scheduled = false;
+        scheduled = SafeActionExecutionExecutor.TryExecute(
+            () => tryScheduleOverlayNormalization(applyOverlayNormalization),
+            fallback: false);
+
         if (!scheduled)
         {
-            applyOverlayNormalization();
+            _ = SafeActionExecutionExecutor.TryExecute(applyOverlayNormalization);
         }
 
         var appliedSurfaceDecision = false;
@@ -44,8 +48,13 @@ internal static class ImageManagerStateChangeTransitionCoordinator
                 decision.RequestZOrderApply,
                 decision.ForceEnforceZOrder))
         {
-            applySurfaceDecision(ImageManagerStateChangeSurfaceDecisionPolicy.Resolve(decision));
-            appliedSurfaceDecision = true;
+            appliedSurfaceDecision = SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    applySurfaceDecision(ImageManagerStateChangeSurfaceDecisionPolicy.Resolve(decision));
+                    return true;
+                },
+                fallback: false);
         }
 
         return new ImageManagerStateChangeTransitionExecutionResult(

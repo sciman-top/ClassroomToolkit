@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using ClassroomToolkit.App.Ink;
@@ -27,6 +28,52 @@ public sealed class InkExportServiceTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_tempDir, recursive: true); } catch { }
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrow_WhenPersistenceServiceIsNull()
+    {
+        Action act = () => _ = new InkExportService(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ExportAllInDirectory_ShouldThrow_WhenOptionsIsNull()
+    {
+        Action act = () => _service.ExportAllInDirectory(_tempDir, null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ExportSinglePage_ShouldThrow_WhenOptionsIsNull()
+    {
+        Action act = () => _service.ExportSinglePage("a.png", 1, new List<InkStrokeData>(), null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void GetExistingOutputPaths_ShouldThrow_WhenOptionsIsNull()
+    {
+        Action act = () => _service.GetExistingOutputPaths("a.png", inkDoc: null, options: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void NormalizePathOrOriginal_ShouldReturnInput_WhenPathIsInvalid()
+    {
+        var method = typeof(InkExportService).GetMethod(
+            "NormalizePathOrOriginal",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+
+        var act = () => (string)method!.Invoke(null, ["\0invalid-path"])!;
+
+        var normalized = act.Should().NotThrow().Subject;
+        normalized.Should().Be("\0invalid-path");
     }
 
     [Fact]

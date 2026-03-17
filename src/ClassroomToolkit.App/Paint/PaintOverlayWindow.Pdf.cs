@@ -47,10 +47,12 @@ public partial class PaintOverlayWindow
     private void StartPdfOpenAsync(string sourcePath)
     {
         var token = Interlocked.Increment(ref _photoLoadToken);
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.StartPdfOpenAsync",
-            _ =>
+            cancellationToken =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!TryOpenPdfDocumentCore(sourcePath, out var document, out var pageCount))
                 {
                     var scheduled = TryBeginInvoke(() =>
@@ -93,23 +95,17 @@ public partial class PaintOverlayWindow
                     openedDocument.Dispose();
                 }
             },
+            lifecycleToken,
             onError: ex => System.Diagnostics.Debug.WriteLine(
                 $"[PdfOpen] async-open failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private static bool TryOpenPdfDocumentCore(string path, out PdfDocumentHost? document, out int pageCount)
     {
-        document = null;
+        document = PaintActionInvoker.TryInvoke(
+            () => PdfDocumentHost.Open(path),
+            fallback: null);
         pageCount = 0;
-        try
-        {
-            document = PdfDocumentHost.Open(path);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            document?.Dispose();
-            return false;
-        }
         if (document == null)
         {
             return false;
@@ -362,18 +358,21 @@ public partial class PaintOverlayWindow
             return;
         }
         var token = _pdfPrefetchToken;
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePdfPrefetch",
-            async _ =>
+            async cancellationToken =>
             {
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var crossPageDisplayActive = ShouldRefreshCrossPagePdfDisplay();
                     var delay = PdfPrefetchTimingPolicy.ResolveInitialDelayMs(crossPageDisplayActive);
                     if (delay > 0)
                     {
-                        await Task.Delay(delay).ConfigureAwait(false);
+                        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                     }
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (token != _pdfPrefetchToken || !IsPdfModeActive())
                     {
                         return;
@@ -385,6 +384,7 @@ public partial class PaintOverlayWindow
                     OnPdfPrefetchCompleted(token);
                 }
             },
+            lifecycleToken,
             onError: ex => System.Diagnostics.Debug.WriteLine(
                 $"[PdfPrefetch] schedule failed: {ex.GetType().Name} - {ex.Message}"));
     }
@@ -412,14 +412,17 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePdfVisiblePrefetch",
-            _unusedToken =>
+            cancellationToken =>
             {
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     foreach (var pageIndex in unique)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         if (token != _pdfVisiblePrefetchToken)
                         {
                             return;
@@ -436,6 +439,7 @@ public partial class PaintOverlayWindow
                     OnPdfVisiblePrefetchCompleted(token);
                 }
             },
+            lifecycleToken,
             onError: ex => System.Diagnostics.Debug.WriteLine(
                 $"[PdfPrefetch] visible-prefetch failed: {ex.GetType().Name} - {ex.Message}"));
     }

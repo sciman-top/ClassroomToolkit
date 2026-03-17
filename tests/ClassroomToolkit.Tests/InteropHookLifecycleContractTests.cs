@@ -27,14 +27,51 @@ public sealed class InteropHookLifecycleContractTests
     }
 
     [Fact]
+    public void WpsHook_ShouldRejectRestartAfterDispose_AndClearSubscribers()
+    {
+        var source = File.ReadAllText(GetInteropSourcePath("WpsSlideshowNavigationHook.cs"));
+
+        source.Should().Contain("if (_disposed)");
+        source.Should().Contain("Stop();");
+        source.Should().Contain("NavigationRequested = null;");
+    }
+
+    [Fact]
     public void KeyboardHook_ShouldUseAcceptEventsGate_InStopAndCallback()
     {
         var source = File.ReadAllText(GetInteropSourcePath("KeyboardHook.cs"));
 
         source.Should().Contain("private volatile bool _acceptEvents;");
+        source.Should().Contain("private volatile bool _disposed;");
         source.Should().Contain("_acceptEvents = true;");
         source.Should().Contain("_acceptEvents = false;");
-        source.Should().Contain("if (!_acceptEvents || nCode < 0 || lParam == IntPtr.Zero)");
+        source.Should().Contain("if (_disposed || !_acceptEvents || nCode < 0 || lParam == IntPtr.Zero)");
+    }
+
+    [Fact]
+    public void KeyboardHook_Stop_ShouldClearSubscribersAndBindingTarget()
+    {
+        var source = File.ReadAllText(GetInteropSourcePath("KeyboardHook.cs"));
+
+        source.Should().Contain("BindingTriggered = null;");
+        source.Should().Contain("TargetBinding = null;");
+        source.Should().Contain("if (_hookId == IntPtr.Zero)");
+        source.Should().Contain("LastError = 0;");
+        source.Should().Contain("if (!UnhookWindowsHookEx(_hookId))");
+        source.Should().Contain("LastError = Marshal.GetLastWin32Error();");
+        source.Should().Contain("[KeyboardHook] Unhook failed with error=");
+    }
+
+    [Fact]
+    public void WpsHook_Stop_ShouldRecordUnhookFailures_ForKeyboardAndMouse()
+    {
+        var source = File.ReadAllText(GetInteropSourcePath("WpsSlideshowNavigationHook.cs"));
+
+        source.Should().Contain("if (!UnhookWindowsHookEx(_keyboardHook))");
+        source.Should().Contain("if (!UnhookWindowsHookEx(_mouseHook))");
+        source.Should().Contain("[WpsNavHook] Keyboard unhook failed with error=");
+        source.Should().Contain("[WpsNavHook] Mouse unhook failed with error=");
+        source.Should().Contain("LastError = unhookFailed ? lastUnhookError : 0;");
     }
 
     private static string GetInteropSourcePath(string fileName)

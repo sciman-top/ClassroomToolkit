@@ -44,7 +44,7 @@ internal static class InkShowTransitionCoordinator
             return default;
         }
 
-        setInkShowEnabled(requestedEnabled);
+        PaintActionInvoker.TryInvoke(() => setInkShowEnabled(requestedEnabled));
         if (transitionPlan.ShouldReturnAfterSetting)
         {
             return new InkShowTransitionExecutionResult(
@@ -57,15 +57,15 @@ internal static class InkShowTransitionCoordinator
 
         if (transitionPlan.ShouldClearInkState)
         {
-            purgePersistedInkForHiddenCurrentDocument();
-            clearInkSurfaceState();
-            clearNeighborInkVisuals();
-            clearNeighborInkCache();
-            clearNeighborInkRenderPending();
-            clearNeighborInkSidecarLoadPending();
+            PaintActionInvoker.TryInvoke(purgePersistedInkForHiddenCurrentDocument);
+            PaintActionInvoker.TryInvoke(clearInkSurfaceState);
+            PaintActionInvoker.TryInvoke(clearNeighborInkVisuals);
+            PaintActionInvoker.TryInvoke(clearNeighborInkCache);
+            PaintActionInvoker.TryInvoke(clearNeighborInkRenderPending);
+            PaintActionInvoker.TryInvoke(clearNeighborInkSidecarLoadPending);
             if (transitionPlan.RequestCrossPageUpdateForDisabled)
             {
-                requestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowDisabled);
+                PaintActionInvoker.TryInvoke(() => requestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowDisabled));
             }
 
             return new InkShowTransitionExecutionResult(
@@ -78,12 +78,12 @@ internal static class InkShowTransitionCoordinator
 
         if (transitionPlan.ShouldLoadCurrentPage)
         {
-            loadCurrentPageIfExists();
+            PaintActionInvoker.TryInvoke(loadCurrentPageIfExists);
         }
 
         if (transitionPlan.RequestCrossPageUpdateForEnabled)
         {
-            requestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowEnabled);
+            PaintActionInvoker.TryInvoke(() => requestCrossPageDisplayUpdate(CrossPageUpdateSources.InkShowEnabled));
         }
 
         return new InkShowTransitionExecutionResult(
@@ -93,4 +93,5 @@ internal static class InkShowTransitionCoordinator
             LoadedCurrentPage: transitionPlan.ShouldLoadCurrentPage,
             RequestedCrossPageUpdate: transitionPlan.RequestCrossPageUpdateForEnabled);
     }
+
 }

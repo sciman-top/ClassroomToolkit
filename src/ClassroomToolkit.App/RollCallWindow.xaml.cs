@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
@@ -52,11 +53,10 @@ public partial class RollCallWindow : Window
     private readonly Stopwatch _stopwatch;
     private Photos.RollCallGroupOverlayWindow? _groupOverlay;
     private readonly LatestOnlyAsyncGate _remoteHookStartGate = new();
+    private readonly CancellationTokenSource _lifecycleCancellation = new();
     private PhotoOverlayWindow? _photoOverlay;
     private StudentPhotoResolver? _photoResolver;
     private string? _lastPhotoStudentId;
-
-    private string _lastVoiceId = string.Empty;
     private bool _allowClose;
     private bool _timerStateApplied;
     private bool _rollStateDirty;
@@ -67,6 +67,7 @@ public partial class RollCallWindow : Window
     private bool _settingsSaveFailedNotified;
     private bool _hovering;
     private bool _windowBoundsDirty;
+    private bool _closingCleanupStarted;
     private DateTime _suppressRollUntil = RollCallRuntimeDefaults.UnsetTimestampUtc;
     private IntPtr _hwnd;
     private bool? _lastTransparentStyleEnabled;
@@ -88,6 +89,13 @@ public partial class RollCallWindow : Window
         ClassroomToolkit.Services.Speech.SpeechService speechService,
         RollCallWorkbookUseCase rollCallWorkbookUseCase)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataPath);
+        ArgumentNullException.ThrowIfNull(settingsService);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(hookService);
+        ArgumentNullException.ThrowIfNull(speechService);
+        ArgumentNullException.ThrowIfNull(rollCallWorkbookUseCase);
+
         InitializeComponent();
         _dataPath = dataPath;
         _settingsService = settingsService;
@@ -274,7 +282,12 @@ public partial class RollCallWindow : Window
         SourceInitialized -= OnSourceInitialized;
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = HandleLoadedAsync(_lifecycleCancellation.Token);
+    }
+
+    private async Task HandleLoadedAsync(CancellationToken cancellationToken)
     {
         if (_initialized)
         {
@@ -283,9 +296,11 @@ public partial class RollCallWindow : Window
         try
         {
             _initialized = true;
+            cancellationToken.ThrowIfCancellationRequested();
             ApplySettings(_settings, updatePhoto: false);
             _viewModel.WarmupData(_dataPath);
             await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+            cancellationToken.ThrowIfCancellationRequested();
             RestoreGroupSelection();
             // 启动时不显示之前点名状态的学生照片，避免意外显示
             UpdatePhotoDisplay(forceHide: true);
@@ -293,10 +308,15 @@ public partial class RollCallWindow : Window
             _stopwatch.Restart();
             _timer.Start();
             UpdateRemoteHookState();
+            cancellationToken.ThrowIfCancellationRequested();
             _dataLoaded = true;
             IsDataLoaded = true;
             UpdateMinWindowSize();
             UpdateWindowTransparency();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _initialized = false;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

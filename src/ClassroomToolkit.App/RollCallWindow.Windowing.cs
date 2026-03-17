@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.RollCall;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Domain.Utilities;
 using WpfSize = System.Windows.Size;
@@ -26,17 +27,8 @@ public partial class RollCallWindow
             {
                 return;
             }
-            try
-            {
-                DragMove();
-            }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
-                        ex.GetType().Name,
-                        ex.Message));
-            }
+
+            _ = TryDragMoveSafe();
         }
     }
 
@@ -62,18 +54,18 @@ public partial class RollCallWindow
                 return;
             }
         }
-        try
+        if (TryDragMoveSafe())
         {
-            DragMove();
             e.Handled = true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
-                    ex.GetType().Name,
-                    ex.Message));
-        }
+    }
+
+    private bool TryDragMoveSafe()
+    {
+        return this.SafeDragMove(ex => System.Diagnostics.Debug.WriteLine(
+            RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
+                ex.GetType().Name,
+                ex.Message)));
     }
 
     /// <summary>
@@ -104,6 +96,12 @@ public partial class RollCallWindow
             HideRollCall();
             return;
         }
+        if (_closingCleanupStarted)
+        {
+            return;
+        }
+        _closingCleanupStarted = true;
+        _lifecycleCancellation.Cancel();
         _timer.Stop();
         _stopwatch.Stop();
         _rollStateSaveTimer.Stop();
@@ -118,6 +116,8 @@ public partial class RollCallWindow
         MouseLeave -= OnWindowMouseLeave;
         IsVisibleChanged -= OnWindowVisibilityChanged;
         StateChanged -= OnWindowStateChanged;
+        _timer.Tick -= OnTimerTick;
+        _rollStateSaveTimer.Tick -= OnRollStateSaveTick;
         _windowBoundsSaveTimer.Tick -= OnWindowBoundsSaveTick;
         _hoverCheckTimer.Tick -= OnHoverCheckTimerTick;
         SizeChanged -= OnWindowSizeChanged;
@@ -132,7 +132,10 @@ public partial class RollCallWindow
         _speechService.SpeechUnavailable -= OnSpeechUnavailable;
         _remoteHookStartGate.NextGeneration();
         StopKeyboardHook();
+        _remoteHookStartGate.Dispose();
         ClosePhotoOverlay();
+        _photoResolver?.Dispose();
+        _photoResolver = null;
         if (_groupOverlay != null)
         {
             _groupOverlay.Closed -= OnGroupOverlayClosed;
@@ -142,6 +145,8 @@ public partial class RollCallWindow
 
         PersistSettings();
         _viewModel.SaveState();
+        _viewModel.Dispose();
+        _lifecycleCancellation.Dispose();
     }
 
     private static bool IsInteractiveElement(DependencyObject source)
@@ -403,6 +408,12 @@ public partial class RollCallWindow
     private void UpdateMinWindowSize()
     {
         if (!IsLoaded)
+        {
+            return;
+        }
+        if (!RollCallRemoteHookDispatchPolicy.CanDispatch(
+                Dispatcher.HasShutdownStarted,
+                Dispatcher.HasShutdownFinished))
         {
             return;
         }

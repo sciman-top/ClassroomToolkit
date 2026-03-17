@@ -41,7 +41,9 @@ public sealed class StudentWorkbookSqliteStoreAdapter
 
     public StudentWorkbookLoadResult LoadOrCreate(string path)
     {
-        var dbPath = _dbPathResolver(path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var dbPath = ResolveDbPathSafe(path);
         StudentWorkbookLoadResult result;
         try
         {
@@ -84,17 +86,58 @@ public sealed class StudentWorkbookSqliteStoreAdapter
 
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
+        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         _bridge.Save(workbook, path, rollStateJson);
-        var dbPath = _dbPathResolver(path);
+        var dbPath = ResolveDbPathSafe(path);
         TryWriteSnapshotPackage(dbPath, workbook, rollStateJson);
+    }
+
+    private string ResolveDbPathSafe(string workbookPath)
+    {
+        try
+        {
+            var resolved = _dbPathResolver(workbookPath);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+
+            Debug.WriteLine("[StudentWorkbookSqlite] resolver returned empty path; fallback to default path policy.");
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[StudentWorkbookSqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
+        return ResolveDbPath(workbookPath);
     }
 
     private static string ResolveDbPath(string workbookPath)
     {
-        var fullWorkbookPath = Path.GetFullPath(workbookPath);
-        var directory = Path.GetDirectoryName(fullWorkbookPath) ?? AppContext.BaseDirectory;
-        var fileName = Path.GetFileNameWithoutExtension(fullWorkbookPath);
-        return Path.Combine(directory, $"{fileName}.studentworkbook.sqlite3");
+        const string fallbackFileName = "students";
+        try
+        {
+            var fullWorkbookPath = Path.GetFullPath(workbookPath);
+            var directory = Path.GetDirectoryName(fullWorkbookPath);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                directory = AppContext.BaseDirectory;
+            }
+
+            var fileName = Path.GetFileNameWithoutExtension(fullWorkbookPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = fallbackFileName;
+            }
+
+            return Path.Combine(directory, $"{fileName}.studentworkbook.sqlite3");
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return Path.Combine(AppContext.BaseDirectory, $"{fallbackFileName}.studentworkbook.sqlite3");
+        }
     }
 
     private static RollStateSnapshot TryReadRollStateSnapshot(string dbPath)

@@ -15,6 +15,17 @@ public sealed class PresentationControlPlannerTests
     }
 
     [Fact]
+    public void Plan_ShouldThrow_WhenOptionsIsNull()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var info = new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" });
+
+        Action act = () => planner.Plan(info, null!, PresentationCommand.Next);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void AutoStrategy_ShouldPreferWpsRawMode()
     {
         var classifier = new PresentationClassifier();

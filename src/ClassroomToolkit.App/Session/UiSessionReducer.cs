@@ -1,9 +1,14 @@
+using System;
+
 namespace ClassroomToolkit.App.Session;
 
 public static class UiSessionReducer
 {
     public static UiSessionState Reduce(UiSessionState current, UiSessionEvent sessionEvent)
     {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(sessionEvent);
+
         var next = sessionEvent switch
         {
             EnterPresentationFullscreenEvent => current with

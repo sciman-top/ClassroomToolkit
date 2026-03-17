@@ -26,7 +26,21 @@ public partial class ClassSelectDialog : Window
         }
         ClassList.MouseDoubleClick += OnClassDoubleClick;
         ClassList.KeyDown += OnClassKeyDown;
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        ClassList.MouseDoubleClick -= OnClassDoubleClick;
+        ClassList.KeyDown -= OnClassKeyDown;
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
@@ -63,7 +77,7 @@ public partial class ClassSelectDialog : Window
     {
         if (e.ChangedButton == MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

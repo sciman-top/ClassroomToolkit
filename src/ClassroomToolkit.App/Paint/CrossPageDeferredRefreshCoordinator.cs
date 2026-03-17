@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -106,16 +105,12 @@ internal static class CrossPageDeferredRefreshCoordinator
         diagnostics("defer-schedule", source, $"delayMs={delay}");
         var token = incrementRefreshToken();
 
-        try
-        {
-            await delayAsync(delay).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(delay, delayAsync).ConfigureAwait(false);
+        if (!delayOutcome.Success)
         {
             return RecoverAfterDelayFailure(
                 source,
-                token,
-                CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(ex.GetType().Name),
+                delayOutcome.FailureDetail!,
                 requestCrossPageDisplayUpdate,
                 tryBeginInvoke,
                 dispatcherCheckAccess,
@@ -182,7 +177,6 @@ internal static class CrossPageDeferredRefreshCoordinator
 
     private static CrossPageDeferredRefreshExecutionResult RecoverAfterDelayFailure(
         string source,
-        int token,
         string failureDetail,
         Action<string> requestCrossPageDisplayUpdate,
         TryBeginInvokeDelegate tryBeginInvoke,
@@ -191,39 +185,17 @@ internal static class CrossPageDeferredRefreshCoordinator
         Func<bool> dispatcherShutdownFinished,
         DiagnosticsDelegate diagnostics)
     {
-        var recoverySource = CrossPageUpdateSources.WithImmediate(source);
-        var scheduledRecovery = tryBeginInvoke(
-            () => requestCrossPageDisplayUpdate(recoverySource),
-            DispatcherPriority.Background);
-        var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
-            recoveryDispatchScheduled: scheduledRecovery,
-            dispatcherCheckAccess: dispatcherCheckAccess(),
-            dispatcherShutdownStarted: dispatcherShutdownStarted(),
-            dispatcherShutdownFinished: dispatcherShutdownFinished());
-        if (recoveryDecision.ShouldRecoverInline)
-        {
-            requestCrossPageDisplayUpdate(recoverySource);
-            diagnostics(
-                "defer-recover",
-                source,
-                CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(tokenMatched: true));
-            return new CrossPageDeferredRefreshExecutionResult(
-                SkippedBeforeSchedule: false,
-                RequestedImmediateRefresh: false,
-                ScheduledDelayedRefresh: true,
-                RequestedDelayedRefresh: false,
-                RecoveredInlineAfterFailure: true,
-                DelayMs: 0);
-        }
-
-        diagnostics("defer-abort", source, failureDetail);
-        return new CrossPageDeferredRefreshExecutionResult(
-            SkippedBeforeSchedule: false,
-            RequestedImmediateRefresh: false,
-            ScheduledDelayedRefresh: true,
-            RequestedDelayedRefresh: false,
-            RecoveredInlineAfterFailure: false,
-            DelayMs: 0);
+        return RecoverAfterFailureCore(
+            source,
+            requestCrossPageDisplayUpdate,
+            tryBeginInvoke,
+            dispatcherCheckAccess,
+            dispatcherShutdownStarted,
+            dispatcherShutdownFinished,
+            diagnostics,
+            abortDetail: failureDetail,
+            recoverDiagnosticsDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
+                tokenMatched: true));
     }
 
     private static CrossPageDeferredRefreshExecutionResult RecoverAfterDelayedDispatchFailure(
@@ -235,6 +207,29 @@ internal static class CrossPageDeferredRefreshCoordinator
         Func<bool> dispatcherShutdownFinished,
         DiagnosticsDelegate diagnostics)
     {
+        return RecoverAfterFailureCore(
+            source,
+            requestCrossPageDisplayUpdate,
+            tryBeginInvoke,
+            dispatcherCheckAccess,
+            dispatcherShutdownStarted,
+            dispatcherShutdownFinished,
+            diagnostics,
+            abortDetail: "delayed-dispatch-failed",
+            recoverDiagnosticsDetail: null);
+    }
+
+    private static CrossPageDeferredRefreshExecutionResult RecoverAfterFailureCore(
+        string source,
+        Action<string> requestCrossPageDisplayUpdate,
+        TryBeginInvokeDelegate tryBeginInvoke,
+        Func<bool> dispatcherCheckAccess,
+        Func<bool> dispatcherShutdownStarted,
+        Func<bool> dispatcherShutdownFinished,
+        DiagnosticsDelegate diagnostics,
+        string abortDetail,
+        string? recoverDiagnosticsDetail)
+    {
         var recoverySource = CrossPageUpdateSources.WithImmediate(source);
         var scheduledRecovery = tryBeginInvoke(
             () => requestCrossPageDisplayUpdate(recoverySource),
@@ -247,6 +242,11 @@ internal static class CrossPageDeferredRefreshCoordinator
         if (recoveryDecision.ShouldRecoverInline)
         {
             requestCrossPageDisplayUpdate(recoverySource);
+            if (!string.IsNullOrWhiteSpace(recoverDiagnosticsDetail))
+            {
+                diagnostics("defer-recover", source, recoverDiagnosticsDetail);
+            }
+
             return new CrossPageDeferredRefreshExecutionResult(
                 SkippedBeforeSchedule: false,
                 RequestedImmediateRefresh: false,
@@ -256,7 +256,7 @@ internal static class CrossPageDeferredRefreshCoordinator
                 DelayMs: 0);
         }
 
-        diagnostics("defer-abort", source, "delayed-dispatch-failed");
+        diagnostics("defer-abort", source, abortDetail);
         return new CrossPageDeferredRefreshExecutionResult(
             SkippedBeforeSchedule: false,
             RequestedImmediateRefresh: false,

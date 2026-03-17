@@ -6,6 +6,7 @@ internal static class InteropAdapterScope
 {
     internal static IDisposable Create(Action restore)
     {
+        ArgumentNullException.ThrowIfNull(restore);
         return new Scope(restore);
     }
 
@@ -16,6 +17,7 @@ internal static class InteropAdapterScope
 
         internal Scope(Action restore)
         {
+            ArgumentNullException.ThrowIfNull(restore);
             _restore = restore;
         }
 

@@ -1,4 +1,5 @@
 using System.Windows;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -23,6 +24,9 @@ internal static class WindowOwnerBindingExecutor
         where TTarget : class
         where TOwner : class
     {
+        ArgumentNullException.ThrowIfNull(attachAction);
+        ArgumentNullException.ThrowIfNull(detachAction);
+
         if (child == null)
         {
             return false;
@@ -31,11 +35,21 @@ internal static class WindowOwnerBindingExecutor
         switch (action)
         {
             case FloatingOwnerBindingAction.AttachOverlay when overlayOwner != null:
-                attachAction(child, overlayOwner);
-                return true;
+                return SafeActionExecutionExecutor.TryExecute(
+                    () =>
+                    {
+                        attachAction(child, overlayOwner);
+                        return true;
+                    },
+                    fallback: false);
             case FloatingOwnerBindingAction.DetachOverlay:
-                detachAction(child);
-                return true;
+                return SafeActionExecutionExecutor.TryExecute(
+                    () =>
+                    {
+                        detachAction(child);
+                        return true;
+                    },
+                    fallback: false);
             default:
                 return false;
         }

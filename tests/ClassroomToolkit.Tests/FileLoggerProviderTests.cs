@@ -9,6 +9,33 @@ namespace ClassroomToolkit.Tests;
 public sealed class FileLoggerProviderTests
 {
     [Fact]
+    public void Constructor_ShouldThrowArgumentException_WhenLogDirectoryIsBlank()
+    {
+        Action act = () => _ = new FileLoggerProvider(" ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void CreateLogger_ShouldThrowArgumentException_WhenCategoryNameIsBlank()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_category_guard");
+        using var provider = new FileLoggerProvider(directory);
+
+        Action act = () => _ = provider.CreateLogger(" ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void FileLoggerConstructor_ShouldThrow_WhenProviderIsNull()
+    {
+        Action act = () => _ = new FileLogger("category", null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Dispose_ShouldBeIdempotent()
     {
         var directory = TestPathHelper.CreateDirectory("ctool_file_logger_dispose");
@@ -123,5 +150,93 @@ public sealed class FileLoggerProviderTests
         var day2Content = File.ReadAllText(day2File);
         day1Content.Should().Contain("message-day-1");
         day2Content.Should().Contain("message-day-2");
+    }
+
+    [Fact]
+    public void Dispose_ShouldFlushQueuedMessages_BeforeShutdown()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_flush");
+        var now = new DateTime(2026, 03, 16, 12, 0, 0);
+        var file = Path.Combine(directory, $"app_{now.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+
+        var provider = new FileLoggerProvider(directory, () => now);
+        var logger = provider.CreateLogger("flush-category");
+        const int total = 2500;
+        for (var index = 0; index < total; index++)
+        {
+            logger.Log(
+                LogLevel.Information,
+                new EventId(index, "flush"),
+                $"flush-message-{index}",
+                null,
+                static (state, _) => state);
+        }
+
+        provider.Dispose();
+
+        File.Exists(file).Should().BeTrue();
+        var content = File.ReadAllText(file);
+        var lines = content.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        lines.Length.Should().Be(total);
+        content.Should().Contain("flush-message-0");
+        content.Should().Contain($"flush-message-{total - 1}");
+    }
+
+    [Fact]
+    public void Log_ShouldUseProviderTime_ForTimestampAndFileBucket()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_time_source");
+        var fixedNow = new DateTime(2026, 03, 17, 01, 02, 03, 456);
+        var expectedDateToken = fixedNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+        var expectedFile = Path.Combine(directory, $"app_{fixedNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+
+        var provider = new FileLoggerProvider(directory, () => fixedNow);
+        var logger = provider.CreateLogger("time-source");
+        logger.Log(
+            LogLevel.Information,
+            new EventId(1, "time-source"),
+            "time-source-message",
+            null,
+            static (state, _) => state);
+
+        SpinWait.SpinUntil(() => File.Exists(expectedFile), TimeSpan.FromSeconds(2)).Should().BeTrue();
+        provider.Dispose();
+        var content = File.ReadAllText(expectedFile);
+        content.Should().Contain(expectedDateToken);
+        content.Should().Contain("time-source-message");
+    }
+
+    [Fact]
+    public void Log_ShouldNotThrow_WhenNowProviderThrowsNonFatal()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_now_provider_nonfatal");
+        using var provider = new FileLoggerProvider(directory, () => throw new InvalidOperationException("now-failed"));
+        var logger = provider.CreateLogger("now-provider-nonfatal");
+
+        Action act = () => logger.Log(
+            LogLevel.Information,
+            new EventId(1, "now-provider"),
+            "message",
+            null,
+            static (state, _) => state);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Log_ShouldNotThrow_WhenFormatterThrowsNonFatal()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_formatter_nonfatal");
+        using var provider = new FileLoggerProvider(directory);
+        var logger = provider.CreateLogger("formatter-nonfatal");
+
+        Action act = () => logger.Log(
+            LogLevel.Information,
+            new EventId(1, "formatter"),
+            "message",
+            null,
+            static (_, _) => throw new InvalidOperationException("formatter-failed"));
+
+        act.Should().NotThrow();
     }
 }

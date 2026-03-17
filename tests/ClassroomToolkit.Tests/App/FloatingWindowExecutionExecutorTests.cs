@@ -131,4 +131,60 @@ public class FloatingWindowExecutionExecutorTests
         activationCalls.Should().Be(2);
         topmostCalled.Should().BeTrue();
     }
+
+    [Fact]
+    public void Apply_ShouldContinueWithoutThrow_WhenOwnerPlanAndTopmostPlanThrowNonFatal()
+    {
+        var activationCalls = 0;
+
+        Action act = () => FloatingWindowExecutionExecutor.Apply(
+            new FloatingWindowExecutionPlan(
+                TopmostExecutionPlan: new FloatingTopmostExecutionPlan(false, false, false, false, false),
+                ActivationPlan: new FloatingWindowActivationPlan(true, true),
+                OwnerPlan: new FloatingOwnerExecutionPlan(
+                    FloatingOwnerBindingAction.AttachOverlay,
+                    FloatingOwnerBindingAction.AttachOverlay,
+                    FloatingOwnerBindingAction.AttachOverlay)),
+            overlayWindow: "overlay",
+            toolbarWindow: "toolbar",
+            rollCallWindow: "rollcall",
+            launcherWindow: "launcher",
+            imageManagerWindow: "image",
+            applyOwnerPlan: (_, _, _, _, _) => throw new InvalidOperationException("owner-failed"),
+            tryActivate: (_, _) =>
+            {
+                activationCalls++;
+                return true;
+            },
+            applyTopmostPlan: (_, _, _, _, _) => throw new InvalidOperationException("topmost-failed"));
+
+        act.Should().NotThrow();
+        activationCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public void Apply_ShouldContinueWithoutThrow_WhenTryActivateThrowsNonFatal()
+    {
+        var topmostCalled = false;
+
+        Action act = () => FloatingWindowExecutionExecutor.Apply(
+            new FloatingWindowExecutionPlan(
+                TopmostExecutionPlan: new FloatingTopmostExecutionPlan(false, false, false, false, false),
+                ActivationPlan: new FloatingWindowActivationPlan(true, true),
+                OwnerPlan: new FloatingOwnerExecutionPlan(
+                    FloatingOwnerBindingAction.None,
+                    FloatingOwnerBindingAction.None,
+                    FloatingOwnerBindingAction.None)),
+            overlayWindow: "overlay",
+            toolbarWindow: "toolbar",
+            rollCallWindow: "rollcall",
+            launcherWindow: "launcher",
+            imageManagerWindow: "image",
+            applyOwnerPlan: (_, _, _, _, _) => { },
+            tryActivate: (_, _) => throw new InvalidOperationException("activate-failed"),
+            applyTopmostPlan: (_, _, _, _, _) => topmostCalled = true);
+
+        act.Should().NotThrow();
+        topmostCalled.Should().BeTrue();
+    }
 }

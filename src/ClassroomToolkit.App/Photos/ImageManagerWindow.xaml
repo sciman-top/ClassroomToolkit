@@ -74,6 +74,9 @@
                         </StackPanel>
                         <ListBox Grid.Row="1" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.CanContentScroll="True"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                  Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
                     </Grid>
                 </Expander>
@@ -86,6 +89,9 @@
                     <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
                              Margin="0,8,0,0"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
                              Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Expander>
             </Border>
@@ -97,6 +103,8 @@
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               Margin="0,8,0,0"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
                         <!-- Global TreeViewItem style applied automatically -->
                     </TreeView>
@@ -177,6 +185,7 @@
                               Background="Transparent" BorderThickness="0" 
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="True"
                               Foreground="{StaticResource Brush_Text_Primary}"
                               ItemContainerStyle="{StaticResource Style_ManagementThumbnailListViewItem}">
                         <ListView.ItemsPanel>
@@ -218,6 +227,9 @@
                     </ListView>
                     <ListView x:Name="ImageListView" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
                               Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
+                              ScrollViewer.CanContentScroll="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               Foreground="{StaticResource Brush_Text_Primary}">
                         <ListView.View>
                             <GridView>

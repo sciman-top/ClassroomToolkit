@@ -45,4 +45,14 @@ public sealed class PresentationCommandMapperTests
         binding.Key.Should().Be(VirtualKey.End);
         binding.Modifiers.Should().Be(KeyModifiers.None);
     }
+
+    [Fact]
+    public void Map_ShouldThrow_WhenCommandIsUnknown()
+    {
+        var mapper = new PresentationCommandMapper();
+
+        Action act = () => mapper.Map(PresentationType.Wps, (PresentationCommand)999);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }

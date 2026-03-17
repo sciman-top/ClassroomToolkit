@@ -121,4 +121,51 @@ public sealed class InkStorageServiceTests
             }
         }
     }
+
+    [Fact]
+    public void ListApis_ShouldReturnEmpty_WhenRootPathIsInvalid()
+    {
+        var service = new InkStorageService("\0invalid-root");
+
+        service.ListDates().Should().BeEmpty();
+        service.ListDocuments(DateTime.Today).Should().BeEmpty();
+        service.ListPages(DateTime.Today, "doc").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ListApis_ShouldUseIgnoreInaccessibleEnumerationOptions()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("IgnoreInaccessible = true");
+        source.Should().Contain("Directory.EnumerateDirectories(_rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
+        source.Should().Contain("Directory.EnumerateDirectories(dateFolder, \"*\", TopLevelIgnoreInaccessibleOptions)");
+        source.Should().Contain("Directory.EnumerateFiles(pagesFolder, \"slide_*.json\", TopLevelIgnoreInaccessibleOptions)");
+    }
+
+    private static string GetSourcePath()
+    {
+        return Path.Combine(
+            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+            "src",
+            "ClassroomToolkit.App",
+            "Ink",
+            "InkStorageService.cs");
+    }
+
+    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
+    {
+        var current = start;
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
 }

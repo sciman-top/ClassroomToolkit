@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using ClassroomToolkit.Application.Abstractions;
+using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.Infra.Settings;
 
@@ -12,20 +13,20 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
     public JsonSettingsDocumentStoreAdapter(string path)
     {
-        ArgumentNullException.ThrowIfNull(path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         _path = path;
     }
 
     public Dictionary<string, Dictionary<string, string>> Load()
     {
-        if (!File.Exists(_path))
-        {
-            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
-            return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-        }
-
         try
         {
+            if (!File.Exists(_path))
+            {
+                Interlocked.Exchange(ref _lastLoadSucceeded, 1);
+                return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            }
+
             var json = File.ReadAllText(_path, Encoding.UTF8);
             using var document = JsonDocument.Parse(json);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
@@ -61,17 +62,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             Interlocked.Exchange(ref _lastLoadSucceeded, 1);
             return result;
         }
-        catch (JsonException)
-        {
-            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
-            return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (IOException)
-        {
-            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
-            return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (UnauthorizedAccessException)
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Interlocked.Exchange(ref _lastLoadSucceeded, 0);
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
@@ -109,7 +100,8 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 {
                     writer.WritePropertyName(section.Key);
                     writer.WriteStartObject();
-                    foreach (var item in section.Value.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+                    var sectionData = section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var item in sectionData.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
                     {
                         writer.WriteString(item.Key, item.Value);
                     }
@@ -121,7 +113,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
             if (File.Exists(_path))
             {
-                File.Replace(tempPath, _path, null);
+                TryReplaceOrOverwrite(tempPath, _path);
             }
             else
             {
@@ -134,8 +126,27 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         {
             if (File.Exists(tempPath))
             {
-                File.Delete(tempPath);
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+                {
+                    // Best-effort cleanup; keep the primary save exception.
+                }
             }
+        }
+    }
+
+    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
+    {
+        try
+        {
+            File.Replace(tempPath, targetPath, null);
+        }
+        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
+        {
+            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 }

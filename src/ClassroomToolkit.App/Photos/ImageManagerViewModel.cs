@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using ClassroomToolkit.App.ViewModels;
 
 namespace ClassroomToolkit.App.Photos;
@@ -80,8 +79,13 @@ public sealed class ImageManagerViewModel : ViewModelBase
     public void LoadFolderList(ObservableCollection<FolderItem> target, IReadOnlyList<string> source)
     {
         target.Clear();
-        foreach (var path in source.Where(path => !string.IsNullOrWhiteSpace(path)))
+        foreach (var path in source)
         {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
             target.Add(new FolderItem(path));
         }
     }

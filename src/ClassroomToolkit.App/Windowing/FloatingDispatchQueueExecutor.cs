@@ -16,15 +16,14 @@ internal static class FloatingDispatchQueueExecutor
         var decision = FloatingDispatchQueuePolicy.RequestApply(state, forceEnforceZOrder);
         if (decision.Action == FloatingDispatchQueueAction.QueueApply)
         {
-            bool dispatched;
-            try
+            Exception? dispatchFailure = null;
+            var dispatched = SafeActionExecutionExecutor.TryExecute(
+                queueApply,
+                fallback: false,
+                onFailure: ex => dispatchFailure = ex);
+            if (dispatchFailure != null)
             {
-                dispatched = queueApply();
-            }
-            catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
-            {
-                onDispatchFailure?.Invoke(ex);
-                dispatched = false;
+                onDispatchFailure?.Invoke(dispatchFailure);
             }
 
             if (!dispatched)
@@ -51,21 +50,9 @@ internal static class FloatingDispatchQueueExecutor
 
         try
         {
-            apply(state.ForceEnforceZOrder);
-        }
-        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
-        {
-            if (onFailure != null)
-            {
-                try
-                {
-                    onFailure(ex);
-                }
-                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
-                {
-                    // Keep queue state recovery isolated from diagnostics callback failures.
-                }
-            }
+            _ = SafeActionExecutionExecutor.TryExecute(
+                () => apply(state.ForceEnforceZOrder),
+                onFailure: onFailure);
         }
         finally
         {

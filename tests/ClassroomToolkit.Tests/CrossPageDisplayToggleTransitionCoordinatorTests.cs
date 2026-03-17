@@ -131,4 +131,26 @@ public sealed class CrossPageDisplayToggleTransitionCoordinatorTests
         widthNormalizationCount.Should().Be(1);
         refreshCount.Should().Be(1);
     }
+
+    [Fact]
+    public void Apply_ShouldNotThrow_WhenCallbacksThrowNonFatal()
+    {
+        Action act = () => _ = CrossPageDisplayToggleTransitionCoordinator.Apply(
+            currentCrossPageDisplayEnabled: false,
+            requestedEnabled: true,
+            photoInkModeActive: true,
+            photoDocumentIsPdf: true,
+            photoUnifiedTransformReady: false,
+            setCrossPageDisplayEnabled: _ => throw new InvalidOperationException("set-failed"),
+            resetCrossPageNormalizedWidth: () => throw new InvalidOperationException("reset-width-failed"),
+            restoreUnifiedTransformAndRedraw: () => throw new InvalidOperationException("restore-failed"),
+            saveUnifiedTransformState: () => throw new InvalidOperationException("save-failed"),
+            updateCurrentPageWidthNormalization: () => throw new InvalidOperationException("normalize-failed"),
+            resetCrossPageReplayState: () => throw new InvalidOperationException("replay-failed"),
+            clearNeighborPages: () => throw new InvalidOperationException("clear-failed"),
+            refreshCurrentImageSequenceSourceAfterToggle: () => throw new InvalidOperationException("refresh-failed"),
+            reloadPdfInkCacheAfterToggle: () => throw new InvalidOperationException("reload-pdf-failed"));
+
+        act.Should().NotThrow();
+    }
 }

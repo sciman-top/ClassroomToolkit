@@ -11,11 +11,20 @@ public partial class AboutDialog : Window
     public AboutDialog()
     {
         InitializeComponent();
-        Loaded += (_, _) =>
-        {
-            WindowPlacementHelper.EnsureVisible(this);
-            VersionText.Text = $"Version {ResolveDisplayVersion()}";
-        };
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+        VersionText.Text = $"Version {ResolveDisplayVersion()}";
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnRequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -78,7 +87,7 @@ public partial class AboutDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 

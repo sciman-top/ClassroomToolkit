@@ -73,6 +73,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         AppSettingsService appSettingsService,
         ILogger<PaintWindowOrchestrator> logger)
     {
+        ArgumentNullException.ThrowIfNull(paintWindowFactory);
+        ArgumentNullException.ThrowIfNull(appSettingsService);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _paintWindowFactory = paintWindowFactory;
         _appSettingsService = appSettingsService;
         _logger = logger;
@@ -80,6 +84,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     public void EnsureWindows(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         if (OverlayWindow != null && ToolbarWindow != null)
         {
             return;
@@ -123,6 +129,27 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.Closed += OnOverlayWindowClosed;
     }
 
+    private void UnwireOverlayWindowEvents(PaintOverlayWindow? overlayWindow)
+    {
+        if (overlayWindow == null)
+        {
+            return;
+        }
+
+        overlayWindow.PhotoModeChanged -= OnOverlayPhotoModeChanged;
+        overlayWindow.PhotoNavigationRequested -= OnOverlayPhotoNavigationRequested;
+        overlayWindow.PhotoUnifiedTransformChanged -= OnOverlayPhotoUnifiedTransformChanged;
+        overlayWindow.PresentationFullscreenDetected -= OnOverlayPresentationFullscreenDetected;
+        overlayWindow.PresentationForegroundDetected -= OnOverlayPresentationForegroundDetected;
+        overlayWindow.PhotoForegroundDetected -= OnOverlayPhotoForegroundDetected;
+        overlayWindow.PhotoCloseRequested -= OnOverlayPhotoCloseRequested;
+        overlayWindow.PhotoCursorModeFocusRequested -= OnOverlayPhotoCursorModeFocusRequested;
+        overlayWindow.FloatingZOrderRequested -= OnOverlayFloatingZOrderRequested;
+        overlayWindow.UiSessionTransitionOccurred -= OnOverlaySessionTransitionOccurred;
+        overlayWindow.Activated -= OnOverlayWindowActivated;
+        overlayWindow.Closed -= OnOverlayWindowClosed;
+    }
+
     private void WireToolbarWindowEvents()
     {
         if (ToolbarWindow == null)
@@ -132,6 +159,17 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         ToolbarWindow.Closed += OnToolbarWindowClosed;
         ToolbarWindow.LocationChanged += OnToolbarWindowLocationChanged;
+    }
+
+    private void UnwireToolbarWindowEvents(PaintToolbarWindow? toolbarWindow)
+    {
+        if (toolbarWindow == null)
+        {
+            return;
+        }
+
+        toolbarWindow.Closed -= OnToolbarWindowClosed;
+        toolbarWindow.LocationChanged -= OnToolbarWindowLocationChanged;
     }
 
     private void WireToolbarBehaviorEvents()
@@ -151,6 +189,25 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         ToolbarWindow.WhiteboardToggled += OnToolbarWhiteboardToggled;
         ToolbarWindow.SettingsRequested += OnToolbarSettingsRequested;
         ToolbarWindow.PhotoOpenRequested += OnToolbarPhotoOpenRequested;
+    }
+
+    private void UnwireToolbarBehaviorEvents(PaintToolbarWindow? toolbarWindow)
+    {
+        if (toolbarWindow == null)
+        {
+            return;
+        }
+
+        toolbarWindow.ModeChanged -= OnToolbarModeChanged;
+        toolbarWindow.BrushColorChanged -= OnToolbarBrushColorChanged;
+        toolbarWindow.BoardColorChanged -= OnToolbarBoardColorChanged;
+        toolbarWindow.ClearRequested -= OnToolbarClearRequested;
+        toolbarWindow.UndoRequested -= OnToolbarUndoRequested;
+        toolbarWindow.QuickColorSlotChanged -= OnToolbarQuickColorSlotChanged;
+        toolbarWindow.ShapeTypeChanged -= OnToolbarShapeTypeChanged;
+        toolbarWindow.WhiteboardToggled -= OnToolbarWhiteboardToggled;
+        toolbarWindow.SettingsRequested -= OnToolbarSettingsRequested;
+        toolbarWindow.PhotoOpenRequested -= OnToolbarPhotoOpenRequested;
     }
 
     private void OnOverlayPhotoModeChanged(bool active) => PhotoModeChanged?.Invoke(active);
@@ -179,6 +236,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     private void OnOverlayWindowClosed(object? sender, EventArgs e)
     {
+        if (sender is PaintOverlayWindow overlayWindow)
+        {
+            UnwireOverlayWindowEvents(overlayWindow);
+        }
         OverlayWindow = null;
         UpdateToggleButtons();
     }
@@ -188,6 +249,11 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         if (ToolbarWindow != null && _currentSettings != null)
         {
             CaptureToolbarPosition(_currentSettings, save: true);
+        }
+        if (sender is PaintToolbarWindow toolbarWindow)
+        {
+            UnwireToolbarBehaviorEvents(toolbarWindow);
+            UnwireToolbarWindowEvents(toolbarWindow);
         }
 
         ToolbarWindow = null;
@@ -438,20 +504,28 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     public void Close()
     {
-        OverlayWindow?.Close();
-        ToolbarWindow?.Close();
+        var overlay = OverlayWindow;
+        var toolbar = ToolbarWindow;
+        UnwireOverlayWindowEvents(overlay);
+        UnwireToolbarBehaviorEvents(toolbar);
+        UnwireToolbarWindowEvents(toolbar);
+        overlay?.Close();
+        toolbar?.Close();
         OverlayWindow = null;
         ToolbarWindow = null;
     }
 
     public void ApplySettings(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         ToolbarWindow?.ApplySettings(settings);
         ApplyInitialOverlaySettings(settings, ResolvePreferredPrimaryToolMode());
     }
 
     public void CaptureToolbarPosition(AppSettings settings, bool save = true)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         if (ToolbarWindow == null) return;
 
         settings.PaintToolbarX = (int)Math.Round(ToolbarWindow.Left);
@@ -470,6 +544,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     private void ApplyPaintToolbarPosition(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         if (ToolbarWindow == null) return;
 
         ToolbarWindow.Left = settings.PaintToolbarX;

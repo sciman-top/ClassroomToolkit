@@ -8,15 +8,31 @@ using ClassroomToolkit.App.Utilities;
 
 namespace ClassroomToolkit.App.Photos;
 
-public sealed class StudentPhotoResolver
+public sealed class StudentPhotoResolver : IDisposable
 {
-    private static readonly string[] Extensions = { ".jpg", ".jpeg", ".png", ".bmp" };
+    private static readonly string[] PreferredExtensions =
+    {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".bmp"
+    };
+    private static readonly HashSet<string> Extensions = new(PreferredExtensions, StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToHashSet();
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);  // 延长缓存时间，减少重复索引
+    private static readonly TimeSpan FreshCacheDirectProbeWindow = TimeSpan.FromSeconds(1);
+    private static readonly Dictionary<string, string> EmptyIndex = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _rootPath;
     private readonly ConcurrentDictionary<string, DirectoryCache> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, object> _indexLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _warmupLock = new();
+    private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true
+    };
     private CancellationTokenSource? _warmupCancellation;
+    private int _disposed;
 
     public StudentPhotoResolver(string rootPath)
     {
@@ -28,11 +44,16 @@ public sealed class StudentPhotoResolver
     /// </summary>
     public void WarmupCache(IEnumerable<string>? classNames = null)
     {
-        var token = ReplaceWarmupCancellationToken();
+        if (!TryReplaceWarmupCancellationToken(out var token))
+        {
+            return;
+        }
+
         _ = SafeTaskRunner.Run("StudentPhotoResolver.WarmupCache", _ =>
         {
             if (classNames != null)
             {
+                var visitedClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var className in classNames)
                 {
                     if (token.IsCancellationRequested)
@@ -40,7 +61,7 @@ public sealed class StudentPhotoResolver
                         return;
                     }
                     var normalizedClass = SanitizeSegment(className);
-                    if (!string.IsNullOrWhiteSpace(normalizedClass))
+                    if (!string.IsNullOrWhiteSpace(normalizedClass) && visitedClasses.Add(normalizedClass))
                     {
                         var directory = Path.Combine(_rootPath, normalizedClass);
                         if (Directory.Exists(directory))
@@ -57,7 +78,7 @@ public sealed class StudentPhotoResolver
                 return;
             }
             // 预热所有班级目录
-            foreach (var directory in Directory.EnumerateDirectories(_rootPath))
+            foreach (var directory in Directory.EnumerateDirectories(_rootPath, "*", TopLevelIgnoreInaccessibleOptions))
             {
                 if (token.IsCancellationRequested)
                 {
@@ -70,6 +91,11 @@ public sealed class StudentPhotoResolver
 
     public string? ResolvePhotoPath(string className, string studentId)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(studentId))
         {
             return null;
@@ -89,21 +115,48 @@ public sealed class StudentPhotoResolver
         {
             return null;
         }
-        foreach (var ext in Extensions)
+        var key = normalizedStudentId;
+        if (TryGetFreshIndex(directory, out var freshCache))
         {
-            var candidate = Path.Combine(directory, normalizedStudentId + ext);
-            if (File.Exists(candidate))
+            if (freshCache.Index.TryGetValue(key, out var cachedPath))
             {
-                return candidate;
+                return cachedPath;
             }
+
+            // Only probe filesystem when directory timestamp changed; this avoids repeated misses
+            // paying 4x File.Exists checks while cache is still fresh.
+            if (TryGetDirectoryWriteTimeUtc(directory, out var writeTimeUtc)
+                && writeTimeUtc <= freshCache.DirectoryWriteTimeUtc
+                && DateTime.UtcNow - freshCache.Timestamp > FreshCacheDirectProbeWindow)
+            {
+                return null;
+            }
+
+            var changedDirectPath = ResolveByPreferredExtensions(directory, normalizedStudentId);
+            if (!string.IsNullOrWhiteSpace(changedDirectPath))
+            {
+                _cache.TryRemove(directory, out _);
+            }
+            return changedDirectPath;
         }
+
+        var direct = ResolveByPreferredExtensions(directory, normalizedStudentId);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return direct;
+        }
+
         var index = GetIndex(directory);
-        var key = normalizedStudentId.ToLowerInvariant();
         return index.TryGetValue(key, out var path) ? path : null;
     }
 
     public void InvalidateStudentCache(string className, string studentId)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(studentId))
         {
             return;
@@ -111,6 +164,7 @@ public sealed class StudentPhotoResolver
         var normalizedClass = NormalizeClassName(className);
         var directory = Path.Combine(_rootPath, normalizedClass);
         _cache.TryRemove(directory, out _);
+        _indexLocks.TryRemove(directory, out _);
     }
 
     public static string SanitizeSegment(string value)
@@ -120,11 +174,34 @@ public sealed class StudentPhotoResolver
         {
             return string.Empty;
         }
-        var invalid = Path.GetInvalidFileNameChars();
+
+        var requiresSanitize = false;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (InvalidFileNameChars.Contains(ch) ||
+                ch == Path.DirectorySeparatorChar ||
+                ch == Path.AltDirectorySeparatorChar)
+            {
+                requiresSanitize = true;
+                break;
+            }
+        }
+
+        if (!requiresSanitize)
+        {
+            if (text is "." or "..")
+            {
+                return string.Empty;
+            }
+
+            return text.Trim('_');
+        }
+
         var buffer = text.ToCharArray();
         for (var i = 0; i < buffer.Length; i++)
         {
-            if (invalid.Contains(buffer[i]) ||
+            if (InvalidFileNameChars.Contains(buffer[i]) ||
                 buffer[i] == Path.DirectorySeparatorChar ||
                 buffer[i] == Path.AltDirectorySeparatorChar)
             {
@@ -141,6 +218,11 @@ public sealed class StudentPhotoResolver
 
     private Dictionary<string, string> GetIndex(string directory)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
         var now = DateTime.UtcNow;
         if (_cache.TryGetValue(directory, out var cached)
             && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
@@ -158,27 +240,77 @@ public sealed class StudentPhotoResolver
             var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                foreach (var file in Directory.EnumerateFiles(directory))
+                foreach (var file in Directory.EnumerateFiles(directory, "*", TopLevelIgnoreInaccessibleOptions))
                 {
                     var ext = Path.GetExtension(file);
-                    if (!Extensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                    if (string.IsNullOrWhiteSpace(ext) || !Extensions.Contains(ext))
                     {
                         continue;
                     }
-                    var baseName = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
-                    if (!index.ContainsKey(baseName))
-                    {
-                        index[baseName] = file;
-                    }
+                    var baseName = Path.GetFileNameWithoutExtension(file);
+                    index.TryAdd(baseName, file);
                 }
             }
             catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
-            _cache[directory] = new DirectoryCache(now, index);
+            var directoryWriteTimeUtc = GetDirectoryWriteTimeUtcOrDefault(directory);
+            _cache[directory] = new DirectoryCache(now, directoryWriteTimeUtc, index);
             return index;
         }
+    }
+
+    private bool TryGetFreshIndex(string directory, out DirectoryCache cache)
+    {
+        var now = DateTime.UtcNow;
+        if (_cache.TryGetValue(directory, out var found)
+            && StudentPhotoCachePolicy.ShouldReuseCache(now, found.Timestamp, CacheTtl))
+        {
+            cache = found;
+            return true;
+        }
+
+        cache = new DirectoryCache(DateTime.MinValue, DateTime.MinValue, EmptyIndex);
+        return false;
+    }
+
+    private static DateTime GetDirectoryWriteTimeUtcOrDefault(string directory)
+    {
+        return TryGetDirectoryWriteTimeUtc(directory, out var writeTimeUtc)
+            ? writeTimeUtc
+            : DateTime.MinValue;
+    }
+
+    private static bool TryGetDirectoryWriteTimeUtc(string directory, out DateTime writeTimeUtc)
+    {
+        writeTimeUtc = DateTime.MinValue;
+        try
+        {
+            writeTimeUtc = Directory.GetLastWriteTimeUtc(directory);
+            return true;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"StudentPhotoResolver: 读取目录修改时间失败，directory='{directory}', reason={ex.GetType().Name}:{ex.Message}");
+            return false;
+        }
+    }
+
+    private static string? ResolveByPreferredExtensions(string directory, string normalizedStudentId)
+    {
+        var filePrefix = Path.Combine(directory, normalizedStudentId);
+        foreach (var ext in PreferredExtensions)
+        {
+            var candidate = filePrefix + ext;
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private object GetIndexLock(string directory)
@@ -186,15 +318,39 @@ public sealed class StudentPhotoResolver
         return _indexLocks.GetOrAdd(directory, _ => new object());
     }
 
-    private CancellationToken ReplaceWarmupCancellationToken()
+    private bool TryReplaceWarmupCancellationToken(out CancellationToken token)
     {
         lock (_warmupLock)
         {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                token = CancellationToken.None;
+                return false;
+            }
+
             _warmupCancellation?.Cancel();
             _warmupCancellation?.Dispose();
             _warmupCancellation = new CancellationTokenSource();
-            return _warmupCancellation.Token;
+            token = _warmupCancellation.Token;
+            return true;
         }
+    }
+
+    public void Dispose()
+    {
+        lock (_warmupLock)
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+            _warmupCancellation?.Cancel();
+            _warmupCancellation?.Dispose();
+            _warmupCancellation = null;
+        }
+
+        _cache.Clear();
+        _indexLocks.Clear();
     }
 
     private static string NormalizeClassName(string className)
@@ -207,5 +363,5 @@ public sealed class StudentPhotoResolver
         return string.IsNullOrWhiteSpace(normalizedClass) ? "default" : normalizedClass;
     }
 
-    private sealed record DirectoryCache(DateTime Timestamp, Dictionary<string, string> Index);
+    private sealed record DirectoryCache(DateTime Timestamp, DateTime DirectoryWriteTimeUtc, Dictionary<string, string> Index);
 }

@@ -23,7 +23,7 @@ public static class LongPressBehavior
     private static readonly DependencyProperty TimerProperty =
         DependencyProperty.RegisterAttached(
             "Timer",
-            typeof(DispatcherTimer),
+            typeof(LongPressTimerContext),
             typeof(LongPressBehavior),
             new PropertyMetadata(null));
 
@@ -68,19 +68,22 @@ public static class LongPressBehavior
         {
             return;
         }
+        StopTimer(element);
         element.SetValue(TriggeredProperty, false);
         var duration = Math.Max(100, GetDuration(element));
         var timer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(duration)
         };
-        timer.Tick += (_, _) =>
+        EventHandler? tickHandler = null;
+        tickHandler = (_, _) =>
         {
-            timer.Stop();
+            StopTimer(element);
             element.SetValue(TriggeredProperty, true);
             ExecuteCommand(element);
         };
-        element.SetValue(TimerProperty, timer);
+        timer.Tick += tickHandler;
+        element.SetValue(TimerProperty, new LongPressTimerContext(timer, tickHandler));
         timer.Start();
     }
 
@@ -115,11 +118,14 @@ public static class LongPressBehavior
         {
             return;
         }
-        var timer = element.GetValue(TimerProperty) as DispatcherTimer;
-        if (timer != null)
+        if (element.GetValue(TimerProperty) is not LongPressTimerContext context)
         {
-            timer.Stop();
+            return;
         }
+
+        context.Timer.Tick -= context.TickHandler;
+        context.Timer.Stop();
+        element.ClearValue(TimerProperty);
     }
 
     private static void ExecuteCommand(UIElement element)
@@ -134,4 +140,6 @@ public static class LongPressBehavior
             command.Execute(null);
         }
     }
+
+    private sealed record LongPressTimerContext(DispatcherTimer Timer, EventHandler TickHandler);
 }

@@ -753,11 +753,13 @@ public partial class PaintOverlayWindow
             var delay = Math.Max(
                 InkRuntimeTimingDefaults.RedrawDispatchDelayMinMs,
                 (int)Math.Ceiling(InkRedrawMinIntervalMs - elapsedMs));
+            var lifecycleToken = _overlayLifecycleCancellation.Token;
             _ = SafeTaskRunner.Run(
                 "PaintOverlayWindow.RequestInkRedraw.Throttled",
-                async _ =>
+                async cancellationToken =>
                 {
-                    await System.Threading.Tasks.Task.Delay(delay).ConfigureAwait(false);
+                    await System.Threading.Tasks.Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
                     var scheduled = TryBeginInvoke(() =>
                     {
                         if (token != _inkRedrawToken)
@@ -787,6 +789,7 @@ public partial class PaintOverlayWindow
                         _redrawPending = false;
                     }
                 },
+                lifecycleToken,
                 onError: ex =>
                 {
                     _redrawPending = false;

@@ -68,6 +68,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
 
     public async Task<bool> StartAsync()
     {
+        if (_disposed)
+        {
+            return false;
+        }
         if (!Available)
         {
             return false;
@@ -79,6 +83,11 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         var moduleHandle = GetModuleHandle(null);
         for (int attempt = 0; attempt < MaxHookRetries; attempt++)
         {
+            if (_disposed)
+            {
+                Stop();
+                return false;
+            }
             if (_keyboardHook == IntPtr.Zero)
             {
                 _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, moduleHandle, 0);
@@ -95,7 +104,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
             if (attempt < MaxHookRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff
-                await Task.Delay(delayMs);
+                await Task.Delay(delayMs).ConfigureAwait(false);
             }
         }
         LastError = Marshal.GetLastWin32Error();
@@ -111,16 +120,29 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         _interceptWheel = true;
         _emitWheelOnBlock = true;
         Interlocked.Increment(ref _dispatchGeneration);
+        var unhookFailed = false;
+        var lastUnhookError = 0;
         if (_keyboardHook != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_keyboardHook);
+            if (!UnhookWindowsHookEx(_keyboardHook))
+            {
+                unhookFailed = true;
+                lastUnhookError = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"[WpsNavHook] Keyboard unhook failed with error={lastUnhookError}");
+            }
             _keyboardHook = IntPtr.Zero;
         }
         if (_mouseHook != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_mouseHook);
+            if (!UnhookWindowsHookEx(_mouseHook))
+            {
+                unhookFailed = true;
+                lastUnhookError = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"[WpsNavHook] Mouse unhook failed with error={lastUnhookError}");
+            }
             _mouseHook = IntPtr.Zero;
         }
+        LastError = unhookFailed ? lastUnhookError : 0;
     }
 
     public void Dispose()
@@ -128,6 +150,7 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
         if (_disposed) return;
         _disposed = true;
         Stop();
+        NavigationRequested = null;
         GC.SuppressFinalize(this);
     }
 

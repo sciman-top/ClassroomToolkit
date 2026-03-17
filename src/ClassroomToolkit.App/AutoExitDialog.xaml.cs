@@ -12,10 +12,22 @@ public partial class AutoExitDialog : Window
         MinutesBox.Text = Math.Max(0, minutes).ToString();
         MinutesBox.SelectAll();
         WindowActivationExecutor.TryKeyboardFocus(MinutesBox, shouldFocus: true);
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
     }
 
     public int Minutes { get; private set; }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
+    }
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
@@ -38,7 +50,7 @@ public partial class AutoExitDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

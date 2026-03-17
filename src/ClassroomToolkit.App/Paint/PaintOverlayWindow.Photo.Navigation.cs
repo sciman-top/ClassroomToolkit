@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -28,6 +29,8 @@ public partial class PaintOverlayWindow
 {
     public void SetPhotoSequence(IReadOnlyList<string> paths, int currentIndex)
     {
+        ArgumentNullException.ThrowIfNull(paths);
+
         var normalized = PhotoCrossPageSequencePolicy.Normalize(paths, currentIndex);
         _photoSequencePaths = normalized.Sequence.ToList();
         _photoSequenceIndex = normalized.CurrentIndex;
@@ -469,14 +472,17 @@ public partial class PaintOverlayWindow
             return;
         }
         var token = Interlocked.Increment(ref _photoFullscreenBoundsToken);
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePhotoFullscreenBoundsEnforcement",
-            async _ =>
+            async cancellationToken =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var delays = new[] { 30, 120, 280 };
                 foreach (var delayMs in delays)
                 {
-                    await Task.Delay(delayMs).ConfigureAwait(false);
+                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
                     TryBeginInvoke(() =>
                     {
                         if (token != _photoFullscreenBoundsToken || !IsPhotoFullscreenActive)
@@ -487,6 +493,7 @@ public partial class PaintOverlayWindow
                     }, DispatcherPriority.Render);
                 }
             },
+            lifecycleToken,
             onError: ex => Debug.WriteLine(
                 $"[PhotoBounds] fullscreen-enforcement failed: {ex.GetType().Name} - {ex.Message}"));
     }
@@ -512,14 +519,7 @@ public partial class PaintOverlayWindow
             FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag));
         }
 
-        try
-        {
-            DragMove();
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            // Ignore drag exceptions.
-        }
+        PaintActionInvoker.TryInvoke(DragMove);
 
         if (plan.RequestZOrderAfterDrag)
         {
@@ -538,11 +538,21 @@ public partial class PaintOverlayWindow
         {
             Header = "关闭"
         };
-        closeItem.Click += (_, _) => ExecutePhotoClose();
+        closeItem.Click += OnPhotoContextMenuCloseClick;
         menu.Items.Add(closeItem);
         menu.PlacementTarget = OverlayRoot;
         menu.Placement = PlacementMode.MousePoint;
         menu.IsOpen = true;
+    }
+
+    private void OnPhotoContextMenuCloseClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.MenuItem item)
+        {
+            item.Click -= OnPhotoContextMenuCloseClick;
+        }
+
+        ExecutePhotoClose();
     }
 
     private void OnPhotoCloseClick(object sender, RoutedEventArgs e)

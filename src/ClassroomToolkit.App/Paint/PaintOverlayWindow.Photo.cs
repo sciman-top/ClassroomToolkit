@@ -10,6 +10,7 @@ using System.IO;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Windowing;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -74,34 +75,34 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        try
-        {
-            var inkDoc = _inkPersistence.LoadInkForFile(sourcePath);
-            if (inkDoc?.Pages == null || inkDoc.Pages.Count == 0)
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                return;
-            }
+                var inkDoc = _inkPersistence.LoadInkForFile(sourcePath);
+                if (inkDoc?.Pages == null || inkDoc.Pages.Count == 0)
+                {
+                    return;
+                }
 
-            var removedCount = 0;
-            var keptCount = 0;
-            foreach (var page in inkDoc.Pages.ToList())
-            {
-                if (PurgePersistedInkForHiddenPageIfNeeded(sourcePath, page.PageIndex))
+                var removedCount = 0;
+                var keptCount = 0;
+                foreach (var page in inkDoc.Pages.ToList())
                 {
-                    removedCount++;
+                    if (PurgePersistedInkForHiddenPageIfNeeded(sourcePath, page.PageIndex))
+                    {
+                        removedCount++;
+                    }
+                    else
+                    {
+                        keptCount++;
+                    }
                 }
-                else
-                {
-                    keptCount++;
-                }
-            }
-            System.Diagnostics.Debug.WriteLine(
-                $"[InkPersist] Hidden-source purge summary: source={sourcePath}, removed={removedCount}, kept={keptCount}");
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-source purge failed: source={sourcePath}, error={ex.Message}");
-        }
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[InkPersist] Hidden-source purge summary: source={sourcePath}, removed={removedCount}, kept={keptCount}");
+            },
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Hidden-source purge failed: source={sourcePath}, error={ex.Message}"));
     }
 
     private bool PurgePersistedInkForHiddenPageIfNeeded(string sourcePath, int pageIndex)
@@ -116,33 +117,32 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        try
-        {
-            var existing = _inkPersistence.LoadInkPageForFile(sourcePath, pageIndex);
-            if (existing == null || existing.Count == 0)
+        return SafeActionExecutionExecutor.TryExecute(
+            () =>
             {
-                return false;
-            }
+                var existing = _inkPersistence.LoadInkPageForFile(sourcePath, pageIndex);
+                if (existing == null || existing.Count == 0)
+                {
+                    return false;
+                }
 
-            _inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>());
-            _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
-            MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
+                _inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>());
+                _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
+                MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
 
-            var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
-            if (!string.IsNullOrWhiteSpace(cacheKey))
-            {
-                _photoCache.Remove(cacheKey);
-                InvalidateNeighborInkCache(cacheKey);
-            }
+                var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
+                if (!string.IsNullOrWhiteSpace(cacheKey))
+                {
+                    _photoCache.Remove(cacheKey);
+                    InvalidateNeighborInkCache(cacheKey);
+                }
 
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
-            return true;
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}");
-            return false;
-        }
+                System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
+                return true;
+            },
+            fallback: false,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}"));
     }
 
     private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes, bool preferInteractiveFastPath = false)
@@ -315,14 +315,9 @@ public partial class PaintOverlayWindow
         {
             return string.Empty;
         }
-        try
-        {
-            return $"img|{IoPath.GetFullPath(sourcePath)}";
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return $"img|{sourcePath}";
-        }
+        return PaintActionInvoker.TryInvoke(
+            () => $"img|{IoPath.GetFullPath(sourcePath)}",
+            fallback: $"img|{sourcePath}");
     }
 
     private string BuildPhotoModeCacheKey(string sourcePath, int pageIndex, bool isPdf)
@@ -340,14 +335,9 @@ public partial class PaintOverlayWindow
         {
             return string.Empty;
         }
-        try
-        {
-            return $"pdf|{IoPath.GetFullPath(sourcePath)}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return $"pdf|{sourcePath}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}";
-        }
+        return PaintActionInvoker.TryInvoke(
+            () => $"pdf|{IoPath.GetFullPath(sourcePath)}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}",
+            fallback: $"pdf|{sourcePath}|page_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}");
     }
 
     private static bool IsPdfFile(string path)

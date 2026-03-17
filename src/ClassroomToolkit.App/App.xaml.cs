@@ -21,6 +21,7 @@ public partial class App : WpfApplication
     private static readonly object LogWriteLock = new();
     private static readonly string AppRootDirectory = new ConfigurationService().BaseDirectory;
     private int _criticalDialogShowing;
+    private int _globalExceptionHandlersRegistered;
     private IServiceProvider? _services;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -50,6 +51,14 @@ public partial class App : WpfApplication
 
         // 注册全局 Border 修复
         BorderFixHelper.RegisterGlobalFix();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        UnregisterGlobalExceptionHandlers();
+        (_services as IDisposable)?.Dispose();
+        _services = null;
+        base.OnExit(e);
     }
 
     private void ConfigureServices()
@@ -161,30 +170,53 @@ public partial class App : WpfApplication
 
     private void RegisterGlobalExceptionHandlers()
     {
+        if (Interlocked.Exchange(ref _globalExceptionHandlersRegistered, 1) == 1)
+        {
+            return;
+        }
+
         // 1. UI 线程未捕获异常
-        this.DispatcherUnhandledException += OnDispatcherUnhandledException;
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
 
         // 2. 非 UI 线程（线程池、后台线程）未捕获异常
-        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
-        {
-            if (e.ExceptionObject is Exception ex)
-            {
-                HandleGlobalException(
-                    ex,
-                    "AppDomain.UnhandledException",
-                    AppGlobalExceptionHandlingPolicy.ResolveForBackground(ex));
-            }
-        };
+        AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
 
         // 3. Task（异步任务）未观察到的异常
-        TaskScheduler.UnobservedTaskException += (s, e) =>
+        TaskScheduler.UnobservedTaskException += OnTaskSchedulerUnobservedTaskException;
+    }
+
+    private void UnregisterGlobalExceptionHandlers()
+    {
+        if (Interlocked.Exchange(ref _globalExceptionHandlersRegistered, 0) == 0)
         {
-            HandleGlobalException(
-                e.Exception,
-                "TaskScheduler.UnobservedTaskException",
-                AppGlobalExceptionHandlingPolicy.ResolveForBackground(e.Exception));
-            e.SetObserved(); // 标记为已观察，防止进程退出（在某些 .NET 版本行为不同）
-        };
+            return;
+        }
+
+        DispatcherUnhandledException -= OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException -= OnTaskSchedulerUnobservedTaskException;
+    }
+
+    private void OnAppDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is not Exception ex)
+        {
+            return;
+        }
+
+        HandleGlobalException(
+            ex,
+            "AppDomain.UnhandledException",
+            AppGlobalExceptionHandlingPolicy.ResolveForBackground(ex));
+    }
+
+    private void OnTaskSchedulerUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        HandleGlobalException(
+            e.Exception,
+            "TaskScheduler.UnobservedTaskException",
+            AppGlobalExceptionHandlingPolicy.ResolveForBackground(e.Exception));
+        e.SetObserved(); // 标记为已观察，防止进程退出（在某些 .NET 版本行为不同）
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

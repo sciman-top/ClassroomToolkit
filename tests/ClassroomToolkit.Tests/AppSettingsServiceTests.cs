@@ -1,6 +1,7 @@
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
 using System.Text.Json;
@@ -448,6 +449,29 @@ public sealed class AppSettingsServiceTests
         }
     }
 
+    [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenSettingsIsNull()
+    {
+        var service = new AppSettingsService(new NullReturningSettingsStore());
+
+        var act = () => service.Save(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Load_ShouldFallbackToDefaults_WhenStoreReturnsNull()
+    {
+        var service = new AppSettingsService(new NullReturningSettingsStore());
+        var defaults = new AppSettings();
+
+        var settings = service.Load();
+
+        settings.RollCallShowId.Should().Be(defaults.RollCallShowId);
+        settings.BrushSize.Should().Be(defaults.BrushSize);
+        settings.WpsInputMode.Should().Be(defaults.WpsInputMode);
+    }
+
     private static AppSettingsService CreateService(string path)
     {
         return new AppSettingsService(new SettingsDocumentStoreAdapter(path));
@@ -461,5 +485,17 @@ public sealed class AppSettingsServiceTests
     private static string CreateTempIniPath(string prefix)
     {
         return TestPathHelper.CreateFilePath(prefix, ".ini");
+    }
+
+    private sealed class NullReturningSettingsStore : ISettingsDocumentStore
+    {
+        public Dictionary<string, Dictionary<string, string>> Load()
+        {
+            return null!;
+        }
+
+        public void Save(Dictionary<string, Dictionary<string, string>> data)
+        {
+        }
     }
 }

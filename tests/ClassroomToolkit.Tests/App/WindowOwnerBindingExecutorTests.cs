@@ -7,6 +7,38 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class WindowOwnerBindingExecutorTests
 {
     [Fact]
+    public void TryExecute_ShouldThrowArgumentNullException_WhenAttachActionIsNull()
+    {
+        var child = new OwnerTarget();
+        var owner = new OwnerValue();
+
+        var act = () => WindowOwnerBindingExecutor.TryExecute(
+            child,
+            owner,
+            FloatingOwnerBindingAction.AttachOverlay,
+            attachAction: null!,
+            detachAction: target => target.Owner = null);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void TryExecute_ShouldThrowArgumentNullException_WhenDetachActionIsNull()
+    {
+        var child = new OwnerTarget();
+        var owner = new OwnerValue();
+
+        var act = () => WindowOwnerBindingExecutor.TryExecute(
+            child,
+            owner,
+            FloatingOwnerBindingAction.DetachOverlay,
+            attachAction: (target, value) => target.Owner = value,
+            detachAction: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void TryExecute_ShouldAttachOwner_WhenActionIsAttachOverlay()
     {
         var child = new OwnerTarget();
@@ -55,6 +87,38 @@ public sealed class WindowOwnerBindingExecutorTests
 
         result.Should().BeFalse();
         child.Owner.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryExecute_ShouldReturnFalse_WhenAttachActionThrowsNonFatal()
+    {
+        var child = new OwnerTarget();
+        var owner = new OwnerValue();
+
+        var result = WindowOwnerBindingExecutor.TryExecute(
+            child,
+            owner,
+            FloatingOwnerBindingAction.AttachOverlay,
+            attachAction: (_, _) => throw new InvalidOperationException("attach-failed"),
+            detachAction: target => target.Owner = null);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryExecute_ShouldReturnFalse_WhenDetachActionThrowsNonFatal()
+    {
+        var child = new OwnerTarget();
+        var owner = new OwnerValue();
+
+        var result = WindowOwnerBindingExecutor.TryExecute(
+            child,
+            owner,
+            FloatingOwnerBindingAction.DetachOverlay,
+            attachAction: (target, value) => target.Owner = value,
+            detachAction: _ => throw new InvalidOperationException("detach-failed"));
+
+        result.Should().BeFalse();
     }
 
     private sealed class OwnerTarget

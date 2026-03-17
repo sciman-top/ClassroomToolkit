@@ -8,16 +8,19 @@ public sealed class SendPresentationCommandUseCase
 
     public SendPresentationCommandUseCase(IPresentationGateway gateway)
     {
+        ArgumentNullException.ThrowIfNull(gateway);
         _gateway = gateway;
     }
 
     public bool ExecuteForeground(PresentationCommand command, PresentationControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         return _gateway.TrySendForeground(command, options);
     }
 
     public bool ExecuteToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         return _gateway.TrySendToTarget(target, command, options);
     }
 }

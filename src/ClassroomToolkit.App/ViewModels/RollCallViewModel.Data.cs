@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -18,18 +19,12 @@ public sealed partial class RollCallViewModel
 
     public void WarmupData(string path)
     {
+        if (_disposed || _disposeCancellation.IsCancellationRequested) return;
         if (string.IsNullOrWhiteSpace(path)) return;
         if (!File.Exists(path)) return;
 
-        DateTime writeTimeUtc;
-        try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
         {
-            System.Diagnostics.Debug.WriteLine(
-                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
-                    path,
-                    ex.GetType().Name,
-                    ex.Message));
             return;
         }
 
@@ -52,11 +47,16 @@ public sealed partial class RollCallViewModel
             _preloadedWriteTimeUtc = writeTimeUtc;
             var expectedPath = path;
             var expectedWriteTimeUtc = writeTimeUtc;
-            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath));
+            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
             _preloadTask.ContinueWith(task =>
             {
                 lock (_preloadLock)
                 {
+                    if (_disposed || _disposeCancellation.IsCancellationRequested)
+                    {
+                        _preloadTask = null;
+                        return;
+                    }
                     if (task.Status == TaskStatus.RanToCompletion && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
                     {
                         if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
@@ -78,9 +78,24 @@ public sealed partial class RollCallViewModel
 
     public async Task LoadDataAsync(string? preferredClass, Dispatcher dispatcher)
     {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
         var preload = TryConsumePreloadedResult(_dataPath);
         if (preload != null)
         {
+            if (_disposed || _disposeCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+            if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
             await dispatcher.InvokeAsync(() =>
             {
                 ApplyLoadResult(preload, preferredClass);
@@ -88,7 +103,23 @@ public sealed partial class RollCallViewModel
             return;
         }
 
-        var result = await Task.Run(LoadDataCore).ConfigureAwait(false);
+        RollCallLoadResult result;
+        try
+        {
+            result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
         await dispatcher.InvokeAsync(() =>
         {
             ApplyLoadResult(result, preferredClass);
@@ -104,15 +135,8 @@ public sealed partial class RollCallViewModel
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
 
-        DateTime writeTimeUtc;
-        try { writeTimeUtc = File.GetLastWriteTimeUtc(path); }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
         {
-            System.Diagnostics.Debug.WriteLine(
-                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
-                    path,
-                    ex.GetType().Name,
-                    ex.Message));
             return null;
         }
 
@@ -169,8 +193,32 @@ public sealed partial class RollCallViewModel
         return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage);
     }
 
+    private static bool TryGetFileWriteTimeUtc(string path, out DateTime writeTimeUtc)
+    {
+        writeTimeUtc = default;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
+                    path,
+                    ex.GetType().Name,
+                    ex.Message));
+            return false;
+        }
+    }
+
     private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
     {
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
         _workbook = result.Workbook;
         _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
         _classStates.Clear();

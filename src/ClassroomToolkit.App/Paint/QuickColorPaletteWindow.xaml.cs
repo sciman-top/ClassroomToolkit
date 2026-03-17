@@ -27,13 +27,8 @@ public partial class QuickColorPaletteWindow : Window
     {
         InitializeComponent();
         BuildButtons();
-        Deactivated += (_, _) =>
-        {
-            if (IsVisible && SelectedColor == null)
-            {
-                Close();
-            }
-        };
+        Deactivated += OnWindowDeactivated;
+        Closed += OnWindowClosed;
     }
 
     private void BuildButtons()
@@ -49,10 +44,43 @@ public partial class QuickColorPaletteWindow : Window
                 BorderBrush = new SolidColorBrush(GetContrastBorderColor(option.Color)),
                 BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
                 ToolTip = option.Name,
+                Tag = option.Color,
                 Style = (Style)FindResource("Style_ColorPaletteButton")
             };
-            button.Click += (_, _) => SelectColor(option.Color);
+            button.Click += OnColorButtonClick;
             OptionsPanel.Children.Add(button);
+        }
+    }
+
+    private void OnColorButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: MediaColor color })
+        {
+            return;
+        }
+
+        SelectColor(color);
+    }
+
+    private void OnWindowDeactivated(object? sender, EventArgs e)
+    {
+        if (IsVisible && SelectedColor == null)
+        {
+            Close();
+        }
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        Deactivated -= OnWindowDeactivated;
+        Closed -= OnWindowClosed;
+
+        foreach (var child in OptionsPanel.Children)
+        {
+            if (child is System.Windows.Controls.Button button)
+            {
+                button.Click -= OnColorButtonClick;
+            }
         }
     }
 

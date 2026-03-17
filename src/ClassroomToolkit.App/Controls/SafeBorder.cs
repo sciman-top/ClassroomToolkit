@@ -11,8 +11,13 @@ namespace ClassroomToolkit.App.Controls
     {
         public SafeBorder()
         {
-            // 在加载时检查 BorderBrush
-            this.Loaded += (s, e) => EnsureBorderBrush();
+            Loaded += OnSafeBorderLoaded;
+        }
+
+        private void OnSafeBorderLoaded(object sender, RoutedEventArgs e)
+        {
+            EnsureBorderBrush();
+            Loaded -= OnSafeBorderLoaded;
         }
 
         private void EnsureBorderBrush()

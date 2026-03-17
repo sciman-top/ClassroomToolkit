@@ -35,4 +35,29 @@ public sealed class RollCallWorkbookStoreResolverAvailabilityTests
         capturedFlag.Should().BeFalse();
         backend.Should().Be(BusinessStorageBackend.Sqlite);
     }
+
+    [Fact]
+    public void Create_ShouldFallbackToWorkbook_WhenAvailabilityEvaluatorThrowsNonFatal()
+    {
+        var store = RollCallWorkbookStoreResolver.Create(
+            preferSqlite: true,
+            experimentalSqliteEnabled: true,
+            out var backend,
+            sqliteAvailabilityEvaluator: _ => throw new InvalidOperationException("probe-failed"));
+
+        store.Should().BeOfType<RollCallWorkbookStoreAdapter>();
+        backend.Should().Be(BusinessStorageBackend.ExcelWorkbook);
+    }
+
+    [Fact]
+    public void Create_ShouldRethrow_WhenAvailabilityEvaluatorThrowsFatal()
+    {
+        Action act = () => RollCallWorkbookStoreResolver.Create(
+            preferSqlite: true,
+            experimentalSqliteEnabled: true,
+            out _,
+            sqliteAvailabilityEvaluator: _ => throw new AccessViolationException("fatal"));
+
+        act.Should().Throw<AccessViolationException>();
+    }
 }

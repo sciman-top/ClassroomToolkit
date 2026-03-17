@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Application.UseCases.RollCall;
@@ -9,7 +10,7 @@ using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.ViewModels;
 
-public sealed partial class RollCallViewModel : ViewModelBase
+public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
 {
     private readonly RollCallWorkbookUseCase _workbookUseCase;
     private readonly string _dataPath;
@@ -43,6 +44,10 @@ public sealed partial class RollCallViewModel : ViewModelBase
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
     private bool _canPersistWorkbook = true;
+    private bool _disposed;
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly Action _timerCompletedHandler;
+    private readonly Action _reminderTriggeredHandler;
 
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
@@ -55,8 +60,10 @@ public sealed partial class RollCallViewModel : ViewModelBase
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
-        _timerEngine.TimerCompleted += () => TimerCompleted?.Invoke();
-        _timerEngine.ReminderTriggered += () => ReminderTriggered?.Invoke();
+        _timerCompletedHandler = OnTimerCompletedInternal;
+        _reminderTriggeredHandler = OnReminderTriggeredInternal;
+        _timerEngine.TimerCompleted += _timerCompletedHandler;
+        _timerEngine.ReminderTriggered += _reminderTriggeredHandler;
         UpdateTimeDisplay();
     }
 
@@ -64,6 +71,48 @@ public sealed partial class RollCallViewModel : ViewModelBase
     public event Action? ReminderTriggered;
     public event Action<string>? DataLoadFailed;
     public event Action<string>? DataSaveFailed;
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _timerEngine.TimerCompleted -= _timerCompletedHandler;
+        _timerEngine.ReminderTriggered -= _reminderTriggeredHandler;
+        _disposeCancellation.Cancel();
+        _photoResolver.Dispose();
+
+        lock (_preloadLock)
+        {
+            _preloadTask = null;
+            _preloadedResult = null;
+        }
+
+        _disposeCancellation.Dispose();
+    }
+
+    private void OnTimerCompletedInternal()
+    {
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        TimerCompleted?.Invoke();
+    }
+
+    private void OnReminderTriggeredInternal()
+    {
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        ReminderTriggered?.Invoke();
+    }
 
     public ObservableCollection<string> Groups { get; }
     public ObservableCollection<GroupButtonItem> GroupButtons { get; }

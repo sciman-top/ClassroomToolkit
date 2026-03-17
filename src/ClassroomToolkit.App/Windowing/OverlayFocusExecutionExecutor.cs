@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -30,9 +31,12 @@ internal static class OverlayFocusExecutionExecutor
         Func<TTarget?, bool, bool> tryKeyboardFocus)
         where TTarget : class
     {
+        ArgumentNullException.ThrowIfNull(tryActivate);
+        ArgumentNullException.ThrowIfNull(tryKeyboardFocus);
+
         var decision = Resolve(shouldActivate, shouldKeyboardFocus);
-        tryActivate(target, decision.ShouldActivate);
-        tryKeyboardFocus(target, decision.ShouldKeyboardFocus);
+        _ = SafeActionExecutionExecutor.TryExecute(() => tryActivate(target, decision.ShouldActivate));
+        _ = SafeActionExecutionExecutor.TryExecute(() => tryKeyboardFocus(target, decision.ShouldKeyboardFocus));
     }
 
     internal static OverlayFocusExecutionDecision Resolve(

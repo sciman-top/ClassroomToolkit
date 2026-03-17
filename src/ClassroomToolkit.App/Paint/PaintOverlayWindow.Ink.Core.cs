@@ -13,6 +13,7 @@ using System.Windows.Shapes;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
 using WpfPath = System.Windows.Shapes.Path;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -334,16 +335,14 @@ public partial class PaintOverlayWindow
 
         private void TryScheduleDrain()
         {
-            try
-            {
-                _dispatcher.BeginInvoke(new Action(Drain), DispatcherPriority.Background);
-            }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                Interlocked.Exchange(ref _refreshRunning, 0);
-                System.Diagnostics.Debug.WriteLine(
-                    $"[InkRefresh] BeginInvoke failed: {ex.GetType().Name} - {ex.Message}");
-            }
+            SafeActionExecutionExecutor.TryExecute(
+                () => _dispatcher.BeginInvoke(new Action(Drain), DispatcherPriority.Background),
+                ex =>
+                {
+                    Interlocked.Exchange(ref _refreshRunning, 0);
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[InkRefresh] BeginInvoke failed: {ex.GetType().Name} - {ex.Message}");
+                });
         }
 
         private void Drain()

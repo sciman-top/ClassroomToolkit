@@ -34,6 +34,8 @@ public sealed class StudentWorkbookStore
 
     public StudentWorkbookLoadResult LoadOrCreate(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         if (!File.Exists(path))
         {
             var template = CreateTemplateWorkbook();
@@ -41,26 +43,37 @@ public sealed class StudentWorkbookStore
             return template with { CreatedTemplate = true };
         }
 
-        using var workbook = new XLWorkbook(path);
-        var rollStateJson = ExtractRollState(workbook);
-        var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var sheet in workbook.Worksheets)
+        try
         {
-            if (sheet.Name.Equals(RollStateSheetName, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            var roster = ReadWorksheet(sheet);
-            classes[roster.ClassName] = roster;
-        }
+            using var workbook = new XLWorkbook(path);
+            var rollStateJson = ExtractRollState(workbook);
+            var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
 
-        var resultWorkbook = new StudentWorkbook(classes, classes.Keys.FirstOrDefault());
-        return new StudentWorkbookLoadResult(resultWorkbook, false, rollStateJson);
+            foreach (var sheet in workbook.Worksheets)
+            {
+                if (sheet.Name.Equals(RollStateSheetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                var roster = ReadWorksheet(sheet);
+                classes[roster.ClassName] = roster;
+            }
+
+            var resultWorkbook = new StudentWorkbook(classes, classes.Keys.FirstOrDefault());
+            return new StudentWorkbookLoadResult(resultWorkbook, false, rollStateJson);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            var template = CreateTemplateWorkbook();
+            return template with { CreatedTemplate = false };
+        }
     }
 
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
+        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         var directory = System.IO.Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory))
         {
@@ -105,7 +118,14 @@ public sealed class StudentWorkbookStore
         {
             if (File.Exists(tempPath))
             {
-                File.Delete(tempPath);
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+                {
+                    // Best-effort cleanup for temp workbook files.
+                }
             }
         }
     }

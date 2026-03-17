@@ -7,6 +7,14 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class InteropAdapterScopeTests
 {
     [Fact]
+    public void Create_ShouldThrowArgumentNullException_WhenRestoreIsNull()
+    {
+        Action act = () => _ = InteropAdapterScope.Create(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Create_ShouldInvokeRestoreOnlyOnce()
     {
         var callCount = 0;

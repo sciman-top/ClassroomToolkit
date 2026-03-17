@@ -14,32 +14,57 @@ public sealed class PresentationGateway : IPresentationGateway
 
     public PresentationGateway(PresentationControlService service)
     {
+        ArgumentNullException.ThrowIfNull(service);
         _service = service;
     }
 
     public bool TrySendForeground(AppPresentationCommand command, AppPresentationOptions options)
     {
-        return _service.TrySendForeground(MapCommand(command), MapOptions(options));
+        ArgumentNullException.ThrowIfNull(options);
+        if (!TryMapCommand(command, out var mappedCommand))
+        {
+            return false;
+        }
+        return _service.TrySendForeground(mappedCommand, MapOptions(options));
     }
 
     public bool TrySendToTarget(AppPresentationTarget target, AppPresentationCommand command, AppPresentationOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        if (!TryMapCommand(command, out var mappedCommand))
+        {
+            return false;
+        }
         var interopTarget = new InteropPresentationTarget(target.Handle, InteropPresentationWindowInfo.FromProcess(string.Empty));
-        return _service.TrySendToTarget(interopTarget, MapCommand(command), MapOptions(options));
+        return _service.TrySendToTarget(interopTarget, mappedCommand, MapOptions(options));
     }
 
-    private static PresentationCommand MapCommand(AppPresentationCommand command)
+    private static bool TryMapCommand(AppPresentationCommand command, out PresentationCommand mapped)
     {
-        return command switch
+        switch (command)
         {
-            AppPresentationCommand.Next => PresentationCommand.Next,
-            AppPresentationCommand.Previous => PresentationCommand.Previous,
-            AppPresentationCommand.First => PresentationCommand.First,
-            AppPresentationCommand.Last => PresentationCommand.Last,
-            AppPresentationCommand.BlackScreenToggle => PresentationCommand.BlackScreenToggle,
-            AppPresentationCommand.WhiteScreenToggle => PresentationCommand.WhiteScreenToggle,
-            _ => PresentationCommand.Next
-        };
+            case AppPresentationCommand.Next:
+                mapped = PresentationCommand.Next;
+                return true;
+            case AppPresentationCommand.Previous:
+                mapped = PresentationCommand.Previous;
+                return true;
+            case AppPresentationCommand.First:
+                mapped = PresentationCommand.First;
+                return true;
+            case AppPresentationCommand.Last:
+                mapped = PresentationCommand.Last;
+                return true;
+            case AppPresentationCommand.BlackScreenToggle:
+                mapped = PresentationCommand.BlackScreenToggle;
+                return true;
+            case AppPresentationCommand.WhiteScreenToggle:
+                mapped = PresentationCommand.WhiteScreenToggle;
+                return true;
+            default:
+                mapped = default;
+                return false;
+        }
     }
 
     private static PresentationControlOptions MapOptions(AppPresentationOptions options)

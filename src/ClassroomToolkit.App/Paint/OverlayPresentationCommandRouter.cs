@@ -1,3 +1,4 @@
+using ClassroomToolkit.App.Windowing;
 namespace ClassroomToolkit.App.Paint;
 
 internal enum OverlayPresentationRouteType
@@ -27,14 +28,14 @@ internal static class OverlayPresentationCommandRouter
 
         if (context.ForegroundType == OverlayPresentationRouteType.Wps
             && context.WpsSlideshow
-            && trySendWps(false))
+            && TrySendSafe(trySendWps, false))
         {
             return true;
         }
 
         if (context.ForegroundType == OverlayPresentationRouteType.Office
             && context.OfficeSlideshow
-            && trySendOffice(false))
+            && TrySendSafe(trySendOffice, false))
         {
             return true;
         }
@@ -42,42 +43,49 @@ internal static class OverlayPresentationCommandRouter
         if (context.WpsSlideshow && context.OfficeSlideshow)
         {
             if (context.CurrentPresentationType == OverlayPresentationRouteType.Wps
-                && trySendWps(true))
+                && TrySendSafe(trySendWps, true))
             {
                 return true;
             }
 
             if (context.CurrentPresentationType == OverlayPresentationRouteType.Office
-                && trySendOffice(true))
+                && TrySendSafe(trySendOffice, true))
             {
                 return true;
             }
 
             if (context.WpsFullscreen
                 && !context.OfficeFullscreen
-                && trySendWps(true))
+                && TrySendSafe(trySendWps, true))
             {
                 return true;
             }
 
             if (context.OfficeFullscreen
                 && !context.WpsFullscreen
-                && trySendOffice(true))
+                && TrySendSafe(trySendOffice, true))
             {
                 return true;
             }
         }
 
-        if (context.WpsSlideshow && trySendWps(true))
+        if (context.WpsSlideshow && TrySendSafe(trySendWps, true))
         {
             return true;
         }
 
-        if (context.OfficeSlideshow && trySendOffice(true))
+        if (context.OfficeSlideshow && TrySendSafe(trySendOffice, true))
         {
             return true;
         }
 
         return false;
+    }
+
+    private static bool TrySendSafe(Func<bool, bool> sender, bool allowBackground)
+    {
+        return SafeActionExecutionExecutor.TryExecute(
+            () => sender(allowBackground),
+            fallback: false);
     }
 }

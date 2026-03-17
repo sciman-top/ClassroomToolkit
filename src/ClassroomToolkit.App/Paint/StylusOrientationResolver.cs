@@ -93,18 +93,24 @@ internal static class StylusOrientationResolver
             return false;
         }
 
-        try
+        var resolveResult = PaintActionInvoker.TryInvoke(() =>
         {
-            raw = stylusPoint.GetPropertyValue(property);
+            var resolvedRaw = stylusPoint.GetPropertyValue(property);
             var info = description.GetPropertyInfo(property);
-            min = info.Minimum;
-            max = info.Maximum;
-            return double.IsFinite(raw) && double.IsFinite(min) && double.IsFinite(max);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+            var resolvedMin = info.Minimum;
+            var resolvedMax = info.Maximum;
+            var valid = double.IsFinite(resolvedRaw) && double.IsFinite(resolvedMin) && double.IsFinite(resolvedMax);
+            return (Valid: valid, Raw: resolvedRaw, Min: resolvedMin, Max: resolvedMax);
+        }, fallback: (Valid: false, Raw: 0d, Min: 0d, Max: 0d));
+        if (!resolveResult.Valid)
         {
             return false;
         }
+
+        raw = resolveResult.Raw;
+        min = resolveResult.Min;
+        max = resolveResult.Max;
+        return true;
     }
 }
 

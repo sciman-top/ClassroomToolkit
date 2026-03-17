@@ -30,7 +30,12 @@ public static class CustomCursors
 
     static CustomCursors()
     {
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => CleanupTempCursorFiles();
+        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+    }
+
+    private static void OnProcessExit(object? sender, EventArgs e)
+    {
+        CleanupTempCursorFiles();
     }
 
     /// <summary>

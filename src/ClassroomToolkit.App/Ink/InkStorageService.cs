@@ -13,6 +13,11 @@ namespace ClassroomToolkit.App.Ink;
 public sealed class InkStorageService
 {
     private static readonly string DefaultRootPath = ResolveDefaultRootPath();
+    private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true
+    };
     private const string PagesFolderName = "pages";
     private const string DefaultPhotosFolderName = "Photos";
 
@@ -107,36 +112,50 @@ public sealed class InkStorageService
 
     public IReadOnlyList<DateTime> ListDates()
     {
-        if (!Directory.Exists(_rootPath))
+        try
+        {
+            if (!Directory.Exists(_rootPath))
+            {
+                return Array.Empty<DateTime>();
+            }
+            var folders = Directory.EnumerateDirectories(_rootPath, "*", TopLevelIgnoreInaccessibleOptions);
+            var dates = new List<DateTime>();
+            foreach (var folder in folders)
+            {
+                var name = Path.GetFileName(folder);
+                if (DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                {
+                    dates.Add(date);
+                }
+            }
+            dates.Sort();
+            return dates;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return Array.Empty<DateTime>();
         }
-        var folders = Directory.GetDirectories(_rootPath);
-        var dates = new List<DateTime>();
-        foreach (var folder in folders)
-        {
-            var name = Path.GetFileName(folder);
-            if (DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-            {
-                dates.Add(date);
-            }
-        }
-        dates.Sort();
-        return dates;
     }
 
     public IReadOnlyList<string> ListDocuments(DateTime date)
     {
-        var dateFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
-        if (!Directory.Exists(dateFolder))
+        try
+        {
+            var dateFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+            if (!Directory.Exists(dateFolder))
+            {
+                return Array.Empty<string>();
+            }
+            return Directory.EnumerateDirectories(dateFolder, "*", TopLevelIgnoreInaccessibleOptions)
+                .Select(path => Path.GetFileName(path) ?? string.Empty)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             return Array.Empty<string>();
         }
-        return Directory.GetDirectories(dateFolder)
-            .Select(path => Path.GetFileName(path) ?? string.Empty)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     public IReadOnlyList<InkPageData> ListPages(DateTime date, string documentName)
@@ -149,7 +168,16 @@ public sealed class InkStorageService
             return Array.Empty<InkPageData>();
         }
         var result = new List<InkPageData>();
-        foreach (var file in Directory.GetFiles(pagesFolder, "slide_*.json"))
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(pagesFolder, "slide_*.json", TopLevelIgnoreInaccessibleOptions);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return Array.Empty<InkPageData>();
+        }
+        foreach (var file in files)
         {
             try
             {
@@ -303,7 +331,14 @@ public sealed class InkStorageService
         {
             if (File.Exists(tempPath))
             {
-                File.Delete(tempPath);
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    // Best-effort cleanup; keep the primary write/replace exception.
+                }
             }
         }
     }

@@ -7,6 +7,32 @@ namespace ClassroomToolkit.Tests;
 public sealed class AuxWindowKeyRoutingHandlerTests
 {
     [Fact]
+    public void TryHandle_ShouldThrowArgumentNullException_WhenPhotoHandlerIsNull()
+    {
+        var act = () => AuxWindowKeyRoutingHandler.TryHandle(
+            key: Key.PageDown,
+            overlayVisible: true,
+            tryHandlePhotoKey: null!,
+            canRoutePresentationInput: true,
+            forwardPresentationKey: _ => { });
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void TryHandle_ShouldThrowArgumentNullException_WhenForwardHandlerIsNull()
+    {
+        var act = () => AuxWindowKeyRoutingHandler.TryHandle(
+            key: Key.PageDown,
+            overlayVisible: true,
+            tryHandlePhotoKey: _ => false,
+            canRoutePresentationInput: true,
+            forwardPresentationKey: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void TryHandle_ShouldReturnFalse_WhenOverlayNotVisible()
     {
         var forwarded = false;
@@ -65,5 +91,34 @@ public sealed class AuxWindowKeyRoutingHandlerTests
 
         handled.Should().BeFalse();
         forwarded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryHandle_ShouldReturnFalse_WhenPhotoHandlerThrowsNonFatal()
+    {
+        var forwarded = false;
+
+        var handled = AuxWindowKeyRoutingHandler.TryHandle(
+            key: Key.Right,
+            overlayVisible: true,
+            tryHandlePhotoKey: _ => throw new InvalidOperationException("photo-failed"),
+            canRoutePresentationInput: false,
+            forwardPresentationKey: _ => forwarded = true);
+
+        handled.Should().BeFalse();
+        forwarded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryHandle_ShouldReturnFalse_WhenForwardHandlerThrowsNonFatal()
+    {
+        var handled = AuxWindowKeyRoutingHandler.TryHandle(
+            key: Key.PageDown,
+            overlayVisible: true,
+            tryHandlePhotoKey: _ => false,
+            canRoutePresentationInput: true,
+            forwardPresentationKey: _ => throw new InvalidOperationException("forward-failed"));
+
+        handled.Should().BeFalse();
     }
 }

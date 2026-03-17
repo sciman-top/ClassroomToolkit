@@ -7,6 +7,14 @@ namespace ClassroomToolkit.Tests;
 public sealed class IniSettingsStoreTests
 {
     [Fact]
+    public void Constructor_ShouldThrow_WhenPathIsBlank()
+    {
+        Action act = () => _ = new IniSettingsStore(" ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
     public void TryLoad_ShouldReadUtf16LeIniFile()
     {
         var path = TestPathHelper.CreateFilePath("ctool_ini_utf16", ".ini");
@@ -52,5 +60,16 @@ public sealed class IniSettingsStoreTests
                 File.Delete(path);
             }
         }
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenDataIsNull()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_save_null", ".ini");
+        var store = new IniSettingsStore(path);
+
+        var act = () => store.Save(null!);
+
+        act.Should().Throw<ArgumentNullException>();
     }
 }

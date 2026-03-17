@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -69,18 +70,36 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(1, Colors.Red);
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
         PreviewKeyDown += OnPreviewKeyDown;
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
-        IsVisibleChanged += (_, _) =>
+        Loaded += OnToolbarLoaded;
+        IsVisibleChanged += OnToolbarVisibleChanged;
+        Closed += OnToolbarClosed;
+    }
+
+    private void OnToolbarLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnToolbarVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
         {
-            if (IsVisible)
-            {
-                WindowPlacementHelper.EnsureVisible(this);
-            }
-        };
+            WindowPlacementHelper.EnsureVisible(this);
+        }
+    }
+
+    private void OnToolbarClosed(object? sender, EventArgs e)
+    {
+        PreviewKeyDown -= OnPreviewKeyDown;
+        Loaded -= OnToolbarLoaded;
+        IsVisibleChanged -= OnToolbarVisibleChanged;
+        Closed -= OnToolbarClosed;
     }
 
     public void ApplySettings(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         _initializing = true;
         try
         {
@@ -122,6 +141,7 @@ public partial class PaintToolbarWindow : Window
 
     public void AttachOverlay(PaintOverlayWindow overlay)
     {
+        ArgumentNullException.ThrowIfNull(overlay);
         _overlay = overlay;
     }
 
@@ -469,14 +489,10 @@ public partial class PaintToolbarWindow : Window
 
     private static MediaColor ColorFromHex(string value, MediaColor fallback)
     {
-        try
+        return PaintActionInvoker.TryInvoke(() =>
         {
             return (MediaColor)MediaColorConverter.ConvertFromString(value);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return fallback;
-        }
+        }, fallback);
     }
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)
@@ -524,14 +540,7 @@ public partial class PaintToolbarWindow : Window
     {
         if (e.ChangedButton == MouseButton.Left)
         {
-            try
-            {
-                DragMove();
-            }
-            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-            {
-                // 忽略异常
-            }
+            PaintActionInvoker.TryInvoke(DragMove);
         }
     }
 

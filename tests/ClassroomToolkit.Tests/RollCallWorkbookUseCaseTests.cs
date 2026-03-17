@@ -9,6 +9,14 @@ namespace ClassroomToolkit.Tests;
 public sealed class RollCallWorkbookUseCaseTests
 {
     [Fact]
+    public void Constructor_ShouldThrowArgumentNullException_WhenStoreIsNull()
+    {
+        var act = () => _ = new RollCallWorkbookUseCase(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Load_ShouldDeserializeRollState()
     {
         var workbook = new StudentWorkbook(
@@ -31,6 +39,17 @@ public sealed class RollCallWorkbookUseCaseTests
         result.ErrorMessage.Should().BeNull();
         result.Workbook.Should().BeSameAs(workbook);
         result.ClassStates.Should().ContainKey("班级1");
+    }
+
+    [Fact]
+    public void Load_ShouldThrowArgumentException_WhenPathIsBlank()
+    {
+        var store = new StubStore();
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        var act = () => _ = useCase.Load(" ");
+
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -88,6 +107,50 @@ public sealed class RollCallWorkbookUseCaseTests
         var parsed = RollStateSerializer.DeserializeWorkbookStates(store.SavedRollStateJson!);
         parsed.Should().NotBeNull();
         parsed!.Should().ContainKey("班级1");
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentException_WhenPathIsBlank()
+    {
+        var store = new StubStore(exception: null, loadData: new RollCallWorkbookStoreLoadData(
+            new StudentWorkbook(
+                new Dictionary<string, ClassRoster> { ["班级1"] = new("班级1", Array.Empty<StudentRecord>()) },
+                "班级1"),
+            false,
+            null));
+        var useCase = new RollCallWorkbookUseCase(store);
+        var workbook = new StudentWorkbook(
+            new Dictionary<string, ClassRoster> { ["班级1"] = new("班级1", Array.Empty<StudentRecord>()) },
+            "班级1");
+
+        var act = () => useCase.Save(" ", workbook, new Dictionary<string, ClassRollState>());
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenWorkbookIsNull()
+    {
+        var store = new StubStore();
+        var useCase = new RollCallWorkbookUseCase(store);
+
+        var act = () => useCase.Save("students.xlsx", null!, new Dictionary<string, ClassRollState>());
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentNullException_WhenClassStatesIsNull()
+    {
+        var store = new StubStore();
+        var useCase = new RollCallWorkbookUseCase(store);
+        var workbook = new StudentWorkbook(
+            new Dictionary<string, ClassRoster> { ["班级1"] = new("班级1", Array.Empty<StudentRecord>()) },
+            "班级1");
+
+        var act = () => useCase.Save("students.xlsx", workbook, null!);
+
+        act.Should().Throw<ArgumentNullException>();
     }
 
     private sealed class StubStore : IRollCallWorkbookStore

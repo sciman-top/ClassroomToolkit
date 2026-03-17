@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     private DateTime _lastLauncherVisibleForTopmostUtc = MainWindowRuntimeDefaults.DefaultTimestampUtc;
     private readonly DispatcherTimer _autoExitTimer;
     private readonly CancellationTokenSource _backgroundTasksCancellation = new();
+    private bool _backgroundTasksCancellationDisposed;
     private bool _allowClose;
     private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;
@@ -81,6 +82,18 @@ public partial class MainWindow : Window
         Photos.IImageManagerWindowFactory imageManagerWindowFactory,
         IWindowOrchestrator windowOrchestrator)
     {
+        ArgumentNullException.ThrowIfNull(settingsService);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(inkExportOptions);
+        ArgumentNullException.ThrowIfNull(inkPersistenceService);
+        ArgumentNullException.ThrowIfNull(inkExportService);
+        ArgumentNullException.ThrowIfNull(mainViewModel);
+        ArgumentNullException.ThrowIfNull(configurationService);
+        ArgumentNullException.ThrowIfNull(rollCallWindowFactory);
+        ArgumentNullException.ThrowIfNull(paintWindowOrchestrator);
+        ArgumentNullException.ThrowIfNull(imageManagerWindowFactory);
+        ArgumentNullException.ThrowIfNull(windowOrchestrator);
+
         InitializeComponent();
         _settingsService = settingsService;
         _settings = settings;
@@ -105,6 +118,7 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         IsVisibleChanged += OnMainWindowVisibleChanged;
         Closing += OnClosing;
+        Closed += OnClosed;
     }
 
     private void OnAutoExitTimerTick(object? sender, EventArgs e)
@@ -225,6 +239,11 @@ public partial class MainWindow : Window
 
     private void OnRollCallWindowClosed(object? sender, EventArgs e)
     {
+        if (sender is RollCallWindow closedWindow)
+        {
+            closedWindow.IsVisibleChanged -= OnRollCallWindowVisibleChanged;
+            closedWindow.Closed -= OnRollCallWindowClosed;
+        }
         _rollCallWindow = null;
         UpdateToggleButtons();
     }
@@ -404,6 +423,18 @@ public partial class MainWindow : Window
 
     private bool TryBeginInvoke(Action action, DispatcherPriority priority, string operation)
     {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                DispatcherBeginInvokeDiagnosticsPolicy.FormatFailureMessage(
+                    operation,
+                    "DispatcherShutdown",
+                    "dispatcher is shutting down"));
+            return false;
+        }
+
         try
         {
             Dispatcher.BeginInvoke(action, priority);
@@ -786,6 +817,27 @@ public partial class MainWindow : Window
         {
             RequestExit();
         }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        if (_backgroundTasksCancellationDisposed)
+        {
+            return;
+        }
+
+        _backgroundTasksCancellationDisposed = true;
+        Closed -= OnClosed;
+        Closing -= OnClosing;
+        Loaded -= OnLoaded;
+        IsVisibleChanged -= OnMainWindowVisibleChanged;
+        _autoExitTimer.Stop();
+        _presentationForegroundSuppressionTimer.Stop();
+        _autoExitTimer.Tick -= OnAutoExitTimerTick;
+        _presentationForegroundSuppressionTimer.Tick -= OnPresentationForegroundSuppressionTimerTick;
+        ReleasePresentationForegroundSuppression();
+        ExecuteLifecycleSafe("main-window-closed", "cancel-background-tasks", () => _backgroundTasksCancellation.Cancel());
+        _backgroundTasksCancellation.Dispose();
     }
 }
 

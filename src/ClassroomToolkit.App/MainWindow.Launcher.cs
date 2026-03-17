@@ -68,16 +68,14 @@ public partial class MainWindow
         {
             return;
         }
-        try
-        {
-            DragMove();
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        if (!this.SafeDragMove(ex =>
         {
             System.Diagnostics.Debug.WriteLine(
                 LauncherDragDiagnosticsPolicy.FormatDragMoveFailureMessage(
                     ex.GetType().Name,
                     ex.Message));
+        }))
+        {
             return;
         }
         EnsureWithinWorkArea();
@@ -363,16 +361,28 @@ public partial class MainWindow
             return;
         }
         var settingsPath = _configurationService.SettingsIniPath;
-        _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", _ =>
+        _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", token =>
         {
             var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);
             if (!result.HasIssues)
             {
                 return;
             }
-
-            Dispatcher.Invoke(() =>
+            if (_backgroundTasksCancellation.IsCancellationRequested || token.IsCancellationRequested)
             {
+                return;
+            }
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
+
+            _ = Dispatcher.InvokeAsync(() =>
+            {
+                if (_backgroundTasksCancellation.IsCancellationRequested || token.IsCancellationRequested)
+                {
+                    return;
+                }
                 if (!IsLoaded)
                 {
                     return;

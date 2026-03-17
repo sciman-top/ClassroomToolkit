@@ -185,6 +185,46 @@ public sealed class ConfigurationServiceTests
         }
     }
 
+    [Fact]
+    public void Constructor_ShouldFallbackToDefaults_WhenConfiguredSettingsPathIsInvalid()
+    {
+        var baseDirectory = CreateTempDirectory();
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(baseDirectory, "appsettings.json"),
+                """
+                {
+                  "SettingsIniPath": "config\u0000bad.ini",
+                  "SettingsDocumentPath": "settings.custom.json"
+                }
+                """);
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.GetFullPath(Path.Combine(baseDirectory, "settings.custom.json")));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Constructor_ShouldFallbackToRuntimeBaseDirectory_WhenInputBaseDirectoryIsInvalid()
+    {
+        var invalidBaseDirectory = "\u0000";
+        var baseline = new ConfigurationService();
+
+        var service = new ConfigurationService(invalidBaseDirectory);
+
+        service.BaseDirectory.Should().Be(baseline.BaseDirectory);
+        service.SettingsIniPath.Should().Be(baseline.SettingsIniPath);
+        service.SettingsDocumentPath.Should().Be(baseline.SettingsDocumentPath);
+    }
+
     private static string CreateTempDirectory()
     {
         var path = TestPathHelper.CreateDirectory("ctool_config");

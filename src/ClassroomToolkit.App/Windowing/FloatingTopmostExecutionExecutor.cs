@@ -29,14 +29,20 @@ internal static class FloatingTopmostExecutionExecutor
         Window? imageManagerWindow,
         Action<Window?, bool, bool> applyTopmostNoActivate)
     {
-        if (applyTopmostNoActivate == null)
-        {
-            throw new ArgumentNullException(nameof(applyTopmostNoActivate));
-        }
+        ArgumentNullException.ThrowIfNull(applyTopmostNoActivate);
 
-        applyTopmostNoActivate(toolbarWindow, plan.ToolbarTopmost, plan.EnforceZOrder);
-        applyTopmostNoActivate(rollCallWindow, plan.RollCallTopmost, plan.EnforceZOrder);
-        applyTopmostNoActivate(launcherWindow, plan.LauncherTopmost, plan.EnforceZOrder);
-        applyTopmostNoActivate(imageManagerWindow, plan.ImageManagerTopmost, plan.EnforceZOrder);
+        TryApply(toolbarWindow, plan.ToolbarTopmost, plan.EnforceZOrder, applyTopmostNoActivate);
+        TryApply(rollCallWindow, plan.RollCallTopmost, plan.EnforceZOrder, applyTopmostNoActivate);
+        TryApply(launcherWindow, plan.LauncherTopmost, plan.EnforceZOrder, applyTopmostNoActivate);
+        TryApply(imageManagerWindow, plan.ImageManagerTopmost, plan.EnforceZOrder, applyTopmostNoActivate);
+    }
+
+    private static void TryApply(
+        Window? window,
+        bool topmost,
+        bool enforceZOrder,
+        Action<Window?, bool, bool> applyTopmostNoActivate)
+    {
+        _ = SafeActionExecutionExecutor.TryExecute(() => applyTopmostNoActivate(window, topmost, enforceZOrder));
     }
 }

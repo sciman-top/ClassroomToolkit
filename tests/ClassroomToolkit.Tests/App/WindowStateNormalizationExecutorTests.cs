@@ -96,4 +96,26 @@ public sealed class WindowStateNormalizationExecutorTests
 
         applied.Should().BeFalse();
     }
+
+    [Fact]
+    public void Apply_ShouldThrowArgumentNullException_WhenApplyNormalizeIsNull()
+    {
+        var act = () => WindowStateNormalizationExecutor.Apply(
+            target: "window",
+            shouldNormalize: true,
+            applyNormalize: null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Apply_ShouldReturnFalse_WhenApplyNormalizeThrowsNonFatal()
+    {
+        var applied = WindowStateNormalizationExecutor.Apply(
+            target: "window",
+            shouldNormalize: true,
+            applyNormalize: (_, _) => throw new InvalidOperationException("normalize-failed"));
+
+        applied.Should().BeFalse();
+    }
 }

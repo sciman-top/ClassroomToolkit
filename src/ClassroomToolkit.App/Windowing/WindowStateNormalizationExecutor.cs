@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 
 namespace ClassroomToolkit.App.Windowing;
@@ -28,13 +29,17 @@ internal static class WindowStateNormalizationExecutor
         Func<TTarget?, bool, bool> applyNormalize)
         where TTarget : class
     {
+        ArgumentNullException.ThrowIfNull(applyNormalize);
+
         var decision = Resolve(target, shouldNormalize);
         if (!decision.ShouldNormalize && target == null)
         {
             return false;
         }
 
-        return applyNormalize(target, decision.ShouldNormalize);
+        return SafeActionExecutionExecutor.TryExecute(
+            () => applyNormalize(target, decision.ShouldNormalize),
+            fallback: false);
     }
 
     internal static WindowStateNormalizationDecision Resolve<TTarget>(

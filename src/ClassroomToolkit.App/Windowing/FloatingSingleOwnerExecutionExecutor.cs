@@ -1,4 +1,5 @@
 using System.Windows;
+using System;
 
 namespace ClassroomToolkit.App.Windowing;
 
@@ -23,6 +24,10 @@ internal static class FloatingSingleOwnerExecutionExecutor
         Func<TWindow?, TWindow?, FloatingOwnerBindingAction, bool> applyAction)
         where TWindow : class
     {
-        return applyAction(child, overlayOwner, action);
+        ArgumentNullException.ThrowIfNull(applyAction);
+
+        return SafeActionExecutionExecutor.TryExecute(
+            () => applyAction(child, overlayOwner, action),
+            fallback: false);
     }
 }

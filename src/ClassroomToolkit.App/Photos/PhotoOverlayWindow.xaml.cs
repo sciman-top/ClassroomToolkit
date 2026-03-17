@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Utilities;
 using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Photos;
@@ -21,6 +22,9 @@ public partial class PhotoOverlayWindow : Window
     private string? _currentStudentId;
     private string? _currentPhotoPath;
     private IntPtr _hwnd;
+    private int _photoLoadRequestId;
+    private string? _cachedBitmapPath;
+    private BitmapSource? _cachedBitmap;
 
     public event Action<string?>? PhotoClosed;
 
@@ -34,60 +38,104 @@ public partial class PhotoOverlayWindow : Window
             Interval = TimeSpan.FromSeconds(1)
         };
         _autoCloseTimer.Tick += OnAutoCloseTick;
-        
-        SourceInitialized += (_, _) =>
-        {
-            _hwnd = new WindowInteropHelper(this).Handle;
-        };
+        SourceInitialized += OnOverlaySourceInitialized;
+        Closed += OnOverlayClosed;
+    }
+
+    private void OnOverlaySourceInitialized(object? sender, EventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+    }
+
+    private void OnOverlayClosed(object? sender, EventArgs e)
+    {
+        Interlocked.Increment(ref _photoLoadRequestId);
+        _autoCloseTimer.Stop();
+        _autoCloseTimer.Tick -= OnAutoCloseTick;
+        SourceInitialized -= OnOverlaySourceInitialized;
+        Closed -= OnOverlayClosed;
+        ClearPhotoCache();
     }
 
     public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
     {
-        var bitmap = LoadBitmap(path);
-        if (bitmap == null)
+        var requestId = Interlocked.Increment(ref _photoLoadRequestId);
+        var normalizedStudentId = studentId?.Trim();
+
+        if (IsShowingSamePhoto(path))
         {
-            Hide();
+            _currentPhotoPath = path;
+            _currentStudentId = normalizedStudentId;
+            NameText.Text = studentName ?? string.Empty;
+            NameText.Visibility = string.IsNullOrWhiteSpace(studentName) ? Visibility.Collapsed : Visibility.Visible;
+            UpdateOverlayPositions();
+            UpdateAutoCloseTimer(durationSeconds);
+            EnsureOverlayVisible();
             return;
         }
 
-        // 清除缓存
-        PhotoImage.Source = null;
-        NameText.Text = string.Empty;
-        PhotoImage.Visibility = Visibility.Collapsed;
-        LoadingMask.Visibility = Visibility.Collapsed;
-
         _currentPhotoPath = path;
-        _currentStudentId = studentId?.Trim();
+        _currentStudentId = normalizedStudentId;
         NameText.Text = studentName ?? string.Empty;
         // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
         NameText.Visibility = Visibility.Collapsed;
 
-        // 设置照片源
-        PhotoImage.Source = bitmap;
-
-        // 显示窗口
-        Show();
-        PhotoImage.Visibility = Visibility.Visible;
-
-        // 强制更新布局以触发 SizeChanged
-        UpdateLayout();
-
-        // 在照片定位完成后再显示姓名，并重新定位到照片上方
-        if (!string.IsNullOrWhiteSpace(studentName))
+        EnsureOverlayVisible();
+        if (TryGetCachedBitmap(path, out var cachedBitmap))
         {
-            NameText.Visibility = Visibility.Visible;
-            UpdateOverlayPositions();
+            LoadingMask.Visibility = Visibility.Collapsed;
+            ApplyLoadedBitmap(
+                requestId,
+                cachedBitmap,
+                studentName,
+                durationSeconds,
+                hideWhenFailed: false);
+            return;
         }
 
-        if (durationSeconds > 0)
-        {
-            _autoCloseTimer.Interval = TimeSpan.FromSeconds(durationSeconds);
-            _autoCloseTimer.Start();
-        }
-        else
-        {
-            _autoCloseTimer.Stop();
-        }
+        // 未命中缓存时，进入异步加载占位态
+        PhotoImage.Source = null;
+        PhotoImage.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = Visibility.Visible;
+
+        _ = SafeTaskRunner.Run(
+            "PhotoOverlayWindow.ShowPhoto.LoadBitmap",
+            async cancellationToken =>
+            {
+                _ = cancellationToken;
+                var bitmap = await LoadBitmapAsync(path);
+                if (requestId != Volatile.Read(ref _photoLoadRequestId))
+                {
+                    return;
+                }
+
+                if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+                {
+                    return;
+                }
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (requestId != Volatile.Read(ref _photoLoadRequestId))
+                    {
+                        return;
+                    }
+
+                    if (bitmap != null)
+                    {
+                        _cachedBitmapPath = path;
+                        _cachedBitmap = bitmap;
+                    }
+                    ApplyLoadedBitmap(
+                        requestId,
+                        bitmap,
+                        studentName,
+                        durationSeconds,
+                        hideWhenFailed: true);
+                }, DispatcherPriority.Background);
+            },
+            CancellationToken.None,
+            ex => System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap async: {path}. Error: {ex.Message}"));
     }
 
     private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e)
@@ -159,6 +207,7 @@ public partial class PhotoOverlayWindow : Window
 
     public void CloseOverlay()
     {
+        Interlocked.Increment(ref _photoLoadRequestId);
         _autoCloseTimer.Stop();
         ClearPhotoCache();
         Hide();
@@ -179,12 +228,107 @@ public partial class PhotoOverlayWindow : Window
         PhotoImage.Source = null;
         NameText.Text = string.Empty;
         NameText.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = Visibility.Collapsed;
         var studentId = _currentStudentId;
         _currentStudentId = null;
         _currentPhotoPath = null;
         if (!string.IsNullOrWhiteSpace(studentId))
         {
             PhotoClosed?.Invoke(studentId);
+        }
+    }
+
+    private bool TryGetCachedBitmap(string path, out BitmapSource bitmap)
+    {
+        if (_cachedBitmap != null
+            && !string.IsNullOrWhiteSpace(_cachedBitmapPath)
+            && string.Equals(_cachedBitmapPath, path, StringComparison.OrdinalIgnoreCase))
+        {
+            bitmap = _cachedBitmap;
+            return true;
+        }
+
+        bitmap = null!;
+        return false;
+    }
+
+    private void ApplyLoadedBitmap(
+        int requestId,
+        BitmapSource? bitmap,
+        string? studentName,
+        int durationSeconds,
+        bool hideWhenFailed)
+    {
+        if (requestId != Volatile.Read(ref _photoLoadRequestId))
+        {
+            return;
+        }
+        if (bitmap == null)
+        {
+            LoadingMask.Visibility = Visibility.Collapsed;
+            if (hideWhenFailed)
+            {
+                Hide();
+            }
+            return;
+        }
+
+        PhotoImage.Source = bitmap;
+        PhotoImage.Visibility = Visibility.Visible;
+        LoadingMask.Visibility = Visibility.Collapsed;
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (requestId != Volatile.Read(ref _photoLoadRequestId))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(studentName))
+            {
+                NameText.Visibility = Visibility.Visible;
+            }
+            UpdateOverlayPositions();
+        }), DispatcherPriority.Background);
+
+        UpdateAutoCloseTimer(durationSeconds);
+    }
+
+    private static Task<BitmapImage?> LoadBitmapAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return Task.FromResult<BitmapImage?>(null);
+        }
+
+        return Task.Run(() => LoadBitmap(path));
+    }
+
+    private bool IsShowingSamePhoto(string path)
+    {
+        return !string.IsNullOrWhiteSpace(path)
+            && string.Equals(_currentPhotoPath, path, StringComparison.OrdinalIgnoreCase)
+            && PhotoImage.Source != null
+            && PhotoImage.Visibility == Visibility.Visible
+            && LoadingMask.Visibility != Visibility.Visible;
+    }
+
+    private void UpdateAutoCloseTimer(int durationSeconds)
+    {
+        if (durationSeconds > 0)
+        {
+            _autoCloseTimer.Interval = TimeSpan.FromSeconds(durationSeconds);
+            _autoCloseTimer.Start();
+            return;
+        }
+
+        _autoCloseTimer.Stop();
+    }
+
+    private void EnsureOverlayVisible()
+    {
+        if (!IsVisible)
+        {
+            Show();
         }
     }
 

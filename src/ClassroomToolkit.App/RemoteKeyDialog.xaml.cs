@@ -27,7 +27,19 @@ public partial class RemoteKeyDialog : Window
         {
             PresetCombo.SelectedIndex = 2;
         }
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 
     private void OnPresetChanged(object sender, RoutedEventArgs e)
@@ -66,7 +78,7 @@ public partial class RemoteKeyDialog : Window
     {
         if (e.LeftButton == MouseButtonState.Pressed)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
     }
 }

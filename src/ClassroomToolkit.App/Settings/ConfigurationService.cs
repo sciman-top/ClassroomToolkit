@@ -86,10 +86,25 @@ public sealed class ConfigurationService : IConfigurationService
             return false;
         }
 
-        resolvedPath = Path.IsPathRooted(configured)
-            ? configured
-            : Path.GetFullPath(Path.Combine(BaseDirectory, configured));
-        return true;
+        try
+        {
+            resolvedPath = Path.IsPathRooted(configured)
+                ? configured
+                : Path.GetFullPath(Path.Combine(BaseDirectory, configured));
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+        catch (PathTooLongException)
+        {
+            return false;
+        }
     }
 
     private string GetDefaultSettingsIniPath()
@@ -191,7 +206,24 @@ public sealed class ConfigurationService : IConfigurationService
             ? AppDomain.CurrentDomain.BaseDirectory
             : baseDirectory;
 
-        var normalizedStart = Path.GetFullPath(start);
+        string normalizedStart;
+        try
+        {
+            normalizedStart = Path.GetFullPath(start);
+        }
+        catch (ArgumentException)
+        {
+            normalizedStart = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+        }
+        catch (NotSupportedException)
+        {
+            normalizedStart = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+        }
+        catch (PathTooLongException)
+        {
+            normalizedStart = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+        }
+
         var solutionDirectory = FindSolutionDirectory(normalizedStart);
         if (!string.IsNullOrWhiteSpace(solutionDirectory))
         {

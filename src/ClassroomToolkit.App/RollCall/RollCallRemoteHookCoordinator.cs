@@ -1,4 +1,5 @@
 namespace ClassroomToolkit.App.RollCall;
+using ClassroomToolkit.App.Windowing;
 
 internal readonly record struct RollCallRemoteHookStartRequest(
     bool ShouldEnable,
@@ -36,26 +37,51 @@ internal sealed class RollCallRemoteHookCoordinator
 
     internal async Task<RollCallRemoteHookStartResult> TryStartAsync(RollCallRemoteHookStartRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request.Handler);
+        ArgumentNullException.ThrowIfNull(request.ShouldKeepActive);
+
         if (!request.ShouldEnable)
         {
             return new RollCallRemoteHookStartResult(Started: false, ShouldNotifyUnavailable: false);
         }
-        if (!request.ShouldKeepActive())
+        if (!ShouldKeepActiveSafe(request.ShouldKeepActive))
         {
             return new RollCallRemoteHookStartResult(Started: false, ShouldNotifyUnavailable: false);
         }
+        try
+        {
+            var bindings = _resolveBindings(request.ConfiguredKey, request.FallbackToken);
+            var started = await _registerHookAsync(bindings, request.Handler, request.ShouldKeepActive);
+            var shouldNotifyUnavailable = ResolveShouldNotifyUnavailable(request, started);
 
-        var bindings = _resolveBindings(request.ConfiguredKey, request.FallbackToken);
-        var started = await _registerHookAsync(bindings, request.Handler, request.ShouldKeepActive);
-        var shouldNotifyUnavailable =
-            request.NotifyUnavailableOnFailure
+            return new RollCallRemoteHookStartResult(
+                Started: started,
+                ShouldNotifyUnavailable: shouldNotifyUnavailable);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            var shouldNotifyUnavailable = ResolveShouldNotifyUnavailable(request, started: false);
+            return new RollCallRemoteHookStartResult(
+                Started: false,
+                ShouldNotifyUnavailable: shouldNotifyUnavailable);
+        }
+    }
+
+    private static bool ResolveShouldNotifyUnavailable(
+        RollCallRemoteHookStartRequest request,
+        bool started)
+    {
+        return request.NotifyUnavailableOnFailure
             && !started
             && !request.AlreadyUnavailableNotified
             && request.ShouldEnable
-            && request.ShouldKeepActive();
+            && ShouldKeepActiveSafe(request.ShouldKeepActive);
+    }
 
-        return new RollCallRemoteHookStartResult(
-            Started: started,
-            ShouldNotifyUnavailable: shouldNotifyUnavailable);
+    private static bool ShouldKeepActiveSafe(Func<bool> shouldKeepActive)
+    {
+        return SafeActionExecutionExecutor.TryExecute(
+            () => shouldKeepActive(),
+            fallback: false);
     }
 }

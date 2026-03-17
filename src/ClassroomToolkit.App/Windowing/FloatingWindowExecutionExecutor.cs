@@ -43,51 +43,61 @@ internal static class FloatingWindowExecutionExecutor
         ArgumentNullException.ThrowIfNull(tryActivate);
         ArgumentNullException.ThrowIfNull(applyTopmostPlan);
 
-        applyOwnerPlan(plan.OwnerPlan, overlayWindow, toolbarWindow, rollCallWindow, imageManagerWindow);
+        SafeActionExecutionExecutor.TryExecute(
+            () => applyOwnerPlan(plan.OwnerPlan, overlayWindow, toolbarWindow, rollCallWindow, imageManagerWindow));
 
         var imageManagerActivationDecision = FloatingActivationExecutionPolicy.Resolve(
             imageManagerWindow,
             plan.ActivationPlan.ActivateImageManager);
-        if (imageManagerActivationDecision.ShouldActivate)
-        {
-            if (!tryActivate(imageManagerWindow, true))
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    FloatingWindowDiagnosticsPolicy.FormatActivationAttemptFailedMessage("ImageManager"));
-            }
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                FloatingWindowDiagnosticsPolicy.FormatActivationSkipMessage(
-                    "ImageManager",
-                    imageManagerActivationDecision.Reason));
-        }
+        ExecuteActivation(
+            imageManagerWindow,
+            imageManagerActivationDecision,
+            "ImageManager",
+            tryActivate);
 
         var overlayActivationDecision = FloatingActivationExecutionPolicy.Resolve(
             overlayWindow,
             plan.ActivationPlan.ActivateOverlay);
-        if (overlayActivationDecision.ShouldActivate)
+        ExecuteActivation(
+            overlayWindow,
+            overlayActivationDecision,
+            "Overlay",
+            tryActivate);
+
+        SafeActionExecutionExecutor.TryExecute(
+            () => applyTopmostPlan(
+                plan.TopmostExecutionPlan,
+                toolbarWindow,
+                rollCallWindow,
+                launcherWindow,
+                imageManagerWindow));
+    }
+
+    private static void ExecuteActivation<TWindow>(
+        TWindow? target,
+        FloatingActivationExecutionDecision decision,
+        string targetName,
+        Func<TWindow?, bool, bool> tryActivate)
+        where TWindow : class
+    {
+        if (decision.ShouldActivate)
         {
-            if (!tryActivate(overlayWindow, true))
+            var activated = SafeActionExecutionExecutor.TryExecute(
+                () => tryActivate(target, true),
+                fallback: false);
+
+            if (!activated)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    FloatingWindowDiagnosticsPolicy.FormatActivationAttemptFailedMessage("Overlay"));
+                    FloatingWindowDiagnosticsPolicy.FormatActivationAttemptFailedMessage(targetName));
             }
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                FloatingWindowDiagnosticsPolicy.FormatActivationSkipMessage(
-                    "Overlay",
-                    overlayActivationDecision.Reason));
+
+            return;
         }
 
-        applyTopmostPlan(
-            plan.TopmostExecutionPlan,
-            toolbarWindow,
-            rollCallWindow,
-            launcherWindow,
-            imageManagerWindow);
+        System.Diagnostics.Debug.WriteLine(
+            FloatingWindowDiagnosticsPolicy.FormatActivationSkipMessage(
+                targetName,
+                decision.Reason));
     }
 }

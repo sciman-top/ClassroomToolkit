@@ -221,6 +221,10 @@ public partial class PaintOverlayWindow
         var interactionState = CaptureInputInteractionState();
         var position = e.GetPosition(OverlayRoot);
         _lastPointerPosition = position;
+        if (e.RightButton == System.Windows.Input.MouseButtonState.Pressed || _photoRightClickPending || _photoPanning)
+        {
+            UpdatePhotoRightClickPendingByMove(position);
+        }
         if (TryHandleMousePhotoPanMove(e, position, interactionState)) return;
         if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
         {

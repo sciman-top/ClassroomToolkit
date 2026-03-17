@@ -1,4 +1,5 @@
 using ClassroomToolkit.Services.Input;
+using ClassroomToolkit.Interop.Presentation;
 using FluentAssertions;
 using System.Reflection;
 
@@ -6,6 +7,44 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class GlobalHookServiceTests
 {
+    [Fact]
+    public async Task RegisterHookAsync_KeyBindingOverload_ShouldThrow_WhenBindingsIsNull()
+    {
+        var service = new GlobalHookService();
+        try
+        {
+            var act = () => service.RegisterHookAsync(
+                bindings: null!,
+                callback: _ => { },
+                shouldKeepActive: () => true);
+
+            await act.Should().ThrowAsync<ArgumentNullException>();
+        }
+        finally
+        {
+            service.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task RegisterHookAsync_KeyBindingOverload_ShouldThrow_WhenCallbackIsNull()
+    {
+        var service = new GlobalHookService();
+        try
+        {
+            var act = () => service.RegisterHookAsync(
+                bindings: Array.Empty<KeyBinding>(),
+                callback: null!,
+                shouldKeepActive: () => true);
+
+            await act.Should().ThrowAsync<ArgumentNullException>();
+        }
+        finally
+        {
+            service.Dispose();
+        }
+    }
+
     [Fact]
     public async Task RegisterHookAsync_ShouldReturnFalse_WhenDisposed()
     {

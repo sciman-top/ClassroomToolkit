@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -177,6 +178,7 @@ public sealed class InkWriteAheadLogService
 
     private void SaveMap(string walPath, Dictionary<string, InkWalEntry> map)
     {
+        string? temp = null;
         try
         {
             if (map.Count == 0)
@@ -195,13 +197,46 @@ public sealed class InkWriteAheadLogService
             }
 
             var json = JsonSerializer.Serialize(map, _options);
-            var temp = $"{walPath}.{Guid.NewGuid():N}.tmp";
+            temp = $"{walPath}.{Guid.NewGuid():N}.tmp";
             File.WriteAllText(temp, json);
-            File.Move(temp, walPath, overwrite: true);
+            if (File.Exists(walPath))
+            {
+                TryReplaceOrOverwrite(temp, walPath);
+            }
+            else
+            {
+                File.Move(temp, walPath);
+            }
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             // Ignore WAL persistence errors.
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(temp) && File.Exists(temp))
+            {
+                try
+                {
+                    File.Delete(temp);
+                }
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    // Best-effort cleanup for temp WAL files.
+                }
+            }
+        }
+    }
+
+    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
+    {
+        try
+        {
+            File.Replace(tempPath, targetPath, null);
+        }
+        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
+        {
+            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 

@@ -11,13 +11,16 @@ public partial class TimerSetDialog : Window
     private const int MaxSliderMinutes = 25;
     private bool _updating;
     private DispatcherTimer? _repeatTimer;
+    private bool _repeatIncrement;
+    private int _repeatTickCount;
 
     public TimerSetDialog(int minutes, int seconds)
     {
         InitializeComponent();
         SetMinutes(Math.Clamp(minutes, 0, MaxMinutes), updateSlider: true);
         SetSeconds(Math.Clamp(seconds, 0, 59));
-        Loaded += (_, _) => WindowPlacementHelper.EnsureVisible(this);
+        Loaded += OnDialogLoaded;
+        Closed += OnDialogClosed;
     }
 
     public int Minutes { get; private set; }
@@ -53,12 +56,7 @@ public partial class TimerSetDialog : Window
         {
             return;
         }
-        if (!int.TryParse(MinutesBox.Text, out var minutes))
-        {
-            minutes = 0;
-        }
-        minutes = Math.Min(minutes + 1, MaxMinutes);
-        SetMinutes(minutes, updateSlider: true);
+        IncrementMinutes();
     }
 
     private void OnMinutesDownClick(object sender, RoutedEventArgs e)
@@ -67,12 +65,7 @@ public partial class TimerSetDialog : Window
         {
             return;
         }
-        if (!int.TryParse(MinutesBox.Text, out var minutes))
-        {
-            minutes = 0;
-        }
-        minutes = Math.Max(minutes - 1, 0);
-        SetMinutes(minutes, updateSlider: true);
+        DecrementMinutes();
     }
 
     private void OnMinutesUpMouseDown(object sender, MouseButtonEventArgs e)
@@ -99,36 +92,41 @@ public partial class TimerSetDialog : Window
 
     private void StartRepeatTimer(bool isIncrement)
     {
-        StopRepeatTimer();
-        _repeatTimer = new DispatcherTimer
+        if (_repeatTimer == null)
         {
-            Interval = TimeSpan.FromMilliseconds(300) // 初始延迟 300ms
-        };
-        int tickCount = 0;
-        _repeatTimer.Tick += (_, _) =>
-        {
-            tickCount++;
-            if (tickCount == 1)
-            {
-                // 首次触发后，加快速度为 100ms 间隔
-                _repeatTimer.Interval = TimeSpan.FromMilliseconds(100);
-            }
-            if (isIncrement)
-            {
-                OnMinutesUpClick(this, new RoutedEventArgs());
-            }
-            else
-            {
-                OnMinutesDownClick(this, new RoutedEventArgs());
-            }
-        };
+            _repeatTimer = new DispatcherTimer();
+            _repeatTimer.Tick += OnRepeatTimerTick;
+        }
+
+        _repeatIncrement = isIncrement;
+        _repeatTickCount = 0;
+        _repeatTimer.Stop();
+        _repeatTimer.Interval = TimeSpan.FromMilliseconds(300); // 初始延迟 300ms
         _repeatTimer.Start();
     }
 
     private void StopRepeatTimer()
     {
         _repeatTimer?.Stop();
-        _repeatTimer = null;
+    }
+
+    private void OnRepeatTimerTick(object? sender, EventArgs e)
+    {
+        _repeatTickCount++;
+        if (_repeatTickCount == 1 && _repeatTimer != null)
+        {
+            // 首次触发后，加快速度为 100ms 间隔
+            _repeatTimer.Interval = TimeSpan.FromMilliseconds(100);
+        }
+
+        if (_repeatIncrement)
+        {
+            IncrementMinutes();
+        }
+        else
+        {
+            DecrementMinutes();
+        }
     }
 
     private void OnSecondsTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
@@ -163,6 +161,23 @@ public partial class TimerSetDialog : Window
             MinutesSlider.Value = Math.Min(minutes, MaxSliderMinutes);
         }
         _updating = false;
+    }
+
+    private void IncrementMinutes()
+    {
+        var minutes = TryParseMinutesOrDefault();
+        SetMinutes(Math.Min(minutes + 1, MaxMinutes), updateSlider: true);
+    }
+
+    private void DecrementMinutes()
+    {
+        var minutes = TryParseMinutesOrDefault();
+        SetMinutes(Math.Max(minutes - 1, 0), updateSlider: true);
+    }
+
+    private int TryParseMinutesOrDefault()
+    {
+        return int.TryParse(MinutesBox.Text, out var minutes) ? minutes : 0;
     }
 
     private void OnPresetMinutesClick(object sender, RoutedEventArgs e)
@@ -211,7 +226,24 @@ public partial class TimerSetDialog : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
         {
-            DragMove();
+            _ = this.SafeDragMove();
         }
+    }
+
+    private void OnDialogLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        StopRepeatTimer();
+        if (_repeatTimer != null)
+        {
+            _repeatTimer.Tick -= OnRepeatTimerTick;
+            _repeatTimer = null;
+        }
+        Loaded -= OnDialogLoaded;
+        Closed -= OnDialogClosed;
     }
 }

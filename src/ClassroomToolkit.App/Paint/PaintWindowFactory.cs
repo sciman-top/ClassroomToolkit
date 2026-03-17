@@ -1,3 +1,4 @@
+using System;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using System.Diagnostics;
@@ -13,6 +14,10 @@ public sealed class PaintWindowFactory : IPaintWindowFactory
 
     public PaintWindowFactory(InkPersistenceService persistence, InkExportService export, InkExportOptions exportOptions)
     {
+        ArgumentNullException.ThrowIfNull(persistence);
+        ArgumentNullException.ThrowIfNull(export);
+        ArgumentNullException.ThrowIfNull(exportOptions);
+
         _persistence = persistence;
         _export = export;
         _exportOptions = exportOptions;

@@ -65,6 +65,6 @@ internal static class SafeTaskRunner
                     }
                 }
             }
-        }, CancellationToken.None);
+        }, cancellationToken);
     }
 }
