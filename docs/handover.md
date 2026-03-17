@@ -15,6 +15,24 @@
 
 ## 2. 当前做到哪里
 
+### 2026-03-18 全量审查进展（新增）
+
+- 已落地全量审查执行手册与 CI 质量闸门：
+  - `docs/validation/2026-03-18-full-code-audit-playbook.md`
+  - `.github/workflows/quality-gate.yml`
+- 已完成 Chunk 1 证据归档：
+  - `docs/validation/evidence/2026-03-18-full-audit/01-risk-inventory.md`
+  - `docs/validation/evidence/2026-03-18-full-audit/02-static-and-test-gates.md`
+- 已完成 Chunk 2 首轮热点闭环：
+  - `ImageManagerWindow` 目录展开 `async void` 生命周期风险已修复并补回归测试。
+  - `WindowInteropRetryExecutor` 已支持可取消重试等待并补测试。
+  - `ComObjectManager` 已补契约测试 + 运行时集成测试。
+  - 证据文档：`03-hotspot-findings.md`、`04-fixes-and-regression.md`。
+- 自动化最新结果（本地）：
+  - Debug 全量：`2789/2789` 通过（2026-03-18）
+  - Release 全量：`2789/2789` 通过（2026-03-18）
+- 当前剩余工作以人工最终回归门为主（课堂场景、DPI、互切链路）。
+
 - 运行时主干已进入“状态更新器 + 策略函数 + 执行器”持续收口阶段。
 - 跨页链路已完成自动化尾部收口：`CrossPage/Photo/Overlay/ArchitectureDependencyTests` 定向过滤 `903/903` 通过；剩余以冻结前人工场景回归为主。
 - 配置 / 存储分治已进入实质落地阶段：JSON 默认路径已切换，RollCall SQLite 已真实落库。
