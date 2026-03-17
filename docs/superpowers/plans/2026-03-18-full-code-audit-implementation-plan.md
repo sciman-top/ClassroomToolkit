@@ -13,6 +13,7 @@
 ## Preconditions And Source Of Truth
 
 - I'm using the writing-plans skill to create the implementation plan.
+- Baseline commit: `03b906c`（2026-03-18）
 - 审查手册：`E:\PythonProject\ClassroomToolkit\docs\validation\2026-03-18-full-code-audit-playbook.md`
 - CI 闸门：`E:\PythonProject\ClassroomToolkit\.github\workflows\quality-gate.yml`
 - 人工回归清单：`E:\PythonProject\ClassroomToolkit\docs\validation\manual-final-regression-checklist.md`
@@ -53,7 +54,7 @@
 - [ ] **Step 2: 检查基线工作区状态**
 
 Run: `git status --short`  
-Expected: 明确当前非本任务改动，后续不回滚、不覆盖。
+Expected: 输出为空（工作区 clean）。
 
 - [ ] **Step 3: 确认 CI 闸门文件存在**
 
