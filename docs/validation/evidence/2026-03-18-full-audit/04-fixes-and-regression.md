@@ -58,3 +58,9 @@
 ## Residual Risks
 
 - No blocker-level residual risk from current Round-1 findings.
+
+## Manual Gate Status
+
+- Decision: skipped by user instruction (`跳过人工`).
+- Implication: classroom scene/manual DPI/multi-window acceptance is not verified in this round.
+- Deferred checklist: `docs/validation/manual-final-regression-checklist.md`
