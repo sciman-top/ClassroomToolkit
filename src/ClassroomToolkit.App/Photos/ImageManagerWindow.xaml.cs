@@ -943,20 +943,37 @@ public partial class ImageManagerWindow : Window
         return item;
     }
 
-    private static async void OnFolderExpanded(object sender, RoutedEventArgs e)
+    private static void OnFolderExpanded(object sender, RoutedEventArgs e)
     {
-        if (sender is not TreeViewItem item || item.Items.Count != 1 || item.Items[0] is not TreeViewItem placeholder) return;
-        if (placeholder.Header is not string text || !text.Contains("\u52a0\u8f7d\u4e2d")) return;
-        item.Items.Clear();
-        if (item.Tag is not string path || string.IsNullOrWhiteSpace(path)) return;
+        _ = OnFolderExpandedAsync(sender);
+    }
 
-        List<string> directories;
+    private static async Task OnFolderExpandedAsync(object sender)
+    {
+        var path = "unknown";
         try
         {
-            directories = await Task.Run(() =>
+            if (sender is not TreeViewItem item || item.Items.Count != 1 || item.Items[0] is not TreeViewItem placeholder)
+            {
+                return;
+            }
+
+            if (placeholder.Header is not string text || !text.Contains("\u52a0\u8f7d\u4e2d"))
+            {
+                return;
+            }
+
+            item.Items.Clear();
+            if (item.Tag is not string folderPath || string.IsNullOrWhiteSpace(folderPath))
+            {
+                return;
+            }
+            path = folderPath;
+
+            var directories = await Task.Run(() =>
             {
                 var result = new List<string>();
-                foreach (var dir in Directory.EnumerateDirectories(path, "*", TopLevelIgnoreInaccessibleOptions))
+                foreach (var dir in Directory.EnumerateDirectories(folderPath, "*", TopLevelIgnoreInaccessibleOptions))
                 {
                     var name = Path.GetFileName(dir);
                     if (string.IsNullOrWhiteSpace(name) || name.StartsWith(".", StringComparison.Ordinal))
@@ -975,6 +992,33 @@ public partial class ImageManagerWindow : Window
                 result.Sort(StringComparer.OrdinalIgnoreCase);
                 return result;
             });
+
+            for (var i = 0; i < directories.Count; i += FolderNodeRenderBatchSize)
+            {
+                var upperBound = Math.Min(i + FolderNodeRenderBatchSize, directories.Count);
+                for (var j = i; j < upperBound; j++)
+                {
+                    var dir = directories[j];
+                    var name = Path.GetFileName(dir);
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        item.Items.Add(CreateFolderNode(dir, name));
+                    }
+                }
+
+                if (upperBound < directories.Count)
+                {
+                    await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Dispatcher/task cancellation can happen when tree view shuts down during async expansion.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Tree view/window disposed during async expansion.
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -982,26 +1026,6 @@ public partial class ImageManagerWindow : Window
                 ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
                     path,
                     ex.Message));
-            return;
-        }
-
-        for (var i = 0; i < directories.Count; i += FolderNodeRenderBatchSize)
-        {
-            var upperBound = Math.Min(i + FolderNodeRenderBatchSize, directories.Count);
-            for (var j = i; j < upperBound; j++)
-            {
-                var dir = directories[j];
-                var name = Path.GetFileName(dir);
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    item.Items.Add(CreateFolderNode(dir, name));
-                }
-            }
-
-            if (upperBound < directories.Count)
-            {
-                await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
-            }
         }
     }
 
