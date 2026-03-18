@@ -220,7 +220,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     private void OnOverlayPresentationFullscreenDetected() => PresentationFullscreenDetected?.Invoke();
 
     private void OnOverlayPresentationForegroundDetected(PresentationForegroundSource source)
-        => PresentationForegroundDetected?.Invoke(source);
+    {
+        PresentationForegroundDetected?.Invoke(source);
+        TryAutoLearnPresentationClassifierOverrides();
+    }
 
     private void OnOverlayPhotoForegroundDetected() => PhotoForegroundDetected?.Invoke();
 
@@ -421,6 +424,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         OverlayWindow.UpdateWpsMode(settings.WpsInputMode);
+        OverlayWindow.UpdatePresentationClassifierOverrides(settings.PresentationClassifierOverridesJson);
+        OverlayWindow.UpdatePresentationClassifierAutoLearn(settings.PresentationClassifierAutoLearnEnabled);
         OverlayWindow.UpdateWpsWheelMapping(settings.WpsWheelForward);
         OverlayWindow.UpdateWpsDebounceMs(settings.WpsDebounceMs);
         OverlayWindow.UpdatePresentationDegradeLock(settings.PresentationLockStrategyWhenDegraded);
@@ -444,6 +449,46 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
             settings.PhotoUnifiedScaleY,
             settings.PhotoUnifiedTranslateX,
             settings.PhotoUnifiedTranslateY);
+    }
+
+    private void TryAutoLearnPresentationClassifierOverrides()
+    {
+        if (_currentSettings == null || OverlayWindow == null)
+        {
+            return;
+        }
+        if (!_currentSettings.PresentationClassifierAutoLearnEnabled)
+        {
+            return;
+        }
+
+        if (!OverlayWindow.TryBuildPresentationClassifierAutoLearnJson(
+                _currentSettings.PresentationClassifierOverridesJson,
+                out var mergedOverridesJson,
+                out var reason))
+        {
+            return;
+        }
+        if (string.Equals(
+                mergedOverridesJson,
+                _currentSettings.PresentationClassifierOverridesJson,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var learnedAtUtc = DateTime.UtcNow;
+        _currentSettings.PresentationClassifierOverridesJson = mergedOverridesJson;
+        _currentSettings.PresentationClassifierLastLearnUtc = learnedAtUtc.ToString("O");
+        _currentSettings.PresentationClassifierLastLearnDetail = reason;
+        _currentSettings.PresentationClassifierRecentLearnRecordsJson =
+            PresentationClassifierLearnHistoryPolicy.Append(
+                _currentSettings.PresentationClassifierRecentLearnRecordsJson,
+                learnedAtUtc,
+                reason);
+        _appSettingsService.Save(_currentSettings);
+        OverlayWindow.UpdatePresentationClassifierOverrides(mergedOverridesJson);
+        _logger.LogInformation("Presentation classifier auto-learn applied. {Reason}", reason);
     }
 
     public void Show(bool photoMode = false)

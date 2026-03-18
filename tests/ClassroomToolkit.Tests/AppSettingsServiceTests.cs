@@ -185,6 +185,84 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void SaveAndLoad_ShouldPersistPresentationClassifierOverridesJson()
+    {
+        var path = CreateTempIniPath("ctool_app_settings");
+        try
+        {
+            var service = CreateService(path);
+            var initial = service.Load();
+            initial.PresentationClassifierOverridesJson =
+                """{"AdditionalWpsClassTokens":["gov-wps-class"],"AdditionalOfficeProcessTokens":["powerpoint_gov"]}""";
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.PresentationClassifierOverridesJson.Should().Be(initial.PresentationClassifierOverridesJson);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistPresentationClassifierAutoLearnEnabled()
+    {
+        var path = CreateTempIniPath("ctool_app_settings");
+        try
+        {
+            var service = CreateService(path);
+            var initial = service.Load();
+            initial.PresentationClassifierAutoLearnEnabled = true;
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.PresentationClassifierAutoLearnEnabled.Should().BeTrue();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistPresentationClassifierLearnHistoryFields()
+    {
+        var path = CreateTempIniPath("ctool_app_settings");
+        try
+        {
+            var service = CreateService(path);
+            var initial = service.Load();
+            initial.PresentationClassifierLastLearnUtc = "2026-03-18T08:30:00.0000000Z";
+            initial.PresentationClassifierLastLearnDetail = "type=Office; process=pptgov; classes=GovPptShowClass";
+            initial.PresentationClassifierRecentLearnRecordsJson =
+                """[{"Utc":"2026-03-18T08:30:00.0000000Z","Detail":"type=Office; process=pptgov"}]""";
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.PresentationClassifierLastLearnUtc.Should().Be(initial.PresentationClassifierLastLearnUtc);
+            reloaded.PresentationClassifierLastLearnDetail.Should().Be(initial.PresentationClassifierLastLearnDetail);
+            reloaded.PresentationClassifierRecentLearnRecordsJson.Should().Be(initial.PresentationClassifierRecentLearnRecordsJson);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_ShouldPersistClassroomWritingMode()
     {
         var path = CreateTempIniPath("ctool_app_settings");
@@ -300,7 +378,7 @@ public sealed class AppSettingsServiceTests
             var settings = service.Load();
 
             settings.PresetScheme.Should().Be(PresetSchemeDefaults.Custom);
-            settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Auto);
+            settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
             settings.StylusAdaptivePressureProfile.Should().Be(0);
             settings.StylusAdaptiveSampleRateTier.Should().Be(0);
             settings.StylusAdaptivePredictionHorizonMs.Should().Be(18);

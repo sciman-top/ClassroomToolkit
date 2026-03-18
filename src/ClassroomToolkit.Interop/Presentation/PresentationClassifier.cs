@@ -2,7 +2,7 @@ namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed class PresentationClassifier
 {
-    private static readonly HashSet<string> WpsSlideshowTokens = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly string[] DefaultWpsSlideshowTokens =
     {
         "kwppshowframeclass",
         "kwppshowframe",
@@ -18,7 +18,7 @@ public sealed class PresentationClassifier
         "wpsshowwnd"
     };
 
-    private static readonly HashSet<string> OfficeClassTokens = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly string[] DefaultOfficeClassTokens =
     {
         "screenclass",
         "pptviewwndclass",
@@ -26,11 +26,33 @@ public sealed class PresentationClassifier
         "powerpointframeclass",
         "pptframeclass"
     };
-    private static readonly HashSet<string> SlideshowClassTokens = new(StringComparer.OrdinalIgnoreCase)
+
+    private static readonly string[] DefaultSlideshowClassTokens =
     {
         "screenclass",
         "pptviewwndclass"
     };
+
+    private readonly HashSet<string> _wpsSlideshowTokens;
+    private readonly HashSet<string> _officeClassTokens;
+    private readonly HashSet<string> _slideshowClassTokens;
+    private readonly HashSet<string> _wpsProcessTokens;
+    private readonly HashSet<string> _officeProcessTokens;
+
+    public PresentationClassifier()
+        : this(PresentationClassifierOverrides.Empty)
+    {
+    }
+
+    public PresentationClassifier(PresentationClassifierOverrides? overrides)
+    {
+        var effectiveOverrides = overrides ?? PresentationClassifierOverrides.Empty;
+        _wpsSlideshowTokens = BuildTokenSet(DefaultWpsSlideshowTokens, effectiveOverrides.AdditionalWpsClassTokens);
+        _officeClassTokens = BuildTokenSet(DefaultOfficeClassTokens, effectiveOverrides.AdditionalOfficeClassTokens);
+        _slideshowClassTokens = BuildTokenSet(DefaultSlideshowClassTokens, effectiveOverrides.AdditionalSlideshowClassTokens);
+        _wpsProcessTokens = BuildTokenSet(Array.Empty<string>(), effectiveOverrides.AdditionalWpsProcessTokens);
+        _officeProcessTokens = BuildTokenSet(Array.Empty<string>(), effectiveOverrides.AdditionalOfficeProcessTokens);
+    }
 
     public PresentationType Classify(PresentationWindowInfo info)
     {
@@ -45,18 +67,33 @@ public sealed class PresentationClassifier
         {
             return PresentationType.Wps;
         }
-        if (classNames.Any(name => OfficeClassTokens.Contains(Normalize(name))))
+
+        var normalizedClassNames = classNames
+            .Select(Normalize)
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .ToArray();
+        var hasScreenClass = normalizedClassNames.Any(static name =>
+            string.Equals(name, "screenclass", StringComparison.OrdinalIgnoreCase));
+        var hasOfficeSpecificClass = normalizedClassNames.Any(name =>
+            !string.Equals(name, "screenclass", StringComparison.OrdinalIgnoreCase)
+            && _officeClassTokens.Contains(name));
+        if (hasOfficeSpecificClass)
         {
             return PresentationType.Office;
         }
+        if (hasScreenClass)
+        {
+            if (IsWpsLikeProcess(process) && !IsOfficeProcess(process))
+            {
+                return PresentationType.Wps;
+            }
+            if (IsOfficeProcess(process))
+            {
+                return PresentationType.Office;
+            }
+        }
 
         if (IsWpsProcess(process))
-        {
-            return PresentationType.Wps;
-        }
-        if (classNames.Any(name => string.Equals(Normalize(name), "screenclass", StringComparison.OrdinalIgnoreCase))
-            && IsWpsLikeProcess(process)
-            && !IsOfficeProcess(process))
         {
             return PresentationType.Wps;
         }
@@ -79,21 +116,21 @@ public sealed class PresentationClassifier
         {
             return true;
         }
-        if (classNames.Any(name => SlideshowClassTokens.Contains(Normalize(name))))
+        if (classNames.Any(name => _slideshowClassTokens.Contains(Normalize(name))))
         {
             return IsOfficeProcess(process) || IsWpsLikeProcess(process);
         }
         return false;
     }
 
-    private static bool HasWpsPresentationSignature(string className)
+    private bool HasWpsPresentationSignature(string className)
     {
         var normalized = Normalize(className);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return false;
         }
-        if (WpsSlideshowTokens.Contains(normalized))
+        if (_wpsSlideshowTokens.Contains(normalized))
         {
             return true;
         }
@@ -120,11 +157,15 @@ public sealed class PresentationClassifier
         return false;
     }
 
-    private static bool IsWpsProcess(string processName)
+    private bool IsWpsProcess(string processName)
     {
         if (string.IsNullOrWhiteSpace(processName))
         {
             return false;
+        }
+        if (MatchesAnyProcessToken(processName, _wpsProcessTokens))
+        {
+            return true;
         }
         if (processName.StartsWith("wpp", StringComparison.OrdinalIgnoreCase))
         {
@@ -141,7 +182,7 @@ public sealed class PresentationClassifier
         return false;
     }
 
-    private static bool IsWpsLikeProcess(string processName)
+    private bool IsWpsLikeProcess(string processName)
     {
         if (string.IsNullOrWhiteSpace(processName))
         {
@@ -154,14 +195,65 @@ public sealed class PresentationClassifier
         return processName.StartsWith("wps", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsOfficeProcess(string processName)
+    private bool IsOfficeProcess(string processName)
     {
         if (string.IsNullOrWhiteSpace(processName))
         {
             return false;
         }
+        if (MatchesAnyProcessToken(processName, _officeProcessTokens))
+        {
+            return true;
+        }
         return processName.Contains("powerpnt", StringComparison.OrdinalIgnoreCase)
                || processName.StartsWith("pptview", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static HashSet<string> BuildTokenSet(
+        IReadOnlyList<string> defaults,
+        IReadOnlyList<string> additional)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddTokens(set, defaults);
+        AddTokens(set, additional);
+        return set;
+    }
+
+    private static void AddTokens(HashSet<string> set, IReadOnlyList<string> values)
+    {
+        if (values == null || values.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var normalized = Normalize(values[i]);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                continue;
+            }
+
+            set.Add(normalized);
+        }
+    }
+
+    private static bool MatchesAnyProcessToken(string processName, IEnumerable<string> tokens)
+    {
+        foreach (var token in tokens)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                continue;
+            }
+
+            if (processName.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string Normalize(string? value)

@@ -8,6 +8,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Authors>sciman</Authors>
+    <Company>sciman逸居</Company>
+    <Product>ClassroomToolkit</Product>
+    <Description>课堂教学辅助工具</Description>
+    <AssemblyTitle>ClassroomToolkit</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassroomToolkit.Domain\ClassroomToolkit.Domain.csproj" />

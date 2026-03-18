@@ -305,6 +305,97 @@ public partial class PaintOverlayWindow
         }
     }
 
+    public void UpdatePresentationClassifierOverrides(string rawOverridesJson)
+    {
+        var hasParseError = false;
+        if (!PresentationClassifierOverridesParser.TryParse(
+                rawOverridesJson,
+                out var overrides,
+                out var error))
+        {
+            Debug.WriteLine($"[PresentationClassifier] overrides parse failed: {error}");
+            overrides = PresentationClassifierOverrides.Empty;
+            hasParseError = true;
+        }
+
+        if (!PresentationClassifierOverridesParser.TryParseScoringOptions(
+                rawOverridesJson,
+                out var scoringOptions,
+                out var scoringError))
+        {
+            Debug.WriteLine($"[PresentationClassifier] scoring parse failed: {scoringError}");
+            scoringOptions = PresentationWindowScoringOptions.Default;
+            hasParseError = true;
+        }
+
+        _presentationClassifier = new PresentationClassifier(overrides);
+        _presentationResolver.UpdateScoringOptions(scoringOptions);
+        _presentationService.ResetWpsAutoFallback();
+        _presentationService.ResetOfficeAutoFallback();
+        if (hasParseError)
+        {
+            WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
+        }
+        UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
+        UpdatePresentationFocusMonitor();
+    }
+
+    public void UpdatePresentationClassifierAutoLearn(bool enabled)
+    {
+        _presentationClassifierAutoLearnEnabled = enabled;
+    }
+
+    public bool TryBuildPresentationClassifierAutoLearnJson(
+        string currentOverridesJson,
+        out string mergedOverridesJson,
+        out string reason)
+    {
+        mergedOverridesJson = currentOverridesJson ?? string.Empty;
+        reason = string.Empty;
+        if (!_presentationClassifierAutoLearnEnabled)
+        {
+            return false;
+        }
+
+        var foreground = _presentationResolver.ResolveForeground();
+        if (!foreground.IsValid || foreground.Info == null)
+        {
+            return false;
+        }
+
+        var check = _presentationResolver.CheckWindow(foreground.Handle, _presentationClassifier);
+        if (check == null || !check.IsFullscreen || check.ClassMatch)
+        {
+            return false;
+        }
+
+        if (!PresentationClassifierAutoLearnPolicy.TryBuildRequest(
+                foreground.Info,
+                check.Type,
+                out var request))
+        {
+            return false;
+        }
+        if (!PresentationClassifierAutoLearnPolicy.TryMergeOverridesJson(
+                currentOverridesJson,
+                request,
+                out mergedOverridesJson,
+                out var error))
+        {
+            reason = $"merge-failed: {error}";
+            return false;
+        }
+        if (string.Equals(mergedOverridesJson, currentOverridesJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        reason =
+            $"type={check.Type}; process={request.ProcessToken}; classes={string.Join("|", request.ClassTokens)}";
+        return true;
+    }
+
     public void UpdatePresentationTargets(bool allowOffice, bool allowWps)
     {
         _presentationOptions.AllowOffice = allowOffice;

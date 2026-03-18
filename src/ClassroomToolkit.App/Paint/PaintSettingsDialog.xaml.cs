@@ -54,7 +54,8 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
-        ("自动判断（推荐）", WpsInputModeDefaults.Auto),
+        ("消息投递（推荐，误报更低）", WpsInputModeDefaults.Message),
+        ("自动判断", WpsInputModeDefaults.Auto),
         ("强制原始输入（SendInput）", WpsInputModeDefaults.Raw),
         ("强制消息投递（PostMessage）", WpsInputModeDefaults.Message)
     };
@@ -173,7 +174,9 @@ public partial class PaintSettingsDialog : Window
         bool WpsWheelForward,
         bool ForcePresentationForegroundOnFullscreen,
         int WpsDebounceMs,
-        bool LockStrategyWhenDegraded);
+        bool LockStrategyWhenDegraded,
+        bool PresentationClassifierAutoLearnEnabled,
+        bool PresentationClassifierClearOverridesRequested);
 
     private readonly record struct AdvancedSectionState(
         PaintShapeType ShapeType,
@@ -181,10 +184,12 @@ public partial class PaintSettingsDialog : Window
 
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
-    public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Auto;
+    public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Message;
     public bool WpsWheelForward { get; private set; }
     public int WpsDebounceMs { get; private set; } = PaintPresetDefaults.WpsDebounceDefaultMs;
     public bool PresentationLockStrategyWhenDegraded { get; private set; } = true;
+    public bool PresentationClassifierAutoLearnEnabled { get; private set; }
+    public bool PresentationClassifierClearOverridesRequested { get; private set; }
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
     public byte BrushOpacity { get; private set; }
@@ -265,6 +270,8 @@ public partial class PaintSettingsDialog : Window
         SelectIntCombo(WpsDebounceCombo, settings.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         LockStrategyOnDegradeCheck.IsChecked = settings.PresentationLockStrategyWhenDegraded;
+        PresentationClassifierAutoLearnCheck.IsChecked = settings.PresentationClassifierAutoLearnEnabled;
+        PresentationClassifierClearOverridesCheck.IsChecked = false;
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
         InkSaveCheck.IsChecked = settings.InkSaveEnabled;
         foreach (var (label, scope) in InkExportScopeChoices)
@@ -412,6 +419,8 @@ public partial class PaintSettingsDialog : Window
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
         WpsDebounceMs = ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         PresentationLockStrategyWhenDegraded = LockStrategyOnDegradeCheck.IsChecked != false;
+        PresentationClassifierAutoLearnEnabled = PresentationClassifierAutoLearnCheck.IsChecked == true;
+        PresentationClassifierClearOverridesRequested = PresentationClassifierClearOverridesCheck.IsChecked == true;
         ForcePresentationForegroundOnFullscreen = ForceForegroundCheck.IsChecked == true;
         BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
@@ -508,6 +517,8 @@ public partial class PaintSettingsDialog : Window
                     SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
                     WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
                     LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
+                    PresentationClassifierAutoLearnCheck.IsChecked = defaults.PresentationClassifierAutoLearnEnabled;
+                    PresentationClassifierClearOverridesCheck.IsChecked = false;
                     ForceForegroundCheck.IsChecked = defaults.ForcePresentationForegroundOnFullscreen;
                     InkSaveCheck.IsChecked = defaults.InkSaveEnabled;
                     SelectInkExportScope(defaults.InkExportScope);
@@ -799,6 +810,10 @@ public partial class PaintSettingsDialog : Window
         ForceForegroundCheck.Unchecked += OnSectionDirtyRoutedChanged;
         LockStrategyOnDegradeCheck.Checked += OnSectionDirtyRoutedChanged;
         LockStrategyOnDegradeCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        PresentationClassifierAutoLearnCheck.Checked += OnSectionDirtyRoutedChanged;
+        PresentationClassifierAutoLearnCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        PresentationClassifierClearOverridesCheck.Checked += OnSectionDirtyRoutedChanged;
+        PresentationClassifierClearOverridesCheck.Unchecked += OnSectionDirtyRoutedChanged;
     }
 
     private void DetachSectionDirtyTrackingHandlers()
@@ -842,6 +857,10 @@ public partial class PaintSettingsDialog : Window
         ForceForegroundCheck.Unchecked -= OnSectionDirtyRoutedChanged;
         LockStrategyOnDegradeCheck.Checked -= OnSectionDirtyRoutedChanged;
         LockStrategyOnDegradeCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        PresentationClassifierAutoLearnCheck.Checked -= OnSectionDirtyRoutedChanged;
+        PresentationClassifierAutoLearnCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        PresentationClassifierClearOverridesCheck.Checked -= OnSectionDirtyRoutedChanged;
+        PresentationClassifierClearOverridesCheck.Unchecked -= OnSectionDirtyRoutedChanged;
     }
 
     private void OnSectionDirtySelectionChanged(object? sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -1015,7 +1034,9 @@ public partial class PaintSettingsDialog : Window
             WpsWheelForward: WpsWheelCheck.IsChecked == true,
             ForcePresentationForegroundOnFullscreen: ForceForegroundCheck.IsChecked == true,
             WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
-            LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false);
+            LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false,
+            PresentationClassifierAutoLearnEnabled: PresentationClassifierAutoLearnCheck.IsChecked == true,
+            PresentationClassifierClearOverridesRequested: PresentationClassifierClearOverridesCheck.IsChecked == true);
     }
 
     private AdvancedSectionState CaptureAdvancedSectionStateFromControls()
@@ -1090,6 +1111,8 @@ public partial class PaintSettingsDialog : Window
             ForceForegroundCheck.IsChecked = state.ForcePresentationForegroundOnFullscreen;
             SelectIntCombo(WpsDebounceCombo, state.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
             LockStrategyOnDegradeCheck.IsChecked = state.LockStrategyWhenDegraded;
+            PresentationClassifierAutoLearnCheck.IsChecked = state.PresentationClassifierAutoLearnEnabled;
+            PresentationClassifierClearOverridesCheck.IsChecked = state.PresentationClassifierClearOverridesRequested;
         }
         finally
         {
@@ -1130,6 +1153,8 @@ public partial class PaintSettingsDialog : Window
             SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
             WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
             LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
+            PresentationClassifierAutoLearnCheck.IsChecked = defaults.PresentationClassifierAutoLearnEnabled;
+            PresentationClassifierClearOverridesCheck.IsChecked = false;
             ForceForegroundCheck.IsChecked = defaults.ForcePresentationForegroundOnFullscreen;
 
             InkSaveCheck.IsChecked = defaults.InkSaveEnabled;
@@ -1228,7 +1253,9 @@ public partial class PaintSettingsDialog : Window
             || current.WpsWheelForward != initial.WpsWheelForward
             || current.ForcePresentationForegroundOnFullscreen != initial.ForcePresentationForegroundOnFullscreen
             || current.WpsDebounceMs != initial.WpsDebounceMs
-            || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded;
+            || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded
+            || current.PresentationClassifierAutoLearnEnabled != initial.PresentationClassifierAutoLearnEnabled
+            || current.PresentationClassifierClearOverridesRequested != initial.PresentationClassifierClearOverridesRequested;
     }
 
     private bool IsAdvancedSectionDirty()

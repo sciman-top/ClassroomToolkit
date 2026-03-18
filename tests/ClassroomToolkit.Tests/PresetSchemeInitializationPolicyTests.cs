@@ -31,7 +31,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         {
             PresetScheme = PresetSchemeDefaults.Custom,
             PresetRecommendationInitialized = false,
-            WpsInputMode = WpsInputModeDefaults.Auto,
+            WpsInputMode = WpsInputModeDefaults.Message,
             WpsWheelForward = true,
             PresentationLockStrategyWhenDegraded = true,
             ClassroomWritingMode = ClassroomWritingMode.Balanced,
@@ -61,7 +61,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         {
             PresetScheme = PresetSchemeDefaults.Custom,
             PresetRecommendationInitialized = false,
-            WpsInputMode = WpsInputModeDefaults.Message
+            WpsInputMode = WpsInputModeDefaults.Auto
         };
 
         var result = PresetSchemeInitializationPolicy.Resolve(settings);

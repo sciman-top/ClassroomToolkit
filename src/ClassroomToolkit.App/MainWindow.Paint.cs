@@ -427,6 +427,14 @@ public partial class MainWindow
             _settings.WpsWheelForward = dialog.WpsWheelForward;
             _settings.WpsDebounceMs = dialog.WpsDebounceMs;
             _settings.PresentationLockStrategyWhenDegraded = dialog.PresentationLockStrategyWhenDegraded;
+            _settings.PresentationClassifierAutoLearnEnabled = dialog.PresentationClassifierAutoLearnEnabled;
+            if (dialog.PresentationClassifierClearOverridesRequested)
+            {
+                _settings.PresentationClassifierOverridesJson = string.Empty;
+                _settings.PresentationClassifierLastLearnUtc = string.Empty;
+                _settings.PresentationClassifierLastLearnDetail = string.Empty;
+                _settings.PresentationClassifierRecentLearnRecordsJson = string.Empty;
+            }
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;

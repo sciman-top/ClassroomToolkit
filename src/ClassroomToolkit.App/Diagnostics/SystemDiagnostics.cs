@@ -4,6 +4,7 @@ using System.Speech.Synthesis;
 using System.Text;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Services.Presentation;
 
@@ -63,6 +64,10 @@ public static class SystemDiagnostics
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
         lines.Add($"WPS去抖毫秒：{settings.WpsDebounceMs}");
         lines.Add($"降级策略锁定：{(settings.PresentationLockStrategyWhenDegraded ? "启用" : "禁用")}");
+        lines.Add($"演示规则自动学习：{(settings.PresentationClassifierAutoLearnEnabled ? "启用" : "禁用")}");
+        lines.Add($"演示识别规则覆盖：{(string.IsNullOrWhiteSpace(settings.PresentationClassifierOverridesJson) ? "未配置" : "已配置")}");
+        AppendClassifierOverrideSummary(lines, settings.PresentationClassifierOverridesJson);
+        AppendClassifierLearnHistorySummary(lines, settings);
         lines.Add($"图片滚轮缩放步进：{settings.PhotoWheelZoomBase:0.####}");
         lines.Add($"图片手势缩放灵敏度：{settings.PhotoGestureZoomSensitivity:0.##}x");
         lines.Add($"跨页抬笔刷新延迟：{settings.PhotoPostInputRefreshDelayMs}ms");
@@ -219,7 +224,8 @@ public static class SystemDiagnostics
         var result = PresentationDiagnosticsProbe.Collect(
             settings.ControlWpsPpt,
             settings.ControlMsPpt,
-            (uint)Environment.ProcessId);
+            (uint)Environment.ProcessId,
+            settings.PresentationClassifierOverridesJson);
         foreach (var line in result.Lines)
         {
             lines.Add(line);
@@ -262,5 +268,38 @@ public static class SystemDiagnostics
             current = current.Parent;
         }
         return null;
+    }
+
+    private static void AppendClassifierOverrideSummary(ICollection<string> lines, string? overridesJson)
+    {
+        if (!PresentationDiagnosticsProbe.TrySummarizeClassifierOverrides(
+                overridesJson,
+                out var classTokenCount,
+                out var processTokenCount,
+                out var parseError))
+        {
+            lines.Add($"演示规则覆盖解析：失败（{parseError}）");
+            return;
+        }
+
+        lines.Add($"演示规则覆盖摘要：classToken={classTokenCount}, processToken={processTokenCount}");
+    }
+
+    private static void AppendClassifierLearnHistorySummary(ICollection<string> lines, AppSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnUtc)
+            || !string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnDetail))
+        {
+            lines.Add($"最近学习时间(UTC)：{(string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnUtc) ? "未记录" : settings.PresentationClassifierLastLearnUtc)}");
+            lines.Add($"最近学习内容：{(string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnDetail) ? "未记录" : settings.PresentationClassifierLastLearnDetail)}");
+        }
+
+        var records = PresentationClassifierLearnHistoryPolicy.Parse(settings.PresentationClassifierRecentLearnRecordsJson);
+        lines.Add($"最近学习记录条数：{records.Count}");
+        for (var i = Math.Max(0, records.Count - 3); i < records.Count; i++)
+        {
+            var record = records[i];
+            lines.Add($"学习记录[{i + 1}]：{record.Utc} | {record.Detail}");
+        }
     }
 }

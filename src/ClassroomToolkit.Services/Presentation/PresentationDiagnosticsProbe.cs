@@ -12,7 +12,8 @@ public static class PresentationDiagnosticsProbe
     public static PresentationDiagnosticsProbeResult Collect(
         bool allowWps,
         bool allowOffice,
-        uint currentProcessId)
+        uint currentProcessId,
+        string? classifierOverridesJson = null)
     {
         var lines = new List<string>();
         var issues = new List<string>();
@@ -23,8 +24,28 @@ public static class PresentationDiagnosticsProbe
             return new PresentationDiagnosticsProbeResult(lines, issues, fixes);
         }
 
-        var classifier = new PresentationClassifier();
+        if (!PresentationClassifierOverridesParser.TryParse(
+                classifierOverridesJson,
+                out var classifierOverrides,
+                out var parseError))
+        {
+            lines.Add($"分类覆盖解析失败：{parseError}");
+            classifierOverrides = PresentationClassifierOverrides.Empty;
+        }
+        if (!PresentationClassifierOverridesParser.TryParseScoringOptions(
+                classifierOverridesJson,
+                out var scoringOptions,
+                out var scoringError))
+        {
+            lines.Add($"评分配置解析失败：{scoringError}");
+            scoringOptions = PresentationWindowScoringOptions.Default;
+        }
+
+        var classifier = new PresentationClassifier(classifierOverrides);
         var resolver = new Win32PresentationResolver();
+        resolver.UpdateScoringOptions(scoringOptions);
+        lines.Add(
+            $"候选评分：class={scoringOptions.ClassMatchWeight}, process={scoringOptions.ProcessMatchWeight}, noCaption={scoringOptions.NoCaptionWeight}, fullscreen={scoringOptions.IsFullscreenWeight}, min={scoringOptions.MinimumCandidateScore}");
 
         var foreground = resolver.ResolveForeground();
         if (foreground.IsValid)
@@ -93,6 +114,35 @@ public static class PresentationDiagnosticsProbe
         }
 
         return new PresentationDiagnosticsProbeResult(lines, issues, fixes);
+    }
+
+    public static bool TrySummarizeClassifierOverrides(
+        string? classifierOverridesJson,
+        out int classTokenCount,
+        out int processTokenCount,
+        out string error)
+    {
+        classTokenCount = 0;
+        processTokenCount = 0;
+        error = string.Empty;
+
+        if (!PresentationClassifierOverridesParser.TryParse(
+                classifierOverridesJson,
+                out var overrides,
+                out var parseError))
+        {
+            error = parseError;
+            return false;
+        }
+
+        classTokenCount =
+            overrides.AdditionalWpsClassTokens.Count
+            + overrides.AdditionalOfficeClassTokens.Count
+            + overrides.AdditionalSlideshowClassTokens.Count;
+        processTokenCount =
+            overrides.AdditionalWpsProcessTokens.Count
+            + overrides.AdditionalOfficeProcessTokens.Count;
+        return true;
     }
 
     private static bool TryCheckWpsHook(out string error)

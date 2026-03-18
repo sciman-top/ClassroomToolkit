@@ -27,7 +27,7 @@ internal static class PresetSchemePolicy
         {
             case PresetSchemeDefaults.Balanced:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Auto,
+                    WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     ClassroomWritingMode.Balanced,
@@ -38,7 +38,7 @@ internal static class PresetSchemePolicy
                 return true;
             case PresetSchemeDefaults.Responsive:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Auto,
+                    WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     ClassroomWritingMode.Responsive,
@@ -49,7 +49,7 @@ internal static class PresetSchemePolicy
                 return true;
             case PresetSchemeDefaults.Stable:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Auto,
+                    WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     ClassroomWritingMode.Stable,
@@ -60,7 +60,7 @@ internal static class PresetSchemePolicy
                 return true;
             case PresetSchemeDefaults.DualScreen:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Auto,
+                    WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     ClassroomWritingMode.Stable,

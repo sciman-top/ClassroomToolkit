@@ -82,6 +82,7 @@ public partial class PaintOverlayWindow : Window
     private bool? _lastAppliedInputPassthroughEnabled;
     private bool? _lastAppliedFocusBlocked;
     private bool _forcePresentationForegroundOnFullscreen;
+    private bool _presentationClassifierAutoLearnEnabled;
     private readonly DispatcherTimer _presentationFocusMonitor;
     private DateTime _nextPresentationFocusAttempt = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
@@ -98,7 +99,7 @@ public partial class PaintOverlayWindow : Window
     private WpfRectangle? _regionRect;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
-    private readonly PresentationClassifier _presentationClassifier;
+    private PresentationClassifier _presentationClassifier;
     private readonly Win32PresentationResolver _presentationResolver;
     private readonly WpsSlideshowNavigationHook? _wpsNavHook;
     private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();

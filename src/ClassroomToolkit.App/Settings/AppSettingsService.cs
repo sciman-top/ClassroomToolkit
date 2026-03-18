@@ -139,6 +139,26 @@ public sealed class AppSettingsService
                 paint,
                 "presentation_lock_strategy_when_degraded",
                 settings.PresentationLockStrategyWhenDegraded);
+            settings.PresentationClassifierAutoLearnEnabled = GetBool(
+                paint,
+                "presentation_classifier_auto_learn_enabled",
+                settings.PresentationClassifierAutoLearnEnabled);
+            settings.PresentationClassifierOverridesJson = GetString(
+                paint,
+                "presentation_classifier_overrides_json",
+                settings.PresentationClassifierOverridesJson);
+            settings.PresentationClassifierLastLearnUtc = GetString(
+                paint,
+                "presentation_classifier_last_learn_utc",
+                settings.PresentationClassifierLastLearnUtc);
+            settings.PresentationClassifierLastLearnDetail = GetString(
+                paint,
+                "presentation_classifier_last_learn_detail",
+                settings.PresentationClassifierLastLearnDetail);
+            settings.PresentationClassifierRecentLearnRecordsJson = GetString(
+                paint,
+                "presentation_classifier_recent_learn_records_json",
+                settings.PresentationClassifierRecentLearnRecordsJson);
             settings.PresetRecommendationInitialized = GetBool(
                 paint,
                 "preset_recommendation_initialized",
@@ -312,6 +332,16 @@ public sealed class AppSettingsService
         paint["wps_debounce_ms"] = NormalizeWpsDebounceMs(settings.WpsDebounceMs).ToString(CultureInfo.InvariantCulture);
         paint["presentation_lock_strategy_when_degraded"] =
             settings.PresentationLockStrategyWhenDegraded ? "True" : "False";
+        paint["presentation_classifier_auto_learn_enabled"] =
+            settings.PresentationClassifierAutoLearnEnabled ? "True" : "False";
+        paint["presentation_classifier_overrides_json"] =
+            settings.PresentationClassifierOverridesJson ?? string.Empty;
+        paint["presentation_classifier_last_learn_utc"] =
+            settings.PresentationClassifierLastLearnUtc ?? string.Empty;
+        paint["presentation_classifier_last_learn_detail"] =
+            settings.PresentationClassifierLastLearnDetail ?? string.Empty;
+        paint["presentation_classifier_recent_learn_records_json"] =
+            settings.PresentationClassifierRecentLearnRecordsJson ?? string.Empty;
         paint["preset_recommendation_initialized"] =
             settings.PresetRecommendationInitialized ? "True" : "False";
         paint["shape_type"] = settings.ShapeType.ToString();

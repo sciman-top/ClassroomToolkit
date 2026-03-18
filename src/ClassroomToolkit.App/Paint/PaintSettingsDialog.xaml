@@ -383,6 +383,8 @@
                                             <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定消息模式（更稳）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征（实验）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空演示识别规则覆盖（本次保存生效）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>

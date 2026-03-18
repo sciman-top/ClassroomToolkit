@@ -82,7 +82,7 @@ internal static class PresetSchemeInitializationPolicy
             return false;
         }
 
-        if (!string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Auto, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Message, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

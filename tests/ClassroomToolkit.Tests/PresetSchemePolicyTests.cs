@@ -23,7 +23,7 @@ public sealed class PresetSchemePolicyTests
         var resolved = PresetSchemePolicy.TryResolveManagedParameters(scheme, out var parameters);
 
         resolved.Should().BeTrue();
-        parameters.WpsInputMode.Should().Be(WpsInputModeDefaults.Auto);
+        parameters.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
         parameters.WpsWheelForward.Should().BeTrue();
         parameters.LockStrategyWhenDegraded.Should().BeTrue();
         parameters.ClassroomWritingMode.Should().Be((ClassroomWritingMode)writingMode);
@@ -124,7 +124,7 @@ public sealed class PresetSchemePolicyTests
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputBalancedMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomBalanced,
             PhotoGestureZoomSensitivity = PhotoZoomInputDefaults.GestureSensitivityDefault,
-            WpsInputMode = WpsInputModeDefaults.Message
+            WpsInputMode = WpsInputModeDefaults.Auto
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);

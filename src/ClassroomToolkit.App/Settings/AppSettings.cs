@@ -49,11 +49,16 @@ public sealed class AppSettings
     public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
-    public string WpsInputMode { get; set; } = WpsInputModeDefaults.Auto;
+    public string WpsInputMode { get; set; } = WpsInputModeDefaults.Message;
     public bool WpsWheelForward { get; set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
     public int WpsDebounceMs { get; set; } = PaintPresetDefaults.WpsDebounceBalancedMs;
     public bool PresentationLockStrategyWhenDegraded { get; set; } = true;
+    public bool PresentationClassifierAutoLearnEnabled { get; set; } = false;
+    public string PresentationClassifierOverridesJson { get; set; } = string.Empty;
+    public string PresentationClassifierLastLearnUtc { get; set; } = string.Empty;
+    public string PresentationClassifierLastLearnDetail { get; set; } = string.Empty;
+    public string PresentationClassifierRecentLearnRecordsJson { get; set; } = string.Empty;
     public bool PresetRecommendationInitialized { get; set; } = false;
     public bool UiDefaultsOptimized { get; set; } = false;
     public int LauncherX { get; set; } = UnsetPosition;

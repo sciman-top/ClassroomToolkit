@@ -1,11 +1,13 @@
 using ClassroomToolkit.Interop.Presentation;
 using FluentAssertions;
+using System.Text.Json;
 
 namespace ClassroomToolkit.Tests;
 
 public sealed class PresentationClassifierTests
 {
     private readonly PresentationClassifier _sut = new();
+    private static readonly CompatibilityMatrix CompatibilityCases = LoadCompatibilityMatrix();
 
     // ── Classify: WPS by class name ──
 
@@ -67,14 +69,13 @@ public sealed class PresentationClassifierTests
         _sut.Classify(info).Should().Be(PresentationType.Office);
     }
 
-    // ── Classify: screenclass in OfficeClassTokens takes priority over WPS process ──
+    // ── Classify: screenclass + WPS-like process should prefer WPS ──
 
     [Fact]
-    public void Classify_ScreenClassWithWpsLikeProcess_ReturnsOffice()
+    public void Classify_ScreenClassWithWpsLikeProcess_ReturnsWps()
     {
-        // screenclass is in OfficeClassTokens, so class name match takes priority
         var info = new PresentationWindowInfo(100, "wpsoffice", new[] { "screenclass" });
-        _sut.Classify(info).Should().Be(PresentationType.Office);
+        _sut.Classify(info).Should().Be(PresentationType.Wps);
     }
 
     // ── Classify: screenclass + Office process → Office ──
@@ -172,4 +173,89 @@ public sealed class PresentationClassifierTests
         var info = new PresentationWindowInfo(100, "POWERPNT", new[] { "kwppshowframeclass" });
         _sut.Classify(info).Should().Be(PresentationType.Wps);
     }
+
+    // ── Compatibility matrix: common version/process/class signatures ──
+
+    [Theory]
+    [MemberData(nameof(ClassificationCompatibilityCases))]
+    public void Classify_CompatibilityMatrix_ReturnsExpected(
+        string processName,
+        string className,
+        PresentationType expected)
+    {
+        var info = new PresentationWindowInfo(100, processName, new[] { className });
+
+        _sut.Classify(info).Should().Be(expected);
+    }
+
+    [Theory]
+    [MemberData(nameof(SlideshowCompatibilityCases))]
+    public void IsSlideshowWindow_CompatibilityMatrix_ReturnsExpected(
+        string processName,
+        string className,
+        bool expected)
+    {
+        var info = new PresentationWindowInfo(100, processName, new[] { className });
+
+        _sut.IsSlideshowWindow(info).Should().Be(expected);
+    }
+
+    public static IEnumerable<object[]> ClassificationCompatibilityCases()
+    {
+        return CompatibilityCases.Classification.Select(testCase => new object[]
+        {
+            testCase.ProcessName,
+            testCase.ClassName,
+            Enum.Parse<PresentationType>(testCase.Expected, ignoreCase: true)
+        });
+    }
+
+    public static IEnumerable<object[]> SlideshowCompatibilityCases()
+    {
+        return CompatibilityCases.Slideshow.Select(testCase => new object[]
+        {
+            testCase.ProcessName,
+            testCase.ClassName,
+            testCase.Expected
+        });
+    }
+
+    private static CompatibilityMatrix LoadCompatibilityMatrix()
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Fixtures",
+            "presentation-classifier-compatibility-matrix.json");
+        var json = File.ReadAllText(path);
+        var matrix = JsonSerializer.Deserialize<CompatibilityMatrix>(
+            json,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        if (matrix is null)
+        {
+            throw new InvalidOperationException("Failed to deserialize compatibility matrix.");
+        }
+
+        return matrix with
+        {
+            Classification = matrix.Classification ?? Array.Empty<ClassificationCase>(),
+            Slideshow = matrix.Slideshow ?? Array.Empty<SlideshowCase>()
+        };
+    }
+
+    private sealed record CompatibilityMatrix(
+        IReadOnlyList<ClassificationCase> Classification,
+        IReadOnlyList<SlideshowCase> Slideshow);
+
+    private sealed record ClassificationCase(
+        string ProcessName,
+        string ClassName,
+        string Expected);
+
+    private sealed record SlideshowCase(
+        string ProcessName,
+        string ClassName,
+        bool Expected);
 }

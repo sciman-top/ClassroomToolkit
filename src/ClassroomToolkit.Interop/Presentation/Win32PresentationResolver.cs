@@ -8,6 +8,13 @@ namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed class Win32PresentationResolver : IPresentationTargetResolver
 {
+    private PresentationWindowScoringOptions _scoringOptions = PresentationWindowScoringOptions.Default;
+
+    public void UpdateScoringOptions(PresentationWindowScoringOptions? options)
+    {
+        _scoringOptions = options ?? PresentationWindowScoringOptions.Default;
+    }
+
     public PresentationTarget ResolveForeground()
     {
         if (!OperatingSystem.IsWindows())
@@ -134,7 +141,7 @@ public sealed class Win32PresentationResolver : IPresentationTargetResolver
                 }
 
                 // Prefer fullscreen candidates that also match slideshow classes.
-                var score = check.Score + (check.ClassMatch ? 100 : 0);
+                var score = check.Score + (check.ClassMatch ? _scoringOptions.FullscreenClassMatchBonus : 0);
                 if (score <= bestScore)
                 {
                     return true;
@@ -179,7 +186,7 @@ public sealed class Win32PresentationResolver : IPresentationTargetResolver
         return new PresentationWindowInfo(processId, processName, classNames);
     }
 
-    private static PresentationWindowCheck? BuildWindowCheck(
+    private PresentationWindowCheck? BuildWindowCheck(
         IntPtr hwnd,
         PresentationWindowInfo info,
         PresentationClassifier classifier)
@@ -194,7 +201,7 @@ public sealed class Win32PresentationResolver : IPresentationTargetResolver
         var hasCaption = HasCaption(hwnd);
         var isFullscreen = IsFullscreenWindow(hwnd);
         // Filter: require slideshow class match or fullscreen; caption only affects score.
-        if (!classMatch && !isFullscreen)
+        if (_scoringOptions.RequireClassMatchOrFullscreen && !classMatch && !isFullscreen)
         {
             return null;
         }
@@ -202,19 +209,24 @@ public sealed class Win32PresentationResolver : IPresentationTargetResolver
         // Strongly prioritize windows with slideshow class names (screenClass, pptviewwndclass, etc.)
         if (classMatch)
         {
-            score += 10;
+            score += _scoringOptions.ClassMatchWeight;
         }
         if (processMatch)
         {
-            score += 3;
+            score += _scoringOptions.ProcessMatchWeight;
         }
         if (!hasCaption)
         {
-            score += 1;
+            score += _scoringOptions.NoCaptionWeight;
         }
         if (isFullscreen)
         {
-            score += 2;
+            score += _scoringOptions.IsFullscreenWeight;
+        }
+
+        if (score < _scoringOptions.MinimumCandidateScore)
+        {
+            return null;
         }
         return new PresentationWindowCheck(
             type,

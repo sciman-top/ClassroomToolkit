@@ -1,0 +1,22 @@
+{
+  "classification": [
+    { "processName": "POWERPNT.EXE", "className": "screenclass", "expected": "Office" },
+    { "processName": "powerpnt_16", "className": "pptviewwndclass", "expected": "Office" },
+    { "processName": "pptview", "className": "powerpointframeclass", "expected": "Office" },
+    { "processName": "WPP.EXE", "className": "kwppshowframeclass", "expected": "Wps" },
+    { "processName": "wppt", "className": "kwpsshowframeclass", "expected": "Wps" },
+    { "processName": "wpspresentationhost", "className": "wpsshowwndclass", "expected": "Wps" },
+    { "processName": "wpp2024", "className": "customclass", "expected": "Wps" },
+    { "processName": "powerpnt", "className": "kwpsshowframe", "expected": "Wps" },
+    { "processName": "notepad", "className": "screenclass", "expected": "Other" }
+  ],
+  "slideshow": [
+    { "processName": "POWERPNT.EXE", "className": "screenclass", "expected": true },
+    { "processName": "pptview", "className": "pptviewwndclass", "expected": true },
+    { "processName": "WPP.EXE", "className": "kwppshowframeclass", "expected": true },
+    { "processName": "wppt", "className": "kwpsshowframeclass", "expected": true },
+    { "processName": "wpspresentationhost", "className": "wpsshowwndclass", "expected": true },
+    { "processName": "notepad", "className": "screenclass", "expected": false },
+    { "processName": "notepad", "className": "customclass", "expected": false }
+  ]
+}

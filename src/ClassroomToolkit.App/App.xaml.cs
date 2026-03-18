@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System.Diagnostics;
+using System.Linq;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Application.Abstractions;
@@ -13,13 +14,16 @@ using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Infra.Settings;
 using ClassroomToolkit.Infra.Storage;
 using Microsoft.Extensions.Logging;
+using ClassroomToolkit.Services.Compatibility;
 
 namespace ClassroomToolkit.App;
 
 public partial class App : WpfApplication
 {
     private static readonly object LogWriteLock = new();
-    private static readonly string AppRootDirectory = new ConfigurationService().BaseDirectory;
+    private static readonly ConfigurationService AppConfiguration = new();
+    private static readonly string AppRootDirectory = AppConfiguration.BaseDirectory;
+    private static readonly string AppDataDirectory = ResolveAppDataDirectory(AppConfiguration);
     private int _criticalDialogShowing;
     private int _globalExceptionHandlersRegistered;
     private IServiceProvider? _services;
@@ -31,6 +35,24 @@ public partial class App : WpfApplication
         ConfigureServices();
 
         base.OnStartup(e);
+
+        var startupCompatibility = CollectStartupCompatibilityReport();
+        var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
+        if (startupCompatibility.HasBlockingIssues)
+        {
+            var message = BuildStartupBlockingMessage(startupCompatibility, startupCompatibilityReportPath);
+            System.Windows.MessageBox.Show(
+                message,
+                "启动环境不兼容",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(-1);
+            return;
+        }
+        if (startupCompatibility.HasWarnings)
+        {
+            Debug.WriteLine($"[StartupCompatibility] {startupCompatibility.BuildMessage(includeWarnings: true)}");
+        }
 
         if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
         {
@@ -137,7 +159,7 @@ public partial class App : WpfApplication
             builder.AddConsole();
             
             // File logger for production/persistence
-            var logPath = Path.Combine(AppRootDirectory, "logs");
+            var logPath = Path.Combine(AppDataDirectory, "logs");
             builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(logPath));
         });
 
@@ -166,6 +188,70 @@ public partial class App : WpfApplication
         }
 
         return fallbackToIni;
+    }
+
+    private StartupCompatibilityReport CollectStartupCompatibilityReport()
+    {
+        try
+        {
+            var configuration = _services?.GetService<IConfigurationService>();
+            var settingsPath = configuration?.SettingsDocumentPath
+                ?? configuration?.SettingsIniPath
+                ?? Path.Combine(AppDataDirectory, "settings.json");
+            return StartupCompatibilityProbe.Collect(settingsPath);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            LogException(ex, "StartupCompatibilityProbe");
+            return new StartupCompatibilityReport(Array.Empty<StartupCompatibilityIssue>());
+        }
+    }
+
+    private static string BuildStartupBlockingMessage(
+        StartupCompatibilityReport report,
+        string? reportPath)
+    {
+        var baseMessage = report.BuildMessage(includeWarnings: false);
+        var hasPrivilegeMismatch =
+            report.Issues.Any(static issue => issue.Code == "presentation-privilege-mismatch");
+        if (!hasPrivilegeMismatch && string.IsNullOrWhiteSpace(reportPath))
+        {
+            return baseMessage;
+        }
+
+        var lines = new List<string> { baseMessage };
+        if (hasPrivilegeMismatch)
+        {
+            lines.Add(string.Empty);
+            lines.Add("快速修复：");
+            lines.Add("1. 关闭本程序、PPT、WPS。");
+            lines.Add("2. 统一以相同权限重启（都管理员或都非管理员）。");
+            lines.Add("3. 若仍失败，优先使用离线标准包重装后重试。");
+        }
+        if (!string.IsNullOrWhiteSpace(reportPath))
+        {
+            lines.Add(string.Empty);
+            lines.Add($"诊断报告：{reportPath}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private string? PersistStartupCompatibilityReport(StartupCompatibilityReport report)
+    {
+        try
+        {
+            var logPath = Path.Combine(AppDataDirectory, "logs");
+            Directory.CreateDirectory(logPath);
+            var filePath = Path.Combine(logPath, "startup-compatibility-latest.json");
+            File.WriteAllText(filePath, report.ToJson());
+            return filePath;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            LogException(ex, "StartupCompatibilityReportPersist");
+            return null;
+        }
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -271,7 +357,7 @@ public partial class App : WpfApplication
     {
         try
         {
-            var logPath = Path.Combine(AppRootDirectory, "logs");
+            var logPath = Path.Combine(AppDataDirectory, "logs");
             if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
 
             var logFile = Path.Combine(logPath, $"error_{DateTime.Now:yyyyMMdd}.log");
@@ -290,6 +376,33 @@ public partial class App : WpfApplication
             // 如果写日志也失败了，最后退路只有 Debug
             System.Diagnostics.Debug.WriteLine($"致命错误记录失败: {ex.Message}");
         }
+    }
+
+    private static string ResolveAppDataDirectory(IConfigurationService configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var settingsPath = configuration.SettingsDocumentPath;
+        if (!string.IsNullOrWhiteSpace(settingsPath))
+        {
+            var parent = Path.GetDirectoryName(settingsPath);
+            if (!string.IsNullOrWhiteSpace(parent))
+            {
+                return parent;
+            }
+        }
+
+        var iniPath = configuration.SettingsIniPath;
+        if (!string.IsNullOrWhiteSpace(iniPath))
+        {
+            var parent = Path.GetDirectoryName(iniPath);
+            if (!string.IsNullOrWhiteSpace(parent))
+            {
+                return parent;
+            }
+        }
+
+        return configuration.BaseDirectory;
     }
 
 }

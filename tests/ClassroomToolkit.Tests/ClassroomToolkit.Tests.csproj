@@ -33,6 +33,12 @@
     <ProjectReference Include="..\..\src\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Fixtures\presentation-classifier-compatibility-matrix.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
 
 
