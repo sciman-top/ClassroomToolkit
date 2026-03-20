@@ -331,11 +331,14 @@ function Resolve-ExecutionSkillPath {
         [string]$RepoPath
     )
 
-    $candidatePaths = @()
-
     if (-not [string]::IsNullOrWhiteSpace($RequestedPath)) {
-        $candidatePaths += $RequestedPath
+        if (-not (Test-Path -LiteralPath $RequestedPath)) {
+            throw "Explicit skill path not found: $RequestedPath"
+        }
+        return (Resolve-Path -LiteralPath $RequestedPath).Path
     }
+
+    $candidatePaths = @()
 
     if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
         $candidatePaths += Join-Path $env:CODEX_HOME "skills/autonomous-execution-loop/SKILL.md"
