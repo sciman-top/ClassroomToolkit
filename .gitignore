@@ -33,6 +33,10 @@ msbuild*.log
 # Local automation / temp state
 .tmp/
 **/.tmp/
+.cache/
+**/.cache/
+.temp/
+**/.temp/
 .codex/logs/
 .codex/tmp-*/
 
