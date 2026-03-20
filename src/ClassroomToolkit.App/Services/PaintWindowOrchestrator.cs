@@ -86,7 +86,9 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (OverlayWindow != null && ToolbarWindow != null)
+        if (!PaintWindowCreationPolicy.ShouldEnsureWindows(
+                hasOverlayWindow: OverlayWindow != null,
+                hasToolbarWindow: ToolbarWindow != null))
         {
             return;
         }

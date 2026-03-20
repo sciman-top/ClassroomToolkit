@@ -95,8 +95,7 @@ public sealed class ArchitectureDependencyTests
             @"src\ClassroomToolkit.App\Paint\IWpsNavHookClient.cs",
             @"src\ClassroomToolkit.App\Paint\OverlayPresentationDispatchCoordinator.cs",
             @"src\ClassroomToolkit.App\Paint\OverlayPresentationRouteContextBuilder.cs",
-            @"src\ClassroomToolkit.App\Paint\OverlayPresentationTargetSnapshotProvider.cs",
-            @"src\ClassroomToolkit.App\Paint\PresentationSlideshowDetectionPolicy.cs"
+            @"src\ClassroomToolkit.App\Paint\OverlayPresentationTargetSnapshotProvider.cs"
         };
 
         var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();

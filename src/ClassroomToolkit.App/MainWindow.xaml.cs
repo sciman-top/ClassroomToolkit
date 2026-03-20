@@ -581,11 +581,10 @@ public partial class MainWindow : Window
             bubbleVisible: _bubbleWindow?.IsVisible == true,
             mainVisible: IsVisible);
 
-        return LauncherWindowResolutionPolicy.ShouldUseBubbleWindow(
+        return LauncherWindowResolutionPolicy.ResolveWindow(
             resolvedKind,
-            bubbleWindowExists: _bubbleWindow != null)
-            ? _bubbleWindow
-            : this;
+            mainWindow: this,
+            bubbleWindow: _bubbleWindow);
     }
 
     private void SyncOverlayOwnedWindow(Window? child)
