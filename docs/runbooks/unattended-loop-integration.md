@@ -9,16 +9,21 @@ Unify unattended execution into one stable entrypoint and reduce token waste cau
 - `-Mode checklist`: runs checklist task graph.
 - `-Mode refactor`: runs stateful refactor loop (`run-refactor-loop.ps1`).
 
-2. `scripts/run-checklist-loop.ps1`
+2. `scripts/unattended/bootstrap-unattended.ps1`
+- One-click bootstrap for unattended execution.
+- Optional pre-run skill sync (your custom sync script).
+- Refactor mode enforces skill-path preflight and then delegates to `run-unattended-loop.ps1`.
+
+3. `scripts/run-checklist-loop.ps1`
 - Generic checklist executor.
 - Uses task descriptor (`tasks.json`) with per-task prompt + gates.
 - Supports resume, preflight, retries, rollback, and structured summary.
 
-3. `scripts/terminal-closure.ps1` (deprecated hard-stop)
+4. `scripts/terminal-closure.ps1` (deprecated hard-stop)
 - Retired compatibility wrapper.
 - Always exits with migration instruction; do not use in automation.
 
-4. `scripts/run-autonomous-execution-loop.ps1` (deprecated hard-stop)
+5. `scripts/run-autonomous-execution-loop.ps1` (deprecated hard-stop)
 - Retired compatibility wrapper.
 - Always exits with migration instruction; do not use in automation.
 
@@ -83,6 +88,24 @@ powershell -File scripts/unattended/test-refactor-loop-exit-contract.ps1 -RepoRo
 ```
 
 This gives a minimal migration + verification path without manually stitching multiple scripts.
+
+## One-click run with custom-skill sync
+When your skill source is maintained in `E:\CODE\skills-manager\overrides` and synced to user runtime skills, use:
+
+```powershell
+powershell -File scripts/unattended/bootstrap-unattended.ps1 `
+  -Mode refactor `
+  -RepoRoot . `
+  -SyncScript E:\CODE\skills-manager\scripts\sync-skills.ps1 `
+  -RuntimeSkillPath $HOME\.codex\skills\autonomous-execution-loop\SKILL.md `
+  -OverrideSkillPath E:\CODE\skills-manager\overrides\autonomous-execution-loop\SKILL.md `
+  -SkipManualGates `
+  -DryRun
+```
+
+Notes:
+- If your sync tool is not PowerShell, run it separately and pass `-SkipSkillSync`.
+- Add `-PreferOverrideSkill` if you want to run directly from override source path.
 
 ## Deprecated Wrapper Policy
 - Official executable entrypoint is only `scripts/run-unattended-loop.ps1`.

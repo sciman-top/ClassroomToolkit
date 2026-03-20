@@ -171,6 +171,12 @@
       "role": "verification"
     },
     {
+      "path": "scripts/unattended/bootstrap-unattended.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-entry"
+    },
+    {
       "path": "scripts/unattended/test-refactor-loop-exit-contract.ps1",
       "kind": "file",
       "required": true,
