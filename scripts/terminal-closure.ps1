@@ -166,13 +166,15 @@ function Invoke-ProcessCommand {
 
     $stdout = @()
     if (Test-Path -LiteralPath $StdoutPath) {
-        $stdout = Get-Content -LiteralPath $StdoutPath
-        $stdout | Out-Host
+        $stdout = @(Get-Content -LiteralPath $StdoutPath)
+        if ($stdout.Count -gt 0) {
+            $stdout | Out-Host
+        }
     }
 
     $stderr = @()
     if (Test-Path -LiteralPath $StderrPath) {
-        $stderr = Get-Content -LiteralPath $StderrPath
+        $stderr = @(Get-Content -LiteralPath $StderrPath)
         if ($stderr.Count -gt 0) {
             $stderr | Out-Host
         }
@@ -625,4 +627,3 @@ finally {
     Write-RunSummary -SummaryPath $summaryPath -Summary $runSummary
     Write-Host "Run summary: $summaryPath" -ForegroundColor Gray
 }
-
