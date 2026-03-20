@@ -61,7 +61,7 @@
       "summary": "Make wrapper, selector, updater, reconciliation, and manifest workflows mode-aware.",
       "file_hints": [
         "scripts/run-refactor-loop.ps1",
-        "scripts/run-autonomous-execution-loop.ps1",
+        "scripts/run-unattended-loop.ps1",
         "scripts/refactor/select-next-task.ps1",
         "scripts/refactor/update-refactor-state.ps1",
         "scripts/refactor/test-governing-reconciliation.ps1",

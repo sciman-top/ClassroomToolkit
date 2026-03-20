@@ -14,13 +14,13 @@ Unify unattended execution into one stable entrypoint and reduce token waste cau
 - Uses task descriptor (`tasks.json`) with per-task prompt + gates.
 - Supports resume, preflight, retries, rollback, and structured summary.
 
-3. `scripts/terminal-closure.ps1`
-- Compatibility wrapper for current terminal-closure task file.
-- Delegates to `run-unattended-loop.ps1 -Mode checklist`.
+3. `scripts/terminal-closure.ps1` (deprecated hard-stop)
+- Retired compatibility wrapper.
+- Always exits with migration instruction; do not use in automation.
 
-4. `scripts/run-autonomous-execution-loop.ps1`
-- Compatibility wrapper for existing refactor workflows.
-- Delegates to `run-unattended-loop.ps1 -Mode refactor`.
+4. `scripts/run-autonomous-execution-loop.ps1` (deprecated hard-stop)
+- Retired compatibility wrapper.
+- Always exits with migration instruction; do not use in automation.
 
 ## Checklist task schema
 `run-checklist-loop.ps1` accepts gates in two forms:
@@ -75,6 +75,11 @@ powershell -File scripts/unattended/test-checklist-loop-smoke.ps1 -RepoRoot .
 ```
 
 This gives a minimal migration + verification path without manually stitching multiple scripts.
+
+## Deprecated Wrapper Policy
+- Official executable entrypoint is only `scripts/run-unattended-loop.ps1`.
+- `scripts/terminal-closure.ps1` and `scripts/run-autonomous-execution-loop.ps1` are hard-stopped and return non-zero.
+- CI runs `scripts/unattended/check-deprecated-wrapper-usage.ps1` to block new active references to deprecated wrappers.
 
 Cross-project portability regression (transfer + smoke in isolated target repo):
 

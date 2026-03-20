@@ -16,8 +16,8 @@
     {
       "path": "scripts/run-autonomous-execution-loop.ps1",
       "kind": "file",
-      "required": true,
-      "role": "wrapper-entry"
+      "required": false,
+      "role": "deprecated-wrapper"
     },
     {
       "path": "scripts/run-unattended-loop.ps1",
@@ -34,8 +34,8 @@
     {
       "path": "scripts/terminal-closure.ps1",
       "kind": "file",
-      "required": true,
-      "role": "wrapper-entry"
+      "required": false,
+      "role": "deprecated-wrapper"
     },
     {
       "path": "scripts/refactor/select-next-task.ps1",
@@ -172,6 +172,12 @@
     },
     {
       "path": "scripts/unattended/test-portability-regression.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "verification"
+    },
+    {
+      "path": "scripts/unattended/check-deprecated-wrapper-usage.ps1",
       "kind": "file",
       "required": true,
       "role": "verification"

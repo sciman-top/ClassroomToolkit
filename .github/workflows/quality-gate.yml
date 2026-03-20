@@ -25,6 +25,16 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Deprecated Wrapper Reference Gate
+        shell: pwsh
+        run: |
+          $report = & powershell -ExecutionPolicy Bypass -File scripts/unattended/check-deprecated-wrapper-usage.ps1 -AsJson
+          $report
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Deprecated wrapper references detected in active run files."
+            exit $LASTEXITCODE
+          }
+
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
