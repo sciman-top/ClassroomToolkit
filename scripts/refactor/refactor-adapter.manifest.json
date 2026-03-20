@@ -86,6 +86,12 @@
       "role": "utility"
     },
     {
+      "path": "scripts/refactor/transfer-refactor-adapter.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
       "path": "scripts/refactor/refactor-adapter.manifest.json",
       "kind": "file",
       "required": true,
@@ -157,6 +163,12 @@
       "kind": "file",
       "required": true,
       "role": "doc"
+    },
+    {
+      "path": "scripts/unattended/test-checklist-loop-smoke.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "verification"
     }
   ],
   "state_seed": {

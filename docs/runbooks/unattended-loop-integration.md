@@ -55,6 +55,23 @@ powershell -File scripts/run-unattended-loop.ps1 `
 
 4. Keep project-specific checks in task gates only. Do not hardcode project paths in script logic.
 
+## One-click adapter transfer
+Use one command from source repo to install unattended/refactor adapter files into target repo:
+
+```powershell
+powershell -File scripts/refactor/transfer-refactor-adapter.ps1 `
+  -TargetRepoRoot E:\CODE\TargetRepo `
+  -Force
+```
+
+Then run smoke validation in target repo:
+
+```powershell
+powershell -File scripts/unattended/test-checklist-loop-smoke.ps1 -RepoRoot .
+```
+
+This gives a minimal migration + verification path without manually stitching multiple scripts.
+
 ## Token waste prevention baseline
 1. Preflight before any Codex iteration:
 - task file parse

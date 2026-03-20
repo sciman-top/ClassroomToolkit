@@ -44,6 +44,22 @@ function Get-RepoRootPath {
     return (Resolve-Path -LiteralPath $Root).Path
 }
 
+function Resolve-InputPath {
+    param(
+        [string]$RootPath,
+        [string]$InputPath
+    )
+
+    if ([System.IO.Path]::IsPathRooted($InputPath)) {
+        if (Test-Path -LiteralPath $InputPath) {
+            return (Resolve-Path -LiteralPath $InputPath).Path
+        }
+        return [System.IO.Path]::GetFullPath($InputPath)
+    }
+
+    return Join-Path $RootPath $InputPath
+}
+
 function Test-CleanWorkingTree {
     param([string]$RootPath)
     Push-Location $RootPath
@@ -507,7 +523,7 @@ if ([string]::IsNullOrWhiteSpace($TaskFile)) {
 }
 
 $repoPath = Get-RepoRootPath -Root $RepoRoot
-$taskFilePath = Join-Path $repoPath $TaskFile
+$taskFilePath = Resolve-InputPath -RootPath $repoPath -InputPath $TaskFile
 if (-not (Test-Path -LiteralPath $taskFilePath)) {
     throw "Task file not found: $taskFilePath"
 }
@@ -542,7 +558,7 @@ New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 
 $runId = Get-Date -Format "yyyyMMdd-HHmmss"
 $summaryPath = Join-Path $logDirectory ("run-{0}.summary.json" -f $runId)
-$lockPath = Join-Path $repoPath $LockFile
+$lockPath = Resolve-InputPath -RootPath $repoPath -InputPath $LockFile
 
 $checkpoint = New-Checkpoint -RootPath $repoPath
 Write-Host "Initial checkpoint: $checkpoint" -ForegroundColor Gray
