@@ -53,14 +53,19 @@ if (-not (Test-Path -LiteralPath $outputPath)) {
 }
 
 $installerPath = Resolve-AbsolutePath -Path "scripts/refactor/install-refactor-adapter.ps1" -BasePath $sourceRoot
-$installResultRaw = & powershell -ExecutionPolicy Bypass -File $installerPath `
-    -SourceRepoRoot $sourceRoot `
-    -TargetRepoRoot $outputPath `
-    -ManifestPath $ManifestPath `
-    -Mode $Mode `
-    -ProjectName $TemplateProjectName `
-    -Force `
-    -AsJson
+$installArgs = @(
+    "-SourceRepoRoot", $sourceRoot,
+    "-TargetRepoRoot", $outputPath,
+    "-ManifestPath", $ManifestPath,
+    "-ProjectName", $TemplateProjectName,
+    "-Force",
+    "-AsJson"
+)
+if (-not [string]::IsNullOrWhiteSpace($Mode)) {
+    $installArgs += @("-Mode", $Mode)
+}
+
+$installResultRaw = & powershell -ExecutionPolicy Bypass -File $installerPath @installArgs
 
 if ($LASTEXITCODE -ne 0) {
     throw "Adapter export failed while installing into output directory. Exit code: $LASTEXITCODE"
