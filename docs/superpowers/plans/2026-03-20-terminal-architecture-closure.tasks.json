@@ -1,0 +1,45 @@
+{
+  "name": "terminal-architecture-closure",
+  "version": "1.0.0",
+  "created_at": "2026-03-20",
+  "tasks": [
+    {
+      "id": "task-1-freeze-guards",
+      "title": "Freeze architecture guard baseline",
+      "commit_message": "test: freeze architecture guard baseline and block new regressions",
+      "prompt": "Work in E:/PythonProject/ClassroomToolkit. Execute Task 1 only: strengthen tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs so App-layer dependency regressions are blocked while current baseline remains passing. Keep changes minimal and scoped to this task. Update tests first where needed. Run related tests and stop after completion.",
+      "gates": [
+        "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\""
+      ]
+    },
+    {
+      "id": "task-2-crosspage-hotspot-split",
+      "title": "Split CrossPage hotspot with behavior parity",
+      "commit_message": "refactor: split CrossPage hotspot while preserving behavior",
+      "prompt": "Work in E:/PythonProject/ClassroomToolkit. Execute Task 2 only: split src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs into smaller focused files following existing naming style. Keep behavior unchanged. Update or add CrossPage tests as needed. Restrict edits to CrossPage-related files and stop after completion.",
+      "gates": [
+        "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPage\"",
+        "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~PaintOverlayPresentationTargetRoutingContractTests|FullyQualifiedName~PaintOverlayDrawingStateContractTests\""
+      ]
+    },
+    {
+      "id": "task-3-rollcall-application-sink",
+      "title": "Move RollCall loading orchestration into Application",
+      "commit_message": "refactor: move RollCall loading orchestration into Application",
+      "prompt": "Work in E:/PythonProject/ClassroomToolkit. Execute Task 3 only: introduce or extend Application use cases under src/ClassroomToolkit.Application/UseCases/RollCall and move RollCall loading orchestration out of src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs so ViewModel keeps binding/coordination concerns. Preserve behavior. Update RollCall tests and stop after completion.",
+      "gates": [
+        "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCall\""
+      ]
+    },
+    {
+      "id": "task-4-mainwindow-closure",
+      "title": "Close MainWindow orchestration and shrink allowlist",
+      "commit_message": "refactor: close MainWindow orchestration and shrink boundary allowlist",
+      "prompt": "Work in E:/PythonProject/ClassroomToolkit. Execute Task 4 only: move new flow decision logic in src/ClassroomToolkit.App/MainWindow.xaml.cs into existing policies/coordinators and reduce at least one allowlist item in tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs. Keep behavior stable, run tests, and stop after completion.",
+      "gates": [
+        "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\""
+      ]
+    }
+  ]
+}
+

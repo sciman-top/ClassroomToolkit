@@ -34,15 +34,43 @@ public sealed class ArchitectureDependencyTests
     }
 
     [Fact]
+    public void AppProject_ShouldNotAdd_NewToolkitProjectReferences()
+    {
+        var references = ReadProjectReferences("src/ClassroomToolkit.App/ClassroomToolkit.App.csproj");
+        var toolkitReferences = references
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Where(name => name!.StartsWith("ClassroomToolkit.", StringComparison.OrdinalIgnoreCase))
+            .Select(name => name!)
+            .ToArray();
+
+        var baselineAllowList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ClassroomToolkit.Domain",
+            "ClassroomToolkit.Application",
+            "ClassroomToolkit.Infra",
+            "ClassroomToolkit.Services",
+            "ClassroomToolkit.Interop"
+        };
+
+        var newToolkitReferences = toolkitReferences
+            .Where(name => !baselineAllowList.Contains(name))
+            .ToArray();
+        newToolkitReferences.Should().BeEmpty("当前守卫允许既有 App 项目引用，但不允许新增新的 Toolkit 层级依赖");
+    }
+
+    [Fact]
     public void AppLayer_ShouldAvoidInfraNamespace_OutsideCompositionRoot()
     {
         var violations = FindNamespaceUsageViolations(
-            namespaceToken: "using ClassroomToolkit.Infra",
+            namespaceToken: "ClassroomToolkit.Infra",
             excludedFileNames: new[] { "App.xaml.cs" });
 
         var baselineAllowList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            @"src\ClassroomToolkit.App\Settings\AppSettingsService.cs"
+            @"src\ClassroomToolkit.App\Ink\InkHistoryPersistenceBridge.cs",
+            @"src\ClassroomToolkit.App\Paint\PaintOverlayWindow.Export.cs",
+            @"src\ClassroomToolkit.App\Paint\PaintWindowFactory.cs"
         };
 
         var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();
@@ -81,6 +109,8 @@ public sealed class ArchitectureDependencyTests
     {
         var excludedSet = new HashSet<string>(excludedFileNames, StringComparer.OrdinalIgnoreCase);
         var appFiles = Directory.GetFiles(TestPathHelper.ResolveAppPath(), "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !excludedSet.Contains(Path.GetFileName(path)))
             .ToArray();
 
