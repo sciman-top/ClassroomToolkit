@@ -2,6 +2,9 @@ param(
     [string]$RepoRoot = ".",
     [string]$TaskFile = "docs/superpowers/plans/2026-03-20-terminal-architecture-closure.tasks.json",
     [string]$CodexCommand = "codex",
+    [string]$StartFromTaskId = "",
+    [int]$MaxAttemptsPerTask = 1,
+    [switch]$DisableGatePreflight,
     [switch]$SkipManualValidation,
     [switch]$ForceReleaseWithoutManual,
     [switch]$SkipReleaseValidation,
@@ -41,7 +44,6 @@ function Get-RepoRootPath {
 
 function Test-CleanWorkingTree {
     param([string]$RootPath)
-
     Push-Location $RootPath
     try {
         $status = git status --porcelain
@@ -92,33 +94,92 @@ function Resolve-CodexLauncher {
     }
 }
 
-function Invoke-ShellCommand {
+function ConvertTo-CommandSpec {
+    param([object]$Gate)
+
+    if ($Gate -is [string]) {
+        return [pscustomobject]@{
+            command = "powershell"
+            args = @("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $Gate)
+            raw = $Gate
+        }
+    }
+
+    if ($null -eq $Gate) {
+        throw "Invalid gate: null"
+    }
+
+    $command = [string]$Gate.command
+    if ([string]::IsNullOrWhiteSpace($command)) {
+        throw "Invalid gate: command is empty"
+    }
+
+    $args = @()
+    if ($null -ne $Gate.args) {
+        foreach ($item in @($Gate.args)) {
+            $args += [string]$item
+        }
+    }
+
+    return [pscustomobject]@{
+        command = $command
+        args = $args
+        raw = $null
+    }
+}
+
+function Format-CommandSpec {
+    param([object]$Spec)
+
+    $parts = @($Spec.command)
+    if ($null -ne $Spec.args) {
+        $parts += @($Spec.args)
+    }
+    return ($parts -join " ")
+}
+
+function Invoke-ProcessCommand {
     param(
         [Parameter(Mandatory = $true)]
         [string]$RootPath,
         [Parameter(Mandatory = $true)]
-        [string]$CommandText,
-        [Parameter(Mandatory = $true)]
         [string]$Label,
         [Parameter(Mandatory = $true)]
-        [string]$LogPath
+        [object]$Spec,
+        [string]$StdoutPath,
+        [string]$StderrPath
     )
 
-    Write-Host "[$Label] $CommandText" -ForegroundColor DarkCyan
+    $display = Format-CommandSpec -Spec $Spec
+    Write-Host "[$Label] $display" -ForegroundColor DarkCyan
     if ($DryRun) {
         return
     }
 
-    Push-Location $RootPath
-    try {
-        $output = & powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command $CommandText 2>&1
-        $output | Tee-Object -FilePath $LogPath | Out-Host
-        if ($LASTEXITCODE -ne 0) {
-            throw "Command failed (exit=$LASTEXITCODE): $CommandText"
+    $process = Start-Process -FilePath $Spec.command `
+        -ArgumentList @($Spec.args) `
+        -WorkingDirectory $RootPath `
+        -RedirectStandardOutput $StdoutPath `
+        -RedirectStandardError $StderrPath `
+        -PassThru `
+        -Wait
+
+    $stdout = @()
+    if (Test-Path -LiteralPath $StdoutPath) {
+        $stdout = Get-Content -LiteralPath $StdoutPath
+        $stdout | Out-Host
+    }
+
+    $stderr = @()
+    if (Test-Path -LiteralPath $StderrPath) {
+        $stderr = Get-Content -LiteralPath $StderrPath
+        if ($stderr.Count -gt 0) {
+            $stderr | Out-Host
         }
     }
-    finally {
-        Pop-Location
+
+    if ($process.ExitCode -ne 0) {
+        throw "Command failed (exit=$($process.ExitCode)): $display"
     }
 }
 
@@ -170,7 +231,6 @@ function Invoke-CodexTask {
 
 function New-Checkpoint {
     param([string]$RootPath)
-
     Push-Location $RootPath
     try {
         return (git rev-parse HEAD).Trim()
@@ -204,7 +264,6 @@ function Invoke-Rollback {
         if ($LASTEXITCODE -ne 0) {
             throw "git reset --hard failed."
         }
-
         git clean -fd | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw "git clean -fd failed."
@@ -264,10 +323,19 @@ function Invoke-ReleaseValidation {
         return
     }
 
-    $buildLog = Join-Path $LogDirectory "release-build.log"
-    $testLog = Join-Path $LogDirectory "release-test.log"
-    Invoke-ShellCommand -RootPath $RootPath -CommandText "dotnet build ClassroomToolkit.sln -c Release" -Label "release-build" -LogPath $buildLog
-    Invoke-ShellCommand -RootPath $RootPath -CommandText "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release" -Label "release-test" -LogPath $testLog
+    $buildOut = Join-Path $LogDirectory "release-build.stdout.log"
+    $buildErr = Join-Path $LogDirectory "release-build.stderr.log"
+    Invoke-ProcessCommand -RootPath $RootPath -Label "release-build" -Spec ([pscustomobject]@{
+            command = "dotnet"
+            args = @("build", "ClassroomToolkit.sln", "-c", "Release")
+        }) -StdoutPath $buildOut -StderrPath $buildErr
+
+    $testOut = Join-Path $LogDirectory "release-test.stdout.log"
+    $testErr = Join-Path $LogDirectory "release-test.stderr.log"
+    Invoke-ProcessCommand -RootPath $RootPath -Label "release-test" -Spec ([pscustomobject]@{
+            command = "dotnet"
+            args = @("test", "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj", "-c", "Release")
+        }) -StdoutPath $testOut -StderrPath $testErr
 }
 
 function Write-RunSummary {
@@ -283,7 +351,42 @@ function Write-RunSummary {
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
     }
 
-    $Summary | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $SummaryPath -Encoding UTF8
+    $Summary | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $SummaryPath -Encoding UTF8
+}
+
+function Get-ErrorClass {
+    param([string]$Message)
+
+    if ([string]::IsNullOrWhiteSpace($Message)) {
+        return "unknown"
+    }
+    if ($Message -like "*Codex task failed*") {
+        return "codex_failure"
+    }
+    if ($Message -like "*Missing command:*" -or $Message -like "*Invalid gate:*") {
+        return "preflight_failure"
+    }
+    if ($Message -like "*Command failed*") {
+        return "gate_failure"
+    }
+    return "unknown"
+}
+
+function Test-GatePreflight {
+    param(
+        [string]$TaskId,
+        [object[]]$GateSpecs
+    )
+
+    for ($i = 0; $i -lt $GateSpecs.Count; $i++) {
+        $spec = $GateSpecs[$i]
+        if ([string]::IsNullOrWhiteSpace([string]$spec.command)) {
+            throw "Invalid gate: task=$TaskId index=$($i + 1) command empty."
+        }
+        if (-not (Get-Command $spec.command -ErrorAction SilentlyContinue)) {
+            throw "Missing command: $($spec.command) for task=$TaskId gate=$($i + 1)."
+        }
+    }
 }
 
 Write-Phase "Environment check"
@@ -292,9 +395,12 @@ Assert-Command -Name dotnet -Hint "Install .NET SDK first."
 Assert-Command -Name powershell -Hint "PowerShell is required."
 Assert-Command -Name $CodexCommand -Hint "Ensure Codex CLI is installed."
 
+if ($MaxAttemptsPerTask -lt 1) {
+    throw "MaxAttemptsPerTask must be >= 1."
+}
+
 $repoPath = Get-RepoRootPath -Root $RepoRoot
 $taskFilePath = Join-Path $repoPath $TaskFile
-
 if (-not (Test-Path -LiteralPath $taskFilePath)) {
     throw "Task file not found: $taskFilePath"
 }
@@ -307,6 +413,21 @@ $taskDoc = (Get-Content -LiteralPath $taskFilePath -Raw) | ConvertFrom-Json
 $tasks = @($taskDoc.tasks)
 if ($tasks.Count -eq 0) {
     throw "No tasks in descriptor file."
+}
+
+$startIndex = 0
+if (-not [string]::IsNullOrWhiteSpace($StartFromTaskId)) {
+    $matched = $false
+    for ($i = 0; $i -lt $tasks.Count; $i++) {
+        if ([string]$tasks[$i].id -eq $StartFromTaskId) {
+            $startIndex = $i
+            $matched = $true
+            break
+        }
+    }
+    if (-not $matched) {
+        throw "StartFromTaskId not found: $StartFromTaskId"
+    }
 }
 
 $logDirectory = Join-Path $repoPath ".codex/logs/terminal-closure"
@@ -323,12 +444,16 @@ $runSummary = [ordered]@{
     started_at = (Get-Date).ToString("o")
     finished_at = $null
     status = "running"
+    error_class = $null
     dry_run = [bool]$DryRun
     repo_root = $repoPath
     task_file = $taskFilePath
     log_directory = $logDirectory
     summary_path = $summaryPath
     options = [ordered]@{
+        start_from_task_id = $StartFromTaskId
+        max_attempts_per_task = $MaxAttemptsPerTask
+        disable_gate_preflight = [bool]$DisableGatePreflight
         skip_manual_validation = [bool]$SkipManualValidation
         force_release_without_manual = [bool]$ForceReleaseWithoutManual
         skip_release_validation = [bool]$SkipReleaseValidation
@@ -358,13 +483,18 @@ try {
         $taskId = [string]$task.id
         $title = [string]$task.title
         $commitMessage = [string]$task.commit_message
-        $gates = @($task.gates)
         $prompt = [string]$task.prompt
+        $gateSpecs = @()
+        foreach ($gate in @($task.gates)) {
+            $gateSpecs += (ConvertTo-CommandSpec -Gate $gate)
+        }
+
         $taskSummary = [ordered]@{
             id = $taskId
             title = $title
-            status = "running"
-            started_at = (Get-Date).ToString("o")
+            status = "pending"
+            attempts = 0
+            started_at = $null
             finished_at = $null
             commit_message = $commitMessage
             gates = @()
@@ -372,28 +502,76 @@ try {
         }
         $runSummary.tasks += $taskSummary
 
-        Write-Phase ("Task {0}/{1}: {2}" -f ($i + 1), $tasks.Count, $title)
-        Invoke-CodexTask -RootPath $repoPath -Prompt $prompt -TaskId $taskId -LogDirectory $logDirectory
-
-        for ($g = 0; $g -lt $gates.Count; $g++) {
-            $gateCommand = [string]$gates[$g]
-            $gateLog = Join-Path $logDirectory ("{0}-{1:D2}-{2}.log" -f $taskId, ($g + 1), (Get-Date -Format "yyyyMMdd-HHmmss"))
-            $taskSummary.gates += [ordered]@{
-                index = ($g + 1)
-                command = $gateCommand
-                log_path = $gateLog
-                status = "running"
-                error_message = $null
-            }
-            Invoke-ShellCommand -RootPath $repoPath -CommandText $gateCommand -Label "$taskId/gate-$($g + 1)" -LogPath $gateLog
-            $taskSummary.gates[$g].status = "passed"
+        if ($i -lt $startIndex) {
+            $taskSummary.status = "skipped_by_resume"
+            continue
         }
 
-        Invoke-AutoCommit -RootPath $repoPath -Message $commitMessage
-        $checkpoint = New-Checkpoint -RootPath $repoPath
-        $taskSummary.status = "completed"
-        $taskSummary.finished_at = (Get-Date).ToString("o")
-        Write-Host "Task complete; checkpoint: $checkpoint" -ForegroundColor Green
+        if (-not $DisableGatePreflight) {
+            Test-GatePreflight -TaskId $taskId -GateSpecs $gateSpecs
+        }
+
+        $taskSucceeded = $false
+        for ($attempt = 1; $attempt -le $MaxAttemptsPerTask; $attempt++) {
+            $taskSummary.attempts = $attempt
+            $taskSummary.status = "running"
+            $taskSummary.started_at = (Get-Date).ToString("o")
+            $taskSummary.error_message = $null
+            $taskSummary.gates = @()
+
+            Write-Phase ("Task {0}/{1}: {2} (attempt {3}/{4})" -f ($i + 1), $tasks.Count, $title, $attempt, $MaxAttemptsPerTask)
+
+            try {
+                Invoke-CodexTask -RootPath $repoPath -Prompt $prompt -TaskId $taskId -LogDirectory $logDirectory
+
+                for ($g = 0; $g -lt $gateSpecs.Count; $g++) {
+                    $spec = $gateSpecs[$g]
+                    $gateSummary = [ordered]@{
+                        index = ($g + 1)
+                        command = (Format-CommandSpec -Spec $spec)
+                        stdout_path = Join-Path $logDirectory ("{0}-{1:D2}-{2}.stdout.log" -f $taskId, ($g + 1), (Get-Date -Format "yyyyMMdd-HHmmss"))
+                        stderr_path = Join-Path $logDirectory ("{0}-{1:D2}-{2}.stderr.log" -f $taskId, ($g + 1), (Get-Date -Format "yyyyMMdd-HHmmss"))
+                        status = "running"
+                        error_message = $null
+                    }
+                    $taskSummary.gates += $gateSummary
+
+                    Invoke-ProcessCommand -RootPath $repoPath -Label "$taskId/gate-$($g + 1)" -Spec $spec -StdoutPath $gateSummary.stdout_path -StderrPath $gateSummary.stderr_path
+                    $gateSummary.status = "passed"
+                }
+
+                Invoke-AutoCommit -RootPath $repoPath -Message $commitMessage
+                $checkpoint = New-Checkpoint -RootPath $repoPath
+                $taskSummary.status = "completed"
+                $taskSummary.finished_at = (Get-Date).ToString("o")
+                Write-Host "Task complete; checkpoint: $checkpoint" -ForegroundColor Green
+                $taskSucceeded = $true
+                break
+            }
+            catch {
+                $taskSummary.status = "failed"
+                $taskSummary.finished_at = (Get-Date).ToString("o")
+                $taskSummary.error_message = $_.Exception.Message
+                $failedGate = $taskSummary.gates | Where-Object { $_.status -eq "running" } | Select-Object -First 1
+                if ($null -ne $failedGate) {
+                    $failedGate.status = "failed"
+                    $failedGate.error_message = $_.Exception.Message
+                }
+                $errorClass = Get-ErrorClass -Message $_.Exception.Message
+                $runSummary.error_class = $errorClass
+
+                if ($attempt -lt $MaxAttemptsPerTask -and $errorClass -in @("codex_failure", "gate_failure", "unknown")) {
+                    Write-Host "Task failed, retrying: $($_.Exception.Message)" -ForegroundColor Yellow
+                    continue
+                }
+
+                throw
+            }
+        }
+
+        if (-not $taskSucceeded) {
+            throw "Task failed after max attempts: $taskId"
+        }
     }
 
     Write-Phase "Manual validation gate"
@@ -418,19 +596,16 @@ try {
 catch {
     $runSummary.status = "failed"
     $runSummary.error_message = $_.Exception.Message
+    if ($null -eq $runSummary.error_class) {
+        $runSummary.error_class = Get-ErrorClass -Message $_.Exception.Message
+    }
     $runSummary.final_checkpoint = $checkpoint
 
-    $failedTask = $runSummary.tasks | Where-Object { $_.status -eq "running" } | Select-Object -First 1
+    $failedTask = $runSummary.tasks | Where-Object { $_.status -eq "failed" -or $_.status -eq "running" } | Select-Object -First 1
     if ($null -ne $failedTask) {
-        $failedTask.status = "failed"
-        $failedTask.finished_at = (Get-Date).ToString("o")
-        $failedTask.error_message = $_.Exception.Message
         $runSummary.failed_task_id = $failedTask.id
-
-        $failedGate = $failedTask.gates | Where-Object { $_.status -eq "running" } | Select-Object -First 1
+        $failedGate = $failedTask.gates | Where-Object { $_.status -eq "failed" -or $_.status -eq "running" } | Select-Object -First 1
         if ($null -ne $failedGate) {
-            $failedGate.status = "failed"
-            $failedGate.error_message = $_.Exception.Message
             $runSummary.failed_gate_command = $failedGate.command
         }
     }
@@ -450,3 +625,4 @@ finally {
     Write-RunSummary -SummaryPath $summaryPath -Summary $runSummary
     Write-Host "Run summary: $summaryPath" -ForegroundColor Gray
 }
+
