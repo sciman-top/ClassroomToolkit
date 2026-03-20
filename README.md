@@ -121,6 +121,7 @@ student_photos/
 
 - [教师使用指南](./使用指南.md)
 - [架构文档](./docs/architecture/)
+- [发布快速清单](./docs/runbooks/release-checklist-quick.md)
 - [发布前检查清单](./docs/runbooks/release-prevention-checklist.md)
 - [课堂试点验证 Runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 
