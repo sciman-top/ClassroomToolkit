@@ -20,6 +20,24 @@
       "role": "wrapper-entry"
     },
     {
+      "path": "scripts/run-unattended-loop.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-entry"
+    },
+    {
+      "path": "scripts/run-checklist-loop.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-entry"
+    },
+    {
+      "path": "scripts/terminal-closure.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-entry"
+    },
+    {
       "path": "scripts/refactor/select-next-task.ps1",
       "kind": "file",
       "required": true,
@@ -133,6 +151,12 @@
       "kind": "file",
       "required": true,
       "role": "task-graph"
+    },
+    {
+      "path": "docs/runbooks/unattended-loop-integration.md",
+      "kind": "file",
+      "required": true,
+      "role": "doc"
     }
   ],
   "state_seed": {

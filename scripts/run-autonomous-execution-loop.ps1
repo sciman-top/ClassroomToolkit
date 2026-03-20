@@ -23,10 +23,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$wrapperPath = Join-Path (Resolve-Path -LiteralPath $PSScriptRoot).Path "run-refactor-loop.ps1"
+$wrapperPath = Join-Path (Resolve-Path -LiteralPath $PSScriptRoot).Path "run-unattended-loop.ps1"
 $forwardArgs = @(
+    "-Mode", "refactor",
     "-RepoRoot", $RepoRoot,
-    "-Mode", $Mode,
+    "-RefactorModeId", $Mode,
     "-CodexCommand", $CodexCommand,
     "-MaxIterations", $MaxIterations,
     "-MaxNoProgress", $MaxNoProgress,
