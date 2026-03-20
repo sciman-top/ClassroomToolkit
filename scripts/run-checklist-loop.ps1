@@ -6,6 +6,10 @@ param(
     [int]$MaxAttemptsPerTask = 1,
     [string]$LockFile = ".codex/checklist-loop.lock.json",
     [int]$LockStaleAfterMinutes = 30,
+    [int]$CodexTimeoutSeconds = 1200,
+    [int]$CodexIdleTimeoutSeconds = 180,
+    [int]$GateTimeoutSeconds = 900,
+    [int]$GateIdleTimeoutSeconds = 120,
     [switch]$DisableGatePreflight,
     [switch]$SkipManualValidation,
     [switch]$ForceReleaseWithoutManual,
@@ -217,6 +221,8 @@ function ConvertTo-CommandSpec {
             command = "powershell"
             args = @("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $Gate)
             raw = $Gate
+            timeout_seconds = 0
+            idle_timeout_seconds = 0
         }
     }
 
@@ -236,10 +242,28 @@ function ConvertTo-CommandSpec {
         }
     }
 
+    $timeoutSeconds = 0
+    if ($null -ne $Gate.PSObject.Properties["timeout_seconds"] -and -not [string]::IsNullOrWhiteSpace([string]$Gate.timeout_seconds)) {
+        $timeoutSeconds = [int]$Gate.timeout_seconds
+        if ($timeoutSeconds -lt 1) {
+            throw "Invalid gate: timeout_seconds must be >= 1"
+        }
+    }
+
+    $idleTimeoutSeconds = 0
+    if ($null -ne $Gate.PSObject.Properties["idle_timeout_seconds"] -and -not [string]::IsNullOrWhiteSpace([string]$Gate.idle_timeout_seconds)) {
+        $idleTimeoutSeconds = [int]$Gate.idle_timeout_seconds
+        if ($idleTimeoutSeconds -lt 1) {
+            throw "Invalid gate: idle_timeout_seconds must be >= 1"
+        }
+    }
+
     return [pscustomobject]@{
         command = $command
         args = $args
         raw = $null
+        timeout_seconds = $timeoutSeconds
+        idle_timeout_seconds = $idleTimeoutSeconds
     }
 }
 
@@ -251,6 +275,130 @@ function Format-CommandSpec {
         $parts += @($Spec.args)
     }
     return ($parts -join " ")
+}
+
+function Invoke-WatchedProcess {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$ArgumentList = @(),
+        [Parameter(Mandatory = $true)]
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$StdoutPath,
+        [Parameter(Mandatory = $true)]
+        [string]$StderrPath,
+        [string]$StdinPath = "",
+        [int]$TimeoutSeconds = 0,
+        [int]$IdleTimeoutSeconds = 0
+    )
+
+    if ($DryRun) {
+        return [pscustomobject]@{
+            timed_out = $false
+            timed_out_reason = $null
+            exit_code = 0
+        }
+    }
+
+    $startArgs = @{
+        FilePath = $FilePath
+        ArgumentList = @($ArgumentList)
+        WorkingDirectory = $WorkingDirectory
+        RedirectStandardOutput = $StdoutPath
+        RedirectStandardError = $StderrPath
+        PassThru = $true
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($StdinPath)) {
+        $startArgs.RedirectStandardInput = $StdinPath
+    }
+
+    $process = Start-Process @startArgs
+    $startedAt = [DateTime]::UtcNow
+    $lastActivityAt = $startedAt
+    $lastStdoutLength = -1L
+    $lastStderrLength = -1L
+    $timedOutReason = $null
+
+    while (-not $process.HasExited) {
+        Start-Sleep -Seconds 2
+
+        $stdoutLength = 0L
+        if (Test-Path -LiteralPath $StdoutPath) {
+            $stdoutLength = (Get-Item -LiteralPath $StdoutPath).Length
+        }
+
+        $stderrLength = 0L
+        if (Test-Path -LiteralPath $StderrPath) {
+            $stderrLength = (Get-Item -LiteralPath $StderrPath).Length
+        }
+
+        if ($stdoutLength -ne $lastStdoutLength -or $stderrLength -ne $lastStderrLength) {
+            $lastStdoutLength = $stdoutLength
+            $lastStderrLength = $stderrLength
+            $lastActivityAt = [DateTime]::UtcNow
+        }
+
+        $now = [DateTime]::UtcNow
+        if ($TimeoutSeconds -gt 0 -and ($now - $startedAt).TotalSeconds -ge $TimeoutSeconds) {
+            $timedOutReason = "total-timeout"
+            break
+        }
+
+        if ($IdleTimeoutSeconds -gt 0 -and ($now - $lastActivityAt).TotalSeconds -ge $IdleTimeoutSeconds) {
+            $timedOutReason = "idle-timeout"
+            break
+        }
+    }
+
+    if ($null -ne $timedOutReason -and -not $process.HasExited) {
+        try {
+            & taskkill /PID $process.Id /T /F | Out-Null
+        }
+        catch {
+            try {
+                $process.Kill($true)
+            }
+            catch {
+            }
+        }
+
+        return [pscustomobject]@{
+            timed_out = $true
+            timed_out_reason = $timedOutReason
+            exit_code = $null
+        }
+    }
+
+    return [pscustomobject]@{
+        timed_out = $false
+        timed_out_reason = $null
+        exit_code = [int]$process.ExitCode
+    }
+}
+
+function Show-ProcessLogs {
+    param(
+        [string]$StdoutPath,
+        [string]$StderrPath
+    )
+
+    $stdout = @()
+    if (Test-Path -LiteralPath $StdoutPath) {
+        $stdout = @(Get-Content -LiteralPath $StdoutPath)
+        if ($stdout.Count -gt 0) {
+            $stdout | Out-Host
+        }
+    }
+
+    $stderr = @()
+    if (Test-Path -LiteralPath $StderrPath) {
+        $stderr = @(Get-Content -LiteralPath $StderrPath)
+        if ($stderr.Count -gt 0) {
+            $stderr | Out-Host
+        }
+    }
 }
 
 function Invoke-ProcessCommand {
@@ -271,32 +419,33 @@ function Invoke-ProcessCommand {
         return
     }
 
-    $process = Start-Process -FilePath $Spec.command `
+    $timeoutSeconds = $GateTimeoutSeconds
+    if ($null -ne $Spec.PSObject.Properties["timeout_seconds"] -and [int]$Spec.timeout_seconds -gt 0) {
+        $timeoutSeconds = [int]$Spec.timeout_seconds
+    }
+
+    $idleTimeoutSeconds = $GateIdleTimeoutSeconds
+    if ($null -ne $Spec.PSObject.Properties["idle_timeout_seconds"] -and [int]$Spec.idle_timeout_seconds -gt 0) {
+        $idleTimeoutSeconds = [int]$Spec.idle_timeout_seconds
+    }
+
+    $result = Invoke-WatchedProcess `
+        -FilePath $Spec.command `
         -ArgumentList @($Spec.args) `
         -WorkingDirectory $RootPath `
-        -RedirectStandardOutput $StdoutPath `
-        -RedirectStandardError $StderrPath `
-        -PassThru `
-        -Wait
+        -StdoutPath $StdoutPath `
+        -StderrPath $StderrPath `
+        -TimeoutSeconds $timeoutSeconds `
+        -IdleTimeoutSeconds $idleTimeoutSeconds
 
-    $stdout = @()
-    if (Test-Path -LiteralPath $StdoutPath) {
-        $stdout = @(Get-Content -LiteralPath $StdoutPath)
-        if ($stdout.Count -gt 0) {
-            $stdout | Out-Host
-        }
+    Show-ProcessLogs -StdoutPath $StdoutPath -StderrPath $StderrPath
+
+    if ($result.timed_out) {
+        throw "Command timed out (reason=$($result.timed_out_reason), timeout=$timeoutSeconds, idle=$idleTimeoutSeconds): $display"
     }
 
-    $stderr = @()
-    if (Test-Path -LiteralPath $StderrPath) {
-        $stderr = @(Get-Content -LiteralPath $StderrPath)
-        if ($stderr.Count -gt 0) {
-            $stderr | Out-Host
-        }
-    }
-
-    if ($process.ExitCode -ne 0) {
-        throw "Command failed (exit=$($process.ExitCode)): $display"
+    if ([int]$result.exit_code -ne 0) {
+        throw "Command failed (exit=$($result.exit_code)): $display"
     }
 }
 
@@ -332,17 +481,22 @@ function Invoke-CodexTask {
         "-"
     )
 
-    $process = Start-Process -FilePath $launcher.FilePath `
+    $result = Invoke-WatchedProcess `
+        -FilePath $launcher.FilePath `
         -ArgumentList $args `
         -WorkingDirectory $RootPath `
-        -RedirectStandardInput $promptPath `
-        -RedirectStandardOutput $stdoutPath `
-        -RedirectStandardError $stderrPath `
-        -PassThru `
-        -Wait
+        -StdoutPath $stdoutPath `
+        -StderrPath $stderrPath `
+        -StdinPath $promptPath `
+        -TimeoutSeconds $CodexTimeoutSeconds `
+        -IdleTimeoutSeconds $CodexIdleTimeoutSeconds
 
-    if ($process.ExitCode -ne 0) {
-        throw "Codex task failed (task=$TaskId, exit=$($process.ExitCode)). See: $stderrPath"
+    if ($result.timed_out) {
+        throw "Codex task timed out (task=$TaskId, reason=$($result.timed_out_reason), timeout=$CodexTimeoutSeconds, idle=$CodexIdleTimeoutSeconds). See: $stderrPath"
+    }
+
+    if ([int]$result.exit_code -ne 0) {
+        throw "Codex task failed (task=$TaskId, exit=$($result.exit_code)). See: $stderrPath"
     }
 }
 
@@ -477,6 +631,27 @@ function Get-ErrorClass {
     if ([string]::IsNullOrWhiteSpace($Message)) {
         return "unknown"
     }
+    if ($Message -like "*Another checklist loop is running*") {
+        return "lock_conflict"
+    }
+    if ($Message -like "*Working tree is dirty*") {
+        return "dirty_worktree"
+    }
+    if ($Message -like "*Task file not found:*" -or $Message -like "*StartFromTaskId not found:*" -or $Message -like "*No tasks in descriptor file.*" -or $Message -like "*TaskFile is required.*") {
+        return "input_validation_failure"
+    }
+    if ($Message -like "*Manual validation is required*" -or $Message -like "*SkipManualValidation requires ForceReleaseWithoutManual.*") {
+        return "manual_gate_failure"
+    }
+    if ($Message -like "*dotnet build ClassroomToolkit.sln -c Release*" -or $Message -like "*dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release*") {
+        return "release_validation_failure"
+    }
+    if ($Message -like "*Codex task timed out*") {
+        return "codex_timeout"
+    }
+    if ($Message -like "*Command timed out*") {
+        return "gate_timeout"
+    }
     if ($Message -like "*Codex task failed*") {
         return "codex_failure"
     }
@@ -485,6 +660,9 @@ function Get-ErrorClass {
     }
     if ($Message -like "*Command failed*") {
         return "gate_failure"
+    }
+    if ($Message -like "*git reset --hard failed.*" -or $Message -like "*git clean -fd failed.*") {
+        return "rollback_failure"
     }
     return "unknown"
 }
@@ -506,6 +684,39 @@ function Test-GatePreflight {
     }
 }
 
+function Test-TaskDescriptor {
+    param([object[]]$Tasks)
+
+    $seen = @{}
+    for ($i = 0; $i -lt $Tasks.Count; $i++) {
+        $task = $Tasks[$i]
+        $index = $i + 1
+        if ($null -eq $task) {
+            throw "Invalid task descriptor: task index $index is null."
+        }
+
+        $taskId = [string]$task.id
+        if ([string]::IsNullOrWhiteSpace($taskId)) {
+            throw "Invalid task descriptor: task index $index missing id."
+        }
+
+        if ($seen.ContainsKey($taskId)) {
+            throw "Invalid task descriptor: duplicate task id '$taskId'."
+        }
+        $seen[$taskId] = $true
+
+        if ([string]::IsNullOrWhiteSpace([string]$task.title)) {
+            throw "Invalid task descriptor: task '$taskId' missing title."
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$task.prompt)) {
+            throw "Invalid task descriptor: task '$taskId' missing prompt."
+        }
+        if (-not $SkipAutoCommit -and [string]::IsNullOrWhiteSpace([string]$task.commit_message)) {
+            throw "Invalid task descriptor: task '$taskId' missing commit_message."
+        }
+    }
+}
+
 Write-Phase "Environment check"
 Assert-Command -Name git -Hint "Install Git first."
 Assert-Command -Name dotnet -Hint "Install .NET SDK first."
@@ -517,6 +728,18 @@ if ($MaxAttemptsPerTask -lt 1) {
 }
 if ($LockStaleAfterMinutes -lt 1) {
     throw "LockStaleAfterMinutes must be >= 1."
+}
+if ($CodexTimeoutSeconds -lt 1) {
+    throw "CodexTimeoutSeconds must be >= 1."
+}
+if ($CodexIdleTimeoutSeconds -lt 1) {
+    throw "CodexIdleTimeoutSeconds must be >= 1."
+}
+if ($GateTimeoutSeconds -lt 1) {
+    throw "GateTimeoutSeconds must be >= 1."
+}
+if ($GateIdleTimeoutSeconds -lt 1) {
+    throw "GateIdleTimeoutSeconds must be >= 1."
 }
 if ([string]::IsNullOrWhiteSpace($TaskFile)) {
     throw "TaskFile is required. Pass -TaskFile <path-to-tasks.json>."
@@ -537,6 +760,7 @@ $tasks = @($taskDoc.tasks)
 if ($tasks.Count -eq 0) {
     throw "No tasks in descriptor file."
 }
+Test-TaskDescriptor -Tasks $tasks
 
 $startIndex = 0
 if (-not [string]::IsNullOrWhiteSpace($StartFromTaskId)) {
@@ -556,7 +780,7 @@ if (-not [string]::IsNullOrWhiteSpace($StartFromTaskId)) {
 $logDirectory = Join-Path $repoPath ".codex/logs/checklist-loop"
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 
-$runId = Get-Date -Format "yyyyMMdd-HHmmss"
+$runId = "{0}-{1}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), ([guid]::NewGuid().ToString("N").Substring(0, 6))
 $summaryPath = Join-Path $logDirectory ("run-{0}.summary.json" -f $runId)
 $lockPath = Resolve-InputPath -RootPath $repoPath -InputPath $LockFile
 
@@ -583,6 +807,10 @@ $runSummary = [ordered]@{
         max_attempts_per_task = $MaxAttemptsPerTask
         lock_file = $LockFile
         lock_stale_after_minutes = $LockStaleAfterMinutes
+        codex_timeout_seconds = $CodexTimeoutSeconds
+        codex_idle_timeout_seconds = $CodexIdleTimeoutSeconds
+        gate_timeout_seconds = $GateTimeoutSeconds
+        gate_idle_timeout_seconds = $GateIdleTimeoutSeconds
         disable_gate_preflight = [bool]$DisableGatePreflight
         skip_manual_validation = [bool]$SkipManualValidation
         force_release_without_manual = [bool]$ForceReleaseWithoutManual
@@ -595,6 +823,7 @@ $runSummary = [ordered]@{
     final_checkpoint = $null
     failed_task_id = $null
     failed_gate_command = $null
+    failed_timeout_reason = $null
     rollback = [ordered]@{
         attempted = $false
         skipped = $false
@@ -661,7 +890,11 @@ try {
                         command = (Format-CommandSpec -Spec $spec)
                         stdout_path = Join-Path $logDirectory ("{0}-{1:D2}-{2}.stdout.log" -f $taskId, ($g + 1), (Get-Date -Format "yyyyMMdd-HHmmss"))
                         stderr_path = Join-Path $logDirectory ("{0}-{1:D2}-{2}.stderr.log" -f $taskId, ($g + 1), (Get-Date -Format "yyyyMMdd-HHmmss"))
+                        timeout_seconds = if ([int]$spec.timeout_seconds -gt 0) { [int]$spec.timeout_seconds } else { $GateTimeoutSeconds }
+                        idle_timeout_seconds = if ([int]$spec.idle_timeout_seconds -gt 0) { [int]$spec.idle_timeout_seconds } else { $GateIdleTimeoutSeconds }
                         status = "running"
+                        timed_out = $false
+                        timeout_reason = $null
                         error_message = $null
                     }
                     $taskSummary.gates += $gateSummary
@@ -686,11 +919,20 @@ try {
                 if ($null -ne $failedGate) {
                     $failedGate.status = "failed"
                     $failedGate.error_message = $_.Exception.Message
+                    if ($_.Exception.Message -like "*timed out*") {
+                        $failedGate.timed_out = $true
+                        if ($_.Exception.Message -like "*idle-timeout*") {
+                            $failedGate.timeout_reason = "idle-timeout"
+                        }
+                        else {
+                            $failedGate.timeout_reason = "total-timeout"
+                        }
+                    }
                 }
                 $errorClass = Get-ErrorClass -Message $_.Exception.Message
                 $runSummary.error_class = $errorClass
 
-                if ($attempt -lt $MaxAttemptsPerTask -and $errorClass -in @("codex_failure", "gate_failure", "unknown")) {
+                if ($attempt -lt $MaxAttemptsPerTask -and $errorClass -in @("codex_failure", "gate_failure", "codex_timeout", "gate_timeout", "unknown")) {
                     Write-Host "Task failed, retrying: $($_.Exception.Message)" -ForegroundColor Yellow
                     continue
                 }
@@ -729,6 +971,14 @@ catch {
     if ($null -eq $runSummary.error_class) {
         $runSummary.error_class = Get-ErrorClass -Message $_.Exception.Message
     }
+    if ([string]::IsNullOrWhiteSpace([string]$runSummary.failed_timeout_reason) -and $_.Exception.Message -like "*timed out*") {
+        if ($_.Exception.Message -like "*idle-timeout*") {
+            $runSummary.failed_timeout_reason = "idle-timeout"
+        }
+        else {
+            $runSummary.failed_timeout_reason = "total-timeout"
+        }
+    }
     $runSummary.final_checkpoint = $checkpoint
 
     $failedTask = $runSummary.tasks | Where-Object { $_.status -eq "failed" -or $_.status -eq "running" } | Select-Object -First 1
@@ -737,6 +987,9 @@ catch {
         $failedGate = $failedTask.gates | Where-Object { $_.status -eq "failed" -or $_.status -eq "running" } | Select-Object -First 1
         if ($null -ne $failedGate) {
             $runSummary.failed_gate_command = $failedGate.command
+            if ($null -ne $failedGate.PSObject.Properties["timeout_reason"] -and -not [string]::IsNullOrWhiteSpace([string]$failedGate.timeout_reason)) {
+                $runSummary.failed_timeout_reason = [string]$failedGate.timeout_reason
+            }
         }
     }
 

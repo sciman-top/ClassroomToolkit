@@ -50,7 +50,11 @@ powershell -File scripts/run-unattended-loop.ps1 `
   -Mode checklist `
   -TaskFile docs/unattended/tasks.json `
   -SkipManualValidation `
-  -ForceReleaseWithoutManual
+  -ForceReleaseWithoutManual `
+  -CodexTimeoutSeconds 1200 `
+  -CodexIdleTimeoutSeconds 180 `
+  -GateTimeoutSeconds 900 `
+  -GateIdleTimeoutSeconds 120
 ```
 
 4. Keep project-specific checks in task gates only. Do not hardcode project paths in script logic.
@@ -72,6 +76,14 @@ powershell -File scripts/unattended/test-checklist-loop-smoke.ps1 -RepoRoot .
 
 This gives a minimal migration + verification path without manually stitching multiple scripts.
 
+Cross-project portability regression (transfer + smoke in isolated target repo):
+
+```powershell
+powershell -File scripts/unattended/test-portability-regression.ps1 `
+  -SourceRepoRoot . `
+  -Clean
+```
+
 ## Token waste prevention baseline
 1. Preflight before any Codex iteration:
 - task file parse
@@ -87,6 +99,10 @@ This gives a minimal migration + verification path without manually stitching mu
 
 4. Single runner lock:
 - `run-checklist-loop.ps1` uses lock file (`.codex/checklist-loop.lock.json`) to prevent concurrent runs.
+
+5. Watchdog timeouts:
+- checklist supports `CodexTimeoutSeconds`, `CodexIdleTimeoutSeconds`, `GateTimeoutSeconds`, `GateIdleTimeoutSeconds`
+- gate-level override supported in task json with `timeout_seconds` and `idle_timeout_seconds`
 
 5. Structured summary always:
 - each run emits `.codex/logs/checklist-loop/run-*.summary.json`

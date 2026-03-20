@@ -16,6 +16,10 @@ param(
     [int]$MaxExecFailuresPerTask = 1,
     [int]$MaxNoProgressPerTask = 1,
     [int]$LockStaleAfterMinutes = 30,
+    [int]$CodexTimeoutSeconds = 1200,
+    [int]$CodexIdleTimeoutSeconds = 180,
+    [int]$GateTimeoutSeconds = 900,
+    [int]$GateIdleTimeoutSeconds = 120,
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
 
@@ -41,7 +45,11 @@ if ($Mode -eq "checklist") {
         "-RepoRoot", $RepoRoot,
         "-CodexCommand", $CodexCommand,
         "-MaxAttemptsPerTask", $MaxAttemptsPerTask,
-        "-LockStaleAfterMinutes", $LockStaleAfterMinutes
+        "-LockStaleAfterMinutes", $LockStaleAfterMinutes,
+        "-CodexTimeoutSeconds", $CodexTimeoutSeconds,
+        "-CodexIdleTimeoutSeconds", $CodexIdleTimeoutSeconds,
+        "-GateTimeoutSeconds", $GateTimeoutSeconds,
+        "-GateIdleTimeoutSeconds", $GateIdleTimeoutSeconds
     )
     if (-not [string]::IsNullOrWhiteSpace($TaskFile)) { $forward += @("-TaskFile", $TaskFile) }
     if (-not [string]::IsNullOrWhiteSpace($StartFromTaskId)) { $forward += @("-StartFromTaskId", $StartFromTaskId) }
