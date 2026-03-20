@@ -54,7 +54,9 @@ powershell -File scripts/run-unattended-loop.ps1 `
   -CodexTimeoutSeconds 1200 `
   -CodexIdleTimeoutSeconds 180 `
   -GateTimeoutSeconds 900 `
-  -GateIdleTimeoutSeconds 120
+  -GateIdleTimeoutSeconds 120 `
+  -MaxWallClockMinutes 120 `
+  -MaxCodexRuns 50
 ```
 
 4. Keep project-specific checks in task gates only. Do not hardcode project paths in script logic.
@@ -109,6 +111,11 @@ powershell -File scripts/unattended/test-portability-regression.ps1 `
 - checklist supports `CodexTimeoutSeconds`, `CodexIdleTimeoutSeconds`, `GateTimeoutSeconds`, `GateIdleTimeoutSeconds`
 - gate-level override supported in task json with `timeout_seconds` and `idle_timeout_seconds`
 - refactor mode supports `IterationTimeoutSeconds` and `IdleTimeoutSeconds` through unified wrapper forwarding
+
+6. Budget guardrails:
+- checklist supports `MaxWallClockMinutes` and `MaxCodexRuns`
+- refactor supports `MaxWallClockMinutes`
+- exceeding budget stops execution with structured blocker status instead of silently consuming more tokens
 
 5. Structured summary always:
 - each run emits `.codex/logs/checklist-loop/run-*.summary.json`

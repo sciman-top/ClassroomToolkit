@@ -10,6 +10,8 @@ param(
     [int]$CodexIdleTimeoutSeconds = 180,
     [int]$GateTimeoutSeconds = 900,
     [int]$GateIdleTimeoutSeconds = 120,
+    [int]$MaxWallClockMinutes = 120,
+    [int]$MaxCodexRuns = 50,
     [switch]$DisableGatePreflight,
     [switch]$SkipManualValidation,
     [switch]$ForceReleaseWithoutManual,
@@ -667,6 +669,9 @@ function Get-ErrorClass {
     if ($Message -like "*Task failed after max attempts:*") {
         return "task_retry_exhausted"
     }
+    if ($Message -like "*Execution wall clock budget exceeded*" -or $Message -like "*Codex run budget exceeded*") {
+        return "budget_exhausted"
+    }
     if ($Message -like "*git reset --hard failed.*" -or $Message -like "*git clean -fd failed.*") {
         return "rollback_failure"
     }
@@ -767,6 +772,12 @@ if ($GateTimeoutSeconds -lt 1) {
 if ($GateIdleTimeoutSeconds -lt 1) {
     throw "GateIdleTimeoutSeconds must be >= 1."
 }
+if ($MaxWallClockMinutes -lt 1) {
+    throw "MaxWallClockMinutes must be >= 1."
+}
+if ($MaxCodexRuns -lt 1) {
+    throw "MaxCodexRuns must be >= 1."
+}
 if ([string]::IsNullOrWhiteSpace($TaskFile)) {
     throw "TaskFile is required. Pass -TaskFile <path-to-tasks.json>."
 }
@@ -817,6 +828,9 @@ if (-not $DryRun) {
     Acquire-RunLock -Path $lockPath -RunId $runId -RepoPath $repoPath -StaleAfterMinutes $LockStaleAfterMinutes
 }
 
+$runStartedAtUtc = [DateTime]::UtcNow
+$codexRunCount = 0
+
 $runSummary = [ordered]@{
     run_id = $runId
     started_at = (Get-Date).ToString("o")
@@ -837,6 +851,8 @@ $runSummary = [ordered]@{
         codex_idle_timeout_seconds = $CodexIdleTimeoutSeconds
         gate_timeout_seconds = $GateTimeoutSeconds
         gate_idle_timeout_seconds = $GateIdleTimeoutSeconds
+        max_wall_clock_minutes = $MaxWallClockMinutes
+        max_codex_runs = $MaxCodexRuns
         disable_gate_preflight = [bool]$DisableGatePreflight
         skip_manual_validation = [bool]$SkipManualValidation
         force_release_without_manual = [bool]$ForceReleaseWithoutManual
@@ -850,6 +866,8 @@ $runSummary = [ordered]@{
     failed_task_id = $null
     failed_gate_command = $null
     failed_timeout_reason = $null
+    codex_runs_used = 0
+    elapsed_seconds = 0
     rollback = [ordered]@{
         attempted = $false
         skipped = $false
@@ -898,6 +916,11 @@ try {
 
         $taskSucceeded = $false
         for ($attempt = 1; $attempt -le $MaxAttemptsPerTask; $attempt++) {
+            $elapsedMinutes = ([DateTime]::UtcNow - $runStartedAtUtc).TotalMinutes
+            if ($elapsedMinutes -ge $MaxWallClockMinutes) {
+                throw ("Execution wall clock budget exceeded (minutes={0:N1}, max={1})." -f $elapsedMinutes, $MaxWallClockMinutes)
+            }
+
             $taskSummary.attempts = $attempt
             $taskSummary.status = "running"
             $taskSummary.started_at = (Get-Date).ToString("o")
@@ -907,6 +930,10 @@ try {
             Write-Phase ("Task {0}/{1}: {2} (attempt {3}/{4})" -f ($i + 1), $tasks.Count, $title, $attempt, $MaxAttemptsPerTask)
 
             try {
+                if ($codexRunCount -ge $MaxCodexRuns) {
+                    throw "Codex run budget exceeded (max=$MaxCodexRuns)."
+                }
+                $codexRunCount++
                 Invoke-CodexTask -RootPath $repoPath -Prompt $prompt -TaskId $taskId -LogDirectory $logDirectory
 
                 for ($g = 0; $g -lt $gateSpecs.Count; $g++) {
@@ -1030,6 +1057,8 @@ finally {
     if ($null -eq $runSummary.final_checkpoint) {
         $runSummary.final_checkpoint = $checkpoint
     }
+    $runSummary.codex_runs_used = $codexRunCount
+    $runSummary.elapsed_seconds = [Math]::Round(([DateTime]::UtcNow - $runStartedAtUtc).TotalSeconds, 2)
     $runSummary.finished_at = (Get-Date).ToString("o")
     Write-RunSummary -SummaryPath $summaryPath -Summary $runSummary
     if (-not $DryRun) {

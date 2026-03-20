@@ -22,6 +22,8 @@ param(
     [int]$CodexIdleTimeoutSeconds = 180,
     [int]$GateTimeoutSeconds = 900,
     [int]$GateIdleTimeoutSeconds = 120,
+    [int]$MaxWallClockMinutes = 120,
+    [int]$MaxCodexRuns = 50,
     [string]$SkillPath = "",
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
@@ -52,7 +54,9 @@ if ($Mode -eq "checklist") {
         "-CodexTimeoutSeconds", $CodexTimeoutSeconds,
         "-CodexIdleTimeoutSeconds", $CodexIdleTimeoutSeconds,
         "-GateTimeoutSeconds", $GateTimeoutSeconds,
-        "-GateIdleTimeoutSeconds", $GateIdleTimeoutSeconds
+        "-GateIdleTimeoutSeconds", $GateIdleTimeoutSeconds,
+        "-MaxWallClockMinutes", $MaxWallClockMinutes,
+        "-MaxCodexRuns", $MaxCodexRuns
     )
     if (-not [string]::IsNullOrWhiteSpace($TaskFile)) { $forward += @("-TaskFile", $TaskFile) }
     if (-not [string]::IsNullOrWhiteSpace($StartFromTaskId)) { $forward += @("-StartFromTaskId", $StartFromTaskId) }
@@ -81,6 +85,7 @@ $forward = @(
     "-MaxNoProgressPerTask", $MaxNoProgressPerTask,
     "-IterationTimeoutSeconds", $IterationTimeoutSeconds,
     "-IdleTimeoutSeconds", $IdleTimeoutSeconds,
+    "-MaxWallClockMinutes", $MaxWallClockMinutes,
     "-LockStaleAfterMinutes", $LockStaleAfterMinutes,
     "-PromptProfile", $PromptProfile
 )

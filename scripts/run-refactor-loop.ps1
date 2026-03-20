@@ -14,6 +14,7 @@ param(
     [int]$MaxAutoRecoverPerTask = 1,
     [int]$IterationTimeoutSeconds = 900,
     [int]$IdleTimeoutSeconds = 120,
+    [int]$MaxWallClockMinutes = 120,
     [int]$LockStaleAfterMinutes = 30,
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
@@ -1058,6 +1059,14 @@ $autoRecoverAttempts = @{}
 $autoRecoverHints = @{}
 $execFailuresByTask = @{}
 $noProgressByTask = @{}
+
+if ($MaxWallClockMinutes -lt 1) {
+    Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+    Write-Host "Invalid MaxWallClockMinutes value. It must be >= 1."
+    return
+}
+
+$loopStartedAtUtc = [DateTime]::UtcNow
 Acquire-LoopLock -Path $lockFilePath -StaleAfterMinutes $LockStaleAfterMinutes
 
 try {
@@ -1070,6 +1079,13 @@ try {
     }
 
 for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
+    $elapsedMinutes = ([DateTime]::UtcNow - $loopStartedAtUtc).TotalMinutes
+    if ($elapsedMinutes -ge $MaxWallClockMinutes) {
+        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Write-Host ("Loop wall-clock budget exceeded (minutes={0:N1}, max={1})." -f $elapsedMinutes, $MaxWallClockMinutes)
+        break
+    }
+
     $selection = Get-Selection
 
     $selectionStatus = Get-SelectionStatusValue -Selection $selection
