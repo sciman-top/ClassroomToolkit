@@ -35,6 +35,15 @@ msbuild*.log
 .codex/logs/
 .codex/tmp-*/
 
+# Assistant and local tooling metadata
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+GlobalUser/
+.codex/
+.claude/
+.trae/
+
 # OS files
 .DS_Store
 Thumbs.db
