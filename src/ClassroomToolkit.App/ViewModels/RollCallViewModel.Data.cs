@@ -1,10 +1,7 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using ClassroomToolkit.App;
 using ClassroomToolkit.Application.UseCases.RollCall;
-using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.App.Windowing;
 
@@ -12,79 +9,15 @@ namespace ClassroomToolkit.App.ViewModels;
 
 public sealed partial class RollCallViewModel
 {
-    private readonly object _preloadLock = new();
-    private Task<RollCallLoadResult>? _preloadTask;
-    private RollCallLoadResult? _preloadedResult;
-    private string? _preloadedPath;
-    private DateTime _preloadedWriteTimeUtc;
-
     public void WarmupData(string path)
     {
         if (_disposed || _disposeCancellation.IsCancellationRequested) return;
-        if (string.IsNullOrWhiteSpace(path)) return;
-        if (!File.Exists(path)) return;
-
-        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
-        {
-            return;
-        }
-
-        lock (_preloadLock)
-        {
-            if (_preloadedResult != null && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc))
-            {
-                _preloadedResult = null;
-            }
-            if (_preloadedResult != null && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == writeTimeUtc)
-            {
-                return;
-            }
-            if (_preloadTask != null && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == writeTimeUtc)
-            {
-                return;
-            }
-
-            _preloadedPath = path;
-            _preloadedWriteTimeUtc = writeTimeUtc;
-            var expectedPath = path;
-            var expectedWriteTimeUtc = writeTimeUtc;
-            var preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
-            _preloadTask = preloadTask;
-            preloadTask.ContinueWith(task =>
-            {
-                lock (_preloadLock)
-                {
-                    if (_disposed || _disposeCancellation.IsCancellationRequested)
-                    {
-                        if (ReferenceEquals(_preloadTask, preloadTask))
-                        {
-                            _preloadTask = null;
-                        }
-                        return;
-                    }
-                    if (task.Status == TaskStatus.RanToCompletion)
-                    {
-                        var completedResult = task.GetAwaiter().GetResult();
-                        if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
-                        {
-                            if (string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
-                            {
-                                _preloadedResult = completedResult;
-                            }
-                        }
-                    }
-                    if (ReferenceEquals(_preloadTask, preloadTask))
-                    {
-                        _preloadTask = null;
-                    }
-                }
-            }, TaskScheduler.Default);
-        }
+        _loadOrchestrator.Warmup(path, _disposeCancellation.Token);
     }
 
     public void LoadData(string? preferredClass = null)
     {
-        var result = LoadDataCore();
+        var result = _loadOrchestrator.Load(_dataPath);
         ApplyLoadResult(result, preferredClass);
     }
 
@@ -97,7 +30,7 @@ public sealed partial class RollCallViewModel
             return;
         }
 
-        var preload = TryConsumePreloadedResult(_dataPath);
+        var preload = _loadOrchestrator.TryConsumePreloaded(_dataPath);
         if (preload != null)
         {
             if (_disposed || _disposeCancellation.IsCancellationRequested)
@@ -115,10 +48,10 @@ public sealed partial class RollCallViewModel
             return;
         }
 
-        RollCallLoadResult result;
+        RollCallWorkbookLoadResult result;
         try
         {
-            result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+            result = await Task.Run(() => _loadOrchestrator.Load(_dataPath), _disposeCancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
         {
@@ -138,93 +71,7 @@ public sealed partial class RollCallViewModel
         }, DispatcherPriority.Render);
     }
 
-    private RollCallLoadResult LoadDataCore()
-    {
-        return TryConsumePreloadedResult(_dataPath) ?? LoadDataFromPath(_dataPath);
-    }
-
-    private RollCallLoadResult? TryConsumePreloadedResult(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
-
-        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
-        {
-            return null;
-        }
-
-        Task<RollCallLoadResult>? preloadTask = null;
-        bool consumeTask = false;
-
-        lock (_preloadLock)
-        {
-            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc)
-            {
-                _preloadedResult = null;
-                return null;
-            }
-            if (_preloadedResult != null)
-            {
-                var result = _preloadedResult;
-                _preloadedResult = null;
-                return result;
-            }
-            if (_preloadTask != null && _preloadTask.IsCompleted)
-            {
-                preloadTask = _preloadTask;
-                _preloadTask = null;
-                consumeTask = true;
-            }
-        }
-
-        if (preloadTask != null && consumeTask)
-        {
-            try
-            {
-                if (!preloadTask.IsCompletedSuccessfully) return null;
-                var result = preloadTask.GetAwaiter().GetResult();
-                if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
-                return result;
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
-                        path,
-                        ex.GetType().Name,
-                        ex.Message));
-                return null;
-            }
-        }
-
-        return null;
-    }
-
-    private RollCallLoadResult LoadDataFromPath(string path)
-    {
-        var result = _workbookUseCase.Load(path);
-        return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage);
-    }
-
-    private static bool TryGetFileWriteTimeUtc(string path, out DateTime writeTimeUtc)
-    {
-        writeTimeUtc = default;
-        try
-        {
-            writeTimeUtc = File.GetLastWriteTimeUtc(path);
-            return true;
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine(
-                RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(
-                    path,
-                    ex.GetType().Name,
-                    ex.Message));
-            return false;
-        }
-    }
-
-    private void ApplyLoadResult(RollCallLoadResult result, string? preferredClass)
+    private void ApplyLoadResult(RollCallWorkbookLoadResult result, string? preferredClass)
     {
         if (_disposed || _disposeCancellation.IsCancellationRequested)
         {
@@ -267,6 +114,4 @@ public sealed partial class RollCallViewModel
                 ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: data load failed callback failed: {ex.Message}"));
         }
     }
-
-    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates, string? ErrorMessage);
 }

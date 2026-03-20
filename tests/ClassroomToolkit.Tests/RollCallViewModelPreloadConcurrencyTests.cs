@@ -10,7 +10,9 @@ namespace ClassroomToolkit.Tests;
 public sealed class RollCallViewModelPreloadConcurrencyTests
 {
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-    private static readonly FieldInfo PreloadTaskField = typeof(RollCallViewModel)
+    private static readonly FieldInfo LoadOrchestratorField = typeof(RollCallViewModel)
+        .GetField("_loadOrchestrator", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly FieldInfo PreloadTaskField = typeof(RollCallWorkbookLoadOrchestrator)
         .GetField("_preloadTask", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     [Fact]
@@ -58,7 +60,8 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
 
     private static Task? GetPreloadTask(RollCallViewModel viewModel)
     {
-        return PreloadTaskField.GetValue(viewModel) as Task;
+        var orchestrator = LoadOrchestratorField.GetValue(viewModel);
+        return PreloadTaskField.GetValue(orchestrator) as Task;
     }
 
     private sealed class CoordinatedStore : IRollCallWorkbookStore

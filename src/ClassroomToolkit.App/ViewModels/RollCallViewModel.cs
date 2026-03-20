@@ -14,6 +14,7 @@ namespace ClassroomToolkit.App.ViewModels;
 public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
 {
     private readonly RollCallWorkbookUseCase _workbookUseCase;
+    private readonly RollCallWorkbookLoadOrchestrator _loadOrchestrator;
     private readonly string _dataPath;
     private StudentWorkbook? _workbook;
     private RollCallEngine? _engine;
@@ -57,6 +58,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     {
         _dataPath = dataPath;
         _workbookUseCase = workbookUseCase ?? throw new ArgumentNullException(nameof(workbookUseCase));
+        _loadOrchestrator = new RollCallWorkbookLoadOrchestrator(_workbookUseCase);
         _photoResolver = new StudentPhotoResolver("student_photos");
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
@@ -86,11 +88,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
         _disposeCancellation.Cancel();
         _photoResolver.Dispose();
 
-        lock (_preloadLock)
-        {
-            _preloadTask = null;
-            _preloadedResult = null;
-        }
+        _loadOrchestrator.Reset();
 
         _disposeCancellation.Dispose();
     }
