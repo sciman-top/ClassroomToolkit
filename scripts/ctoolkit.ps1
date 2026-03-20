@@ -7,7 +7,10 @@
     [switch]$SmokeZOrderAuto,
     [switch]$SmokeNonInteractive,
     [switch]$CheckRefactorConsistency,
-    [switch]$InstallPreCommitHook
+    [switch]$InstallPreCommitHook,
+    [ValidateSet("quick", "standard", "full")]
+    [string]$StableTestProfile = "standard",
+    [switch]$LegacyTestRunner
 )
 
 Set-StrictMode -Version Latest
@@ -72,14 +75,36 @@ Invoke-DotnetWithRetry -Arguments @("build", ".\ClassroomToolkit.sln", "-c", "De
 
 if (-not $SkipTests) {
     Write-Host "==> 测试" -ForegroundColor Cyan
-    Invoke-DotnetWithRetry -Arguments @(
-        "test",
-        ".\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj",
-        "-c",
-        "Debug",
-        "--no-build",
-        "-m:1"
-    )
+    if ($LegacyTestRunner) {
+        Invoke-DotnetWithRetry -Arguments @(
+            "test",
+            ".\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj",
+            "-c",
+            "Debug",
+            "--no-build",
+            "-m:1"
+        )
+    }
+    else {
+        $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
+        $stableConfigValidator = Join-Path $PSScriptRoot "validation/validate-stable-test-config.ps1"
+        if (-not (Test-Path -LiteralPath $stableTestsScript)) {
+            throw "未找到稳定测试脚本: $stableTestsScript"
+        }
+        if (-not (Test-Path -LiteralPath $stableConfigValidator)) {
+            throw "未找到稳定测试配置校验脚本: $stableConfigValidator"
+        }
+
+        & powershell -ExecutionPolicy Bypass -File $stableConfigValidator
+        if ($LASTEXITCODE -ne 0) {
+            throw "稳定测试配置校验失败，退出码: $LASTEXITCODE"
+        }
+
+        & powershell -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
+        if ($LASTEXITCODE -ne 0) {
+            throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"
+        }
+    }
 }
 
 if ($CheckRefactorConsistency) {

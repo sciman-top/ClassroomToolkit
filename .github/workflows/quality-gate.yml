@@ -52,6 +52,23 @@ jobs:
           dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build
           --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
 
+      - name: Resolve Stable Profile
+        id: stable_profile
+        shell: pwsh
+        run: |
+          $profile = & powershell -ExecutionPolicy Bypass -File scripts/validation/resolve-stable-profile.ps1 `
+            -Pipeline "quality-gate" `
+            -EventName "${{ github.event_name }}"
+          "profile=$profile" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Stable Test Profile
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/validation/run-stable-tests.ps1 `
+            -Configuration Debug `
+            -SkipBuild `
+            -Profile "${{ steps.stable_profile.outputs.profile }}"
+
       - name: Full Debug Tests With Coverage
         run: >
           dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build
@@ -80,4 +97,14 @@ jobs:
         with:
           name: quality-gate-test-results
           path: artifacts/TestResults
+          if-no-files-found: warn
+
+      - name: Upload Stable Test Summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-stable-test-summary
+          path: |
+            artifacts/TestResults/stable-tests-summary.json
+            artifacts/TestResults/stable-tests-entries
           if-no-files-found: warn
