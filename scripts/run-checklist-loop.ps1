@@ -661,6 +661,12 @@ function Get-ErrorClass {
     if ($Message -like "*Command failed*") {
         return "gate_failure"
     }
+    if ($Message -like "*git add failed.*" -or $Message -like "*git commit failed.*") {
+        return "vcs_failure"
+    }
+    if ($Message -like "*Task failed after max attempts:*") {
+        return "task_retry_exhausted"
+    }
     if ($Message -like "*git reset --hard failed.*" -or $Message -like "*git clean -fd failed.*") {
         return "rollback_failure"
     }
@@ -680,6 +686,26 @@ function Test-GatePreflight {
         }
         if (-not (Get-Command $spec.command -ErrorAction SilentlyContinue)) {
             throw "Missing command: $($spec.command) for task=$TaskId gate=$($i + 1)."
+        }
+
+        $args = @($spec.args)
+        for ($j = 0; $j -lt $args.Count; $j++) {
+            if ([string]::IsNullOrWhiteSpace([string]$args[$j])) {
+                throw "Invalid gate: task=$TaskId gate=$($i + 1) contains empty argument at index $j."
+            }
+        }
+
+        $commandLower = [string]$spec.command
+        $commandLower = $commandLower.ToLowerInvariant()
+        if ($commandLower -in @("powershell", "powershell.exe", "pwsh", "pwsh.exe")) {
+            for ($j = 0; $j -lt $args.Count; $j++) {
+                $arg = [string]$args[$j]
+                if ($arg -in @("-Command", "-c")) {
+                    if ($j + 1 -ge $args.Count -or [string]::IsNullOrWhiteSpace([string]$args[$j + 1])) {
+                        throw "Invalid gate: task=$TaskId gate=$($i + 1) has empty PowerShell command body."
+                    }
+                }
+            }
         }
     }
 }
@@ -932,7 +958,7 @@ try {
                 $errorClass = Get-ErrorClass -Message $_.Exception.Message
                 $runSummary.error_class = $errorClass
 
-                if ($attempt -lt $MaxAttemptsPerTask -and $errorClass -in @("codex_failure", "gate_failure", "codex_timeout", "gate_timeout", "unknown")) {
+                if ($attempt -lt $MaxAttemptsPerTask -and $errorClass -in @("codex_failure", "gate_failure", "codex_timeout", "gate_timeout")) {
                     Write-Host "Task failed, retrying: $($_.Exception.Message)" -ForegroundColor Yellow
                     continue
                 }

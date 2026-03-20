@@ -103,6 +103,7 @@ powershell -File scripts/unattended/test-portability-regression.ps1 `
 5. Watchdog timeouts:
 - checklist supports `CodexTimeoutSeconds`, `CodexIdleTimeoutSeconds`, `GateTimeoutSeconds`, `GateIdleTimeoutSeconds`
 - gate-level override supported in task json with `timeout_seconds` and `idle_timeout_seconds`
+- refactor mode supports `IterationTimeoutSeconds` and `IdleTimeoutSeconds` through unified wrapper forwarding
 
 5. Structured summary always:
 - each run emits `.codex/logs/checklist-loop/run-*.summary.json`

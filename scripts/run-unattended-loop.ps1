@@ -16,10 +16,13 @@ param(
     [int]$MaxExecFailuresPerTask = 1,
     [int]$MaxNoProgressPerTask = 1,
     [int]$LockStaleAfterMinutes = 30,
+    [int]$IterationTimeoutSeconds = 900,
+    [int]$IdleTimeoutSeconds = 120,
     [int]$CodexTimeoutSeconds = 1200,
     [int]$CodexIdleTimeoutSeconds = 180,
     [int]$GateTimeoutSeconds = 900,
     [int]$GateIdleTimeoutSeconds = 120,
+    [string]$SkillPath = "",
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
 
@@ -76,12 +79,15 @@ $forward = @(
     "-MaxNonCodeProgress", $MaxNonCodeProgress,
     "-MaxExecFailuresPerTask", $MaxExecFailuresPerTask,
     "-MaxNoProgressPerTask", $MaxNoProgressPerTask,
+    "-IterationTimeoutSeconds", $IterationTimeoutSeconds,
+    "-IdleTimeoutSeconds", $IdleTimeoutSeconds,
     "-LockStaleAfterMinutes", $LockStaleAfterMinutes,
     "-PromptProfile", $PromptProfile
 )
 if (-not [string]::IsNullOrWhiteSpace($TaskFile)) { $forward += @("-TaskFile", $TaskFile) }
 if (-not [string]::IsNullOrWhiteSpace($StateFile)) { $forward += @("-StateFile", $StateFile) }
 if (-not [string]::IsNullOrWhiteSpace($ConfigFile)) { $forward += @("-ConfigFile", $ConfigFile) }
+if (-not [string]::IsNullOrWhiteSpace($SkillPath)) { $forward += @("-SkillPath", $SkillPath) }
 if ($SkipManualGates.IsPresent) { $forward += "-SkipManualGates" }
 if ($DryRun.IsPresent) { $forward += "-DryRun" }
 

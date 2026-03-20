@@ -65,3 +65,4 @@ if ($DryRun.IsPresent) {
 }
 
 & powershell -File $wrapperPath @forwardArgs
+exit $LASTEXITCODE
