@@ -22,7 +22,8 @@ powershell -NoProfile -File "%BOOTSTRAP_PS1%"
 if errorlevel 1 (
   echo.
   echo [提示] 运行环境准备失败。
-  echo 1. 请先运行 prereq 目录中的 .NET Desktop Runtime 安装包；
+  echo 1. 请先安装 .NET Desktop Runtime 10.x；
+  echo    官方下载： https://dotnet.microsoft.com/download/dotnet/10.0
   echo 2. 若当前电脑策略禁止安装运行时，请改用离线版。
   pause
   exit /b 12

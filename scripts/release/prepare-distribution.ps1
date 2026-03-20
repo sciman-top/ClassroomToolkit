@@ -329,38 +329,40 @@ if (-not $SkipPublish) {
     }
 }
 
-$preReqDir = Join-Path $standardDir "prereq"
-if ($buildStandard) {
-    New-Item -Path $preReqDir -ItemType Directory -Force | Out-Null
+$offlinePreReqDir = Join-Path $offlineDir "prereq"
+if ($buildOffline) {
+    New-Item -Path $offlinePreReqDir -ItemType Directory -Force | Out-Null
 }
 
 $resolvedInstaller = ""
 $sourcePrereqDir = Join-Path $scriptRoot "prereq"
-if (-not [string]::IsNullOrWhiteSpace($RuntimeInstallerPath)) {
-    $candidate = (Resolve-Path -LiteralPath $RuntimeInstallerPath -ErrorAction SilentlyContinue)
-    if ($candidate -eq $null) {
-        throw "Runtime installer path not found: $RuntimeInstallerPath"
-    }
+if ($buildOffline) {
+    if (-not [string]::IsNullOrWhiteSpace($RuntimeInstallerPath)) {
+        $candidate = (Resolve-Path -LiteralPath $RuntimeInstallerPath -ErrorAction SilentlyContinue)
+        if ($candidate -eq $null) {
+            throw "Runtime installer path not found: $RuntimeInstallerPath"
+        }
 
-    $resolvedInstaller = $candidate.Path
-}
-elseif ($EnsureLatestRuntime) {
-    $resolvedInstaller = Get-OrDownloadLatestRuntimeInstaller -Channel $RuntimeChannel -Architecture "x64" -PrereqDirectory $sourcePrereqDir
-}
-else {
-    $localPreReq = $sourcePrereqDir
-    if (Test-Path -LiteralPath $localPreReq) {
-        $defaultInstaller = Get-ChildItem -LiteralPath $localPreReq -Filter "*desktop-runtime*10*win-x64*.exe" -File |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-        if ($defaultInstaller -ne $null) {
-            $resolvedInstaller = $defaultInstaller.FullName
+        $resolvedInstaller = $candidate.Path
+    }
+    elseif ($EnsureLatestRuntime) {
+        $resolvedInstaller = Get-OrDownloadLatestRuntimeInstaller -Channel $RuntimeChannel -Architecture "x64" -PrereqDirectory $sourcePrereqDir
+    }
+    else {
+        $localPreReq = $sourcePrereqDir
+        if (Test-Path -LiteralPath $localPreReq) {
+            $defaultInstaller = Get-ChildItem -LiteralPath $localPreReq -Filter "*desktop-runtime*10*win-x64*.exe" -File |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+            if ($defaultInstaller -ne $null) {
+                $resolvedInstaller = $defaultInstaller.FullName
+            }
         }
     }
 }
 
-if ($buildStandard -and -not [string]::IsNullOrWhiteSpace($resolvedInstaller)) {
-    $targetInstallerPath = Join-Path $preReqDir ([System.IO.Path]::GetFileName($resolvedInstaller))
+if ($buildOffline -and -not [string]::IsNullOrWhiteSpace($resolvedInstaller)) {
+    $targetInstallerPath = Join-Path $offlinePreReqDir ([System.IO.Path]::GetFileName($resolvedInstaller))
     if (-not (Test-Path -LiteralPath $targetInstallerPath)) {
         Copy-Item -LiteralPath $resolvedInstaller -Destination $targetInstallerPath -Force
     }
@@ -453,12 +455,12 @@ if ($buildStandard) {
 if ($buildOffline) {
     Write-Host "Offline package: $offlineDir"
 }
-if ($buildStandard) {
+if ($buildOffline) {
     if ([string]::IsNullOrWhiteSpace($resolvedInstaller)) {
-        Write-Host "Runtime installer: not bundled (drop installer into scripts/release/prereq or pass -RuntimeInstallerPath)."
+        Write-Host "Runtime installer: not bundled into offline package (drop installer into scripts/release/prereq or pass -RuntimeInstallerPath)."
     }
     else {
-        Write-Host "Runtime installer bundled: $resolvedInstaller"
+        Write-Host "Runtime installer bundled into offline package: $resolvedInstaller"
     }
 }
 if (-not $SkipZip -and $archives.Count -gt 0) {

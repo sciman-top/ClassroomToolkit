@@ -50,6 +50,13 @@ ClassroomToolkit 当前聚焦单机、本地、课堂即时使用，不覆盖下
 
 推荐从 GitHub Releases 下载发布包，解压后直接运行 `ClassroomToolkit.exe`。
 
+### 发布形态（当前）
+
+- GitHub 版、标准版、离线版会分别生成独立目录，不混在同一个输出目录里。
+- GitHub 版：源码与文档仓库，不面向直接课堂安装。
+- 标准版：不内置 `.NET Desktop Runtime 10 x64`，体积更小，适合已安装运行时的机器。
+- 离线版：内置 `.NET Desktop Runtime 10 x64` 安装包，目录中会额外带 `prereq/`，适合离线分发或受限网络环境。
+
 第一次启动建议按这个顺序确认：
 
 1. 悬浮启动器是否正常出现
