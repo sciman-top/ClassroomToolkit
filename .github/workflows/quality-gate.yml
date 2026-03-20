@@ -35,6 +35,15 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Refactor Exit Contract Gate
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/unattended/test-refactor-loop-exit-contract.ps1 -RepoRoot .
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Refactor loop exit contract failed."
+            exit $LASTEXITCODE
+          }
+
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:

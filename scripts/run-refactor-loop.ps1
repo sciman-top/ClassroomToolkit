@@ -35,6 +35,18 @@ $configFileOverride = if ($PSBoundParameters.ContainsKey("ConfigFile")) { $Confi
 $modeResolverPath = Join-Path $repoPath "scripts/refactor/resolve-refactor-mode.ps1"
 $lockFilePath = Join-Path $repoPath ".codex/refactor-loop.lock.json"
 $loopRunId = [guid]::NewGuid().ToString("n")
+$script:LoopTerminalStatus = $null
+$script:LoopExitCode = 0
+
+function Publish-LoopStatus {
+    param([string]$Status)
+
+    if (-not [string]::IsNullOrWhiteSpace($Status)) {
+        $script:LoopTerminalStatus = $Status
+    }
+
+    Write-Host "STATUS: $Status"
+}
 
 function Get-Selection {
     & powershell -File $selectorPath -TaskFile $TaskFile -StateFile $StateFile -AsJson | ConvertFrom-Json
@@ -103,9 +115,9 @@ try {
     $modeInfo = Resolve-ModeContext -RepoPath $repoPath -RequestedMode $Mode -RequestedTaskFile $taskFileOverride -RequestedStateFile $stateFileOverride -RequestedConfigFile $configFileOverride
 }
 catch {
-    Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     Write-Host $_.Exception.Message
-    return
+    exit 2
 }
 
 $Mode = [string]$modeInfo.mode_id
@@ -362,7 +374,14 @@ function Resolve-ExecutionSkillPath {
     throw "No usable autonomous execution skill path was found. Checked explicit path, CODEX_HOME, user .codex skills, override source, and repo-local skills."
 }
 
-$SkillPath = Resolve-ExecutionSkillPath -RequestedPath $SkillPath -RepoPath $repoPath
+try {
+    $SkillPath = Resolve-ExecutionSkillPath -RequestedPath $SkillPath -RepoPath $repoPath
+}
+catch {
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+    Write-Host $_.Exception.Message
+    exit 2
+}
 
 function Invoke-CodexIteration {
     param(
@@ -1022,7 +1041,7 @@ function Write-TerminalStatusFromSelection {
     if ($SelectionStatus -eq "done") {
         $consistency = Invoke-DocConsistencyCheck -FixMode -Phase "terminal-gate"
         if ([string]$consistency.status -eq "needs_human") {
-            Write-Host "STATUS: NO_ELIGIBLE_TASK"
+            Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
             Write-Host "Execution graph is exhausted, but consistency drift still requires human action before declaring done."
             $consistency | ConvertTo-Json -Depth 20
             return $true
@@ -1033,11 +1052,11 @@ function Write-TerminalStatusFromSelection {
             $reconciliation = & powershell -File $reconciliationCheckPath -TaskFile $TaskFile -ConfigFile $ConfigFile -AsJson | ConvertFrom-Json
         }
         if ([string]$reconciliation.status -eq "ok") {
-            Write-Host "STATUS: ALL_AUTOMATABLE_TASKS_DONE"
+            Publish-LoopStatus -Status "ALL_AUTOMATABLE_TASKS_DONE"
             Write-Host "All automatable tasks completed."
         }
         else {
-            Write-Host "STATUS: NO_ELIGIBLE_TASK"
+            Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
             Write-Host "Execution graph is exhausted, but governing docs require reconciliation before declaring done."
             $reconciliation | ConvertTo-Json -Depth 20
         }
@@ -1045,7 +1064,7 @@ function Write-TerminalStatusFromSelection {
     }
 
     if ($SelectionStatus -eq "blocked") {
-        Write-Host "STATUS: NO_ELIGIBLE_TASK"
+        Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
         Write-Host "No ready task found. Loop stopped."
         return $true
     }
@@ -1061,27 +1080,30 @@ $execFailuresByTask = @{}
 $noProgressByTask = @{}
 
 if ($MaxWallClockMinutes -lt 1) {
-    Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     Write-Host "Invalid MaxWallClockMinutes value. It must be >= 1."
-    return
+    exit 2
 }
 
 $loopStartedAtUtc = [DateTime]::UtcNow
 Acquire-LoopLock -Path $lockFilePath -StaleAfterMinutes $LockStaleAfterMinutes
+$stopBeforeLoop = $false
 
 try {
     $preflightConsistency = Invoke-DocConsistencyCheck -FixMode -Phase "preflight"
     if ([string]$preflightConsistency.status -eq "needs_human") {
-        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         Write-Host "Preflight consistency check found unresolved drift that cannot be auto-fixed."
         $preflightConsistency | ConvertTo-Json -Depth 20
-        return
+        $script:LoopExitCode = 2
+        $stopBeforeLoop = $true
     }
 
+if (-not $stopBeforeLoop) {
 for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
     $elapsedMinutes = ([DateTime]::UtcNow - $loopStartedAtUtc).TotalMinutes
     if ($elapsedMinutes -ge $MaxWallClockMinutes) {
-        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         Write-Host ("Loop wall-clock budget exceeded (minutes={0:N1}, max={1})." -f $elapsedMinutes, $MaxWallClockMinutes)
         break
     }
@@ -1150,7 +1172,7 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
     if ($taskExecFailures -ge $MaxExecFailuresPerTask -or $taskNoProgressCount -ge $MaxNoProgressPerTask) {
         $budgetSummary = "Task execution budget exhausted (exec_failures=$taskExecFailures/$MaxExecFailuresPerTask, no_progress=$taskNoProgressCount/$MaxNoProgressPerTask)."
         & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" | Out-Null
-        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         Write-Host $budgetSummary
         break
     }
@@ -1188,6 +1210,7 @@ Auto-recovery note for this task:
         Write-Host ""
         Write-Host "Prompt preview:"
         Write-Host $prompt
+        Publish-LoopStatus -Status "ITERATION_COMPLETE_CONTINUE"
         break
     }
 
@@ -1222,14 +1245,14 @@ Auto-recovery note for this task:
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task timeout/no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-per-task-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task timeout/no-progress threshold reached. Task marked blocked."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated timeouts. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Timeout threshold reached. Task marked blocked."
             break
         }
@@ -1265,7 +1288,7 @@ Auto-recovery note for this task:
     }
 
     if ([string]$postIterationConsistency.status -eq "needs_human") {
-        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         Write-Host "Post-iteration consistency drift cannot be auto-fixed."
         $postIterationConsistency | ConvertTo-Json -Depth 20
         Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
@@ -1291,7 +1314,7 @@ Auto-recovery note for this task:
             Write-Host "Ignoring child NO_ELIGIBLE_TASK because the next eligible task is $([string]$selectionAfter.id)."
         }
         else {
-            Write-Host "STATUS: NO_ELIGIBLE_TASK"
+            Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
             Write-Host "Child iteration reported that no eligible task is available."
             Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
             break
@@ -1330,7 +1353,7 @@ Auto-recovery note for this task:
             continue
         }
 
-        Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         if ($hadStateProgress) {
             Write-Host "Child iteration marked the task as blocked."
         }
@@ -1357,21 +1380,21 @@ Auto-recovery note for this task:
 
         if ($taskExecFailures -ge $MaxExecFailuresPerTask) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task execution failure threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-per-task-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task execution failure threshold reached. Task marked blocked."
             break
         }
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold after execution failure. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task no-progress threshold reached. Task marked blocked."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated execution failures. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Execution failure threshold reached. Task marked blocked."
             break
         }
@@ -1389,14 +1412,14 @@ Auto-recovery note for this task:
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
             & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
-            Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
+            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task no-progress threshold reached. Task marked blocked."
             Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
-            Write-Host "STATUS: NO_ELIGIBLE_TASK"
+            Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
             Write-Host "No progress threshold reached. Loop stopped."
             Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
             break
@@ -1414,7 +1437,7 @@ Auto-recovery note for this task:
             Write-Host "Non-code-only progress streak: $nonCodeProgressCount / $MaxNonCodeProgress"
 
             if ($nonCodeProgressCount -ge $MaxNonCodeProgress) {
-                Write-Host "STATUS: NO_ELIGIBLE_TASK"
+                Publish-LoopStatus -Status "NO_ELIGIBLE_TASK"
                 Write-Host "Non-code-only progress threshold reached. Loop stopped to conserve tokens."
                 Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
                 break
@@ -1424,9 +1447,47 @@ Auto-recovery note for this task:
 
     Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
 }
+
+if ([string]::IsNullOrWhiteSpace($script:LoopTerminalStatus)) {
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+    Write-Host "Loop iteration budget reached before terminal completion."
+    if ($script:LoopExitCode -lt 2) {
+        $script:LoopExitCode = 2
+    }
+}
+}
+}
+catch {
+    if ([string]::IsNullOrWhiteSpace($script:LoopTerminalStatus)) {
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+    }
+    Write-Host $_.Exception.Message
+    if ($script:LoopExitCode -lt 2) {
+        $script:LoopExitCode = 2
+    }
 }
 finally {
     Release-LoopLock -Path $lockFilePath
 }
+
+switch ($script:LoopTerminalStatus) {
+    "ALL_AUTOMATABLE_TASKS_DONE" {
+        if ($script:LoopExitCode -eq 0) { $script:LoopExitCode = 0 }
+    }
+    "ITERATION_COMPLETE_CONTINUE" {
+        if ($script:LoopExitCode -eq 0) { $script:LoopExitCode = 0 }
+    }
+    "NO_ELIGIBLE_TASK" {
+        if ($script:LoopExitCode -eq 0) { $script:LoopExitCode = 0 }
+    }
+    "BLOCKED_NEEDS_HUMAN" {
+        if ($script:LoopExitCode -lt 2) { $script:LoopExitCode = 2 }
+    }
+    default {
+        if ($script:LoopExitCode -eq 0) { $script:LoopExitCode = 1 }
+    }
+}
+
+exit $script:LoopExitCode
 
 

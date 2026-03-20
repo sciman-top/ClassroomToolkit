@@ -76,6 +76,12 @@ Then run smoke validation in target repo:
 powershell -File scripts/unattended/test-checklist-loop-smoke.ps1 -RepoRoot .
 ```
 
+Optional hardening check for refactor-mode exit semantics:
+
+```powershell
+powershell -File scripts/unattended/test-refactor-loop-exit-contract.ps1 -RepoRoot .
+```
+
 This gives a minimal migration + verification path without manually stitching multiple scripts.
 
 ## Deprecated Wrapper Policy
@@ -117,7 +123,12 @@ powershell -File scripts/unattended/test-portability-regression.ps1 `
 - refactor supports `MaxWallClockMinutes`
 - exceeding budget stops execution with structured blocker status instead of silently consuming more tokens
 
-5. Structured summary always:
+7. Exit-code contract:
+- checklist mode: success `0`, failure non-zero
+- refactor mode: `0` for normal terminal states, `2` for `BLOCKED_NEEDS_HUMAN` fast-fail states
+- unsupported/deprecated wrappers always return non-zero
+
+8. Structured summary always:
 - each run emits `.codex/logs/checklist-loop/run-*.summary.json`
 - includes failed task, failed gate, error class, rollback checkpoint, and log paths.
 

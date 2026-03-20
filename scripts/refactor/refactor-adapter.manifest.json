@@ -171,6 +171,12 @@
       "role": "verification"
     },
     {
+      "path": "scripts/unattended/test-refactor-loop-exit-contract.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "verification"
+    },
+    {
       "path": "scripts/unattended/test-portability-regression.ps1",
       "kind": "file",
       "required": true,
