@@ -236,7 +236,9 @@ public partial class PaintToolbarWindow : Window
             _overlay.SetBrush(selectedColor, _brushSize, _brushOpacity);
         }
         
-        BrushColorChanged?.Invoke(selectedColor);
+        SafeActionExecutionExecutor.TryExecute(
+            () => BrushColorChanged?.Invoke(selectedColor),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: brush color callback failed: {ex.Message}"));
     }
 
     private void OnClearClick(object sender, RoutedEventArgs e)
@@ -246,7 +248,9 @@ public partial class PaintToolbarWindow : Window
             _overlay.ClearAll();
             return;
         }
-        ClearRequested?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => ClearRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: clear callback failed: {ex.Message}"));
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
@@ -256,7 +260,9 @@ public partial class PaintToolbarWindow : Window
             _overlay.Undo();
             return;
         }
-        UndoRequested?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => UndoRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: undo callback failed: {ex.Message}"));
     }
 
     private void OnBoardClick(object sender, RoutedEventArgs e)
@@ -271,7 +277,9 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
     {
-        PhotoOpenRequested?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoOpenRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: photo open callback failed: {ex.Message}"));
     }
 
     private void UpdateToolButtons(PaintToolMode mode)
@@ -316,7 +324,9 @@ public partial class PaintToolbarWindow : Window
         {
             _initializing = false;
         }
-        ModeChanged?.Invoke(mode);
+        SafeActionExecutionExecutor.TryExecute(
+            () => ModeChanged?.Invoke(mode),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: mode callback failed: {ex.Message}"));
         if (_overlay != null)
         {
             _overlay.SetMode(mode);
@@ -335,7 +345,9 @@ public partial class PaintToolbarWindow : Window
         }
         var color = dialog.SelectedColor.Value;
         ApplyBoardColor(color);
-        BoardColorChanged?.Invoke(color);
+        SafeActionExecutionExecutor.TryExecute(
+            () => BoardColorChanged?.Invoke(color),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: board color callback failed: {ex.Message}"));
     }
 
     private void ApplyBoardColor(MediaColor color)
@@ -376,7 +388,9 @@ public partial class PaintToolbarWindow : Window
                 _overlay.SetBoardOpacity(0);
             }
         }
-        WhiteboardToggled?.Invoke(_boardActive);
+        SafeActionExecutionExecutor.TryExecute(
+            () => WhiteboardToggled?.Invoke(_boardActive),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: whiteboard callback failed: {ex.Message}"));
     }
 
     private void OpenQuickColorDialog(int index)
@@ -398,7 +412,9 @@ public partial class PaintToolbarWindow : Window
         }
         var color = picker.SelectedColor.Value;
         SetQuickColorSlot(index, color);
-        QuickColorSlotChanged?.Invoke(index, color);
+        SafeActionExecutionExecutor.TryExecute(
+            () => QuickColorSlotChanged?.Invoke(index, color),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: quick color callback failed: {ex.Message}"));
         
         // 如果当前是形状模式，重置形状类型
         if (_currentMode == PaintToolMode.Shape)
@@ -421,7 +437,9 @@ public partial class PaintToolbarWindow : Window
             _overlay.SetBrush(color, _brushSize, _brushOpacity);
         }
         
-        BrushColorChanged?.Invoke(color);
+        SafeActionExecutionExecutor.TryExecute(
+            () => BrushColorChanged?.Invoke(color),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: brush color callback failed: {ex.Message}"));
     }
 
     private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
@@ -497,7 +515,9 @@ public partial class PaintToolbarWindow : Window
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
-        SettingsRequested?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => SettingsRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: settings callback failed: {ex.Message}"));
     }
 
     private void UpdateQuickColorSelection(MediaColor color)
@@ -533,7 +553,9 @@ public partial class PaintToolbarWindow : Window
         {
             _overlay.SetShapeType(_shapeType);
         }
-        ShapeTypeChanged?.Invoke(_shapeType);
+        SafeActionExecutionExecutor.TryExecute(
+            () => ShapeTypeChanged?.Invoke(_shapeType),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: shape callback failed: {ex.Message}"));
     }
 
     private void OnToolbarDrag(object sender, MouseButtonEventArgs e)

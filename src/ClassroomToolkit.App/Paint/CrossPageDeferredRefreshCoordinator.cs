@@ -52,38 +52,19 @@ internal static class CrossPageDeferredRefreshCoordinator
         ArgumentNullException.ThrowIfNull(dispatcherShutdownFinished);
         ArgumentNullException.ThrowIfNull(diagnostics);
 
-        var scheduleGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeSchedule(
-            isCrossPageDisplayActive(),
-            isCrossPageInteractionActive());
-        if (!scheduleGate.ShouldProceed)
+        try
         {
-            diagnostics(
-                "defer-skip",
-                source,
-                scheduleGate.Reason ?? CrossPageDeferredDiagnosticReason.Inactive);
-            return new CrossPageDeferredRefreshExecutionResult(
-                SkippedBeforeSchedule: true,
-                RequestedImmediateRefresh: false,
-                ScheduledDelayedRefresh: false,
-                RequestedDelayedRefresh: false,
-                RecoveredInlineAfterFailure: false,
-                DelayMs: 0);
-        }
-
-        var targetDelayMs = CrossPagePostInputDelayPolicy.ResolveMs(
-            source,
-            configuredDelayMs,
-            fallbackDelayMs: CrossPageRuntimeDefaults.PostInputRefreshDelayMs,
-            delayOverrideMs: delayOverrideMs);
-
-        var elapsedMs = (getCurrentUtcTimestamp() - lastPointerUpUtc).TotalMilliseconds;
-        if (elapsedMs >= targetDelayMs || lastPointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
-        {
-            if (singlePerPointerUp && !tryAcquirePostInputRefreshSlot(out var seqImmediate))
+            var scheduleGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeSchedule(
+                isCrossPageDisplayActive(),
+                isCrossPageInteractionActive());
+            if (!scheduleGate.ShouldProceed)
             {
-                diagnostics("defer-skip", source, $"already-refreshed seq={seqImmediate}");
+                diagnostics(
+                    "defer-skip",
+                    source,
+                    scheduleGate.Reason ?? CrossPageDeferredDiagnosticReason.Inactive);
                 return new CrossPageDeferredRefreshExecutionResult(
-                    SkippedBeforeSchedule: false,
+                    SkippedBeforeSchedule: true,
                     RequestedImmediateRefresh: false,
                     ScheduledDelayedRefresh: false,
                     RequestedDelayedRefresh: false,
@@ -91,88 +72,121 @@ internal static class CrossPageDeferredRefreshCoordinator
                     DelayMs: 0);
             }
 
-            requestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(source));
-            return new CrossPageDeferredRefreshExecutionResult(
-                SkippedBeforeSchedule: false,
-                RequestedImmediateRefresh: true,
-                ScheduledDelayedRefresh: false,
-                RequestedDelayedRefresh: false,
-                RecoveredInlineAfterFailure: false,
-                DelayMs: 0);
-        }
-
-        var delay = Math.Max(1, (int)Math.Ceiling(targetDelayMs - elapsedMs));
-        diagnostics("defer-schedule", source, $"delayMs={delay}");
-        var token = incrementRefreshToken();
-
-        var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(delay, delayAsync).ConfigureAwait(false);
-        if (!delayOutcome.Success)
-        {
-            return RecoverAfterDelayFailure(
+            var targetDelayMs = CrossPagePostInputDelayPolicy.ResolveMs(
                 source,
-                delayOutcome.FailureDetail!,
+                configuredDelayMs,
+                fallbackDelayMs: CrossPageRuntimeDefaults.PostInputRefreshDelayMs,
+                delayOverrideMs: delayOverrideMs);
+
+            var elapsedMs = (getCurrentUtcTimestamp() - lastPointerUpUtc).TotalMilliseconds;
+            if (elapsedMs >= targetDelayMs || lastPointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
+            {
+                if (singlePerPointerUp && !tryAcquirePostInputRefreshSlot(out var seqImmediate))
+                {
+                    diagnostics("defer-skip", source, $"already-refreshed seq={seqImmediate}");
+                    return new CrossPageDeferredRefreshExecutionResult(
+                        SkippedBeforeSchedule: false,
+                        RequestedImmediateRefresh: false,
+                        ScheduledDelayedRefresh: false,
+                        RequestedDelayedRefresh: false,
+                        RecoveredInlineAfterFailure: false,
+                        DelayMs: 0);
+                }
+
+                requestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(source));
+                return new CrossPageDeferredRefreshExecutionResult(
+                    SkippedBeforeSchedule: false,
+                    RequestedImmediateRefresh: true,
+                    ScheduledDelayedRefresh: false,
+                    RequestedDelayedRefresh: false,
+                    RecoveredInlineAfterFailure: false,
+                    DelayMs: 0);
+            }
+
+            var delay = Math.Max(1, (int)Math.Ceiling(targetDelayMs - elapsedMs));
+            diagnostics("defer-schedule", source, $"delayMs={delay}");
+            var token = incrementRefreshToken();
+
+            var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(delay, delayAsync).ConfigureAwait(false);
+            if (!delayOutcome.Success)
+            {
+                return RecoverAfterDelayFailure(
+                    source,
+                    delayOutcome.FailureDetail!,
+                    requestCrossPageDisplayUpdate,
+                    tryBeginInvoke,
+                    dispatcherCheckAccess,
+                    dispatcherShutdownStarted,
+                    dispatcherShutdownFinished,
+                    diagnostics);
+            }
+
+            var delayedRequested = false;
+            var delayedSkipped = false;
+            var delayedAborted = false;
+            var scheduled = tryBeginInvoke(() =>
+            {
+                if (token != readRefreshToken())
+                {
+                    return;
+                }
+
+                var delayedDispatchGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeDelayedDispatch(
+                    isCrossPageDisplayActive(),
+                    isCrossPageInteractionActive());
+                if (!delayedDispatchGate.ShouldProceed)
+                {
+                    diagnostics(
+                        "defer-abort",
+                        source,
+                        delayedDispatchGate.Reason ?? CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
+                    delayedAborted = true;
+                    return;
+                }
+
+                if (singlePerPointerUp && !tryAcquirePostInputRefreshSlot(out var seqDelayed))
+                {
+                    diagnostics("defer-skip", source, $"already-refreshed seq={seqDelayed}");
+                    delayedSkipped = true;
+                    return;
+                }
+
+                requestCrossPageDisplayUpdate(CrossPageUpdateSources.WithDelayed(source));
+                delayedRequested = true;
+            }, DispatcherPriority.Background);
+
+            if (scheduled)
+            {
+                return new CrossPageDeferredRefreshExecutionResult(
+                    SkippedBeforeSchedule: false,
+                    RequestedImmediateRefresh: false,
+                    ScheduledDelayedRefresh: true,
+                    RequestedDelayedRefresh: delayedRequested && !delayedSkipped && !delayedAborted,
+                    RecoveredInlineAfterFailure: false,
+                    DelayMs: delay);
+            }
+
+            var failureResult = RecoverAfterDelayedDispatchFailure(
+                source,
                 requestCrossPageDisplayUpdate,
                 tryBeginInvoke,
                 dispatcherCheckAccess,
                 dispatcherShutdownStarted,
                 dispatcherShutdownFinished,
                 diagnostics);
+            return failureResult with { DelayMs = delay, ScheduledDelayedRefresh = true };
         }
-
-        var delayedRequested = false;
-        var delayedSkipped = false;
-        var delayedAborted = false;
-        var scheduled = tryBeginInvoke(() =>
+        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            if (token != readRefreshToken())
-            {
-                return;
-            }
-
-            var delayedDispatchGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeDelayedDispatch(
-                isCrossPageDisplayActive(),
-                isCrossPageInteractionActive());
-            if (!delayedDispatchGate.ShouldProceed)
-            {
-                diagnostics(
-                    "defer-abort",
-                    source,
-                    delayedDispatchGate.Reason ?? CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
-                delayedAborted = true;
-                return;
-            }
-
-            if (singlePerPointerUp && !tryAcquirePostInputRefreshSlot(out var seqDelayed))
-            {
-                diagnostics("defer-skip", source, $"already-refreshed seq={seqDelayed}");
-                delayedSkipped = true;
-                return;
-            }
-
-            requestCrossPageDisplayUpdate(CrossPageUpdateSources.WithDelayed(source));
-            delayedRequested = true;
-        }, DispatcherPriority.Background);
-
-        if (scheduled)
-        {
+            diagnostics("defer-abort", source, $"nonfatal:{ex.GetType().Name}");
             return new CrossPageDeferredRefreshExecutionResult(
                 SkippedBeforeSchedule: false,
                 RequestedImmediateRefresh: false,
-                ScheduledDelayedRefresh: true,
-                RequestedDelayedRefresh: delayedRequested && !delayedSkipped && !delayedAborted,
+                ScheduledDelayedRefresh: false,
+                RequestedDelayedRefresh: false,
                 RecoveredInlineAfterFailure: false,
-                DelayMs: delay);
+                DelayMs: 0);
         }
-
-        var failureResult = RecoverAfterDelayedDispatchFailure(
-            source,
-            requestCrossPageDisplayUpdate,
-            tryBeginInvoke,
-            dispatcherCheckAccess,
-            dispatcherShutdownStarted,
-            dispatcherShutdownFinished,
-            diagnostics);
-        return failureResult with { DelayMs = delay, ScheduledDelayedRefresh = true };
     }
 
     private static CrossPageDeferredRefreshExecutionResult RecoverAfterDelayFailure(

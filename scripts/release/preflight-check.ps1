@@ -87,6 +87,56 @@ function Assert-WindowsDesktopRuntimeMajor {
     return [string]$desktopFramework.version
 }
 
+function Assert-FileContainsAllPatterns {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Patterns
+    )
+
+    $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    foreach ($pattern in $Patterns) {
+        if (-not $content.Contains($pattern)) {
+            throw "Expected pattern '$pattern' missing in file: $Path"
+        }
+    }
+}
+
+function Assert-PrepareDistributionPolicy {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PrepareScriptPath
+    )
+
+    Assert-FileContainsAllPatterns -Path $PrepareScriptPath -Patterns @(
+        '-r", "win-x64'
+        '--self-contained", "false'
+        '--self-contained", "true'
+        "-p:PublishSingleFile=false",
+        "-p:PublishTrimmed=false",
+        "Write-Sha256Sums",
+        "release-notes.txt",
+        "release-manifest.json",
+        "AllowOverwriteVersion",
+        "RunDefenderScan"
+    )
+}
+
+function Assert-ReleaseNotesTemplatePlaceholders {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TemplatePath
+    )
+
+    Assert-FileContainsAllPatterns -Path $TemplatePath -Patterns @(
+        "__VERSION__",
+        "__PACKAGE_KIND__",
+        "__GENERATED_AT__",
+        "__SOURCE_URL__"
+    )
+}
+
 function Invoke-PublishCompatibilityProbe {
     param(
         [Parameter(Mandatory = $true)]
@@ -136,15 +186,19 @@ function Invoke-PublishCompatibilityProbe {
     $runtimeConfigPath = Join-Path $fddDir "ClassroomToolkit.App.runtimeconfig.json"
     $windowsDesktopRuntimeVersion = Assert-WindowsDesktopRuntimeMajor -RuntimeConfigPath $runtimeConfigPath -ExpectedMajor "10"
 
+    $fddExePath = Join-Path $fddDir "ClassroomToolkit.App.exe"
     $fddPdfiumPath = Join-Path $fddDir "x64\pdfium.dll"
     $fddSqlitePath = Join-Path $fddDir "e_sqlite3.dll"
+    Assert-PathExistsOrThrow -Path $fddExePath
     Assert-PathExistsOrThrow -Path $fddPdfiumPath
     Assert-PathExistsOrThrow -Path $fddSqlitePath
 
+    $scdExePath = Join-Path $scdDir "ClassroomToolkit.App.exe"
     $scdHostFxrPath = Join-Path $scdDir "hostfxr.dll"
     $scdCoreClrPath = Join-Path $scdDir "coreclr.dll"
     $scdVcruntimePath = Join-Path $scdDir "vcruntime140_cor3.dll"
     $scdSqlitePath = Join-Path $scdDir "e_sqlite3.dll"
+    Assert-PathExistsOrThrow -Path $scdExePath
     Assert-PathExistsOrThrow -Path $scdHostFxrPath
     Assert-PathExistsOrThrow -Path $scdCoreClrPath
     Assert-PathExistsOrThrow -Path $scdVcruntimePath
@@ -159,8 +213,10 @@ function Invoke-PublishCompatibilityProbe {
             Scd = $scdDir
         }
         RequiredArtifacts = [pscustomobject]@{
+            FddExe = $fddExePath
             FddPdfium = $fddPdfiumPath
             FddSqlite = $fddSqlitePath
+            ScdExe = $scdExePath
             ScdHostFxr = $scdHostFxrPath
             ScdCoreClr = $scdCoreClrPath
             ScdVcruntime = $scdVcruntimePath
@@ -194,14 +250,19 @@ function Get-PresentationSignatureMatrixSummary {
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..\..")).Path
 $csprojPath = Join-Path $repoRoot "src\ClassroomToolkit.App\ClassroomToolkit.App.csproj"
+$prepareScriptPath = Join-Path $scriptRoot "prepare-distribution.ps1"
+$releaseNotesTemplatePath = Join-Path $scriptRoot "templates\release-notes.txt"
 
-Assert-PathExists -Path (Join-Path $scriptRoot "prepare-distribution.ps1")
+Assert-PathExists -Path $prepareScriptPath
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\start-standard.bat")
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\bootstrap-runtime.ps1")
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\user-guide-standard.md")
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\user-guide-offline.md")
+Assert-PathExists -Path $releaseNotesTemplatePath
 Assert-DesktopRuntimeInstallerExists -PrereqDirectory (Join-Path $scriptRoot "prereq") -RuntimeMajor "10"
 Assert-PathExists -Path (Join-Path $repoRoot "docs\runbooks\release-prevention-checklist.md")
+Assert-PrepareDistributionPolicy -PrepareScriptPath $prepareScriptPath
+Assert-ReleaseNotesTemplatePlaceholders -TemplatePath $releaseNotesTemplatePath
 
 [xml]$csprojXml = Get-Content -LiteralPath $csprojPath -Raw -Encoding UTF8
 $propertyGroup = $csprojXml.Project.PropertyGroup | Select-Object -First 1
@@ -218,6 +279,9 @@ if ($propertyGroup.Company -ne $expectedCompany) {
 }
 if ($propertyGroup.Product -ne "ClassroomToolkit") {
     throw "Unexpected Product in csproj. Current=$($propertyGroup.Product)"
+}
+if ($propertyGroup.AssemblyTitle -ne "ClassroomToolkit") {
+    throw "Unexpected AssemblyTitle in csproj. Current=$($propertyGroup.AssemblyTitle)"
 }
 if ([string]::IsNullOrWhiteSpace($propertyGroup.Description)) {
     throw "Description missing in csproj."
@@ -244,6 +308,12 @@ $presentationSignatureSummary = Get-PresentationSignatureMatrixSummary -RepoRoot
 $probeReportPath = Join-Path $repoRoot "artifacts\release\preflight-compatibility-report.json"
 ([pscustomobject]@{
     GeneratedAtUtc = [DateTime]::UtcNow.ToString("o")
+    PolicyChecks = [pscustomobject]@{
+        PrepareDistributionScript = $prepareScriptPath
+        ReleaseNotesTemplate = $releaseNotesTemplatePath
+        PublishPolicy = "win-x64 only; PublishSingleFile=false; PublishTrimmed=false; FDD+SCD"
+        VersionImmutability = "prepare-distribution requires -AllowOverwriteVersion to overwrite"
+    }
     PublishProbe = $probeReport
     PresentationSignatureCoverage = $presentationSignatureSummary
 }) | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $probeReportPath -Encoding UTF8

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -39,7 +41,9 @@ public partial class ImageManagerWindow
         {
             return;
         }
-        ShowInkOverlayChanged?.Invoke(ViewModel.ShowInkOverlay);
+        SafeActionExecutionExecutor.TryExecute(
+            () => ShowInkOverlayChanged?.Invoke(ViewModel.ShowInkOverlay),
+            ex => Debug.WriteLine($"ImageManager: show-ink callback failed: {ex.Message}"));
         if (!string.IsNullOrWhiteSpace(ViewModel.CurrentFolder))
         {
             StartLoadImages(ViewModel.CurrentFolder);

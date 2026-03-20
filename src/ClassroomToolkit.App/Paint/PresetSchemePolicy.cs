@@ -11,7 +11,8 @@ internal readonly record struct PresetSchemeManagedParameters(
     int WpsDebounceMs,
     int PhotoPostInputRefreshDelayMs,
     double PhotoWheelZoomBase,
-    double PhotoGestureZoomSensitivity);
+    double PhotoGestureZoomSensitivity,
+    string PhotoInertiaProfile);
 
 internal readonly record struct PresetSchemeRecommendation(
     string Scheme,
@@ -34,7 +35,8 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.WpsDebounceBalancedMs,
                     PaintPresetDefaults.PostInputBalancedMs,
                     PaintPresetDefaults.WheelZoomBalanced,
-                    PhotoZoomInputDefaults.GestureSensitivityDefault);
+                    PhotoZoomInputDefaults.GestureSensitivityDefault,
+                    PaintPresetDefaults.InertiaProfileBalanced);
                 return true;
             case PresetSchemeDefaults.Responsive:
                 parameters = new PresetSchemeManagedParameters(
@@ -45,7 +47,8 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.WpsDebounceResponsiveMs,
                     PaintPresetDefaults.PostInputResponsiveMs,
                     PaintPresetDefaults.WheelZoomResponsive,
-                    PaintPresetDefaults.GestureSensitivityResponsive);
+                    PaintPresetDefaults.GestureSensitivityResponsive,
+                    PaintPresetDefaults.InertiaProfileResponsive);
                 return true;
             case PresetSchemeDefaults.Stable:
                 parameters = new PresetSchemeManagedParameters(
@@ -56,7 +59,8 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.WpsDebounceStableMs,
                     PaintPresetDefaults.PostInputStableMs,
                     PaintPresetDefaults.WheelZoomStable,
-                    PaintPresetDefaults.GestureSensitivityStable);
+                    PaintPresetDefaults.GestureSensitivityStable,
+                    PaintPresetDefaults.InertiaProfileStable);
                 return true;
             case PresetSchemeDefaults.DualScreen:
                 parameters = new PresetSchemeManagedParameters(
@@ -67,7 +71,8 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.WpsDebounceDualScreenMs,
                     PaintPresetDefaults.PostInputDualScreenMs,
                     PaintPresetDefaults.WheelZoomDualScreen,
-                    PaintPresetDefaults.GestureSensitivityDualScreen);
+                    PaintPresetDefaults.GestureSensitivityDualScreen,
+                    PaintPresetDefaults.InertiaProfileDualScreen);
                 return true;
             default:
                 parameters = default;
@@ -115,7 +120,7 @@ internal static class PresetSchemePolicy
         {
             return new PresetSchemeRecommendation(
                 PresetSchemeDefaults.Balanced,
-                "尚未采集到足够书写样本，建议先用课堂平衡（推荐）。",
+                string.Empty,
                 HasAdaptiveSignal: false);
         }
 
@@ -201,7 +206,11 @@ internal static class PresetSchemePolicy
             && settings.WpsDebounceMs == parameters.WpsDebounceMs
             && settings.PhotoPostInputRefreshDelayMs == parameters.PhotoPostInputRefreshDelayMs
             && Math.Abs(settings.PhotoWheelZoomBase - parameters.PhotoWheelZoomBase) < PaintSettingsDefaults.DoubleComparisonEpsilon
-            && Math.Abs(settings.PhotoGestureZoomSensitivity - parameters.PhotoGestureZoomSensitivity) < PaintSettingsDefaults.DoubleComparisonEpsilon;
+            && Math.Abs(settings.PhotoGestureZoomSensitivity - parameters.PhotoGestureZoomSensitivity) < PaintSettingsDefaults.DoubleComparisonEpsilon
+            && string.Equals(
+                PhotoInertiaProfileDefaults.Normalize(settings.PhotoInertiaProfile),
+                parameters.PhotoInertiaProfile,
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static StylusPressureDeviceProfile ResolvePressureProfile(int rawProfile)

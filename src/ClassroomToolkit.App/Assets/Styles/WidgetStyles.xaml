@@ -1418,7 +1418,11 @@
                                      </ControlTemplate>
                                  </ToggleButton.Template>
                              </ToggleButton>
-                             <ContentPresenter x:Name="ExpandSite" DockPanel.Dock="Bottom" Visibility="Collapsed" Margin="10,0,10,10"/>
+                             <ContentPresenter x:Name="ExpandSite"
+                                               ContentSource="Content"
+                                               DockPanel.Dock="Bottom"
+                                               Visibility="Collapsed"
+                                               Margin="10,0,10,10"/>
                          </DockPanel>
                      </Border>
                      <ControlTemplate.Triggers>
@@ -1459,6 +1463,7 @@
     <!-- ListView/ListBox Style -->
     <Style x:Key="Style_ListBoxItem_SelectionUnified" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="Margin" Value="0,1"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
@@ -1469,7 +1474,8 @@
                             Background="{TemplateBinding Background}"
                             CornerRadius="4"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter VerticalAlignment="Center"/>
+                        <ContentPresenter VerticalAlignment="Center"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -1588,7 +1594,8 @@
                                 SnapsToDevicePixels="true">
                             <ContentPresenter x:Name="PART_Header" ContentSource="Header" 
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
 
                         <!-- Items Host -->

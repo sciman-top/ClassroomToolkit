@@ -423,6 +423,7 @@ public partial class MainWindow
         {
             _settings.ControlMsPpt = dialog.ControlMsPpt;
             _settings.ControlWpsPpt = dialog.ControlWpsPpt;
+            _settings.OfficeInputMode = dialog.OfficeInputMode;
             _settings.WpsInputMode = dialog.WpsInputMode;
             _settings.WpsWheelForward = dialog.WpsWheelForward;
             _settings.WpsDebounceMs = dialog.WpsDebounceMs;
@@ -461,6 +462,10 @@ public partial class MainWindow
             _settings.PhotoPostInputRefreshDelayMs = dialog.PhotoPostInputRefreshDelayMs;
             _settings.PhotoWheelZoomBase = dialog.PhotoWheelZoomBase;
             _settings.PhotoGestureZoomSensitivity = dialog.PhotoGestureZoomSensitivity;
+            _settings.PhotoInertiaProfile = dialog.PhotoInertiaProfile;
+            _settings.QuickColor1 = dialog.QuickColor1;
+            _settings.QuickColor2 = dialog.QuickColor2;
+            _settings.QuickColor3 = dialog.QuickColor3;
             SaveSettings();
             _inkExportOptions.Scope = _settings.InkExportScope;
             _inkExportOptions.MaxParallelFiles = _settings.InkExportMaxParallelFiles;
@@ -550,7 +555,6 @@ public partial class MainWindow
         ApplySurfaceZOrderDecision(decision);
     }
 }
-
 
 
 

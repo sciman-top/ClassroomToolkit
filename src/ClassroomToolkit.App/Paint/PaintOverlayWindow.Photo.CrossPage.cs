@@ -1579,34 +1579,23 @@ public partial class PaintOverlayWindow
                     }, DispatcherPriority.Render);
                     if (!scheduled)
                     {
-                        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
-                        HandleCrossPageDisplayUpdateDispatchFailure(
+                        HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(
                             request.Kind,
                             source,
                             mode: "delayed",
-                            emitAbortDiagnostics: false);
+                            emitAbortDiagnostics: false,
+                            abortDetail: "delayed-dispatch-unavailable");
                     }
                 },
                 lifecycleToken,
                 onError: ex =>
                 {
-                    CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
-                    var scheduledFailure = TryBeginInvoke(() =>
-                    {
-                        HandleCrossPageDisplayUpdateDispatchFailure(
-                            request.Kind,
-                            source,
-                            mode: "delayed-task-fault",
-                            emitAbortDiagnostics: false);
-                    }, DispatcherPriority.Background);
-                    if (!scheduledFailure)
-                    {
-                        HandleCrossPageDisplayUpdateDispatchFailure(
-                            request.Kind,
-                            source,
-                            mode: "delayed-task-fault",
-                            emitAbortDiagnostics: false);
-                    }
+                    HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(
+                        request.Kind,
+                        source,
+                        mode: "delayed-task-fault",
+                        emitAbortDiagnostics: false,
+                        abortDetail: "delayed-task-fault-dispatch-unavailable");
                     Debug.WriteLine(
                         $"[CrossPage] delayed-dispatch task fault ex={ex.GetType().Name} msg={ex.Message} source={source}");
                 });
@@ -1694,6 +1683,41 @@ public partial class PaintOverlayWindow
             dispatcherCheckAccess: Dispatcher.CheckAccess,
             dispatcherShutdownStarted: () => Dispatcher.HasShutdownStarted,
             dispatcherShutdownFinished: () => Dispatcher.HasShutdownFinished);
+    }
+
+    private void HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(
+        CrossPageUpdateSourceKind kind,
+        string source,
+        string mode,
+        bool emitAbortDiagnostics,
+        string abortDetail)
+    {
+        var scheduled = TryBeginInvoke(() =>
+        {
+            CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+            HandleCrossPageDisplayUpdateDispatchFailure(
+                kind,
+                source,
+                mode,
+                emitAbortDiagnostics);
+        }, DispatcherPriority.Background);
+        if (scheduled)
+        {
+            return;
+        }
+
+        if (Dispatcher.CheckAccess())
+        {
+            CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+            HandleCrossPageDisplayUpdateDispatchFailure(
+                kind,
+                source,
+                mode,
+                emitAbortDiagnostics);
+            return;
+        }
+
+        _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, abortDetail);
     }
 
     private void ExecuteCrossPageDisplayUpdateRun(

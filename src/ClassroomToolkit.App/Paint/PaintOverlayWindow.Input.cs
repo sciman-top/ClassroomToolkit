@@ -96,12 +96,17 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        if (ShouldSuppressPresentationWheelFromRecentInkInput())
+        {
+            e.Handled = true;
+            return;
+        }
         var foregroundType = ResolveForegroundPresentationType();
         var presentationExecutionAction = OverlayWheelPresentationExecutionPolicy.Resolve(
             _wpsNavHookActive,
             _wpsHookInterceptWheel,
             _wpsHookBlockOnly,
-            isWpsForeground: MapRouteType(foregroundType) == OverlayPresentationRouteType.Wps,
+            isWpsForeground: OverlayPresentationRouteContextBuilder.MapRouteType(foregroundType) == OverlayPresentationRouteType.Wps,
             WpsHookRecentlyFired(),
             e.Delta);
         var command = presentationExecutionAction switch
@@ -290,13 +295,14 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        PaintModeManager.Instance.IsDrawing = false;
         var interactionState = CaptureInputInteractionState();
         var lostCapturePlan = OverlayLostMouseCaptureExecutionPolicy.Resolve(
             IsMousePhotoPanActive(interactionState),
             rightClickPending: _photoRightClickPending);
         if (lostCapturePlan.ShouldEndPan)
         {
-            EndPhotoPan();
+            EndPhotoPan(allowInertia: false);
         }
         if (lostCapturePlan.ShouldClearRightClickPending)
         {
@@ -350,7 +356,7 @@ public partial class PaintOverlayWindow
         }
         if (IsMousePhotoPanActive(interactionState))
         {
-            EndPhotoPan();
+            EndPhotoPan(allowInertia: false);
         }
         ShowPhotoContextMenu(point);
         e.Handled = executionPlan.ShouldMarkHandled;
@@ -393,6 +399,7 @@ public partial class PaintOverlayWindow
         }
         if (executionPlan.Action == PhotoPanMouseExecutionAction.EndPan)
         {
+            UpdatePhotoPanVelocitySamples(position);
             EndPhotoPan();
             e.Handled = executionPlan.ShouldMarkHandled;
             return true;
@@ -420,6 +427,7 @@ public partial class PaintOverlayWindow
             return false;
         }
 
+        UpdatePhotoPanVelocitySamples(e.GetPosition(OverlayRoot));
         EndPhotoPan();
         e.Handled = executionPlan.ShouldMarkHandled;
         return true;
@@ -440,9 +448,6 @@ public partial class PaintOverlayWindow
         {
             MarkCrossPageFirstInputStage("tool-dispatch", $"tool={_mode}");
         }
-        // 设置正在绘图状态
-        PaintModeManager.Instance.IsDrawing = true;
-
         HandlePointerDownByTool(input);
     }
 
@@ -996,9 +1001,24 @@ public partial class PaintOverlayWindow
             _photoManipulating = false;
             return;
         }
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         _photoManipulating = true;
         e.ManipulationContainer = OverlayRoot;
         e.Mode = ManipulationModes.Scale | ManipulationModes.Translate;
+    }
+
+    private void OnManipulationInertiaStarting(object? sender, ManipulationInertiaStartingEventArgs e)
+    {
+        var interactionState = CaptureInputInteractionState();
+        if (!TryAdmitPhotoManipulation(e, interactionState))
+        {
+            return;
+        }
+        _photoManipulating = true;
+        e.TranslationBehavior.DesiredDeceleration = PhotoManipulationInertiaPolicy.ResolveTranslationDeceleration(
+            interactionState.CrossPageDisplayActive,
+            _photoPanInertiaTuning);
+        e.Handled = true;
     }
 
     private void OnManipulationDelta(object? sender, ManipulationDeltaEventArgs e)
@@ -1121,6 +1141,9 @@ public partial class PaintOverlayWindow
         {
             // Cross-page resume can carry a seam seed from the previous frame.
             // Skip seed-only preview draw to avoid one-frame page-cross flash.
+            // SaveCurrentPageOnNavigate(finalizeActiveOperation=true) releases pointer capture;
+            // reacquire here so subsequent move/up events remain reliable during seam-cross writing.
+            CapturePointerInput();
             _visualHost.Clear();
             BeginBrushStrokeContinuation(seed, renderInitialPreview: false);
             // Keep the current input sample update in the normal pointer-move path only.
@@ -1548,6 +1571,7 @@ public partial class PaintOverlayWindow
     {
         OverlayRoot.CaptureMouse();
         Stylus.Capture(OverlayRoot);
+        PaintModeManager.Instance.IsDrawing = true;
     }
 
     private void ReleasePointerInput()
@@ -1560,6 +1584,7 @@ public partial class PaintOverlayWindow
         {
             Stylus.Capture(null);
         }
+        PaintModeManager.Instance.IsDrawing = false;
     }
 
     private bool IsCrossPageFirstInputTraceActive()

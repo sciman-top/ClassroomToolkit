@@ -175,6 +175,10 @@ public sealed class WpsSlideshowNavigationHook : IDisposable
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
             var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
+            if (WpsHookKeyboardInjectionPolicy.ShouldIgnore(data.Flags))
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
             var key = (VirtualKey)data.VirtualKeyCode;
             if (!_allowedKeys.Contains(key))
             {

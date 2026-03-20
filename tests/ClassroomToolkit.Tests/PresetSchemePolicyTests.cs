@@ -8,17 +8,18 @@ namespace ClassroomToolkit.Tests;
 public sealed class PresetSchemePolicyTests
 {
     [Theory]
-    [InlineData(PresetSchemeDefaults.Balanced, (int)ClassroomWritingMode.Balanced, 120, 120, 1.0008, 1.0)]
-    [InlineData(PresetSchemeDefaults.Responsive, (int)ClassroomWritingMode.Responsive, 80, 80, 1.0010, 1.2)]
-    [InlineData(PresetSchemeDefaults.Stable, (int)ClassroomWritingMode.Stable, 200, 140, 1.0006, 0.8)]
-    [InlineData(PresetSchemeDefaults.DualScreen, (int)ClassroomWritingMode.Stable, 160, 160, 1.0007, 0.9)]
+    [InlineData(PresetSchemeDefaults.Balanced, (int)ClassroomWritingMode.Balanced, 120, 120, 1.0008, 1.0, PhotoInertiaProfileDefaults.Standard)]
+    [InlineData(PresetSchemeDefaults.Responsive, (int)ClassroomWritingMode.Responsive, 80, 80, 1.0010, 1.2, PhotoInertiaProfileDefaults.Sensitive)]
+    [InlineData(PresetSchemeDefaults.Stable, (int)ClassroomWritingMode.Stable, 200, 140, 1.0006, 0.8, PhotoInertiaProfileDefaults.Heavy)]
+    [InlineData(PresetSchemeDefaults.DualScreen, (int)ClassroomWritingMode.Stable, 160, 160, 1.0007, 0.9, PhotoInertiaProfileDefaults.Heavy)]
     public void TryResolveManagedParameters_ShouldReturnExpectedValues(
         string scheme,
         int writingMode,
         int wpsDebounceMs,
         int postInputDelayMs,
         double wheelZoomBase,
-        double gestureSensitivity)
+        double gestureSensitivity,
+        string photoInertiaProfile)
     {
         var resolved = PresetSchemePolicy.TryResolveManagedParameters(scheme, out var parameters);
 
@@ -31,6 +32,7 @@ public sealed class PresetSchemePolicyTests
         parameters.PhotoPostInputRefreshDelayMs.Should().Be(postInputDelayMs);
         parameters.PhotoWheelZoomBase.Should().BeApproximately(wheelZoomBase, 1e-9);
         parameters.PhotoGestureZoomSensitivity.Should().BeApproximately(gestureSensitivity, 1e-9);
+        parameters.PhotoInertiaProfile.Should().Be(photoInertiaProfile);
     }
 
     [Fact]
@@ -51,7 +53,8 @@ public sealed class PresetSchemePolicyTests
             WpsDebounceMs = PaintPresetDefaults.WpsDebounceResponsiveMs,
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputResponsiveMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomResponsive,
-            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityResponsive
+            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityResponsive,
+            PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileResponsive
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
@@ -69,7 +72,8 @@ public sealed class PresetSchemePolicyTests
             WpsDebounceMs = PaintPresetDefaults.WpsDebounceDualScreenMs,
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputDualScreenMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomDualScreen,
-            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityDualScreen
+            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityDualScreen,
+            PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileDualScreen
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
@@ -87,7 +91,8 @@ public sealed class PresetSchemePolicyTests
             WpsDebounceMs = PaintPresetDefaults.WpsDebounceDualScreenMs,
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputDualScreenMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomDualScreen,
-            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityDualScreen
+            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityDualScreen,
+            PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileDualScreen
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
@@ -105,7 +110,8 @@ public sealed class PresetSchemePolicyTests
             WpsDebounceMs = PaintPresetDefaults.WpsDebounceBalancedMs,
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputBalancedMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomBalanced,
-            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityResponsive
+            PhotoGestureZoomSensitivity = PaintPresetDefaults.GestureSensitivityResponsive,
+            PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileBalanced
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
@@ -124,6 +130,7 @@ public sealed class PresetSchemePolicyTests
             PhotoPostInputRefreshDelayMs = PaintPresetDefaults.PostInputBalancedMs,
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomBalanced,
             PhotoGestureZoomSensitivity = PhotoZoomInputDefaults.GestureSensitivityDefault,
+            PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileBalanced,
             WpsInputMode = WpsInputModeDefaults.Auto
         };
 

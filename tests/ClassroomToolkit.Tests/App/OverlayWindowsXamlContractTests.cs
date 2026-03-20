@@ -60,8 +60,7 @@ public sealed class OverlayWindowsXamlContractTests
 
     private static string GetPaintOverlayWindowXamlPath()
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Paint",
@@ -70,8 +69,7 @@ public sealed class OverlayWindowsXamlContractTests
 
     private static string GetPhotoOverlayWindowXamlPath()
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Photos",
@@ -80,33 +78,11 @@ public sealed class OverlayWindowsXamlContractTests
 
     private static string GetXamlPath(params string[] segments)
     {
-        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName;
-        var full = new List<string> { root, "src", "ClassroomToolkit.App" };
-        full.AddRange(segments);
-        return Path.Combine(full.ToArray());
+        return TestPathHelper.ResolveAppPath(segments);
     }
 
     private static string GetSourcePath(params string[] segments)
     {
-        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName;
-        var full = new List<string> { root, "src", "ClassroomToolkit.App" };
-        full.AddRange(segments);
-        return Path.Combine(full.ToArray());
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
+        return TestPathHelper.ResolveAppPath(segments);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Paint;
@@ -38,13 +39,14 @@ internal static class InkPageLoadCoordinator
         ArgumentNullException.ThrowIfNull(clearInkSurfaceState);
         ArgumentNullException.ThrowIfNull(applyInkStrokes);
 
-        markTraceStage?.Invoke(
+        InvokeTraceStageSafely(
+            markTraceStage,
             "load-enter",
             $"allowDisk={allowDiskFallback} preferFast={preferInteractiveFastPath}");
 
         if (!photoCacheScopeActive)
         {
-            markTraceStage?.Invoke("load-skip", "scope!=photo");
+            InvokeTraceStageSafely(markTraceStage, "load-skip", "scope!=photo");
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: true,
                 ClearedInkState: false,
@@ -58,7 +60,7 @@ internal static class InkPageLoadCoordinator
         if (!inkCacheEnabled)
         {
             clearInkSurfaceState();
-            markTraceStage?.Invoke("load-clear", "cache-disabled");
+            InvokeTraceStageSafely(markTraceStage, "load-clear", "cache-disabled");
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: false,
                 ClearedInkState: true,
@@ -73,7 +75,7 @@ internal static class InkPageLoadCoordinator
         {
             purgePersistedInkForHiddenCurrentPage();
             clearInkSurfaceState();
-            markTraceStage?.Invoke("load-clear", "ink-hidden");
+            InvokeTraceStageSafely(markTraceStage, "load-clear", "ink-hidden");
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: false,
                 ClearedInkState: true,
@@ -86,7 +88,7 @@ internal static class InkPageLoadCoordinator
 
         if (string.IsNullOrWhiteSpace(currentCacheKey))
         {
-            markTraceStage?.Invoke("load-skip", "empty-cache-key");
+            InvokeTraceStageSafely(markTraceStage, "load-skip", "empty-cache-key");
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: false,
                 ClearedInkState: false,
@@ -100,7 +102,7 @@ internal static class InkPageLoadCoordinator
         if (tryGetCachedStrokes(currentCacheKey, out var cached))
         {
             applyInkStrokes(cached, preferInteractiveFastPath);
-            markTraceStage?.Invoke("load-cache-hit", $"strokes={cached.Count}");
+            InvokeTraceStageSafely(markTraceStage, "load-cache-hit", $"strokes={cached.Count}");
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: false,
                 ClearedInkState: false,
@@ -115,7 +117,7 @@ internal static class InkPageLoadCoordinator
             && hasInkPersistence
             && tryLoadInkFromSidecar())
         {
-            markTraceStage?.Invoke("load-sidecar-hit", null);
+            InvokeTraceStageSafely(markTraceStage, "load-sidecar-hit", null);
             return new InkPageLoadExecutionResult(
                 SkippedForNonPhotoScope: false,
                 ClearedInkState: false,
@@ -127,7 +129,7 @@ internal static class InkPageLoadCoordinator
         }
 
         clearInkSurfaceState();
-        markTraceStage?.Invoke("load-clear", "cache-miss");
+        InvokeTraceStageSafely(markTraceStage, "load-clear", "cache-miss");
         return new InkPageLoadExecutionResult(
             SkippedForNonPhotoScope: false,
             ClearedInkState: true,
@@ -136,5 +138,25 @@ internal static class InkPageLoadCoordinator
             LoadedFromSidecar: false,
             SkippedForEmptyCacheKey: false,
             LoadedStrokeCount: 0);
+    }
+
+    private static void InvokeTraceStageSafely(
+        Action<string, string?>? markTraceStage,
+        string stage,
+        string? detail)
+    {
+        if (markTraceStage is null)
+        {
+            return;
+        }
+
+        try
+        {
+            markTraceStage(stage, detail);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkPageLoadCoordinator] trace callback failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 }

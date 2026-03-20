@@ -39,8 +39,21 @@ public static class PhotoNavigationDiagnostics
 
         public void Dispose()
         {
-            _onDispose?.Invoke();
+            var callback = _onDispose;
             _onDispose = null;
+            if (callback is null)
+            {
+                return;
+            }
+
+            try
+            {
+                callback();
+            }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine($"[PhotoNav] scope dispose callback failed: {ex.GetType().Name} - {ex.Message}");
+            }
         }
     }
 }

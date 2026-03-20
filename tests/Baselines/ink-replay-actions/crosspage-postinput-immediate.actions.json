@@ -1,0 +1,10 @@
+{
+  "name": "crosspage-postinput-immediate",
+  "actions": [
+    {
+      "type": "FastRefreshImmediate",
+      "source": "post-input-immediate"
+    }
+  ]
+}
+

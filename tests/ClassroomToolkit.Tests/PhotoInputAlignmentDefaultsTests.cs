@@ -13,7 +13,7 @@ public sealed class PhotoInputAlignmentDefaultsTests
         PhotoInputAlignmentDefaults.GestureSensitivityMax.Should().Be(3.0);
         PhotoInputAlignmentDefaults.MinEventFactorFloor.Should().Be(0.01);
         PhotoInputAlignmentDefaults.IgnoreFactorDelta.Should().Be(0.001);
-        PhotoInputAlignmentDefaults.PanResistanceFactorDefault.Should().Be(0.35);
+        PhotoInputAlignmentDefaults.PanResistanceFactorDefault.Should().Be(0.42);
         PhotoInputAlignmentDefaults.PanResistanceFactorMin.Should().Be(0.05);
         PhotoInputAlignmentDefaults.PanResistanceFactorMax.Should().Be(0.95);
     }

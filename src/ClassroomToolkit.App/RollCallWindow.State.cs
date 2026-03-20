@@ -322,17 +322,25 @@ public partial class RollCallWindow
             return;
         }
 
+        void ShowSpeechUnavailableNotice()
+        {
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
+            ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
+        }
+
+        var scheduled = false;
         SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                _ = Dispatcher.InvokeAsync(() =>
-                {
-                    var owner = System.Windows.Application.Current?.MainWindow;
-                    var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
-                    ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
-                });
+                _ = Dispatcher.InvokeAsync(ShowSpeechUnavailableNotice);
+                scheduled = true;
             },
             ex => System.Diagnostics.Debug.WriteLine($"NotifySpeechError dispatch failed: {ex.Message}"));
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ShowSpeechUnavailableNotice();
+        }
     }
 }
 

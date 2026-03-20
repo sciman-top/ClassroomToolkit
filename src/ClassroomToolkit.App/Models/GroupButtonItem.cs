@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Models;
 
@@ -34,6 +35,22 @@ public sealed class GroupButtonItem : INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        var handlers = PropertyChanged?.GetInvocationList();
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers)
+        {
+            try
+            {
+                ((PropertyChangedEventHandler)handler)(this, new PropertyChangedEventArgs(propertyName));
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"GroupButtonItem: PropertyChanged callback failed: {ex.Message}");
+            }
+        }
     }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-interaction-replay-delayed",
+  "actions": [
+    {
+      "type": "DeferredRefreshRequested",
+      "source": "interaction-replay-delayed"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "interaction-replay"
+    }
+  ]
+}
+

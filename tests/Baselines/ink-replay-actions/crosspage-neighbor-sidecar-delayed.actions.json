@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-neighbor-sidecar-delayed",
+  "actions": [
+    {
+      "type": "DeferredRefreshRequested",
+      "source": "neighbor-sidecar-delayed"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "neighbor-sidecar"
+    }
+  ]
+}
+

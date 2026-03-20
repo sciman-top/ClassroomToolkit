@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace ClassroomToolkit.Domain.Timers;
 
 public sealed class TimerEngine
@@ -144,7 +146,7 @@ public sealed class TimerEngine
             if (_secondsLeft == 0)
             {
                 Running = false;
-                TimerCompleted?.Invoke();
+                InvokeEventSafely(TimerCompleted, "TimerCompleted");
             }
         }
     }
@@ -162,11 +164,48 @@ public sealed class TimerEngine
         {
             return;
         }
+
+        // Do not emit a "midway reminder" exactly at the completion boundary.
+        // When countdown length is an exact multiple of reminder interval,
+        // completion already provides the terminal feedback signal.
+        if (_secondsLeft == 0
+            && _countdownSeconds > 0
+            && _countdownSeconds % _reminderSeconds == 0
+            && triggers > 0)
+        {
+            triggers--;
+        }
+
+        if (triggers <= 0)
+        {
+            return;
+        }
+
         // Cap triggers to avoid sound storm on large elapsed jumps
         triggers = Math.Min(triggers, 3);
         for (var i = 0; i < triggers; i++)
         {
-            ReminderTriggered?.Invoke();
+            InvokeEventSafely(ReminderTriggered, "ReminderTriggered");
+        }
+    }
+
+    private static void InvokeEventSafely(Action? callback, string callbackName)
+    {
+        if (callback is null)
+        {
+            return;
+        }
+
+        foreach (var handler in callback.GetInvocationList())
+        {
+            try
+            {
+                ((Action)handler).Invoke();
+            }
+            catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine($"[TimerEngine] {callbackName} callback failed: {ex.GetType().Name} - {ex.Message}");
+            }
         }
     }
 }

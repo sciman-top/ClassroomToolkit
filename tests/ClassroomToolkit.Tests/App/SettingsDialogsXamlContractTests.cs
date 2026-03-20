@@ -54,25 +54,6 @@ public sealed class SettingsDialogsXamlContractTests
 
     private static string GetXamlPath(params string[] segments)
     {
-        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName;
-        var fullSegments = new List<string> { root, "src", "ClassroomToolkit.App" };
-        fullSegments.AddRange(segments);
-        return Path.Combine(fullSegments.ToArray());
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
+        return TestPathHelper.ResolveAppPath(segments);
     }
 }

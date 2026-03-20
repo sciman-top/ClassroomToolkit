@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -13,7 +14,23 @@ public abstract class ViewModelBase : INotifyPropertyChanged
 
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        var handlers = PropertyChanged?.GetInvocationList();
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers)
+        {
+            try
+            {
+                ((PropertyChangedEventHandler)handler)(this, new PropertyChangedEventArgs(propertyName));
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"ViewModelBase: PropertyChanged callback failed: {ex.Message}");
+            }
+        }
     }
 
     protected void RaisePropertyChanged(params string[] propertyNames)

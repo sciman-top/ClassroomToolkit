@@ -47,33 +47,76 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
         ArgumentNullException.ThrowIfNull(dispatcherShutdownFinished);
         ArgumentNullException.ThrowIfNull(diagnostics);
 
-        var decision = CrossPageMissingNeighborRefreshPolicy.Resolve(
-            photoModeActive,
-            crossPageDisplayEnabled,
-            interactionActive,
-            missingCount,
-            lastScheduledUtc,
-            nowUtc);
-        if (!decision.ShouldSchedule)
+        try
         {
-            return new CrossPageMissingNeighborRefreshExecutionResult(
-                Scheduled: false,
-                RequestedDelayedRefresh: false,
-                RecoveredInlineAfterFailure: false,
-                DelayMs: decision.DelayMs,
-                LastScheduledUtc: lastScheduledUtc);
-        }
+            var decision = CrossPageMissingNeighborRefreshPolicy.Resolve(
+                photoModeActive,
+                crossPageDisplayEnabled,
+                interactionActive,
+                missingCount,
+                lastScheduledUtc,
+                nowUtc);
+            if (!decision.ShouldSchedule)
+            {
+                return new CrossPageMissingNeighborRefreshExecutionResult(
+                    Scheduled: false,
+                    RequestedDelayedRefresh: false,
+                    RecoveredInlineAfterFailure: false,
+                    DelayMs: decision.DelayMs,
+                    LastScheduledUtc: lastScheduledUtc);
+            }
 
-        updateLastScheduledUtc(decision.LastScheduledUtc);
-        diagnostics("defer-schedule", CrossPageUpdateSources.NeighborMissing, $"count={missingCount}");
-        var token = incrementRefreshToken();
+            updateLastScheduledUtc(decision.LastScheduledUtc);
+            diagnostics("defer-schedule", CrossPageUpdateSources.NeighborMissing, $"count={missingCount}");
+            var token = incrementRefreshToken();
 
-        var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(decision.DelayMs, delayAsync).ConfigureAwait(false);
-        if (!delayOutcome.Success)
-        {
+            var delayOutcome = await CrossPageDelayExecutionHelper.TryDelayAsync(decision.DelayMs, delayAsync).ConfigureAwait(false);
+            if (!delayOutcome.Success)
+            {
+                return RecoverAfterFailure(
+                    source: CrossPageUpdateSources.NeighborMissingDelayed,
+                    failureDetail: delayOutcome.FailureDetail!,
+                    requestCrossPageDisplayUpdate: requestCrossPageDisplayUpdate,
+                    tryBeginInvoke: tryBeginInvoke,
+                    dispatcherCheckAccess: dispatcherCheckAccess,
+                    dispatcherShutdownStarted: dispatcherShutdownStarted,
+                    dispatcherShutdownFinished: dispatcherShutdownFinished,
+                    diagnostics: diagnostics,
+                    scheduled: true,
+                    delayMs: decision.DelayMs,
+                    lastScheduledUtc: decision.LastScheduledUtc);
+            }
+
+            var requestedDelayed = false;
+            var scheduledInvoke = tryBeginInvoke(() =>
+            {
+                if (token != readRefreshToken())
+                {
+                    return;
+                }
+
+                if (!isCrossPageDisplayActive())
+                {
+                    return;
+                }
+
+                requestCrossPageDisplayUpdate(CrossPageUpdateSources.NeighborMissingDelayed);
+                requestedDelayed = true;
+            }, DispatcherPriority.Background);
+
+            if (scheduledInvoke)
+            {
+                return new CrossPageMissingNeighborRefreshExecutionResult(
+                    Scheduled: true,
+                    RequestedDelayedRefresh: requestedDelayed,
+                    RecoveredInlineAfterFailure: false,
+                    DelayMs: decision.DelayMs,
+                    LastScheduledUtc: decision.LastScheduledUtc);
+            }
+
             return RecoverAfterFailure(
                 source: CrossPageUpdateSources.NeighborMissingDelayed,
-                failureDetail: delayOutcome.FailureDetail!,
+                failureDetail: "missing-neighbor-delayed-dispatch-failed",
                 requestCrossPageDisplayUpdate: requestCrossPageDisplayUpdate,
                 tryBeginInvoke: tryBeginInvoke,
                 dispatcherCheckAccess: dispatcherCheckAccess,
@@ -84,46 +127,16 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
                 delayMs: decision.DelayMs,
                 lastScheduledUtc: decision.LastScheduledUtc);
         }
-
-        var requestedDelayed = false;
-        var scheduledInvoke = tryBeginInvoke(() =>
+        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            if (token != readRefreshToken())
-            {
-                return;
-            }
-
-            if (!isCrossPageDisplayActive())
-            {
-                return;
-            }
-
-            requestCrossPageDisplayUpdate(CrossPageUpdateSources.NeighborMissingDelayed);
-            requestedDelayed = true;
-        }, DispatcherPriority.Background);
-
-        if (scheduledInvoke)
-        {
+            diagnostics("defer-abort", CrossPageUpdateSources.NeighborMissing, $"nonfatal:{ex.GetType().Name}");
             return new CrossPageMissingNeighborRefreshExecutionResult(
-                Scheduled: true,
-                RequestedDelayedRefresh: requestedDelayed,
+                Scheduled: false,
+                RequestedDelayedRefresh: false,
                 RecoveredInlineAfterFailure: false,
-                DelayMs: decision.DelayMs,
-                LastScheduledUtc: decision.LastScheduledUtc);
+                DelayMs: 0,
+                LastScheduledUtc: lastScheduledUtc);
         }
-
-        return RecoverAfterFailure(
-            source: CrossPageUpdateSources.NeighborMissingDelayed,
-            failureDetail: "missing-neighbor-delayed-dispatch-failed",
-            requestCrossPageDisplayUpdate: requestCrossPageDisplayUpdate,
-            tryBeginInvoke: tryBeginInvoke,
-            dispatcherCheckAccess: dispatcherCheckAccess,
-            dispatcherShutdownStarted: dispatcherShutdownStarted,
-            dispatcherShutdownFinished: dispatcherShutdownFinished,
-            diagnostics: diagnostics,
-            scheduled: true,
-            delayMs: decision.DelayMs,
-            lastScheduledUtc: decision.LastScheduledUtc);
     }
 
     private static CrossPageMissingNeighborRefreshExecutionResult RecoverAfterFailure(

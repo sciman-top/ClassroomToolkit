@@ -6,6 +6,7 @@ using ClassroomToolkit.App;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -47,24 +48,35 @@ public sealed partial class RollCallViewModel
             _preloadedWriteTimeUtc = writeTimeUtc;
             var expectedPath = path;
             var expectedWriteTimeUtc = writeTimeUtc;
-            _preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
-            _preloadTask.ContinueWith(task =>
+            var preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
+            _preloadTask = preloadTask;
+            preloadTask.ContinueWith(task =>
             {
                 lock (_preloadLock)
                 {
                     if (_disposed || _disposeCancellation.IsCancellationRequested)
                     {
-                        _preloadTask = null;
+                        if (ReferenceEquals(_preloadTask, preloadTask))
+                        {
+                            _preloadTask = null;
+                        }
                         return;
                     }
-                    if (task.Status == TaskStatus.RanToCompletion && string.IsNullOrWhiteSpace(task.Result.ErrorMessage))
+                    if (task.Status == TaskStatus.RanToCompletion)
                     {
+                        var completedResult = task.GetAwaiter().GetResult();
                         if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
                         {
-                            _preloadedResult = task.Result;
+                            if (string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
+                            {
+                                _preloadedResult = completedResult;
+                            }
                         }
                     }
-                    _preloadTask = null;
+                    if (ReferenceEquals(_preloadTask, preloadTask))
+                    {
+                        _preloadTask = null;
+                    }
                 }
             }, TaskScheduler.Default);
         }
@@ -169,7 +181,7 @@ public sealed partial class RollCallViewModel
             try
             {
                 if (!preloadTask.IsCompletedSuccessfully) return null;
-                var result = preloadTask.Result;
+                var result = preloadTask.GetAwaiter().GetResult();
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
@@ -250,7 +262,9 @@ public sealed partial class RollCallViewModel
 
         if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
         {
-            DataLoadFailed?.Invoke(result.ErrorMessage);
+            SafeActionExecutionExecutor.TryExecute(
+                () => DataLoadFailed?.Invoke(result.ErrorMessage),
+                ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: data load failed callback failed: {ex.Message}"));
         }
     }
 

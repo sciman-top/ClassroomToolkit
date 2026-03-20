@@ -9,6 +9,8 @@ namespace ClassroomToolkit.Infra.Logging;
 public class FileLoggerProvider : ILoggerProvider
 {
     private readonly record struct LogQueueItem(DateTime Timestamp, string Message);
+    private const int QueueDrainTimeoutMs = 3000;
+    private const int QueueCancelGraceTimeoutMs = 1000;
 
     private readonly string _logDirectory;
     private readonly Func<DateTime> _nowProvider;
@@ -90,9 +92,9 @@ public class FileLoggerProvider : ILoggerProvider
                 }
             }
         }
-        catch (OperationCanceledException) when (_cancellationTokenSource.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
-            // Expected when the provider forces cancellation after a shutdown timeout.
+            // Expected during shutdown cancellation.
         }
         catch (ObjectDisposedException)
         {
@@ -118,10 +120,17 @@ public class FileLoggerProvider : ILoggerProvider
 
         try
         {
-            if (!_processQueueTask.Wait(3000))
+            var completed = WaitTaskSafely(_processQueueTask, QueueDrainTimeoutMs);
+            if (!completed)
             {
                 _cancellationTokenSource.Cancel();
-                _processQueueTask.Wait(1000);
+                completed = WaitTaskSafely(_processQueueTask, QueueCancelGraceTimeoutMs);
+            }
+            if (!completed)
+            {
+                // Avoid disposing shared queue objects while worker thread is still unwinding.
+                _loggers.Clear();
+                return;
             }
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
@@ -132,6 +141,19 @@ public class FileLoggerProvider : ILoggerProvider
         _cancellationTokenSource.Dispose();
         _messageQueue.Dispose();
         _loggers.Clear();
+    }
+
+    private static bool WaitTaskSafely(Task task, int timeoutMs)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        try
+        {
+            return task.Wait(timeoutMs);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return false;
+        }
     }
 }
 

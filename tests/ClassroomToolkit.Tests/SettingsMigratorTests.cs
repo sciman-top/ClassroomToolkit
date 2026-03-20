@@ -28,6 +28,7 @@ public sealed class SettingsMigratorTests
         SettingsMigrator.Migrate(data, null);
 
         data["Paint"]["wps_input_mode"].Should().Be("raw");
+        data["Paint"]["office_input_mode"].Should().Be("raw");
     }
 
     [Fact]
@@ -45,6 +46,7 @@ public sealed class SettingsMigratorTests
         SettingsMigrator.Migrate(data, null);
 
         data["Paint"]["wps_input_mode"].Should().Be("message");
+        data["Paint"]["office_input_mode"].Should().Be("auto");
     }
 
     [Fact]
@@ -61,6 +63,25 @@ public sealed class SettingsMigratorTests
         SettingsMigrator.Migrate(data, null);
 
         data["Paint"]["wps_input_mode"].Should().Be("auto");
+        data["Paint"]["office_input_mode"].Should().Be("auto");
+    }
+
+    [Fact]
+    public void Migrate_ShouldNormalizeOfficeMode_WhenProvided()
+    {
+        var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["office_input_mode"] = "weird",
+                ["wps_input_mode"] = "raw"
+            }
+        };
+
+        SettingsMigrator.Migrate(data, null);
+
+        data["Paint"]["office_input_mode"].Should().Be("auto");
+        data["Paint"]["wps_input_mode"].Should().Be("raw");
     }
 
     [Fact]

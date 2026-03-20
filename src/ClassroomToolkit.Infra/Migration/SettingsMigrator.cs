@@ -30,12 +30,12 @@ public static class SettingsMigrator
             CreateBackup(settingsPath);
         }
 
-        NormalizeWpsInputMode(data);
+        NormalizePresentationInputModes(data);
         meta[VersionKey] = CurrentVersion;
         return data;
     }
 
-    private static void NormalizeWpsInputMode(Dictionary<string, Dictionary<string, string>> data)
+    private static void NormalizePresentationInputModes(Dictionary<string, Dictionary<string, string>> data)
     {
         if (!data.TryGetValue("Paint", out var paint))
         {
@@ -51,6 +51,21 @@ public static class SettingsMigrator
         {
             paint["wps_input_mode"] = normalized;
         }
+
+        var officeMode = paint.TryGetValue("office_input_mode", out var officeValue)
+            ? officeValue
+            : string.Empty;
+        if (string.IsNullOrWhiteSpace(officeMode))
+        {
+            // Legacy compatibility: office mode did not exist previously.
+            // Keep inherited raw/auto, but avoid message default for Office.
+            paint["office_input_mode"] = string.Equals(normalized, "message", StringComparison.OrdinalIgnoreCase)
+                ? "auto"
+                : normalized;
+            return;
+        }
+
+        paint["office_input_mode"] = NormalizeWpsMode(officeMode, rawInput: false);
     }
 
     private static string NormalizeWpsMode(string? mode, bool rawInput)

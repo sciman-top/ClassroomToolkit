@@ -417,7 +417,7 @@ public partial class RollCallWindow
         {
             return;
         }
-        _ = Dispatcher.InvokeAsync(() =>
+        void ApplyMinWindowSize()
         {
             var titleSize = MeasureElement(TitleBarRoot);
             var bottomSize = MeasureElement(BottomBarRoot);
@@ -433,7 +433,22 @@ public partial class RollCallWindow
 
             MinWidth = Math.Max(240, Math.Ceiling(minWidth));
             MinHeight = Math.Max(240, Math.Ceiling(minHeight));
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        var scheduled = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                _ = Dispatcher.InvokeAsync(
+                    ApplyMinWindowSize,
+                    System.Windows.Threading.DispatcherPriority.Background);
+                scheduled = true;
+            },
+            ex => System.Diagnostics.Debug.WriteLine($"UpdateMinWindowSize dispatch failed: {ex.Message}"));
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ApplyMinWindowSize();
+        }
     }
 
     private double GetBottomBarChromeWidth()

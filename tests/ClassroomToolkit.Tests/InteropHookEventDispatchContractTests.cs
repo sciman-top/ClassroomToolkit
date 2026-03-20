@@ -27,27 +27,10 @@ public sealed class InteropHookEventDispatchContractTests
 
     private static string GetSourcePath(string fileName)
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.Interop",
             "Presentation",
             fileName);
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

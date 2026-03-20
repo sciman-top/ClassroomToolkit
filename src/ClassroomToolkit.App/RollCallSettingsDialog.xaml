@@ -40,7 +40,7 @@
                 <!-- Global TabControl style applied automatically -->
 
                 <!-- 标签页 1: 显示/照片 -->
-                <TabItem Header="显示">
+                <TabItem Header="显示与照片">
                     <StackPanel Margin="4,12,4,8">
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                             <Grid>
@@ -73,15 +73,20 @@
                                     <TextBlock x:Name="PhotoDurationLabel" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="照片目录" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="照片来源" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                                 <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="34"/>
                             </Grid>
                         </Border>
+                        <TextBlock Text="说明：默认推荐保持当前设置；仅在课堂需要突出学生信息或照片时调整。"
+                                   Margin="4,8,4,0"
+                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 2: 语音播报 -->
-                <TabItem Header="语音">
+                <TabItem Header="语音播报">
                     <StackPanel Margin="4,12,4,8">
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                         <Grid>
@@ -100,22 +105,27 @@
                             <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名时朗读姓名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnSpeechToggleChanged" Unchecked="OnSpeechToggleChanged"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="语音引擎" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="播报引擎" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="SpeechEngineCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="34"
                                       SelectionChanged="OnSpeechEngineChanged" />
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="发音人" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="SpeechVoiceCombo" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="输出设备" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="播报设备（暂不可选）" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" Height="34"/>
                         </Grid>
                         </Border>
+                        <TextBlock Text="说明：默认推荐保持当前设置；当前版本将使用系统默认播报设备。"
+                                   Margin="4,8,4,0"
+                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 3: 遥控控制 -->
-                <TabItem Header="遥控">
+                <TabItem Header="遥控按键">
                     <StackPanel Margin="4,12,4,8">
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                         <Grid>
@@ -132,26 +142,31 @@
 
                             <!-- 点名按键 -->
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="遥控点名" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控点名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="使用翻页笔进行点名" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="触发按键" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="点名按键" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="False" Height="34" Margin="0,0,0,16"/>
 
                             <!-- 分组切换 -->
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="分组切换" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteGroupSwitchCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="启用翻页笔遥控切换分组" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <CheckBox x:Name="RemoteGroupSwitchCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="使用翻页笔切换分组" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteGroupSwitchChanged" Unchecked="OnRemoteGroupSwitchChanged" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="切换按键" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="分组按键" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="RemoteGroupSwitchKeyCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="34"/>
                         </Grid>
                         </Border>
+                        <TextBlock Text="说明：默认推荐保持当前设置；如同时启用两个按键，请确保不相同。"
+                                   Margin="4,8,4,0"
+                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 4: 倒计时提示 -->
-                <TabItem Header="倒计时">
+                <TabItem Header="倒计时提醒">
                     <StackPanel Margin="4,12,4,8">
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                         <Grid>
@@ -175,10 +190,10 @@
                             <ComboBox x:Name="TimerSoundCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="中途提示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="每隔一段时间提示" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="定时语音提醒" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="提示音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="提醒音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
                             <ComboBox x:Name="ReminderSoundCombo" Grid.Row="3" Grid.Column="1" Margin="0,0,0,16" Height="34"/>
 
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="提示间隔" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
@@ -189,14 +204,19 @@
                             </StackPanel>
                         </Grid>
                         </Border>
+                        <TextBlock Text="说明：默认推荐关闭“定时语音提醒”；开启后将按设定间隔播报。"
+                                   Margin="4,8,4,0"
+                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
             </TabControl>
 
             <!-- 3. 底部按钮 -->
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
-                <Button Content="重置当前标签" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
-                <Button Content="恢复全部默认" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
+                <Button Content="仅重置当前页" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
+                <Button Content="重置全部设置" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
                 <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>

@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-neighbor-render-recover",
+  "actions": [
+    {
+      "type": "FastRefreshImmediate",
+      "source": "neighbor-render-immediate"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "neighbor-render"
+    }
+  ]
+}
+

@@ -23,7 +23,9 @@ public partial class PaintOverlayWindow
 {
     private void ExecutePhotoClose()
     {
-        PhotoCloseRequested?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoCloseRequested?.Invoke(),
+            ex => Debug.WriteLine($"[PhotoCloseRequested] callback failed: {ex.GetType().Name} - {ex.Message}"));
         ExitPhotoMode();
     }
 

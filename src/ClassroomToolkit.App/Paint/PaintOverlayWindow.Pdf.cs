@@ -454,13 +454,20 @@ public partial class PaintOverlayWindow
         Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
         if (token == _pdfVisiblePrefetchToken)
         {
-            TryBeginInvoke(() =>
+            var scheduled = TryBeginInvoke(() =>
             {
                 if (ShouldRefreshCrossPagePdfDisplay())
                 {
                     UpdateCrossPageDisplay();
                 }
             }, DispatcherPriority.Background);
+            if (!scheduled && Dispatcher.CheckAccess())
+            {
+                if (ShouldRefreshCrossPagePdfDisplay())
+                {
+                    UpdateCrossPageDisplay();
+                }
+            }
         }
     }
 

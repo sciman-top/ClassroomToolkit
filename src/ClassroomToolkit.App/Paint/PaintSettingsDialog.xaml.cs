@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -7,6 +8,7 @@ using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
+using MediaColors = System.Windows.Media.Colors;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using WpfGrid = System.Windows.Controls.Grid;
@@ -54,10 +56,15 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, string Value)[] WpsModeChoices =
     {
-        ("消息投递（推荐，误报更低）", WpsInputModeDefaults.Message),
+        ("兼容优先（推荐，PostMessage）", WpsInputModeDefaults.Message),
         ("自动判断", WpsInputModeDefaults.Auto),
+        ("性能优先（SendInput）", WpsInputModeDefaults.Raw)
+    };
+    private static readonly (string Label, string Value)[] OfficeModeChoices =
+    {
+        ("自动判断（推荐）", WpsInputModeDefaults.Auto),
         ("强制原始输入（SendInput）", WpsInputModeDefaults.Raw),
-        ("强制消息投递（PostMessage）", WpsInputModeDefaults.Message)
+        ("兼容排障（PostMessage，画笔态可能无效）", WpsInputModeDefaults.Message)
     };
     private static readonly (string Label, int Value)[] WpsDebounceChoices =
     {
@@ -65,7 +72,7 @@ public partial class PaintSettingsDialog : Window
         ("80 ms（更灵敏）", 80),
         ("120 ms（推荐）", 120),
         ("160 ms（跨屏稳）", 160),
-        ("200 ms（默认）", 200),
+        ("200 ms（更稳）", 200),
         ("300 ms（更稳）", 300)
     };
     private static readonly double[] ToolbarScaleChoices =
@@ -118,6 +125,12 @@ public partial class PaintSettingsDialog : Window
         ("标准（1.0x，推荐/默认）", PhotoZoomInputDefaults.GestureSensitivityDefault),
         ("灵敏（1.2x）", PaintPresetDefaults.GestureSensitivityResponsive)
     };
+    private static readonly (string Label, string Value)[] PhotoInertiaProfileChoices =
+    {
+        ("标准（推荐）", PhotoInertiaProfileDefaults.Standard),
+        ("灵敏（轻甩易触发）", PhotoInertiaProfileDefaults.Sensitive),
+        ("重惯性（甩动更远）", PhotoInertiaProfileDefaults.Heavy)
+    };
     private static readonly (string Label, string Value)[] PresetSchemeChoices =
     {
         ("自定义（不覆盖）", PresetSchemeDefaults.Custom),
@@ -128,16 +141,15 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly Dictionary<string, string> PresetHints = new(StringComparer.OrdinalIgnoreCase)
     {
-        [PresetSchemeDefaults.Custom] = "保持你当前设置，不自动覆盖参数。手动修改联动参数后会自动切到此项。",
-        [PresetSchemeDefaults.Balanced] = "课堂通用推荐：联动“课堂通用”书写模式，整体稳和快均衡。",
-        [PresetSchemeDefaults.Responsive] = "流畅优先：联动“跟手优先”书写模式，适合高性能设备。",
-        [PresetSchemeDefaults.Stable] = "稳定优先：联动“稳笔模式”，适合老旧设备或复杂环境。",
-        [PresetSchemeDefaults.DualScreen] = "跨屏优先：联动“稳笔模式”，适合主屏+投影授课。"
+        [PresetSchemeDefaults.Custom] = string.Empty,
+        [PresetSchemeDefaults.Balanced] = "课堂通用推荐：使用「课堂通用」书写模式，整体稳和快均衡。",
+        [PresetSchemeDefaults.Responsive] = "流畅优先：使用「跟手优先」书写模式，适合高性能设备。",
+        [PresetSchemeDefaults.Stable] = "稳定优先：使用「稳笔模式」，适合老旧设备或复杂环境。",
+        [PresetSchemeDefaults.DualScreen] = "跨屏优先：使用「稳笔模式」，适合主屏+投影授课。"
     };
-    private const string PresetManagedHintForCustom =
-        "当前为自定义：可独立调整 WPS 模式、滚轮映射、降级锁定、去抖阈值、抬笔刷新、缩放步进与手势灵敏。";
+    private const string PresetManagedHintForCustom = "";
     private const string PresetManagedHintForPreset =
-        "当前预设托管：联动参数已锁定。点击“转为自定义后编辑”后可单独调整。";
+        "当前为预设模式：部分参数由预设统一管理。点击「切换为自定义后编辑」可单独调整。";
 
     private readonly record struct PresetBrushSectionState(
         string PresetScheme,
@@ -157,7 +169,8 @@ public partial class PaintSettingsDialog : Window
         int WpsDebounceMs,
         int PhotoPostInputRefreshDelayMs,
         double PhotoWheelZoomBase,
-        double PhotoGestureZoomSensitivity);
+        double PhotoGestureZoomSensitivity,
+        string PhotoInertiaProfile);
 
     private readonly record struct SceneSectionState(
         bool InkSaveEnabled,
@@ -170,6 +183,8 @@ public partial class PaintSettingsDialog : Window
         int PhotoPostInputRefreshDelayMs,
         double PhotoWheelZoomBase,
         double PhotoGestureZoomSensitivity,
+        string PhotoInertiaProfile,
+        string OfficeInputMode,
         string WpsInputMode,
         bool WpsWheelForward,
         bool ForcePresentationForegroundOnFullscreen,
@@ -184,6 +199,7 @@ public partial class PaintSettingsDialog : Window
 
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
+    public string OfficeInputMode { get; private set; } = WpsInputModeDefaults.Auto;
     public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Message;
     public bool WpsWheelForward { get; private set; }
     public int WpsDebounceMs { get; private set; } = PaintPresetDefaults.WpsDebounceDefaultMs;
@@ -204,6 +220,9 @@ public partial class PaintSettingsDialog : Window
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
+    public MediaColor QuickColor1 { get; private set; } = MediaColors.Black;
+    public MediaColor QuickColor2 { get; private set; } = MediaColors.Red;
+    public MediaColor QuickColor3 { get; private set; } = MediaColors.DodgerBlue;
     public double ToolbarScale { get; private set; } = ToolbarScaleDefaults.Default;
     public bool InkSaveEnabled { get; private set; }
     public InkExportScope InkExportScope { get; private set; } = InkExportScope.AllPersistedAndSession;
@@ -215,6 +234,7 @@ public partial class PaintSettingsDialog : Window
     public int PhotoPostInputRefreshDelayMs { get; private set; } = PaintPresetDefaults.PostInputRefreshDefaultMs;
     public double PhotoWheelZoomBase { get; private set; } = PhotoZoomInputDefaults.WheelZoomBaseDefault;
     public double PhotoGestureZoomSensitivity { get; private set; } = PhotoZoomInputDefaults.GestureSensitivityDefault;
+    public string PhotoInertiaProfile { get; private set; } = PhotoInertiaProfileDefaults.Standard;
     private bool _suppressPresetSelectionChanged;
     private bool _suppressPresetAutoCustom = true;
     private string _currentPresetScheme = PresetSchemeDefaults.Custom;
@@ -243,6 +263,15 @@ public partial class PaintSettingsDialog : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}"));
         
         BrushColor = settings.BrushColor;
+        QuickColor1 = settings.QuickColor1;
+        QuickColor2 = settings.QuickColor2;
+        QuickColor3 = settings.QuickColor3;
+        foreach (var (label, value) in OfficeModeChoices)
+        {
+            OfficeModeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        SelectComboByTag(OfficeModeCombo, settings.OfficeInputMode, WpsInputModeDefaults.Auto);
+        OfficeModeCombo.ToolTip = "仅影响 Microsoft PowerPoint（PPT）放映控制。";
         foreach (var (label, value) in WpsModeChoices)
         {
             WpsModeCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
@@ -267,6 +296,10 @@ public partial class PaintSettingsDialog : Window
         {
             WpsDebounceCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
+        EnsureIntComboOption(
+            WpsDebounceCombo,
+            settings.WpsDebounceMs,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.WpsDebounceMs} ms）"));
         SelectIntCombo(WpsDebounceCombo, settings.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         LockStrategyOnDegradeCheck.IsChecked = settings.PresentationLockStrategyWhenDegraded;
@@ -299,17 +332,37 @@ public partial class PaintSettingsDialog : Window
         {
             PostInputRefreshDelayCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
+        EnsureIntComboOption(
+            PostInputRefreshDelayCombo,
+            settings.PhotoPostInputRefreshDelayMs,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.PhotoPostInputRefreshDelayMs}ms）"));
         SelectIntCombo(PostInputRefreshDelayCombo, settings.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
         foreach (var (label, value) in WheelZoomBaseChoices)
         {
             WheelZoomBaseCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
+        EnsureDoubleComboOption(
+            WheelZoomBaseCombo,
+            settings.PhotoWheelZoomBase,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.PhotoWheelZoomBase:0.####}）"));
         SelectDoubleCombo(WheelZoomBaseCombo, settings.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
         foreach (var (label, value) in GestureSensitivityChoices)
         {
             GestureSensitivityCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
         }
+        EnsureDoubleComboOption(
+            GestureSensitivityCombo,
+            settings.PhotoGestureZoomSensitivity,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.PhotoGestureZoomSensitivity:0.###}x）"));
         SelectDoubleCombo(GestureSensitivityCombo, settings.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+        foreach (var (label, value) in PhotoInertiaProfileChoices)
+        {
+            PhotoInertiaProfileCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        SelectComboByTag(
+            PhotoInertiaProfileCombo,
+            PhotoInertiaProfileDefaults.Normalize(settings.PhotoInertiaProfile),
+            PhotoInertiaProfileDefaults.Standard);
         PhotoInputTelemetryCheck.IsChecked = settings.PhotoInputTelemetryEnabled;
         PhotoRememberTransformCheck.IsChecked = settings.PhotoRememberTransform;
         PhotoCrossPageDisplayCheck.IsChecked = settings.PhotoCrossPageDisplay;
@@ -395,10 +448,29 @@ public partial class PaintSettingsDialog : Window
             return;
         }
 
-        _sizeToContentCommitted = true;
-        _ = Dispatcher.InvokeAsync(
-            () => SizeToContent = System.Windows.SizeToContent.Manual,
-            System.Windows.Threading.DispatcherPriority.ContextIdle);
+        var scheduled = PaintActionInvoker.TryInvoke(() =>
+        {
+            _ = Dispatcher.InvokeAsync(
+                () =>
+                {
+                    _sizeToContentCommitted = true;
+                    SizeToContent = System.Windows.SizeToContent.Manual;
+                },
+                System.Windows.Threading.DispatcherPriority.ContextIdle);
+            return true;
+        }, fallback: false);
+        if (!scheduled)
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                _sizeToContentCommitted = true;
+                SizeToContent = System.Windows.SizeToContent.Manual;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[PaintSettingsDialog] deferred SizeToContent scheduling skipped");
+            }
+        }
     }
 
     private void OnDialogClosed(object? sender, EventArgs e)
@@ -414,6 +486,7 @@ public partial class PaintSettingsDialog : Window
     {
         ControlMsPpt = true;
         ControlWpsPpt = true;
+        OfficeInputMode = GetSelectedTag(OfficeModeCombo, WpsInputModeDefaults.Auto);
         WpsInputMode = GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto);
         PresetScheme = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
@@ -448,6 +521,8 @@ public partial class PaintSettingsDialog : Window
         PhotoPostInputRefreshDelayMs = ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
         PhotoWheelZoomBase = ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
         PhotoGestureZoomSensitivity = ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+        PhotoInertiaProfile = PhotoInertiaProfileDefaults.Normalize(
+            GetSelectedTag(PhotoInertiaProfileCombo, PhotoInertiaProfileDefaults.Standard));
         DialogResult = true;
     }
 
@@ -458,6 +533,19 @@ public partial class PaintSettingsDialog : Window
 
     private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
     {
+        if ((SettingsTabControl?.SelectedIndex ?? 0) == 0)
+        {
+            var result = System.Windows.MessageBox.Show(
+                "重置“笔触与预设”会同时恢复部分场景参数（如 WPS 策略、抬笔后刷新、缩放灵敏度）。是否继续？",
+                "仅重置当前页",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+            if (result != System.Windows.MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
         ApplyDefaultSettingsForCurrentTab();
     }
 
@@ -465,7 +553,7 @@ public partial class PaintSettingsDialog : Window
     {
         var result = System.Windows.MessageBox.Show(
             "将恢复画笔设置窗口中的全部默认参数，是否继续？",
-            "恢复全部默认",
+            "重置全部设置",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
@@ -513,6 +601,7 @@ public partial class PaintSettingsDialog : Window
                     SelectComboByTag(ToolbarScaleCombo, FindNearestScale(defaults.PaintToolbarScale));
                     break;
                 case 2:
+                    SelectComboByTag(OfficeModeCombo, defaults.OfficeInputMode, WpsInputModeDefaults.Auto);
                     SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
                     SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
                     WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
@@ -527,6 +616,7 @@ public partial class PaintSettingsDialog : Window
                     SelectIntCombo(PostInputRefreshDelayCombo, defaults.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
                     SelectDoubleCombo(WheelZoomBaseCombo, defaults.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
                     SelectDoubleCombo(GestureSensitivityCombo, defaults.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+                    SelectComboByTag(PhotoInertiaProfileCombo, defaults.PhotoInertiaProfile, PhotoInertiaProfileDefaults.Standard);
                     PhotoInputTelemetryCheck.IsChecked = defaults.PhotoInputTelemetryEnabled;
                     PhotoRememberTransformCheck.IsChecked = defaults.PhotoRememberTransform;
                     PhotoCrossPageDisplayCheck.IsChecked = defaults.PhotoCrossPageDisplay;
@@ -750,6 +840,7 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.SelectionChanged += OnPresetManagedComboChanged;
         WheelZoomBaseCombo.SelectionChanged += OnPresetManagedComboChanged;
         GestureSensitivityCombo.SelectionChanged += OnPresetManagedComboChanged;
+        PhotoInertiaProfileCombo.SelectionChanged += OnPresetManagedComboChanged;
         WpsWheelCheck.Checked += OnPresetManagedToggleChanged;
         WpsWheelCheck.Unchecked += OnPresetManagedToggleChanged;
         LockStrategyOnDegradeCheck.Checked += OnPresetManagedToggleChanged;
@@ -763,6 +854,7 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.SelectionChanged -= OnPresetManagedComboChanged;
         WheelZoomBaseCombo.SelectionChanged -= OnPresetManagedComboChanged;
         GestureSensitivityCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        PhotoInertiaProfileCombo.SelectionChanged -= OnPresetManagedComboChanged;
         WpsWheelCheck.Checked -= OnPresetManagedToggleChanged;
         WpsWheelCheck.Unchecked -= OnPresetManagedToggleChanged;
         LockStrategyOnDegradeCheck.Checked -= OnPresetManagedToggleChanged;
@@ -782,6 +874,8 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         WheelZoomBaseCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         GestureSensitivityCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        PhotoInertiaProfileCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        OfficeModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         WpsModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         WpsDebounceCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         ShapeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
@@ -829,6 +923,8 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         WheelZoomBaseCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         GestureSensitivityCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        PhotoInertiaProfileCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        OfficeModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         WpsModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         WpsDebounceCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         ShapeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
@@ -939,7 +1035,8 @@ public partial class PaintSettingsDialog : Window
             ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
             ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
             ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
-            ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault));
+            ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault),
+            PhotoInertiaProfileDefaults.Normalize(GetSelectedTag(PhotoInertiaProfileCombo, PhotoInertiaProfileDefaults.Standard)));
     }
 
     private void ApplyManagedParametersToControls(PresetSchemeManagedParameters parameters)
@@ -955,21 +1052,26 @@ public partial class PaintSettingsDialog : Window
             GestureSensitivityCombo,
             parameters.PhotoGestureZoomSensitivity,
             fallback: parameters.PhotoGestureZoomSensitivity);
+        SelectComboByTag(
+            PhotoInertiaProfileCombo,
+            parameters.PhotoInertiaProfile,
+            PhotoInertiaProfileDefaults.Standard);
     }
 
     private static string FormatManagedParameters(PresetSchemeManagedParameters parameters)
     {
         return $"mode={parameters.WpsInputMode}; wheel={parameters.WpsWheelForward}; lock={parameters.LockStrategyWhenDegraded}; " +
                $"writing={parameters.ClassroomWritingMode}; debounce={parameters.WpsDebounceMs}; postInput={parameters.PhotoPostInputRefreshDelayMs}; " +
-               $"wheelZoom={parameters.PhotoWheelZoomBase:0.####}; gesture={parameters.PhotoGestureZoomSensitivity:0.###}";
+               $"wheelZoom={parameters.PhotoWheelZoomBase:0.####}; gesture={parameters.PhotoGestureZoomSensitivity:0.###}; " +
+               $"inertia={parameters.PhotoInertiaProfile}";
     }
 
     private void UpdateManagedControlVisualState(string preset)
     {
         var isCustom = IsCustomScheme(preset);
         var tip = isCustom
-            ? "自定义模式：该参数可独立调整。"
-            : "预设托管：切换到“自定义”后可独立调整。";
+            ? "WPS策略（仅影响 WPS）：自定义模式下可独立调整。"
+            : "WPS策略（仅影响 WPS）：当前为预设模式，切换到“自定义”后可独立调整。";
 
         WpsModeCombo.ToolTip = tip;
         WpsDebounceCombo.ToolTip = tip;
@@ -978,6 +1080,7 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.ToolTip = tip;
         WheelZoomBaseCombo.ToolTip = tip;
         GestureSensitivityCombo.ToolTip = tip;
+        PhotoInertiaProfileCombo.ToolTip = tip;
         ClassroomWritingModeCombo.ToolTip = tip;
         WpsModeCombo.IsEnabled = isCustom;
         WpsDebounceCombo.IsEnabled = isCustom;
@@ -986,6 +1089,7 @@ public partial class PaintSettingsDialog : Window
         PostInputRefreshDelayCombo.IsEnabled = isCustom;
         WheelZoomBaseCombo.IsEnabled = isCustom;
         GestureSensitivityCombo.IsEnabled = isCustom;
+        PhotoInertiaProfileCombo.IsEnabled = isCustom;
         ClassroomWritingModeCombo.IsEnabled = isCustom;
         if (ConvertToCustomEditingButton != null)
         {
@@ -1014,7 +1118,8 @@ public partial class PaintSettingsDialog : Window
             WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
             PhotoPostInputRefreshDelayMs: ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
             PhotoWheelZoomBase: ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
-            PhotoGestureZoomSensitivity: ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault));
+            PhotoGestureZoomSensitivity: ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault),
+            PhotoInertiaProfile: PhotoInertiaProfileDefaults.Normalize(GetSelectedTag(PhotoInertiaProfileCombo, PhotoInertiaProfileDefaults.Standard)));
     }
 
     private SceneSectionState CaptureSceneSectionStateFromControls()
@@ -1030,6 +1135,8 @@ public partial class PaintSettingsDialog : Window
             PhotoPostInputRefreshDelayMs: ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
             PhotoWheelZoomBase: ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
             PhotoGestureZoomSensitivity: ResolveDoubleCombo(GestureSensitivityCombo, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault),
+            PhotoInertiaProfile: PhotoInertiaProfileDefaults.Normalize(GetSelectedTag(PhotoInertiaProfileCombo, PhotoInertiaProfileDefaults.Standard)),
+            OfficeInputMode: GetSelectedTag(OfficeModeCombo, WpsInputModeDefaults.Auto),
             WpsInputMode: GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
             WpsWheelForward: WpsWheelCheck.IsChecked == true,
             ForcePresentationForegroundOnFullscreen: ForceForegroundCheck.IsChecked == true,
@@ -1071,6 +1178,7 @@ public partial class PaintSettingsDialog : Window
             SelectIntCombo(PostInputRefreshDelayCombo, state.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
             SelectDoubleCombo(WheelZoomBaseCombo, state.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
             SelectDoubleCombo(GestureSensitivityCombo, state.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+            SelectComboByTag(PhotoInertiaProfileCombo, state.PhotoInertiaProfile, PhotoInertiaProfileDefaults.Standard);
         }
         finally
         {
@@ -1106,6 +1214,8 @@ public partial class PaintSettingsDialog : Window
             SelectIntCombo(PostInputRefreshDelayCombo, state.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
             SelectDoubleCombo(WheelZoomBaseCombo, state.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
             SelectDoubleCombo(GestureSensitivityCombo, state.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+            SelectComboByTag(PhotoInertiaProfileCombo, state.PhotoInertiaProfile, PhotoInertiaProfileDefaults.Standard);
+            SelectComboByTag(OfficeModeCombo, state.OfficeInputMode, WpsInputModeDefaults.Auto);
             SelectComboByTag(WpsModeCombo, state.WpsInputMode, WpsInputModeDefaults.Auto);
             WpsWheelCheck.IsChecked = state.WpsWheelForward;
             ForceForegroundCheck.IsChecked = state.ForcePresentationForegroundOnFullscreen;
@@ -1147,6 +1257,7 @@ public partial class PaintSettingsDialog : Window
         _suppressSectionDirtyTracking = true;
         try
         {
+            SelectComboByTag(OfficeModeCombo, defaults.OfficeInputMode, WpsInputModeDefaults.Auto);
             SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
             SelectComboByTag(PresetSchemeCombo, defaultPreset, PresetSchemeDefaults.Custom);
             _currentPresetScheme = defaultPreset;
@@ -1164,6 +1275,7 @@ public partial class PaintSettingsDialog : Window
             SelectIntCombo(PostInputRefreshDelayCombo, defaults.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
             SelectDoubleCombo(WheelZoomBaseCombo, defaults.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
             SelectDoubleCombo(GestureSensitivityCombo, defaults.PhotoGestureZoomSensitivity, fallback: PhotoZoomInputDefaults.GestureSensitivityDefault);
+            SelectComboByTag(PhotoInertiaProfileCombo, defaults.PhotoInertiaProfile, PhotoInertiaProfileDefaults.Standard);
             PhotoInputTelemetryCheck.IsChecked = defaults.PhotoInputTelemetryEnabled;
             PhotoRememberTransformCheck.IsChecked = defaults.PhotoRememberTransform;
             PhotoCrossPageDisplayCheck.IsChecked = defaults.PhotoCrossPageDisplay;
@@ -1180,6 +1292,9 @@ public partial class PaintSettingsDialog : Window
             CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
             SelectShapeType(defaults.ShapeType);
             SelectComboByTag(ToolbarScaleCombo, FindNearestScale(defaults.PaintToolbarScale));
+            QuickColor1 = defaults.QuickColor1;
+            QuickColor2 = defaults.QuickColor2;
+            QuickColor3 = defaults.QuickColor3;
         }
         finally
         {
@@ -1232,7 +1347,8 @@ public partial class PaintSettingsDialog : Window
             || current.WpsDebounceMs != initial.WpsDebounceMs
             || current.PhotoPostInputRefreshDelayMs != initial.PhotoPostInputRefreshDelayMs
             || Math.Abs(current.PhotoWheelZoomBase - initial.PhotoWheelZoomBase) > PaintSettingsDefaults.DoubleComparisonEpsilon
-            || Math.Abs(current.PhotoGestureZoomSensitivity - initial.PhotoGestureZoomSensitivity) > PaintSettingsDefaults.DoubleComparisonEpsilon;
+            || Math.Abs(current.PhotoGestureZoomSensitivity - initial.PhotoGestureZoomSensitivity) > PaintSettingsDefaults.DoubleComparisonEpsilon
+            || !string.Equals(current.PhotoInertiaProfile, initial.PhotoInertiaProfile, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsSceneSectionDirty()
@@ -1249,6 +1365,8 @@ public partial class PaintSettingsDialog : Window
             || current.PhotoPostInputRefreshDelayMs != initial.PhotoPostInputRefreshDelayMs
             || Math.Abs(current.PhotoWheelZoomBase - initial.PhotoWheelZoomBase) > PaintSettingsDefaults.DoubleComparisonEpsilon
             || Math.Abs(current.PhotoGestureZoomSensitivity - initial.PhotoGestureZoomSensitivity) > PaintSettingsDefaults.DoubleComparisonEpsilon
+            || !string.Equals(current.PhotoInertiaProfile, initial.PhotoInertiaProfile, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(current.OfficeInputMode, initial.OfficeInputMode, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(current.WpsInputMode, initial.WpsInputMode, StringComparison.OrdinalIgnoreCase)
             || current.WpsWheelForward != initial.WpsWheelForward
             || current.ForcePresentationForegroundOnFullscreen != initial.ForcePresentationForegroundOnFullscreen
@@ -1655,6 +1773,19 @@ public partial class PaintSettingsDialog : Window
         combo.SelectedIndex = 0;
     }
 
+    private static void EnsureIntComboOption(WpfComboBox combo, int value, string label)
+    {
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is int tagged && tagged == value)
+            {
+                return;
+            }
+        }
+
+        combo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+    }
+
     private static int ResolveIntCombo(WpfComboBox combo, int fallback)
     {
         if (combo.SelectedItem is WpfComboBoxItem item && item.Tag is int value)
@@ -1685,6 +1816,20 @@ public partial class PaintSettingsDialog : Window
         combo.SelectedIndex = 0;
     }
 
+    private static void EnsureDoubleComboOption(WpfComboBox combo, double value, string label)
+    {
+        foreach (var item in combo.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is double tagged
+                && Math.Abs(tagged - value) < PaintSettingsDefaults.DoubleComparisonEpsilon)
+            {
+                return;
+            }
+        }
+
+        combo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+    }
+
     private static double ResolveDoubleCombo(WpfComboBox combo, double fallback)
     {
         if (combo.SelectedItem is WpfComboBoxItem item && item.Tag is double value)
@@ -1694,4 +1839,3 @@ public partial class PaintSettingsDialog : Window
         return fallback;
     }
 }
-

@@ -77,7 +77,15 @@
                                  ScrollViewer.CanContentScroll="True"
                                  VirtualizingPanel.IsVirtualizing="True"
                                  VirtualizingPanel.VirtualizationMode="Recycling"
-                                 Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
+                                 Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Path}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{StaticResource Brush_Text_Primary}"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Grid>
                 </Expander>
             </Border>
@@ -92,7 +100,15 @@
                              ScrollViewer.CanContentScroll="True"
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling"
-                             Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}"/>
+                             Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Path}"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{StaticResource Brush_Text_Primary}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Expander>
             </Border>
 
@@ -106,7 +122,14 @@
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
-                        <!-- Global TreeViewItem style applied automatically -->
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="FontSize" Value="13"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
                     </TreeView>
                 </Expander>
             </Border>
@@ -122,9 +145,15 @@
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Border Background="{StaticResource Brush_InputBackground}" BorderBrush="{StaticResource Brush_Border}"
-                            BorderThickness="1" CornerRadius="4" Padding="8,6" Height="36">
-                        <TextBlock x:Name="CurrentFolderText" Foreground="{StaticResource Brush_Text_Primary}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            BorderThickness="1" CornerRadius="4" Padding="10,4" Height="40">
+                        <TextBox x:Name="CurrentFolderText"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{StaticResource Brush_Text_Primary}"
+                                 FontSize="13"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="OnCurrentFolderTextKeyDown"
+                                 ToolTip="输入文件夹路径后按 Enter"/>
                     </Border>
                 </DockPanel>
 
@@ -154,15 +183,21 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="36" Height="30" Margin="0,0,6,0"
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="72" Height="30" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
-                                <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
-                                      Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
+                                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                                    <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
+                                </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="36" Height="30" Margin="0,0,10,0"
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="84" Height="30" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
-                                <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
-                                      Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
+                                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                                    <TextBlock Text="缩略图" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
+                                </StackPanel>
                             </ToggleButton>
                             <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>

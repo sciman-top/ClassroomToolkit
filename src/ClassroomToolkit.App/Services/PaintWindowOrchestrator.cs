@@ -210,32 +210,45 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         toolbarWindow.PhotoOpenRequested -= OnToolbarPhotoOpenRequested;
     }
 
-    private void OnOverlayPhotoModeChanged(bool active) => PhotoModeChanged?.Invoke(active);
+    private void OnOverlayPhotoModeChanged(bool active)
+        => RaiseEventSafely(() => PhotoModeChanged?.Invoke(active), nameof(PhotoModeChanged));
 
-    private void OnOverlayPhotoNavigationRequested(int direction) => PhotoNavigationRequested?.Invoke(direction);
+    private void OnOverlayPhotoNavigationRequested(int direction)
+        => RaiseEventSafely(() => PhotoNavigationRequested?.Invoke(direction), nameof(PhotoNavigationRequested));
 
     private void OnOverlayPhotoUnifiedTransformChanged(double scaleX, double scaleY, double translateX, double translateY)
-        => PhotoUnifiedTransformChanged?.Invoke(scaleX, scaleY, translateX, translateY);
+        => RaiseEventSafely(
+            () => PhotoUnifiedTransformChanged?.Invoke(scaleX, scaleY, translateX, translateY),
+            nameof(PhotoUnifiedTransformChanged));
 
-    private void OnOverlayPresentationFullscreenDetected() => PresentationFullscreenDetected?.Invoke();
+    private void OnOverlayPresentationFullscreenDetected()
+        => RaiseEventSafely(() => PresentationFullscreenDetected?.Invoke(), nameof(PresentationFullscreenDetected));
 
     private void OnOverlayPresentationForegroundDetected(PresentationForegroundSource source)
     {
-        PresentationForegroundDetected?.Invoke(source);
+        RaiseEventSafely(() => PresentationForegroundDetected?.Invoke(source), nameof(PresentationForegroundDetected));
         TryAutoLearnPresentationClassifierOverrides();
     }
 
-    private void OnOverlayPhotoForegroundDetected() => PhotoForegroundDetected?.Invoke();
+    private void OnOverlayPhotoForegroundDetected()
+        => RaiseEventSafely(() => PhotoForegroundDetected?.Invoke(), nameof(PhotoForegroundDetected));
 
-    private void OnOverlayPhotoCloseRequested() => PhotoCloseRequested?.Invoke();
+    private void OnOverlayPhotoCloseRequested()
+        => RaiseEventSafely(() => PhotoCloseRequested?.Invoke(), nameof(PhotoCloseRequested));
 
-    private void OnOverlayPhotoCursorModeFocusRequested() => PhotoCursorModeFocusRequested?.Invoke();
+    private void OnOverlayPhotoCursorModeFocusRequested()
+        => RaiseEventSafely(() => PhotoCursorModeFocusRequested?.Invoke(), nameof(PhotoCursorModeFocusRequested));
 
-    private void OnOverlayFloatingZOrderRequested(FloatingZOrderRequest request) => FloatingZOrderRequested?.Invoke(request);
+    private void OnOverlayFloatingZOrderRequested(FloatingZOrderRequest request)
+        => RaiseEventSafely(() => FloatingZOrderRequested?.Invoke(request), nameof(FloatingZOrderRequested));
 
-    private void OnOverlaySessionTransitionOccurred(UiSessionTransition transition) => OverlaySessionTransitionOccurred?.Invoke(transition);
+    private void OnOverlaySessionTransitionOccurred(UiSessionTransition transition)
+        => RaiseEventSafely(
+            () => OverlaySessionTransitionOccurred?.Invoke(transition),
+            nameof(OverlaySessionTransitionOccurred));
 
-    private void OnOverlayWindowActivated(object? sender, EventArgs e) => OverlayActivated?.Invoke();
+    private void OnOverlayWindowActivated(object? sender, EventArgs e)
+        => RaiseEventSafely(() => OverlayActivated?.Invoke(), nameof(OverlayActivated));
 
     private void OnOverlayWindowClosed(object? sender, EventArgs e)
     {
@@ -375,9 +388,18 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.SetBoardOpacity(0);
     }
 
-    private void OnToolbarSettingsRequested() => SettingsRequested?.Invoke();
+    private void OnToolbarSettingsRequested()
+        => RaiseEventSafely(() => SettingsRequested?.Invoke(), nameof(SettingsRequested));
 
-    private void OnToolbarPhotoOpenRequested() => PhotoOpenRequested?.Invoke();
+    private void OnToolbarPhotoOpenRequested()
+        => RaiseEventSafely(() => PhotoOpenRequested?.Invoke(), nameof(PhotoOpenRequested));
+
+    private void RaiseEventSafely(Action callback, string eventName)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            callback,
+            ex => _logger.LogWarning(ex, "PaintWindowOrchestrator event callback failed: {EventName}", eventName));
+    }
 
     private PaintToolMode ResolvePreferredPrimaryToolMode()
     {
@@ -423,6 +445,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
             OverlayWindow.SetBoardOpacity(0);
         }
 
+        OverlayWindow.UpdateOfficeMode(settings.OfficeInputMode);
         OverlayWindow.UpdateWpsMode(settings.WpsInputMode);
         OverlayWindow.UpdatePresentationClassifierOverrides(settings.PresentationClassifierOverridesJson);
         OverlayWindow.UpdatePresentationClassifierAutoLearn(settings.PresentationClassifierAutoLearnEnabled);
@@ -443,6 +466,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.UpdateNeighborPrefetchRadiusMax(settings.PhotoNeighborPrefetchRadiusMax);
         OverlayWindow.UpdatePhotoPostInputRefreshDelayMs(settings.PhotoPostInputRefreshDelayMs);
         OverlayWindow.UpdatePhotoZoomTuning(settings.PhotoWheelZoomBase, settings.PhotoGestureZoomSensitivity);
+        OverlayWindow.UpdatePhotoInertiaProfile(settings.PhotoInertiaProfile);
         OverlayWindow.SetPhotoUnifiedTransformState(
             settings.PhotoUnifiedTransformEnabled,
             settings.PhotoUnifiedScaleX,

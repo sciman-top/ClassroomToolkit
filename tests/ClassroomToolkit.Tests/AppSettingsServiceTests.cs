@@ -136,6 +136,7 @@ public sealed class AppSettingsServiceTests
             initial.PhotoPostInputRefreshDelayMs = 120;
             initial.PhotoWheelZoomBase = 1.001;
             initial.PhotoGestureZoomSensitivity = 1.2;
+            initial.PhotoInertiaProfile = PhotoInertiaProfileDefaults.Heavy;
             initial.PhotoInputTelemetryEnabled = true;
 
             service.Save(initial);
@@ -147,6 +148,7 @@ public sealed class AppSettingsServiceTests
             reloaded.PhotoPostInputRefreshDelayMs.Should().Be(120);
             reloaded.PhotoWheelZoomBase.Should().BeApproximately(1.001, 0.0001);
             reloaded.PhotoGestureZoomSensitivity.Should().BeApproximately(1.2, 0.0001);
+            reloaded.PhotoInertiaProfile.Should().Be(PhotoInertiaProfileDefaults.Heavy);
             reloaded.PhotoInputTelemetryEnabled.Should().BeTrue();
         }
         finally
@@ -362,6 +364,7 @@ public sealed class AppSettingsServiceTests
                     "photo_post_input_refresh_delay_ms": "1",
                     "photo_wheel_zoom_base": "0.1",
                     "photo_gesture_zoom_sensitivity": "9",
+                    "photo_inertia_profile": "legacy_profile",
                     "stylus_adaptive_pressure_profile": "999",
                     "stylus_adaptive_sample_rate_tier": "-2",
                     "stylus_adaptive_prediction_horizon_ms": "999",
@@ -379,6 +382,7 @@ public sealed class AppSettingsServiceTests
 
             settings.PresetScheme.Should().Be(PresetSchemeDefaults.Custom);
             settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
+            settings.OfficeInputMode.Should().Be(WpsInputModeDefaults.Auto);
             settings.StylusAdaptivePressureProfile.Should().Be(0);
             settings.StylusAdaptiveSampleRateTier.Should().Be(0);
             settings.StylusAdaptivePredictionHorizonMs.Should().Be(18);
@@ -393,6 +397,7 @@ public sealed class AppSettingsServiceTests
             settings.PhotoPostInputRefreshDelayMs.Should().Be(CrossPagePostInputRefreshDelayClampPolicy.MinDelayMs);
             settings.PhotoWheelZoomBase.Should().Be(PhotoZoomInputDefaults.WheelZoomBaseMin);
             settings.PhotoGestureZoomSensitivity.Should().Be(PhotoZoomInputDefaults.GestureSensitivityMax);
+            settings.PhotoInertiaProfile.Should().Be(PhotoInertiaProfileDefaults.Standard);
             settings.LauncherAutoExitSeconds.Should().Be(0);
         }
         finally
@@ -425,6 +430,39 @@ public sealed class AppSettingsServiceTests
             var settings = service.Load();
 
             settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
+            settings.OfficeInputMode.Should().Be(WpsInputModeDefaults.Auto);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldRespectOfficeInputMode_WhenProvided()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_json");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                {
+                  "Paint": {
+                    "office_input_mode": "message",
+                    "wps_input_mode": "raw"
+                  }
+                }
+                """);
+            var service = CreateJsonService(path);
+
+            var settings = service.Load();
+
+            settings.OfficeInputMode.Should().Be(WpsInputModeDefaults.Message);
+            settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Raw);
         }
         finally
         {
@@ -445,6 +483,7 @@ public sealed class AppSettingsServiceTests
             var settings = service.Load();
             settings.PresetScheme = "legacy";
             settings.WpsInputMode = "invalid_mode";
+            settings.OfficeInputMode = "invalid_mode";
             settings.StylusAdaptivePressureProfile = 99;
             settings.StylusAdaptiveSampleRateTier = -1;
             settings.StylusAdaptivePredictionHorizonMs = 1000;
@@ -466,6 +505,7 @@ public sealed class AppSettingsServiceTests
 
             reloaded.PresetScheme.Should().Be(PresetSchemeDefaults.Custom);
             reloaded.WpsInputMode.Should().Be(WpsInputModeDefaults.Auto);
+            reloaded.OfficeInputMode.Should().Be(WpsInputModeDefaults.Auto);
             reloaded.StylusAdaptivePressureProfile.Should().Be(0);
             reloaded.StylusAdaptiveSampleRateTier.Should().Be(0);
             reloaded.StylusAdaptivePredictionHorizonMs.Should().Be(18);
@@ -510,6 +550,7 @@ public sealed class AppSettingsServiceTests
             var service = CreateJsonService(path);
             var settings = service.Load();
             settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Raw);
+            settings.OfficeInputMode.Should().Be(WpsInputModeDefaults.Raw);
 
             service.Save(settings);
 
@@ -517,6 +558,7 @@ public sealed class AppSettingsServiceTests
             var paint = document.RootElement.GetProperty("Paint");
             paint.TryGetProperty("wps_raw_input", out _).Should().BeFalse();
             paint.GetProperty("wps_input_mode").GetString().Should().Be(WpsInputModeDefaults.Raw);
+            paint.GetProperty("office_input_mode").GetString().Should().Be(WpsInputModeDefaults.Raw);
         }
         finally
         {
@@ -547,6 +589,7 @@ public sealed class AppSettingsServiceTests
 
         settings.RollCallShowId.Should().Be(defaults.RollCallShowId);
         settings.BrushSize.Should().Be(defaults.BrushSize);
+        settings.OfficeInputMode.Should().Be(defaults.OfficeInputMode);
         settings.WpsInputMode.Should().Be(defaults.WpsInputMode);
     }
 

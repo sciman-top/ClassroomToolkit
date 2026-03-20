@@ -20,29 +20,24 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
         source.Should().Contain("WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);");
     }
 
+    [Fact]
+    public void PaintOverlayPresentation_ShouldFallbackInline_WhenWpsHookDispatchSchedulingFailsOnUiThread()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Background);");
+        source.Should().Contain("if (Dispatcher.CheckAccess())");
+        source.Should().Contain("ExecuteHookRequest();");
+        source.Should().Contain("var scheduled = TryBeginInvoke(ShowUnavailableMessage, System.Windows.Threading.DispatcherPriority.Background);");
+        source.Should().Contain("ShowUnavailableMessage();");
+    }
+
     private static string GetSourcePath()
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Paint",
             "PaintOverlayWindow.Presentation.cs");
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

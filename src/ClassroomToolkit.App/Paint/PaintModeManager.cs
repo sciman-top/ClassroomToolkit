@@ -1,4 +1,5 @@
 using System;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -33,7 +34,7 @@ public sealed class PaintModeManager
             if (_isPaintMode != value)
             {
                 _isPaintMode = value;
-                PaintModeChanged?.Invoke(value);
+                SafeActionExecutionExecutor.TryExecute(() => PaintModeChanged?.Invoke(value));
             }
         }
     }
@@ -49,7 +50,7 @@ public sealed class PaintModeManager
             if (_isDrawing != value)
             {
                 _isDrawing = value;
-                IsDrawingChanged?.Invoke(value);
+                SafeActionExecutionExecutor.TryExecute(() => IsDrawingChanged?.Invoke(value));
             }
         }
     }

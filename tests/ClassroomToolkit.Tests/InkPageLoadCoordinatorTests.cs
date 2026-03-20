@@ -210,4 +210,29 @@ public sealed class InkPageLoadCoordinatorTests
         result.ClearedInkState.Should().BeTrue();
         clearCount.Should().Be(1);
     }
+
+    [Fact]
+    public void Apply_ShouldIgnoreTraceCallbackFailures()
+    {
+        Action act = () => InkPageLoadCoordinator.Apply(
+            photoCacheScopeActive: true,
+            inkCacheEnabled: true,
+            inkShowEnabled: true,
+            currentCacheKey: "photo|trace",
+            allowDiskFallback: true,
+            hasInkPersistence: false,
+            preferInteractiveFastPath: false,
+            tryGetCachedStrokes: static (string _, out List<InkStrokeData> strokes) =>
+            {
+                strokes = new List<InkStrokeData>();
+                return false;
+            },
+            tryLoadInkFromSidecar: static () => false,
+            purgePersistedInkForHiddenCurrentPage: static () => { },
+            clearInkSurfaceState: static () => { },
+            applyInkStrokes: static (_, _) => { },
+            markTraceStage: static (_, _) => throw new InvalidOperationException("trace failed"));
+
+        act.Should().NotThrow();
+    }
 }

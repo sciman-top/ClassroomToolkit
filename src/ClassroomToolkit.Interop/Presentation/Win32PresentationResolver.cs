@@ -268,7 +268,9 @@ public sealed class Win32PresentationResolver : IPresentationTargetResolver
         {
             return false;
         }
-        const int tolerance = 2;
+        // PowerPoint slideshow/annotation surfaces may keep a small non-client margin.
+        // A wider tolerance avoids dropping valid fullscreen candidates in pen mode.
+        const int tolerance = 16;
         return Math.Abs(rect.Left - info.Monitor.Left) <= tolerance
                && Math.Abs(rect.Top - info.Monitor.Top) <= tolerance
                && Math.Abs(rect.Right - info.Monitor.Right) <= tolerance

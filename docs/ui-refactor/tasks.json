@@ -1,10 +1,10 @@
 {
   "project": "ClassroomToolkit",
-  "updated_at": "2026-03-14",
+  "updated_at": "2026-03-18",
   "mode": "ui-window-system",
   "mode_family": "ui-overhaul",
   "governing_reconciliation": {
-    "last_reconciled_at": "2026-03-14T07:51:37.6475422Z",
+    "last_reconciled_at": "2026-03-18T15:03:53.0848945Z",
     "doc_paths": [
       "docs/superpowers/specs/2026-03-14-ui-window-system-design.md",
       "docs/superpowers/specs/2026-03-14-ui-mode-loop-integration-design.md",
@@ -416,7 +416,8 @@
       "behavior_invariants": [
         "No main-scene window polish starts before this gate is resumed"
       ],
-      "blocked_by_visual_review": true
+      "blocked_by_visual_review": true,
+      "status_hint": "completed"
     },
     {
       "id": "ui-main-scenes-main-window",
@@ -448,7 +449,8 @@
       "behavior_invariants": [
         "MainWindow startup and owner relationships must not change"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "ui-main-scenes-rollcall-and-timer",
@@ -480,7 +482,8 @@
       "behavior_invariants": [
         "RollCall remote control and timer behavior must not regress"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "ui-main-scenes-toolbar-and-overlay",
@@ -512,7 +515,8 @@
       "behavior_invariants": [
         "Overlay input passthrough and topmost behavior remain policy-driven"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "main-scene-freeze-gate",
@@ -538,7 +542,8 @@
       "behavior_invariants": [
         "Management/settings polish cannot begin before this gate resumes"
       ],
-      "blocked_by_visual_review": true
+      "blocked_by_visual_review": true,
+      "status_hint": "completed"
     },
     {
       "id": "ui-management-image-and-list",
@@ -570,7 +575,8 @@
       "behavior_invariants": [
         "File/navigation workflows must remain functionally unchanged"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "ui-management-settings-dialog-family",
@@ -603,7 +609,8 @@
       "behavior_invariants": [
         "No configuration schema or persistence format changes are introduced"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "ui-dialog-tail-pass",
@@ -636,7 +643,8 @@
       "behavior_invariants": [
         "Dialog owner and topmost semantics remain unchanged"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "fullscreen-float-freeze-gate",
@@ -662,7 +670,8 @@
       "behavior_invariants": [
         "Final visual regression cannot begin before this gate resumes"
       ],
-      "blocked_by_visual_review": true
+      "blocked_by_visual_review": true,
+      "status_hint": "completed"
     },
     {
       "id": "ui-visual-regression-stage",
@@ -693,7 +702,8 @@
       "behavior_invariants": [
         "Completion is blocked when reconciliation is stale"
       ],
-      "blocked_by_visual_review": false
+      "blocked_by_visual_review": false,
+      "status_hint": "completed"
     },
     {
       "id": "final-visual-regression-gate",
@@ -718,7 +728,8 @@
       "behavior_invariants": [
         "Wrapper must refuse ALL_AUTOMATABLE_TASKS_DONE when this gate is unresolved"
       ],
-      "blocked_by_visual_review": true
+      "blocked_by_visual_review": true,
+      "status_hint": "completed"
     }
   ]
 }

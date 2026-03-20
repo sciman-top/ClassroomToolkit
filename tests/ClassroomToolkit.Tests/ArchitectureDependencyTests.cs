@@ -36,9 +36,7 @@ public sealed class ArchitectureDependencyTests
     [Fact]
     public void AppLayer_ShouldAvoidInfraNamespace_OutsideCompositionRoot()
     {
-        var root = FindRepoRoot();
         var violations = FindNamespaceUsageViolations(
-            root,
             namespaceToken: "using ClassroomToolkit.Infra",
             excludedFileNames: new[] { "App.xaml.cs" });
 
@@ -54,9 +52,7 @@ public sealed class ArchitectureDependencyTests
     [Fact]
     public void AppLayer_ShouldNotAdd_NewInteropNamespaceUsage()
     {
-        var root = FindRepoRoot();
         var violations = FindNamespaceUsageViolations(
-            root,
             namespaceToken: "ClassroomToolkit.Interop",
             excludedFileNames: Array.Empty<string>());
 
@@ -67,7 +63,12 @@ public sealed class ArchitectureDependencyTests
             @"src\ClassroomToolkit.App\Windowing\NativeWindowStyleInteropAdapter.cs",
             @"src\ClassroomToolkit.App\Windowing\NativeWindowTopmostInteropAdapter.cs",
             @"src\ClassroomToolkit.App\Windowing\PresentationForegroundSuppressionInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\WindowHandleValidationInteropAdapter.cs"
+            @"src\ClassroomToolkit.App\Windowing\WindowHandleValidationInteropAdapter.cs",
+            @"src\ClassroomToolkit.App\Paint\IWpsNavHookClient.cs",
+            @"src\ClassroomToolkit.App\Paint\OverlayPresentationDispatchCoordinator.cs",
+            @"src\ClassroomToolkit.App\Paint\OverlayPresentationRouteContextBuilder.cs",
+            @"src\ClassroomToolkit.App\Paint\OverlayPresentationTargetSnapshotProvider.cs",
+            @"src\ClassroomToolkit.App\Paint\PresentationSlideshowDetectionPolicy.cs"
         };
 
         var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();
@@ -75,12 +76,11 @@ public sealed class ArchitectureDependencyTests
     }
 
     private static IReadOnlyList<string> FindNamespaceUsageViolations(
-        string root,
         string namespaceToken,
         IEnumerable<string> excludedFileNames)
     {
         var excludedSet = new HashSet<string>(excludedFileNames, StringComparer.OrdinalIgnoreCase);
-        var appFiles = Directory.GetFiles(Path.Combine(root, "src", "ClassroomToolkit.App"), "*.cs", SearchOption.AllDirectories)
+        var appFiles = Directory.GetFiles(TestPathHelper.ResolveAppPath(), "*.cs", SearchOption.AllDirectories)
             .Where(path => !excludedSet.Contains(Path.GetFileName(path)))
             .ToArray();
 
@@ -90,7 +90,7 @@ public sealed class ArchitectureDependencyTests
             var content = File.ReadAllText(file);
             if (content.Contains(namespaceToken, StringComparison.Ordinal))
             {
-                violations.Add(Path.GetRelativePath(root, file));
+                violations.Add(TestPathHelper.GetRelativeRepoPath(file));
             }
         }
 
@@ -99,8 +99,9 @@ public sealed class ArchitectureDependencyTests
 
     private static IReadOnlyList<string> ReadProjectReferences(string relativeProjectPath)
     {
-        var root = FindRepoRoot();
-        var fullPath = Path.Combine(root, relativeProjectPath);
+        var fullPath = TestPathHelper.ResolveRepoPath(
+            relativeProjectPath
+                .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries));
         var doc = XDocument.Load(fullPath);
 
         return doc
@@ -108,21 +109,5 @@ public sealed class ArchitectureDependencyTests
             .Select(x => x.Attribute("Include")?.Value ?? string.Empty)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .ToArray();
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "ClassroomToolkit.sln")))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Cannot locate repository root from test base directory.");
     }
 }

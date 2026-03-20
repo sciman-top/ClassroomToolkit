@@ -20,7 +20,18 @@ public static class WindowExtensions
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            onFailure?.Invoke(ex);
+            if (onFailure != null)
+            {
+                try
+                {
+                    onFailure(ex);
+                }
+                catch (Exception callbackEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(callbackEx))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"WindowExtensions.SafeDragMove failure callback failed: {callbackEx.GetType().Name} - {callbackEx.Message}");
+                }
+            }
             return false;
         }
     }

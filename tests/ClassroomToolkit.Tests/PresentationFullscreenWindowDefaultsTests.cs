@@ -9,6 +9,6 @@ public sealed class PresentationFullscreenWindowDefaultsTests
     [Fact]
     public void Defaults_ShouldMatchStabilizedValues()
     {
-        PresentationFullscreenWindowDefaults.BoundsTolerancePixels.Should().Be(2);
+        PresentationFullscreenWindowDefaults.BoundsTolerancePixels.Should().Be(16);
     }
 }

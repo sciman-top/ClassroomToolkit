@@ -53,7 +53,7 @@
                           CanContentScroll="False">
                 <Grid>
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
-                        <TabItem Header="预设与笔触">
+                        <TabItem Header="笔触与预设">
                             <StackPanel Margin="0,12,0,0">
                 <!-- 基础画笔参数 -->
                 <Grid Margin="0,0,0,16">
@@ -106,13 +106,13 @@
                     </StackPanel>
                 </Grid>
 
-                <Expander x:Name="WritingModeOverrideExpander" Header="书写模式（子项覆盖）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
+                <Expander x:Name="WritingModeOverrideExpander" Header="书写模式覆盖（按需）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
                     <Border Style="{StaticResource Style_SettingCardBorder}"
                             Margin="0,8,0,0"
                             Padding="12"
                             Background="{StaticResource Brush_Surface_Secondary}">
                         <StackPanel>
-                            <TextBlock Text="总预设入口在“预设方案”；此处仅用于按需覆盖书写手感。"
+                            <TextBlock Text="整体效果请优先在&quot;整套预设&quot;中选择；此处仅在需要时覆盖书写手感。"
                                        Foreground="{StaticResource Brush_Text_Secondary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -132,8 +132,8 @@
 
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
-                        <TextBlock Text="预设方案" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="这是总预设入口，会联动书写模式及场景参数。"
+                        <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <TextBlock Text="这里是总入口，会统一调整书写模式与场景参数。"
                                    Margin="0,0,0,8"
                                    FontSize="12"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -167,7 +167,7 @@
                         <TextBlock x:Name="PresetSchemeHintText" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <TextBlock x:Name="PresetManagedHintText" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <Button x:Name="ConvertToCustomEditingButton"
-                                Content="转为自定义后编辑"
+                                Content="切换为自定义后编辑"
                                 Margin="0,8,0,0"
                                 Padding="12,0"
                                 Height="30"
@@ -234,12 +234,12 @@
                             </StackPanel>
                         </TabItem>
 
-                        <TabItem Header="工具">
+                        <TabItem Header="工具栏">
                             <StackPanel Margin="0,12,0,0">
                                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="界面与工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                                        <TextBlock Text="这里只保留影响工具显示和切换方式的设置。"
+                                        <TextBlock Text="这里只保留影响工具栏显示和切换方式的设置。"
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="12"
                                                    Margin="0,0,0,12"/>
@@ -266,7 +266,7 @@
                             </StackPanel>
                         </TabItem>
 
-                        <TabItem Header="场景兼容">
+                        <TabItem Header="场景与兼容">
                             <StackPanel Margin="0,12,0,0">
                 <Grid x:Name="SceneCardsGrid" Margin="0,8,0,0" SizeChanged="OnSceneCardsGridSizeChanged">
                     <Grid.RowDefinitions>
@@ -298,8 +298,13 @@
                             </Grid>
                             <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="说明：默认推荐保持当前设置；仅在卡顿或翻页不同步时再调整下方高级参数。"
+                                       Foreground="{StaticResource Brush_Text_Tertiary}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
 
-                            <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
@@ -307,7 +312,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="导出并发" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <TextBlock Text="导出并行度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
@@ -315,7 +320,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="邻页预取" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <TextBlock Text="邻页预加载" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
@@ -323,7 +328,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="抬笔后刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <TextBlock Text="抬笔后延迟刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="PostInputRefreshDelayCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
@@ -331,7 +336,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="滚轮缩放步进" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <TextBlock Text="滚轮缩放幅度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="WheelZoomBaseCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
@@ -339,17 +344,25 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="手势缩放灵敏" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <TextBlock Text="手势缩放灵敏度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="GestureSensitivityCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入遥测日志（仅调试）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="拖拽惯性预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Height="34" FontSize="13"/>
+                                        </Grid>
+                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志（仅排障）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>
                         </StackPanel>
                     </Border>
 
-                    <!-- WPS 演示文稿兼容性 -->
+                    <!-- 演示文稿控制策略 -->
                     <Border x:Name="WpsSettingsCard"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -357,21 +370,35 @@
                             Padding="16"
                             Margin="6,0,0,0">
                         <StackPanel>
-                            <TextBlock Text="WPS 演示文稿" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                            <TextBlock Text="放映控制策略" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
 
-                            <!-- WPS 兼容策略 -->
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="112"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="兼容策略" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                <TextBlock Text="Office PPT" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                <ComboBox Grid.Column="1" x:Name="OfficeModeCombo" Height="34" FontSize="13"/>
+                            </Grid>
+
+                            <!-- WPS 策略 -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="WPS 演示文稿" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                 <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
                             </Grid>
                             <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶（检测到全屏放映时）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="说明：默认推荐保持当前设置；仅在兼容异常时再调整高级参数。"
+                                       Foreground="{StaticResource Brush_Text_Tertiary}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
 
-                            <Expander Header="高级设置（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
@@ -382,9 +409,9 @@
                                             <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定消息模式（更稳）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
-                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征（实验）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
-                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空演示识别规则覆盖（本次保存生效）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
+                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式（更稳定）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征（实验功能）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空演示识别规则覆盖（保存后生效）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>
@@ -399,12 +426,13 @@
 
             <!-- 3. 按钮 -->
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
-                <Button Content="重置当前标签" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
-                <Button Content="恢复全部默认" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
+                <Button Content="仅重置当前页" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
+                <Button Content="重置全部设置" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
                 <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>
         </Grid>
     </Border>
 </Window>
+
 

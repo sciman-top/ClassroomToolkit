@@ -18,12 +18,12 @@ public sealed class AppSettings
     public bool RollCallRemoteEnabled { get; set; } = false;
     public bool RollCallRemoteGroupSwitchEnabled { get; set; } = false;
     public bool RollCallShowPhoto { get; set; } = false;
-    public int RollCallPhotoDurationSeconds { get; set; } = 0;
+    public int RollCallPhotoDurationSeconds { get; set; } = 3;
     public string RollCallPhotoSharedClass { get; set; } = string.Empty;
     public bool RollCallTimerSoundEnabled { get; set; } = true;
     public string RollCallTimerSoundVariant { get; set; } = "gentle";
     public bool RollCallTimerReminderEnabled { get; set; } = false;
-    public int RollCallTimerReminderIntervalMinutes { get; set; } = 3;
+    public int RollCallTimerReminderIntervalMinutes { get; set; } = 5;
     public string RollCallTimerReminderSoundVariant { get; set; } = "soft_beep";
     public string RollCallMode { get; set; } = "roll_call";
     public string RollCallTimerMode { get; set; } = "countdown";
@@ -44,11 +44,12 @@ public sealed class AppSettings
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
     public string RemotePresenterKey { get; set; } = "tab";
-    public string RemoteGroupSwitchKey { get; set; } = "b";
+    public string RemoteGroupSwitchKey { get; set; } = "enter";
     public string RollCallCurrentClass { get; set; } = string.Empty;
     public string RollCallCurrentGroup { get; set; } = "全部";
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
+    public string OfficeInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public string WpsInputMode { get; set; } = WpsInputModeDefaults.Message;
     public bool WpsWheelForward { get; set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
@@ -87,6 +88,7 @@ public sealed class AppSettings
     public int PhotoPostInputRefreshDelayMs { get; set; } = 120;
     public double PhotoWheelZoomBase { get; set; } = 1.0008;
     public double PhotoGestureZoomSensitivity { get; set; } = 1.0;
+    public string PhotoInertiaProfile { get; set; } = PhotoInertiaProfileDefaults.Standard;
     public bool PhotoShowInkOverlay { get; set; } = true;
     public int PhotoManagerWindowWidth { get; set; } = 0;
     public int PhotoManagerWindowHeight { get; set; } = 0;

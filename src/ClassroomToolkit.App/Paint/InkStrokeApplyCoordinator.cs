@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Paint;
@@ -37,7 +38,8 @@ internal static class InkStrokeApplyCoordinator
         ArgumentNullException.ThrowIfNull(getElapsedMilliseconds);
         ArgumentNullException.ThrowIfNull(dispatcherCheckAccess);
 
-        markTraceStage?.Invoke(
+        InvokeTraceStageSafely(
+            markTraceStage,
             "apply-enter",
             $"strokes={strokes.Count} preferFast={preferInteractiveFastPath}");
 
@@ -47,23 +49,43 @@ internal static class InkStrokeApplyCoordinator
         var fastApplied = tryApplyNeighborInkBitmapForCurrentPage(strokes, preferInteractiveFastPath);
         if (!fastApplied)
         {
-            markTraceStage?.Invoke("apply-redraw", null);
+            InvokeTraceStageSafely(markTraceStage, "apply-redraw", null);
             redrawInkSurface();
         }
         else
         {
-            markTraceStage?.Invoke("apply-fast-bitmap", null);
+            InvokeTraceStageSafely(markTraceStage, "apply-fast-bitmap", null);
             finalizeFastAppliedInkSurface();
         }
 
         markCurrentInkPageLoaded();
         recordPerfMilliseconds(getElapsedMilliseconds(), dispatcherCheckAccess());
-        markTraceStage?.Invoke("apply-exit", $"ms={getElapsedMilliseconds():F2}");
+        InvokeTraceStageSafely(markTraceStage, "apply-exit", $"ms={getElapsedMilliseconds():F2}");
 
         return new InkStrokeApplyExecutionResult(
             AppliedStrokeCount: strokes.Count,
             UsedInteractiveFastPathCopy: fastApplied,
             RedrewInkSurface: !fastApplied,
             MarkedCurrentPageLoaded: true);
+    }
+
+    private static void InvokeTraceStageSafely(
+        Action<string, string?>? markTraceStage,
+        string stage,
+        string? detail)
+    {
+        if (markTraceStage is null)
+        {
+            return;
+        }
+
+        try
+        {
+            markTraceStage(stage, detail);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkStrokeApplyCoordinator] trace callback failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 }

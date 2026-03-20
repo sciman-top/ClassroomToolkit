@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Media;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -77,6 +79,8 @@ public sealed class ImageItem : INotifyPropertyChanged
 
     private void OnPropertyChanged(string propertyName)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        SafeActionExecutionExecutor.TryExecute(
+            () => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)),
+            ex => Debug.WriteLine($"ImageItem: property changed callback failed: {ex.Message}"));
     }
 }

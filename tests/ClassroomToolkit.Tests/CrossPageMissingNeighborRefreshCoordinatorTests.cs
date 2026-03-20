@@ -150,4 +150,32 @@ public sealed class CrossPageMissingNeighborRefreshCoordinatorTests
 
         await act.Should().ThrowAsync<BadImageFormatException>();
     }
+
+    [Fact]
+    public async Task ScheduleAsync_ShouldSwallowNonFatal_WhenUpdateLastScheduledThrows()
+    {
+        var events = new List<string>();
+
+        var result = await CrossPageMissingNeighborRefreshCoordinator.ScheduleAsync(
+            missingCount: 2,
+            photoModeActive: true,
+            crossPageDisplayEnabled: true,
+            interactionActive: false,
+            lastScheduledUtc: CrossPageRuntimeDefaults.UnsetTimestampUtc,
+            nowUtc: DateTime.UtcNow,
+            isCrossPageDisplayActive: static () => true,
+            updateLastScheduledUtc: static _ => throw new InvalidOperationException("nonfatal-update"),
+            requestCrossPageDisplayUpdate: static _ => { },
+            tryBeginInvoke: static (_, _) => true,
+            delayAsync: static _ => Task.CompletedTask,
+            incrementRefreshToken: static () => 1,
+            readRefreshToken: static () => 1,
+            dispatcherCheckAccess: static () => true,
+            dispatcherShutdownStarted: static () => false,
+            dispatcherShutdownFinished: static () => false,
+            diagnostics: (action, source, detail) => events.Add($"{action}:{source}:{detail}"));
+
+        result.Scheduled.Should().BeFalse();
+        events.Should().Contain(e => e.Contains("defer-abort") && e.Contains("nonfatal:InvalidOperationException"));
+    }
 }

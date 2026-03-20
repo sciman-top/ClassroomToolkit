@@ -128,6 +128,10 @@ public sealed class AppSettingsService
             settings.ControlMsPpt = GetBool(paint, "control_ms_ppt", settings.ControlMsPpt);
             settings.ControlWpsPpt = GetBool(paint, "control_wps_ppt", settings.ControlWpsPpt);
             settings.WpsInputMode = ResolveWpsInputMode(paint, settings.WpsInputMode);
+            settings.OfficeInputMode = ResolveOfficeInputMode(
+                paint,
+                settings.OfficeInputMode,
+                settings.WpsInputMode);
             settings.WpsWheelForward = GetBool(paint, "wps_wheel_forward", settings.WpsWheelForward);
             settings.ForcePresentationForegroundOnFullscreen = GetBool(
                 paint,
@@ -198,6 +202,11 @@ public sealed class AppSettingsService
                     paint,
                     "photo_gesture_zoom_sensitivity",
                     settings.PhotoGestureZoomSensitivity));
+            settings.PhotoInertiaProfile = NormalizePhotoInertiaProfile(
+                GetString(
+                    paint,
+                    "photo_inertia_profile",
+                    settings.PhotoInertiaProfile));
             settings.PhotoShowInkOverlay = GetBool(paint, "photo_show_ink_overlay", settings.PhotoShowInkOverlay);
             settings.PhotoManagerWindowWidth = GetInt(paint, "photo_manager_window_width", settings.PhotoManagerWindowWidth);
             settings.PhotoManagerWindowHeight = GetInt(paint, "photo_manager_window_height", settings.PhotoManagerWindowHeight);
@@ -325,6 +334,7 @@ public sealed class AppSettingsService
         paint["quick_color_3"] = settings.QuickColor3Hex;
         paint["control_ms_ppt"] = settings.ControlMsPpt ? "True" : "False";
         paint["control_wps_ppt"] = settings.ControlWpsPpt ? "True" : "False";
+        paint["office_input_mode"] = NormalizeInputMode(settings.OfficeInputMode, WpsInputModeDefaults.Auto);
         paint["wps_input_mode"] = NormalizeWpsInputMode(settings.WpsInputMode, WpsInputModeDefaults.Auto);
         paint["wps_wheel_forward"] = settings.WpsWheelForward ? "True" : "False";
         paint["force_presentation_foreground_on_fullscreen"] =
@@ -365,6 +375,7 @@ public sealed class AppSettingsService
         paint["photo_post_input_refresh_delay_ms"] = NormalizePhotoPostInputRefreshDelayMs(settings.PhotoPostInputRefreshDelayMs).ToString(CultureInfo.InvariantCulture);
         paint["photo_wheel_zoom_base"] = NormalizePhotoWheelZoomBase(settings.PhotoWheelZoomBase).ToString("0.####", CultureInfo.InvariantCulture);
         paint["photo_gesture_zoom_sensitivity"] = NormalizePhotoGestureZoomSensitivity(settings.PhotoGestureZoomSensitivity).ToString("0.###", CultureInfo.InvariantCulture);
+        paint["photo_inertia_profile"] = NormalizePhotoInertiaProfile(settings.PhotoInertiaProfile);
         paint["photo_show_ink_overlay"] = settings.PhotoShowInkOverlay ? "True" : "False";
         paint["photo_manager_window_width"] = settings.PhotoManagerWindowWidth.ToString(CultureInfo.InvariantCulture);
         paint["photo_manager_window_height"] = settings.PhotoManagerWindowHeight.ToString(CultureInfo.InvariantCulture);
@@ -575,17 +586,45 @@ public sealed class AppSettingsService
     private static string ResolveWpsInputMode(Dictionary<string, string> section, string fallback)
     {
         var mode = GetString(section, "wps_input_mode", fallback);
-        var normalizedFallback = NormalizeWpsInputMode(fallback, WpsInputModeDefaults.Auto);
+        var normalizedFallback = NormalizeInputMode(fallback, WpsInputModeDefaults.Auto);
         if (mode.Trim().Equals("manual", StringComparison.OrdinalIgnoreCase))
         {
             var rawInput = GetBool(section, "wps_raw_input", fallback: false);
             return rawInput ? WpsInputModeDefaults.Raw : WpsInputModeDefaults.Message;
         }
 
-        return NormalizeWpsInputMode(mode, normalizedFallback);
+        return NormalizeInputMode(mode, normalizedFallback);
+    }
+
+    private static string ResolveOfficeInputMode(
+        Dictionary<string, string> section,
+        string fallback,
+        string wpsResolvedMode)
+    {
+        var mode = GetString(section, "office_input_mode", string.Empty);
+        if (!string.IsNullOrWhiteSpace(mode))
+        {
+            return NormalizeInputMode(mode, fallback);
+        }
+
+        // Backward compatibility:
+        // For users upgraded from single-mode configuration, inherit WPS mode,
+        // but avoid keeping Office on message mode by default.
+        var normalizedLegacy = NormalizeInputMode(wpsResolvedMode, fallback);
+        if (string.Equals(normalizedLegacy, WpsInputModeDefaults.Message, StringComparison.OrdinalIgnoreCase))
+        {
+            return WpsInputModeDefaults.Auto;
+        }
+
+        return normalizedLegacy;
     }
 
     private static string NormalizeWpsInputMode(string? rawMode, string fallback)
+    {
+        return NormalizeInputMode(rawMode, fallback);
+    }
+
+    private static string NormalizeInputMode(string? rawMode, string fallback)
     {
         var normalizedFallback = string.IsNullOrWhiteSpace(fallback)
             ? WpsInputModeDefaults.Auto
@@ -701,6 +740,11 @@ public sealed class AppSettingsService
             sensitivity,
             PhotoZoomInputDefaults.GestureSensitivityMin,
             PhotoZoomInputDefaults.GestureSensitivityMax);
+    }
+
+    private static string NormalizePhotoInertiaProfile(string? profile)
+    {
+        return PhotoInertiaProfileDefaults.Normalize(profile);
     }
 
     private static int NormalizeLauncherAutoExitSeconds(int autoExitSeconds)

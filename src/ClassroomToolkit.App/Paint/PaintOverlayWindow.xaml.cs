@@ -99,16 +99,21 @@ public partial class PaintOverlayWindow : Window
     private WpfRectangle? _regionRect;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
+    private readonly PresentationInputPipeline _presentationInputPipeline;
+    private readonly IOverlayPresentationTargetSnapshotProvider _presentationTargetSnapshotProvider;
+    private readonly OverlayPresentationDispatchCoordinator _presentationDispatchCoordinator;
     private PresentationClassifier _presentationClassifier;
     private readonly Win32PresentationResolver _presentationResolver;
     private readonly WpsSlideshowNavigationHook? _wpsNavHook;
+    private readonly IWpsNavHookClient? _wpsNavHookClient;
+    private readonly WpsHookOrchestrator _wpsHookOrchestrator = new();
+    private readonly IWpsHookUnavailableNotifier _wpsHookUnavailableNotifier = new MessageBoxWpsHookUnavailableNotifier();
     private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();
     private const int WpsNavDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs;
     private bool _wpsNavHookActive;
     private bool _wpsHookInterceptKeyboard = true;
     private bool _wpsHookInterceptWheel = true;
     private bool _wpsHookBlockOnly;
-    private bool _wpsForceMessageFallback;
     private int _wpsHookUnavailableNotifiedState;
     private DateTime _wpsNavBlockUntil = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
@@ -164,6 +169,14 @@ public partial class PaintOverlayWindow : Window
     private WpfPoint _photoPanStart;
     private double _photoPanOriginX;
     private double _photoPanOriginY;
+    private readonly List<PhotoPanVelocitySample> _photoPanVelocitySamples = new(PhotoPanInertiaDefaults.MouseVelocitySampleCapacity);
+    private string _photoInertiaProfile = PhotoInertiaProfileDefaults.Standard;
+    private PhotoPanInertiaTuning _photoPanInertiaTuning = PhotoPanInertiaTuning.Default;
+    private Vector _photoPanInertiaVelocityDipPerMs;
+    private DateTime _photoPanInertiaLastTickUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
+    private DateTime _photoPanInertiaStartUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
+    private TimeSpan _photoPanInertiaLastRenderingTime = TimeSpan.MinValue;
+    private bool _photoPanInertiaRenderingAttached;
     private bool _photoRestoreFullscreenPending;
     private int _photoFullscreenBoundsToken;
     private bool _photoDocumentIsPdf;
@@ -326,6 +339,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.LostMouseCapture += OnOverlayLostMouseCapture;
         OverlayRoot.IsManipulationEnabled = true;
         OverlayRoot.ManipulationStarting += OnManipulationStarting;
+        OverlayRoot.ManipulationInertiaStarting += OnManipulationInertiaStarting;
         OverlayRoot.ManipulationDelta += OnManipulationDelta;
         OverlayRoot.ManipulationCompleted += OnManipulationCompleted;
         OverlayRoot.StylusDown += OnStylusDown;
@@ -351,10 +365,22 @@ public partial class PaintOverlayWindow : Window
             AllowOffice = true,
             AllowWps = true
         };
+        _presentationInputPipeline = new PresentationInputPipeline(
+            _presentationService,
+            _presentationOptions.Strategy,
+            InputStrategy.Auto);
+        _presentationTargetSnapshotProvider = new OverlayPresentationTargetSnapshotProvider(
+            _presentationResolver,
+            () => _presentationClassifier,
+            IsFullscreenWindow,
+            _currentProcessId);
+        _presentationDispatchCoordinator = new OverlayPresentationDispatchCoordinator(_presentationTargetSnapshotProvider);
         _wpsNavHook = new WpsSlideshowNavigationHook();
-        if (_wpsNavHook.Available)
+        var navHook = _wpsNavHook;
+        _wpsNavHookClient = navHook == null ? null : new WpsNavHookClient(navHook);
+        if (navHook != null && navHook.Available)
         {
-            _wpsNavHook.NavigationRequested += OnWpsNavHookRequested;
+            navHook.NavigationRequested += OnWpsNavHookRequested;
         }
         _sessionCoordinator = new SessionCoordinator(
             new PaintOverlaySessionEffectRunner(
@@ -440,8 +466,14 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.MouseLeave -= OnOverlayMouseLeave;
         OverlayRoot.LostMouseCapture -= OnOverlayLostMouseCapture;
         OverlayRoot.ManipulationStarting -= OnManipulationStarting;
+        OverlayRoot.ManipulationInertiaStarting -= OnManipulationInertiaStarting;
         OverlayRoot.ManipulationDelta -= OnManipulationDelta;
         OverlayRoot.ManipulationCompleted -= OnManipulationCompleted;
+        if (_photoPanInertiaRenderingAttached)
+        {
+            CompositionTarget.Rendering -= OnPhotoPanInertiaRendering;
+            _photoPanInertiaRenderingAttached = false;
+        }
         OverlayRoot.StylusDown -= OnStylusDown;
         OverlayRoot.StylusMove -= OnStylusMove;
         OverlayRoot.StylusUp -= OnStylusUp;
@@ -477,7 +509,9 @@ public partial class PaintOverlayWindow : Window
         UpdateOverlayHitTestVisibility();
         if (PhotoCursorModeFocusRequestPolicy.ShouldRequestFocus(_photoModeActive, mode))
         {
-            PhotoCursorModeFocusRequested?.Invoke();
+            SafeActionExecutionExecutor.TryExecute(
+                () => PhotoCursorModeFocusRequested?.Invoke(),
+                ex => Debug.WriteLine($"[PhotoCursorModeFocusRequested] callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
         
         // 鏇存柊鍏ㄥ眬缁樺浘妯″紡鐘舵€?
@@ -492,10 +526,14 @@ public partial class PaintOverlayWindow : Window
         else
         {
             // 鍏朵粬妯″紡鐨勫厜鏍囨洿鏂板欢杩熸墽琛岋紝閬垮厤闃诲
-            _ = TryBeginInvoke(() =>
+            var cursorUpdateScheduled = TryBeginInvoke(() =>
             {
                 UpdateCursor(mode);
             }, System.Windows.Threading.DispatcherPriority.Normal);
+            if (!cursorUpdateScheduled && Dispatcher.CheckAccess())
+            {
+                UpdateCursor(mode);
+            }
         }
         
         if (mode != PaintToolMode.RegionErase)
@@ -517,11 +555,11 @@ public partial class PaintOverlayWindow : Window
                 _mode,
                 IsInkOperationActive()))
         {
-            EndPhotoPan();
+            EndPhotoPan(allowInertia: false);
         }
         
         // 寤惰繜鏇存柊閽╁瓙鍜岀劍鐐圭姸鎬侊紝閬垮厤鍗￠】
-        _ = TryBeginInvoke(() =>
+        var modeFollowUpScheduled = TryBeginInvoke(() =>
         {
             UpdateWpsNavHookState();
             UpdateFocusAcceptance();
@@ -532,12 +570,23 @@ public partial class PaintOverlayWindow : Window
                 RestorePresentationFocusIfNeeded(requireFullscreen: false);
             }
         }, System.Windows.Threading.DispatcherPriority.Background);
+        if (!modeFollowUpScheduled && Dispatcher.CheckAccess())
+        {
+            UpdateWpsNavHookState();
+            UpdateFocusAcceptance();
+            if (mode == PaintToolMode.Cursor)
+            {
+                RestorePresentationFocusIfNeeded(requireFullscreen: false);
+            }
+        }
     }
 
     private void DispatchSessionEvent(UiSessionEvent sessionEvent)
     {
         var transition = _sessionCoordinator.Dispatch(sessionEvent);
-        UiSessionTransitionOccurred?.Invoke(transition);
+        SafeActionExecutionExecutor.TryExecute(
+            () => UiSessionTransitionOccurred?.Invoke(transition),
+            ex => Debug.WriteLine($"[UiSessionTransitionOccurred] callback failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private void ApplySessionOverlayTopmost(bool topmostRequired)
@@ -552,7 +601,9 @@ public partial class PaintOverlayWindow : Window
                 topmostRequired,
                 out var request))
         {
-            FloatingZOrderRequested?.Invoke(request);
+            SafeActionExecutionExecutor.TryExecute(
+                () => FloatingZOrderRequested?.Invoke(request),
+                ex => Debug.WriteLine($"[FloatingZOrderRequested] session callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
     }
 
@@ -582,7 +633,9 @@ public partial class PaintOverlayWindow : Window
     {
         if (UiSessionFloatingZOrderRequestPolicy.TryResolveForWidgetVisibility(_, out var request))
         {
-            FloatingZOrderRequested?.Invoke(request);
+            SafeActionExecutionExecutor.TryExecute(
+                () => FloatingZOrderRequested?.Invoke(request),
+                ex => Debug.WriteLine($"[FloatingZOrderRequested] session callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
     }
 
@@ -1348,7 +1401,11 @@ public partial class PaintOverlayWindow : Window
 
     private void RequestDeferredFullscreenBoundsRecovery()
     {
-        TryBeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
+        var scheduled = TryBeginInvoke(ApplyFullscreenBounds, DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ApplyFullscreenBounds();
+        }
     }
 
 }

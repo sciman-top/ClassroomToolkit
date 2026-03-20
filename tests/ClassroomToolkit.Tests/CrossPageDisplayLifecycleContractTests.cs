@@ -34,29 +34,22 @@ public sealed class CrossPageDisplayLifecycleContractTests
         source.Should().Contain("!string.Equals(cacheKey, expectedCacheKey, StringComparison.Ordinal)");
     }
 
+    [Fact]
+    public void DelayedDispatchFailureHandling_ShouldMarshalStateMutation_ToUiThread()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(");
+        source.Should().Contain("if (Dispatcher.CheckAccess())");
+        source.Should().Contain("_inkDiagnostics?.OnCrossPageUpdateEvent(\"defer-abort\", source, abortDetail);");
+    }
+
     private static string GetSourcePath()
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Paint",
             "PaintOverlayWindow.Photo.CrossPage.cs");
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

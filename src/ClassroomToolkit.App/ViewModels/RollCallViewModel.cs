@@ -7,6 +7,7 @@ using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -101,7 +102,9 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        TimerCompleted?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => TimerCompleted?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: timer completed callback failed: {ex.Message}"));
     }
 
     private void OnReminderTriggeredInternal()
@@ -111,7 +114,9 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        ReminderTriggered?.Invoke();
+        SafeActionExecutionExecutor.TryExecute(
+            () => ReminderTriggered?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: reminder callback failed: {ex.Message}"));
     }
 
     public ObservableCollection<string> Groups { get; }
@@ -336,13 +341,13 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
         set => SetField(ref _speechOutputId, value ?? string.Empty);
     }
 
-    private string _remoteGroupSwitchKey = "b";
+    private string _remoteGroupSwitchKey = "enter";
     private bool _remoteGroupSwitchEnabled = false;
 
     public string RemoteGroupSwitchKey
     {
         get => _remoteGroupSwitchKey;
-        set => SetField(ref _remoteGroupSwitchKey, value ?? "b");
+        set => SetField(ref _remoteGroupSwitchKey, value ?? "enter");
     }
 
     public bool RemoteGroupSwitchEnabled

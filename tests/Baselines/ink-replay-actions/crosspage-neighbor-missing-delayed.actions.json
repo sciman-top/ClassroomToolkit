@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-neighbor-missing-delayed",
+  "actions": [
+    {
+      "type": "DeferredRefreshRequested",
+      "source": "neighbor-missing-delayed"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "neighbor-missing"
+    }
+  ]
+}
+

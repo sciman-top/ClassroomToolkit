@@ -133,7 +133,7 @@ public partial class LauncherBubbleWindow : Window
         y = Math.Max(area.Top + margin, Math.Min(y, area.Bottom - Height - margin));
         Left = x;
         Top = y;
-        PositionChanged?.Invoke(new System.Windows.Point(Left, Top));
+        TryExecuteNonFatal(() => PositionChanged?.Invoke(new System.Windows.Point(Left, Top)));
     }
 
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -212,7 +212,7 @@ public partial class LauncherBubbleWindow : Window
         if (!_moved)
         {
             // 点击事件：恢复主窗口
-            RestoreRequested?.Invoke();
+            TryExecuteNonFatal(() => RestoreRequested?.Invoke());
         }
         else
         {
@@ -223,7 +223,7 @@ public partial class LauncherBubbleWindow : Window
                 return;
             }
 
-            _ = Dispatcher.InvokeAsync(new Action(() =>
+            void SnapBubbleToNearestEdge()
             {
                 try
                 {
@@ -234,7 +234,20 @@ public partial class LauncherBubbleWindow : Window
                 {
                     // Ignore transient bubble drag/snap failures.
                 }
-            }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+
+            var scheduled = false;
+            TryExecuteNonFatal(() =>
+            {
+                _ = Dispatcher.InvokeAsync(
+                    new Action(SnapBubbleToNearestEdge),
+                    System.Windows.Threading.DispatcherPriority.Background);
+                scheduled = true;
+            });
+            if (!scheduled && Dispatcher.CheckAccess())
+            {
+                SnapBubbleToNearestEdge();
+            }
         }
         
         _moved = false;

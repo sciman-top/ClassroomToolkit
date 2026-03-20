@@ -1,4 +1,5 @@
 using System;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Session;
 
@@ -57,6 +58,16 @@ public sealed class PaintOverlaySessionEffectRunner : IUiSessionEffectRunner
                 transition.Current.ToolbarVisible));
         }
 
-        _onTransition?.Invoke(transition);
+        if (_onTransition != null)
+        {
+            try
+            {
+                _onTransition(transition);
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"PaintOverlaySessionEffectRunner: transition callback failed: {ex.Message}");
+            }
+        }
     }
 }

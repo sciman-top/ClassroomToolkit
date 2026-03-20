@@ -118,4 +118,24 @@ public sealed class InkStrokeApplyCoordinatorTests
         traces.Should().Contain("apply-redraw:");
         traces.Should().Contain("apply-exit:ms=8.80");
     }
+
+    [Fact]
+    public void Apply_ShouldIgnoreTraceCallbackFailures()
+    {
+        Action act = () => InkStrokeApplyCoordinator.Apply(
+            strokes: new List<InkStrokeData> { new() },
+            preferInteractiveFastPath: false,
+            clearRuntimeStrokes: static () => { },
+            addRuntimeStrokes: static _ => { },
+            tryApplyNeighborInkBitmapForCurrentPage: static (_, _) => false,
+            redrawInkSurface: static () => { },
+            finalizeFastAppliedInkSurface: static () => { },
+            markCurrentInkPageLoaded: static () => { },
+            recordPerfMilliseconds: static (_, _) => { },
+            getElapsedMilliseconds: static () => 5.6,
+            dispatcherCheckAccess: static () => true,
+            markTraceStage: static (_, _) => throw new InvalidOperationException("trace failed"));
+
+        act.Should().NotThrow();
+    }
 }

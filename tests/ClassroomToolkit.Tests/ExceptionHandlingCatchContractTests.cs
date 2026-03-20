@@ -30,9 +30,7 @@ public sealed class ExceptionHandlingCatchContractTests
 
     private static List<string> FindOffenders(Regex pattern)
     {
-        var root = FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))
-            ?? throw new InvalidOperationException("Repository root not found.");
-        var sourceRoot = Path.Combine(root.FullName, "src");
+        var sourceRoot = TestPathHelper.ResolveRepoPath("src");
         var offenders = new List<string>();
 
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
@@ -45,27 +43,11 @@ public sealed class ExceptionHandlingCatchContractTests
                     continue;
                 }
 
-                var relativePath = Path.GetRelativePath(root.FullName, file).Replace('\\', '/');
+                var relativePath = TestPathHelper.GetRelativeRepoPath(file).Replace('\\', '/');
                 offenders.Add($"{relativePath}:{index + 1}");
             }
         }
 
         return offenders;
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

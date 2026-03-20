@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.App.Windowing;
 using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Photos;
@@ -114,7 +115,7 @@ public partial class PhotoOverlayWindow : Window
                     return;
                 }
 
-                await Dispatcher.InvokeAsync(() =>
+                void ApplyLoadedBitmapOnUi()
                 {
                     if (requestId != Volatile.Read(ref _photoLoadRequestId))
                     {
@@ -132,7 +133,29 @@ public partial class PhotoOverlayWindow : Window
                         studentName,
                         durationSeconds,
                         hideWhenFailed: true);
-                }, DispatcherPriority.Background);
+                }
+
+                if (Dispatcher.CheckAccess())
+                {
+                    ApplyLoadedBitmapOnUi();
+                    return;
+                }
+
+                var scheduled = false;
+                try
+                {
+                    await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Background);
+                    scheduled = true;
+                }
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[PhotoOverlayWindow] async apply dispatch failed: {ex.GetType().Name} - {ex.Message}");
+                }
+                if (!scheduled && Dispatcher.CheckAccess())
+                {
+                    ApplyLoadedBitmapOnUi();
+                }
             },
             CancellationToken.None,
             ex => System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap async: {path}. Error: {ex.Message}"));
@@ -234,7 +257,9 @@ public partial class PhotoOverlayWindow : Window
         _currentPhotoPath = null;
         if (!string.IsNullOrWhiteSpace(studentId))
         {
-            PhotoClosed?.Invoke(studentId);
+            SafeActionExecutionExecutor.TryExecute(
+                () => PhotoClosed?.Invoke(studentId),
+                ex => Debug.WriteLine($"[PhotoOverlayWindow] photo closed callback failed: {ex.Message}"));
         }
     }
 
@@ -276,7 +301,8 @@ public partial class PhotoOverlayWindow : Window
         PhotoImage.Source = bitmap;
         PhotoImage.Visibility = Visibility.Visible;
         LoadingMask.Visibility = Visibility.Collapsed;
-        _ = Dispatcher.BeginInvoke(new Action(() =>
+
+        void ApplyOverlayLayoutAfterPhotoLoad()
         {
             if (requestId != Volatile.Read(ref _photoLoadRequestId))
             {
@@ -288,7 +314,35 @@ public partial class PhotoOverlayWindow : Window
                 NameText.Visibility = Visibility.Visible;
             }
             UpdateOverlayPositions();
-        }), DispatcherPriority.Background);
+        }
+
+        var scheduled = false;
+        if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+        {
+            try
+            {
+                _ = Dispatcher.BeginInvoke(
+                    new Action(ApplyOverlayLayoutAfterPhotoLoad),
+                    DispatcherPriority.Background);
+                scheduled = true;
+            }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine(
+                    $"[PhotoOverlayWindow] deferred layout dispatch failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+        if (!scheduled)
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                ApplyOverlayLayoutAfterPhotoLoad();
+            }
+            else
+            {
+                Debug.WriteLine("[PhotoOverlayWindow] deferred layout dispatch failed");
+            }
+        }
 
         UpdateAutoCloseTimer(durationSeconds);
     }

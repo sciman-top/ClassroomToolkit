@@ -9,6 +9,8 @@ public readonly record struct PresentationDiagnosticsProbeResult(
 
 public static class PresentationDiagnosticsProbe
 {
+    private const int HookStartWaitTimeoutMs = 2000;
+
     public static PresentationDiagnosticsProbeResult Collect(
         bool allowWps,
         bool allowOffice,
@@ -156,7 +158,11 @@ public static class PresentationDiagnosticsProbe
                 return false;
             }
 
-            var started = hook.StartAsync().GetAwaiter().GetResult();
+            if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out var started, out error))
+            {
+                hook.Stop();
+                return false;
+            }
             if (!started && hook.LastError != 0)
             {
                 error = $"Win32 Error {hook.LastError}";
@@ -178,7 +184,11 @@ public static class PresentationDiagnosticsProbe
         try
         {
             using var hook = new KeyboardHook();
-            hook.StartAsync().GetAwaiter().GetResult();
+            if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out error))
+            {
+                hook.Stop();
+                return false;
+            }
             var active = hook.IsActive;
             if (!active && hook.LastError != 0)
             {
@@ -203,5 +213,56 @@ public static class PresentationDiagnosticsProbe
         }
 
         return string.Join(" | ", names.Where(name => !string.IsNullOrWhiteSpace(name)));
+    }
+
+    private static bool TryWaitTask<T>(
+        Task<T> task,
+        int timeoutMs,
+        out T result,
+        out string error)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        result = default!;
+        error = string.Empty;
+        try
+        {
+            if (!task.Wait(timeoutMs))
+            {
+                error = "startup timeout";
+                return false;
+            }
+
+            result = task.Result;
+            return true;
+        }
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool TryWaitTask(
+        Task task,
+        int timeoutMs,
+        out string error)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        error = string.Empty;
+        try
+        {
+            if (!task.Wait(timeoutMs))
+            {
+                error = "startup timeout";
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 }

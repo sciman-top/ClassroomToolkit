@@ -3,12 +3,16 @@ param(
     [string]$RuntimeInstallerPath = "",
     [switch]$EnsureLatestRuntime,
     [string]$RuntimeChannel = "10.0",
+    [string]$ReleaseNotesSourceUrl = "",
     [ValidateSet("both", "standard", "offline")]
     [string]$PackageMode = "both",
     [ValidateSet("zip", "7z")]
     [string]$ArchiveFormat = "zip",
     [switch]$SkipZip,
-    [switch]$SkipPublish
+    [switch]$SkipPublish,
+    [switch]$RunDefenderScan,
+    [switch]$FailOnDefenderScanError,
+    [switch]$AllowOverwriteVersion
 )
 
 Set-StrictMode -Version Latest
@@ -39,7 +43,7 @@ function Write-Sha256Sums {
 
     $lines = foreach ($item in $items) {
         $hash = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        $relative = $item.FullName.Substring($TargetDirectory.Length).TrimStart('\')
+        $relative = $item.FullName.Substring($TargetDirectory.Length).TrimStart('\\')
         "$hash  $relative"
     }
 
@@ -53,14 +57,14 @@ function Render-Template {
         [Parameter(Mandatory = $true)]
         [string]$OutputPath,
         [Parameter(Mandatory = $true)]
-        [string]$VersionValue,
-        [Parameter(Mandatory = $true)]
-        [string]$GeneratedAt
+        [hashtable]$Tokens
     )
 
     $content = Get-Content -LiteralPath $TemplatePath -Raw -Encoding UTF8
-    $content = $content.Replace("__VERSION__", $VersionValue)
-    $content = $content.Replace("__GENERATED_AT__", $GeneratedAt)
+    foreach ($key in $Tokens.Keys) {
+        $content = $content.Replace("__$key" + "__", [string]$Tokens[$key])
+    }
+
     Set-Content -LiteralPath $OutputPath -Value $content -Encoding UTF8
 }
 
@@ -151,6 +155,7 @@ function Compress-Directory {
             if ($LASTEXITCODE -ne 0) {
                 throw "7z archive creation failed for $SourceDirectory."
             }
+
             return $outputPath
         }
 
@@ -161,8 +166,103 @@ function Compress-Directory {
     if (Test-Path -LiteralPath $zipPath) {
         Remove-Item -LiteralPath $zipPath -Force
     }
+
     Compress-Archive -Path (Join-Path $SourceDirectory "*") -DestinationPath $zipPath -Force
     return $zipPath
+}
+
+function Get-GitCommit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot
+    )
+
+    Push-Location $RepositoryRoot
+    try {
+        $commit = (& git rev-parse --short HEAD 2>$null)
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($commit)) {
+            return "unknown"
+        }
+
+        return $commit.Trim()
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Write-ReleaseManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+        [Parameter(Mandatory = $true)]
+        [string]$GeneratedAtUtc,
+        [Parameter(Mandatory = $true)]
+        [string]$GitCommit,
+        [Parameter(Mandatory = $true)]
+        [string]$PackageMode,
+        [Parameter(Mandatory = $true)]
+        [bool]$BuildStandard,
+        [Parameter(Mandatory = $true)]
+        [bool]$BuildOffline,
+        [AllowEmptyCollection()]
+        [string[]]$Archives,
+        [Parameter(Mandatory = $true)]
+        [bool]$DefenderScanEnabled,
+        [Parameter(Mandatory = $true)]
+        [string]$DefenderScanStatus
+    )
+
+    $manifest = [pscustomobject]@{
+        version = $Version
+        generatedAtUtc = $GeneratedAtUtc
+        gitCommit = $GitCommit
+        packageMode = $PackageMode
+        packages = [pscustomobject]@{
+            standard = $BuildStandard
+            offline = $BuildOffline
+        }
+        archives = $Archives
+        defenderScan = [pscustomobject]@{
+            enabled = $DefenderScanEnabled
+            status = $DefenderScanStatus
+        }
+    }
+
+    $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
+}
+
+function Invoke-DefenderScan {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ScanPath,
+        [switch]$FailOnError
+    )
+
+    if (-not (Get-Command Start-MpScan -ErrorAction SilentlyContinue)) {
+        $message = "Start-MpScan not found. Skip Defender scan."
+        if ($FailOnError) {
+            throw $message
+        }
+
+        Write-Warning $message
+        return "skipped-command-missing"
+    }
+
+    try {
+        Start-MpScan -ScanType CustomScan -ScanPath $ScanPath | Out-Null
+        return "completed"
+    }
+    catch {
+        if ($FailOnError) {
+            throw "Defender scan failed. $_"
+        }
+
+        Write-Warning "Defender scan failed and was ignored: $_"
+        return "failed-ignored"
+    }
 }
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -181,6 +281,10 @@ $buildStandard = $PackageMode -eq "both" -or $PackageMode -eq "standard"
 $buildOffline = $PackageMode -eq "both" -or $PackageMode -eq "offline"
 
 if (Test-Path -LiteralPath $releaseRoot) {
+    if (-not $AllowOverwriteVersion) {
+        throw "Release directory already exists for version '$Version': $releaseRoot. Refuse overwrite by default. Use -AllowOverwriteVersion to override."
+    }
+
     Remove-Item -LiteralPath $releaseRoot -Recurse -Force
 }
 
@@ -237,6 +341,7 @@ if (-not [string]::IsNullOrWhiteSpace($RuntimeInstallerPath)) {
     if ($candidate -eq $null) {
         throw "Runtime installer path not found: $RuntimeInstallerPath"
     }
+
     $resolvedInstaller = $candidate.Path
 }
 elseif ($EnsureLatestRuntime) {
@@ -267,10 +372,35 @@ if ($buildStandard) {
 }
 
 if ($buildStandard) {
-    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-standard.md") -OutputPath (Join-Path $standardDir "使用说明.md") -VersionValue $Version -GeneratedAt $generatedAt
+    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-standard.md") -OutputPath (Join-Path $standardDir "使用说明.md") -Tokens @{
+        VERSION = $Version
+        GENERATED_AT = $generatedAt
+    }
 }
 if ($buildOffline) {
-    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-offline.md") -OutputPath (Join-Path $offlineDir "使用说明.md") -VersionValue $Version -GeneratedAt $generatedAt
+    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-offline.md") -OutputPath (Join-Path $offlineDir "使用说明.md") -Tokens @{
+        VERSION = $Version
+        GENERATED_AT = $generatedAt
+    }
+}
+
+$defaultSourceUrl = "https://github.com/<owner>/<repo>/releases/tag/v$Version"
+$resolvedSourceUrl = if ([string]::IsNullOrWhiteSpace($ReleaseNotesSourceUrl)) { $defaultSourceUrl } else { $ReleaseNotesSourceUrl }
+if ($buildStandard) {
+    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $standardDir "发布说明.txt") -Tokens @{
+        VERSION = $Version
+        GENERATED_AT = $generatedAt
+        PACKAGE_KIND = "standard"
+        SOURCE_URL = $resolvedSourceUrl
+    }
+}
+if ($buildOffline) {
+    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $offlineDir "发布说明.txt") -Tokens @{
+        VERSION = $Version
+        GENERATED_AT = $generatedAt
+        PACKAGE_KIND = "offline"
+        SOURCE_URL = $resolvedSourceUrl
+    }
 }
 
 if ($buildStandard) {
@@ -294,9 +424,29 @@ if (-not $SkipZip) {
     }
 }
 
+$defenderScanStatus = "not-enabled"
+if ($RunDefenderScan) {
+    $defenderScanStatus = Invoke-DefenderScan -ScanPath $releaseRoot -FailOnError:$FailOnDefenderScanError
+}
+
+$gitCommit = Get-GitCommit -RepositoryRoot $repoRoot
+$manifestPath = Join-Path $releaseRoot "release-manifest.json"
+Write-ReleaseManifest `
+    -ManifestPath $manifestPath `
+    -Version $Version `
+    -GeneratedAtUtc ([DateTime]::UtcNow.ToString("o")) `
+    -GitCommit $gitCommit `
+    -PackageMode $PackageMode `
+    -BuildStandard $buildStandard `
+    -BuildOffline $buildOffline `
+    -Archives ($archives.ToArray()) `
+    -DefenderScanEnabled ([bool]$RunDefenderScan) `
+    -DefenderScanStatus $defenderScanStatus
+
 Write-Host "Release preparation completed."
 Write-Host "Version: $Version"
 Write-Host "Package mode: $PackageMode"
+Write-Host "Manifest: $manifestPath"
 if ($buildStandard) {
     Write-Host "Standard package: $standardDir"
 }
@@ -315,4 +465,7 @@ if (-not $SkipZip -and $archives.Count -gt 0) {
     foreach ($archive in $archives) {
         Write-Host "Archive: $archive"
     }
+}
+if ($RunDefenderScan) {
+    Write-Host "Defender scan status: $defenderScanStatus"
 }

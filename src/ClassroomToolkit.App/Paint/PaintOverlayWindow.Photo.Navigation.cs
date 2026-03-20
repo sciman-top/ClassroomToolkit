@@ -158,12 +158,16 @@ public partial class PaintOverlayWindow
                 return;
             }
         }
-        PhotoModeChanged?.Invoke(true);
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoModeChanged?.Invoke(true),
+            ex => Debug.WriteLine($"[PhotoModeChanged] enter callback failed: {ex.GetType().Name} - {ex.Message}"));
         if (PhotoTitleText != null)
         {
             PhotoTitleText.Text = IoPath.GetFileName(sourcePath);
         }
-        InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
+        SafeActionExecutionExecutor.TryExecute(
+            () => InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate),
+            ex => Debug.WriteLine($"[InkContextChanged] enter callback failed: {ex.GetType().Name} - {ex.Message}"));
         ResetInkHistory();
         LoadCurrentPageIfExists();
         if (IsCrossPageDisplayActive())
@@ -214,7 +218,9 @@ public partial class PaintOverlayWindow
         UpdateOverlayHitTestVisibility();
         UpdateInputPassthrough();
         EnsureOverlayTopmost(enforceZOrder: false);
-        PhotoModeChanged?.Invoke(false);
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoModeChanged?.Invoke(false),
+            ex => Debug.WriteLine($"[PhotoModeChanged] exit callback failed: {ex.GetType().Name} - {ex.Message}"));
         _currentDocumentName = string.Empty;
         _currentDocumentPath = string.Empty;
         if (PhotoTitleText != null)
@@ -483,7 +489,7 @@ public partial class PaintOverlayWindow
                 {
                     await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
-                    TryBeginInvoke(() =>
+                    var scheduled = TryBeginInvoke(() =>
                     {
                         if (token != _photoFullscreenBoundsToken || !IsPhotoFullscreenActive)
                         {
@@ -491,6 +497,18 @@ public partial class PaintOverlayWindow
                         }
                         ApplyPhotoWindowBounds(fullscreen: true);
                     }, DispatcherPriority.Render);
+                    if (!scheduled && Dispatcher.CheckAccess())
+                    {
+                        if (token != _photoFullscreenBoundsToken || !IsPhotoFullscreenActive)
+                        {
+                            return;
+                        }
+                        ApplyPhotoWindowBounds(fullscreen: true);
+                    }
+                    else if (!scheduled)
+                    {
+                        Debug.WriteLine("[PhotoBounds] fullscreen-enforcement dispatch unavailable.");
+                    }
                 }
             },
             lifecycleToken,
@@ -516,14 +534,18 @@ public partial class PaintOverlayWindow
 
         if (plan.RequestZOrderBeforeDrag)
         {
-            FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag));
+            SafeActionExecutionExecutor.TryExecute(
+                () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag)),
+                ex => Debug.WriteLine($"[FloatingZOrderRequested] drag-before callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
 
         PaintActionInvoker.TryInvoke(DragMove);
 
         if (plan.RequestZOrderAfterDrag)
         {
-            FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag));
+            SafeActionExecutionExecutor.TryExecute(
+                () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag)),
+                ex => Debug.WriteLine($"[FloatingZOrderRequested] drag-after callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
     }
 
@@ -588,6 +610,7 @@ public partial class PaintOverlayWindow
 
     private void HandlePhotoNavigationRequest(int direction)
     {
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         PhotoNavigationDiagnostics.Log(
             "Overlay.Nav",
             $"dir={direction}, isPdf={_photoDocumentIsPdf}, page={_currentPageIndex}, seqIndex={_photoSequenceIndex}, crossPage={IsCrossPageDisplaySettingEnabled()}");
@@ -623,7 +646,9 @@ public partial class PaintOverlayWindow
             return;
         }
         PhotoNavigationDiagnostics.Log("Overlay.Nav", "request file-nav to MainWindow");
-        PhotoNavigationRequested?.Invoke(direction);
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoNavigationRequested?.Invoke(direction),
+            ex => Debug.WriteLine($"[PhotoNavigationRequested] callback failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private bool TryNavigatePhotoEdition(int direction)
@@ -868,7 +893,9 @@ public partial class PaintOverlayWindow
                 _photoTranslate.Y = Math.Clamp(_photoTranslate.Y, minY, maxY);
             }
         }
-        InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate);
+        SafeActionExecutionExecutor.TryExecute(
+            () => InkContextChanged?.Invoke(_currentDocumentName, _currentCourseDate),
+            ex => Debug.WriteLine($"[InkContextChanged] enter callback failed: {ex.GetType().Name} - {ex.Message}"));
         if (interactiveSwitch)
         {
             TrySeedNeighborFrameForInteractiveSwitch(
@@ -944,6 +971,9 @@ public partial class PaintOverlayWindow
         {
             FinalizeActiveInkOperation();
         }
+        // Interactive seam switching prefers async persistence, but when cache is disabled
+        // we must persist synchronously here to avoid losing the finalized previous-page stroke.
+        var shouldPersistToSidecar = persistToSidecar || (!_inkCacheEnabled && hadActiveInkOperation);
 
         if (!forceBackground && !IsCurrentPageDirty())
         {
@@ -973,10 +1003,6 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        if (finalizeActiveOperation)
-        {
-            FinalizeActiveInkOperation();
-        }
         List<InkStrokeData> strokes;
         var reusedCachedSnapshot = false;
 
@@ -1014,7 +1040,7 @@ public partial class PaintOverlayWindow
                 $"strokes={strokes.Count} reused={reusedCachedSnapshot}");
         }
 
-        if (persistToSidecar)
+        if (shouldPersistToSidecar)
         {
             // Method A: also persist to sidecar file on disk
             PersistInkToSidecar(strokes, _currentDocumentPath, _currentPageIndex);

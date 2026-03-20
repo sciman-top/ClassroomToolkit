@@ -64,6 +64,12 @@ public partial class ImageManagerWindow : Window
     public ImageManagerWindow(IReadOnlyList<string> favorites, IReadOnlyList<string> recents)
     {
         ViewModel = new ImageManagerViewModel();
+        _thumbnailRefreshDebounceTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(ThumbnailRefreshDebounceMilliseconds),
+            DispatcherPriority.Background,
+            OnThumbnailRefreshDebounceTick,
+            Dispatcher.CurrentDispatcher);
+        _thumbnailRefreshDebounceTimer.Stop();
         InitializeComponent();
         DataContext = ViewModel;
 
@@ -83,22 +89,11 @@ public partial class ImageManagerWindow : Window
         SizeChanged += OnWindowSizeChanged;
         StateChanged += OnWindowStateChanged;
         SourceInitialized += OnWindowSourceInitialized;
-
-        _thumbnailRefreshDebounceTimer = new DispatcherTimer(
-            TimeSpan.FromMilliseconds(ThumbnailRefreshDebounceMilliseconds),
-            DispatcherPriority.Background,
-            OnThumbnailRefreshDebounceTick,
-            Dispatcher);
-        _thumbnailRefreshDebounceTimer.Stop();
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
-        _ = SafeTaskRunner.Run(
-            "ImageManagerWindow.InitializeTree",
-            token => InitializeTreeAsync(token),
-            _lifecycleCancellation.Token,
-            onError: ex => Debug.WriteLine($"ImageManager: InitializeTree Error: {ex}"));
+        _ = InitializeTreeAsync(_lifecycleCancellation.Token);
         InitializeDefaultFolder();
         EnterInitialMaximizedState();
         ApplyAdaptiveLayout();
@@ -183,7 +178,7 @@ public partial class ImageManagerWindow : Window
     private async Task InitializeTreeAsync(CancellationToken cancellationToken)
     {
         FolderTree.Items.Clear();
-        FolderTree.Items.Add(new TreeViewItem { Header = "加载中..." });
+        FolderTree.Items.Add(CreateStatusNode("加载中..."));
         try
         {
             var drives = await Task.Run(() => DriveInfo.GetDrives(), cancellationToken);
@@ -215,7 +210,7 @@ public partial class ImageManagerWindow : Window
             FolderTree.Items.Clear();
             if (nodes.Count == 0)
             {
-                FolderTree.Items.Add(new TreeViewItem { Header = "无可用驱动器" });
+                FolderTree.Items.Add(CreateStatusNode("无可用驱动器"));
                 return;
             }
             foreach (var node in nodes)
@@ -231,7 +226,7 @@ public partial class ImageManagerWindow : Window
         {
             Debug.WriteLine($"ImageManager: InitializeTree Error: {ex}");
             FolderTree.Items.Clear();
-            FolderTree.Items.Add(new TreeViewItem { Header = "加载失败" });
+            FolderTree.Items.Add(CreateStatusNode("加载失败"));
         }
     }
 
@@ -282,7 +277,9 @@ public partial class ImageManagerWindow : Window
             return;
         }
         ViewModel.Favorites.Remove(selected);
-        FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites));
+        SafeActionExecutionExecutor.TryExecute(
+            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
+            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
     }
 
     private void OnFavoritesSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -332,7 +329,9 @@ public partial class ImageManagerWindow : Window
         }
         if (ViewModel.CurrentIndex >= 0)
         {
-            ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex);
+            SafeActionExecutionExecutor.TryExecute(
+                () => ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex),
+                ex => Debug.WriteLine($"ImageManager: image selected callback failed: {ex.Message}"));
         }
     }
 
@@ -369,6 +368,10 @@ public partial class ImageManagerWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (ReferenceEquals(Keyboard.FocusedElement, CurrentFolderText))
+        {
+            return;
+        }
         if (!_suppressKeyboardNavigation)
         {
             return;
@@ -377,6 +380,32 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
+        e.Handled = true;
+    }
+
+    private void OnCurrentFolderTextKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        var raw = CurrentFolderText.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            ShowEmptyState();
+            e.Handled = true;
+            return;
+        }
+
+        if (TryResolveExistingFolder(raw, out var folder))
+        {
+            OpenFolder(folder, addToRecents: true);
+            e.Handled = true;
+            return;
+        }
+
+        CurrentFolderText.SelectAll();
         e.Handled = true;
     }
 
@@ -498,7 +527,9 @@ public partial class ImageManagerWindow : Window
             return;
         }
         ViewModel.Favorites.Insert(0, new FolderItem(path));
-        FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites));
+        SafeActionExecutionExecutor.TryExecute(
+            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
+            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
     }
 
     private void OpenFolder(string path, bool addToRecents = true, bool navigate = true)
@@ -608,6 +639,13 @@ public partial class ImageManagerWindow : Window
             return false;
         }
 
+        if (normalized.Length == 2
+            && char.IsLetter(normalized[0])
+            && normalized[1] == ':')
+        {
+            normalized += "\\";
+        }
+
         if (Directory.Exists(normalized))
         {
             folder = normalized;
@@ -647,7 +685,9 @@ public partial class ImageManagerWindow : Window
         {
             ViewModel.Recents.RemoveAt(ViewModel.Recents.Count - 1);
         }
-        RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents));
+        SafeActionExecutionExecutor.TryExecute(
+            () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
+            ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));
     }
 
     private void StartLoadImages(string folder)
@@ -686,6 +726,12 @@ public partial class ImageManagerWindow : Window
             }
 
             await AppendScanResultsAsync(result, token, requestId);
+            if (token.IsCancellationRequested
+                || requestId != Volatile.Read(ref _loadImagesRequestId)
+                || _isClosing)
+            {
+                return;
+            }
 
             ViewModel.CurrentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
             EmptyHintText.Visibility = ViewModel.Images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -811,6 +857,18 @@ public partial class ImageManagerWindow : Window
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            if (Dispatcher.CheckAccess()
+                && !_isClosing
+                && !token.IsCancellationRequested
+                && requestId == Volatile.Read(ref _loadImagesRequestId))
+            {
+                item.Thumbnail = thumbnail;
+                if (item.IsPdf && pageCount > 0)
+                {
+                    item.PageCount = pageCount;
+                }
+                return;
+            }
             Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
                     item.Path,
@@ -824,7 +882,9 @@ public partial class ImageManagerWindow : Window
         _isClosing = true;
         _lifecycleCancellation.Cancel();
         UpdatePreferredLeftLayoutFromCurrent();
-        LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
+        SafeActionExecutionExecutor.TryExecute(
+            () => LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth),
+            ex => Debug.WriteLine($"ImageManager: close layout callback failed: {ex.Message}"));
         _thumbnailCts?.Cancel();
     }
 
@@ -878,7 +938,9 @@ public partial class ImageManagerWindow : Window
         var next = ViewModel.CurrentIndex + direction;
         if (next < 0 || next >= navigableItems.Count) return false;
         ViewModel.CurrentIndex = next;
-        ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex);
+        SafeActionExecutionExecutor.TryExecute(
+            () => ImageSelected?.Invoke(GetNavigablePaths(), ViewModel.CurrentIndex),
+            ex => Debug.WriteLine($"ImageManager: image selected callback failed: {ex.Message}"));
         return true;
     }
 
@@ -937,8 +999,8 @@ public partial class ImageManagerWindow : Window
 
     private static TreeViewItem CreateFolderNode(string path, string header)
     {
-        var item = new TreeViewItem { Header = header, Tag = path };
-        item.Items.Add(new TreeViewItem { Header = "\u52a0\u8f7d\u4e2d..." });
+        var item = new TreeViewItem { Header = CreateVisibleTreeHeader(header), Tag = path };
+        item.Items.Add(CreateStatusNode("\u52a0\u8f7d\u4e2d..."));
         item.Expanded += OnFolderExpanded;
         return item;
     }
@@ -958,7 +1020,8 @@ public partial class ImageManagerWindow : Window
                 return;
             }
 
-            if (placeholder.Header is not string text || !text.Contains("\u52a0\u8f7d\u4e2d"))
+            var placeholderText = ResolveTreeHeaderText(placeholder.Header);
+            if (!placeholderText.Contains("\u52a0\u8f7d\u4e2d", StringComparison.Ordinal))
             {
                 return;
             }
@@ -1008,6 +1071,10 @@ public partial class ImageManagerWindow : Window
 
                 if (upperBound < directories.Count)
                 {
+                    if (item.Dispatcher.HasShutdownStarted || item.Dispatcher.HasShutdownFinished)
+                    {
+                        return;
+                    }
                     await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
                 }
             }
@@ -1054,7 +1121,22 @@ public partial class ImageManagerWindow : Window
 
             if (upperBound < result.Count)
             {
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished || _isClosing)
+                {
+                    return;
+                }
+                try
+                {
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                }
+                catch (OperationCanceledException) when (_isClosing)
+                {
+                    return;
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
             }
         }
     }
@@ -1076,6 +1158,36 @@ public partial class ImageManagerWindow : Window
         WindowPlacementExecutor.TryRefreshFrame(hwnd);
     }
 
+    private static TreeViewItem CreateStatusNode(string text)
+    {
+        return new TreeViewItem
+        {
+            Header = CreateVisibleTreeHeader(text),
+            IsHitTestVisible = false
+        };
+    }
+
+    private static TextBlock CreateVisibleTreeHeader(string text)
+    {
+        return new TextBlock
+        {
+            Text = text,
+            Foreground = System.Windows.Application.Current?.TryFindResource("Brush_Text_Primary") as System.Windows.Media.Brush
+                ?? System.Windows.Media.Brushes.White,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+    }
+
+    private static string ResolveTreeHeaderText(object? header)
+    {
+        return header switch
+        {
+            TextBlock textBlock => textBlock.Text ?? string.Empty,
+            string text => text,
+            _ => string.Empty
+        };
+    }
+
     private void OnMainColumnSplitterDragDelta(object sender, DragDeltaEventArgs e)
     {
         UpdatePreferredLeftLayoutFromCurrent();
@@ -1087,17 +1199,29 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
+        void ApplyDeferredSplitterUpdate()
+        {
+            UpdatePreferredLeftLayoutFromCurrent();
+            SafeActionExecutionExecutor.TryExecute(
+                () => LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth),
+                ex => Debug.WriteLine($"ImageManager: layout callback failed: {ex.Message}"));
+        }
+
+        var scheduled = false;
         try
         {
-            Dispatcher.BeginInvoke(() =>
-            {
-                UpdatePreferredLeftLayoutFromCurrent();
-                LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth);
-            }, DispatcherPriority.Background);
+            Dispatcher.BeginInvoke(
+                new Action(ApplyDeferredSplitterUpdate),
+                DispatcherPriority.Background);
+            scheduled = true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: deferred splitter update dispatch failed: {ex.GetType().Name} - {ex.Message}");
+        }
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ApplyDeferredSplitterUpdate();
         }
     }
 
@@ -1280,42 +1404,52 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
+        void ApplyRestoredBounds()
+        {
+            if (WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            var plan = ImageManagerRestoreBoundsPolicy.Resolve(
+                restoredWidth: _restoredWindowWidth,
+                restoredHeight: _restoredWindowHeight,
+                defaultWidth: DefaultWindowWidth,
+                defaultHeight: DefaultWindowHeight,
+                minWidth: MinWidth,
+                minHeight: MinHeight,
+                workArea: SystemParameters.WorkArea);
+
+            Width = plan.Width;
+            Height = plan.Height;
+            if (!double.IsNaN(plan.Left))
+            {
+                Left = plan.Left;
+            }
+            if (!double.IsNaN(plan.Top))
+            {
+                Top = plan.Top;
+            }
+
+            TrackRestoredWindowSize();
+            ApplyAdaptiveLayout();
+        }
+
+        var scheduled = false;
         try
         {
-            Dispatcher.BeginInvoke(() =>
-            {
-                if (WindowState != WindowState.Normal)
-                {
-                    return;
-                }
-
-                var plan = ImageManagerRestoreBoundsPolicy.Resolve(
-                    restoredWidth: _restoredWindowWidth,
-                    restoredHeight: _restoredWindowHeight,
-                    defaultWidth: DefaultWindowWidth,
-                    defaultHeight: DefaultWindowHeight,
-                    minWidth: MinWidth,
-                    minHeight: MinHeight,
-                    workArea: SystemParameters.WorkArea);
-
-                Width = plan.Width;
-                Height = plan.Height;
-                if (!double.IsNaN(plan.Left))
-                {
-                    Left = plan.Left;
-                }
-                if (!double.IsNaN(plan.Top))
-                {
-                    Top = plan.Top;
-                }
-
-                TrackRestoredWindowSize();
-                ApplyAdaptiveLayout();
-            }, DispatcherPriority.Loaded);
+            Dispatcher.BeginInvoke(
+                new Action(ApplyRestoredBounds),
+                DispatcherPriority.Loaded);
+            scheduled = true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: restore bounds dispatch failed: {ex.GetType().Name} - {ex.Message}");
+        }
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ApplyRestoredBounds();
         }
     }
 

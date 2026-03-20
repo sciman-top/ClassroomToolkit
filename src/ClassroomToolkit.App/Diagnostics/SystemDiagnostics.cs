@@ -60,6 +60,7 @@ public static class SystemDiagnostics
 
         lines.Add($"控制Office演示：{(settings.ControlMsPpt ? "启用" : "禁用")}");
         lines.Add($"控制WPS演示：{(settings.ControlWpsPpt ? "启用" : "禁用")}");
+        lines.Add($"Office兼容策略：{settings.OfficeInputMode}");
         lines.Add($"WPS兼容策略：{settings.WpsInputMode}");
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
         lines.Add($"WPS去抖毫秒：{settings.WpsDebounceMs}");

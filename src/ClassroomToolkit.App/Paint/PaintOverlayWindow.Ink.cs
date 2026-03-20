@@ -93,6 +93,8 @@ public partial class PaintOverlayWindow
 
         var versionBeforeMove = _activeRenderer.GeometryVersion;
         _activeRenderer.OnMove(input);
+        // Keep seam-bridge continuation input aligned with the latest accepted move sample.
+        _lastBrushInputSample = input;
         return _activeRenderer.GeometryVersion != versionBeforeMove;
     }
 
@@ -692,9 +694,16 @@ public partial class PaintOverlayWindow
         _isRegionSelecting = false;
     }
 
+    private bool ShouldRecordRuntimeInkStroke()
+    {
+        // Cross-page photo/PDF writing requires per-page vector strokes to survive page switches.
+        // Keep runtime stroke recording in photo ink mode even when replay/history recording is disabled.
+        return _inkRecordEnabled || IsPhotoInkModeActive();
+    }
+
     private void RecordBrushStroke(Geometry geometry)
     {
-        if (!_inkRecordEnabled || geometry == null)
+        if (!ShouldRecordRuntimeInkStroke() || geometry == null)
         {
             return;
         }
@@ -790,7 +799,7 @@ public partial class PaintOverlayWindow
 
     private void RecordShapeStroke(Geometry geometry, MediaPen pen)
     {
-        if (!_inkRecordEnabled || geometry == null || pen == null)
+        if (!ShouldRecordRuntimeInkStroke() || geometry == null || pen == null)
         {
             return;
         }

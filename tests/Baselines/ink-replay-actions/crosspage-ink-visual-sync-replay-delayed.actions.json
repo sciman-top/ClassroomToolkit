@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-ink-visual-sync-replay-delayed",
+  "actions": [
+    {
+      "type": "DeferredRefreshRequested",
+      "source": "ink-visual-sync-replay-delayed"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "ink-visual-sync-replay"
+    }
+  ]
+}
+

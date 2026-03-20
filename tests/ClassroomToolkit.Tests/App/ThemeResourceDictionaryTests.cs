@@ -97,8 +97,7 @@ public sealed class ThemeResourceDictionaryTests
 
     private static ResourceDictionary LoadColorsDictionary()
     {
-        var colorsPath = Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        var colorsPath = TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Assets",
@@ -107,21 +106,5 @@ public sealed class ThemeResourceDictionaryTests
 
         using var stream = File.OpenRead(colorsPath);
         return (ResourceDictionary)XamlReader.Load(stream);
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

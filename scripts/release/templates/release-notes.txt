@@ -1,0 +1,7 @@
+ClassroomToolkit 发布说明
+
+版本: __VERSION__
+包类型: __PACKAGE_KIND__
+生成时间: __GENERATED_AT__
+下载来源: __SOURCE_URL__
+运行前请校验: SHA256SUMS.txt

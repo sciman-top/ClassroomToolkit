@@ -43,28 +43,11 @@ public sealed class WidgetShellSizeContractTests
 
     private static string GetWidgetStylesPath()
     {
-        return Path.Combine(
-            FindRepositoryRoot(new DirectoryInfo(AppContext.BaseDirectory))!.FullName,
+        return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Assets",
             "Styles",
             "WidgetStyles.xaml");
-    }
-
-    private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)
-    {
-        var current = start;
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ClassroomToolkit.sln")))
-            {
-                return current;
-            }
-
-            current = current.Parent;
-        }
-
-        return null;
     }
 }

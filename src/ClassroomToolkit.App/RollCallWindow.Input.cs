@@ -219,7 +219,7 @@ public partial class RollCallWindow
             var request = new RollCallRemoteHookStartRequest(
                 ShouldEnable: ShouldEnableGroupSwitchHook(),
                 ConfiguredKey: _viewModel.RemoteGroupSwitchKey,
-                FallbackToken: "b",
+                FallbackToken: "enter",
                 Handler: handler,
                 ShouldKeepActive: () => isCurrent() && ShouldEnableGroupSwitchHook(),
                 AlreadyUnavailableNotified: false,
@@ -245,25 +245,35 @@ public partial class RollCallWindow
             return;
         }
 
+        void ExecuteOnUi()
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                action,
+                ex => System.Diagnostics.Debug.WriteLine(
+                    RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                        operation,
+                        ex.GetType().Name,
+                        ex.Message)));
+        }
+
+        var scheduled = false;
         SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
-                {
-                    SafeActionExecutionExecutor.TryExecute(
-                        action,
-                        ex => System.Diagnostics.Debug.WriteLine(
-                            RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
-                                operation,
-                                ex.GetType().Name,
-                                ex.Message)));
-                }));
+                _ = Dispatcher.BeginInvoke(
+                    DispatcherPriority.Background,
+                    new Action(ExecuteOnUi));
+                scheduled = true;
             },
             ex => System.Diagnostics.Debug.WriteLine(
                 RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
                     operation,
                     ex.GetType().Name,
                     ex.Message)));
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ExecuteOnUi();
+        }
     }
 
     private void NotifyRemoteHookError()
@@ -283,17 +293,25 @@ public partial class RollCallWindow
             return;
         }
 
+        void ShowUnavailableNotice()
+        {
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
+            ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
+        }
+
+        var scheduled = false;
         SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                _ = Dispatcher.InvokeAsync(() =>
-                {
-                    var owner = System.Windows.Application.Current?.MainWindow;
-                    var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
-                    ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
-                });
+                _ = Dispatcher.InvokeAsync(ShowUnavailableNotice);
+                scheduled = true;
             },
             ex => System.Diagnostics.Debug.WriteLine($"NotifyRemoteHookError dispatch failed: {ex.Message}"));
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ShowUnavailableNotice();
+        }
     }
 
     private void UpdateRemoteHookState()

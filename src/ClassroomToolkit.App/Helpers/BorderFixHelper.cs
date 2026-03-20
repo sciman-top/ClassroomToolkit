@@ -135,7 +135,7 @@ namespace ClassroomToolkit.App.Helpers
                         return;
                     }
 
-                    window.Dispatcher.BeginInvoke(new Action(() =>
+                    void ApplyDeferredBorderFix()
                     {
                         try
                         {
@@ -146,11 +146,32 @@ namespace ClassroomToolkit.App.Helpers
                         {
                             System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟修复失败: {ex.Message}");
                         }
-                    }), System.Windows.Threading.DispatcherPriority.Loaded);
+                    }
+
+                    var scheduled = false;
+                    window.Dispatcher.BeginInvoke(
+                        new Action(ApplyDeferredBorderFix),
+                        System.Windows.Threading.DispatcherPriority.Loaded);
+                    scheduled = true;
+                    if (!scheduled && window.Dispatcher.CheckAccess())
+                    {
+                        ApplyDeferredBorderFix();
+                    }
                 }
                 catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟调度失败: {ex.Message}");
+                    if (window.Dispatcher.CheckAccess())
+                    {
+                        try
+                        {
+                            FixAllBorders(window);
+                        }
+                        catch (Exception fallbackEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(fallbackEx))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"BorderFixHelper 延迟回退修复失败: {fallbackEx.Message}");
+                        }
+                    }
                 }
             }
         }

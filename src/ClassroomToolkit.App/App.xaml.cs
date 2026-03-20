@@ -333,8 +333,7 @@ public partial class App : WpfApplication
             return;
         }
 
-        // 弹窗提示用户（防止重入导致消息风暴）
-        _ = Dispatcher.InvokeAsync(() =>
+        void ShowGlobalErrorDialog()
         {
             if (Interlocked.Exchange(ref _criticalDialogShowing, 1) == 1)
             {
@@ -350,7 +349,23 @@ public partial class App : WpfApplication
             {
                 Interlocked.Exchange(ref _criticalDialogShowing, 0);
             }
-        });
+        }
+
+        var scheduled = false;
+        // 弹窗提示用户（防止重入导致消息风暴）
+        try
+        {
+            _ = Dispatcher.InvokeAsync(ShowGlobalErrorDialog);
+            scheduled = true;
+        }
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        {
+            // Keep fallback path below; no-op here.
+        }
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ShowGlobalErrorDialog();
+        }
     }
 
     private void LogException(Exception ex, string source)

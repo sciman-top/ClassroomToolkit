@@ -12,6 +12,9 @@ namespace ClassroomToolkit.App;
 public partial class RollCallSettingsDialog : Window
 {
     private readonly IReadOnlyList<string> _availableClasses;
+    private readonly string _defaultRemotePresenterKey;
+    private readonly string _defaultRemoteGroupSwitchKey;
+    private readonly int _defaultReminderIntervalMinutes;
     private readonly record struct DisplayTabState(
         bool ShowId,
         bool ShowName,
@@ -51,7 +54,7 @@ public partial class RollCallSettingsDialog : Window
     public bool RollCallRemoteEnabled { get; private set; }
     public bool RollCallRemoteGroupSwitchEnabled { get; private set; }
     public string RemotePresenterKey { get; private set; } = "tab";
-    public string RemoteGroupSwitchKey { get; private set; } = "b";
+    public string RemoteGroupSwitchKey { get; private set; } = "enter";
     public bool RollCallShowPhoto { get; private set; }
     public int RollCallPhotoDurationSeconds { get; private set; }
     public string RollCallPhotoSharedClass { get; private set; } = string.Empty;
@@ -68,6 +71,10 @@ public partial class RollCallSettingsDialog : Window
     public RollCallSettingsDialog(AppSettings settings, IReadOnlyList<string> availableClasses)
     {
         InitializeComponent();
+        var defaults = new AppSettings();
+        _defaultRemotePresenterKey = string.IsNullOrWhiteSpace(defaults.RemotePresenterKey) ? "tab" : defaults.RemotePresenterKey;
+        _defaultRemoteGroupSwitchKey = string.IsNullOrWhiteSpace(defaults.RemoteGroupSwitchKey) ? "enter" : defaults.RemoteGroupSwitchKey;
+        _defaultReminderIntervalMinutes = defaults.RollCallTimerReminderIntervalMinutes <= 0 ? 5 : defaults.RollCallTimerReminderIntervalMinutes;
         _availableClasses = availableClasses ?? Array.Empty<string>();
         _initialVoiceId = settings.RollCallSpeechVoiceId ?? string.Empty;
         _initialOutputId = settings.RollCallSpeechOutputId ?? string.Empty;
@@ -92,7 +99,7 @@ public partial class RollCallSettingsDialog : Window
         var interval = settings.RollCallTimerReminderIntervalMinutes;
         if (interval <= 0)
         {
-            interval = 3;
+            interval = _defaultReminderIntervalMinutes;
         }
         ReminderIntervalSlider.Value = Math.Max(1, Math.Min(20, interval));
         RemoteEnabledCheck.IsChecked = settings.RollCallRemoteEnabled;
@@ -311,9 +318,9 @@ public partial class RollCallSettingsDialog : Window
         try
         {
             RemoteEnabledCheck.IsChecked = state.RemoteEnabled;
-            SelectComboValue(RemoteKeyCombo, state.RemotePresenterKey, "tab");
+            SelectComboValue(RemoteKeyCombo, state.RemotePresenterKey, _defaultRemotePresenterKey);
             RemoteGroupSwitchCheck.IsChecked = state.RemoteGroupSwitchEnabled;
-            SelectComboValue(RemoteGroupSwitchKeyCombo, state.RemoteGroupSwitchKey, "b");
+            SelectComboValue(RemoteGroupSwitchKeyCombo, state.RemoteGroupSwitchKey, _defaultRemoteGroupSwitchKey);
         }
         finally
         {
@@ -398,12 +405,14 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
+        RemoteKeyCombo.ToolTip = enabled ? null : "启用“使用翻页笔进行点名”后可设置点名按键。";
     }
 
     private void UpdateRemoteGroupSwitchEnabled()
     {
         var enabled = RemoteGroupSwitchCheck.IsChecked == true;
         RemoteGroupSwitchKeyCombo.IsEnabled = enabled;
+        RemoteGroupSwitchKeyCombo.ToolTip = enabled ? null : "启用“使用翻页笔切换分组”后可设置分组按键。";
     }
 
     private void UpdatePhotoControls()
@@ -411,6 +420,9 @@ public partial class RollCallSettingsDialog : Window
         var enabled = ShowPhotoCheck.IsChecked == true;
         PhotoDurationSlider.IsEnabled = enabled;
         PhotoSharedCombo.IsEnabled = enabled;
+        var disabledTip = "启用“启用学生照片显示”后可设置照片时长和照片来源。";
+        PhotoDurationSlider.ToolTip = enabled ? null : disabledTip;
+        PhotoSharedCombo.ToolTip = enabled ? null : disabledTip;
     }
 
     private void UpdatePhotoDurationLabel()
@@ -422,9 +434,13 @@ public partial class RollCallSettingsDialog : Window
     private void UpdateTimerControls()
     {
         TimerSoundCombo.IsEnabled = TimerSoundCheck.IsChecked == true;
+        TimerSoundCombo.ToolTip = TimerSoundCheck.IsChecked == true ? null : "启用“计时结束播放音效”后可选择结束音效。";
         var reminderEnabled = ReminderSoundCheck.IsChecked == true;
         ReminderSoundCombo.IsEnabled = reminderEnabled;
         ReminderIntervalSlider.IsEnabled = reminderEnabled;
+        var reminderTip = "启用“定时语音提醒”后可设置提醒音效和提醒间隔。";
+        ReminderSoundCombo.ToolTip = reminderEnabled ? null : reminderTip;
+        ReminderIntervalSlider.ToolTip = reminderEnabled ? null : reminderTip;
     }
 
     private void UpdateSpeechControls()
@@ -440,7 +456,7 @@ public partial class RollCallSettingsDialog : Window
         }
 
         SpeechOutputCombo.IsEnabled = false;
-        SpeechOutputCombo.ToolTip = "当前版本暂不支持输出设备选择。";
+        SpeechOutputCombo.ToolTip = "当前版本暂不支持播报设备选择。";
 
         if (SpeechVoiceCombo.Items.Count == 0)
         {
@@ -453,8 +469,8 @@ public partial class RollCallSettingsDialog : Window
         var keyText = GetRemoteKey();
         var groupKeyText = GetRemoteGroupSwitchKey();
 
-        if (string.IsNullOrWhiteSpace(keyText)) keyText = "tab";
-        if (string.IsNullOrWhiteSpace(groupKeyText)) groupKeyText = "b";
+        if (string.IsNullOrWhiteSpace(keyText)) keyText = _defaultRemotePresenterKey;
+        if (string.IsNullOrWhiteSpace(groupKeyText)) groupKeyText = _defaultRemoteGroupSwitchKey;
 
         if (RemoteEnabledCheck.IsChecked == true)
         {
@@ -518,7 +534,7 @@ public partial class RollCallSettingsDialog : Window
     {
         var result = System.Windows.MessageBox.Show(
             "将恢复点名设置窗口中的全部默认参数，是否继续？",
-            "恢复全部默认",
+            "重置全部设置",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
@@ -564,7 +580,9 @@ public partial class RollCallSettingsDialog : Window
                     BuildTimerSoundCombo(defaults.RollCallTimerSoundVariant);
                     ReminderSoundCheck.IsChecked = defaults.RollCallTimerReminderEnabled;
                     BuildReminderSoundCombo(defaults.RollCallTimerReminderSoundVariant);
-                    var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0 ? 3 : defaults.RollCallTimerReminderIntervalMinutes;
+                    var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0
+                        ? _defaultReminderIntervalMinutes
+                        : defaults.RollCallTimerReminderIntervalMinutes;
                     ReminderIntervalSlider.Value = Math.Clamp(reminderInterval, 1, 20);
                     break;
                 default:
@@ -610,7 +628,9 @@ public partial class RollCallSettingsDialog : Window
             BuildTimerSoundCombo(defaults.RollCallTimerSoundVariant);
             ReminderSoundCheck.IsChecked = defaults.RollCallTimerReminderEnabled;
             BuildReminderSoundCombo(defaults.RollCallTimerReminderSoundVariant);
-            var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0 ? 3 : defaults.RollCallTimerReminderIntervalMinutes;
+            var reminderInterval = defaults.RollCallTimerReminderIntervalMinutes <= 0
+                ? _defaultReminderIntervalMinutes
+                : defaults.RollCallTimerReminderIntervalMinutes;
             ReminderIntervalSlider.Value = Math.Clamp(reminderInterval, 1, 20);
 
             RemoteEnabledCheck.IsChecked = defaults.RollCallRemoteEnabled;
@@ -662,10 +682,10 @@ public partial class RollCallSettingsDialog : Window
         RemoteKeyCombo.ItemsSource = items;
         RemoteKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
-        var selected = string.IsNullOrWhiteSpace(current) ? "tab" : current;
+        var selected = string.IsNullOrWhiteSpace(current) ? _defaultRemotePresenterKey : current;
         if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
         {
-            selected = "tab";
+            selected = _defaultRemotePresenterKey;
         }
         RemoteKeyCombo.SelectedValue = selected;
     }
@@ -676,10 +696,10 @@ public partial class RollCallSettingsDialog : Window
         RemoteGroupSwitchKeyCombo.ItemsSource = items;
         RemoteGroupSwitchKeyCombo.DisplayMemberPath = nameof(ComboOption.Label);
         RemoteGroupSwitchKeyCombo.SelectedValuePath = nameof(ComboOption.Value);
-        var selected = string.IsNullOrWhiteSpace(current) ? "b" : current;
+        var selected = string.IsNullOrWhiteSpace(current) ? _defaultRemoteGroupSwitchKey : current;
         if (!items.Any(item => item.Value.Equals(selected, StringComparison.OrdinalIgnoreCase)))
         {
-            selected = "b";
+            selected = _defaultRemoteGroupSwitchKey;
         }
         RemoteGroupSwitchKeyCombo.SelectedValue = selected;
     }

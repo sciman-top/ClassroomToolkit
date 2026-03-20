@@ -23,4 +23,9 @@ internal static class PaintPresetDefaults
     internal const double GestureSensitivityResponsive = 1.2;
     internal const double GestureSensitivityStable = 0.8;
     internal const double GestureSensitivityDualScreen = 0.9;
+
+    internal const string InertiaProfileBalanced = PhotoInertiaProfileDefaults.Standard;
+    internal const string InertiaProfileResponsive = PhotoInertiaProfileDefaults.Sensitive;
+    internal const string InertiaProfileStable = PhotoInertiaProfileDefaults.Heavy;
+    internal const string InertiaProfileDualScreen = PhotoInertiaProfileDefaults.Heavy;
 }

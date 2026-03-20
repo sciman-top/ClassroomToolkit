@@ -455,7 +455,10 @@ public partial class MainWindow
                 "FocusOverlayForPhotoNavigation");
             if (!scheduled)
             {
-                FocusNow();
+                if (Dispatcher.CheckAccess())
+                {
+                    FocusNow();
+                }
             }
             return;
         }

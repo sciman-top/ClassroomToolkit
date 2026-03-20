@@ -10,6 +10,7 @@ using System.IO;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Windowing;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -22,6 +23,7 @@ public partial class PaintOverlayWindow
 {
     private bool TryStepPhotoViewport(int direction)
     {
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         var viewportHeight = ResolvePhotoViewportHeight();
         if (viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
         {
@@ -95,8 +97,16 @@ public partial class PaintOverlayWindow
             PhotoZoomInputDefaults.GestureSensitivityMax);
     }
 
+    public void UpdatePhotoInertiaProfile(string profile)
+    {
+        _photoInertiaProfile = PhotoInertiaProfileDefaults.Normalize(profile);
+        _photoPanInertiaTuning = PhotoPanInertiaProfilePolicy.Resolve(_photoInertiaProfile);
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
+    }
+
     private void ApplyPhotoScale(double scaleFactor, WpfPoint center)
     {
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         EnsurePhotoTransformsWritable();
         double newScale = Math.Clamp(
             _photoScale.ScaleX * scaleFactor,
@@ -257,11 +267,13 @@ public partial class PaintOverlayWindow
 
     private void BeginPhotoPan(WpfPoint position, bool captureStylus)
     {
+        StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         _photoPanning = true;
         _photoPanHadEffectiveMovement = false;
         _photoPanStart = position;
         _photoPanOriginX = _photoTranslate.X;
         _photoPanOriginY = _photoTranslate.Y;
+        ResetPhotoPanVelocitySamples(position);
         SyncPhotoInteractiveRefreshAnchor();
         LogPhotoInputTelemetry("pan-start", $"stylus={captureStylus}");
         if (captureStylus)
@@ -280,11 +292,20 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+
+        UpdatePhotoPanVelocitySamples(point);
         EnsurePhotoTransformsWritable();
         var delta = point - _photoPanStart;
         _photoTranslate.X = _photoPanOriginX + delta.X;
         _photoTranslate.Y = _photoPanOriginY + delta.Y;
         ApplyPhotoPanBounds(allowResistance: true);
+        var movedSincePanStart =
+            Math.Abs(_photoTranslate.X - _photoPanOriginX) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip
+            || Math.Abs(_photoTranslate.Y - _photoPanOriginY) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip;
+        if (movedSincePanStart)
+        {
+            _photoPanHadEffectiveMovement = true;
+        }
         UpdatePhotoInkPanCompensation();
         var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
             _lastPhotoInteractiveRefreshTranslateX,
@@ -302,7 +323,6 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        _photoPanHadEffectiveMovement = true;
         SyncPhotoInteractiveRefreshAnchor();
 
         UpdateNeighborTransformsForPan();
@@ -322,7 +342,7 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private void EndPhotoPan()
+    private void EndPhotoPan(bool allowInertia = true)
     {
         if (!_photoPanning)
         {
@@ -346,15 +366,211 @@ public partial class PaintOverlayWindow
             _crossPageTranslateClamped = false;
             FinalizeCurrentPageFromScroll();
         }
+        var inertiaStarted = allowInertia
+            && hadEffectiveMovement
+            && TryStartPhotoPanInertiaFromRelease();
         _photoPanHadEffectiveMovement = false;
         LogPhotoInputTelemetry("pan-end", "commit");
-        FlushPhotoTransformSave();
-        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        if (!inertiaStarted)
+        {
+            FlushPhotoTransformSave();
+            ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        }
         if (PhotoPanEndRedrawPolicy.ShouldRequestInkRedraw(
-                hadEffectiveMovement,
-                hadCrossPageDragCommit))
+                hadEffectiveMovement && !inertiaStarted,
+                hadCrossPageDragCommit && !inertiaStarted))
         {
             RequestInkRedraw();
+        }
+    }
+
+    private void ResetPhotoPanVelocitySamples(WpfPoint position)
+    {
+        var nowTicks = Stopwatch.GetTimestamp();
+        _photoPanVelocitySamples.Clear();
+        _photoPanVelocitySamples.Add(new PhotoPanVelocitySample(position, nowTicks));
+    }
+
+    private void UpdatePhotoPanVelocitySamples(WpfPoint position)
+    {
+        var nowTicks = Stopwatch.GetTimestamp();
+        if (_photoPanVelocitySamples.Count <= 0)
+        {
+            ResetPhotoPanVelocitySamples(position);
+            return;
+        }
+
+        var lastTimestampTicks = _photoPanVelocitySamples[^1].TimestampTicks;
+        if (nowTicks <= lastTimestampTicks)
+        {
+            nowTicks = lastTimestampTicks + 1;
+        }
+
+        _photoPanVelocitySamples.Add(new PhotoPanVelocitySample(position, nowTicks));
+        TrimPhotoPanVelocitySamples(nowTicks);
+    }
+
+    private void TrimPhotoPanVelocitySamples(long nowTicks)
+    {
+        var maxAgeTicks = (long)Math.Ceiling(
+            PhotoPanInertiaDefaults.MouseVelocitySampleHistoryMaxAgeMs * Stopwatch.Frequency / 1000.0);
+        while (_photoPanVelocitySamples.Count > 1
+               && nowTicks - _photoPanVelocitySamples[0].TimestampTicks > maxAgeTicks)
+        {
+            _photoPanVelocitySamples.RemoveAt(0);
+        }
+
+        while (_photoPanVelocitySamples.Count > PhotoPanInertiaDefaults.MouseVelocitySampleCapacity)
+        {
+            _photoPanVelocitySamples.RemoveAt(0);
+        }
+    }
+
+    private bool TryStartPhotoPanInertiaFromRelease()
+    {
+        var nowTicks = Stopwatch.GetTimestamp();
+        if (!PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
+                _photoPanVelocitySamples,
+                nowTicks,
+                Stopwatch.Frequency,
+                _photoPanInertiaTuning,
+                out var velocityDipPerMs))
+        {
+            return false;
+        }
+
+        _photoPanInertiaVelocityDipPerMs = velocityDipPerMs;
+        var nowUtc = GetCurrentUtcTimestamp();
+        _photoPanInertiaLastTickUtc = nowUtc;
+        _photoPanInertiaStartUtc = nowUtc;
+        _photoPanInertiaLastRenderingTime = TimeSpan.MinValue;
+        if (!_photoPanInertiaRenderingAttached)
+        {
+            CompositionTarget.Rendering += OnPhotoPanInertiaRendering;
+            _photoPanInertiaRenderingAttached = true;
+        }
+        LogPhotoInputTelemetry(
+            "pan-inertia-start",
+            $"vx={_photoPanInertiaVelocityDipPerMs.X:0.###},vy={_photoPanInertiaVelocityDipPerMs.Y:0.###}");
+        return true;
+    }
+
+    private void OnPhotoPanInertiaRendering(object? sender, EventArgs e)
+    {
+        if (!_photoModeActive || _photoPanning || _photoPanInertiaLastTickUtc == PhotoInputConflictDefaults.UnsetTimestampUtc)
+        {
+            StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
+            return;
+        }
+
+        var nowUtc = GetCurrentUtcTimestamp();
+        if (_photoPanInertiaStartUtc != PhotoInputConflictDefaults.UnsetTimestampUtc)
+        {
+            var durationMs = (nowUtc - _photoPanInertiaStartUtc).TotalMilliseconds;
+            if (PhotoPanInertiaMotionPolicy.ShouldStopByDuration(durationMs, _photoPanInertiaTuning))
+            {
+                StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
+                return;
+            }
+        }
+
+        var fallbackElapsedMs = (nowUtc - _photoPanInertiaLastTickUtc).TotalMilliseconds;
+        double elapsedMs = fallbackElapsedMs;
+        if (e is RenderingEventArgs renderingArgs)
+        {
+            if (_photoPanInertiaLastRenderingTime != TimeSpan.MinValue
+                && renderingArgs.RenderingTime > _photoPanInertiaLastRenderingTime)
+            {
+                elapsedMs = (renderingArgs.RenderingTime - _photoPanInertiaLastRenderingTime).TotalMilliseconds;
+            }
+            _photoPanInertiaLastRenderingTime = renderingArgs.RenderingTime;
+        }
+
+        elapsedMs = PhotoPanInertiaMotionPolicy.ResolveFrameElapsedMilliseconds(elapsedMs);
+        if (elapsedMs <= 0)
+        {
+            return;
+        }
+        _photoPanInertiaLastTickUtc = nowUtc;
+
+        var translation = PhotoPanInertiaMotionPolicy.ResolveTranslation(
+            _photoPanInertiaVelocityDipPerMs,
+            elapsedMs,
+            _photoPanInertiaTuning);
+        if (translation.LengthSquared <= 0)
+        {
+            StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
+            return;
+        }
+
+        EnsurePhotoTransformsWritable();
+        var beforeX = _photoTranslate.X;
+        var beforeY = _photoTranslate.Y;
+        _photoTranslate.X += translation.X;
+        _photoTranslate.Y += translation.Y;
+        ApplyPhotoPanBounds(allowResistance: false);
+        var moved = Math.Abs(_photoTranslate.X - beforeX) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip
+            || Math.Abs(_photoTranslate.Y - beforeY) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip;
+        if (!moved)
+        {
+            StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
+            return;
+        }
+
+        UpdatePhotoInkPanCompensation();
+        var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+            _lastPhotoInteractiveRefreshTranslateX,
+            _lastPhotoInteractiveRefreshTranslateY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
+        if (shouldRefresh)
+        {
+            SyncPhotoInteractiveRefreshAnchor();
+            UpdateNeighborTransformsForPan();
+            if (PhotoInkPanRedrawPolicy.ShouldRequest(
+                    IsPhotoInkModeActive(),
+                    _photoTranslate.X,
+                    _photoTranslate.Y,
+                    _lastInkRedrawPhotoTranslateX,
+                    _lastInkRedrawPhotoTranslateY))
+            {
+                RequestPhotoTransformInkRedraw();
+            }
+        }
+        if (IsCrossPageDisplayActive())
+        {
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.PhotoPan);
+        }
+        SchedulePhotoTransformSave(userAdjusted: true);
+
+        _photoPanInertiaVelocityDipPerMs = PhotoPanInertiaMotionPolicy.ResolveVelocityAfterDeceleration(
+            _photoPanInertiaVelocityDipPerMs,
+            elapsedMs,
+            _photoPanInertiaTuning);
+        if (_photoPanInertiaVelocityDipPerMs.LengthSquared <= 0)
+        {
+            StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
+        }
+    }
+
+    private void StopPhotoPanInertia(bool flushTransformSave, bool resetInkPanCompensation)
+    {
+        if (_photoPanInertiaRenderingAttached)
+        {
+            CompositionTarget.Rendering -= OnPhotoPanInertiaRendering;
+            _photoPanInertiaRenderingAttached = false;
+        }
+        _photoPanInertiaVelocityDipPerMs = default;
+        _photoPanInertiaLastTickUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
+        _photoPanInertiaStartUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
+        _photoPanInertiaLastRenderingTime = TimeSpan.MinValue;
+        if (flushTransformSave)
+        {
+            FlushPhotoTransformSave();
+        }
+        if (resetInkPanCompensation)
+        {
+            ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
         }
     }
 
@@ -685,11 +901,13 @@ public partial class PaintOverlayWindow
     private void OnPhotoUnifiedTransformSaveTimerTick(object? sender, EventArgs e)
     {
         _photoUnifiedTransformSaveTimer?.Stop();
-        PhotoUnifiedTransformChanged?.Invoke(
-            _pendingUnifiedScaleX,
-            _pendingUnifiedScaleY,
-            _pendingUnifiedTranslateX,
-            _pendingUnifiedTranslateY);
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoUnifiedTransformChanged?.Invoke(
+                _pendingUnifiedScaleX,
+                _pendingUnifiedScaleY,
+                _pendingUnifiedTranslateX,
+                _pendingUnifiedTranslateY),
+            ex => Debug.WriteLine($"[PhotoUnifiedTransformChanged] callback failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private double ResolvePhotoViewportWidth()

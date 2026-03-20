@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Commands;
 
@@ -27,6 +28,22 @@ public sealed class RelayCommand : ICommand
 
     public void RaiseCanExecuteChanged()
     {
-        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        var handlers = CanExecuteChanged?.GetInvocationList();
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers)
+        {
+            try
+            {
+                ((EventHandler)handler)(this, EventArgs.Empty);
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"RelayCommand: CanExecuteChanged callback failed: {ex.Message}");
+            }
+        }
     }
 }

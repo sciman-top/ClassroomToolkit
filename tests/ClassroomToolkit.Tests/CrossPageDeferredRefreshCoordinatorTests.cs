@@ -211,4 +211,38 @@ public sealed class CrossPageDeferredRefreshCoordinatorTests
 
         await act.Should().ThrowAsync<BadImageFormatException>();
     }
+
+    [Fact]
+    public async Task ScheduleAsync_ShouldSwallowNonFatal_WhenImmediateDispatchThrows()
+    {
+        var events = new List<string>();
+
+        var result = await CrossPageDeferredRefreshCoordinator.ScheduleAsync(
+            source: CrossPageUpdateSources.PostInput,
+            singlePerPointerUp: false,
+            delayOverrideMs: null,
+            configuredDelayMs: 120,
+            lastPointerUpUtc: DateTime.UtcNow.AddMilliseconds(-500),
+            getCurrentUtcTimestamp: () => DateTime.UtcNow,
+            isCrossPageDisplayActive: static () => true,
+            isCrossPageInteractionActive: static () => false,
+            tryAcquirePostInputRefreshSlot: (out long seq) =>
+            {
+                seq = 0;
+                return true;
+            },
+            requestCrossPageDisplayUpdate: static _ => throw new InvalidOperationException("nonfatal-dispatch"),
+            tryBeginInvoke: static (_, _) => true,
+            delayAsync: static _ => Task.CompletedTask,
+            incrementRefreshToken: static () => 1,
+            readRefreshToken: static () => 1,
+            dispatcherCheckAccess: static () => true,
+            dispatcherShutdownStarted: static () => false,
+            dispatcherShutdownFinished: static () => false,
+            diagnostics: (action, source, detail) => events.Add($"{action}:{source}:{detail}"));
+
+        result.RequestedImmediateRefresh.Should().BeFalse();
+        result.ScheduledDelayedRefresh.Should().BeFalse();
+        events.Should().Contain(e => e.Contains("defer-abort") && e.Contains("nonfatal:InvalidOperationException"));
+    }
 }

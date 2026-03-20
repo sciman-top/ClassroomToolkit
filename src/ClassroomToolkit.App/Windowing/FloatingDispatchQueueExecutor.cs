@@ -23,7 +23,8 @@ internal static class FloatingDispatchQueueExecutor
                 onFailure: ex => dispatchFailure = ex);
             if (dispatchFailure != null)
             {
-                onDispatchFailure?.Invoke(dispatchFailure);
+                _ = SafeActionExecutionExecutor.TryExecute(
+                    () => onDispatchFailure?.Invoke(dispatchFailure));
             }
 
             if (!dispatched)
@@ -32,12 +33,14 @@ internal static class FloatingDispatchQueueExecutor
                     state,
                     FloatingDispatchQueueAction.None,
                     FloatingDispatchQueueReason.QueueDispatchFailed);
-                onDecision?.Invoke(failedDecision);
+                _ = SafeActionExecutionExecutor.TryExecute(
+                    () => onDecision?.Invoke(failedDecision));
                 return failedDecision.State;
             }
         }
 
-        onDecision?.Invoke(decision);
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () => onDecision?.Invoke(decision));
         return decision.State;
     }
 

@@ -377,7 +377,7 @@ public partial class MainWindow
                 return;
             }
 
-            _ = Dispatcher.InvokeAsync(() =>
+            void ShowDiagnosticsDialog()
             {
                 if (_backgroundTasksCancellation.IsCancellationRequested || token.IsCancellationRequested)
                 {
@@ -392,7 +392,21 @@ public partial class MainWindow
                     Owner = this
                 };
                 TryShowDialogWithDiagnostics(dialog, nameof(DiagnosticsDialog));
-            });
+            }
+
+            var scheduled = false;
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    _ = Dispatcher.InvokeAsync(ShowDiagnosticsDialog);
+                    scheduled = true;
+                },
+                ex => System.Diagnostics.Debug.WriteLine(
+                    $"MainWindow: startup diagnostics dispatch failed: {ex.GetType().Name} - {ex.Message}"));
+            if (!scheduled && Dispatcher.CheckAccess())
+            {
+                ShowDiagnosticsDialog();
+            }
         }, _backgroundTasksCancellation.Token, ex =>
         {
             System.Diagnostics.Debug.WriteLine($"MainWindow: startup diagnostics failed: {ex.GetType().Name} - {ex.Message}");

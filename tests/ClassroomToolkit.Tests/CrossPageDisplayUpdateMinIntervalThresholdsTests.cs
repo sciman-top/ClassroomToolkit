@@ -9,8 +9,8 @@ public sealed class CrossPageDisplayUpdateMinIntervalThresholdsTests
     [Fact]
     public void Thresholds_ShouldMatchStabilizedValues()
     {
-        CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs.Should().Be(72);
-        CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs.Should().Be(60);
-        CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs.Should().Be(36);
+        CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs.Should().Be(56);
+        CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs.Should().Be(42);
+        CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs.Should().Be(30);
     }
 }

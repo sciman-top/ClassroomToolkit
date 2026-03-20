@@ -1,0 +1,30 @@
+{
+  "name": "crosspage-seam-basic",
+  "actions": [
+    {
+      "type": "FastRefreshImmediate",
+      "source": "pointer-up-fast-immediate"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "pointer-up-ink"
+    },
+    {
+      "type": "ReplayFlushed",
+      "source": null
+    },
+    {
+      "type": "PointerUpTracked",
+      "source": null
+    },
+    {
+      "type": "FirstInputTraceEnded",
+      "source": null
+    },
+    {
+      "type": "InkContextRefreshRequested",
+      "source": null
+    }
+  ]
+}
+

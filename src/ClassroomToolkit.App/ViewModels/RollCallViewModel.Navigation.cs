@@ -4,6 +4,7 @@ using ClassroomToolkit.App;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Utilities;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.App.ViewModels;
 
@@ -228,7 +229,10 @@ public sealed partial class RollCallViewModel
 
         _ = SafeActionExecutionExecutor.TryExecute(
             () => _workbookUseCase.Save(_dataPath, _workbook, _classStates),
-            ex => DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}"));
+            ex => SafeActionExecutionExecutor.TryExecute(
+                () => DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}"),
+                callbackEx => Debug.WriteLine(
+                    $"[RollCallViewModel] data save failed callback failed: {callbackEx.GetType().Name} - {callbackEx.Message}")));
     }
 
     private void StoreCurrentState()
