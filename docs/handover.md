@@ -38,6 +38,7 @@
   - 新增 `MainWindowSurfaceZOrderPipelineContractTests` 锁定 `ApplySurfaceZOrderDecision` 的 dedup 间隔策略、状态写回与 `SurfaceZOrderCoordinator` 接线。
   - 新增 `MainWindowSaveSettingsFlowContractTests` 锁定设置保存主流程中的触笔自适应状态抓取、成功状态复位与失败通知计划执行语义。
   - 新增 `MainWindowStartupCleanupFlowContractTests` 锁定启动阶段自动退出计时、Ink 清理调度、诊断触发与 `SafeTaskRunner + cancellation token` 接线语义。
+  - 新增 `MainWindowStartupDiagnosticsGuardContractTests` 锁定启动诊断 gate、取消令牌与 dispatcher 关闭守护条件，避免错误时机触发诊断弹窗。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
