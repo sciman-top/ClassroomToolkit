@@ -19,6 +19,7 @@ param(
     [switch]$SkipAutoCommit,
     [switch]$NoRollback,
     [switch]$AllowDirtyWorkingTree,
+    [switch]$EnableCompatibilityArtifacts,
     [switch]$DryRun
 )
 
@@ -744,6 +745,7 @@ $runSummary = [ordered]@{
         skip_auto_commit = [bool]$SkipAutoCommit
         no_rollback = [bool]$NoRollback
         allow_dirty_working_tree = [bool]$AllowDirtyWorkingTree
+        enable_compatibility_artifacts = [bool]$EnableCompatibilityArtifacts
     }
     initial_checkpoint = $checkpoint
     final_checkpoint = $null
@@ -945,6 +947,20 @@ finally {
     $runSummary.elapsed_seconds = [Math]::Round(([DateTime]::UtcNow - $runStartedAtUtc).TotalSeconds, 2)
     $runSummary.finished_at = (Get-Date).ToString("o")
     Write-RunSummary -SummaryPath $summaryPath -Summary $runSummary
+    if ($EnableCompatibilityArtifacts) {
+        $compatSummaryScript = Join-Path $PSScriptRoot "unattended/export-compatibility-summary.ps1"
+        if (Test-Path -LiteralPath $compatSummaryScript) {
+            try {
+                & powershell -ExecutionPolicy Bypass -File $compatSummaryScript `
+                    -SummaryPath $summaryPath `
+                    -IncludeClassifierSuggestions `
+                    -IncludeOverridesFragment | Out-Null
+            }
+            catch {
+                Write-Host "Compatibility summary export failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+    }
     if (-not $DryRun) {
         Release-RunLock -Path $lockPath
     }

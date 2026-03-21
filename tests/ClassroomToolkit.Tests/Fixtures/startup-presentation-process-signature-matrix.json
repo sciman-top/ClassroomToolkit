@@ -1,0 +1,14 @@
+{
+  "cases": [
+    { "processName": "POWERPNT", "expected": true, "evidenceContains": "default-name" },
+    { "processName": "powerpnt_16", "expected": true, "evidenceContains": "default-pattern:office" },
+    { "processName": "PowerPoint_edu_2024", "expected": true, "evidenceContains": "default-pattern:office" },
+    { "processName": "pptview_16", "expected": true, "evidenceContains": "default-pattern:office" },
+    { "processName": "WPP", "expected": true, "evidenceContains": "default-name" },
+    { "processName": "wppgov_edition", "expected": true, "evidenceContains": "default-pattern:wps" },
+    { "processName": "WPPT", "expected": true, "evidenceContains": "default-name" },
+    { "processName": "wpspresentation_2025", "expected": true, "evidenceContains": "default-pattern:wps" },
+    { "processName": "kwpp_edu_host", "expected": true, "evidenceContains": "default-pattern:wps" },
+    { "processName": "notepad", "expected": false, "evidenceContains": "" }
+  ]
+}

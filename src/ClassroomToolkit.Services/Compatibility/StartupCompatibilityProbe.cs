@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Services.Compatibility;
 
@@ -88,15 +89,26 @@ public static class StartupCompatibilityProbe
     private const int MinSupportedWindowsBuild = 19045; // Win10 22H2
     private const int ProcessQueryLimitedInformation = 0x1000;
     private const uint TokenQuery = 0x0008;
+    private const int MinOverrideProcessTokenLength = 3;
+    private static readonly string[] DefaultPresentationProcessNames =
+    {
+        "POWERPNT",
+        "WPP",
+        "WPPT",
+        "PPTVIEW"
+    };
 
-    public static StartupCompatibilityReport Collect(string settingsPath)
+    public static StartupCompatibilityReport Collect(
+        string settingsPath,
+        string? classifierOverridesJson = null)
     {
         var issues = new List<StartupCompatibilityIssue>();
 
         EvaluatePlatform(issues);
         EvaluateSettingsPath(settingsPath, issues);
         EvaluateNativeDependencies(issues);
-        EvaluatePresentationPrivilegeConsistency(issues);
+        EvaluateClassifierOverridesSettings(issues, classifierOverridesJson);
+        EvaluatePresentationPrivilegeConsistency(issues, classifierOverridesJson);
 
         return new StartupCompatibilityReport(issues);
     }
@@ -202,8 +214,56 @@ public static class StartupCompatibilityProbe
         }
     }
 
+    public static bool TryValidateClassifierOverrides(
+        string? classifierOverridesJson,
+        out string error)
+    {
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(classifierOverridesJson))
+        {
+            return true;
+        }
+
+        if (!PresentationClassifierOverridesParser.TryParse(
+                classifierOverridesJson,
+                out _,
+                out var parseError))
+        {
+            error = $"overrides-parse-failed: {parseError}";
+            return false;
+        }
+
+        if (!PresentationClassifierOverridesParser.TryParseScoringOptions(
+                classifierOverridesJson,
+                out _,
+                out var scoringError))
+        {
+            error = $"scoring-parse-failed: {scoringError}";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void EvaluateClassifierOverridesSettings(
+        ICollection<StartupCompatibilityIssue> issues,
+        string? classifierOverridesJson)
+    {
+        if (TryValidateClassifierOverrides(classifierOverridesJson, out var error))
+        {
+            return;
+        }
+
+        issues.Add(new StartupCompatibilityIssue(
+            Code: "presentation-classifier-overrides-invalid",
+            Message: $"演示识别覆盖配置解析失败：{error}",
+            Suggestion: "请在设置中修正或清空演示识别覆盖配置后重试。",
+            IsBlocking: false));
+    }
+
     private static void EvaluatePresentationPrivilegeConsistency(
-        ICollection<StartupCompatibilityIssue> issues)
+        ICollection<StartupCompatibilityIssue> issues,
+        string? classifierOverridesJson)
     {
         if (!TryGetCurrentProcessElevation(out var currentElevated, out var currentError))
         {
@@ -217,19 +277,26 @@ public static class StartupCompatibilityProbe
 
         var mismatchedProcesses = new List<string>();
         var unknownProcesses = new List<string>();
-        foreach (var process in EnumeratePresentationProcesses())
+        foreach (var process in EnumeratePresentationProcesses(classifierOverridesJson))
         {
+            var hasEvidence = TryDescribePresentationProcessMatch(
+                process.ProcessName,
+                classifierOverridesJson,
+                out var evidence);
+            var processDisplay = hasEvidence && !string.IsNullOrWhiteSpace(evidence)
+                ? $"{process.ProcessName}({process.Id}) [{evidence}]"
+                : $"{process.ProcessName}({process.Id})";
             try
             {
                 if (!TryGetProcessElevation(process.Id, out var processElevated, out var error))
                 {
-                    unknownProcesses.Add($"{process.ProcessName}({process.Id}): {error}");
+                    unknownProcesses.Add($"{processDisplay}: {error}");
                     continue;
                 }
 
                 if (processElevated != currentElevated)
                 {
-                    mismatchedProcesses.Add($"{process.ProcessName}({process.Id})");
+                    mismatchedProcesses.Add(processDisplay);
                 }
             }
             finally
@@ -285,14 +352,28 @@ public static class StartupCompatibilityProbe
         }
     }
 
-    private static IEnumerable<Process> EnumeratePresentationProcesses()
+    internal static bool IsPresentationProcessName(
+        string? processName,
+        string? classifierOverridesJson = null)
     {
-        var acceptedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "POWERPNT",
-            "WPP",
-            "WPPT"
-        };
+        return TryDescribePresentationProcessMatch(
+            processName,
+            classifierOverridesJson,
+            out _);
+    }
+
+    internal static bool TryDescribePresentationProcessMatch(
+        string? processName,
+        string? classifierOverridesJson,
+        out string evidence)
+    {
+        var overrideTokens = BuildOverrideProcessTokens(classifierOverridesJson);
+        return TryDescribePresentationProcessMatch(processName, overrideTokens, out evidence);
+    }
+
+    private static IEnumerable<Process> EnumeratePresentationProcesses(string? classifierOverridesJson)
+    {
+        var overrideTokens = BuildOverrideProcessTokens(classifierOverridesJson);
 
         Process[] processes;
         try
@@ -307,7 +388,7 @@ public static class StartupCompatibilityProbe
 
         foreach (var process in processes)
         {
-            if (acceptedNames.Contains(process.ProcessName))
+            if (TryDescribePresentationProcessMatch(process.ProcessName, overrideTokens, out _))
             {
                 yield return process;
             }
@@ -315,6 +396,111 @@ public static class StartupCompatibilityProbe
             {
                 process.Dispose();
             }
+        }
+    }
+
+    private static bool TryDescribePresentationProcessMatch(
+        string? processName,
+        IReadOnlyCollection<string> overrideTokens,
+        out string evidence)
+    {
+        evidence = string.Empty;
+        if (string.IsNullOrWhiteSpace(processName))
+        {
+            return false;
+        }
+
+        var normalized = PresentationProcessSignaturePolicy.NormalizeProcessName(processName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        if (DefaultPresentationProcessNames.Any(
+                name => string.Equals(name, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            evidence = $"default-name:{normalized}";
+            return true;
+        }
+
+        if (PresentationProcessSignaturePolicy.IsOfficeProcessName(normalized))
+        {
+            evidence = "default-pattern:office";
+            return true;
+        }
+
+        if (PresentationProcessSignaturePolicy.IsWpsProcessName(normalized))
+        {
+            evidence = "default-pattern:wps";
+            return true;
+        }
+
+        if (PresentationProcessSignaturePolicy.MatchesAnyProcessToken(normalized, overrideTokens))
+        {
+            foreach (var token in overrideTokens)
+            {
+                if (!string.IsNullOrWhiteSpace(token)
+                    && normalized.Contains(token, StringComparison.OrdinalIgnoreCase))
+                {
+                    evidence = $"override-token:{token}";
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static HashSet<string> BuildOverrideProcessTokens(string? classifierOverridesJson)
+    {
+        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(classifierOverridesJson))
+        {
+            return tokens;
+        }
+
+        if (!PresentationClassifierOverridesParser.TryParse(
+                classifierOverridesJson,
+                out var overrides,
+                out var parseError))
+        {
+            Debug.WriteLine($"[StartupCompatibility] classifier overrides parse failed: {parseError}");
+            return tokens;
+        }
+
+        AddOverrideProcessTokens(tokens, overrides.AdditionalWpsProcessTokens);
+        AddOverrideProcessTokens(tokens, overrides.AdditionalOfficeProcessTokens);
+        return tokens;
+    }
+
+    private static void AddOverrideProcessTokens(
+        ICollection<string> destination,
+        IReadOnlyList<string> source)
+    {
+        if (source == null || source.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            var token = source[i]?.Trim();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                continue;
+            }
+
+            if (token.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                token = token[..^4];
+            }
+
+            if (token.Length < MinOverrideProcessTokenLength)
+            {
+                continue;
+            }
+
+            destination.Add(token);
         }
     }
 

@@ -7,6 +7,7 @@ using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Services.Presentation;
+using ClassroomToolkit.Services.Compatibility;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
@@ -68,7 +69,18 @@ public static class SystemDiagnostics
         lines.Add($"演示规则自动学习：{(settings.PresentationClassifierAutoLearnEnabled ? "启用" : "禁用")}");
         lines.Add($"演示识别规则覆盖：{(string.IsNullOrWhiteSpace(settings.PresentationClassifierOverridesJson) ? "未配置" : "已配置")}");
         AppendClassifierOverrideSummary(lines, settings.PresentationClassifierOverridesJson);
+        AppendClassifierOverrideValidationWarnings(
+            lines,
+            issues,
+            fixes,
+            settings.PresentationClassifierOverridesJson);
         AppendClassifierLearnHistorySummary(lines, settings);
+        AppendStartupCompatibilitySummary(
+            lines,
+            issues,
+            fixes,
+            settingsPath,
+            settings.PresentationClassifierOverridesJson);
         lines.Add($"图片滚轮缩放步进：{settings.PhotoWheelZoomBase:0.####}");
         lines.Add($"图片手势缩放灵敏度：{settings.PhotoGestureZoomSensitivity:0.##}x");
         lines.Add($"跨页抬笔刷新延迟：{settings.PhotoPostInputRefreshDelayMs}ms");
@@ -284,6 +296,64 @@ public static class SystemDiagnostics
         }
 
         lines.Add($"演示规则覆盖摘要：classToken={classTokenCount}, processToken={processTokenCount}");
+    }
+
+    private static void AppendClassifierOverrideValidationWarnings(
+        ICollection<string> lines,
+        ICollection<string> issues,
+        ICollection<string> fixes,
+        string? overridesJson)
+    {
+        if (ClassroomToolkit.Services.Compatibility.StartupCompatibilityProbe.TryValidateClassifierOverrides(
+                overridesJson,
+                out var parseError))
+        {
+            return;
+        }
+
+        lines.Add($"【关键兼容提示】演示识别规则覆盖配置格式无效：{parseError}");
+        issues.Add("演示识别规则覆盖配置格式无效：可能导致特定版本 PPT/WPS 识别偏差。");
+        fixes.Add("请在设置中修正或清空“演示识别规则覆盖（JSON）”，保存后重启再复测。");
+    }
+
+    private static void AppendStartupCompatibilitySummary(
+        ICollection<string> lines,
+        ICollection<string> issues,
+        ICollection<string> fixes,
+        string settingsPath,
+        string? overridesJson)
+    {
+        var startupReport = StartupCompatibilityProbe.Collect(settingsPath, overridesJson);
+        lines.Add(
+            $"启动兼容探针：阻断={startupReport.HasBlockingIssues}，提示={startupReport.HasWarnings}，条目={startupReport.Issues.Count}");
+
+        foreach (var issue in startupReport.Issues)
+        {
+            var severity = issue.IsBlocking ? "阻断" : "提示";
+            lines.Add($"启动探针[{severity}/{issue.Code}] {issue.Message}");
+
+            var issueText = $"启动探针[{issue.Code}] {issue.Message}";
+            AddUniqueText(issues, issueText);
+            if (!string.IsNullOrWhiteSpace(issue.Suggestion))
+            {
+                AddUniqueText(fixes, $"启动探针建议[{issue.Code}] {issue.Suggestion}");
+            }
+        }
+    }
+
+    private static void AddUniqueText(ICollection<string> collection, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (collection.Any(existing => string.Equals(existing, value, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        collection.Add(value);
     }
 
     private static void AppendClassifierLearnHistorySummary(ICollection<string> lines, AppSettings settings)

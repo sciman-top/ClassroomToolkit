@@ -40,6 +40,7 @@ param(
     [switch]$SkipAutoCommit,
     [switch]$NoRollback,
     [switch]$AllowDirtyWorkingTree,
+    [switch]$EnableCompatibilityArtifacts,
     [switch]$DryRun
 )
 
@@ -203,6 +204,7 @@ if ($Mode -eq "checklist") {
     if ($SkipAutoCommit.IsPresent) { $forward += "-SkipAutoCommit" }
     if ($NoRollback.IsPresent) { $forward += "-NoRollback" }
     if ($AllowDirtyWorkingTree.IsPresent) { $forward += "-AllowDirtyWorkingTree" }
+    if ($EnableCompatibilityArtifacts.IsPresent) { $forward += "-EnableCompatibilityArtifacts" }
     if ($DryRun.IsPresent) { $forward += "-DryRun" }
 
     & powershell -File $runner @forward

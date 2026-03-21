@@ -163,23 +163,13 @@ public sealed class PresentationClassifier
         {
             return false;
         }
-        if (MatchesAnyProcessToken(processName, _wpsProcessTokens))
+        if (PresentationProcessSignaturePolicy.MatchesAnyProcessToken(
+                processName,
+                _wpsProcessTokens))
         {
             return true;
         }
-        if (processName.StartsWith("wpp", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        if (processName.StartsWith("wppt", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        if (processName.Contains("wpspresentation", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        return false;
+        return PresentationProcessSignaturePolicy.IsWpsProcessName(processName);
     }
 
     private bool IsWpsLikeProcess(string processName)
@@ -192,7 +182,7 @@ public sealed class PresentationClassifier
         {
             return true;
         }
-        return processName.StartsWith("wps", StringComparison.OrdinalIgnoreCase);
+        return PresentationProcessSignaturePolicy.IsWpsLikeProcessName(processName);
     }
 
     private bool IsOfficeProcess(string processName)
@@ -201,12 +191,13 @@ public sealed class PresentationClassifier
         {
             return false;
         }
-        if (MatchesAnyProcessToken(processName, _officeProcessTokens))
+        if (PresentationProcessSignaturePolicy.MatchesAnyProcessToken(
+                processName,
+                _officeProcessTokens))
         {
             return true;
         }
-        return processName.Contains("powerpnt", StringComparison.OrdinalIgnoreCase)
-               || processName.StartsWith("pptview", StringComparison.OrdinalIgnoreCase);
+        return PresentationProcessSignaturePolicy.IsOfficeProcessName(processName);
     }
 
     private static HashSet<string> BuildTokenSet(
@@ -236,24 +227,6 @@ public sealed class PresentationClassifier
 
             set.Add(normalized);
         }
-    }
-
-    private static bool MatchesAnyProcessToken(string processName, IEnumerable<string> tokens)
-    {
-        foreach (var token in tokens)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                continue;
-            }
-
-            if (processName.Contains(token, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static string Normalize(string? value)

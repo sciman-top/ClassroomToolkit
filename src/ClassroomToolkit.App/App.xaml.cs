@@ -198,7 +198,21 @@ public partial class App : WpfApplication
             var settingsPath = configuration?.SettingsDocumentPath
                 ?? configuration?.SettingsIniPath
                 ?? Path.Combine(AppDataDirectory, "settings.json");
-            return StartupCompatibilityProbe.Collect(settingsPath);
+            var classifierOverridesJson = string.Empty;
+            var settingsService = _services?.GetService<AppSettingsService>();
+            if (settingsService != null)
+            {
+                try
+                {
+                    var startupSettings = settingsService.Load();
+                    classifierOverridesJson = startupSettings.PresentationClassifierOverridesJson;
+                }
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    LogException(ex, "StartupCompatibilityProbe.LoadSettingsOverrides");
+                }
+            }
+            return StartupCompatibilityProbe.Collect(settingsPath, classifierOverridesJson);
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

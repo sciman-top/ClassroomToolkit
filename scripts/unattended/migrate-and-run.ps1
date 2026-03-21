@@ -22,6 +22,7 @@ param(
     [switch]$PreferOverrideSkill,
     [switch]$SkipGuardSync,
     [switch]$AllowDirtyWorkingTree,
+    [switch]$EnableCompatibilityArtifacts,
     [switch]$DryRun
 )
 
@@ -236,6 +237,7 @@ if ($SkipManualGates.IsPresent) { $forward += "-SkipManualGates" }
 if ($PreferOverrideSkill.IsPresent) { $forward += "-PreferOverrideSkill" }
 if ($SkipGuardSync.IsPresent) { $forward += "-SkipGuardSync" }
 if ($AllowDirtyWorkingTree.IsPresent) { $forward += "-AllowDirtyWorkingTree" }
+if ($EnableCompatibilityArtifacts.IsPresent) { $forward += "-EnableCompatibilityArtifacts" }
 if ($DryRun.IsPresent) { $forward += "-DryRun" }
 
 # Keep unattended checklist defaults to avoid manual-gate blocking unless user explicitly overrides.
