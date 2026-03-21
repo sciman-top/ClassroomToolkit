@@ -173,7 +173,7 @@ public static class PresentationDiagnosticsProbe
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
-            error = ex.Message;
+            error = ResolveProbeErrorMessage(ex);
             return false;
         }
     }
@@ -200,7 +200,7 @@ public static class PresentationDiagnosticsProbe
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
-            error = ex.Message;
+            error = ResolveProbeErrorMessage(ex);
             return false;
         }
     }
@@ -237,7 +237,7 @@ public static class PresentationDiagnosticsProbe
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
-            error = ex.Message;
+            error = ResolveProbeErrorMessage(ex);
             return false;
         }
     }
@@ -261,8 +261,26 @@ public static class PresentationDiagnosticsProbe
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
-            error = ex.Message;
+            error = ResolveProbeErrorMessage(ex);
             return false;
         }
+    }
+
+    private static string ResolveProbeErrorMessage(Exception ex)
+    {
+        ArgumentNullException.ThrowIfNull(ex);
+        if (ex is AggregateException aggregateException)
+        {
+            var flattened = aggregateException.Flatten();
+            foreach (var innerException in flattened.InnerExceptions)
+            {
+                if (!string.IsNullOrWhiteSpace(innerException.Message))
+                {
+                    return innerException.Message;
+                }
+            }
+        }
+
+        return ex.Message;
     }
 }
