@@ -40,6 +40,7 @@
   - 新增 `MainWindowStartupCleanupFlowContractTests` 锁定启动阶段自动退出计时、Ink 清理调度、诊断触发与 `SafeTaskRunner + cancellation token` 接线语义。
   - 新增 `MainWindowStartupDiagnosticsGuardContractTests` 锁定启动诊断 gate、取消令牌与 dispatcher 关闭守护条件，避免错误时机触发诊断弹窗。
   - 新增 `MainWindowLoadedFlowContractTests` 锁定 `OnLoaded` 的启动序列与 `MainWindowLoadedToggleActionPolicy` 分支接线语义。
+  - 新增 `MainWindowDialogSafetyContractTests` 锁定边框修复、对话框展示与主提示框路径必须通过安全执行封装并输出规范诊断。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
