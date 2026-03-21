@@ -28,6 +28,7 @@
   - 新增源码契约门：`PaintOverlayPresentationNavigationContractTests` 锁定解析器/编排器入口、hook-source 选项与去抖策略调用点。
   - MainWindow.Photo 参数收口：`ApplyPhotoModeSurfaceTransition` 改为接收 `PhotoModeSurfaceTransitionContext`，移除多布尔参数调用形态，降低调用点顺序误用风险。
   - 新增 `MainWindowPhotoSurfaceTransitionContractTests` 锁定 photo-mode 与 presentation-fullscreen 两条切换链路都通过上下文构建进入策略层。
+  - 新增 `MainWindowToolbarRetouchDispatchContractTests` 锁定工具栏直修链路必须经 `ToolbarInteractionDirectRepairExecutionCoordinator` 与后台调度失败分支处理。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
