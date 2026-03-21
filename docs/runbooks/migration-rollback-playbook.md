@@ -1,6 +1,6 @@
 # 终态主线回滚手册（当前有效口径）
 
-最后更新：2026-03-11  
+最后更新：2026-03-21  
 状态：active
 
 ## 1. 适用范围
@@ -69,3 +69,19 @@
 - `ArchitectureDependencyTests` 不新增违规。
 - App -> Interop 文件数未上升。
 - 主方案 / 主进度 / handover 的状态描述仍然成立；若不成立，必须同步更新文档。
+
+## 6. 演示翻页稳定性重构专项回滚（2026-03-21）
+
+触发条件：
+- PPT/WPS 全屏放映下出现以下任一回归：键盘翻页失效、画笔/光标切换后翻页失效、键盘翻页明显延迟。
+
+建议回滚顺序（从小到大）：
+1. 回退调度优先级策略改动（`WpsHookDispatchPriorityPolicy` 接线）并复测键盘/滚轮翻页。
+2. 回退 hook 来源的 service 去抖禁用改动（恢复旧 debounce 口径）并复测。
+3. 回退 `PresentationNavigationIntentParser` / `PresentationNavigationOrchestrator` 接线路径到上一稳定提交。
+
+专项验证命令：
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
+
+回滚落档最小字段：
+- `失败应用(PPT/WPS)=`；`失败模式(画笔/光标)=`；`失败输入(键盘/滚轮)=`；`触发步骤=`；`回滚动作=`；`回滚后测试结果=`；`证据路径=`

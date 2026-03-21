@@ -1,6 +1,6 @@
 # ClassroomToolkit 重构交接说明（handover）
 
-最后更新：2026-03-15  
+最后更新：2026-03-21  
 当前主线：`终态最佳架构 + 全功能零回归`
 
 ## 1. 统一口径
@@ -14,6 +14,22 @@
 - 本文档只保留“接手即能继续执行”的最小闭环信息。
 
 ## 2. 当前做到哪里
+
+### 2026-03-21 演示翻页稳定性收口（新增）
+
+- 背景：PPT/WPS 全屏放映在画笔/光标切换、滚轮/键盘翻页链路出现过多次回归。
+- 已落地收口：
+  - 统一导航意图与上下文模型：`PresentationNavigationIntent`、`PresentationNavigationContextSnapshot`、`PresentationNavigationDecision`。
+  - 导航决策集中化：新增 `PresentationNavigationIntentParser` + `PresentationNavigationOrchestrator`，窗口层改为“事件入口 + 调用编排”。
+  - 去抖口径统一：窗口侧导航去抖改为 `PresentationNavigationDebounceMsPolicy` 统一解析，不再散落硬编码。
+  - 键盘延迟优化：hook 键盘链路调度优先级改为 `DispatcherPriority.Input`，并新增策略契约测试。
+  - 防双重去抖：hook 来源下发到 service 时禁用 service 侧重复去抖，避免窗口 + service 叠加延迟。
+- 自动化证据（本地最近一次）：
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
+  - 结果：`630/630` 通过（2026-03-21）。
+- 人工验证新增关注：
+  - WPS/PPT 全屏下 `画笔 <-> 光标` 来回切换后，键盘/滚轮翻页均持续可用。
+  - 光标模式键盘翻页无可感知额外延迟（相对滚轮与切换前基线）。
 
 ### 2026-03-18 全量审查进展（新增）
 
