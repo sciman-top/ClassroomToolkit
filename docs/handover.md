@@ -30,6 +30,7 @@
   - 新增 `MainWindowPhotoSurfaceTransitionContractTests` 锁定 photo-mode 与 presentation-fullscreen 两条切换链路都通过上下文构建进入策略层。
   - 新增 `MainWindowToolbarRetouchDispatchContractTests` 锁定工具栏直修链路必须经 `ToolbarInteractionDirectRepairExecutionCoordinator` 与后台调度失败分支处理。
   - 新增 `MainWindowPaintTransitionContractTests` 锁定画笔显隐切换入口必须走 `PaintVisibilityTransitionPolicy` 与 `FloatingZOrderApplyExecutor`，并保持 `EnsurePaintWindows` 的 skip/creation 双策略闸门。
+  - 新增 `MainWindowZOrderRequestPipelineContractTests` 锁定 `RequestApplyZOrderPolicy` 的准入、队列调度、失败回滚与 queued 执行流水线结构。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
