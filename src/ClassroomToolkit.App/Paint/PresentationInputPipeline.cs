@@ -95,7 +95,7 @@ internal sealed class PresentationInputPipeline
         {
             Strategy = strategy,
             WheelAsKey = currentOptions.WheelAsKey,
-            WpsDebounceMs = currentOptions.WpsDebounceMs,
+            WpsDebounceMs = ResolveWpsDebounceMs(currentOptions, source),
             LockStrategyWhenDegraded = currentOptions.LockStrategyWhenDegraded,
             AllowOffice = false,
             AllowWps = true
@@ -148,5 +148,17 @@ internal sealed class PresentationInputPipeline
         }
 
         return strategy;
+    }
+
+    private static int ResolveWpsDebounceMs(PresentationControlOptions currentOptions, string? source)
+    {
+        if (source?.StartsWith("hook-", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Hook pipeline already has debounce gate on overlay side; avoid
+            // stacking service-level debounce again.
+            return 0;
+        }
+
+        return currentOptions.WpsDebounceMs;
     }
 }

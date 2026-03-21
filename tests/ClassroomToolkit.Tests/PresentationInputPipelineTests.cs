@@ -66,6 +66,27 @@ public sealed class PresentationInputPipelineTests
     }
 
     [Fact]
+    public void BuildWpsOptions_HookSource_ShouldDisableServiceDebounce()
+    {
+        var pipeline = CreatePipeline();
+        pipeline.UpdateWpsMode(WpsInputModeDefaults.Raw);
+        var baseOptions = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = false,
+            WpsDebounceMs = 180,
+            LockStrategyWhenDegraded = true
+        };
+
+        var options = pipeline.BuildWpsOptions(baseOptions, source: "hook-keyboard");
+
+        options.WpsDebounceMs.Should().Be(0);
+        options.Strategy.Should().Be(InputStrategy.Raw);
+        options.AllowWps.Should().BeTrue();
+        options.AllowOffice.Should().BeFalse();
+    }
+
+    [Fact]
     public void BuildOfficeOptions_ShouldUseOfficeStrategyAndOfficeChannel()
     {
         var pipeline = CreatePipeline();

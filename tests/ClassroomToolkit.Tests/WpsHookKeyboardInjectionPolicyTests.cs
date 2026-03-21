@@ -22,4 +22,3 @@ public sealed class WpsHookKeyboardInjectionPolicyTests
         WpsHookKeyboardInjectionPolicy.ShouldIgnore(flags).Should().BeFalse();
     }
 }
-

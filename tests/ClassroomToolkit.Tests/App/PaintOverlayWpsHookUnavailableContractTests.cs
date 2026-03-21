@@ -25,7 +25,8 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        source.Should().Contain("var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Background);");
+        source.Should().Contain("var dispatchPriority = WpsHookDispatchPriorityPolicy.Resolve(source);");
+        source.Should().Contain("var scheduled = TryBeginInvoke(ExecuteHookRequest, dispatchPriority);");
         source.Should().Contain("if (Dispatcher.CheckAccess())");
         source.Should().Contain("ExecuteHookRequest();");
         source.Should().Contain("var scheduled = TryBeginInvoke(ShowUnavailableMessage, System.Windows.Threading.DispatcherPriority.Background);");

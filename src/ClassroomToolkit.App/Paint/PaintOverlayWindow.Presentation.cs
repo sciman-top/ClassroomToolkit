@@ -431,38 +431,46 @@ public partial class PaintOverlayWindow
                 return;
             }
             MarkWpsHookInput();
-            if (IsBoardActive() || direction == 0)
+            if (!PresentationNavigationIntentParser.TryParseHook(direction, source, out var intent)
+                || IsBoardActive())
             {
                 Debug.WriteLine($"[WpsNavHook] ignored board={IsBoardActive()} dir={direction}");
                 return;
             }
-            if (source == "wheel" && ShouldSuppressPresentationWheelFromRecentInkInput())
-            {
-                Debug.WriteLine($"[WpsNavHook] ignored recent-ink source={source} dir={direction}");
-                return;
-            }
             var target = ResolveWpsTarget();
-            if (!target.IsValid)
-            {
-                Debug.WriteLine($"[WpsNavHook] target invalid source={source} dir={direction}");
-                return;
-            }
             var passthrough = IsWpsRawInputPassthrough(target);
-            var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
-            if (passthrough && !interceptSource)
+            var interceptSource = intent.IsWheelSource ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
+            var suppressedAsDebounced = target.IsValid && ShouldSuppressWpsNav(direction, target.Handle);
+            var execution = PresentationNavigationOrchestrator.ResolveHook(
+                intent,
+                suppressWheelFromRecentInkInput: intent.IsWheelSource && ShouldSuppressPresentationWheelFromRecentInkInput(),
+                targetValid: target.IsValid,
+                passthrough,
+                interceptSource,
+                suppressedAsDebounced);
+            if (!execution.ShouldDispatch)
             {
-                Debug.WriteLine($"[WpsNavHook] passthrough source={source} dir={direction}");
+                switch (execution.BlockReason)
+                {
+                    case PresentationNavigationBlockReason.WheelSuppressedByRecentInkInput:
+                        Debug.WriteLine($"[WpsNavHook] ignored recent-ink source={source} dir={direction}");
+                        break;
+                    case PresentationNavigationBlockReason.TargetInvalid:
+                        Debug.WriteLine($"[WpsNavHook] target invalid source={source} dir={direction}");
+                        break;
+                    case PresentationNavigationBlockReason.RawPassthroughWithoutIntercept:
+                        Debug.WriteLine($"[WpsNavHook] passthrough source={source} dir={direction}");
+                        break;
+                    case PresentationNavigationBlockReason.Debounced:
+                        Debug.WriteLine($"[WpsNavHook] suppressed source={source} dir={direction}");
+                        break;
+                }
                 return;
             }
-            if (ShouldSuppressWpsNav(direction, target.Handle))
-            {
-                Debug.WriteLine($"[WpsNavHook] suppressed source={source} dir={direction}");
-                return;
-            }
-            var command = direction > 0
+            var command = execution.DirectionCode > 0
                 ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
                 : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-            var options = BuildWpsOptions(source);
+            var options = BuildWpsOptions($"hook-{source}");
             if (TrySendPresentationCommandToTarget(target, command, options))
             {
                 RememberWpsNav(direction, target.Handle);
@@ -475,7 +483,8 @@ public partial class PaintOverlayWindow
             }
         }
 
-        var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Background);
+        var dispatchPriority = WpsHookDispatchPriorityPolicy.Resolve(source);
+        var scheduled = TryBeginInvoke(ExecuteHookRequest, dispatchPriority);
         if (!scheduled)
         {
             if (Dispatcher.CheckAccess())
@@ -822,22 +831,24 @@ public partial class PaintOverlayWindow
     private bool ShouldSuppressWpsNav(int direction, IntPtr target)
     {
         var nowUtc = GetCurrentUtcTimestamp();
+        var debounceMs = ResolveWpsDebounceMs();
         return WpsNavigationDebouncePolicy.ShouldSuppress(
             direction,
             target,
             nowUtc,
             new WpsNavigationDebounceState(_lastWpsNavEvent, _wpsNavBlockUntil),
-            WpsNavDebounceMs);
+            debounceMs);
     }
 
     private void RememberWpsNav(int direction, IntPtr target)
     {
         var nowUtc = GetCurrentUtcTimestamp();
+        var debounceMs = ResolveWpsDebounceMs();
         var state = WpsNavigationDebouncePolicy.Remember(
             direction,
             target,
             nowUtc,
-            WpsNavDebounceMs);
+            debounceMs);
         WpsNavigationDebounceStateUpdater.Apply(
             ref _lastWpsNavEvent,
             ref _wpsNavBlockUntil,
@@ -851,19 +862,28 @@ public partial class PaintOverlayWindow
 
     private bool WpsHookRecentlyFired()
     {
+        var debounceMs = ResolveWpsDebounceMs();
         return WpsHookInputDebouncePolicy.IsRecent(
             _lastWpsHookInput,
             GetCurrentUtcTimestamp(),
-            WpsNavDebounceMs);
+            debounceMs);
     }
 
     private bool ShouldSuppressPresentationWheelFromRecentInkInput()
     {
+        var debounceMs = ResolveWpsDebounceMs();
         return PresentationWheelInkConflictPolicy.ShouldSuppress(
             _mode,
             _lastInkInputUtc,
             GetCurrentUtcTimestamp(),
-            Math.Max(InkInputCooldownMs, WpsNavDebounceMs));
+            Math.Max(InkInputCooldownMs, debounceMs));
+    }
+
+    private int ResolveWpsDebounceMs()
+    {
+        return PresentationNavigationDebounceMsPolicy.Resolve(
+            _presentationOptions.WpsDebounceMs,
+            WpsNavDebounceMs);
     }
 
     private bool IsForegroundOwnedByCurrentProcess()

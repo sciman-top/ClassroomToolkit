@@ -10,4 +10,3 @@ internal static class WpsHookKeyboardInjectionPolicy
         return (flags & (LlkhfInjected | LlkhfLowerIlInjected)) != 0;
     }
 }
-
