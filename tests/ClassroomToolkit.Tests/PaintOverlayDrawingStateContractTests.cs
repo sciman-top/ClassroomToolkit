@@ -15,6 +15,11 @@ public sealed class PaintOverlayDrawingStateContractTests
         source.Should().Contain("private void ReleasePointerInput()");
         source.Should().Contain("PaintModeManager.Instance.IsDrawing = false;");
         source.Should().Contain("private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)");
+        source.Should().Contain("private void OnOverlayLostStylusCapture(object sender, StylusEventArgs e)");
+        source.Should().Contain("private void HandleOverlayCaptureLost()");
+        source.Should().Contain("ReleasePointerInput();");
+        source.Should().Contain("CancelActivePointerOperationOnCaptureLoss();");
+        source.Should().Contain("private void CancelActivePointerOperationOnCaptureLoss()");
     }
 
     private static string GetSourcePath()

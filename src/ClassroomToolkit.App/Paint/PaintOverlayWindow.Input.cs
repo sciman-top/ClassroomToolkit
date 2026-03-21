@@ -295,11 +295,21 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        PaintModeManager.Instance.IsDrawing = false;
-        var interactionState = CaptureInputInteractionState();
+        HandleOverlayCaptureLost();
+    }
+
+    private void OnOverlayLostStylusCapture(object sender, StylusEventArgs e)
+    {
+        HandleOverlayCaptureLost();
+    }
+
+    private void HandleOverlayCaptureLost()
+    {
+        ReleasePointerInput();
         var lostCapturePlan = OverlayLostMouseCaptureExecutionPolicy.Resolve(
-            IsMousePhotoPanActive(interactionState),
-            rightClickPending: _photoRightClickPending);
+            photoPanning: _photoPanning,
+            rightClickPending: _photoRightClickPending,
+            inkOperationActive: IsInkOperationActive());
         if (lostCapturePlan.ShouldEndPan)
         {
             EndPhotoPan(allowInertia: false);
@@ -307,6 +317,10 @@ public partial class PaintOverlayWindow
         if (lostCapturePlan.ShouldClearRightClickPending)
         {
             PhotoRightClickPendingStateUpdater.Clear(ref _photoRightClickPending);
+        }
+        if (lostCapturePlan.ShouldCancelInkOperation)
+        {
+            CancelActivePointerOperationOnCaptureLoss();
         }
     }
 
@@ -1153,6 +1167,9 @@ public partial class PaintOverlayWindow
 
         if (executionPlan.Action == CrossPageInputResumeAction.BeginEraser)
         {
+            // Cross-page switch finalization releases capture. Reacquire so eraser
+            // drag remains continuous if pointer leaves the overlay bounds.
+            CapturePointerInput();
             BeginEraser(input.Position);
         }
     }
@@ -1585,6 +1602,39 @@ public partial class PaintOverlayWindow
             Stylus.Capture(null);
         }
         PaintModeManager.Instance.IsDrawing = false;
+    }
+
+    private void CancelActivePointerOperationOnCaptureLoss()
+    {
+        if (_strokeInProgress)
+        {
+            _activeRenderer?.Reset();
+            _visualHost.Clear();
+            _strokeInProgress = false;
+            _activeBrushStrokeUsesCrossPageContinuation = false;
+            _lastBrushInputSample = null;
+            _lastBrushVelocityDipPerSec = new Vector(0, 0);
+            _lastCalligraphyPreviewPoint = null;
+        }
+
+        if (_isErasing)
+        {
+            _isErasing = false;
+            _lastEraserPoint = null;
+        }
+
+        if (_isRegionSelecting)
+        {
+            ClearRegionSelection();
+        }
+
+        if (_isDrawingShape)
+        {
+            ClearShapePreview();
+        }
+
+        _pendingCrossPageBrushContinuationSample = null;
+        _pendingCrossPageBrushReplayCurrentInput = false;
     }
 
     private bool IsCrossPageFirstInputTraceActive()

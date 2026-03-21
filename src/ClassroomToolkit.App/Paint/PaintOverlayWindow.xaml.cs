@@ -337,6 +337,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.MouseRightButtonUp += OnRightButtonUp;
         OverlayRoot.MouseLeave += OnOverlayMouseLeave;
         OverlayRoot.LostMouseCapture += OnOverlayLostMouseCapture;
+        OverlayRoot.LostStylusCapture += OnOverlayLostStylusCapture;
         OverlayRoot.IsManipulationEnabled = true;
         OverlayRoot.ManipulationStarting += OnManipulationStarting;
         OverlayRoot.ManipulationInertiaStarting += OnManipulationInertiaStarting;
@@ -465,6 +466,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.MouseRightButtonUp -= OnRightButtonUp;
         OverlayRoot.MouseLeave -= OnOverlayMouseLeave;
         OverlayRoot.LostMouseCapture -= OnOverlayLostMouseCapture;
+        OverlayRoot.LostStylusCapture -= OnOverlayLostStylusCapture;
         OverlayRoot.ManipulationStarting -= OnManipulationStarting;
         OverlayRoot.ManipulationInertiaStarting -= OnManipulationInertiaStarting;
         OverlayRoot.ManipulationDelta -= OnManipulationDelta;

@@ -2,16 +2,19 @@ namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct OverlayLostMouseCaptureExecutionPlan(
     bool ShouldEndPan,
-    bool ShouldClearRightClickPending);
+    bool ShouldClearRightClickPending,
+    bool ShouldCancelInkOperation);
 
 internal static class OverlayLostMouseCaptureExecutionPolicy
 {
     internal static OverlayLostMouseCaptureExecutionPlan Resolve(
-        bool isMousePhotoPanActive,
-        bool rightClickPending)
+        bool photoPanning,
+        bool rightClickPending,
+        bool inkOperationActive)
     {
         return new OverlayLostMouseCaptureExecutionPlan(
-            ShouldEndPan: isMousePhotoPanActive,
-            ShouldClearRightClickPending: rightClickPending);
+            ShouldEndPan: photoPanning,
+            ShouldClearRightClickPending: rightClickPending,
+            ShouldCancelInkOperation: inkOperationActive);
     }
 }
