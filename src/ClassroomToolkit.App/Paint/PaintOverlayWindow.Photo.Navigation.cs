@@ -685,6 +685,8 @@ public partial class PaintOverlayWindow
                 $"targetPage={newPageIndex} interactive={interactiveSwitch}");
         }
         var beforeCurrentPage = GetCurrentPageIndexForCrossPage();
+        var previousCacheKey = _currentCacheKey;
+        var previousTranslateY = _photoTranslate.Y;
         if (_photoDocumentIsPdf)
         {
             _currentPageIndex = newPageIndex;
@@ -716,6 +718,15 @@ public partial class PaintOverlayWindow
                 if (IsCrossPageFirstInputTraceActive())
                 {
                     MarkCrossPageFirstInputStage("navigate-render-failed", "doc=pdf");
+                }
+                _currentPageIndex = beforeCurrentPage;
+                _currentCacheKey = previousCacheKey;
+                _photoTranslate.Y = previousTranslateY;
+                if (IsCrossPageFirstInputTraceActive())
+                {
+                    MarkCrossPageFirstInputStage(
+                        "navigate-rollback",
+                        $"activePage={GetCurrentPageIndexForCrossPage()}");
                 }
                 return;
             }
