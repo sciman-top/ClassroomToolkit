@@ -29,6 +29,7 @@
   - MainWindow.Photo 参数收口：`ApplyPhotoModeSurfaceTransition` 改为接收 `PhotoModeSurfaceTransitionContext`，移除多布尔参数调用形态，降低调用点顺序误用风险。
   - 新增 `MainWindowPhotoSurfaceTransitionContractTests` 锁定 photo-mode 与 presentation-fullscreen 两条切换链路都通过上下文构建进入策略层。
   - 新增 `MainWindowToolbarRetouchDispatchContractTests` 锁定工具栏直修链路必须经 `ToolbarInteractionDirectRepairExecutionCoordinator` 与后台调度失败分支处理。
+  - 新增 `MainWindowPaintTransitionContractTests` 锁定画笔显隐切换入口必须走 `PaintVisibilityTransitionPolicy` 与 `FloatingZOrderApplyExecutor`，并保持 `EnsurePaintWindows` 的 skip/creation 双策略闸门。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
