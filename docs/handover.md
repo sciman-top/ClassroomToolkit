@@ -34,6 +34,7 @@
   - 新增 `MainWindowExitLifecycleContractTests` 锁定 `RequestExit` 与 `OnClosing/OnClosed` 的计划策略接线、生命周期安全执行与后台取消释放语义。
   - 新增 `MainWindowRollCallTransitionContractTests` 锁定点名窗口显隐切换的上下文采集、策略生成、执行器接线与 ZOrder 申请流水线。
   - 新增 `MainWindowLauncherOwnerSyncContractTests` 锁定 launcher 解析、可见性时间戳写回、overlay owner 同步与 floating owner 计划执行链路。
+  - 新增 `MainWindowDispatcherBeginInvokeContractTests` 锁定 `TryBeginInvoke` 的 dispatcher 关闭前置检查、非致命异常降级日志与成功路径语义。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
