@@ -1272,6 +1272,12 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
+        HandleCrossPageDisplayUpdateDispatchFailure(
+            kind,
+            source,
+            mode,
+            emitAbortDiagnostics);
         _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", source, abortDetail);
     }
 
