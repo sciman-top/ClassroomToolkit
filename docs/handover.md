@@ -36,6 +36,7 @@
   - 新增 `MainWindowLauncherOwnerSyncContractTests` 锁定 launcher 解析、可见性时间戳写回、overlay owner 同步与 floating owner 计划执行链路。
   - 新增 `MainWindowDispatcherBeginInvokeContractTests` 锁定 `TryBeginInvoke` 的 dispatcher 关闭前置检查、非致命异常降级日志与成功路径语义。
   - 新增 `MainWindowSurfaceZOrderPipelineContractTests` 锁定 `ApplySurfaceZOrderDecision` 的 dedup 间隔策略、状态写回与 `SurfaceZOrderCoordinator` 接线。
+  - 新增 `MainWindowSaveSettingsFlowContractTests` 锁定设置保存主流程中的触笔自适应状态抓取、成功状态复位与失败通知计划执行语义。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
