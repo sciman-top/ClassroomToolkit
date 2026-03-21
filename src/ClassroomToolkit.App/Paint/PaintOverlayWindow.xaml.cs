@@ -189,9 +189,12 @@ public partial class PaintOverlayWindow : Window
     private const int NeighborPageCacheLimit = PhotoDocumentRuntimeDefaults.NeighborPageCacheLimit;
     private int _pdfPrefetchInFlight;
     private int _pdfPrefetchToken;
+    private int _pdfPrefetchRequestedPageIndex;
+    private int _pdfPrefetchRequestedDirection = 1;
     private readonly HashSet<int> _pdfPinnedPages = new();
     private int _pdfVisiblePrefetchInFlight;
     private int _pdfVisiblePrefetchToken;
+    private int[] _pdfVisiblePrefetchRequestedPages = [];
     private int _photoLoadToken;
     private double _photoWheelZoomBase = PhotoWheelZoomBaseDefault;
     private double _photoGestureZoomSensitivity = PhotoZoomInputDefaults.GestureSensitivityDefault;

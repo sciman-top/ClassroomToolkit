@@ -146,6 +146,7 @@ public sealed class FileLoggerProviderTests
             () => File.Exists(day1File) && File.Exists(day2File),
             TimeSpan.FromSeconds(2)).Should().BeTrue();
 
+        provider.Dispose();
         var day1Content = File.ReadAllText(day1File);
         var day2Content = File.ReadAllText(day2File);
         day1Content.Should().Contain("message-day-1");

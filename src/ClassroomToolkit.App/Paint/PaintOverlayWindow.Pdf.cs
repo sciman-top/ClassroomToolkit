@@ -352,12 +352,13 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        Volatile.Write(ref _pdfPrefetchRequestedPageIndex, pageIndex);
+        Volatile.Write(ref _pdfPrefetchRequestedDirection, direction);
+        var token = Interlocked.Increment(ref _pdfPrefetchToken);
         if (Interlocked.Exchange(ref _pdfPrefetchInFlight, 1) == 1)
         {
-            Interlocked.Increment(ref _pdfPrefetchToken);
             return;
         }
-        var token = _pdfPrefetchToken;
         var lifecycleToken = _overlayLifecycleCancellation.Token;
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePdfPrefetch",
@@ -407,6 +408,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        Volatile.Write(ref _pdfVisiblePrefetchRequestedPages, unique);
         var token = Interlocked.Increment(ref _pdfVisiblePrefetchToken);
         if (Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 1) == 1)
         {
@@ -447,26 +449,49 @@ public partial class PaintOverlayWindow
     private void OnPdfPrefetchCompleted(int token)
     {
         Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
+        if (token == Volatile.Read(ref _pdfPrefetchToken) || !CanUsePdfDocument())
+        {
+            return;
+        }
+
+        var pendingPageIndex = Volatile.Read(ref _pdfPrefetchRequestedPageIndex);
+        if (pendingPageIndex < 1 || pendingPageIndex > _pdfPageCount)
+        {
+            return;
+        }
+
+        var pendingDirection = Volatile.Read(ref _pdfPrefetchRequestedDirection);
+        SchedulePdfPrefetch(pendingPageIndex, pendingDirection);
     }
 
     private void OnPdfVisiblePrefetchCompleted(int token)
     {
         Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
-        if (token == _pdfVisiblePrefetchToken)
+        if (token != Volatile.Read(ref _pdfVisiblePrefetchToken))
         {
-            var scheduled = TryBeginInvoke(() =>
+            if (CanUsePdfDocument())
             {
-                if (ShouldRefreshCrossPagePdfDisplay())
+                var pendingPageIndexes = Volatile.Read(ref _pdfVisiblePrefetchRequestedPages);
+                if (pendingPageIndexes != null && pendingPageIndexes.Length > 0)
                 {
-                    UpdateCrossPageDisplay();
+                    SchedulePdfVisiblePrefetch(pendingPageIndexes);
                 }
-            }, DispatcherPriority.Background);
-            if (!scheduled && Dispatcher.CheckAccess())
+            }
+            return;
+        }
+
+        var scheduled = TryBeginInvoke(() =>
+        {
+            if (ShouldRefreshCrossPagePdfDisplay())
             {
-                if (ShouldRefreshCrossPagePdfDisplay())
-                {
-                    UpdateCrossPageDisplay();
-                }
+                UpdateCrossPageDisplay();
+            }
+        }, DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            if (ShouldRefreshCrossPagePdfDisplay())
+            {
+                UpdateCrossPageDisplay();
             }
         }
     }
