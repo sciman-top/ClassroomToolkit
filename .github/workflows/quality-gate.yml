@@ -44,6 +44,15 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Unattended Guard Fault Injection Gate
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/unattended/test-unattended-guard-faults.ps1 -RepoRoot .
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Unattended guard fault injection checks failed."
+            exit $LASTEXITCODE
+          }
+
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:

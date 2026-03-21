@@ -4,11 +4,14 @@ param(
     [string]$TaskFile = "docs/refactor/tasks.json",
     [string]$StateFile = ".codex/refactor-state.json",
     [string]$ConfigFile = "",
+    [string]$GuardProfileFile = ".codex/unattended-loop.guard.json",
+    [string]$StartFromTaskId = "",
     [string]$CodexCommand = "codex",
     [string]$SkillPath = "",
     [int]$MaxIterations = 10,
     [int]$MaxNoProgress = 3,
     [int]$MaxNonCodeProgress = 2,
+    [int]$MaxTaskRetries = 1,
     [int]$MaxExecFailuresPerTask = 1,
     [int]$MaxNoProgressPerTask = 1,
     [int]$MaxAutoRecoverPerTask = 1,
@@ -16,6 +19,8 @@ param(
     [int]$IdleTimeoutSeconds = 120,
     [int]$MaxWallClockMinutes = 120,
     [int]$LockStaleAfterMinutes = 30,
+    [bool]$StopOnMissingStatusLine = $true,
+    [bool]$StopOnRepeatedFailureSignature = $true,
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
     [switch]$SkipManualGates,
@@ -32,11 +37,17 @@ $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 $taskFileOverride = if ($PSBoundParameters.ContainsKey("TaskFile")) { $TaskFile } else { "" }
 $stateFileOverride = if ($PSBoundParameters.ContainsKey("StateFile")) { $StateFile } else { "" }
 $configFileOverride = if ($PSBoundParameters.ContainsKey("ConfigFile")) { $ConfigFile } else { "" }
+$coreScriptPath = Join-Path $PSScriptRoot "unattended/core/unattended-core.ps1"
+if (-not (Test-Path -LiteralPath $coreScriptPath)) {
+    throw "Unattended core script not found: $coreScriptPath"
+}
+. $coreScriptPath
 $modeResolverPath = Join-Path $repoPath "scripts/refactor/resolve-refactor-mode.ps1"
 $lockFilePath = Join-Path $repoPath ".codex/refactor-loop.lock.json"
 $loopRunId = [guid]::NewGuid().ToString("n")
 $script:LoopTerminalStatus = $null
 $script:LoopExitCode = 0
+$script:CurrentIterationTaskId = ""
 
 function Publish-LoopStatus {
     param([string]$Status)
@@ -48,6 +59,64 @@ function Publish-LoopStatus {
     Write-Host "STATUS: $Status"
 }
 
+function Write-LoopFailureBrief {
+    param(
+        [string]$TaskId = "",
+        [string]$FailedGate = "unknown",
+        [string]$FailureClass = "unknown",
+        [string]$StdoutPath = "",
+        [string]$StderrPath = "",
+        [string]$NextAction = ""
+    )
+
+    UCore-WriteFailureBrief `
+        -TaskId $TaskId `
+        -FailedGate $FailedGate `
+        -FailureClass $FailureClass `
+        -StdoutLogPath $StdoutPath `
+        -StderrLogPath $StderrPath `
+        -RollbackPoint $StateFile `
+        -NextAction $NextAction
+}
+
+function Invoke-BlockAndStop {
+    param(
+        [string]$TaskId,
+        [string]$Summary,
+        [string]$Reason,
+        [string]$FailedGate,
+        [string]$FailureClass,
+        [string]$StdoutPath = "",
+        [string]$StderrPath = "",
+        [string]$NextAction = ""
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($TaskId)) {
+        UCore-InvokeStateBlock `
+            -StateUpdaterScript $stateUpdaterPath `
+            -StateFile $StateFile `
+            -TaskId $TaskId `
+            -Summary $Summary `
+            -Reason $Reason `
+            -ExtraArgs @{
+                Mode = $Mode
+                ModeFamily = [string]$modeInfo.mode_family
+            }
+    }
+
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+    if (-not [string]::IsNullOrWhiteSpace($Summary)) {
+        Write-Host $Summary
+    }
+    Write-LoopFailureBrief `
+        -TaskId $TaskId `
+        -FailedGate $FailedGate `
+        -FailureClass $FailureClass `
+        -StdoutPath $StdoutPath `
+        -StderrPath $StderrPath `
+        -NextAction $NextAction
+}
+
 function Get-Selection {
     & powershell -File $selectorPath -TaskFile $TaskFile -StateFile $StateFile -AsJson | ConvertFrom-Json
 }
@@ -55,24 +124,7 @@ function Get-Selection {
 function Read-JsonFile {
     param([string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return $null
-    }
-
-    $maxAttempts = 3
-    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-        try {
-            return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-        }
-        catch {
-            if ($attempt -eq $maxAttempts) {
-                throw
-            }
-            Start-Sleep -Milliseconds 120
-        }
-    }
-
-    return $null
+    return UCore-ReadJsonFile -Path $Path -ReturnNullIfMissing -MaxAttempts 3 -RetryDelayMilliseconds 120
 }
 
 function Resolve-ModeContext {
@@ -117,6 +169,7 @@ try {
 catch {
     Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     Write-Host $_.Exception.Message
+    Write-LoopFailureBrief -FailedGate "mode-resolution" -FailureClass "preflight-mode-conflict" -NextAction "Fix mode/path mapping and rerun unattended loop."
     exit 2
 }
 
@@ -132,6 +185,47 @@ $consistencyCheckPath = Join-Path $repoPath "scripts/refactor/check-doc-consiste
 $loopLogRoot = Join-Path $repoPath (Join-Path ".codex/logs/refactor-loop" $Mode)
 $uiProgressDocPath = Join-Path $repoPath "docs/validation/ui-window-system-progress.md"
 $uiAcceptanceDocPath = Join-Path $repoPath "docs/validation/ui-window-system-acceptance.md"
+
+$guardProfilePath = if ([System.IO.Path]::IsPathRooted($GuardProfileFile)) { $GuardProfileFile } else { Join-Path $repoPath $GuardProfileFile }
+if (Test-Path -LiteralPath $guardProfilePath) {
+    try {
+        $guardProfile = Get-Content -LiteralPath $guardProfilePath -Raw | ConvertFrom-Json
+        if ($null -ne $guardProfile.PSObject.Properties["execution_guard"] -and -not $PSBoundParameters.ContainsKey("MaxTaskRetries")) {
+            $maxRetries = [int]$guardProfile.execution_guard.max_retries_per_task
+            if ($maxRetries -gt 0) {
+                $MaxTaskRetries = $maxRetries
+            }
+        }
+        if ($null -ne $guardProfile.PSObject.Properties["refactor"]) {
+            $refactorGuard = $guardProfile.refactor
+            if ($null -ne $refactorGuard.PSObject.Properties["max_task_retries"] -and -not $PSBoundParameters.ContainsKey("MaxTaskRetries")) {
+                $value = [int]$refactorGuard.max_task_retries
+                if ($value -gt 0) { $MaxTaskRetries = $value }
+            }
+            if ($null -ne $refactorGuard.PSObject.Properties["max_exec_failures_per_task"] -and -not $PSBoundParameters.ContainsKey("MaxExecFailuresPerTask")) {
+                $value = [int]$refactorGuard.max_exec_failures_per_task
+                if ($value -gt 0) { $MaxExecFailuresPerTask = $value }
+            }
+            if ($null -ne $refactorGuard.PSObject.Properties["max_no_progress_per_task"] -and -not $PSBoundParameters.ContainsKey("MaxNoProgressPerTask")) {
+                $value = [int]$refactorGuard.max_no_progress_per_task
+                if ($value -gt 0) { $MaxNoProgressPerTask = $value }
+            }
+            if ($null -ne $refactorGuard.PSObject.Properties["stop_on_missing_status_line"] -and -not $PSBoundParameters.ContainsKey("StopOnMissingStatusLine")) {
+                $StopOnMissingStatusLine = [bool]$refactorGuard.stop_on_missing_status_line
+            }
+            if ($null -ne $refactorGuard.PSObject.Properties["stop_on_repeated_failure_signature"] -and -not $PSBoundParameters.ContainsKey("StopOnRepeatedFailureSignature")) {
+                $StopOnRepeatedFailureSignature = [bool]$refactorGuard.stop_on_repeated_failure_signature
+            }
+        }
+    }
+    catch {
+        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+        Write-Host "Failed to parse guard profile: $guardProfilePath"
+        Write-Host $_.Exception.Message
+        Write-LoopFailureBrief -FailedGate "guard-profile-parse" -FailureClass "preflight-guard-profile" -NextAction "Fix guard profile JSON and rerun."
+        exit 2
+    }
+}
 
 New-Item -ItemType Directory -Force -Path $loopLogRoot | Out-Null
 
@@ -185,17 +279,7 @@ function Invoke-DocConsistencyCheck {
 function Test-ProcessAlive {
     param([int]$ProcessId)
 
-    if ($ProcessId -le 0) {
-        return $false
-    }
-
-    try {
-        $null = Get-Process -Id $ProcessId -ErrorAction Stop
-        return $true
-    }
-    catch {
-        return $false
-    }
+    return UCore-TestProcessAlive -ProcessId $ProcessId
 }
 
 function Acquire-LoopLock {
@@ -204,43 +288,7 @@ function Acquire-LoopLock {
         [int]$StaleAfterMinutes
     )
 
-    $existingLock = Read-JsonFile -Path $Path
-    if ($null -ne $existingLock) {
-        $existingPid = 0
-        if ($null -ne $existingLock.PSObject.Properties["pid"]) {
-            $existingPid = [int]$existingLock.pid
-        }
-
-        $ownerAlive = Test-ProcessAlive -ProcessId $existingPid
-        if ($ownerAlive -and $existingPid -ne $PID) {
-            throw "Another autonomous refactor loop is already running with PID $existingPid. Lock file: $Path"
-        }
-
-        $startedAt = $null
-        if ($null -ne $existingLock.PSObject.Properties["started_at"]) {
-            try {
-                $startedAt = [DateTime]::Parse([string]$existingLock.started_at)
-            }
-            catch {
-                $startedAt = $null
-            }
-        }
-
-        $isStale = $false
-        if ($null -eq $startedAt) {
-            $isStale = $true
-        }
-        else {
-            $age = [DateTime]::UtcNow - $startedAt.ToUniversalTime()
-            $isStale = $age.TotalMinutes -ge $StaleAfterMinutes
-        }
-
-        if (-not $ownerAlive -or $isStale) {
-            throw "Stale or ambiguous loop ownership detected in $Path. Review and remove the lock manually before retrying."
-        }
-    }
-
-    $lockRecord = [ordered]@{
+    $lockRecord = @{
         owner_kind = "wrapper"
         loop_run_id = $loopRunId
         pid = $PID
@@ -252,90 +300,18 @@ function Acquire-LoopLock {
         task_file = $TaskFile
         config_file = $ConfigFile
     }
-
-    $lockDirectory = Split-Path -Parent $Path
-    if ($lockDirectory -and -not (Test-Path -LiteralPath $lockDirectory)) {
-        New-Item -ItemType Directory -Path $lockDirectory -Force | Out-Null
-    }
-
-    $lockRecord | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding UTF8 -NoNewline
+    UCore-AcquireLock -Path $Path -Record $lockRecord -StaleAfterMinutes $StaleAfterMinutes -StalePolicy "block" -ConflictMessagePrefix "Another autonomous refactor loop is already running"
 }
 
 function Release-LoopLock {
     param([string]$Path)
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-
-    $existingLock = Read-JsonFile -Path $Path
-    if ($null -eq $existingLock) {
-        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-        return
-    }
-
-    $existingPid = 0
-    if ($null -ne $existingLock.PSObject.Properties["pid"]) {
-        $existingPid = [int]$existingLock.pid
-    }
-
-    if ($existingPid -eq $PID) {
-        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-    }
+    UCore-ReleaseLock -Path $Path
 }
 
 function Resolve-CodexLauncher {
     param([string]$Command)
 
-    $resolved = Get-Command $Command -ErrorAction Stop
-    $source = $resolved.Source
-
-    if ([string]::IsNullOrWhiteSpace($source)) {
-        $source = $resolved.Definition
-    }
-
-    $extension = [System.IO.Path]::GetExtension($source)
-    switch ($extension.ToLowerInvariant()) {
-        ".ps1" {
-            $cmdSibling = [System.IO.Path]::ChangeExtension($source, ".cmd")
-            if (Test-Path -LiteralPath $cmdSibling) {
-                return [pscustomobject]@{
-                    FilePath = "cmd.exe"
-                    PrefixArguments = @(
-                        "/c"
-                        $cmdSibling
-                    )
-                }
-            }
-
-            return [pscustomobject]@{
-                FilePath = "powershell.exe"
-                PrefixArguments = @(
-                    "-NoLogo"
-                    "-NoProfile"
-                    "-ExecutionPolicy"
-                    "Bypass"
-                    "-File"
-                    $source
-                )
-            }
-        }
-        ".cmd" {
-            return [pscustomobject]@{
-                FilePath = "cmd.exe"
-                PrefixArguments = @(
-                    "/c"
-                    $source
-                )
-            }
-        }
-        default {
-            return [pscustomobject]@{
-                FilePath = $source
-                PrefixArguments = @()
-            }
-        }
-    }
+    return UCore-ResolveLauncher -Command $Command
 }
 
 function Resolve-ExecutionSkillPath {
@@ -380,6 +356,7 @@ try {
 catch {
     Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     Write-Host $_.Exception.Message
+    Write-LoopFailureBrief -FailedGate "skill-path-resolution" -FailureClass "preflight-skill-path" -NextAction "Fix skill path or sync runtime skill, then rerun."
     exit 2
 }
 
@@ -410,76 +387,20 @@ function Invoke-CodexIteration {
         "-"
     )
 
-    $process = Start-Process -FilePath $launcher.FilePath `
-        -ArgumentList $argumentList `
+    $result = UCore-InvokeWatchedProcess `
+        -FilePath $launcher.FilePath `
+        -ArgumentList @($argumentList) `
         -WorkingDirectory $RepoPath `
-        -RedirectStandardInput $stdinPath `
-        -RedirectStandardOutput $stdoutPath `
-        -RedirectStandardError $stderrPath `
-        -PassThru
-
-    $startedAt = [DateTime]::UtcNow
-    $lastActivityAt = $startedAt
-    $lastStdoutLength = -1L
-    $lastStderrLength = -1L
-    $timedOutReason = $null
-
-    while (-not $process.HasExited) {
-        Start-Sleep -Seconds 2
-
-        $stdoutLength = 0L
-        if (Test-Path -LiteralPath $stdoutPath) {
-            $stdoutLength = (Get-Item -LiteralPath $stdoutPath).Length
-        }
-
-        $stderrLength = 0L
-        if (Test-Path -LiteralPath $stderrPath) {
-            $stderrLength = (Get-Item -LiteralPath $stderrPath).Length
-        }
-
-        if ($stdoutLength -ne $lastStdoutLength -or $stderrLength -ne $lastStderrLength) {
-            $lastActivityAt = [DateTime]::UtcNow
-            $lastStdoutLength = $stdoutLength
-            $lastStderrLength = $stderrLength
-        }
-
-        $now = [DateTime]::UtcNow
-        if (($now - $startedAt).TotalSeconds -ge $TimeoutSeconds) {
-            $timedOutReason = "total-timeout"
-            break
-        }
-
-        if (($now - $lastActivityAt).TotalSeconds -ge $IdleTimeoutSeconds) {
-            $timedOutReason = "idle-timeout"
-            break
-        }
-    }
-
-    if ($null -ne $timedOutReason -and -not $process.HasExited) {
-        try {
-            & taskkill /PID $process.Id /T /F | Out-Null
-        }
-        catch {
-            try {
-                $process.Kill($true)
-            }
-            catch {
-            }
-        }
-
-        return [pscustomobject]@{
-            TimedOut = $true
-            TimedOutReason = $timedOutReason
-            ExitCode = $null
-            StdoutPath = $stdoutPath
-            StderrPath = $stderrPath
-        }
-    }
+        -StdoutPath $stdoutPath `
+        -StderrPath $stderrPath `
+        -StdinPath $stdinPath `
+        -TimeoutSeconds $TimeoutSeconds `
+        -IdleTimeoutSeconds $IdleTimeoutSeconds
 
     return [pscustomobject]@{
-        TimedOut = $false
-        TimedOutReason = $null
-        ExitCode = if ($null -ne $process.ExitCode) { [int]$process.ExitCode } else { -1 }
+        TimedOut = [bool]$result.timed_out
+        TimedOutReason = [string]$result.timed_out_reason
+        ExitCode = if ($null -ne $result.exit_code) { [int]$result.exit_code } else { $null }
         StdoutPath = $stdoutPath
         StderrPath = $stderrPath
     }
@@ -488,53 +409,7 @@ function Invoke-CodexIteration {
 function Get-ObservableReport {
     param([string]$StdoutPath)
 
-    if (-not (Test-Path -LiteralPath $StdoutPath)) {
-        return [pscustomobject]@{
-            Status = $null
-            Sections = @()
-        }
-    }
-
-    $lines = @(Get-Content -LiteralPath $StdoutPath -Encoding UTF8)
-    $status = $null
-    $sections = @()
-
-    for ($index = 0; $index -lt $lines.Count; $index++) {
-        $line = $lines[$index]
-        if ($line -match '^STATUS:\s*(.+)$') {
-            $status = [string]$Matches[1]
-            continue
-        }
-
-        if ($line -notmatch '^(EXECUTION_PLAN|RESULT_SUMMARY)$') {
-            continue
-        }
-
-        $section = @($line)
-        for ($inner = $index + 1; $inner -lt $lines.Count; $inner++) {
-            $nextLine = $lines[$inner]
-            if ($nextLine -match '^(EXECUTION_PLAN|RESULT_SUMMARY)$' -or $nextLine -match '^STATUS:') {
-                break
-            }
-
-            if ([string]::IsNullOrWhiteSpace($nextLine)) {
-                break
-            }
-
-            if ($nextLine -match '^```') {
-                continue
-            }
-
-            $section += $nextLine
-        }
-
-        $sections += ,$section
-    }
-
-    return [pscustomobject]@{
-        Status = $status
-        Sections = $sections
-    }
+    return UCore-ParseObservableReport -StdoutPath $StdoutPath
 }
 
 function Get-StateTaskStatusMap {
@@ -1072,17 +947,120 @@ function Write-TerminalStatusFromSelection {
     return $false
 }
 
+function Set-ResumeTaskFromStartPoint {
+    param(
+        [string]$TaskId,
+        [string]$RepoPathValue,
+        [string]$TaskFileValue,
+        [string]$StateFileValue
+    )
+
+    if ([string]::IsNullOrWhiteSpace($TaskId)) {
+        return
+    }
+
+    $taskPath = Join-Path $RepoPathValue $TaskFileValue
+    $statePath = Join-Path $RepoPathValue $StateFileValue
+    $tasksDoc = Read-JsonFile -Path $taskPath
+    $targetExists = $false
+    foreach ($task in @($tasksDoc.tasks)) {
+        if ([string]$task.id -eq $TaskId) {
+            $targetExists = $true
+            break
+        }
+    }
+
+    if (-not $targetExists) {
+        throw "StartFromTaskId not found in task graph: $TaskId"
+    }
+
+    $stateDoc = Read-JsonFile -Path $statePath
+    if ($null -ne $stateDoc -and $null -ne $stateDoc.tasks -and $null -ne $stateDoc.tasks.PSObject.Properties[$TaskId]) {
+        $taskState = $stateDoc.tasks.PSObject.Properties[$TaskId].Value
+        if ([string]$taskState.status -eq "completed") {
+            throw "StartFromTaskId is already completed: $TaskId"
+        }
+    }
+
+    & powershell -File $stateUpdaterPath -Action start -StateFile $StateFileValue -TaskId $TaskId -Summary "Wrapper resumed from explicit StartFromTaskId." -Reason "start-from-task-id" -Mode $Mode -ModeFamily ([string]$modeInfo.mode_family) | Out-Null
+}
+
 $noProgressCount = 0
 $nonCodeProgressCount = 0
 $autoRecoverAttempts = @{}
 $autoRecoverHints = @{}
 $execFailuresByTask = @{}
 $noProgressByTask = @{}
+$script:LastFailureSignature = ""
+$script:SameFailureSignatureCount = 0
+
+function Register-FailureSignature {
+    param(
+        [string]$TaskId,
+        [string]$Gate,
+        [string]$FailureClass,
+        [string]$Reason
+    )
+
+    $signature = "$TaskId|$Gate|$FailureClass|$Reason"
+    if ($signature -eq $script:LastFailureSignature) {
+        $script:SameFailureSignatureCount++
+    }
+    else {
+        $script:LastFailureSignature = $signature
+        $script:SameFailureSignatureCount = 1
+    }
+
+    return $script:SameFailureSignatureCount
+}
+
+function Reset-FailureSignature {
+    $script:LastFailureSignature = ""
+    $script:SameFailureSignatureCount = 0
+}
+
+function Test-RepeatedFailureStop {
+    param(
+        [string]$TaskId,
+        [string]$Gate,
+        [string]$FailureClass,
+        [string]$Reason,
+        [string]$Summary,
+        [string]$StdoutPath = "",
+        [string]$StderrPath = ""
+    )
+
+    if (-not $StopOnRepeatedFailureSignature) {
+        return $false
+    }
+
+    $count = Register-FailureSignature -TaskId $TaskId -Gate $Gate -FailureClass $FailureClass -Reason $Reason
+    if ($count -lt 2) {
+        return $false
+    }
+
+    Invoke-BlockAndStop -TaskId $TaskId -Summary $Summary -Reason "repeated-failure-signature" -FailedGate $Gate -FailureClass "repeated-failure-signature" -StdoutPath $StdoutPath -StderrPath $StderrPath -NextAction "Same failure repeated. Fix blocker and resume from this task."
+    return $true
+}
 
 if ($MaxWallClockMinutes -lt 1) {
     Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     Write-Host "Invalid MaxWallClockMinutes value. It must be >= 1."
+    Write-LoopFailureBrief -FailedGate "preflight-budget" -FailureClass "invalid-parameter" -NextAction "Set MaxWallClockMinutes >= 1 and rerun."
     exit 2
+}
+if ($MaxTaskRetries -lt 1) {
+    Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
+    Write-Host "Invalid MaxTaskRetries value. It must be >= 1."
+    Write-LoopFailureBrief -FailedGate "preflight-budget" -FailureClass "invalid-parameter" -NextAction "Set MaxTaskRetries >= 1 and rerun."
+    exit 2
+}
+
+if ($MaxExecFailuresPerTask -gt $MaxTaskRetries) {
+    $MaxExecFailuresPerTask = $MaxTaskRetries
+}
+if ($MaxNoProgressPerTask -gt $MaxTaskRetries) {
+    $MaxNoProgressPerTask = $MaxTaskRetries
 }
 
 $loopStartedAtUtc = [DateTime]::UtcNow
@@ -1090,6 +1068,10 @@ Acquire-LoopLock -Path $lockFilePath -StaleAfterMinutes $LockStaleAfterMinutes
 $stopBeforeLoop = $false
 
 try {
+    if (-not $DryRun) {
+        Set-ResumeTaskFromStartPoint -TaskId $StartFromTaskId -RepoPathValue $repoPath -TaskFileValue $TaskFile -StateFileValue $StateFile
+    }
+
     $preflightConsistency = Invoke-DocConsistencyCheck -FixMode -Phase "preflight"
     if ([string]$preflightConsistency.status -eq "needs_human") {
         Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
@@ -1105,6 +1087,7 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
     if ($elapsedMinutes -ge $MaxWallClockMinutes) {
         Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
         Write-Host ("Loop wall-clock budget exceeded (minutes={0:N1}, max={1})." -f $elapsedMinutes, $MaxWallClockMinutes)
+        Write-LoopFailureBrief -TaskId $script:CurrentIterationTaskId -FailedGate "loop-budget" -FailureClass "wall-clock-exceeded" -NextAction "Resume from failed task with -StartFromTaskId after increasing budget."
         break
     }
 
@@ -1169,11 +1152,9 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
         $taskNoProgressCount = [int]$noProgressByTask[$taskId]
     }
 
-    if ($taskExecFailures -ge $MaxExecFailuresPerTask -or $taskNoProgressCount -ge $MaxNoProgressPerTask) {
+    if (UCore-TestTaskBudgetExceeded -ExecFailures $taskExecFailures -MaxExecFailures $MaxExecFailuresPerTask -NoProgress $taskNoProgressCount -MaxNoProgress $MaxNoProgressPerTask) {
         $budgetSummary = "Task execution budget exhausted (exec_failures=$taskExecFailures/$MaxExecFailuresPerTask, no_progress=$taskNoProgressCount/$MaxNoProgressPerTask)."
-        & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" | Out-Null
-        Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-        Write-Host $budgetSummary
+        Invoke-BlockAndStop -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" -FailedGate "task-budget" -FailureClass "task-budget-threshold" -NextAction "Inspect repeated failures and resume from this task once fixed."
         break
     }
 
@@ -1242,18 +1223,17 @@ Auto-recovery note for this task:
         $timeoutSummary = "$timeoutLabel stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)"
         & powershell -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $timeoutSummary -Reason "timeout" | Out-Null
         Write-Host $timeoutSummary
+        if (Test-RepeatedFailureStop -TaskId $taskId -Gate "iteration-timeout" -FailureClass "timeout" -Reason ([string]$invokeResult.TimedOutReason) -Summary "Same timeout signature repeated. Task marked blocked." -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath) {
+            break
+        }
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task timeout/no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-per-task-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Per-task timeout/no-progress threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Per-task timeout/no-progress threshold reached. Task marked blocked." -Reason "timeout-per-task-threshold" -FailedGate "iteration-timeout" -FailureClass "timeout-per-task-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Fix timeout root cause and resume from this task."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated timeouts. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Timeout threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Timeout threshold reached. Task marked blocked." -Reason "timeout-threshold" -FailedGate "iteration-timeout" -FailureClass "timeout-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Fix timeout root cause and resume from this task."
             break
         }
 
@@ -1269,6 +1249,10 @@ Auto-recovery note for this task:
     $childStatus = $null
     if ($null -ne $observableReport.Status) {
         $childStatus = [string]$observableReport.Status
+    }
+    elseif ($StopOnMissingStatusLine) {
+        Invoke-BlockAndStop -TaskId $taskId -Summary "Child iteration output did not contain a STATUS line." -Reason "missing-status-line" -FailedGate "iteration-output-contract" -FailureClass "missing-status-line" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Fix child output contract and resume from this task."
+        break
     }
     $resultSummaryFields = Get-SectionFields -ObservableReport $observableReport -SectionName "RESULT_SUMMARY"
     $hasCodeLikeChanges = Test-HasCodeLikeChanges -FilesChangedValue ([string]$resultSummaryFields["files_changed"])
@@ -1360,6 +1344,7 @@ Auto-recovery note for this task:
         else {
             Write-Host "Child iteration reported a blocker before any state mutation."
         }
+        Write-LoopFailureBrief -TaskId $taskId -FailedGate "child-iteration" -FailureClass "blocked-needs-human" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Review RESULT_SUMMARY blocker and resume from this task."
         Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
         break
     }
@@ -1377,25 +1362,22 @@ Auto-recovery note for this task:
         Write-Host $failureSummary
         Write-Host "Task exec-failure count: $taskExecFailures / $MaxExecFailuresPerTask"
         $countedNoProgress = $true
+        if (Test-RepeatedFailureStop -TaskId $taskId -Gate "iteration-exec" -FailureClass "exec-failed" -Reason ("exit-" + [string]$invokeResult.ExitCode) -Summary "Same execution failure signature repeated. Task marked blocked." -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath) {
+            break
+        }
 
         if ($taskExecFailures -ge $MaxExecFailuresPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task execution failure threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-per-task-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Per-task execution failure threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Per-task execution failure threshold reached. Task marked blocked." -Reason "exec-failure-per-task-threshold" -FailedGate "iteration-exec" -FailureClass "exec-failure-per-task-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Fix execution failure and resume from this task."
             break
         }
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold after execution failure. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Per-task no-progress threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Per-task no-progress threshold reached. Task marked blocked." -Reason "no-progress-per-task-threshold" -FailedGate "iteration-no-progress" -FailureClass "no-progress-per-task-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Inspect why the task is non-progressing and resume once fixed."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated execution failures. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Execution failure threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Execution failure threshold reached. Task marked blocked." -Reason "exec-failure-threshold" -FailedGate "iteration-exec" -FailureClass "exec-failure-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Fix repeated execution failure and resume."
             break
         }
     }
@@ -1409,11 +1391,13 @@ Auto-recovery note for this task:
         $nonCodeProgressCount = 0
         Write-Host "No state/task-graph change after iteration. Retry count: $noProgressCount / $MaxNoProgress"
         Write-Host "Task no-progress count: $taskNoProgressCount / $MaxNoProgressPerTask"
+        if (Test-RepeatedFailureStop -TaskId $taskId -Gate "iteration-no-progress" -FailureClass "no-progress" -Reason "no-progress" -Summary "Same no-progress signature repeated. Task marked blocked." -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath) {
+            Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
+            break
+        }
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
-            Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
-            Write-Host "Per-task no-progress threshold reached. Task marked blocked."
+            Invoke-BlockAndStop -TaskId $taskId -Summary "Per-task no-progress threshold reached. Task marked blocked." -Reason "no-progress-per-task-threshold" -FailedGate "iteration-no-progress" -FailureClass "no-progress-per-task-threshold" -StdoutPath $invokeResult.StdoutPath -StderrPath $invokeResult.StderrPath -NextAction "Adjust task scope/prerequisites and resume."
             Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus
             break
         }
@@ -1429,6 +1413,7 @@ Auto-recovery note for this task:
         $noProgressCount = 0
         $noProgressByTask[$taskId] = 0
         $execFailuresByTask[$taskId] = 0
+        Reset-FailureSignature
         if ($hasCodeLikeChanges) {
             $nonCodeProgressCount = 0
         }
@@ -1462,6 +1447,7 @@ catch {
         Publish-LoopStatus -Status "BLOCKED_NEEDS_HUMAN"
     }
     Write-Host $_.Exception.Message
+    Write-LoopFailureBrief -TaskId $script:CurrentIterationTaskId -FailedGate "wrapper-exception" -FailureClass "unhandled-exception" -NextAction "Inspect exception and resume from the failed task once fixed."
     if ($script:LoopExitCode -lt 2) {
         $script:LoopExitCode = 2
     }

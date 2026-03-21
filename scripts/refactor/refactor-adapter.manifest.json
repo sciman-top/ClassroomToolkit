@@ -32,6 +32,12 @@
       "role": "wrapper-entry"
     },
     {
+      "path": "scripts/unattended/core/unattended-core.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "wrapper-core"
+    },
+    {
       "path": "scripts/terminal-closure.ps1",
       "kind": "file",
       "required": false,
@@ -177,6 +183,24 @@
       "role": "wrapper-entry"
     },
     {
+      "path": "scripts/unattended/sync-loop-guard-from-skill.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
+      "path": "scripts/unattended/set-loop-guard-profile.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
+      "path": "scripts/unattended/migrate-and-run.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "utility"
+    },
+    {
       "path": "scripts/unattended/test-refactor-loop-exit-contract.ps1",
       "kind": "file",
       "required": true,
@@ -190,6 +214,12 @@
     },
     {
       "path": "scripts/unattended/check-deprecated-wrapper-usage.ps1",
+      "kind": "file",
+      "required": true,
+      "role": "verification"
+    },
+    {
+      "path": "scripts/unattended/test-unattended-guard-faults.ps1",
       "kind": "file",
       "required": true,
       "role": "verification"

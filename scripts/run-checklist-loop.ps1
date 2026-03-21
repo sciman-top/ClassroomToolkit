@@ -29,6 +29,12 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
+$coreScriptPath = Join-Path $PSScriptRoot "unattended/core/unattended-core.ps1"
+if (-not (Test-Path -LiteralPath $coreScriptPath)) {
+    throw "Unattended core script not found: $coreScriptPath"
+}
+. $coreScriptPath
+
 function Write-Phase {
     param([string]$Message)
     Write-Host "==> $Message" -ForegroundColor Cyan
@@ -81,27 +87,13 @@ function Test-CleanWorkingTree {
 function Read-JsonFile {
     param([string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return $null
-    }
-
-    return (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)
+    return UCore-ReadJsonFile -Path $Path -ReturnNullIfMissing
 }
 
 function Test-ProcessAlive {
     param([int]$ProcessId)
 
-    if ($ProcessId -le 0) {
-        return $false
-    }
-
-    try {
-        $null = Get-Process -Id $ProcessId -ErrorAction Stop
-        return $true
-    }
-    catch {
-        return $false
-    }
+    return UCore-TestProcessAlive -ProcessId $ProcessId
 }
 
 function Acquire-RunLock {
@@ -112,39 +104,7 @@ function Acquire-RunLock {
         [int]$StaleAfterMinutes
     )
 
-    $existing = Read-JsonFile -Path $Path
-    if ($null -ne $existing) {
-        $ownerPid = if ($null -ne $existing.PSObject.Properties["pid"]) { [int]$existing.pid } else { 0 }
-        $ownerAlive = Test-ProcessAlive -ProcessId $ownerPid
-        $startedAt = $null
-        if ($null -ne $existing.PSObject.Properties["started_at"]) {
-            try {
-                $startedAt = [DateTime]::Parse([string]$existing.started_at).ToUniversalTime()
-            }
-            catch {
-                $startedAt = $null
-            }
-        }
-
-        $isStale = $false
-        if ($null -eq $startedAt) {
-            $isStale = $true
-        }
-        else {
-            $isStale = ([DateTime]::UtcNow - $startedAt).TotalMinutes -ge $StaleAfterMinutes
-        }
-
-        if ($ownerAlive -and -not $isStale -and $ownerPid -ne $PID) {
-            throw "Another checklist loop is running with PID $ownerPid. Lock file: $Path"
-        }
-    }
-
-    $lockDir = Split-Path -Parent $Path
-    if (-not [string]::IsNullOrWhiteSpace($lockDir) -and -not (Test-Path -LiteralPath $lockDir)) {
-        New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
-    }
-
-    $record = [ordered]@{
+    $record = @{
         owner_kind = "checklist-loop"
         run_id = $RunId
         pid = $PID
@@ -152,67 +112,18 @@ function Acquire-RunLock {
         repo_root = $RepoPath
         task_file = $TaskFile
     }
-
-    $record | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding UTF8 -NoNewline
+    UCore-AcquireLock -Path $Path -Record $record -StaleAfterMinutes $StaleAfterMinutes -StalePolicy "takeover" -ConflictMessagePrefix "Another checklist loop is running"
 }
 
 function Release-RunLock {
     param([string]$Path)
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-
-    $existing = Read-JsonFile -Path $Path
-    if ($null -eq $existing) {
-        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-        return
-    }
-
-    $ownerPid = if ($null -ne $existing.PSObject.Properties["pid"]) { [int]$existing.pid } else { 0 }
-    if ($ownerPid -eq $PID) {
-        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-    }
+    UCore-ReleaseLock -Path $Path
 }
 
 function Resolve-CodexLauncher {
     param([string]$Command)
 
-    $resolved = Get-Command $Command -ErrorAction Stop
-    $source = $resolved.Source
-    if ([string]::IsNullOrWhiteSpace($source)) {
-        $source = $resolved.Definition
-    }
-
-    $extension = [System.IO.Path]::GetExtension($source).ToLowerInvariant()
-    switch ($extension) {
-        ".ps1" {
-            $cmdSibling = [System.IO.Path]::ChangeExtension($source, ".cmd")
-            if (Test-Path -LiteralPath $cmdSibling) {
-                return [pscustomobject]@{
-                    FilePath = "cmd.exe"
-                    PrefixArguments = @("/c", $cmdSibling)
-                }
-            }
-
-            return [pscustomobject]@{
-                FilePath = "powershell.exe"
-                PrefixArguments = @("-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $source)
-            }
-        }
-        ".cmd" {
-            return [pscustomobject]@{
-                FilePath = "cmd.exe"
-                PrefixArguments = @("/c", $source)
-            }
-        }
-        default {
-            return [pscustomobject]@{
-                FilePath = $source
-                PrefixArguments = @()
-            }
-        }
-    }
+    return UCore-ResolveLauncher -Command $Command
 }
 
 function ConvertTo-CommandSpec {
@@ -303,81 +214,15 @@ function Invoke-WatchedProcess {
         }
     }
 
-    $startArgs = @{
-        FilePath = $FilePath
-        ArgumentList = @($ArgumentList)
-        WorkingDirectory = $WorkingDirectory
-        RedirectStandardOutput = $StdoutPath
-        RedirectStandardError = $StderrPath
-        PassThru = $true
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($StdinPath)) {
-        $startArgs.RedirectStandardInput = $StdinPath
-    }
-
-    $process = Start-Process @startArgs
-    $startedAt = [DateTime]::UtcNow
-    $lastActivityAt = $startedAt
-    $lastStdoutLength = -1L
-    $lastStderrLength = -1L
-    $timedOutReason = $null
-
-    while (-not $process.HasExited) {
-        Start-Sleep -Seconds 2
-
-        $stdoutLength = 0L
-        if (Test-Path -LiteralPath $StdoutPath) {
-            $stdoutLength = (Get-Item -LiteralPath $StdoutPath).Length
-        }
-
-        $stderrLength = 0L
-        if (Test-Path -LiteralPath $StderrPath) {
-            $stderrLength = (Get-Item -LiteralPath $StderrPath).Length
-        }
-
-        if ($stdoutLength -ne $lastStdoutLength -or $stderrLength -ne $lastStderrLength) {
-            $lastStdoutLength = $stdoutLength
-            $lastStderrLength = $stderrLength
-            $lastActivityAt = [DateTime]::UtcNow
-        }
-
-        $now = [DateTime]::UtcNow
-        if ($TimeoutSeconds -gt 0 -and ($now - $startedAt).TotalSeconds -ge $TimeoutSeconds) {
-            $timedOutReason = "total-timeout"
-            break
-        }
-
-        if ($IdleTimeoutSeconds -gt 0 -and ($now - $lastActivityAt).TotalSeconds -ge $IdleTimeoutSeconds) {
-            $timedOutReason = "idle-timeout"
-            break
-        }
-    }
-
-    if ($null -ne $timedOutReason -and -not $process.HasExited) {
-        try {
-            & taskkill /PID $process.Id /T /F | Out-Null
-        }
-        catch {
-            try {
-                $process.Kill($true)
-            }
-            catch {
-            }
-        }
-
-        return [pscustomobject]@{
-            timed_out = $true
-            timed_out_reason = $timedOutReason
-            exit_code = $null
-        }
-    }
-
-    return [pscustomobject]@{
-        timed_out = $false
-        timed_out_reason = $null
-        exit_code = [int]$process.ExitCode
-    }
+    return UCore-InvokeWatchedProcess `
+        -FilePath $FilePath `
+        -ArgumentList @($ArgumentList) `
+        -WorkingDirectory $WorkingDirectory `
+        -StdoutPath $StdoutPath `
+        -StderrPath $StderrPath `
+        -StdinPath $StdinPath `
+        -TimeoutSeconds $TimeoutSeconds `
+        -IdleTimeoutSeconds $IdleTimeoutSeconds
 }
 
 function Show-ProcessLogs {
@@ -625,6 +470,45 @@ function Write-RunSummary {
     }
 
     $Summary | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $SummaryPath -Encoding UTF8
+}
+
+function Invoke-ChecklistBlockAndThrow {
+    param(
+        [object]$SummaryObject,
+        [string]$TaskId = "",
+        [string]$Summary,
+        [string]$FailureClass = "blocked_needs_human",
+        [string]$FailedGate = "",
+        [string]$StdoutPath = "",
+        [string]$StderrPath = "",
+        [string]$NextAction = ""
+    )
+
+    if ($null -ne $SummaryObject) {
+        if (-not [string]::IsNullOrWhiteSpace($TaskId)) {
+            $SummaryObject.failed_task_id = $TaskId
+        }
+        if (-not [string]::IsNullOrWhiteSpace($FailedGate)) {
+            $SummaryObject.failed_gate_command = $FailedGate
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$SummaryObject.error_class)) {
+            $SummaryObject.error_class = $FailureClass
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$SummaryObject.error_message)) {
+            $SummaryObject.error_message = $Summary
+        }
+    }
+
+    UCore-WriteFailureBrief `
+        -TaskId $TaskId `
+        -FailedGate $(if ([string]::IsNullOrWhiteSpace($FailedGate)) { "checklist-policy" } else { $FailedGate }) `
+        -FailureClass $FailureClass `
+        -StdoutLogPath $StdoutPath `
+        -StderrLogPath $StderrPath `
+        -RollbackPoint $checkpoint `
+        -NextAction $NextAction
+
+    throw $Summary
 }
 
 function Get-ErrorClass {
@@ -931,7 +815,7 @@ try {
 
             try {
                 if ($codexRunCount -ge $MaxCodexRuns) {
-                    throw "Codex run budget exceeded (max=$MaxCodexRuns)."
+                    Invoke-ChecklistBlockAndThrow -SummaryObject $runSummary -TaskId $taskId -Summary "Codex run budget exceeded (max=$MaxCodexRuns)." -FailureClass "budget_exceeded" -FailedGate "codex-run-budget" -NextAction "Increase MaxCodexRuns or resume from the failed task after narrowing scope."
                 }
                 $codexRunCount++
                 Invoke-CodexTask -RootPath $repoPath -Prompt $prompt -TaskId $taskId -LogDirectory $logDirectory
@@ -995,19 +879,19 @@ try {
         }
 
         if (-not $taskSucceeded) {
-            throw "Task failed after max attempts: $taskId"
+            Invoke-ChecklistBlockAndThrow -SummaryObject $runSummary -TaskId $taskId -Summary "Task failed after max attempts: $taskId" -FailureClass "task_retry_exhausted" -FailedGate "task-attempt-budget" -NextAction "Fix the blocking error and rerun with -StartFromTaskId $taskId."
         }
     }
 
     Write-Phase "Manual validation gate"
     if ($SkipManualValidation) {
         if (-not $ForceReleaseWithoutManual) {
-            throw "SkipManualValidation requires ForceReleaseWithoutManual."
+            Invoke-ChecklistBlockAndThrow -SummaryObject $runSummary -Summary "SkipManualValidation requires ForceReleaseWithoutManual." -FailureClass "manual_gate_failure" -FailedGate "manual-validation-policy" -NextAction "Pass -ForceReleaseWithoutManual or run manual validation."
         }
         Write-Host "Manual gate skipped by explicit force flag." -ForegroundColor Yellow
     }
     else {
-        throw "Manual validation is required by default. Use -SkipManualValidation -ForceReleaseWithoutManual for unattended mode."
+        Invoke-ChecklistBlockAndThrow -SummaryObject $runSummary -Summary "Manual validation is required by default. Use -SkipManualValidation -ForceReleaseWithoutManual for unattended mode." -FailureClass "manual_gate_failure" -FailedGate "manual-validation-policy" -NextAction "Enable explicit unattended override flags or complete manual validation."
     }
 
     Write-Phase "Release validation gate"

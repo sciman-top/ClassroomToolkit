@@ -24,6 +24,9 @@ param(
     [int]$GateIdleTimeoutSeconds = 120,
     [int]$MaxWallClockMinutes = 120,
     [int]$MaxCodexRuns = 50,
+    [string]$GuardProfileFile = ".codex/unattended-loop.guard.json",
+    [ValidateSet("aggressive", "balanced", "conservative")]
+    [string]$GuardProfilePreset = "balanced",
     [ValidateSet("compact", "full")]
     [string]$PromptProfile = "compact",
 
@@ -31,6 +34,7 @@ param(
     [string]$RuntimeSkillPath = "",
     [string]$OverrideSkillPath = "E:\CODE\skills-manager\overrides\autonomous-execution-loop\SKILL.md",
     [switch]$SkipSkillSync,
+    [switch]$SkipGuardSync,
     [switch]$PreferOverrideSkill,
 
     [switch]$DisableGatePreflight,
@@ -107,8 +111,16 @@ function Resolve-EffectiveSkillPath {
 
 $repoPath = Resolve-AbsolutePath -Path $RepoRoot
 $entryScript = Join-Path $repoPath "scripts/run-unattended-loop.ps1"
+ $guardSyncScript = Join-Path $repoPath "scripts/unattended/sync-loop-guard-from-skill.ps1"
+ $guardProfileSetterScript = Join-Path $repoPath "scripts/unattended/set-loop-guard-profile.ps1"
 if (-not (Test-Path -LiteralPath $entryScript)) {
     throw "Unified unattended entrypoint not found: $entryScript"
+}
+if (-not (Test-Path -LiteralPath $guardSyncScript)) {
+    throw "Guard sync script not found: $guardSyncScript"
+}
+if (-not (Test-Path -LiteralPath $guardProfileSetterScript)) {
+    throw "Guard profile setter script not found: $guardProfileSetterScript"
 }
 
 $resolvedRuntimeSkillPath = if ([string]::IsNullOrWhiteSpace($RuntimeSkillPath)) {
@@ -134,6 +146,33 @@ if ($Mode -eq "refactor" -and -not $SkipSkillSync.IsPresent -and -not [string]::
     Write-Host "SKILL_SYNC: done"
 }
 
+if (-not $DryRun.IsPresent) {
+    if (-not $SkipGuardSync.IsPresent) {
+        $guardSyncArgs = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", $guardSyncScript,
+            "-RepoRoot", $repoPath
+        )
+        if ($PreferOverrideSkill.IsPresent) { $guardSyncArgs += "-PreferOverride" }
+        Write-Host "GUARD_SYNC: running $guardSyncScript"
+        & powershell @guardSyncArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Guard sync failed with exit code $($LASTEXITCODE): $guardSyncScript"
+        }
+        Write-Host "GUARD_SYNC: done"
+    }
+
+    Write-Host "GUARD_PROFILE: applying preset '$GuardProfilePreset'"
+    & powershell -ExecutionPolicy Bypass -File $guardProfileSetterScript -RepoRoot $repoPath -GuardProfileFile $GuardProfileFile -Profile $GuardProfilePreset
+    if ($LASTEXITCODE -ne 0) {
+        throw "Guard profile preset apply failed with exit code $($LASTEXITCODE): $guardProfileSetterScript"
+    }
+}
+else {
+    Write-Host "GUARD_SYNC: skipped in DryRun mode"
+    Write-Host "GUARD_PROFILE: skipped in DryRun mode (requested preset '$GuardProfilePreset')"
+}
+
 $forward = @(
     "-Mode", $Mode,
     "-RepoRoot", $repoPath,
@@ -154,6 +193,7 @@ $forward = @(
     "-GateIdleTimeoutSeconds", $GateIdleTimeoutSeconds,
     "-MaxWallClockMinutes", $MaxWallClockMinutes,
     "-MaxCodexRuns", $MaxCodexRuns,
+    "-GuardProfileFile", $GuardProfileFile,
     "-PromptProfile", $PromptProfile
 )
 

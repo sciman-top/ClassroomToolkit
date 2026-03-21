@@ -14,16 +14,31 @@ Unify unattended execution into one stable entrypoint and reduce token waste cau
 - Optional pre-run skill sync (your custom sync script).
 - Refactor mode enforces skill-path preflight and then delegates to `run-unattended-loop.ps1`.
 
-3. `scripts/run-checklist-loop.ps1`
+3. `scripts/unattended/sync-loop-guard-from-skill.ps1`
+- Pulls `execution_guard` from the synced autonomous-execution skill template.
+- Writes repo-local guard profile: `.codex/unattended-loop.guard.json`.
+- Unified entrypoint auto-loads this guard profile as default budget/contract behavior.
+- Emits built-in profiles (`aggressive`, `balanced`, `conservative`) with default active profile `balanced`.
+
+4. `scripts/unattended/set-loop-guard-profile.ps1`
+- One-click profile switcher for token budget and timeout posture.
+- Applies selected profile into effective `execution_guard`, `checklist`, and `refactor` sections.
+
+5. `scripts/run-checklist-loop.ps1`
 - Generic checklist executor.
 - Uses task descriptor (`tasks.json`) with per-task prompt + gates.
 - Supports resume, preflight, retries, rollback, and structured summary.
 
-4. `scripts/terminal-closure.ps1` (deprecated hard-stop)
+6. `scripts/unattended/core/unattended-core.ps1`
+- Shared unattended execution core.
+- Provides launcher resolution, watchdog process execution, observable report parsing, and structured `FAILURE_BRIEF` emission.
+- `run-checklist-loop.ps1` and `run-refactor-loop.ps1` both depend on this core.
+
+7. `scripts/terminal-closure.ps1` (deprecated hard-stop)
 - Retired compatibility wrapper.
 - Always exits with migration instruction; do not use in automation.
 
-5. `scripts/run-autonomous-execution-loop.ps1` (deprecated hard-stop)
+8. `scripts/run-autonomous-execution-loop.ps1` (deprecated hard-stop)
 - Retired compatibility wrapper.
 - Always exits with migration instruction; do not use in automation.
 
@@ -87,7 +102,29 @@ Optional hardening check for refactor-mode exit semantics:
 powershell -File scripts/unattended/test-refactor-loop-exit-contract.ps1 -RepoRoot .
 ```
 
+Guard fault-injection regression (preflight parse failure / budget exhaustion / lock conflict):
+
+```powershell
+powershell -File scripts/unattended/test-unattended-guard-faults.ps1 -RepoRoot .
+```
+
 This gives a minimal migration + verification path without manually stitching multiple scripts.
+
+## Real one-command migrate and run
+From source repo, migrate adapter files to target repo, auto-bootstrap a minimal task file when missing, then run unattended loop in target repo:
+
+```powershell
+powershell -File scripts/unattended/migrate-and-run.ps1 `
+  -SourceRepoRoot . `
+  -TargetRepoRoot E:\CODE\TargetRepo `
+  -Mode checklist `
+  -GuardProfilePreset balanced
+```
+
+Notes:
+- Default checklist run automatically applies `-SkipManualValidation -ForceReleaseWithoutManual -SkipReleaseValidation` to avoid manual-gate blocking.
+- Add `-DryRun` for rehearsal.
+- Add `-SkipRun` to perform migration only.
 
 ## One-click run with custom-skill sync
 When your skill source is maintained in `E:\CODE\skills-manager\overrides` and synced to user runtime skills, use:
@@ -106,6 +143,22 @@ powershell -File scripts/unattended/bootstrap-unattended.ps1 `
 Notes:
 - If your sync tool is not PowerShell, run it separately and pass `-SkipSkillSync`.
 - Add `-PreferOverrideSkill` if you want to run directly from override source path.
+- To sync guard defaults from skill template into repo:
+
+```powershell
+powershell -File scripts/unattended/sync-loop-guard-from-skill.ps1 -RepoRoot .
+```
+
+Then pick operating posture:
+
+```powershell
+powershell -File scripts/unattended/set-loop-guard-profile.ps1 -RepoRoot . -Profile aggressive
+```
+
+Available profiles:
+- `aggressive`: minimum token spend, fastest fail-fast.
+- `balanced`: default recommendation for daily unattended runs.
+- `conservative`: higher tolerance for transient failures/latency.
 
 ## Deprecated Wrapper Policy
 - Official executable entrypoint is only `scripts/run-unattended-loop.ps1`.
@@ -132,9 +185,11 @@ powershell -File scripts/unattended/test-portability-regression.ps1 `
 
 3. Resume instead of rerun:
 - use `-StartFromTaskId` after failure
+- supported in both checklist and refactor mode through unified entrypoint forwarding
 
 4. Single runner lock:
 - `run-checklist-loop.ps1` uses lock file (`.codex/checklist-loop.lock.json`) to prevent concurrent runs.
+- `run-refactor-loop.ps1` uses lock file (`.codex/refactor-loop.lock.json`) for mode-aware ownership.
 
 5. Watchdog timeouts:
 - checklist supports `CodexTimeoutSeconds`, `CodexIdleTimeoutSeconds`, `GateTimeoutSeconds`, `GateIdleTimeoutSeconds`
@@ -154,6 +209,7 @@ powershell -File scripts/unattended/test-portability-regression.ps1 `
 8. Structured summary always:
 - each run emits `.codex/logs/checklist-loop/run-*.summary.json`
 - includes failed task, failed gate, error class, rollback checkpoint, and log paths.
+- refactor mode now also emits `FAILURE_BRIEF` blocks on blocking exits for machine-readable recovery hints.
 
 ## Recommended operating model
 1. `DryRun` first.
