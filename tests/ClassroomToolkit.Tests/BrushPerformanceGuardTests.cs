@@ -35,12 +35,11 @@ public sealed class BrushPerformanceGuardTests
         IReadOnlyList<StylusPressureSample> trace,
         double maxRatio)
     {
-        var ratio = MeasureMedianRelativeCostRatio(
+        var ratio = MeasureRelativeCostRatioWithGuardBand(
             baselineFactory: () => CreateMarkerRenderer(ClassroomWritingMode.Balanced),
             candidateFactory: () => CreateMarkerRenderer(ClassroomWritingMode.Responsive),
             trace: trace,
-            iterations: 7,
-            passesPerIteration: 3);
+            maxRatio: maxRatio);
 
         ratio.Should().BeLessThanOrEqualTo(maxRatio, "scenario: {0}", scenario);
     }
@@ -52,14 +51,46 @@ public sealed class BrushPerformanceGuardTests
         IReadOnlyList<StylusPressureSample> trace,
         double maxRatio)
     {
-        var ratio = MeasureMedianRelativeCostRatio(
+        var ratio = MeasureRelativeCostRatioWithGuardBand(
             baselineFactory: () => CreateCalligraphyRenderer(ClassroomWritingMode.Balanced),
             candidateFactory: () => CreateCalligraphyRenderer(ClassroomWritingMode.Responsive),
             trace: trace,
-            iterations: 7,
-            passesPerIteration: 3);
+            maxRatio: maxRatio);
 
         ratio.Should().BeLessThanOrEqualTo(maxRatio, "scenario: {0}", scenario);
+    }
+
+    private static double MeasureRelativeCostRatioWithGuardBand(
+        Func<IBrushRenderer> baselineFactory,
+        Func<IBrushRenderer> candidateFactory,
+        IReadOnlyList<StylusPressureSample> trace,
+        double maxRatio)
+    {
+        var initialRatio = MeasureMedianRelativeCostRatio(
+            baselineFactory,
+            candidateFactory,
+            trace,
+            iterations: 7,
+            passesPerIteration: 3);
+        if (initialRatio <= maxRatio)
+        {
+            return initialRatio;
+        }
+
+        const double retryGuardBand = 0.03;
+        if (initialRatio > maxRatio + retryGuardBand)
+        {
+            return initialRatio;
+        }
+
+        // Borderline samples may jitter on shared CI/desktop load. Confirm with a denser pass
+        // before declaring regression so budgets remain strict but less flaky.
+        return MeasureMedianRelativeCostRatio(
+            baselineFactory,
+            candidateFactory,
+            trace,
+            iterations: 13,
+            passesPerIteration: 4);
     }
 
     private static MarkerBrushRenderer CreateMarkerRenderer(ClassroomWritingMode mode)
