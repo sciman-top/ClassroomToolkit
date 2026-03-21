@@ -34,14 +34,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldBlock_WhenWheelSuppressedByRecentInk()
     {
         var intent = new PresentationNavigationIntent(1, PresentationNavigationSource.HookWheel);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: true,
+            TargetValid: true,
+            Passthrough: false,
+            InterceptSource: true,
+            SuppressedAsDebounced: false);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: true,
-            targetValid: true,
-            passthrough: false,
-            interceptSource: true,
-            suppressedAsDebounced: false);
+            context);
 
         result.ShouldDispatch.Should().BeFalse();
         result.BlockReason.Should().Be(PresentationNavigationBlockReason.WheelSuppressedByRecentInkInput);
@@ -51,14 +53,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldBlock_WhenTargetInvalid()
     {
         var intent = new PresentationNavigationIntent(1, PresentationNavigationSource.HookKeyboard);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: false,
+            TargetValid: false,
+            Passthrough: false,
+            InterceptSource: true,
+            SuppressedAsDebounced: false);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: false,
-            targetValid: false,
-            passthrough: false,
-            interceptSource: true,
-            suppressedAsDebounced: false);
+            context);
 
         result.ShouldDispatch.Should().BeFalse();
         result.BlockReason.Should().Be(PresentationNavigationBlockReason.TargetInvalid);
@@ -68,14 +72,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldBlock_WhenPassthroughAndInterceptDisabled()
     {
         var intent = new PresentationNavigationIntent(1, PresentationNavigationSource.HookKeyboard);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: false,
+            TargetValid: true,
+            Passthrough: true,
+            InterceptSource: false,
+            SuppressedAsDebounced: false);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: false,
-            targetValid: true,
-            passthrough: true,
-            interceptSource: false,
-            suppressedAsDebounced: false);
+            context);
 
         result.ShouldDispatch.Should().BeFalse();
         result.BlockReason.Should().Be(PresentationNavigationBlockReason.RawPassthroughWithoutIntercept);
@@ -85,14 +91,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldBlock_WhenDebounced()
     {
         var intent = new PresentationNavigationIntent(-1, PresentationNavigationSource.HookKeyboard);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: false,
+            TargetValid: true,
+            Passthrough: false,
+            InterceptSource: true,
+            SuppressedAsDebounced: true);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: false,
-            targetValid: true,
-            passthrough: false,
-            interceptSource: true,
-            suppressedAsDebounced: true);
+            context);
 
         result.ShouldDispatch.Should().BeFalse();
         result.BlockReason.Should().Be(PresentationNavigationBlockReason.Debounced);
@@ -102,14 +110,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldDispatchNext_WhenPositiveDirection()
     {
         var intent = new PresentationNavigationIntent(9, PresentationNavigationSource.HookKeyboard);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: false,
+            TargetValid: true,
+            Passthrough: false,
+            InterceptSource: true,
+            SuppressedAsDebounced: false);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: false,
-            targetValid: true,
-            passthrough: false,
-            interceptSource: true,
-            suppressedAsDebounced: false);
+            context);
 
         result.ShouldDispatch.Should().BeTrue();
         result.DirectionCode.Should().Be(1);
@@ -120,14 +130,16 @@ public sealed class PresentationNavigationOrchestratorTests
     public void ResolveHook_ShouldDispatchPrevious_WhenNegativeDirection()
     {
         var intent = new PresentationNavigationIntent(-9, PresentationNavigationSource.HookKeyboard);
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: false,
+            TargetValid: true,
+            Passthrough: false,
+            InterceptSource: true,
+            SuppressedAsDebounced: false);
 
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput: false,
-            targetValid: true,
-            passthrough: false,
-            interceptSource: true,
-            suppressedAsDebounced: false);
+            context);
 
         result.ShouldDispatch.Should().BeTrue();
         result.DirectionCode.Should().Be(-1);

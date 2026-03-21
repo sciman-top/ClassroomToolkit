@@ -441,13 +441,15 @@ public partial class PaintOverlayWindow
             var passthrough = IsWpsRawInputPassthrough(target);
             var interceptSource = intent.IsWheelSource ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
             var suppressedAsDebounced = target.IsValid && ShouldSuppressWpsNav(direction, target.Handle);
+            var context = new PresentationNavigationHookContext(
+                SuppressWheelFromRecentInkInput: intent.IsWheelSource && ShouldSuppressPresentationWheelFromRecentInkInput(),
+                TargetValid: target.IsValid,
+                Passthrough: passthrough,
+                InterceptSource: interceptSource,
+                SuppressedAsDebounced: suppressedAsDebounced);
             var execution = PresentationNavigationOrchestrator.ResolveHook(
                 intent,
-                suppressWheelFromRecentInkInput: intent.IsWheelSource && ShouldSuppressPresentationWheelFromRecentInkInput(),
-                targetValid: target.IsValid,
-                passthrough,
-                interceptSource,
-                suppressedAsDebounced);
+                context);
             if (!execution.ShouldDispatch)
             {
                 switch (execution.BlockReason)

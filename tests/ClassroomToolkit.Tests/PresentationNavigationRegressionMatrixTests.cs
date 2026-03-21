@@ -29,13 +29,15 @@ public sealed class PresentationNavigationRegressionMatrixTests
         var parsed = PresentationNavigationIntentParser.TryParseHook(direction, source, out var intent);
 
         parsed.Should().BeTrue();
+        var context = new PresentationNavigationHookContext(
+            SuppressWheelFromRecentInkInput: suppressWheelFromRecentInkInput,
+            TargetValid: targetValid,
+            Passthrough: passthrough,
+            InterceptSource: interceptSource,
+            SuppressedAsDebounced: suppressedAsDebounced);
         var result = PresentationNavigationOrchestrator.ResolveHook(
             intent,
-            suppressWheelFromRecentInkInput,
-            targetValid,
-            passthrough,
-            interceptSource,
-            suppressedAsDebounced);
+            context);
 
         result.ShouldDispatch.Should().Be(expectedDispatch);
         result.DirectionCode.Should().Be(expectedDirectionCode);

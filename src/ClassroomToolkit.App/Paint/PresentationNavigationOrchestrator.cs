@@ -18,13 +18,9 @@ internal static class PresentationNavigationOrchestrator
 {
     internal static PresentationNavigationOrchestratorResult ResolveHook(
         PresentationNavigationIntent intent,
-        bool suppressWheelFromRecentInkInput,
-        bool targetValid,
-        bool passthrough,
-        bool interceptSource,
-        bool suppressedAsDebounced)
+        PresentationNavigationHookContext context)
     {
-        if (intent.IsWheelSource && suppressWheelFromRecentInkInput)
+        if (intent.IsWheelSource && context.SuppressWheelFromRecentInkInput)
         {
             return new PresentationNavigationOrchestratorResult(
                 ShouldDispatch: false,
@@ -32,7 +28,7 @@ internal static class PresentationNavigationOrchestrator
                 BlockReason: PresentationNavigationBlockReason.WheelSuppressedByRecentInkInput);
         }
 
-        if (!targetValid)
+        if (!context.TargetValid)
         {
             return new PresentationNavigationOrchestratorResult(
                 ShouldDispatch: false,
@@ -40,7 +36,7 @@ internal static class PresentationNavigationOrchestrator
                 BlockReason: PresentationNavigationBlockReason.TargetInvalid);
         }
 
-        if (passthrough && !interceptSource)
+        if (context.Passthrough && !context.InterceptSource)
         {
             return new PresentationNavigationOrchestratorResult(
                 ShouldDispatch: false,
@@ -48,7 +44,7 @@ internal static class PresentationNavigationOrchestrator
                 BlockReason: PresentationNavigationBlockReason.RawPassthroughWithoutIntercept);
         }
 
-        if (suppressedAsDebounced)
+        if (context.SuppressedAsDebounced)
         {
             return new PresentationNavigationOrchestratorResult(
                 ShouldDispatch: false,
