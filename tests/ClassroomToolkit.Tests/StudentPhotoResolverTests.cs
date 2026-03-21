@@ -16,6 +16,14 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void SanitizeSegment_ShouldPreserveLeadingAndTrailingUnderscores()
+    {
+        var result = StudentPhotoResolver.SanitizeSegment("_1001_");
+
+        result.Should().Be("_1001_");
+    }
+
+    [Fact]
     public void ResolvePhotoPath_ShouldNotTraverseOutsideRoot_WhenClassNameIsParentDirectory()
     {
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver");
@@ -83,6 +91,34 @@ public sealed class StudentPhotoResolverTests
         var classDirectory = Path.Combine(rootPath, className);
         Directory.CreateDirectory(classDirectory);
         var studentId = "1001";
+        var target = Path.Combine(classDirectory, $"{studentId}.jpg");
+        File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            var result = resolver.ResolvePhotoPath(className, studentId);
+
+            result.Should().Be(target);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ResolvePhotoPath_ShouldPreserveUnderscoreStudentIds()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_underscore");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var studentId = "_1001_";
         var target = Path.Combine(classDirectory, $"{studentId}.jpg");
         File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
 

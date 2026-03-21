@@ -26,6 +26,7 @@ public partial class PhotoOverlayWindow : Window
     private int _photoLoadRequestId;
     private string? _cachedBitmapPath;
     private BitmapSource? _cachedBitmap;
+    private CancellationTokenSource? _photoLoadCts;
 
     public event Action<string?>? PhotoClosed;
 
@@ -51,6 +52,7 @@ public partial class PhotoOverlayWindow : Window
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
         Interlocked.Increment(ref _photoLoadRequestId);
+        CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
         _autoCloseTimer.Tick -= OnAutoCloseTick;
         SourceInitialized -= OnOverlaySourceInitialized;
@@ -80,6 +82,7 @@ public partial class PhotoOverlayWindow : Window
         NameText.Text = studentName ?? string.Empty;
         // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
         NameText.Visibility = Visibility.Collapsed;
+        var loadToken = ReplacePhotoLoadToken();
 
         EnsureOverlayVisible();
         if (TryGetCachedBitmap(path, out var cachedBitmap))
@@ -103,8 +106,7 @@ public partial class PhotoOverlayWindow : Window
             "PhotoOverlayWindow.ShowPhoto.LoadBitmap",
             async cancellationToken =>
             {
-                _ = cancellationToken;
-                var bitmap = await LoadBitmapAsync(path);
+                var bitmap = await LoadBitmapAsync(path, cancellationToken);
                 if (requestId != Volatile.Read(ref _photoLoadRequestId))
                 {
                     return;
@@ -157,7 +159,7 @@ public partial class PhotoOverlayWindow : Window
                     ApplyLoadedBitmapOnUi();
                 }
             },
-            CancellationToken.None,
+            loadToken,
             ex => System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap async: {path}. Error: {ex.Message}"));
     }
 
@@ -231,6 +233,7 @@ public partial class PhotoOverlayWindow : Window
     public void CloseOverlay()
     {
         Interlocked.Increment(ref _photoLoadRequestId);
+        CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
         ClearPhotoCache();
         Hide();
@@ -347,14 +350,32 @@ public partial class PhotoOverlayWindow : Window
         UpdateAutoCloseTimer(durationSeconds);
     }
 
-    private static Task<BitmapImage?> LoadBitmapAsync(string path)
+    private static Task<BitmapImage?> LoadBitmapAsync(string path, CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<BitmapImage?>(cancellationToken);
+        }
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             return Task.FromResult<BitmapImage?>(null);
         }
 
-        return Task.Run(() => LoadBitmap(path));
+        return Task.Run(() => LoadBitmap(path), cancellationToken);
+    }
+
+    private CancellationToken ReplacePhotoLoadToken()
+    {
+        CancelPendingPhotoLoad();
+        _photoLoadCts = new CancellationTokenSource();
+        return _photoLoadCts.Token;
+    }
+
+    private void CancelPendingPhotoLoad()
+    {
+        _photoLoadCts?.Cancel();
+        _photoLoadCts?.Dispose();
+        _photoLoadCts = null;
     }
 
     private bool IsShowingSamePhoto(string path)

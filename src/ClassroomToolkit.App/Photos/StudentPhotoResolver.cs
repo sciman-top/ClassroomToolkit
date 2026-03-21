@@ -195,7 +195,7 @@ public sealed class StudentPhotoResolver : IDisposable
                 return string.Empty;
             }
 
-            return text.Trim('_');
+            return text;
         }
 
         var buffer = text.ToCharArray();
@@ -208,7 +208,7 @@ public sealed class StudentPhotoResolver : IDisposable
                 buffer[i] = '_';
             }
         }
-        var sanitized = new string(buffer).Trim('_');
+        var sanitized = new string(buffer);
         if (sanitized is "." or "..")
         {
             return string.Empty;
