@@ -1080,6 +1080,12 @@ public partial class PaintOverlayWindow
                     {
                         if (string.IsNullOrWhiteSpace(delayOutcome.FailureDetail))
                         {
+                            HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(
+                                request.Kind,
+                                source,
+                                mode: "delayed-canceled",
+                                emitAbortDiagnostics: false,
+                                abortDetail: "delayed-canceled-dispatch-unavailable");
                             return;
                         }
 
