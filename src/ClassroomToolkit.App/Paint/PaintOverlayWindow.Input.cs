@@ -651,15 +651,24 @@ public partial class PaintOverlayWindow
                 previousPageIndexForInteractiveSwitch: currentPage,
                 previousPageBitmapForInteractiveSwitch: currentBitmap,
                 clearPreservedNeighborInkFrames: clearPreservedNeighborInkFrames);
-            if (GetCurrentPageIndexForCrossPage() == targetPage)
+            var switchedPage = GetCurrentPageIndexForCrossPage() == targetPage;
+            if (switchedPage)
             {
                 _lastInputSwitchFromPage = currentPage;
                 _lastInputSwitchToPage = targetPage;
                 _lastInputSwitchUtc = nowUtc;
+                _pendingCrossPageBrushContinuationSample = continuationSeed;
+                _pendingCrossPageBrushReplayCurrentInput = replayCurrentInputAfterResume;
             }
-            _pendingCrossPageBrushContinuationSample = continuationSeed;
-            _pendingCrossPageBrushReplayCurrentInput = replayCurrentInputAfterResume;
-            MarkCrossPageFirstInputStage("navigate-end", $"activePage={GetCurrentPageIndexForCrossPage()}");
+            else
+            {
+                _pendingCrossPageBrushContinuationSample = null;
+                _pendingCrossPageBrushReplayCurrentInput = false;
+            }
+            MarkCrossPageFirstInputStage(
+                "navigate-end",
+                $"activePage={GetCurrentPageIndexForCrossPage()} switched={switchedPage}");
+            return switchedPage;
         }
         finally
         {
@@ -667,7 +676,6 @@ public partial class PaintOverlayWindow
             _suppressImmediatePhotoInkRedraw = false;
             _suppressCrossPageVisualSync = previousSuppressCrossPageVisualSync;
         }
-        return true;
     }
 
     private bool TryResolveVisibleImagePageFromPointer(
