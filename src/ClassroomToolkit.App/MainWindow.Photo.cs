@@ -37,15 +37,8 @@ public partial class MainWindow
 
     private void ApplyPhotoModeSurfaceTransition(
         PhotoModeSurfaceTransitionKind kind,
-        bool photoModeActive,
-        bool requestZOrderApply,
-        bool forceEnforceZOrder)
+        PhotoModeSurfaceTransitionContext context)
     {
-        var context = new PhotoModeSurfaceTransitionContext(
-            PhotoModeActive: photoModeActive,
-            RequestZOrderApply: requestZOrderApply,
-            ForceEnforceZOrder: forceEnforceZOrder,
-            OverlayVisible: IsOverlayVisibleForWindowing());
         ApplySurfaceZOrderDecision(
             PhotoModeSurfaceTransitionPolicy.Resolve(
                 kind,
@@ -401,11 +394,17 @@ public partial class MainWindow
             () => WindowStateNormalizationExecutor.Apply(toolbarWindow, transitionPlan.NormalizeToolbarWindowState),
             () => ExecuteLifecycleSafe("photo-mode-changed", "show-toolbar-window", toolbarWindow.Show),
             () => SyncFloatingWindowOwners(overlayVisible: transitionPlan.SyncFloatingOwnersVisible),
-            () => ApplyPhotoModeSurfaceTransition(
-                PhotoModeSurfaceTransitionKind.PhotoModeChanged,
-                photoModeActive: active,
-                requestZOrderApply: transitionPlan.RequestZOrderApply,
-                forceEnforceZOrder: transitionPlan.ForceEnforceZOrder));
+            () =>
+            {
+                var context = new PhotoModeSurfaceTransitionContext(
+                    PhotoModeActive: active,
+                    RequestZOrderApply: transitionPlan.RequestZOrderApply,
+                    ForceEnforceZOrder: transitionPlan.ForceEnforceZOrder,
+                    OverlayVisible: IsOverlayVisibleForWindowing());
+                ApplyPhotoModeSurfaceTransition(
+                    PhotoModeSurfaceTransitionKind.PhotoModeChanged,
+                    context);
+            });
     }
 
     private void OnPhotoCursorModeFocusRequested()
@@ -508,11 +507,14 @@ public partial class MainWindow
 
     private void OnPresentationFullscreenDetected()
     {
+        var context = new PhotoModeSurfaceTransitionContext(
+            PhotoModeActive: false,
+            RequestZOrderApply: false,
+            ForceEnforceZOrder: false,
+            OverlayVisible: IsOverlayVisibleForWindowing());
         ApplyPhotoModeSurfaceTransition(
             PhotoModeSurfaceTransitionKind.PresentationFullscreenDetected,
-            photoModeActive: false,
-            requestZOrderApply: false,
-            forceEnforceZOrder: false);
+            context);
     }
 
     private void OnPresentationForegroundDetected(PresentationForegroundSource type)
