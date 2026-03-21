@@ -27,20 +27,12 @@
   - 防双重去抖：hook 来源下发到 service 时禁用 service 侧重复去抖，避免窗口 + service 叠加延迟。
   - 新增源码契约门：`PaintOverlayPresentationNavigationContractTests` 锁定解析器/编排器入口、hook-source 选项与去抖策略调用点。
   - MainWindow.Photo 参数收口：`ApplyPhotoModeSurfaceTransition` 改为接收 `PhotoModeSurfaceTransitionContext`，移除多布尔参数调用形态，降低调用点顺序误用风险。
-  - 新增 `MainWindowPhotoSurfaceTransitionContractTests` 锁定 photo-mode 与 presentation-fullscreen 两条切换链路都通过上下文构建进入策略层。
-  - 新增 `MainWindowToolbarRetouchDispatchContractTests` 锁定工具栏直修链路必须经 `ToolbarInteractionDirectRepairExecutionCoordinator` 与后台调度失败分支处理。
-  - 新增 `MainWindowPaintTransitionContractTests` 锁定画笔显隐切换入口必须走 `PaintVisibilityTransitionPolicy` 与 `FloatingZOrderApplyExecutor`，并保持 `EnsurePaintWindows` 的 skip/creation 双策略闸门。
-  - 新增 `MainWindowZOrderRequestPipelineContractTests` 锁定 `RequestApplyZOrderPolicy` 的准入、队列调度、失败回滚与 queued 执行流水线结构。
-  - 新增 `MainWindowExitLifecycleContractTests` 锁定 `RequestExit` 与 `OnClosing/OnClosed` 的计划策略接线、生命周期安全执行与后台取消释放语义。
-  - 新增 `MainWindowRollCallTransitionContractTests` 锁定点名窗口显隐切换的上下文采集、策略生成、执行器接线与 ZOrder 申请流水线。
-  - 新增 `MainWindowLauncherOwnerSyncContractTests` 锁定 launcher 解析、可见性时间戳写回、overlay owner 同步与 floating owner 计划执行链路。
-  - 新增 `MainWindowDispatcherBeginInvokeContractTests` 锁定 `TryBeginInvoke` 的 dispatcher 关闭前置检查、非致命异常降级日志与成功路径语义。
-  - 新增 `MainWindowSurfaceZOrderPipelineContractTests` 锁定 `ApplySurfaceZOrderDecision` 的 dedup 间隔策略、状态写回与 `SurfaceZOrderCoordinator` 接线。
-  - 新增 `MainWindowSaveSettingsFlowContractTests` 锁定设置保存主流程中的触笔自适应状态抓取、成功状态复位与失败通知计划执行语义。
-  - 新增 `MainWindowStartupCleanupFlowContractTests` 锁定启动阶段自动退出计时、Ink 清理调度、诊断触发与 `SafeTaskRunner + cancellation token` 接线语义。
-  - 新增 `MainWindowStartupDiagnosticsGuardContractTests` 锁定启动诊断 gate、取消令牌与 dispatcher 关闭守护条件，避免错误时机触发诊断弹窗。
-  - 新增 `MainWindowLoadedFlowContractTests` 锁定 `OnLoaded` 的启动序列与 `MainWindowLoadedToggleActionPolicy` 分支接线语义。
-  - 新增 `MainWindowDialogSafetyContractTests` 锁定边框修复、对话框展示与主提示框路径必须通过安全执行封装并输出规范诊断。
+  - 契约守卫已精简为核心集合（其余重复/低收益守卫已删除）：
+    - `PaintOverlayPresentationNavigationContractTests`（演示翻页关键路径）
+    - `MainWindowToolbarRetouchDispatchContractTests`（工具栏直修高风险调度）
+    - `MainWindowZOrderRequestPipelineContractTests`（ZOrder 请求队列与回滚）
+    - `MainWindowExitLifecycleContractTests`（退出/关闭生命周期）
+    - `MainWindowStartupDiagnosticsDispatchContractTests`（启动诊断调度降级）
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
