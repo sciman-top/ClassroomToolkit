@@ -26,9 +26,11 @@
   - 键盘延迟优化：hook 键盘链路调度优先级改为 `DispatcherPriority.Input`，并新增策略契约测试。
   - 防双重去抖：hook 来源下发到 service 时禁用 service 侧重复去抖，避免窗口 + service 叠加延迟。
   - 新增源码契约门：`PaintOverlayPresentationNavigationContractTests` 锁定解析器/编排器入口、hook-source 选项与去抖策略调用点。
+  - MainWindow.Photo 参数收口：`ApplyPhotoModeSurfaceTransition` 改为接收 `PhotoModeSurfaceTransitionContext`，移除多布尔参数调用形态，降低调用点顺序误用风险。
+  - 新增 `MainWindowPhotoSurfaceTransitionContractTests` 锁定 photo-mode 与 presentation-fullscreen 两条切换链路都通过上下文构建进入策略层。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
-  - 结果：`634/634` 通过（2026-03-21）。
+  - 结果：`635/635` 通过（2026-03-21）。
 - 人工验证新增关注：
   - WPS/PPT 全屏下 `画笔 <-> 光标` 来回切换后，键盘/滚轮翻页均持续可用。
   - 光标模式键盘翻页无可感知额外延迟（相对滚轮与切换前基线）。
