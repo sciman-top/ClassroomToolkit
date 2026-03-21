@@ -32,6 +32,7 @@
   - 新增 `MainWindowPaintTransitionContractTests` 锁定画笔显隐切换入口必须走 `PaintVisibilityTransitionPolicy` 与 `FloatingZOrderApplyExecutor`，并保持 `EnsurePaintWindows` 的 skip/creation 双策略闸门。
   - 新增 `MainWindowZOrderRequestPipelineContractTests` 锁定 `RequestApplyZOrderPolicy` 的准入、队列调度、失败回滚与 queued 执行流水线结构。
   - 新增 `MainWindowExitLifecycleContractTests` 锁定 `RequestExit` 与 `OnClosing/OnClosed` 的计划策略接线、生命周期安全执行与后台取消释放语义。
+  - 新增 `MainWindowRollCallTransitionContractTests` 锁定点名窗口显隐切换的上下文采集、策略生成、执行器接线与 ZOrder 申请流水线。
 - 自动化证据（本地最近一次）：
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationNavigationRegressionMatrixTests|FullyQualifiedName~WpsHook|FullyQualifiedName~Presentation|FullyQualifiedName~Overlay"`
   - 结果：`635/635` 通过（2026-03-21）。
