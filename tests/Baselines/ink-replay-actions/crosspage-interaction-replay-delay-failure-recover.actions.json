@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-interaction-replay-delay-failure-recover",
+  "actions": [
+    {
+      "type": "FastRefreshImmediate",
+      "source": "interaction-replay-immediate"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "interaction-replay"
+    }
+  ]
+}
+

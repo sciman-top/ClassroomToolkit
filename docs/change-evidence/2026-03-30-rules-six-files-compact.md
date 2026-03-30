@@ -1,0 +1,9 @@
+规则ID=R1/R2/R4/R6/R8/E1/E2/E3
+影响模块=GlobalUser/AGENTS.md; GlobalUser/CLAUDE.md; GlobalUser/GEMINI.md; AGENTS.md; CLAUDE.md; GEMINI.md
+当前落点=6份规则文件均存在跨文件重复描述与平台差异轻量化不足
+目标归宿=全局定义共性语义+平台最小差异；项目定义仓库事实+门禁+证据回滚；形成不重叠不缺失协同
+迁移批次=2026-03-30-governance-compact-batch1
+风险等级=Low（文档治理变更，不涉及运行时代码）
+执行命令=Get-ChildItem/ Get-Content/ Set-Content/ rg 结构校验
+验证证据=6文件均保留 1/A/B/C/D 结构；平台B章节均含加载/诊断/回退；项目C章节均含门禁顺序与失败分流
+回滚动作=使用本文件修改前的历史版本恢复6文件；恢复后执行 rg "^## (1\.|A\.|B\.|C\.|D\.)" 复验结构

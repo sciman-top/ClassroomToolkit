@@ -1,0 +1,10 @@
+{
+  "name": "crosspage-interaction-replay-delay-failure-abort",
+  "actions": [
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "interaction-replay"
+    }
+  ]
+}
+

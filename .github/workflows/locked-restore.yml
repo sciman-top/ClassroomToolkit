@@ -1,0 +1,72 @@
+name: locked-restore
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+
+jobs:
+  verify-lock:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Refactor Doc Consistency Gate
+        shell: pwsh
+        run: |
+          $report = & powershell -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -AsJson
+          $report
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Refactor doc consistency check failed."
+            exit $LASTEXITCODE
+          }
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked mode)
+        run: dotnet restore ClassroomToolkit.sln --locked-mode
+
+      - name: Vulnerability Gate
+        shell: pwsh
+        run: |
+          $report = dotnet list ClassroomToolkit.sln package --vulnerable --include-transitive
+          $report
+          $hasVuln = $report | Select-String -Pattern "has the following vulnerable packages|具有下列易受攻击的包" -SimpleMatch
+          if ($hasVuln) {
+            Write-Error "Vulnerable NuGet packages detected."
+            exit 1
+          }
+
+      - name: Build
+        run: dotnet build ClassroomToolkit.sln -c Debug --no-restore
+
+      - name: Resolve Stable Profile
+        id: stable_profile
+        shell: pwsh
+        run: |
+          $profile = & powershell -ExecutionPolicy Bypass -File scripts/validation/resolve-stable-profile.ps1 `
+            -Pipeline "locked-restore" `
+            -EventName "${{ github.event_name }}"
+          "profile=$profile" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Stable Test Profile
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/validation/run-stable-tests.ps1 `
+            -Configuration Debug `
+            -SkipBuild `
+            -Profile "${{ steps.stable_profile.outputs.profile }}"
+
+      - name: Upload Stable Test Summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locked-restore-stable-test-summary
+          path: |
+            artifacts/TestResults/stable-tests-summary.json
+            artifacts/TestResults/stable-tests-entries
+          if-no-files-found: warn

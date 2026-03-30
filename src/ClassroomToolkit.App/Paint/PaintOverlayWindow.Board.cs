@@ -1,0 +1,133 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Services.Presentation;
+using MediaColor = System.Windows.Media.Color;
+
+namespace ClassroomToolkit.App.Paint;
+
+public partial class PaintOverlayWindow
+{
+    /// <summary>透明但可点击测试的颜色（Alpha=1）</summary>
+    private static readonly MediaColor TransparentHitTestColor = MediaColor.FromArgb(1, 255, 255, 255);
+
+    private MediaColor _boardColor = Colors.Transparent;
+    private byte _boardOpacity;
+
+    public void SetBoardColor(MediaColor color)
+    {
+        var wasActive = IsBoardActive();
+        _boardColor = color;
+        UpdateBoardBackground();
+        var isActive = IsBoardActive();
+        HandleBoardStateChange(wasActive, isActive);
+    }
+
+    public void SetBoardOpacity(byte opacity)
+    {
+        var wasActive = IsBoardActive();
+        _boardOpacity = opacity;
+        UpdateBoardBackground();
+        UpdateInputPassthrough();
+        UpdateWpsNavHookState();
+        UpdateFocusAcceptance();
+        var isActive = IsBoardActive();
+        HandleBoardStateChange(wasActive, isActive);
+    }
+
+    private void HandleBoardStateChange(bool wasActive, bool isActive)
+    {
+        if (isActive && !wasActive)
+        {
+            DispatchSessionEvent(new EnterWhiteboardEvent());
+            UpdatePhotoContentTransforms(enabled: false);
+            if (!_photoModeActive)
+            {
+                RecoverOverlayFullscreenBounds();
+            }
+            SaveCurrentPageOnNavigate(forceBackground: false);
+            _presentationFullscreenActive = false;
+            ClearCurrentPresentationType();
+            _currentCacheScope = InkCacheScope.None;
+            _currentCacheKey = string.Empty;
+            _boardSuspendedPhotoCache = _photoModeActive;
+            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+                    _photoModeActive,
+                    IsCrossPageDisplaySettingEnabled()))
+            {
+                ClearNeighborPages();
+            }
+            ClearInkSurfaceState();
+            return;
+        }
+        if (!isActive && wasActive)
+        {
+            var resume = WhiteboardResumeSceneResolver.Resolve(
+                _photoModeActive,
+                _photoDocumentIsPdf,
+                MapPresentationForegroundSource(ResolveFullscreenPresentationType()));
+            DispatchSessionEvent(new ExitWhiteboardEvent(
+                ResumeScene: resume.Scene,
+                PhotoSource: resume.PhotoSource,
+                PresentationSource: resume.PresentationSource));
+            if (_photoModeActive)
+            {
+                UpdatePhotoContentTransforms(enabled: true);
+            }
+            if (!_photoModeActive)
+            {
+                // Keep overlay on monitor bounds instead of work-area maximize semantics.
+                RecoverOverlayFullscreenBounds();
+            }
+            _currentCacheScope = InkCacheScope.None;
+            _currentCacheKey = string.Empty;
+            ClearInkSurfaceState();
+            if (_photoModeActive && _boardSuspendedPhotoCache)
+            {
+                _boardSuspendedPhotoCache = false;
+                _currentCacheScope = InkCacheScope.Photo;
+                _currentCacheKey = BuildPhotoModeCacheKey(_currentDocumentPath, _currentPageIndex, _photoDocumentIsPdf);
+                LoadCurrentPageIfExists();
+            }
+            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+                    _photoModeActive,
+                    IsCrossPageDisplaySettingEnabled()))
+            {
+                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.BoardExit);
+            }
+            _refreshOrchestrator.RequestRefresh("board-exit");
+        }
+    }
+
+    private void UpdateBoardBackground()
+    {
+        var color = _boardColor;
+        var opacity = _boardOpacity;
+        if (opacity == 0 || color.A == 0)
+        {
+            color = TransparentHitTestColor;
+        }
+        else
+        {
+            color = MediaColor.FromArgb(opacity, color.R, color.G, color.B);
+        }
+        OverlayRoot.Background = new SolidColorBrush(color);
+        if (_photoModeActive)
+        {
+            RefreshPhotoBackgroundVisibility();
+            PhotoControlLayer.Visibility = _photoModeActive
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    private bool IsBoardActive()
+    {
+        return _boardOpacity > 0 && _boardColor.A > 0;
+    }
+}

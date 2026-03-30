@@ -1,0 +1,8 @@
+stages:
+  - quality
+
+quality:
+  stage: quality
+  tags: []
+  script:
+    - pwsh -NoProfile -Command "if (Test-Path 'scripts/quality/run-local-quality-gates.ps1') { powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile quick } else { Write-Host 'No project quality script found, skip.' }"

@@ -1,0 +1,10 @@
+period=
+repo=
+rule_version=
+gate_pass_rate=
+rollback_rate=
+patch_recovery_overdue_rate=
+evidence_completeness_rate=
+waiver_active_count=
+waiver_expired_unrecovered_count=
+notes=

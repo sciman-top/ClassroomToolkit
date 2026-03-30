@@ -1,0 +1,116 @@
+<Window x:Class="ClassroomToolkit.App.Paint.PaintToolbarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
+        Title="工具条"
+        Height="Auto" Width="Auto"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}">
+    <!-- 容器：深色胶囊工具条 -->
+    <Border x:Name="ToolbarContainer"
+            Background="{StaticResource Brush_Surface_Primary}"
+            BorderBrush="{StaticResource Brush_Border_Subtle}"
+            BorderThickness="1" 
+            CornerRadius="24" 
+            Height="44" 
+            Padding="10,5" 
+            MouseLeftButtonDown="OnToolbarDrag"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+        <Border.Effect>
+            <StaticResource ResourceKey="Shadow_Floating"/>
+        </Border.Effect>
+
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- 1. 拖动把手 -->
+            <Grid Width="18" Background="Transparent" Cursor="SizeAll" Margin="0,0,4,0" ToolTip="按住拖动"
+                  VerticalAlignment="Stretch">
+                <WrapPanel Width="12" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5">
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                    <Ellipse Width="4" Height="4" Fill="{StaticResource Brush_Text_Primary}" Margin="1,2"/>
+                </WrapPanel>
+            </Grid>
+
+            <!-- 2. 指针模式 (使用 Style_IconButton_Active) -->
+            <ToggleButton x:Name="CursorButton" 
+                          Style="{StaticResource Style_IconButton_Active}"
+                          Checked="OnModeChecked" Unchecked="OnModeUnchecked" 
+                          ToolTip="切换到鼠标模式"
+                          Foreground="{StaticResource Brush_Text_Primary}">
+                <Path Data="{StaticResource Icon_Cursor}" 
+                      Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" 
+                      Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </ToggleButton>
+
+            <Rectangle Width="6" Fill="Transparent"/>
+
+            <!-- 3. 颜色组 -->
+            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="16" Padding="5,3" BorderBrush="Transparent">
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0" 
+                                  Style="{StaticResource Style_ColorBubbleToggle}" 
+                                  ToolTip="切换画笔颜色（长按可更换）"
+                                  Click="OnColorClick" 
+                                  behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}"/>
+                    
+                    <ToggleButton x:Name="QuickColor2Button" Background="{StaticResource Brush_Pen_Red}" Tag="1" 
+                                  Style="{StaticResource Style_ColorBubbleToggle}" 
+                                  ToolTip="切换画笔颜色（长按可更换）"
+                                  Click="OnColorClick" 
+                                  behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}"/>
+                    
+                    <ToggleButton x:Name="QuickColor3Button" Background="{StaticResource Brush_Pen_Blue}" Tag="2" 
+                                  Style="{StaticResource Style_ColorBubbleToggle}" 
+                                  ToolTip="切换画笔颜色（长按可更换）"
+                                  Click="OnColorClick" 
+                                  behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}"/>
+                </StackPanel>
+            </Border>
+            
+            <Rectangle Width="6" Fill="Transparent"/>
+
+            <!-- 4. 擦除组 -->
+            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="16" Padding="5,3" BorderBrush="Transparent">
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_IconButton_Active}" Checked="OnModeChecked" Unchecked="OnModeUnchecked" ToolTip="切换到橡皮擦" Foreground="{StaticResource Brush_Warning}">
+                        <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="RegionEraseButton" Style="{StaticResource Style_IconButton_Active}" Checked="OnModeChecked" Unchecked="OnModeUnchecked" ToolTip="切换到区域擦除" Foreground="{StaticResource Brush_Warning}">
+                        <Path Data="{StaticResource Icon_RegionErase}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+                    </ToggleButton>
+                    <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="清空当前页笔迹">
+                        <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Rectangle Width="1" Height="22" Fill="{StaticResource Brush_Border_Strong}" Margin="8,0" Opacity="0.45"/>
+
+            <!-- 5. 常用操作 -->
+            <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销上一步（PDF/图片支持跨页）">
+                <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </Button>
+
+            <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="切换白板（长按可调颜色）" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">
+                 <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </ToggleButton>
+
+            <Button x:Name="PhotoOpenButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoOpenClick" ToolTip="打开 PDF/图片管理">
+                <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </Button>
+
+            <Button x:Name="SettingsButton" Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="打开画笔设置">
+                <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Accent_Violet}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </Button>
+        </StackPanel>
+    </Border>
+</Window>

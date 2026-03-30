@@ -1,0 +1,54 @@
+# Build outputs
+bin/
+obj/
+artifacts/
+**/artifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Logs and local data
+classroom_toolkit.log
+build_error_analysis.log
+test_failure_debug.log
+logs/
+**/build_log*.txt
+**/TestResults/
+*.trx
+*.bak
+settings.ini
+settings.json
+students.xlsx
+student_photos/
+logs/*.log
+msbuild*.log
+
+# Local automation / temp state
+.tmp/
+**/.tmp/
+.cache/
+**/.cache/
+.temp/
+**/.temp/
+.codex/logs/
+.codex/tmp-*/
+
+# Assistant and local tooling metadata
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+GlobalUser/
+.codex/
+.claude/
+.trae/
+
+# OS files
+.DS_Store
+Thumbs.db

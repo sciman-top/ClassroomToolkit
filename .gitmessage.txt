@@ -1,0 +1,6 @@
+[type] summary
+
+Risk: low|medium|high
+Compatibility Impact:
+Evidence:
+Rollback:

@@ -1,0 +1,56 @@
+<Window x:Class="ClassroomToolkit.App.Ink.InkSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="笔迹记录与回看"
+        Height="Auto" Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}"
+        Topmost="True">
+
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}" Margin="8"
+            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <TextBlock Text="笔迹记录与回看" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭笔迹设置">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                </Button>
+            </Grid>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
+
+            <StackPanel Grid.Row="1" Margin="16,14">
+                <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录/回看" Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Primary}"/>
+                <CheckBox x:Name="InkReplayPreviousCheck" Content="显示同一个课件在上次课的笔迹" Margin="0,0,0,10" Foreground="{StaticResource Brush_Text_Primary}"/>
+                <Grid Margin="0,4,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="60"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,8,0"/>
+                    <TextBox x:Name="InkRetentionDaysBox" Grid.Column="1" Height="30" VerticalContentAlignment="Center" Padding="4,0"/>
+                    <TextBlock Grid.Column="2" Text="0 表示不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="8,0,0,0"/>
+                </Grid>
+                <TextBlock Text="照片存储路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,8,0,4"/>
+                <TextBox x:Name="InkPhotoPathBox" Height="28"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
+                <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

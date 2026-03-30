@@ -1,0 +1,2172 @@
+{
+  "project": "ClassroomToolkit",
+  "updated_at": "2026-03-18",
+  "mode": "repo-local-autonomous-refactor-loop",
+  "scope": {
+    "goal": "unattended automated closure of the remaining target-architecture gap up to the final manual-regression gate",
+    "omit_manual_regression": true
+  },
+  "governing_docs": [
+    "docs/plans/2026-03-06-best-target-architecture-plan.md",
+    "docs/validation/2026-03-06-target-architecture-progress.md",
+    "docs/handover.md",
+    "docs/validation/target-architecture-final-acceptance.md",
+    "docs/architecture/2026-03-10-target-boundary-map.md",
+    "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md",
+    "docs/runbooks/migration-rollback-playbook.md"
+  ],
+  "defaults": {
+    "state_file": ".codex/refactor-state.json",
+    "verification_policy": "task-targeted-first-then-batch",
+    "doc_sync_policy": "main-plan > progress > handover > validation-history",
+    "mutation_policy": "execution-graph-only"
+  },
+  "governing_reconciliation": {
+    "last_reconciled_at": "2026-03-18T15:05:12.6687260Z",
+    "doc_paths": [
+      "docs/plans/2026-03-06-best-target-architecture-plan.md",
+      "docs/validation/2026-03-06-target-architecture-progress.md",
+      "docs/handover.md",
+      "docs/validation/target-architecture-final-acceptance.md",
+      "docs/architecture/2026-03-10-target-boundary-map.md",
+      "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md",
+      "docs/runbooks/migration-rollback-playbook.md"
+    ],
+    "policy": "wrapper must refuse ALL_AUTOMATABLE_TASKS_DONE when any governing doc is newer than this reconciliation stamp"
+  },
+  "tasks": [
+    {
+      "id": "phase0-baseline",
+      "title": "Historical baseline phase",
+      "stage": "history",
+      "priority": 99,
+      "order": 10,
+      "depends_on": [],
+      "status_hint": "completed",
+      "summary": "Historical baseline freeze completed and retained only as context.",
+      "file_hints": [
+        "docs/validation/phase-0-baseline.md"
+      ],
+      "done_when": [
+        "Historical baseline is recorded"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "phase1-application-bootstrap",
+      "title": "Historical application bootstrap phase",
+      "stage": "history",
+      "priority": 99,
+      "order": 20,
+      "depends_on": [
+        "phase0-baseline"
+      ],
+      "status_hint": "completed",
+      "summary": "Application bootstrap and first use-case port setup are already complete.",
+      "file_hints": [
+        "docs/validation/phase-1-application-bootstrap.md"
+      ],
+      "done_when": [
+        "Historical bootstrap phase is recorded as completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "phase2-module-migrations",
+      "title": "Historical module migration phase",
+      "stage": "history",
+      "priority": 99,
+      "order": 30,
+      "depends_on": [
+        "phase1-application-bootstrap"
+      ],
+      "status_hint": "completed",
+      "summary": "Photos, RollCall, and Presentation core migration are already complete.",
+      "file_hints": [
+        "docs/validation/phase-2-module-migrations.md"
+      ],
+      "done_when": [
+        "Historical module migration phase is recorded as completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "phase3-boundary-hardening",
+      "title": "Historical boundary hardening phase",
+      "stage": "history",
+      "priority": 99,
+      "order": 40,
+      "depends_on": [
+        "phase2-module-migrations"
+      ],
+      "status_hint": "completed",
+      "summary": "Boundary guards are already established and moved into the ongoing architecture guard path.",
+      "file_hints": [
+        "docs/validation/phase-3-boundary-hardening.md"
+      ],
+      "done_when": [
+        "Historical boundary hardening phase is recorded as completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "slice-overlay-presentation-router",
+      "title": "Completed first-batch overlay presentation router slice",
+      "stage": "history",
+      "priority": 99,
+      "order": 50,
+      "depends_on": [
+        "phase3-boundary-hardening"
+      ],
+      "status_hint": "completed",
+      "summary": "Overlay presentation routing slice is already complete and documented in the interop matrix and progress doc.",
+      "file_hints": [
+        "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "done_when": [
+        "Overlay presentation routing slice remains completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "slice-rollcall-remote-hook",
+      "title": "Completed first-batch RollCall remote hook slice",
+      "stage": "history",
+      "priority": 99,
+      "order": 60,
+      "depends_on": [
+        "slice-overlay-presentation-router"
+      ],
+      "status_hint": "completed",
+      "summary": "RollCall remote hook coordination slice is already complete and documented.",
+      "file_hints": [
+        "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "done_when": [
+        "RollCall remote hook slice remains completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "slice-rollcall-windowstyle-boundary",
+      "title": "Completed first-batch RollCall window style boundary slice",
+      "stage": "history",
+      "priority": 99,
+      "order": 70,
+      "depends_on": [
+        "slice-rollcall-remote-hook"
+      ],
+      "status_hint": "completed",
+      "summary": "RollCall window style execution boundary slice is already complete and documented.",
+      "file_hints": [
+        "docs/plans/2026-03-10-target-architecture-first-batch-implementation-plan.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "done_when": [
+        "RollCall window style boundary slice remains completed"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "reconcile-current-progress",
+      "title": "Reconcile current dirty worktree with execution docs",
+      "stage": "execution-foundation",
+      "priority": 1,
+      "order": 80,
+      "depends_on": [
+        "slice-rollcall-windowstyle-boundary"
+      ],
+      "status_hint": "completed",
+      "summary": "Map the current dirty worktree to the main plan, progress doc, and handover.",
+      "file_hints": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+      ],
+      "done_when": [
+        "Current dirty worktree progress is represented in tasks or state",
+        "Minimum required docs are synced",
+        "No unrelated changes are reverted"
+      ],
+      "verify": {
+        "commands": [
+          "git status --short",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "mainwindow-lifecycle-tail",
+      "title": "Close remaining MainWindow lifecycle and runtime tail work",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-tail-stage",
+      "priority": 1,
+      "order": 100,
+      "depends_on": [
+        "reconcile-current-progress"
+      ],
+      "status_hint": "completed",
+      "summary": "MainWindow lifecycle tail is already closed through policy/state extraction and verified by the targeted lifecycle filter plus ArchitectureDependencyTests.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "tests/ClassroomToolkit.Tests/MainWindowVisibleChangedPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/MainWindowLoadedToggleActionPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/MainWindowOverlayInteractionStatePolicyTests.cs"
+      ],
+      "done_when": [
+        "Remaining MainWindow lifecycle tail logic no longer depends on inline hotspot branching",
+        "Related MainWindow lifecycle policy tests pass",
+        "ArchitectureDependencyTests still pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindowVisibleChangedPolicyTests|FullyQualifiedName~MainWindowLoadedToggleActionPolicyTests|FullyQualifiedName~MainWindowOverlayInteractionStatePolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-launcher-zorder-tail",
+      "title": "Close remaining MainWindow launcher and Z-order tail work",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-tail-stage",
+      "priority": 1,
+      "order": 110,
+      "depends_on": [
+        "mainwindow-lifecycle-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified the existing launcher-resolution, dispatch-queue, and Z-order queue rollback closure through the targeted MainWindow queue/policy filter plus ArchitectureDependencyTests.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/MainWindow.Launcher.cs",
+        "tests/ClassroomToolkit.Tests/FloatingDispatchQueueDecisionLogPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/LauncherWindowResolutionPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/ZOrderQueueDispatchDecisionHandlingPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/ZOrderQueueDispatchFailureRollbackStatePolicyTests.cs"
+      ],
+      "done_when": [
+        "Remaining launcher and Z-order queue tail logic is policy-driven or executor-driven",
+        "Launcher and Z-order targeted tests pass",
+        "ArchitectureDependencyTests still pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~FloatingDispatchQueueDecisionLogPolicyTests|FullyQualifiedName~LauncherWindowResolutionPolicyTests|FullyQualifiedName~ZOrderQueueDispatchDecisionHandlingPolicyTests|FullyQualifiedName~ZOrderQueueDispatchFailureRollbackStatePolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "overlay-presentation-tail",
+      "title": "Close remaining Overlay presentation tail work",
+      "stage": "overlay-tail",
+      "parent_id": "overlay-tail-stage",
+      "priority": 1,
+      "order": 120,
+      "depends_on": [
+        "reconcile-current-progress"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified the existing Overlay presentation tail closure through the presentation-focused filter and ArchitectureDependencyTests without re-expanding direct coupling.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+        "tests/ClassroomToolkit.Tests/PresentationChannelAvailabilityPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/PresentationFullscreenTypeResolutionPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/PresentationFocusRestorePolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/OverlayPresentationCommandRouterTests.cs"
+      ],
+      "done_when": [
+        "Remaining Overlay presentation tail logic is routed through policies or router boundaries",
+        "Presentation targeted tests pass",
+        "ArchitectureDependencyTests still pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Presentation|FullyQualifiedName~OverlayPresentationCommandRouterTests|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "overlay-input-tail",
+      "title": "Close remaining Overlay input tail work",
+      "stage": "overlay-tail",
+      "parent_id": "overlay-tail-stage",
+      "priority": 1,
+      "order": 130,
+      "depends_on": [
+        "overlay-presentation-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified the existing Overlay input tail closure through the targeted input/pointer-source filter and ArchitectureDependencyTests without reopening hotspot inline branches.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs",
+        "tests/ClassroomToolkit.Tests/OverlayInputRoutingPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/OverlayPointerSourceHandlingPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/PhotoManipulationAdmissionPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/PhotoRightButtonDownExecutionPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/OverlayLostMouseCaptureExecutionPolicyTests.cs"
+      ],
+      "done_when": [
+        "Remaining Overlay input tail logic no longer depends on ad-hoc inline event handling branches",
+        "Input and pointer-source targeted tests pass",
+        "ArchitectureDependencyTests still pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~OverlayInputRoutingPolicyTests|FullyQualifiedName~OverlayPointerSourceHandlingPolicyTests|FullyQualifiedName~PhotoManipulationAdmissionPolicyTests|FullyQualifiedName~PhotoRightButtonDownExecutionPolicyTests|FullyQualifiedName~OverlayLostMouseCaptureExecutionPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "cross-page-tail",
+      "title": "Close remaining cross-page consistency tail work",
+      "stage": "overlay-tail",
+      "parent_id": "overlay-tail-stage",
+      "priority": 1,
+      "order": 140,
+      "depends_on": [
+        "overlay-input-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified existing cross-page consistency tail closure through the targeted CrossPage/Photo/Overlay filter and ArchitectureDependencyTests (903/903).",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/",
+        "tests/ClassroomToolkit.Tests/CrossPage*",
+        "tests/ClassroomToolkit.Tests/Photo*",
+        "tests/ClassroomToolkit.Tests/Overlay*"
+      ],
+      "done_when": [
+        "The remaining cross-page tail no longer depends on move-or-zoom compensation behavior",
+        "Cross-page targeted tests pass",
+        "ArchitectureDependencyTests still pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPage|FullyQualifiedName~Photo|FullyQualifiedName~Overlay|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-domain-selection",
+      "title": "Choose and wire the next SQLite business domain",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-tail-stage",
+      "priority": 2,
+      "order": 200,
+      "depends_on": [
+        "reconcile-current-progress"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed by child-task split completion: sqlite-domain-student-workbook-selection, sqlite-domain-student-workbook-adapter, and sqlite-domain-student-workbook-wiring are all completed.",
+      "file_hints": [
+        "src/ClassroomToolkit.Infra/",
+        "src/ClassroomToolkit.Services/",
+        "tests/ClassroomToolkit.Tests/*Store*",
+        "tests/ClassroomToolkit.Tests/*Repository*"
+      ],
+      "done_when": [
+        "At least one new business domain uses SQLite as the primary automated path",
+        "Its read or write path is covered by targeted tests"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-domain-student-workbook-selection",
+      "title": "Finalize SQLite domain choice for student workbook data",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-domain-selection",
+      "priority": 2,
+      "order": 201,
+      "depends_on": [
+        "reconcile-current-progress"
+      ],
+      "status_hint": "completed",
+      "summary": "Finalized student workbook/class roster as the next SQLite business domain beyond RollCall and synced boundary plus rollback expectation across progress/handover/runbook docs.",
+      "file_hints": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md",
+        "src/ClassroomToolkit.Infra/Storage/"
+      ],
+      "done_when": [
+        "The chosen business domain beyond RollCall is explicit and consistent across execution docs",
+        "Domain boundary and rollback expectation are recorded for follow-up implementation"
+      ],
+      "verify": {
+        "commands": [
+          "rg -n \"SQLite|sqlite|鐝骇|鍚嶅唽|student workbook|class roster\" docs/validation/2026-03-06-target-architecture-progress.md docs/handover.md docs/runbooks/migration-rollback-playbook.md"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-domain-student-workbook-adapter",
+      "title": "Implement SQLite-backed student workbook adapter with tests",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-domain-selection",
+      "priority": 2,
+      "order": 202,
+      "depends_on": [
+        "sqlite-domain-student-workbook-selection"
+      ],
+      "status_hint": "completed",
+      "summary": "Implemented a dedicated StudentWorkbook SQLite adapter with snapshot/state persistence and focused read/write/fallback tests.",
+      "file_hints": [
+        "src/ClassroomToolkit.Infra/Storage/",
+        "tests/ClassroomToolkit.Tests/*Store*",
+        "tests/ClassroomToolkit.Tests/*Repository*",
+        "tests/ClassroomToolkit.Tests/*Sqlite*"
+      ],
+      "done_when": [
+        "Student workbook domain has a dedicated SQLite adapter path",
+        "Targeted adapter tests cover at least one read path and one write path"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Student|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-domain-student-workbook-wiring",
+      "title": "Wire student workbook SQLite path into runtime selection",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-domain-selection",
+      "priority": 2,
+      "order": 203,
+      "depends_on": [
+        "sqlite-domain-student-workbook-adapter"
+      ],
+      "status_hint": "completed",
+      "summary": "Wired runtime selection to StudentWorkbook SQLite path via StudentWorkbookSqliteRollCallStoreAdapter, added startup guardrail log wording, and passed resolver/store/repository/sqlite plus ArchitectureDependencyTests filter (113/113).",
+      "file_hints": [
+        "src/ClassroomToolkit.App/App.xaml.cs",
+        "src/ClassroomToolkit.Infra/Storage/",
+        "tests/ClassroomToolkit.Tests/*Resolver*",
+        "tests/ClassroomToolkit.Tests/*Sqlite*"
+      ],
+      "done_when": [
+        "Runtime backend selection can resolve to the new student workbook SQLite path",
+        "Targeted wiring and guard tests pass without increasing App->Interop direct dependency baseline"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Resolver|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-migration-tail",
+      "title": "Close SQLite migration and rollback tail work",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-tail-stage",
+      "priority": 2,
+      "order": 210,
+      "depends_on": [
+        "sqlite-domain-student-workbook-wiring"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed SQLite migration/rollback tail by confirming student-workbook fallback-read coverage and syncing rollback/progress/handover docs; task filter passed (85/85).",
+      "file_hints": [
+        "docs/runbooks/migration-rollback-playbook.md",
+        "tests/ClassroomToolkit.Tests/*Migration*",
+        "tests/ClassroomToolkit.Tests/*SettingsDocument*",
+        "src/ClassroomToolkit.Infra/"
+      ],
+      "done_when": [
+        "Migration or fallback coverage exists for the new SQLite domain",
+        "Rollback runbook is updated",
+        "Storage-tail targeted tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Migration|FullyQualifiedName~SettingsDocument|FullyQualifiedName~Sqlite|FullyQualifiedName~Store\""
+        ]
+      },
+      "doc_sync": [
+        "docs/runbooks/migration-rollback-playbook.md",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "ink-capability-guardrails",
+      "title": "Finish Ink capability and fallback guardrails",
+      "stage": "ink-tail",
+      "parent_id": "ink-tail-stage",
+      "priority": 2,
+      "order": 300,
+      "depends_on": [
+        "reconcile-current-progress"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified Ink capability detection and CPU/GPU fallback guardrails via targeted Ink/Renderer/Brush filter (252/252), with CPU remaining the safe primary path when GPU is unavailable or gated off.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/Brushes/",
+        "src/ClassroomToolkit.App/Paint/",
+        "tests/ClassroomToolkit.Tests/*Ink*",
+        "tests/ClassroomToolkit.Tests/*Renderer*",
+        "tests/ClassroomToolkit.Tests/*Brush*"
+      ],
+      "done_when": [
+        "Renderer entry points expose clear capability and fallback behavior",
+        "GPU failure does not affect CPU primary behavior",
+        "Ink and renderer targeted tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Ink|FullyQualifiedName~Renderer|FullyQualifiedName~Brush\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/validation/target-architecture-final-acceptance.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "automated-freeze-check",
+      "title": "Run automated freeze acceptance only",
+      "stage": "closure",
+      "priority": 3,
+      "order": 400,
+      "depends_on": [
+        "mainwindow-launcher-zorder-tail",
+        "cross-page-tail",
+        "sqlite-migration-tail",
+        "ink-capability-guardrails"
+      ],
+      "status_hint": "completed",
+      "summary": "Completed automated freeze acceptance by passing ArchitectureDependencyTests (5/5), full Debug (2214/2214), and full Release (2214/2214), while leaving real manual regression omitted from unattended scope.",
+      "file_hints": [
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+      ],
+      "done_when": [
+        "Architecture guard tests pass",
+        "Debug full test suite passes",
+        "Release full test suite passes",
+        "Acceptance, progress, and handover docs reflect automated freeze status"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "windowing-activation-coordination-tail",
+      "title": "Finish scene-switch windowing, activation, and topmost coordination closure",
+      "stage": "runtime-tail",
+      "parent_id": "windowing-tail-stage",
+      "priority": 1,
+      "order": 405,
+      "depends_on": [
+        "mainwindow-launcher-zorder-tail",
+        "cross-page-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Verified existing scene-switch windowing/activation/topmost coordination closure through the task-targeted filter (WindowOrchestrator|Topmost|Presentation|Launcher|ArchitectureDependencyTests, 379/379).",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+        "src/ClassroomToolkit.App/Windowing/",
+        "tests/ClassroomToolkit.Tests/*WindowOrchestrator*",
+        "tests/ClassroomToolkit.Tests/*Topmost*",
+        "tests/ClassroomToolkit.Tests/*Presentation*"
+      ],
+      "done_when": [
+        "Image/PDF/whiteboard/PPT-WPS switching no longer depends on scattered activation or topmost compensation branches",
+        "Launcher, toolbar, Overlay, RollCall, and ImageManager window relationships are coordinated through Session or Windowing paths",
+        "Targeted windowing and presentation tests pass without increasing App to Interop baseline"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WindowOrchestrator|FullyQualifiedName~Topmost|FullyQualifiedName~Presentation|FullyQualifiedName~Launcher|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/architecture/2026-03-10-target-boundary-map.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-scattered-state-consolidation-tail",
+      "title": "Consolidate remaining MainWindow scattered state writes",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-tail-stage",
+      "priority": 1,
+      "order": 410,
+      "depends_on": [
+        "windowing-activation-coordination-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Remaining automatable cleanup of MainWindow hotspot state writes into Session, Updater, Policy, or Executor paths.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "tests/ClassroomToolkit.Tests/*MainWindow*",
+        "tests/ClassroomToolkit.Tests/*Launcher*",
+        "tests/ClassroomToolkit.Tests/*ZOrderQueue*"
+      ],
+      "done_when": [
+        "Remaining MainWindow hotspot state writes are consolidated into Session, Updater, Policy, or Executor paths",
+        "No new inline state-repair logic is added to MainWindow hotspot files",
+        "Targeted MainWindow tests and ArchitectureDependencyTests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindow|FullyQualifiedName~FloatingDispatchQueue|FullyQualifiedName~Launcher|FullyQualifiedName~ZOrderQueue|FullyQualifiedName~ArchitectureDependencyTests\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-toolbar-direct-repair-coordination-tail",
+      "title": "Close MainWindow toolbar direct-repair dispatch coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-tail-stage",
+      "priority": 1,
+      "order": 411,
+      "depends_on": [
+        "mainwindow-scattered-state-consolidation-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the remaining MainWindow.Paint toolbar direct-repair dispatch tail by moving background scheduling, rerun, and failure-plan coordination into ToolbarInteractionDirectRepairExecutionCoordinator and re-running the focused MainWindow and ArchitectureDependency test filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Paint.cs",
+        "src/ClassroomToolkit.App/Windowing/ToolbarInteractionDirectRepairExecutionCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/App/ToolbarInteractionDirectRepairExecutionCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*ToolbarInteraction*",
+        "tests/ClassroomToolkit.Tests/*FloatingTopmost*"
+      ],
+      "done_when": [
+        "Toolbar direct-repair background dispatch, rerun, and failure-plan handling no longer live inline in MainWindow.Paint.cs",
+        "The direct-repair path is coordinated through a dedicated Windowing unit",
+        "Targeted ToolbarInteraction, FloatingTopmost, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ToolbarInteractionDirectRepairExecutionCoordinatorTests|FullyQualifiedName~ToolbarInteraction|FullyQualifiedName~FloatingTopmost|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-photo-image-manager-surface-tail",
+      "title": "Close MainWindow photo and image-manager surface coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-tail-stage",
+      "priority": 1,
+      "order": 412,
+      "depends_on": [
+        "mainwindow-toolbar-direct-repair-coordination-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed by child-task split completion: mainwindow-image-manager-state-change-transition-tail and mainwindow-foreground-retouch-owner-sync-tail are completed.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Windowing/",
+        "tests/ClassroomToolkit.Tests/*ImageManager*",
+        "tests/ClassroomToolkit.Tests/*Foreground*",
+        "tests/ClassroomToolkit.Tests/*FloatingWindow*"
+      ],
+      "done_when": [
+        "Image-manager surface transitions and explicit foreground retouch no longer depend on large inline MainWindow.Photo coordination branches",
+        "Owner and surface coordination are covered by focused policy, coordinator, or executor tests",
+        "Targeted ImageManager, Foreground, FloatingWindow, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManager|FullyQualifiedName~Foreground|FullyQualifiedName~FloatingWindow|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-image-manager-state-change-transition-tail",
+      "title": "Close MainWindow image-manager state-change transition tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-photo-image-manager-surface-tail",
+      "priority": 1,
+      "order": 413,
+      "depends_on": [
+        "mainwindow-toolbar-direct-repair-coordination-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the image-manager state-change transition slice by moving normalize scheduling/fallback and surface-apply coordination into ImageManagerStateChangeTransitionCoordinator and re-running the focused MainWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "src/ClassroomToolkit.App/Windowing/ImageManagerStateChangeTransitionCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/App/ImageManagerStateChangeTransitionCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*ImageManagerStateChange*",
+        "tests/ClassroomToolkit.Tests/*Foreground*",
+        "tests/ClassroomToolkit.Tests/*MainWindow*"
+      ],
+      "done_when": [
+        "Image-manager state-change normalize scheduling and immediate fallback no longer live inline in MainWindow.Photo.cs",
+        "Surface-apply coordination for that state-change path is covered by a dedicated coordinator test",
+        "Targeted ImageManagerStateChange, Foreground, FloatingWindow, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManagerStateChangeTransitionCoordinatorTests|FullyQualifiedName~ImageManagerStateChange|FullyQualifiedName~Foreground|FullyQualifiedName~FloatingWindow|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-foreground-retouch-owner-sync-tail",
+      "title": "Close MainWindow foreground retouch and owner-sync coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-photo-image-manager-surface-tail",
+      "priority": 1,
+      "order": 414,
+      "depends_on": [
+        "mainwindow-image-manager-state-change-transition-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed by child-task split completion: mainwindow-foreground-retouch-tail and mainwindow-image-manager-owner-sync-tail are completed.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Windowing/",
+        "tests/ClassroomToolkit.Tests/*Foreground*",
+        "tests/ClassroomToolkit.Tests/*OverlayActivation*",
+        "tests/ClassroomToolkit.Tests/*FloatingOwner*",
+        "tests/ClassroomToolkit.Tests/*MainWindow*"
+      ],
+      "done_when": [
+        "Foreground explicit retouch and overlay-activation retouch no longer depend on large inline MainWindow.Photo coordination branches",
+        "Image-manager owner-sync and related surface retouch decisions are covered by focused policy, coordinator, or executor tests",
+        "Targeted Foreground, OverlayActivation, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Foreground|FullyQualifiedName~OverlayActivation|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-foreground-retouch-tail",
+      "title": "Close MainWindow foreground and overlay-activation retouch tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-foreground-retouch-owner-sync-tail",
+      "priority": 1,
+      "order": 415,
+      "depends_on": [
+        "mainwindow-image-manager-state-change-transition-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the MainWindow.Photo foreground-retouch slice by moving overlay-activation retouch and explicit-foreground retouch coordination into ForegroundSurfaceRetouchCoordinator and re-running the focused MainWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "src/ClassroomToolkit.App/Windowing/ForegroundSurfaceRetouchCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/App/ForegroundSurfaceRetouchCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*Foreground*",
+        "tests/ClassroomToolkit.Tests/*OverlayActivation*",
+        "tests/ClassroomToolkit.Tests/*MainWindow*"
+      ],
+      "done_when": [
+        "Overlay-activation retouch and explicit-foreground retouch no longer depend on large inline MainWindow.Photo coordination branches",
+        "Retouch throttle/state-update/apply coordination is covered by a dedicated coordinator test",
+        "Targeted Foreground, OverlayActivation, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ForegroundSurfaceRetouchCoordinatorTests|FullyQualifiedName~Foreground|FullyQualifiedName~OverlayActivation|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-image-manager-owner-sync-tail",
+      "title": "Close MainWindow image-manager owner-sync coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "mainwindow-foreground-retouch-owner-sync-tail",
+      "priority": 1,
+      "order": 416,
+      "depends_on": [
+        "mainwindow-foreground-retouch-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the MainWindow.Photo image-manager owner-sync tail by moving image-manager open/close transition coordination into ImageManagerVisibilityTransitionCoordinator and photo-mode owner-sync coordination into PhotoModeTransitionCoordinator, then re-running the focused MainWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.Photo.cs",
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Windowing/",
+        "tests/ClassroomToolkit.Tests/*ImageManager*",
+        "tests/ClassroomToolkit.Tests/*FloatingOwner*",
+        "tests/ClassroomToolkit.Tests/*MainWindow*"
+      ],
+      "done_when": [
+        "Image-manager owner attach/detach and related open/close transition coordination no longer depend on large inline MainWindow.Photo branches",
+        "Owner-sync and surface coordination are covered by focused policy, coordinator, or executor tests",
+        "Targeted ImageManager, FloatingOwner, MainWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ImageManager|FullyQualifiedName~FloatingOwner|FullyQualifiedName~MainWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-display-toggle-tail",
+      "title": "Close PaintOverlayWindow cross-page display toggle coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 417,
+      "depends_on": [
+        "mainwindow-image-manager-owner-sync-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page display toggle shell tail by moving flag update and runtime action coordination into CrossPageDisplayToggleTransitionCoordinator, then re-running the focused PaintOverlayWindow/CrossPage/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageDisplayToggleTransitionCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageDisplayToggleTransitionCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*CrossPageDisplayToggle*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "Cross-page display toggle no longer mixes flag updates and runtime action dispatch inline inside PaintOverlayWindow.xaml.cs",
+        "The toggle path is covered by a dedicated coordinator test with enable, disable, and no-op branches",
+        "Targeted CrossPageDisplayToggle, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDisplayToggleTransitionCoordinatorTests|FullyQualifiedName~CrossPageDisplayToggle|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-inkshow-transition-tail",
+      "title": "Close PaintOverlayWindow ink-show transition coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 418,
+      "depends_on": [
+        "paintoverlay-crosspage-display-toggle-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow ink-show transition shell tail by moving show-ink setting, clear/load actions, and cross-page refresh requests into InkShowTransitionCoordinator, then re-running the focused InkShow/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/InkShowTransitionCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/InkShowTransitionCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*InkShow*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "Ink-show toggle no longer mixes setting mutation, clear/load actions, and cross-page update dispatch inline inside PaintOverlayWindow.xaml.cs",
+        "The show-ink toggle path is covered by a dedicated coordinator test with no-op, non-photo, disable, and enable branches",
+        "Targeted InkShow, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkShowTransitionCoordinatorTests|FullyQualifiedName~InkShowUpdateTransitionPolicyTests|FullyQualifiedName~PhotoShowInkOverlayChangePolicy|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-ink-page-load-tail",
+      "title": "Close PaintOverlayWindow ink page-load coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 419,
+      "depends_on": [
+        "paintoverlay-inkshow-transition-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow ink page-load shell tail by moving cache-hit, sidecar-fallback, and clear-state branching into InkPageLoadCoordinator, then re-running the focused InkPageLoad/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs",
+        "src/ClassroomToolkit.App/Paint/InkPageLoadCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/InkPageLoadCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*InkPageLoad*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "LoadCurrentPageIfExists no longer mixes cache scope checks, ink visibility checks, sidecar fallback, and clear/apply dispatch inline inside PaintOverlayWindow.Photo.cs",
+        "The page-load path is covered by a dedicated coordinator test with skip, clear, cache-hit, sidecar-hit, and cache-miss branches",
+        "Targeted InkPageLoad, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkPageLoadCoordinatorTests|FullyQualifiedName~InkPersistenceTogglePolicyTests|FullyQualifiedName~CrossPageInkFastPathSelectorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-ink-stroke-apply-tail",
+      "title": "Close PaintOverlayWindow ink stroke-apply coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 420,
+      "depends_on": [
+        "paintoverlay-ink-page-load-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow ink stroke-apply shell tail by moving runtime stroke update, fast-path vs redraw branching, and loaded-state/perf bookkeeping into InkStrokeApplyCoordinator, then re-running the focused InkStrokeApply/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs",
+        "src/ClassroomToolkit.App/Paint/InkStrokeApplyCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/InkStrokeApplyCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*InkStrokeApply*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "ApplyInkStrokes no longer mixes runtime collection update, fast-path vs redraw branching, and loaded-state/perf bookkeeping inline inside PaintOverlayWindow.Photo.cs",
+        "The stroke-apply path is covered by a dedicated coordinator test for redraw, fast-path, and trace branches",
+        "Targeted InkStrokeApply, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InkStrokeApplyCoordinatorTests|FullyQualifiedName~CrossPageInkFastPathSelectorTests|FullyQualifiedName~InkPageLoadCoordinatorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-deferred-refresh-tail",
+      "title": "Close PaintOverlayWindow cross-page deferred refresh coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 421,
+      "depends_on": [
+        "paintoverlay-ink-stroke-apply-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page deferred refresh tail by moving post-input delay gating, delayed dispatch, and failure recovery coordination into CrossPageDeferredRefreshCoordinator, then re-running the focused CrossPageDeferredRefresh/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageDeferredRefreshCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageDeferredRefreshCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*CrossPageDeferredRefresh*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "ScheduleCrossPageDisplayUpdateAfterInputSettles no longer mixes gate checks, delay timing, delayed dispatch, and failure recovery inline inside PaintOverlayWindow.Photo.CrossPage.cs",
+        "The deferred refresh path is covered by a dedicated coordinator test for skip, immediate, delayed, and failure-recovery branches",
+        "Targeted CrossPageDeferredRefresh, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshGatePolicyTests|FullyQualifiedName~CrossPageDelayedDispatchFailureRecoveryPolicyTests|FullyQualifiedName~CrossPageDelayedDispatchFailureDiagnosticsPolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-postinput-slot-tail",
+      "title": "Close PaintOverlayWindow cross-page post-input refresh-slot coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 422,
+      "depends_on": [
+        "paintoverlay-crosspage-deferred-refresh-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page post-input refresh-slot tail by moving pointer-up sequence CAS acquire logic into CrossPagePostInputRefreshSlotCoordinator, then re-running the focused CrossPagePostInputSlot/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPagePostInputRefreshSlotCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPagePostInputRefreshSlotCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*CrossPagePostInput*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "TryAcquirePostInputRefreshSlot no longer embeds the pointer-up sequence CAS loop inline in PaintOverlayWindow.Photo.CrossPage.cs",
+        "Refresh-slot acquire semantics are covered by a dedicated coordinator test for unset, matched, CAS success, and CAS retry branches",
+        "Targeted CrossPagePostInputSlot, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPagePostInputRefreshSlotCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDeferredRefreshGatePolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-missing-neighbor-refresh-tail",
+      "title": "Close PaintOverlayWindow cross-page missing-neighbor refresh coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 423,
+      "depends_on": [
+        "paintoverlay-crosspage-postinput-slot-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page missing-neighbor refresh tail by moving policy-based scheduling, delayed dispatch, and failure recovery coordination into CrossPageMissingNeighborRefreshCoordinator, then re-running the focused MissingNeighborRefresh/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageMissingNeighborRefreshCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageMissingNeighborRefreshCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*MissingNeighborRefresh*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "ScheduleCrossPageDisplayUpdateForMissingNeighborPages no longer mixes policy decision, delayed scheduling, and failure recovery inline inside PaintOverlayWindow.Photo.CrossPage.cs",
+        "Missing-neighbor refresh flow is covered by a dedicated coordinator test for skip, delayed run, delay failure recovery, and dispatch failure recovery branches",
+        "Targeted MissingNeighborRefresh, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageMissingNeighborRefreshCoordinatorTests|FullyQualifiedName~CrossPageMissingNeighborRefreshPolicyTests|FullyQualifiedName~CrossPageDeferredRefreshCoordinatorTests|FullyQualifiedName~CrossPageDelayedDispatchFailureRecoveryPolicyTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-replay-dispatch-tail",
+      "title": "Close PaintOverlayWindow cross-page replay dispatch coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 424,
+      "depends_on": [
+        "paintoverlay-crosspage-missing-neighbor-refresh-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page replay dispatch tail by moving replay dispatch scheduling, inline fallback, and requeue-on-failure coordination into CrossPageReplayDispatchCoordinator, then re-running the focused ReplayDispatch/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageReplayDispatchCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageReplayDispatchCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*ReplayDispatch*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "TryScheduleCrossPageReplayDispatch no longer mixes replay state mutation, dispatcher scheduling, inline fallback, and requeue handling inline in PaintOverlayWindow.Photo.CrossPage.cs",
+        "Replay dispatch flow is covered by a dedicated coordinator test for scheduled, inline, requeue, and inline-throw branches",
+        "Targeted ReplayDispatch, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageReplayDispatchCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchPolicyTests|FullyQualifiedName~CrossPageReplayDispatchScheduleFallbackPolicy|FullyQualifiedName~CrossPageReplayPendingStateUpdaterTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-replay-flush-tail",
+      "title": "Close PaintOverlayWindow cross-page replay flush coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 425,
+      "depends_on": [
+        "paintoverlay-crosspage-replay-dispatch-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page replay flush tail by moving flush-gate and dispatch-target resolution into CrossPageReplayFlushCoordinator, then re-running the focused ReplayFlush/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageReplayFlushCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageReplayFlushCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*ReplayFlush*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "TryFlushCrossPageReplay no longer mixes replay-pending gate checks and dispatch-target selection inline in PaintOverlayWindow.Photo.CrossPage.cs",
+        "Replay flush decision path is covered by a dedicated coordinator test for skip, visual-sync, and interaction-preferred branches",
+        "Targeted ReplayFlush, ReplayDispatch, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageReplayFlushCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchCoordinatorTests|FullyQualifiedName~CrossPageReplayDispatchPolicyTests|FullyQualifiedName~CrossPageUpdateReplayPolicyTests|FullyQualifiedName~CrossPageReplayPendingStateUpdaterTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-crosspage-dispatch-failure-tail",
+      "title": "Close PaintOverlayWindow cross-page dispatch-failure coordination tail",
+      "stage": "runtime-tail",
+      "parent_id": "cross-page-tail",
+      "priority": 1,
+      "order": 426,
+      "depends_on": [
+        "paintoverlay-crosspage-replay-flush-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed the PaintOverlayWindow cross-page dispatch-failure tail by moving inline-fallback, replay-queue, and replay-flush-on-failure coordination into CrossPageDisplayUpdateDispatchFailureCoordinator, then re-running the focused DispatchFailure/PaintOverlayWindow/ArchitectureDependency filter.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+        "src/ClassroomToolkit.App/Paint/CrossPageDisplayUpdateDispatchFailureCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/CrossPageDisplayUpdateDispatchFailureCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/*DispatchFailure*",
+        "tests/ClassroomToolkit.Tests/*PaintOverlayWindow*"
+      ],
+      "done_when": [
+        "HandleCrossPageDisplayUpdateDispatchFailure no longer mixes inline fallback, replay queue decision, diagnostics, and replay flush trigger inline in PaintOverlayWindow.Photo.CrossPage.cs",
+        "Dispatch-failure handling is covered by a dedicated coordinator test for inline, queue+flush, and interaction queue branches",
+        "Targeted DispatchFailure, ReplayQueue, PaintOverlayWindow, and ArchitectureDependency tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~CrossPageDisplayUpdateDispatchFailureCoordinatorTests|FullyQualifiedName~CrossPageDisplayUpdateDispatchFailureFallbackPolicyTests|FullyQualifiedName~CrossPageReplayQueuePolicyTests|FullyQualifiedName~CrossPageReplayFlushCoordinatorTests|FullyQualifiedName~PaintOverlayWindow|FullyQualifiedName~ArchitectureDependencyTests\" -m:1 -p:UseSharedCompilation=false"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-history-domain-extension-tail",
+      "title": "Extend SQLite beyond student workbook into the next history domain",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-tail-stage",
+      "priority": 2,
+      "order": 420,
+      "depends_on": [
+        "sqlite-migration-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed by child-task split completion: sqlite-history-domain-selection, sqlite-history-domain-adapter, and sqlite-history-domain-wiring-migration are all completed.",
+      "file_hints": [
+        "src/ClassroomToolkit.Infra/Storage/",
+        "src/ClassroomToolkit.Services/",
+        "tests/ClassroomToolkit.Tests/*History*",
+        "tests/ClassroomToolkit.Tests/*Store*",
+        "tests/ClassroomToolkit.Tests/*Repository*",
+        "tests/ClassroomToolkit.Tests/*Sqlite*"
+      ],
+      "done_when": [
+        "At least one history-oriented business domain uses SQLite as the primary automated path",
+        "Migration, fallback-read, and rollback coverage exist for that domain",
+        "Targeted storage tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~Migration\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-history-domain-selection",
+      "title": "Finalize next history-oriented SQLite domain scope",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-history-domain-extension-tail",
+      "priority": 2,
+      "order": 421,
+      "depends_on": [
+        "sqlite-migration-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Select one concrete history-oriented business domain and align boundary, migration expectation, and rollback scope across execution docs.",
+      "file_hints": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md",
+        "src/ClassroomToolkit.Infra/Storage/"
+      ],
+      "done_when": [
+        "A concrete history-oriented business domain is explicitly selected beyond student workbook",
+        "Domain boundary and migration plus rollback expectation are consistent across progress, handover, and runbook docs"
+      ],
+      "verify": {
+        "commands": [
+          "rg -n \"SQLite|sqlite|history|migration|rollback|student workbook|class roster\" docs/validation/2026-03-06-target-architecture-progress.md docs/handover.md docs/runbooks/migration-rollback-playbook.md"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-history-domain-adapter",
+      "title": "Implement SQLite adapter for the selected history domain",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-history-domain-extension-tail",
+      "priority": 2,
+      "order": 422,
+      "depends_on": [
+        "sqlite-history-domain-selection"
+      ],
+      "status_hint": "completed",
+      "summary": "Implement SQLite-backed adapter path for the selected history-oriented domain with focused read/write and fallback tests.",
+      "file_hints": [
+        "src/ClassroomToolkit.Infra/Storage/",
+        "src/ClassroomToolkit.Services/",
+        "tests/ClassroomToolkit.Tests/*History*",
+        "tests/ClassroomToolkit.Tests/*Store*",
+        "tests/ClassroomToolkit.Tests/*Repository*",
+        "tests/ClassroomToolkit.Tests/*Sqlite*"
+      ],
+      "done_when": [
+        "Selected history-oriented domain has a dedicated SQLite adapter path",
+        "Targeted tests cover at least one primary read path and one write path",
+        "Fallback-read behavior is covered when bridge or source path fails"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite\""
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "sqlite-history-domain-wiring-migration",
+      "title": "Wire selected history-domain SQLite path with migration and rollback coverage",
+      "stage": "storage-tail",
+      "parent_id": "sqlite-history-domain-extension-tail",
+      "priority": 2,
+      "order": 423,
+      "depends_on": [
+        "sqlite-history-domain-adapter"
+      ],
+      "status_hint": "completed",
+      "summary": "Completed Ink history SQLite runtime wiring via sidecar bridge + adapter path, synced migration/rollback docs, and passed the task-targeted History|Store|Repository|Sqlite|Migration filter (98/98).",
+      "file_hints": [
+        "src/ClassroomToolkit.App/App.xaml.cs",
+        "src/ClassroomToolkit.Infra/Storage/",
+        "src/ClassroomToolkit.Infra/Migration/",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md",
+        "tests/ClassroomToolkit.Tests/*Migration*",
+        "tests/ClassroomToolkit.Tests/*History*",
+        "tests/ClassroomToolkit.Tests/*Store*",
+        "tests/ClassroomToolkit.Tests/*Repository*",
+        "tests/ClassroomToolkit.Tests/*Sqlite*"
+      ],
+      "done_when": [
+        "Runtime selection can resolve to the selected history-domain SQLite path",
+        "Migration and rollback expectations are reflected in runbook and synced docs",
+        "Task-targeted history/storage/migration verification passes"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~History|FullyQualifiedName~Store|FullyQualifiedName~Repository|FullyQualifiedName~Sqlite|FullyQualifiedName~Migration\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/runbooks/migration-rollback-playbook.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "ink-gpu-release-strategy-tail",
+      "title": "Close the remaining GPU Ink optional-release strategy gap",
+      "stage": "ink-tail",
+      "parent_id": "ink-tail-stage",
+      "priority": 2,
+      "order": 430,
+      "depends_on": [
+        "ink-capability-guardrails"
+      ],
+      "status_hint": "completed",
+      "summary": "Closed GPU Ink optional-release strategy gap: kept CPU as stable default, enforced dual-gate GPU enablement with safe fallback, aligned release-facing docs, and passed task verify filter (Ink|Renderer|Brush|Gpu: 259/259).",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/",
+        "src/ClassroomToolkit.App/Paint/Brushes/",
+        "tests/ClassroomToolkit.Tests/*Ink*",
+        "tests/ClassroomToolkit.Tests/*Renderer*",
+        "tests/ClassroomToolkit.Tests/*Brush*",
+        "docs/validation/target-architecture-final-acceptance.md"
+      ],
+      "done_when": [
+        "GPU Ink enablement and fallback behavior are explicit and release-facing docs match the implemented policy",
+        "CPU remains the stable default path and GPU failure cannot destabilize the session",
+        "Targeted Ink, renderer, and GPU-related tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~Ink|FullyQualifiedName~Renderer|FullyQualifiedName~Brush|FullyQualifiedName~Gpu\""
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/validation/target-architecture-final-acceptance.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "automated-freeze-recheck-after-gap-closure",
+      "title": "Re-run automated freeze acceptance after remaining automatable gap closure",
+      "stage": "closure",
+      "priority": 3,
+      "order": 440,
+      "depends_on": [
+        "mainwindow-scattered-state-consolidation-tail",
+        "sqlite-history-domain-wiring-migration",
+        "ink-gpu-release-strategy-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Completed post-gap automated freeze recheck by passing ArchitectureDependencyTests (5/5), full Debug (2502/2502), and full Release (2502/2502), with acceptance/progress/handover/matrix docs synced.",
+      "file_hints": [
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "tests/ClassroomToolkit.Tests/ArchitectureDependencyTests.cs"
+      ],
+      "done_when": [
+        "Architecture guard tests pass",
+        "Debug full test suite passes",
+        "Release full test suite passes",
+        "Acceptance, progress, and handover docs reflect the post-gap-closure freeze result"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release"
+        ]
+      },
+      "doc_sync": [
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/validation/2026-03-06-target-architecture-progress.md",
+        "docs/handover.md",
+        "docs/architecture/2026-03-10-interop-direct-dependency-matrix.md"
+      ],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": false
+      }
+    },
+    {
+      "id": "rollcall-remote-hook-action-coordination-tail",
+      "title": "Close RollCall remote-hook action coordination tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 445,
+      "depends_on": [
+        "automated-freeze-recheck-after-gap-closure"
+      ],
+      "status_hint": "completed",
+      "summary": "Extracted RollCallWindow.Input remote roll/group-switch inline branches into RollCallRemoteHookActionExecutionCoordinator and passed targeted plus full Debug verification.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/RollCallWindow.Input.cs",
+        "src/ClassroomToolkit.App/RollCall/RollCallRemoteHookActionExecutionCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/RollCallRemoteHookActionExecutionCoordinatorTests.cs",
+        "tests/ClassroomToolkit.Tests/App/RollCallRemoteHookLifecycleContractTests.cs"
+      ],
+      "done_when": [
+        "Remote roll and group-switch hook handlers no longer keep inline branch logic in RollCallWindow.Input",
+        "Coordinator-level tests cover remote roll and group-switch behavior",
+        "Targeted and full Debug verification pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallRemoteHookActionExecutionCoordinatorTests|FullyQualifiedName~RollCallRemoteHookCoordinatorTests|FullyQualifiedName~RollCallRemoteHookLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "rollcall-remote-hook-stale-guard-tail",
+      "title": "Close RollCall remote-hook stale-generation guard tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 446,
+      "depends_on": [
+        "rollcall-remote-hook-action-coordination-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added a pre-registration active-generation guard in RollCallRemoteHookCoordinator so stale generations skip hook registration and unavailable notification, with focused coverage.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/RollCall/RollCallRemoteHookCoordinator.cs",
+        "tests/ClassroomToolkit.Tests/RollCallRemoteHookCoordinatorTests.cs"
+      ],
+      "done_when": [
+        "TryStartAsync exits early when ShouldKeepActive is already false before registration",
+        "Stale-generation path does not register hooks or emit unavailable notification",
+        "Remote-hook targeted tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallRemoteHookCoordinatorTests|FullyQualifiedName~RollCallRemoteHookActionExecutionCoordinatorTests|FullyQualifiedName~RollCallRemoteHookLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet build ClassroomToolkit.sln -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-wps-hook-unavailable-notification-tail",
+      "title": "Close PaintOverlay WPS-hook unavailable notification tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 447,
+      "depends_on": [
+        "rollcall-remote-hook-stale-guard-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Replaced PaintOverlayWindow WPS hook unavailable bool gate with atomic notification policy and recovery reset wiring, then verified with focused and full Debug tests.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+        "src/ClassroomToolkit.App/Paint/WpsHookUnavailableNotificationPolicy.cs",
+        "tests/ClassroomToolkit.Tests/App/WpsHookUnavailableNotificationPolicyTests.cs"
+      ],
+      "done_when": [
+        "WPS hook unavailable notification uses atomic one-shot policy instead of inline bool gate",
+        "Notification gate resets when WPS hook mode/targets are reset or hook recovers",
+        "Targeted policy and architecture guard tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~WpsHookUnavailableNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "globalhook-lifecycle-hardening-tail",
+      "title": "Close GlobalHookService lifecycle hardening tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 448,
+      "depends_on": [
+        "paintoverlay-wps-hook-unavailable-notification-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Hardened GlobalHookService lifecycle by short-circuiting registration after dispose, guarding active-hook tracking with synchronization, and making stop/unregister paths resilient to non-fatal stop errors.",
+      "file_hints": [
+        "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+        "tests/ClassroomToolkit.Tests/GlobalHookServiceTests.cs"
+      ],
+      "done_when": [
+        "RegisterHookAsync exits safely when service is disposed or inactive",
+        "Dispose and UnregisterAll are idempotent under lifecycle races",
+        "GlobalHookService targeted tests and architecture guard pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "speechservice-unavailable-notification-rearm-tail",
+      "title": "Close SpeechService unavailable-notification rearm tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 449,
+      "depends_on": [
+        "globalhook-lifecycle-hardening-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Replaced SpeechService unavailable bool gate with atomic notification policy and rearm-on-success wiring, plus policy/conformance tests.",
+      "file_hints": [
+        "src/ClassroomToolkit.Services/Speech/SpeechService.cs",
+        "src/ClassroomToolkit.Services/Speech/SpeechServiceUnavailableNotificationPolicy.cs",
+        "src/ClassroomToolkit.Services/Properties/InternalsVisibleTo.cs",
+        "tests/ClassroomToolkit.Tests/SpeechServiceUnavailableNotificationPolicyTests.cs",
+        "tests/ClassroomToolkit.Tests/SpeechServiceLifecycleContractTests.cs"
+      ],
+      "done_when": [
+        "SpeechService failure notification uses atomic one-shot policy",
+        "SpeechService rearms notification gate after successful speak path",
+        "SpeechService targeted and full Debug tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~SpeechServiceUnavailableNotificationPolicyTests|FullyQualifiedName~SpeechServiceLifecycleContractTests|FullyQualifiedName~SpeechServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "rollcall-settings-save-notification-policy-tail",
+      "title": "Close RollCall settings-save notification policy tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 450,
+      "depends_on": [
+        "speechservice-unavailable-notification-rearm-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Aligned RollCallWindow settings-save failure notification flow with SettingsSaveFailureNotificationPolicy/StateUpdater and added source contract coverage.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/RollCallWindow.State.cs",
+        "tests/ClassroomToolkit.Tests/App/RollCallSettingsSaveNotificationContractTests.cs"
+      ],
+      "done_when": [
+        "RollCallWindow settings-save failure path is policy-driven instead of inline boolean branching",
+        "Successful save path resets failure notification via state updater",
+        "Targeted contract/policy tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~RollCallSettingsSaveNotificationContractTests|FullyQualifiedName~SettingsSaveFailureNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "mainwindow-settings-save-notification-contract-tail",
+      "title": "Close MainWindow settings-save notification contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 451,
+      "depends_on": [
+        "rollcall-settings-save-notification-policy-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added MainWindow settings-save notification source contract tests to lock policy-driven flow and successful-save reset behavior.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+        "tests/ClassroomToolkit.Tests/App/MainWindowSettingsSaveNotificationContractTests.cs"
+      ],
+      "done_when": [
+        "MainWindow settings-save path remains policy-driven for failure notification",
+        "MainWindow successful save path keeps state-updater reset contract",
+        "Targeted contract/policy tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~MainWindowSettingsSaveNotificationContractTests|FullyQualifiedName~RollCallSettingsSaveNotificationContractTests|FullyQualifiedName~SettingsSaveFailureNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "globalhook-unavailable-callback-resilience-tail",
+      "title": "Close GlobalHookService unavailable-callback resilience tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 452,
+      "depends_on": [
+        "mainwindow-settings-save-notification-contract-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Hardened GlobalHookService unavailable callback dispatch to isolate recoverable subscriber failures and keep later subscribers running, with fatal exception pass-through preserved.",
+      "file_hints": [
+        "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+        "tests/ClassroomToolkit.Tests/GlobalHookServiceTests.cs"
+      ],
+      "done_when": [
+        "HookUnavailable dispatch iterates invocation list with recoverable callback isolation",
+        "Recoverable callback failures do not block later subscribers",
+        "Fatal callback failures still propagate and tests pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "globalhook-unavailable-callback-contract-tail",
+      "title": "Close GlobalHookService unavailable-callback contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 453,
+      "depends_on": [
+        "globalhook-unavailable-callback-resilience-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added source-level contract tests to lock GlobalHookService HookUnavailable invocation-list dispatch and recoverable callback-failure isolation semantics.",
+      "file_hints": [
+        "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+        "tests/ClassroomToolkit.Tests/GlobalHookServiceLifecycleContractTests.cs"
+      ],
+      "done_when": [
+        "HookUnavailable dispatch keeps invocation-list iteration contract",
+        "Recoverable callback failure isolation behavior is contract-guarded",
+        "Targeted GlobalHookService tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "paintoverlay-wps-hook-unavailable-contract-tail",
+      "title": "Close PaintOverlay WPS-hook unavailable contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 454,
+      "depends_on": [
+        "globalhook-unavailable-callback-contract-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added source contracts to lock PaintOverlay WPS-hook unavailable notification semantics: atomic gate on notify and gate reset on recovery/reset paths.",
+      "file_hints": [
+        "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs",
+        "tests/ClassroomToolkit.Tests/App/PaintOverlayWpsHookUnavailableContractTests.cs"
+      ],
+      "done_when": [
+        "PaintOverlay WPS-hook unavailable notify path keeps atomic policy gate contract",
+        "PaintOverlay WPS-hook recovery/reset paths keep notification rearm contract",
+        "Targeted WPS policy/contract tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~PaintOverlayWpsHookUnavailableContractTests|FullyQualifiedName~WpsHookUnavailableNotificationPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "interop-background-dispatch-error-callback-resilience-tail",
+      "title": "Close Interop background dispatch error-callback resilience tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 455,
+      "depends_on": [
+        "paintoverlay-wps-hook-unavailable-contract-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Hardened InteropBackgroundDispatchExecutor to isolate non-fatal onError callback failures so worker error-handling callbacks cannot crash or block later dispatch work.",
+      "file_hints": [
+        "src/ClassroomToolkit.Interop/Utilities/InteropBackgroundDispatchExecutor.cs",
+        "tests/ClassroomToolkit.Tests/InteropBackgroundDispatchExecutorTests.cs"
+      ],
+      "done_when": [
+        "InteropBackgroundDispatchExecutor worker and queue failure paths invoke onError through safe non-fatal isolation",
+        "onError callback exceptions do not block subsequent background dispatch execution",
+        "Targeted interop dispatch tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "interop-hook-event-dispatch-resilience-tail",
+      "title": "Close Interop hook event-dispatch resilience tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 456,
+      "depends_on": [
+        "interop-background-dispatch-error-callback-resilience-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added InteropEventDispatchPolicy and wired KeyboardHook/WpsSlideshowNavigationHook event dispatch through recoverable-subscriber isolation so one non-fatal subscriber no longer blocks later subscribers.",
+      "file_hints": [
+        "src/ClassroomToolkit.Interop/Utilities/InteropEventDispatchPolicy.cs",
+        "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+        "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs",
+        "tests/ClassroomToolkit.Tests/InteropEventDispatchPolicyTests.cs"
+      ],
+      "done_when": [
+        "KeyboardHook BindingTriggered dispatch uses interop event-dispatch policy",
+        "WpsSlideshowNavigationHook NavigationRequested dispatch uses interop event-dispatch policy",
+        "Recoverable subscriber exceptions are isolated while fatal exceptions still propagate",
+        "Targeted interop event/dispatch tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "interop-hook-event-dispatch-contract-tail",
+      "title": "Close Interop hook event-dispatch contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 457,
+      "depends_on": [
+        "interop-hook-event-dispatch-resilience-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added source-level contracts to lock KeyboardHook/WpsSlideshowNavigationHook event dispatch through InteropEventDispatchPolicy so future edits cannot regress to direct subscriber invocation.",
+      "file_hints": [
+        "tests/ClassroomToolkit.Tests/InteropHookEventDispatchContractTests.cs",
+        "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+        "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs"
+      ],
+      "done_when": [
+        "KeyboardHook source contract enforces InteropEventDispatchPolicy for BindingTriggered dispatch",
+        "WpsSlideshowNavigationHook source contract enforces InteropEventDispatchPolicy for NavigationRequested dispatch",
+        "Targeted interop contract/policy tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "interop-background-dispatch-contract-tail",
+      "title": "Close Interop background-dispatch contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 458,
+      "depends_on": [
+        "interop-hook-event-dispatch-contract-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Added source-level contracts to lock InteropBackgroundDispatchExecutor error paths to InvokeOnErrorSafely so future edits cannot regress to direct onError invocation.",
+      "file_hints": [
+        "tests/ClassroomToolkit.Tests/InteropBackgroundDispatchContractTests.cs",
+        "src/ClassroomToolkit.Interop/Utilities/InteropBackgroundDispatchExecutor.cs"
+      ],
+      "done_when": [
+        "Worker failure path source contract enforces InvokeOnErrorSafely dispatch",
+        "Queue failure path source contract enforces InvokeOnErrorSafely dispatch",
+        "Targeted interop background-dispatch contract tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropBackgroundDispatchContractTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "interop-hook-direct-invoke-ban-contract-tail",
+      "title": "Close Interop hook direct-invoke ban contract tail",
+      "stage": "runtime-tail",
+      "priority": 1,
+      "order": 459,
+      "depends_on": [
+        "interop-background-dispatch-contract-tail"
+      ],
+      "status_hint": "completed",
+      "summary": "Strengthened hook event-dispatch contracts to explicitly ban direct BindingTriggered/NavigationRequested invocation so regressions to raw event invoke are blocked.",
+      "file_hints": [
+        "tests/ClassroomToolkit.Tests/InteropHookEventDispatchContractTests.cs",
+        "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+        "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs"
+      ],
+      "done_when": [
+        "KeyboardHook contract forbids direct BindingTriggered?.Invoke usage",
+        "WpsSlideshowNavigationHook contract forbids direct NavigationRequested?.Invoke usage",
+        "Targeted interop hook contract tests and full Debug suite pass"
+      ],
+      "verify": {
+        "commands": [
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~InteropEventDispatchPolicyTests|FullyQualifiedName~ArchitectureDependencyTests\"",
+          "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug"
+        ]
+      },
+      "doc_sync": [],
+      "mutation": {
+        "allow_split": true,
+        "allow_reorder_within_stage": true
+      }
+    },
+    {
+      "id": "manual-final-regression",
+      "title": "Real manual final regression",
+      "stage": "manual-regression",
+      "priority": 100,
+      "order": 500,
+      "depends_on": [
+        "interop-hook-direct-invoke-ban-contract-tail"
+      ],
+      "status_hint": "omitted",
+      "summary": "Real PPT, WPS, image, PDF, whiteboard, and window-relationship regression in a live environment (omitted in this run by explicit user instruction).",
+      "file_hints": [
+        "docs/validation/target-architecture-final-acceptance.md",
+        "docs/validation/templates/classroom-pilot-acceptance-template.md"
+      ],
+      "done_when": [
+        "Live environment regression is executed by a human"
+      ],
+      "verify": {
+        "commands": []
+      },
+      "doc_sync": [
+        "docs/validation/target-architecture-final-acceptance.md"
+      ],
+      "manual_gate": true,
+      "mutation": {
+        "allow_split": false,
+        "allow_reorder_within_stage": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+trigger:
+- main
+
+pr:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- checkout: self
+
+- powershell: |
+    if (Test-Path "scripts/quality/run-local-quality-gates.ps1") {
+      powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile quick
+    } else {
+      Write-Host "No project quality script found, skip."
+    }
+  displayName: Run local quality gates

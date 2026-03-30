@@ -1,0 +1,23 @@
+<Application x:Class="ClassroomToolkit.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Icons.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/WidgetStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- 全局样式：优化字体渲染 -->
+            <Style TargetType="Window">
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
+

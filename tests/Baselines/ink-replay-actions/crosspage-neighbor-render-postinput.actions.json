@@ -1,0 +1,14 @@
+{
+  "name": "crosspage-neighbor-render-postinput",
+  "actions": [
+    {
+      "type": "DeferredRefreshRequested",
+      "source": "neighbor-render-delayed"
+    },
+    {
+      "type": "DeferredRefreshScheduled",
+      "source": "neighbor-render"
+    }
+  ]
+}
+
