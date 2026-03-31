@@ -417,6 +417,7 @@ public partial class PaintOverlayWindow
             rasterClipBounds = PhotoInkCurrentPageClipPolicy.ResolveBounds(
                 photoInkModeActive: IsPhotoInkModeActive(),
                 crossPageDisplayActive: IsCrossPageDisplayActive(),
+                photoFullscreenActive: IsPhotoFullscreenActive,
                 usePhotoTransform: usePhotoTransform,
                 currentPageScreenRect: currentPageScreenRect,
                 pageWidthDip: GetBitmapDisplayWidthInDip(bitmap),
@@ -424,6 +425,7 @@ public partial class PaintOverlayWindow
             previewClipBounds = PhotoInkPreviewClipPolicy.ResolveBounds(
                 photoInkModeActive: IsPhotoInkModeActive(),
                 crossPageDisplayActive: IsCrossPageDisplayActive(),
+                photoFullscreenActive: IsPhotoFullscreenActive,
                 usePhotoTransform: usePhotoTransform,
                 currentPageScreenRect: currentPageScreenRect,
                 pageWidthDip: GetBitmapDisplayWidthInDip(bitmap),
@@ -1300,4 +1302,3 @@ public partial class PaintOverlayWindow
         return screenRect;
     }
 }
-

@@ -12,6 +12,7 @@ public sealed class PhotoInkPreviewClipPolicyTests
         var rect = PhotoInkPreviewClipPolicy.ResolveBounds(
             photoInkModeActive: true,
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             usePhotoTransform: true,
             currentPageScreenRect: new Rect(32, 128, 960, 540),
             pageWidthDip: 1280,
@@ -26,6 +27,7 @@ public sealed class PhotoInkPreviewClipPolicyTests
         var rect = PhotoInkPreviewClipPolicy.ResolveBounds(
             photoInkModeActive: true,
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             usePhotoTransform: true,
             currentPageScreenRect: Rect.Empty,
             pageWidthDip: 1280,
@@ -40,6 +42,22 @@ public sealed class PhotoInkPreviewClipPolicyTests
         var rect = PhotoInkPreviewClipPolicy.ResolveBounds(
             photoInkModeActive: true,
             crossPageDisplayActive: false,
+            photoFullscreenActive: false,
+            usePhotoTransform: true,
+            currentPageScreenRect: new Rect(32, 128, 960, 540),
+            pageWidthDip: 1280,
+            pageHeightDip: 720);
+
+        rect.Should().Be(Rect.Empty);
+    }
+
+    [Fact]
+    public void ResolveBounds_ShouldReturnEmpty_WhenPhotoFullscreenIsActive()
+    {
+        var rect = PhotoInkPreviewClipPolicy.ResolveBounds(
+            photoInkModeActive: true,
+            crossPageDisplayActive: true,
+            photoFullscreenActive: true,
             usePhotoTransform: true,
             currentPageScreenRect: new Rect(32, 128, 960, 540),
             pageWidthDip: 1280,

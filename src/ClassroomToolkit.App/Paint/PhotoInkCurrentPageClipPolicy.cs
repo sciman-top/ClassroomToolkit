@@ -7,13 +7,15 @@ internal static class PhotoInkCurrentPageClipPolicy
     internal static Rect ResolveBounds(
         bool photoInkModeActive,
         bool crossPageDisplayActive,
+        bool photoFullscreenActive,
         bool usePhotoTransform,
         Rect currentPageScreenRect,
         double pageWidthDip,
         double pageHeightDip)
     {
         if (!photoInkModeActive
-            || !crossPageDisplayActive)
+            || !crossPageDisplayActive
+            || photoFullscreenActive)
         {
             return Rect.Empty;
         }
