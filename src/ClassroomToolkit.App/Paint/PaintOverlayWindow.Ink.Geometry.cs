@@ -192,9 +192,12 @@ public partial class PaintOverlayWindow
             PaintShapeType.None => null,
             PaintShapeType.Line => new Line(),
             PaintShapeType.DashedLine => new Line(),
+            PaintShapeType.Arrow => new WpfPath(),
+            PaintShapeType.DashedArrow => new WpfPath(),
             PaintShapeType.Rectangle => new WpfRectangle(),
             PaintShapeType.RectangleFill => new WpfRectangle(),
             PaintShapeType.Ellipse => new Ellipse(),
+            PaintShapeType.Triangle => new WpfPath(),
             PaintShapeType.Path => new WpfPath(),
             _ => null
         };
@@ -206,37 +209,93 @@ public partial class PaintOverlayWindow
         stroke.Freeze();
         shape.Stroke = stroke;
         shape.StrokeThickness = Math.Max(InkGeometryDefaults.MinShapeStrokeThicknessDip, _brushSize);
-        shape.StrokeStartLineCap = PenLineCap.Round;
-        shape.StrokeEndLineCap = PenLineCap.Round;
-        shape.StrokeLineJoin = PenLineJoin.Round;
-        if (_shapeType == PaintShapeType.DashedLine)
+        shape.StrokeStartLineCap = PenLineCap.Flat;
+        shape.StrokeEndLineCap = PenLineCap.Flat;
+        shape.StrokeLineJoin = PenLineJoin.Miter;
+        if (_shapeType == PaintShapeType.DashedLine || _shapeType == PaintShapeType.DashedArrow)
         {
             shape.StrokeDashArray = new DoubleCollection { 6, 4 };
         }
-        shape.Fill = null;
+        if (_shapeType == PaintShapeType.Arrow || _shapeType == PaintShapeType.DashedArrow)
+        {
+            var fillOnly = new SolidColorBrush(EffectiveBrushColor());
+            fillOnly.Freeze();
+            shape.Fill = fillOnly;
+            shape.Stroke = null;
+            shape.StrokeDashArray = null;
+            shape.IsHitTestVisible = false;
+            return;
+        }
+
+        if (_shapeType == PaintShapeType.RectangleFill || _shapeType == PaintShapeType.DashedArrow)
+        {
+            var fill = new SolidColorBrush(EffectiveBrushColor());
+            fill.Freeze();
+            shape.Fill = fill;
+        }
+        else
+        {
+            shape.Fill = null;
+        }
         shape.IsHitTestVisible = false;
     }
 
-    private static void UpdateShape(Shape shape, WpfPoint start, WpfPoint end)
+    private void UpdateShape(Shape shape, PaintShapeType type, WpfPoint start, WpfPoint end)
     {
         var left = Math.Min(start.X, end.X);
         var top = Math.Min(start.Y, end.Y);
         var width = Math.Abs(end.X - start.X);
         var height = Math.Abs(end.Y - start.Y);
-        if (shape is Line line)
+        if (type == PaintShapeType.Line || type == PaintShapeType.DashedLine)
         {
+            if (shape is not Line line)
+            {
+                return;
+            }
             line.X1 = start.X;
             line.Y1 = start.Y;
             line.X2 = end.X;
             line.Y2 = end.Y;
+            return;
         }
-        else
+
+        if (type == PaintShapeType.Arrow)
         {
-            Canvas.SetLeft(shape, left);
-            Canvas.SetTop(shape, top);
-            shape.Width = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, width);
-            shape.Height = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, height);
+            if (shape is not WpfPath path)
+            {
+                return;
+            }
+            path.Data = BuildArrowGeometry(start, end);
+            return;
         }
+        if (type == PaintShapeType.DashedArrow)
+        {
+            if (shape is not WpfPath path)
+            {
+                return;
+            }
+            path.Data = BuildDashedArrowGeometry(start, end);
+            return;
+        }
+
+        if (type == PaintShapeType.Triangle)
+        {
+            if (shape is not WpfPath path)
+            {
+                return;
+            }
+            path.Data = BuildTrianglePreviewGeometry(start, end);
+            return;
+        }
+
+        if (shape is not FrameworkElement element)
+        {
+            return;
+        }
+        Canvas.SetLeft(element, left);
+        Canvas.SetTop(element, top);
+        element.Width = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, width);
+        element.Height = Math.Max(InkGeometryDefaults.MinShapeRectSideDip, height);
     }
 
     private Geometry? BuildShapeGeometry(PaintShapeType type, WpfPoint start, WpfPoint end)
@@ -246,6 +305,8 @@ public partial class PaintOverlayWindow
         {
             PaintShapeType.Line => new LineGeometry(start, end),
             PaintShapeType.DashedLine => new LineGeometry(start, end),
+            PaintShapeType.Arrow => BuildArrowGeometry(start, end),
+            PaintShapeType.DashedArrow => BuildDashedArrowGeometry(start, end),
             PaintShapeType.Rectangle => new RectangleGeometry(rect),
             PaintShapeType.RectangleFill => new RectangleGeometry(rect),
             PaintShapeType.Ellipse => new EllipseGeometry(rect),
@@ -259,17 +320,185 @@ public partial class PaintOverlayWindow
         brush.Freeze();
         var pen = new MediaPen(brush, Math.Max(InkGeometryDefaults.MinPenThicknessDip, _brushSize))
         {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
+            StartLineCap = PenLineCap.Flat,
+            EndLineCap = PenLineCap.Flat,
+            LineJoin = PenLineJoin.Miter
         };
-        if (_shapeType == PaintShapeType.DashedLine)
+        if (_shapeType == PaintShapeType.DashedLine || _shapeType == PaintShapeType.DashedArrow)
         {
             pen.DashStyle = new DashStyle(new double[] { 6, 4 }, 0);
-            pen.DashCap = PenLineCap.Round;
+            pen.DashCap = PenLineCap.Flat;
         }
         pen.Freeze();
         return pen;
+    }
+
+    private static Geometry BuildTrianglePreviewGeometry(WpfPoint p1, WpfPoint p2)
+    {
+        var geometry = new StreamGeometry();
+        using var ctx = geometry.Open();
+        ctx.BeginFigure(p1, isFilled: false, isClosed: false);
+        ctx.LineTo(p2, isStroked: true, isSmoothJoin: false);
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private static Geometry BuildTriangleGeometry(WpfPoint p1, WpfPoint p2, WpfPoint p3)
+    {
+        var geometry = new StreamGeometry();
+        using var ctx = geometry.Open();
+        ctx.BeginFigure(p1, isFilled: false, isClosed: true);
+        ctx.LineTo(p2, isStroked: true, isSmoothJoin: false);
+        ctx.LineTo(p3, isStroked: true, isSmoothJoin: false);
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private static Geometry BuildTriangleInteractivePreviewGeometry(WpfPoint p1, WpfPoint p2, WpfPoint cursor)
+    {
+        var geometry = new StreamGeometry();
+        using var ctx = geometry.Open();
+        ctx.BeginFigure(p1, isFilled: false, isClosed: false);
+        ctx.LineTo(p2, isStroked: true, isSmoothJoin: false);
+        ctx.LineTo(cursor, isStroked: true, isSmoothJoin: false);
+        ctx.LineTo(p1, isStroked: true, isSmoothJoin: false);
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private Geometry BuildArrowGeometry(WpfPoint start, WpfPoint end)
+    {
+        var direction = end - start;
+        var length = direction.Length;
+        if (length < InkGeometryDefaults.MinSelectionRectSideDip)
+        {
+            return new LineGeometry(start, end);
+        }
+
+        direction.Normalize();
+        var perpendicular = new Vector(-direction.Y, direction.X);
+        double minHeadLength = Math.Max(_brushSize * 3.0, 9.0);
+        double maxHeadLength = Math.Max(minHeadLength, 28.0);
+        double headLength = Math.Clamp(length * 0.3, minHeadLength, maxHeadLength);
+        double shaftHalfWidth = Math.Max(_brushSize * 0.5, 2.0);
+        double headHalfWidth = Math.Max(headLength * 0.58, shaftHalfWidth * 1.8);
+        var headBase = end - (direction * headLength);
+        var notch = headBase + (direction * Math.Max(headLength * 0.32, shaftHalfWidth * 1.5));
+
+        var shaftTopStart = start + (perpendicular * shaftHalfWidth);
+        var shaftTopEnd = notch + (perpendicular * shaftHalfWidth);
+        var shaftBottomEnd = notch - (perpendicular * shaftHalfWidth);
+        var shaftBottomStart = start - (perpendicular * shaftHalfWidth);
+
+        var headTop = headBase + (perpendicular * headHalfWidth);
+        var headBottom = headBase - (perpendicular * headHalfWidth);
+
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            // Single closed outline removes antialias seam between shaft/head pieces.
+            ctx.BeginFigure(shaftTopStart, isFilled: true, isClosed: true);
+            ctx.LineTo(shaftTopEnd, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(headTop, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(headBottom, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(shaftBottomEnd, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(shaftBottomStart, isStroked: true, isSmoothJoin: false);
+        }
+        geometry.Freeze();
+        return geometry;
+    }
+
+    private Geometry BuildDashedArrowGeometry(WpfPoint start, WpfPoint end)
+    {
+        var direction = end - start;
+        var length = direction.Length;
+        if (length < InkGeometryDefaults.MinSelectionRectSideDip)
+        {
+            return new LineGeometry(start, end);
+        }
+
+        direction.Normalize();
+        var perpendicular = new Vector(-direction.Y, direction.X);
+        double minHeadLength = Math.Max(_brushSize * 3.0, 9.0);
+        double maxHeadLength = Math.Max(minHeadLength, 28.0);
+        double headLength = Math.Clamp(length * 0.3, minHeadLength, maxHeadLength);
+        double shaftHalfWidth = Math.Max(_brushSize * 0.5, 2.0);
+        double headHalfWidth = Math.Max(headLength * 0.58, shaftHalfWidth * 1.8);
+        var headBase = end - (direction * headLength);
+        var notch = headBase + (direction * Math.Max(headLength * 0.32, shaftHalfWidth * 1.5));
+
+        var headTop = headBase + (perpendicular * headHalfWidth);
+        var headBottom = headBase - (perpendicular * headHalfWidth);
+
+        var group = new GeometryGroup
+        {
+            FillRule = FillRule.Nonzero
+        };
+        var shaftLength = Math.Max(0.0, (notch - start).Length);
+        var strokeThickness = Math.Max(InkGeometryDefaults.MinShapeStrokeThicknessDip, _brushSize);
+        var dashLength = Math.Max(2.0, strokeThickness * 6.0);
+        var gapLength = Math.Max(1.0, strokeThickness * 4.0);
+        var segments = new List<(double Start, double End)>();
+        for (double cursor = 0.0; cursor < shaftLength; cursor += (dashLength + gapLength))
+        {
+            var segmentStartDistance = cursor;
+            var segmentEndDistance = Math.Min(cursor + dashLength, shaftLength);
+            if ((segmentEndDistance - segmentStartDistance) <= 0.1)
+            {
+                continue;
+            }
+            segments.Add((segmentStartDistance, segmentEndDistance));
+        }
+
+        // Draw all leading dashed shaft segments, reserve the last segment for
+        // a unified "shaft+head" polygon to eliminate seam holes.
+        for (int i = 0; i < Math.Max(0, segments.Count - 1); i++)
+        {
+            var segmentStartDistance = segments[i].Start;
+            var segmentEndDistance = segments[i].End;
+
+            var segmentStart = start + (direction * segmentStartDistance);
+            var segmentEnd = start + (direction * segmentEndDistance);
+            var segmentTopStart = segmentStart + (perpendicular * shaftHalfWidth);
+            var segmentTopEnd = segmentEnd + (perpendicular * shaftHalfWidth);
+            var segmentBottomEnd = segmentEnd - (perpendicular * shaftHalfWidth);
+            var segmentBottomStart = segmentStart - (perpendicular * shaftHalfWidth);
+
+            var segment = new StreamGeometry();
+            using (var segmentCtx = segment.Open())
+            {
+                segmentCtx.BeginFigure(segmentTopStart, isFilled: true, isClosed: true);
+                segmentCtx.LineTo(segmentTopEnd, isStroked: true, isSmoothJoin: false);
+                segmentCtx.LineTo(segmentBottomEnd, isStroked: true, isSmoothJoin: false);
+                segmentCtx.LineTo(segmentBottomStart, isStroked: true, isSmoothJoin: false);
+            }
+            segment.Freeze();
+            group.Children.Add(segment);
+        }
+
+        var connectorStartDistance = segments.Count > 0 ? segments[^1].Start : 0.0;
+        var connectorStart = start + (direction * connectorStartDistance);
+        var connectorTopStart = connectorStart + (perpendicular * shaftHalfWidth);
+        var connectorBottomStart = connectorStart - (perpendicular * shaftHalfWidth);
+        var connectorTopEnd = notch + (perpendicular * shaftHalfWidth);
+        var connectorBottomEnd = notch - (perpendicular * shaftHalfWidth);
+
+        var connectorAndHead = new StreamGeometry();
+        using (var ctx = connectorAndHead.Open())
+        {
+            ctx.BeginFigure(connectorTopStart, isFilled: true, isClosed: true);
+            ctx.LineTo(connectorTopEnd, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(headTop, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(end, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(headBottom, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(connectorBottomEnd, isStroked: true, isSmoothJoin: false);
+            ctx.LineTo(connectorBottomStart, isStroked: true, isSmoothJoin: false);
+        }
+        connectorAndHead.Freeze();
+        group.Children.Add(connectorAndHead);
+        group.Freeze();
+        return group;
     }
 
     private Geometry? BuildEraserGeometry(WpfPoint start, WpfPoint end)
@@ -295,4 +524,3 @@ public partial class PaintOverlayWindow
         return path.GetWidenedPathGeometry(pen);
     }
 }
-

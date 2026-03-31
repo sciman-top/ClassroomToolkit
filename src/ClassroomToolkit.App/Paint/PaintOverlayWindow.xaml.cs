@@ -94,6 +94,9 @@ public partial class PaintOverlayWindow : Window
     private bool _isDrawingShape;
     private WpfPoint _shapeStart;
     private Shape? _activeShape;
+    private bool _triangleFirstEdgeCommitted;
+    private WpfPoint _trianglePoint1;
+    private WpfPoint _trianglePoint2;
     private bool _isRegionSelecting;
     private WpfPoint _regionStart;
     private WpfRectangle? _regionRect;
@@ -715,7 +718,11 @@ public partial class PaintOverlayWindow : Window
 
     public void SetShapeType(PaintShapeType type)
     {
-        _shapeType = type == PaintShapeType.RectangleFill ? PaintShapeType.Rectangle : type;
+        _shapeType = type;
+        if (_shapeType != PaintShapeType.Triangle)
+        {
+            ResetTriangleState();
+        }
     }
 
 
@@ -1409,4 +1416,3 @@ public partial class PaintOverlayWindow : Window
     }
 
 }
-

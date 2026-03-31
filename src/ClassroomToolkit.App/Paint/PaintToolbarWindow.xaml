@@ -12,6 +12,51 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="{x:Null}">
+    <Window.Resources>
+        <ContextMenu x:Key="ShapeMenu"
+                     Placement="Bottom">
+            <MenuItem Header="实直线" Tag="Line" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeLineSolid}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="虚直线" Tag="DashedLine" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeLineDashed}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="实箭头" Tag="Arrow" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeArrowSolid}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="虚箭头" Tag="DashedArrow" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeArrowDashed}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="空心矩形" Tag="Rectangle" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeRectOutline}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="实心矩形" Tag="RectangleFill" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeRectFill}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="圆形/椭圆" Tag="Ellipse" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeEllipse}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="任意三角形" Tag="Triangle" Click="OnShapeMenuItemClick">
+                <MenuItem.Icon>
+                    <Path Data="{StaticResource Icon_ShapeTriangle}" Fill="{StaticResource Brush_Text_Primary}" Width="16" Height="16" Stretch="Uniform"/>
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </Window.Resources>
     <!-- 容器：深色胶囊工具条 -->
     <Border x:Name="ToolbarContainer"
             Background="{StaticResource Brush_Surface_Primary}"
@@ -98,6 +143,15 @@
             <!-- 5. 常用操作 -->
             <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销上一步（PDF/图片支持跨页）">
                 <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </Button>
+
+            <Button x:Name="ShapeButton"
+                    Style="{StaticResource Style_IconButton}"
+                    Click="OnShapeButtonClick"
+                    ToolTip="图形工具（长按可切换图形）"
+                    ContextMenu="{StaticResource ShapeMenu}"
+                    behaviors:LongPressBehavior.Command="{Binding OpenShapeMenuCommand}">
+                <Path x:Name="ShapeButtonIconPath" Data="{StaticResource Icon_ShapeLineSolid}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
 
             <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="切换白板（长按可调颜色）" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">

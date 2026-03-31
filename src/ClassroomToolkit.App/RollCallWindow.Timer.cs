@@ -14,12 +14,19 @@ public partial class RollCallWindow
 
     private void OnTimerStartPauseClick(object sender, RoutedEventArgs e)
     {
+        var wasRunning = _viewModel.TimerRunning;
         _viewModel.ToggleTimer();
+        if (!wasRunning && _viewModel.TimerRunning)
+        {
+            // Avoid consuming paused-time delta on the first running tick.
+            _stopwatch.Restart();
+        }
     }
 
     private void OnTimerResetClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ResetTimer();
+        _stopwatch.Restart();
     }
 
     private void OnTimerSetClick(object sender, RoutedEventArgs e)
@@ -31,6 +38,7 @@ public partial class RollCallWindow
         if (TryShowDialogSafe(dialog, nameof(TimerSetDialog)))
         {
             _viewModel.SetCountdown(dialog.Minutes, dialog.Seconds);
+            _stopwatch.Restart();
         }
     }
 

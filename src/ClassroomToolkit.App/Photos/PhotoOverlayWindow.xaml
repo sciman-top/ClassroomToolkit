@@ -41,14 +41,13 @@
         </TextBlock>
 
         <!-- 底部关闭按钮 -->
-        <Button x:Name="CloseButtonLeft" 
-                Style="{StaticResource Style_FullscreenShellCloseButton}" 
-                Click="OnCloseClick" 
-                Opacity="0.5"
+        <Button x:Name="CloseButtonLeft"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Click="OnCloseClick"
+                Opacity="0.6"
                 Width="64"
                 Height="64"
-                ToolTip="关闭全屏预览"
-                Visibility="Collapsed">
+                ToolTip="关闭全屏预览">
             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
         </Button>

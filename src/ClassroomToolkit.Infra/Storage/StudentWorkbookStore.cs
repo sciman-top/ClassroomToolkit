@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using ClassroomToolkit.Domain.Models;
+using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.Infra.Storage;
@@ -8,10 +9,12 @@ public sealed record StudentWorkbookLoadResult(StudentWorkbook Workbook, bool Cr
 
 public sealed class StudentWorkbookStore
 {
+    public const string DefaultClassName = "1班";
     public const string RollStateSheetName = "_ROLL_STATE";
     public const string RollStateColumn = "ROLL_STATE_JSON";
 
-    private static readonly string[] DefaultHeaders = ClassRoster.DefaultColumns;
+    private static readonly string[] DefaultHeaders = { "学号", "姓名", "分组" };
+    private static readonly string[] CanonicalColumns = { "学号", "姓名", "分组", ClassRoster.InternalRowIdColumn };
     private const string InternalRowIdColumn = ClassRoster.InternalRowIdColumn;
 
     private static readonly Dictionary<string, string> HeaderAliases = new(StringComparer.OrdinalIgnoreCase)
@@ -39,14 +42,14 @@ public sealed class StudentWorkbookStore
         if (!File.Exists(path))
         {
             var template = CreateTemplateWorkbook();
-            Save(template.Workbook, path, template.RollStateJson);
+            TrySaveWorkbook(template.Workbook, path, template.RollStateJson);
             return template with { CreatedTemplate = true };
         }
 
         try
         {
             using var workbook = new XLWorkbook(path);
-            var rollStateJson = ExtractRollState(workbook);
+            var rollStateJson = ExtractRollState(workbook, out var rollStateNeedsRepair);
             var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var sheet in workbook.Worksheets)
@@ -59,12 +62,19 @@ public sealed class StudentWorkbookStore
                 classes[roster.ClassName] = roster;
             }
 
-            var resultWorkbook = new StudentWorkbook(classes, classes.Keys.FirstOrDefault());
-            return new StudentWorkbookLoadResult(resultWorkbook, false, rollStateJson);
+            var normalizedWorkbook = NormalizeWorkbook(classes, out var workbookNeedsRepair);
+            var normalizedRollStateJson = EnsureRollStateJson(rollStateJson);
+            if (rollStateNeedsRepair || workbookNeedsRepair || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
+            {
+                TrySaveWorkbook(normalizedWorkbook, path, normalizedRollStateJson);
+            }
+
+            return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             var template = CreateTemplateWorkbook();
+            TrySaveWorkbook(template.Workbook, path, template.RollStateJson);
             return template with { CreatedTemplate = false };
         }
     }
@@ -97,12 +107,10 @@ public sealed class StudentWorkbookStore
                     var sheet = xl.Worksheets.Add(pair.Key);
                     WriteWorksheet(sheet, pair.Value);
                 }
-                if (!string.IsNullOrWhiteSpace(rollStateJson))
-                {
-                    var stateSheet = xl.Worksheets.Add(RollStateSheetName);
-                    stateSheet.Cell(1, 1).Value = RollStateColumn;
-                    stateSheet.Cell(2, 1).Value = rollStateJson;
-                }
+                var stateSheet = xl.Worksheets.Add(RollStateSheetName);
+                stateSheet.Cell(1, 1).Value = RollStateColumn;
+                stateSheet.Cell(2, 1).Value = EnsureRollStateJson(rollStateJson);
+                stateSheet.Column(1).Width = 100;
                 xl.SaveAs(tempPath);
             }
             if (File.Exists(path))
@@ -142,26 +150,46 @@ public sealed class StudentWorkbookStore
         }
     }
 
+    private void TrySaveWorkbook(StudentWorkbook workbook, string path, string? rollStateJson)
+    {
+        try
+        {
+            Save(workbook, path, rollStateJson);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // Best-effort self-heal write. Keep runtime available even when workbook file is locked.
+        }
+    }
+
     private static StudentWorkbookLoadResult CreateTemplateWorkbook()
     {
         var students = new List<StudentRecord>
         {
-            StudentRecord.Create("101", "张三", "班级1", "一组"),
-            StudentRecord.Create("102", "李四", "班级1", "二组"),
-            StudentRecord.Create("103", "王五", "班级1", "一组"),
+            StudentRecord.Create("01", "张三", DefaultClassName, "A"),
+            StudentRecord.Create("02", "李四", DefaultClassName, "B"),
+            StudentRecord.Create("03", "王五", DefaultClassName, "C"),
         };
-        var roster = new ClassRoster("班级1", students);
-        var workbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["班级1"] = roster }, "班级1");
-        return new StudentWorkbookLoadResult(workbook, false, null);
+        var roster = new ClassRoster(DefaultClassName, students, CanonicalColumns);
+        var workbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { [DefaultClassName] = roster }, DefaultClassName);
+        var rollStateJson = EnsureRollStateJson(null);
+        return new StudentWorkbookLoadResult(workbook, false, rollStateJson);
     }
 
-    private static string? ExtractRollState(XLWorkbook workbook)
+    private static string? ExtractRollState(XLWorkbook workbook, out bool needsRepair)
     {
+        needsRepair = false;
         if (!workbook.TryGetWorksheet(RollStateSheetName, out var sheet))
         {
+            needsRepair = true;
             return null;
         }
-        var value = sheet.Cell(2, 1).GetString();
+        var header = sheet.Cell(1, 1).GetString().Trim();
+        if (!header.Equals(RollStateColumn, StringComparison.OrdinalIgnoreCase))
+        {
+            needsRepair = true;
+        }
+        var value = sheet.Cell(2, 1).GetString().Trim();
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
@@ -235,6 +263,10 @@ public sealed class StudentWorkbookStore
             foreach (var column in columnOrder)
             {
                 if (IsDefaultColumn(column) || column.Equals(InternalRowIdColumn, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (column.Equals("班级", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -322,7 +354,7 @@ public sealed class StudentWorkbookStore
             }
             rowIndex++;
         }
-        sheet.Columns().AdjustToContents();
+        ApplyColumnWidths(sheet, columns);
     }
 
     private static bool IsDefaultColumn(string column)
@@ -332,21 +364,17 @@ public sealed class StudentWorkbookStore
 
     private static List<string> BuildWriteColumns(ClassRoster roster)
     {
-        var columns = roster.ColumnOrder?.ToList() ?? new List<string>();
-        if (columns.Count == 0)
+        var columns = CanonicalColumns.ToList();
+        foreach (var column in roster.ColumnOrder)
         {
-            columns.AddRange(DefaultHeaders);
-        }
-        foreach (var column in DefaultHeaders)
-        {
+            if (IsCanonicalColumn(column) || column.Equals("班级", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             if (!columns.Contains(column, StringComparer.OrdinalIgnoreCase))
             {
                 columns.Add(column);
             }
-        }
-        if (!columns.Contains(InternalRowIdColumn, StringComparer.OrdinalIgnoreCase))
-        {
-            columns.Add(InternalRowIdColumn);
         }
         foreach (var student in roster.Students)
         {
@@ -359,5 +387,192 @@ public sealed class StudentWorkbookStore
             }
         }
         return columns;
+    }
+
+    private static StudentWorkbook NormalizeWorkbook(
+        Dictionary<string, ClassRoster> classes,
+        out bool needsRepair)
+    {
+        needsRepair = false;
+        var normalized = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var pair in classes)
+        {
+            var className = NormalizeClassName(pair.Key);
+            if (string.IsNullOrWhiteSpace(className))
+            {
+                needsRepair = true;
+                continue;
+            }
+
+            var roster = NormalizeRoster(className, pair.Value, out var rosterRepaired);
+            needsRepair |= rosterRepaired;
+            if (!string.Equals(className, pair.Key, StringComparison.Ordinal))
+            {
+                needsRepair = true;
+            }
+
+            normalized[className] = roster;
+        }
+
+        if (normalized.Count == 0)
+        {
+            needsRepair = true;
+            return CreateTemplateWorkbook().Workbook;
+        }
+
+        return new StudentWorkbook(normalized, normalized.Keys.FirstOrDefault());
+    }
+
+    private static ClassRoster NormalizeRoster(
+        string className,
+        ClassRoster roster,
+        out bool repaired)
+    {
+        repaired = false;
+        var students = new List<StudentRecord>();
+        var discoveredColumns = new List<string>();
+
+        foreach (var column in roster.ColumnOrder)
+        {
+            var normalizedColumn = IdentityUtils.NormalizeText(column);
+            if (string.IsNullOrWhiteSpace(normalizedColumn))
+            {
+                repaired = true;
+                continue;
+            }
+            if (normalizedColumn.Equals("班级", StringComparison.OrdinalIgnoreCase))
+            {
+                repaired = true;
+                continue;
+            }
+            if (!IsCanonicalColumn(normalizedColumn) && !discoveredColumns.Contains(normalizedColumn, StringComparer.OrdinalIgnoreCase))
+            {
+                discoveredColumns.Add(normalizedColumn);
+            }
+        }
+
+        foreach (var student in roster.Students)
+        {
+            var studentId = IdentityUtils.CompactText(student.StudentId);
+            var name = IdentityUtils.NormalizeText(student.Name);
+            if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(name))
+            {
+                repaired = true;
+                continue;
+            }
+
+            var groupName = IdentityUtils.NormalizeGroupName(student.GroupName);
+            var rowId = string.IsNullOrWhiteSpace(student.RowId)
+                ? Guid.NewGuid().ToString("N")
+                : student.RowId.Trim();
+            if (!string.Equals(rowId, student.RowId, StringComparison.Ordinal)
+                || !string.Equals(student.ClassName, className, StringComparison.Ordinal)
+                || !string.Equals(studentId, student.StudentId, StringComparison.Ordinal)
+                || !string.Equals(name, student.Name, StringComparison.Ordinal)
+                || !string.Equals(groupName, student.GroupName, StringComparison.Ordinal))
+            {
+                repaired = true;
+            }
+
+            var extras = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in student.ExtraFields)
+            {
+                var extraKey = IdentityUtils.NormalizeText(pair.Key);
+                if (string.IsNullOrWhiteSpace(extraKey)
+                    || IsCanonicalColumn(extraKey)
+                    || extraKey.Equals("班级", StringComparison.OrdinalIgnoreCase))
+                {
+                    repaired = true;
+                    continue;
+                }
+                var extraValue = IdentityUtils.NormalizeText(pair.Value);
+                if (string.IsNullOrWhiteSpace(extraValue))
+                {
+                    continue;
+                }
+                extras[extraKey] = extraValue;
+                if (!discoveredColumns.Contains(extraKey, StringComparer.OrdinalIgnoreCase))
+                {
+                    discoveredColumns.Add(extraKey);
+                }
+            }
+
+            students.Add(StudentRecord.Create(studentId, name, className, groupName, rowId, extras));
+        }
+
+        var columns = CanonicalColumns.ToList();
+        foreach (var extra in discoveredColumns)
+        {
+            if (!columns.Contains(extra, StringComparer.OrdinalIgnoreCase))
+            {
+                columns.Add(extra);
+            }
+        }
+
+        if (!SequenceEqualIgnoreCase(roster.ColumnOrder, columns))
+        {
+            repaired = true;
+        }
+
+        return new ClassRoster(className, students, columns);
+    }
+
+    private static string NormalizeClassName(string className)
+    {
+        var normalized = IdentityUtils.NormalizeText(className);
+        return string.IsNullOrWhiteSpace(normalized) ? DefaultClassName : normalized;
+    }
+
+    private static bool SequenceEqualIgnoreCase(
+        IReadOnlyList<string> source,
+        IReadOnlyList<string> target)
+    {
+        if (source.Count != target.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (!string.Equals(source[i], target[i], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static bool IsCanonicalColumn(string column)
+    {
+        return CanonicalColumns.Contains(column, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string EnsureRollStateJson(string? rollStateJson)
+    {
+        if (!string.IsNullOrWhiteSpace(rollStateJson))
+        {
+            return rollStateJson;
+        }
+
+        return RollStateSerializer.SerializeWorkbookStates(
+            new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static void ApplyColumnWidths(IXLWorksheet sheet, IReadOnlyList<string> columns)
+    {
+        for (var i = 0; i < columns.Count; i++)
+        {
+            var column = columns[i];
+            var width = column switch
+            {
+                "学号" => 12,
+                "姓名" => 16,
+                "分组" => 12,
+                InternalRowIdColumn => 38,
+                _ => 20
+            };
+            sheet.Column(i + 1).Width = width;
+        }
     }
 }

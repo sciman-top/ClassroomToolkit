@@ -22,6 +22,7 @@ public partial class PaintToolbarWindow : Window
     private byte _brushOpacity = 255;
     private byte _boardOpacity = 255;
     private PaintShapeType _shapeType = PaintShapeType.Line;
+    private PaintShapeType _lastShapeType = PaintShapeType.Line;
     private bool _boardActive;
     private MediaColor _boardColor = Colors.White;
     private PaintOverlayWindow? _overlay;
@@ -43,6 +44,7 @@ public partial class PaintToolbarWindow : Window
     public ICommand OpenQuickColor1Command { get; }
     public ICommand OpenQuickColor2Command { get; }
     public ICommand OpenQuickColor3Command { get; }
+    public ICommand OpenShapeMenuCommand { get; }
 
     public double BrushSize => _brushSize;
     public double EraserSize => _eraserSize;
@@ -61,6 +63,7 @@ public partial class PaintToolbarWindow : Window
         OpenQuickColor1Command = new RelayCommand(() => OpenQuickColorDialog(0));
         OpenQuickColor2Command = new RelayCommand(() => OpenQuickColorDialog(1));
         OpenQuickColor3Command = new RelayCommand(() => OpenQuickColorDialog(2));
+        OpenShapeMenuCommand = new RelayCommand(OpenShapeMenu);
         DataContext = this;
 
         CursorButton.IsChecked = false;
@@ -69,6 +72,7 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(0, Colors.Black);
         SetQuickColorSlot(1, Colors.Red);
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
+        UpdateShapeButtonIcon();
         PreviewKeyDown += OnPreviewKeyDown;
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
@@ -107,9 +111,11 @@ public partial class PaintToolbarWindow : Window
             _eraserSize = settings.EraserSize;
             _brushOpacity = settings.BrushOpacity;
             _boardOpacity = 255;
-            _shapeType = settings.ShapeType == PaintShapeType.RectangleFill
-                ? PaintShapeType.Rectangle
-                : settings.ShapeType;
+            _shapeType = settings.ShapeType;
+            if (_shapeType != PaintShapeType.None)
+            {
+                _lastShapeType = _shapeType;
+            }
             _boardColor = settings.BoardColor;
             SetQuickColorSlot(0, settings.QuickColor1);
             SetQuickColorSlot(1, settings.QuickColor2);
@@ -118,6 +124,7 @@ public partial class PaintToolbarWindow : Window
             UpdateQuickColorSelection(settings.BrushColor);
             ApplyUiScale(settings.PaintToolbarScale);
             PhotoOpenButton.IsEnabled = true;
+            UpdateShapeButtonIcon();
         }
         finally
         {
@@ -263,6 +270,38 @@ public partial class PaintToolbarWindow : Window
         SafeActionExecutionExecutor.TryExecute(
             () => UndoRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: undo callback failed: {ex.Message}"));
+    }
+
+    private void OnShapeButtonClick(object sender, RoutedEventArgs e)
+    {
+        var shapeType = ResolveEffectiveShapeType();
+        ApplyShapeType(shapeType);
+        UpdateToolButtons(PaintToolMode.Shape);
+    }
+
+    private void OpenShapeMenu()
+    {
+        if (ShapeButton.ContextMenu == null)
+        {
+            return;
+        }
+        ShapeButton.ContextMenu.PlacementTarget = ShapeButton;
+        ShapeButton.ContextMenu.IsOpen = true;
+    }
+
+    private void OnShapeMenuItemClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.MenuItem menuItem || menuItem.Tag is not string tag)
+        {
+            return;
+        }
+        if (!Enum.TryParse<PaintShapeType>(tag, ignoreCase: true, out var type))
+        {
+            return;
+        }
+
+        ApplyShapeType(type);
+        UpdateToolButtons(PaintToolMode.Shape);
     }
 
     private void OnBoardClick(object sender, RoutedEventArgs e)
@@ -549,6 +588,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         _shapeType = PaintShapeType.None;
+        UpdateShapeButtonIcon();
         if (_overlay != null)
         {
             _overlay.SetShapeType(_shapeType);
@@ -556,6 +596,74 @@ public partial class PaintToolbarWindow : Window
         SafeActionExecutionExecutor.TryExecute(
             () => ShapeTypeChanged?.Invoke(_shapeType),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: shape callback failed: {ex.Message}"));
+    }
+
+    private PaintShapeType ResolveEffectiveShapeType()
+    {
+        if (_shapeType != PaintShapeType.None)
+        {
+            return _shapeType;
+        }
+
+        return _lastShapeType == PaintShapeType.None
+            ? PaintShapeType.Line
+            : _lastShapeType;
+    }
+
+    private void ApplyShapeType(PaintShapeType type)
+    {
+        var normalized = NormalizeShapeType(type);
+        if (normalized == PaintShapeType.None)
+        {
+            return;
+        }
+
+        _shapeType = normalized;
+        _lastShapeType = normalized;
+        UpdateShapeButtonIcon();
+        if (_overlay != null)
+        {
+            _overlay.SetShapeType(_shapeType);
+        }
+        SafeActionExecutionExecutor.TryExecute(
+            () => ShapeTypeChanged?.Invoke(_shapeType),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: shape callback failed: {ex.Message}"));
+    }
+
+    private static PaintShapeType NormalizeShapeType(PaintShapeType type)
+    {
+        return type switch
+        {
+            PaintShapeType.RectangleFill => PaintShapeType.RectangleFill,
+            PaintShapeType.None => PaintShapeType.None,
+            _ => type
+        };
+    }
+
+    private void UpdateShapeButtonIcon()
+    {
+        if (ShapeButtonIconPath == null)
+        {
+            return;
+        }
+
+        var type = ResolveEffectiveShapeType();
+        var resourceKey = type switch
+        {
+            PaintShapeType.DashedLine => "Icon_ShapeLineDashed",
+            PaintShapeType.Arrow => "Icon_ShapeArrowSolid",
+            PaintShapeType.DashedArrow => "Icon_ShapeArrowDashed",
+            PaintShapeType.Rectangle => "Icon_ShapeRectOutline",
+            PaintShapeType.RectangleFill => "Icon_ShapeRectFill",
+            PaintShapeType.Ellipse => "Icon_ShapeEllipse",
+            PaintShapeType.Triangle => "Icon_ShapeTriangle",
+            _ => "Icon_ShapeLineSolid"
+        };
+
+        if (TryFindResource(resourceKey) is Geometry geometry)
+        {
+            ShapeButtonIconPath.Data = geometry;
+        }
     }
 
     private void OnToolbarDrag(object sender, MouseButtonEventArgs e)
@@ -616,4 +724,3 @@ public partial class PaintToolbarWindow : Window
     }
 
 }
-

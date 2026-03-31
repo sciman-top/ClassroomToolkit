@@ -5,8 +5,11 @@ public enum PaintShapeType
     None = 0,
     Line,
     DashedLine,
+    Arrow,
+    DashedArrow,
     Rectangle,
     RectangleFill,
     Ellipse,
+    Triangle,
     Path
 }

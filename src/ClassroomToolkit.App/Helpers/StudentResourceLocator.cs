@@ -7,11 +7,13 @@ public static class StudentResourceLocator
 {
     private const string WorkbookFileName = "students.xlsx";
     private const string PhotoFolderName = "student_photos";
+    private const string DefaultPhotoClassFolderName = "1班";
     private const string SolutionFileName = "ClassroomToolkit.sln";
 
     public static string ResolveStudentWorkbookPath()
     {
         var root = ResolveResourceRoot();
+        TryEnsureDirectory(root);
         return Path.Combine(root, WorkbookFileName);
     }
 
@@ -20,6 +22,7 @@ public static class StudentResourceLocator
         var root = ResolveResourceRoot();
         var path = Path.Combine(root, PhotoFolderName);
         TryEnsureDirectory(path);
+        TryEnsureDirectory(Path.Combine(path, DefaultPhotoClassFolderName));
         return path;
     }
 

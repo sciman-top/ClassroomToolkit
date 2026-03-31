@@ -20,10 +20,14 @@ public partial class PaintSettingsDialog : Window
     private static readonly (string Label, PaintShapeType Type)[] ShapeChoices =
     {
         ("无", PaintShapeType.None),
-        ("直线", PaintShapeType.Line),
-        ("虚线", PaintShapeType.DashedLine),
-        ("矩形", PaintShapeType.Rectangle),
-        ("圆形", PaintShapeType.Ellipse)
+        ("实直线", PaintShapeType.Line),
+        ("虚直线", PaintShapeType.DashedLine),
+        ("实箭头", PaintShapeType.Arrow),
+        ("虚箭头", PaintShapeType.DashedArrow),
+        ("空心矩形", PaintShapeType.Rectangle),
+        ("实心矩形", PaintShapeType.RectangleFill),
+        ("圆形/椭圆", PaintShapeType.Ellipse),
+        ("任意三角形", PaintShapeType.Triangle)
     };
     private static readonly (string Label, PaintBrushStyle Style)[] BrushStyleChoices =
     {
@@ -1560,10 +1564,6 @@ public partial class PaintSettingsDialog : Window
 
     private void SelectShapeType(PaintShapeType type)
     {
-        if (type == PaintShapeType.RectangleFill)
-        {
-            type = PaintShapeType.Rectangle;
-        }
         foreach (var item in ShapeCombo.Items.OfType<WpfComboBoxItem>())
         {
             if (item.Tag is PaintShapeType tagged && tagged == type)

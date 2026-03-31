@@ -220,12 +220,14 @@
                               Background="Transparent" BorderThickness="0" 
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.CanContentScroll="False"
                               Foreground="{StaticResource Brush_Text_Primary}"
                               ItemContainerStyle="{StaticResource Style_ManagementThumbnailListViewItem}">
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel IsItemsHost="True" />
+                                <WrapPanel IsItemsHost="True"
+                                           Orientation="Horizontal"
+                                           Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollContentPresenter}}"/>
                             </ItemsPanelTemplate>
                         </ListView.ItemsPanel>
                         <ListView.ItemTemplate>
@@ -297,4 +299,3 @@
         </Grid>
     </Border>
 </Window>
-

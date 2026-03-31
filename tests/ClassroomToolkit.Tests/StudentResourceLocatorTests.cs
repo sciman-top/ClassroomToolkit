@@ -52,6 +52,16 @@ public sealed class StudentResourceLocatorTests
         }
     }
 
+    [Fact]
+    public void ResolveStudentPhotoRoot_ShouldEnsureDefaultClassFolderExists()
+    {
+        var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
+        var defaultClassFolder = Path.Combine(photoRoot, "1班");
+
+        Directory.Exists(photoRoot).Should().BeTrue();
+        Directory.Exists(defaultClassFolder).Should().BeTrue();
+    }
+
     private static string CreateTempDirectory()
     {
         return TestPathHelper.CreateDirectory("ctool_locator");

@@ -502,10 +502,6 @@ public sealed class AppSettingsService
     {
         if (Enum.TryParse<PaintShapeType>(raw, true, out var parsed))
         {
-            if (parsed == PaintShapeType.RectangleFill)
-            {
-                return PaintShapeType.Rectangle;
-            }
             return parsed;
         }
         return PaintShapeType.None;

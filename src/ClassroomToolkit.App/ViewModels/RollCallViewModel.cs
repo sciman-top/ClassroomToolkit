@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
@@ -57,7 +58,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     {
         _dataPath = dataPath;
         _workbookUseCase = workbookUseCase ?? throw new ArgumentNullException(nameof(workbookUseCase));
-        _photoResolver = new StudentPhotoResolver("student_photos");
+        _photoResolver = new StudentPhotoResolver(StudentResourceLocator.ResolveStudentPhotoRoot());
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);

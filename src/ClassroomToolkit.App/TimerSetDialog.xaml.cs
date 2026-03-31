@@ -70,12 +70,22 @@ public partial class TimerSetDialog : Window
 
     private void OnMinutesUpMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (_updating)
+        {
+            return;
+        }
+        IncrementMinutes();
         StartRepeatTimer(isIncrement: true);
         e.Handled = true;
     }
 
     private void OnMinutesDownMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (_updating)
+        {
+            return;
+        }
+        DecrementMinutes();
         StartRepeatTimer(isIncrement: false);
         e.Handled = true;
     }
@@ -154,7 +164,9 @@ public partial class TimerSetDialog : Window
 
     private void SetMinutes(int minutes, bool updateSlider)
     {
+        minutes = Math.Clamp(minutes, 0, MaxMinutes);
         _updating = true;
+        Minutes = minutes;
         MinutesBox.Text = minutes.ToString();
         if (updateSlider)
         {
@@ -177,7 +189,9 @@ public partial class TimerSetDialog : Window
 
     private int TryParseMinutesOrDefault()
     {
-        return int.TryParse(MinutesBox.Text, out var minutes) ? minutes : 0;
+        return int.TryParse(MinutesBox.Text, out var minutes)
+            ? Math.Clamp(minutes, 0, MaxMinutes)
+            : Minutes;
     }
 
     private void OnPresetMinutesClick(object sender, RoutedEventArgs e)

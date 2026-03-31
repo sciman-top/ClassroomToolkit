@@ -32,16 +32,17 @@
     <PackageReference Include="PdfiumViewer.Native.x86_64.no_v8-no_xfa" Version="2018.4.8.256" />
     <PackageReference Include="System.Speech" Version="8.0.0" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="Exists('..\..\students.xlsx')">
     <Content Include="..\..\students.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup Condition="Exists('..\..\student_photos')">
     <Content Include="..\..\student_photos\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 </Project>
-
 
 
 

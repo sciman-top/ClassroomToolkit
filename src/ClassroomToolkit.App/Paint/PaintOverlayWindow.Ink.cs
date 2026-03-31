@@ -583,17 +583,21 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        if (_shapeType == PaintShapeType.Triangle)
+        {
+            BeginTriangleShape(position);
+            return;
+        }
+
         PushHistory();
         CaptureStrokeContext();
         _shapeStart = position;
-        _activeShape = CreateShape(_shapeType);
+        EnsureActiveShapePreview();
         if (_activeShape == null)
         {
             return;
         }
-        ApplyShapeStyle(_activeShape);
-        PreviewCanvas.Children.Add(_activeShape);
-        UpdateShape(_activeShape, _shapeStart, position);
+        UpdateShape(_activeShape!, _shapeType, _shapeStart, position);
         _isDrawingShape = true;
     }
 
@@ -603,7 +607,20 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        UpdateShape(_activeShape, _shapeStart, position);
+        if (_shapeType == PaintShapeType.Triangle)
+        {
+            if (_triangleFirstEdgeCommitted)
+            {
+                if (_activeShape is WpfPath path)
+                {
+                    path.Data = BuildTriangleInteractivePreviewGeometry(_trianglePoint1, _trianglePoint2, position);
+                }
+                return;
+            }
+            UpdateShape(_activeShape, PaintShapeType.Triangle, _trianglePoint1, position);
+            return;
+        }
+        UpdateShape(_activeShape, _shapeType, _shapeStart, position);
     }
 
     private void EndShape(WpfPoint position)
@@ -612,13 +629,13 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var geometry = BuildShapeGeometry(_shapeType, _shapeStart, position);
-        if (geometry != null)
+        if (_shapeType == PaintShapeType.Triangle)
         {
-            var pen = BuildShapePen();
-            CommitGeometryStroke(geometry, pen);
-            RecordShapeStroke(geometry, pen);
+            EndTriangleShape(position);
+            return;
         }
+        var geometry = BuildShapeGeometry(_shapeType, _shapeStart, position);
+        CommitShapeGeometry(geometry, _shapeType);
         ClearShapePreview();
         var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
@@ -639,6 +656,97 @@ public partial class PaintOverlayWindow
             _activeShape = null;
         }
         _isDrawingShape = false;
+        ResetTriangleState();
+    }
+
+    private void EnsureActiveShapePreview()
+    {
+        if (_activeShape == null)
+        {
+            _activeShape = CreateShape(_shapeType);
+            if (_activeShape == null)
+            {
+                return;
+            }
+            ApplyShapeStyle(_activeShape);
+            PreviewCanvas.Children.Add(_activeShape);
+        }
+    }
+
+    private void CommitShapeGeometry(Geometry? geometry, PaintShapeType shapeType)
+    {
+        if (geometry == null)
+        {
+            return;
+        }
+
+        if (shapeType == PaintShapeType.RectangleFill
+            || shapeType == PaintShapeType.Arrow
+            || shapeType == PaintShapeType.DashedArrow)
+        {
+            CommitGeometryFill(geometry, EffectiveBrushColor());
+            RecordBrushStroke(geometry);
+            return;
+        }
+
+        var pen = BuildShapePen();
+        CommitGeometryStroke(geometry, pen);
+        RecordShapeStroke(geometry, pen);
+    }
+
+    private void BeginTriangleShape(WpfPoint position)
+    {
+        if (!_triangleFirstEdgeCommitted)
+        {
+            PushHistory();
+            CaptureStrokeContext();
+            _trianglePoint1 = position;
+        }
+
+        EnsureActiveShapePreview();
+        if (_activeShape is WpfPath path)
+        {
+            path.Data = _triangleFirstEdgeCommitted
+                ? BuildTriangleInteractivePreviewGeometry(_trianglePoint1, _trianglePoint2, position)
+                : BuildTrianglePreviewGeometry(_trianglePoint1, position);
+        }
+        _isDrawingShape = true;
+    }
+
+    private void EndTriangleShape(WpfPoint position)
+    {
+        if (!_triangleFirstEdgeCommitted)
+        {
+            _trianglePoint2 = position;
+            _triangleFirstEdgeCommitted = true;
+            _isDrawingShape = false;
+            if (_activeShape is WpfPath path)
+            {
+                path.Data = BuildTrianglePreviewGeometry(_trianglePoint1, _trianglePoint2);
+            }
+            return;
+        }
+
+        var triangle = BuildTriangleGeometry(_trianglePoint1, _trianglePoint2, position);
+        CommitShapeGeometry(triangle, PaintShapeType.Triangle);
+        ClearShapePreview();
+        ResetTriangleState();
+        var photoInkModeActive = IsPhotoInkModeActive();
+        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+                photoInkModeActive,
+                RasterImage.RenderTransform,
+                _photoContentTransform))
+        {
+            RequestInkRedraw();
+        }
+        NotifyInkStateChanged(updateActiveSnapshot: false);
+    }
+
+    private void ResetTriangleState()
+    {
+        _triangleFirstEdgeCommitted = false;
+        _trianglePoint1 = new WpfPoint();
+        _trianglePoint2 = new WpfPoint();
     }
 
     private void HideEraserPreview()
@@ -1376,5 +1484,3 @@ public partial class PaintOverlayWindow
         _inkMonitor.Interval = TimeSpan.FromMilliseconds(targetMs);
     }
 }
-
-
