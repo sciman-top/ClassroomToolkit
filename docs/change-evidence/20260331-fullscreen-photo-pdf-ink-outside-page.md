@@ -92,3 +92,19 @@
 - test: PASS（3028 passed）
 - contract/invariant: PASS（24 passed）
 - hotspot: PASS
+
+[增量修复-清空后跨页回灌旧笔迹(二)]
+问题描述=问题仍复现；跨页时旧笔迹再次出现。
+根因=清空流程之前直接调用 InkPersistenceService 写空 sidecar，未经过 InkHistorySqliteStoreAdapter。启用 SQLite 历史后端时，跨页加载可从 sqlite snapshot 读回旧笔迹。
+修复策略=
+1) ClearPhotoInkStateAfterClearAll 收敛为“清空当前页笔迹”（与工具栏文案一致）。
+2) 清理当前页 cache + 邻页运行时可视/缓存状态，防止 stale frame 回灌。
+3) 清空持久化时改为 PersistInkHistorySnapshot(..., empty)，统一清 sidecar + sqlite snapshot。
+变更文件=
+- src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs
+
+[增量复验]
+- build: PASS
+- test: PASS（3028 passed；首次因 FileLoggerProviderTests 文件锁竞争失败，复跑通过）
+- contract/invariant: PASS（24 passed）
+- hotspot: PASS
