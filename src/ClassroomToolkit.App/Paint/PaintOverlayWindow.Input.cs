@@ -855,6 +855,7 @@ public partial class PaintOverlayWindow
         }
         return CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: IsCrossPageDisplayActive(),
+            photoFullscreenActive: IsPhotoFullscreenActive,
             mode: _mode,
             strokeInProgress: _strokeInProgress,
             switchedPageThisFrame: switchedPageThisFrame,
@@ -1604,7 +1605,6 @@ public partial class PaintOverlayWindow
     {
     }
 }
-
 
 
 

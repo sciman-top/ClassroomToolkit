@@ -54,3 +54,23 @@
   exit_code: 0
   key_output: commands listed (exec/review/login/...)
   timestamp: 2026-03-31
+
+[增量修复-全屏页面外输入抑制]
+问题描述=全屏后页面外移动不出笔，回到页面边缘出现沿边线的异常笔迹。
+根因=CrossPageOutOfPageMoveSuppressionPolicy 在跨页显示+画笔进行中时，强制抑制页面外 move；导致页面外轨迹被丢弃，恢复到页面内时仅留下边界附近几何。
+修复策略=
+1) 为 CrossPageOutOfPageMoveSuppressionPolicy 增加 photoFullscreenActive 入参。
+2) photoFullscreenActive=true 时直接不抑制页面外 move。
+3) 在 PaintOverlayWindow.Input 的调用处传入 IsPhotoFullscreenActive。
+4) 增加回归测试 ShouldSuppress_ShouldReturnFalse_WhenPhotoFullscreenIsActive。
+变更文件=
+- src/ClassroomToolkit.App/Paint/CrossPageOutOfPageMoveSuppressionPolicy.cs
+- src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs
+- tests/ClassroomToolkit.Tests/CrossPageOutOfPageMoveSuppressionPolicyTests.cs
+
+[增量复验]
+- targeted test: PASS（16 passed）
+- build: PASS
+- test: PASS（3028 passed）
+- contract/invariant: PASS（24 passed）
+- hotspot: PASS

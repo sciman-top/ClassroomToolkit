@@ -10,6 +10,7 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
     {
         var suppress = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Brush,
             strokeInProgress: true,
             switchedPageThisFrame: false,
@@ -25,6 +26,7 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
     {
         var suppress = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Brush,
             strokeInProgress: true,
             switchedPageThisFrame: false,
@@ -40,6 +42,7 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
     {
         var suppressByTool = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Eraser,
             strokeInProgress: true,
             switchedPageThisFrame: false,
@@ -48,6 +51,7 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
             pointerInsideCurrentPageRect: false);
         var suppressByState = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Brush,
             strokeInProgress: false,
             switchedPageThisFrame: false,
@@ -64,6 +68,7 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
     {
         var suppress = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Brush,
             strokeInProgress: true,
             switchedPageThisFrame: true,
@@ -79,10 +84,27 @@ public sealed class CrossPageOutOfPageMoveSuppressionPolicyTests
     {
         var suppress = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
             crossPageDisplayActive: true,
+            photoFullscreenActive: false,
             mode: PaintToolMode.Brush,
             strokeInProgress: true,
             switchedPageThisFrame: false,
             recentSwitchGraceActive: true,
+            hasCurrentPageRect: true,
+            pointerInsideCurrentPageRect: false);
+
+        suppress.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuppress_ShouldReturnFalse_WhenPhotoFullscreenIsActive()
+    {
+        var suppress = CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
+            crossPageDisplayActive: true,
+            photoFullscreenActive: true,
+            mode: PaintToolMode.Brush,
+            strokeInProgress: true,
+            switchedPageThisFrame: false,
+            recentSwitchGraceActive: false,
             hasCurrentPageRect: true,
             pointerInsideCurrentPageRect: false);
 

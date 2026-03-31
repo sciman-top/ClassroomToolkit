@@ -4,6 +4,7 @@ internal static class CrossPageOutOfPageMoveSuppressionPolicy
 {
     internal static bool ShouldSuppress(
         bool crossPageDisplayActive,
+        bool photoFullscreenActive,
         PaintToolMode mode,
         bool strokeInProgress,
         bool switchedPageThisFrame,
@@ -12,6 +13,7 @@ internal static class CrossPageOutOfPageMoveSuppressionPolicy
         bool pointerInsideCurrentPageRect)
     {
         if (!crossPageDisplayActive
+            || photoFullscreenActive
             || mode != PaintToolMode.Brush
             || !strokeInProgress
             || switchedPageThisFrame
