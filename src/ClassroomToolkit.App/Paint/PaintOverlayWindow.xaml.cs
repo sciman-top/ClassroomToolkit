@@ -761,6 +761,92 @@ public partial class PaintOverlayWindow : Window
             _inkStrokes.Clear();
             NotifyInkStateChanged(updateActiveSnapshot: true);
         }
+
+        if (_photoModeActive)
+        {
+            ClearPhotoInkStateAfterClearAll();
+        }
+    }
+
+    private void ClearPhotoInkStateAfterClearAll()
+    {
+        if (string.IsNullOrWhiteSpace(_currentDocumentPath))
+        {
+            return;
+        }
+
+        var sourcePath = _currentDocumentPath;
+        var touchedPages = new HashSet<int>();
+        foreach (var (cacheKey, _) in _photoCache.Snapshot())
+        {
+            if (!InkExportSnapshotBuilder.TryParseCacheKey(cacheKey, out var cachedSourcePath, out var pageIndex))
+            {
+                continue;
+            }
+            if (!string.Equals(cachedSourcePath, sourcePath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            touchedPages.Add(pageIndex);
+            _photoCache.Remove(cacheKey);
+            InvalidateNeighborInkCache(cacheKey);
+        }
+
+        if (_currentPageIndex > 0)
+        {
+            touchedPages.Add(_currentPageIndex);
+        }
+
+        if (_inkSaveEnabled && _inkPersistence != null)
+        {
+            _ = SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    var existingDoc = _inkPersistence.LoadInkForFile(sourcePath);
+                    if (existingDoc?.Pages == null)
+                    {
+                        return;
+                    }
+
+                    foreach (var page in existingDoc.Pages)
+                    {
+                        if (page.PageIndex > 0)
+                        {
+                            touchedPages.Add(page.PageIndex);
+                        }
+                    }
+                });
+        }
+
+        foreach (var pageIndex in touchedPages)
+        {
+            var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, _photoDocumentIsPdf);
+            if (!string.IsNullOrWhiteSpace(cacheKey))
+            {
+                _photoCache.Remove(cacheKey);
+                InvalidateNeighborInkCache(cacheKey);
+            }
+
+            MarkInkPageModified(sourcePath, pageIndex, "empty", Array.Empty<InkStrokeData>());
+            ClearInkWalSnapshot(sourcePath, pageIndex);
+
+            if (_inkSaveEnabled && _inkPersistence != null)
+            {
+                _ = SafeActionExecutionExecutor.TryExecute(
+                    () =>
+                    {
+                        _inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>());
+                        _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
+                    });
+            }
+        }
+
+        _neighborInkCache.Clear();
+        _neighborInkRenderPending.Clear();
+        _neighborInkSidecarLoadPending.Clear();
+        ClearNeighborInkVisuals(clearSlotIdentity: true);
+        RequestCrossPageDisplayUpdate(CrossPageUpdateSources.InkStateChanged);
     }
 
     public MediaColor CurrentBrushColor => _brushColor;

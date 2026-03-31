@@ -74,3 +74,21 @@
 - test: PASS（3028 passed）
 - contract/invariant: PASS（24 passed）
 - hotspot: PASS
+
+[增量修复-清空后跨页回灌旧笔迹]
+问题描述=一键清空后跨页书写，路径跨过页缝时旧笔迹重新出现。
+根因=ClearAll 仅清理当前绘制层与当前页运行时笔迹，未同步清理 photo 文档级缓存/邻页 ink 可视状态；跨页切换时邻页缓存与历史帧重新参与渲染。
+修复策略=
+1) ClearAll 在 photo 模式新增 ClearPhotoInkStateAfterClearAll()。
+2) 清理当前文档所有缓存页（_photoCache + neighbor cache invalidation）。
+3) 重置邻页 ink 运行时状态（_neighborInkCache/_neighborInkRenderPending/_neighborInkSidecarLoadPending + ClearNeighborInkVisuals）。
+4) 启用保存时同步写空页并移除复合输出，避免旧 sidecar 再次回灌。
+5) 触发一次 CrossPageDisplay 更新，确保 UI 与缓存状态一致。
+变更文件=
+- src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs
+
+[增量复验]
+- build: PASS
+- test: PASS（3028 passed）
+- contract/invariant: PASS（24 passed）
+- hotspot: PASS
