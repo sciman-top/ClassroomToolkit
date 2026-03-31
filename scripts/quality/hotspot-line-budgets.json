@@ -1,0 +1,17 @@
+[
+  { "path": "src/ClassroomToolkit.App/MainWindow.xaml.cs", "maxLines": 900 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs", "maxLines": 1450 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs", "maxLines": 1650 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs", "maxLines": 1420 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs", "maxLines": 2380 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.cs", "maxLines": 1340 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Transform.cs", "maxLines": 1100 },
+  { "path": "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml.cs", "maxLines": 1880 },
+  { "path": "src/ClassroomToolkit.App/Paint/Brushes/VariableWidthBrushRenderer.Geometry.cs", "maxLines": 1450 },
+  { "path": "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml.cs", "maxLines": 1540 },
+  { "path": "src/ClassroomToolkit.App/Ink/InkExportService.cs", "maxLines": 1240 },
+  { "path": "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs", "maxLines": 380 },
+  { "path": "src/ClassroomToolkit.Interop/Presentation/Win32PresentationResolver.cs", "maxLines": 370 },
+  { "path": "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs", "maxLines": 370 },
+  { "path": "src/ClassroomToolkit.App/Windowing/OverlayNavigationFocusPolicy.cs", "maxLines": 220 }
+]
