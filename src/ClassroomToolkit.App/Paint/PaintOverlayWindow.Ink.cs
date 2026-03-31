@@ -696,33 +696,56 @@ public partial class PaintOverlayWindow
 
     private void BeginTriangleShape(WpfPoint position)
     {
-        if (!_triangleFirstEdgeCommitted)
+        if (!_triangleAnchorSet)
         {
             PushHistory();
             CaptureStrokeContext();
             _trianglePoint1 = position;
+            _triangleAnchorSet = true;
         }
 
         EnsureActiveShapePreview();
         if (_activeShape is WpfPath path)
         {
-            path.Data = _triangleFirstEdgeCommitted
-                ? BuildTriangleInteractivePreviewGeometry(_trianglePoint1, _trianglePoint2, position)
-                : BuildTrianglePreviewGeometry(_trianglePoint1, position);
+            if (_triangleFirstEdgeCommitted)
+            {
+                path.Data = BuildTriangleInteractivePreviewGeometry(_trianglePoint1, _trianglePoint2, position);
+            }
+            else
+            {
+                path.Data = BuildTrianglePreviewGeometry(_trianglePoint1, position);
+            }
         }
         _isDrawingShape = true;
     }
 
     private void EndTriangleShape(WpfPoint position)
     {
+        const double triangleTapThresholdDip = 2.5;
+        if (!_triangleAnchorSet)
+        {
+            return;
+        }
+
         if (!_triangleFirstEdgeCommitted)
         {
+            if ((_trianglePoint1 - position).Length < triangleTapThresholdDip)
+            {
+                // First tap only establishes anchor; do not commit a degenerate first edge.
+                _isDrawingShape = false;
+                if (_activeShape is WpfPath path)
+                {
+                    path.Data = BuildTrianglePreviewGeometry(_trianglePoint1, _trianglePoint1);
+                }
+                return;
+            }
+
             _trianglePoint2 = position;
             _triangleFirstEdgeCommitted = true;
             _isDrawingShape = false;
-            if (_activeShape is WpfPath path)
+            if (_activeShape is WpfPath previewPath)
             {
-                path.Data = BuildTrianglePreviewGeometry(_trianglePoint1, _trianglePoint2);
+                previewPath.Data = BuildTrianglePreviewGeometry(_trianglePoint1, _trianglePoint2);
             }
             return;
         }
@@ -744,9 +767,34 @@ public partial class PaintOverlayWindow
 
     private void ResetTriangleState()
     {
+        _triangleAnchorSet = false;
         _triangleFirstEdgeCommitted = false;
         _trianglePoint1 = new WpfPoint();
         _trianglePoint2 = new WpfPoint();
+    }
+
+    private bool HasPendingTriangleDraft()
+    {
+        if (_shapeType != PaintShapeType.Triangle)
+        {
+            return false;
+        }
+
+        return _triangleAnchorSet
+               || _triangleFirstEdgeCommitted
+               || _isDrawingShape
+               || _activeShape != null;
+    }
+
+    private void CancelPendingTriangleDraft(string reason)
+    {
+        if (!HasPendingTriangleDraft())
+        {
+            return;
+        }
+
+        Debug.WriteLine($"[TriangleDraft] canceled: {reason}");
+        ClearShapePreview();
     }
 
     private void HideEraserPreview()

@@ -95,6 +95,7 @@ public partial class PaintOverlayWindow : Window
     private WpfPoint _shapeStart;
     private Shape? _activeShape;
     private bool _triangleFirstEdgeCommitted;
+    private bool _triangleAnchorSet;
     private WpfPoint _trianglePoint1;
     private WpfPoint _trianglePoint2;
     private bool _isRegionSelecting;
@@ -333,6 +334,7 @@ public partial class PaintOverlayWindow : Window
         Loaded += OnOverlayLoaded;
         IsVisibleChanged += OnOverlayVisibleChanged;
         SourceInitialized += OnOverlaySourceInitialized;
+        Deactivated += OnOverlayDeactivated;
         OverlayRoot.MouseLeftButtonDown += OnMouseDown;
         OverlayRoot.MouseMove += OnMouseMove;
         OverlayRoot.MouseLeftButtonUp += OnMouseUp;
@@ -449,6 +451,11 @@ public partial class PaintOverlayWindow : Window
         UpdateFocusAcceptance();
     }
 
+    private void OnOverlayDeactivated(object? sender, EventArgs e)
+    {
+        CancelPendingTriangleDraft("overlay-deactivated");
+    }
+
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
         Interlocked.Exchange(ref _overlayClosed, 1);
@@ -458,6 +465,7 @@ public partial class PaintOverlayWindow : Window
         Loaded -= OnOverlayLoaded;
         IsVisibleChanged -= OnOverlayVisibleChanged;
         SourceInitialized -= OnOverlaySourceInitialized;
+        Deactivated -= OnOverlayDeactivated;
         MouseWheel -= OnMouseWheel;
         SizeChanged -= OnWindowSizeChanged;
         StateChanged -= OnWindowStateChanged;
@@ -507,6 +515,11 @@ public partial class PaintOverlayWindow : Window
 
     public void SetMode(PaintToolMode mode)
     {
+        if (mode != PaintToolMode.Shape)
+        {
+            CancelPendingTriangleDraft($"mode-switch:{_mode}->{mode}");
+        }
+
         _mode = mode;
         DispatchSessionEvent(new SwitchToolModeEvent(MapSessionToolMode(mode)));
         UpdateOverlayHitTestVisibility();
@@ -718,6 +731,11 @@ public partial class PaintOverlayWindow : Window
 
     public void SetShapeType(PaintShapeType type)
     {
+        if (_shapeType == PaintShapeType.Triangle)
+        {
+            CancelPendingTriangleDraft($"shape-switch:{_shapeType}->{type}");
+        }
+
         _shapeType = type;
         if (_shapeType != PaintShapeType.Triangle)
         {
