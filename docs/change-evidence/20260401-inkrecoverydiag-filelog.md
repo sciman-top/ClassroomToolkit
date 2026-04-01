@@ -1,0 +1,9 @@
+规则ID=R1,R2,R4,R6,R8
+影响模块=src/ClassroomToolkit.App/Paint + src/ClassroomToolkit.App
+当前落点=PaintOverlayWindow 诊断日志双写（Debug + ILogger）+ PaintWindowFactory logger 注入
+目标归宿=CTOOL_INK_RECOVERY_DIAG 打开后，InkRecoveryDiag 直接进入 app_*.log，复现链路可检索定位
+迁移批次=2026-04-01-03
+风险等级=低
+执行命令=dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"; powershell -File scripts/quality/check-hotspot-line-budgets.ps1
+验证证据=build 0 error; 全量测试 3054 通过; contract/invariant 24 通过; hotspot PASS
+回滚动作=git checkout -- src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs src/ClassroomToolkit.App/Paint/PaintWindowFactory.cs docs/change-evidence/20260401-inkrecoverydiag-filelog.md

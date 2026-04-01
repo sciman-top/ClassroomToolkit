@@ -1,0 +1,9 @@
+规则ID=R1,R2,R4,R6,R8
+影响模块=src/ClassroomToolkit.Infra/Logging + src/ClassroomToolkit.App
+当前落点=FileLoggerProvider 启动清理策略 + App 启动注入参数 + FileLoggerProviderTests 回归覆盖
+目标归宿=每次应用启动默认清空历史 app 日志，仅保留本次运行日志，降低诊断检索噪音
+迁移批次=2026-04-01-02
+风险等级=低
+执行命令=dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"; powershell -File scripts/quality/check-hotspot-line-budgets.ps1
+验证证据=build 0 error; 全量测试 3054 通过; contract/invariant 24 通过; hotspot PASS; 新增 reset enabled/disabled 两条 FileLoggerProvider 行为测试通过
+回滚动作=git checkout -- src/ClassroomToolkit.Infra/Logging/FileLoggerProvider.cs src/ClassroomToolkit.App/App.xaml.cs tests/ClassroomToolkit.Tests/FileLoggerProviderTests.cs docs/change-evidence/20260401-log-session-reset.md
