@@ -14,21 +14,27 @@ public class FileLoggerProvider : ILoggerProvider
 
     private readonly string _logDirectory;
     private readonly Func<DateTime> _nowProvider;
+    private readonly bool _resetExistingLogsOnStartup;
     private readonly ConcurrentDictionary<string, FileLogger> _loggers = new();
     private readonly BlockingCollection<LogQueueItem> _messageQueue = new();
     private readonly Task _processQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _disposeState;
 
-    public FileLoggerProvider(string logDirectory, Func<DateTime>? nowProvider = null)
+    public FileLoggerProvider(
+        string logDirectory,
+        Func<DateTime>? nowProvider = null,
+        bool resetExistingLogsOnStartup = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
         _logDirectory = logDirectory;
         _nowProvider = nowProvider ?? (() => DateTime.Now);
+        _resetExistingLogsOnStartup = resetExistingLogsOnStartup;
         if (!Directory.Exists(_logDirectory))
         {
             Directory.CreateDirectory(_logDirectory);
         }
+        TryResetSessionLogs();
 
         _processQueueTask = Task.Factory.StartNew(
             ProcessQueue,
@@ -99,6 +105,33 @@ public class FileLoggerProvider : ILoggerProvider
         catch (ObjectDisposedException)
         {
             // Expected when queue resources are disposed during shutdown races.
+        }
+    }
+
+    private void TryResetSessionLogs()
+    {
+        if (!_resetExistingLogsOnStartup)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(_logDirectory, "app_*.log", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+                {
+                    // Best effort cleanup; continue with current session logging.
+                }
+            }
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // Best effort cleanup; continue with current session logging.
         }
     }
 

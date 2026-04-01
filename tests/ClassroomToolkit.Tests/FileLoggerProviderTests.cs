@@ -153,6 +153,57 @@ public sealed class FileLoggerProviderTests
     }
 
     [Fact]
+    public void Constructor_ShouldPreserveExistingSessionLog_WhenResetDisabled()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_preserve_history");
+        var fixedNow = new DateTime(2026, 03, 18, 12, 34, 56);
+        var currentFile = Path.Combine(directory, $"app_{fixedNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+        File.WriteAllText(currentFile, "legacy-line" + Environment.NewLine);
+
+        var provider = new FileLoggerProvider(directory, () => fixedNow, resetExistingLogsOnStartup: false);
+        var logger = provider.CreateLogger("preserve-history");
+        logger.Log(
+            LogLevel.Information,
+            new EventId(1, "preserve"),
+            "fresh-line",
+            null,
+            static (state, _) => state);
+
+        provider.Dispose();
+
+        var content = File.ReadAllText(currentFile);
+        content.Should().Contain("legacy-line");
+        content.Should().Contain("fresh-line");
+    }
+
+    [Fact]
+    public void Constructor_ShouldResetExistingSessionLog_WhenResetEnabled()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_reset_history");
+        var fixedNow = new DateTime(2026, 03, 19, 08, 30, 00);
+        var currentFile = Path.Combine(directory, $"app_{fixedNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+        var previousFile = Path.Combine(directory, "app_20260318.log");
+        File.WriteAllText(currentFile, "legacy-current-line" + Environment.NewLine);
+        File.WriteAllText(previousFile, "legacy-previous-line" + Environment.NewLine);
+
+        var provider = new FileLoggerProvider(directory, () => fixedNow, resetExistingLogsOnStartup: true);
+        var logger = provider.CreateLogger("reset-history");
+        logger.Log(
+            LogLevel.Information,
+            new EventId(1, "reset"),
+            "fresh-line",
+            null,
+            static (state, _) => state);
+
+        provider.Dispose();
+
+        File.Exists(previousFile).Should().BeFalse();
+        var content = File.ReadAllText(currentFile);
+        content.Should().NotContain("legacy-current-line");
+        content.Should().Contain("fresh-line");
+    }
+
+    [Fact]
     public void Dispose_ShouldFlushQueuedMessages_BeforeShutdown()
     {
         var directory = TestPathHelper.CreateDirectory("ctool_file_logger_flush");

@@ -160,7 +160,9 @@ public partial class App : WpfApplication
             
             // File logger for production/persistence
             var logPath = Path.Combine(AppDataDirectory, "logs");
-            builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(logPath));
+            builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(
+                logPath,
+                resetExistingLogsOnStartup: true));
         });
 
         _services = services.BuildServiceProvider();
@@ -421,4 +423,3 @@ public partial class App : WpfApplication
     }
 
 }
-
