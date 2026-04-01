@@ -36,6 +36,7 @@ using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
+using Microsoft.Extensions.Logging;
 using WpfImage = System.Windows.Controls.Image;
 
 namespace ClassroomToolkit.App.Paint;
@@ -266,6 +267,7 @@ public partial class PaintOverlayWindow : Window
     private TransformGroup? _photoContentTransform;
     private readonly SessionCoordinator _sessionCoordinator;
     private readonly CancellationTokenSource _overlayLifecycleCancellation = new();
+    private readonly ILogger<PaintOverlayWindow>? _logger;
     private int _overlayClosed;
 
 
@@ -290,7 +292,13 @@ public partial class PaintOverlayWindow : Window
 
 
     public PaintOverlayWindow()
+        : this(null)
     {
+    }
+
+    public PaintOverlayWindow(ILogger<PaintOverlayWindow>? logger)
+    {
+        _logger = logger;
         InitializeComponent();
         _inkRendererFactory = InkRendererFactoryResolver.Resolve(
             AppFlags.UseGpuInkRenderer,
@@ -756,9 +764,12 @@ public partial class PaintOverlayWindow : Window
         ClearShapePreview();
         ClearRegionSelection();
         _hasDrawing = false;
-        if (_inkRecordEnabled)
+        if (_inkStrokes.Count > 0)
         {
             _inkStrokes.Clear();
+        }
+        if (_inkRecordEnabled)
+        {
             NotifyInkStateChanged(updateActiveSnapshot: true);
         }
 
@@ -778,6 +789,9 @@ public partial class PaintOverlayWindow : Window
         var sourcePath = _currentDocumentPath;
         var pageIndex = Math.Max(1, _currentPageIndex);
         var currentCacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, _photoDocumentIsPdf);
+        // Cancel deferred/stale auto-save work before committing the empty page snapshot.
+        _inkSidecarAutoSaveTimer?.Stop();
+        _inkSidecarAutoSaveGate.NextGeneration();
         if (!string.IsNullOrWhiteSpace(_currentCacheKey))
         {
             _photoCache.Remove(_currentCacheKey);
@@ -807,6 +821,33 @@ public partial class PaintOverlayWindow : Window
         _neighborInkSidecarLoadPending.Clear();
         ClearNeighborInkVisuals(clearSlotIdentity: true);
         RequestCrossPageDisplayUpdate(CrossPageUpdateSources.InkStateChanged);
+    }
+
+    private bool TryEnforceRuntimeEmptyGuardForCurrentPage(bool clearSurfaceWhenDrawing = true)
+    {
+        if (!IsRuntimeInkPageExplicitlyCleared(_currentDocumentPath, Math.Max(1, _currentPageIndex)))
+        {
+            return false;
+        }
+
+        if (_inkStrokes.Count > 0)
+        {
+            _inkStrokes.Clear();
+        }
+
+        if (!string.IsNullOrWhiteSpace(_currentCacheKey))
+        {
+            _photoCache.Remove(_currentCacheKey);
+            InvalidateNeighborInkCache(_currentCacheKey);
+        }
+
+        if (clearSurfaceWhenDrawing && _hasDrawing)
+        {
+            ClearSurface();
+            _hasDrawing = false;
+        }
+
+        return true;
     }
 
     public MediaColor CurrentBrushColor => _brushColor;

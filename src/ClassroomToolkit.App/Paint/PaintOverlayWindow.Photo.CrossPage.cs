@@ -62,6 +62,36 @@ public partial class PaintOverlayWindow
         return IsCrossPageDisplayActive() && !_photoDocumentIsPdf;
     }
 
+    private readonly record struct NeighborInkSlotTag(double BaseTop, double HorizontalOffsetDip);
+
+    private static NeighborInkSlotTag ResolveNeighborInkSlotTag(object? tag, double fallbackBaseTop)
+    {
+        if (tag is NeighborInkSlotTag slotTag)
+        {
+            return slotTag;
+        }
+
+        if (tag is double baseTop)
+        {
+            return new NeighborInkSlotTag(baseTop, 0);
+        }
+
+        return new NeighborInkSlotTag(fallbackBaseTop, 0);
+    }
+
+    private static double ResolveNeighborInkHorizontalOffsetDip(object? tag)
+    {
+        return tag is NeighborInkSlotTag slotTag
+            ? slotTag.HorizontalOffsetDip
+            : 0;
+    }
+
+    private static void SetNeighborInkSlotTag(WpfImage inkImage, double baseTop, double horizontalOffsetDip)
+    {
+        var clampedOffset = Math.Max(0, horizontalOffsetDip);
+        inkImage.Tag = new NeighborInkSlotTag(baseTop, clampedOffset);
+    }
+
     private void ClearNeighborPages()
     {
         if (_neighborPagesCanvas == null)
@@ -812,7 +842,7 @@ public partial class PaintOverlayWindow
         // Preserve currently visible frames by page uid so slot reordering does not
         // temporarily blank a page's bitmap/ink for one frame.
         var preservedPageFrames = new Dictionary<string, BitmapSource>(StringComparer.Ordinal);
-        var preservedInkFrames = new Dictionary<string, BitmapSource>(StringComparer.Ordinal);
+        var preservedInkFrames = new Dictionary<string, (BitmapSource Bitmap, double HorizontalOffsetDip)>(StringComparer.Ordinal);
         for (int i = 0; i < _neighborPageImages.Count; i++)
         {
             var pageImg = _neighborPageImages[i];
@@ -832,7 +862,9 @@ public partial class PaintOverlayWindow
                     && !string.IsNullOrWhiteSpace(inkImg.Uid)
                     && !preservedInkFrames.ContainsKey(inkImg.Uid))
                 {
-                    preservedInkFrames[inkImg.Uid] = inkBitmap;
+                    preservedInkFrames[inkImg.Uid] = (
+                        inkBitmap,
+                        ResolveNeighborInkHorizontalOffsetDip(inkImg.Tag));
                 }
             }
         }
@@ -849,6 +881,7 @@ public partial class PaintOverlayWindow
         for (int i = 0; i < neighborPages.Count; i++)
         {
             var (pageIndex, top) = neighborPages[i];
+            var runtimeInkPageCleared = IsRuntimeInkPageClearedForCrossPageIndex(pageIndex);
             var pageUid = pageIndex.ToString(CultureInfo.InvariantCulture);
             var img = _neighborPageImages[i];
             var slotPageChanged = !string.Equals(img.Uid, pageUid, StringComparison.Ordinal);
@@ -937,10 +970,12 @@ public partial class PaintOverlayWindow
                 continue;
             }
             var inkImg = _neighborInkImages[i];
+            var baseTop = inkImg.Tag is NeighborInkSlotTag currentInkTag ? currentInkTag.BaseTop : (img.Tag is double taggedTop ? taggedTop : top - _photoTranslate.Y);
+            var pageScaleRatio = 1.0;
+            var currentInkOffsetDip = ResolveNeighborInkHorizontalOffsetDip(inkImg.Tag);
             if (bitmap != null)
             {
-                var baseTop = top - _photoTranslate.Y;
-                var pageScaleRatio = 1.0;
+                baseTop = top - _photoTranslate.Y;
                 if (!_photoDocumentIsPdf && normalizedWidthDip > 0)
                 {
                     var pageWidthDip = GetBitmapDisplayWidthInDip(bitmap);
@@ -950,12 +985,18 @@ public partial class PaintOverlayWindow
                     }
                 }
                 img.Tag = baseTop;
-                inkImg.Tag = baseTop;
+                SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                 img.Uid = pageUid;
                 inkImg.Uid = pageUid;
-                // Bind slot identity/transform before ink bitmap replacement so async neighbor-ink
-                // apply always targets the correct page slot without one-frame old-position flashes.
                 ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
+            }
+            if (runtimeInkPageCleared)
+            {
+                TryAssignFrameSource(inkImg, null);
+                SetNeighborInkSlotTag(inkImg, baseTop, 0);
+                inkImg.Visibility = Visibility.Collapsed;
+                if (bitmap != null) ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
+                continue;
             }
             var baseHoldInkReplacement = CrossPageInteractiveInkFrameHoldPolicy.ShouldHoldReplacement(
                 pageIndex,
@@ -972,12 +1013,13 @@ public partial class PaintOverlayWindow
             if (bitmap != null)
             {
                 if (inkImg.Source == null
-                    && preservedInkFrames.TryGetValue(pageUid, out var preservedInkBitmap))
+                    && preservedInkFrames.TryGetValue(pageUid, out var preservedInkEntry))
                 {
-                    TryAssignFrameSource(inkImg, preservedInkBitmap);
+                    TryAssignFrameSource(inkImg, preservedInkEntry.Bitmap);
+                    currentInkOffsetDip = preservedInkEntry.HorizontalOffsetDip;
+                    SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                     usedPreservedInkFrame = true;
                 }
-
                 if (!interactionActive)
                 {
                     var inkBitmap = TryGetNeighborInkBitmap(pageIndex, bitmap);
@@ -996,6 +1038,7 @@ public partial class PaintOverlayWindow
                         // Slot remapped to a page without resolved target ink:
                         // clear stale old-page frame immediately to avoid ghost duplication.
                         TryAssignFrameSource(inkImg, null);
+                        currentInkOffsetDip = 0;
                     }
                     if (inkBitmap != null
                         && !holdInkReplacement
@@ -1003,17 +1046,19 @@ public partial class PaintOverlayWindow
                             || !ReferenceEquals(inkImg.Source, inkBitmap)))
                     {
                         TryAssignFrameSource(inkImg, inkBitmap);
+                        if (TryGetNeighborInkCacheEntry(pageIndex, out var resolvedEntry)
+                            && ReferenceEquals(resolvedEntry.Bitmap, inkBitmap))
+                        {
+                            currentInkOffsetDip = resolvedEntry.HorizontalOffsetDip;
+                        }
                     }
-                    // Keep previous frame until replacement is ready to avoid one-frame flashing.
+                    SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                     inkImg.Visibility = frameDecision.KeepVisible && inkImg.Source != null
                         ? Visibility.Visible
                         : Visibility.Collapsed;
                 }
                 else
                 {
-                    // Keep previously rendered neighbor ink visible while dragging.
-                    // This avoids the "ink disappears during pan" flicker without
-                    // introducing expensive re-render work on each move event.
                     if (inkImg.Source == null)
                     {
                         var cacheKey = BuildNeighborInkCacheKey(pageIndex);
@@ -1021,6 +1066,8 @@ public partial class PaintOverlayWindow
                             && _neighborInkCache.TryGetValue(cacheKey, out var cachedEntry))
                         {
                             TryAssignFrameSource(inkImg, cachedEntry.Bitmap);
+                            currentInkOffsetDip = cachedEntry.HorizontalOffsetDip;
+                            SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                         }
                     }
                     // In interactive cross-page drawing/erase, keep neighbor ink in sync
@@ -1037,10 +1084,17 @@ public partial class PaintOverlayWindow
                     if (shouldReplaceInteractiveInk)
                     {
                         TryAssignFrameSource(inkImg, interactiveInkBitmap);
+                        if (interactiveInkBitmap != null
+                            && TryGetNeighborInkCacheEntry(pageIndex, out var interactiveEntry)
+                            && ReferenceEquals(interactiveEntry.Bitmap, interactiveInkBitmap))
+                        {
+                            currentInkOffsetDip = interactiveEntry.HorizontalOffsetDip;
+                            SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
+                        }
                     }
                     else if (slotPageChanged)
                     {
-                        var hasPreservedInkFrame = preservedInkFrames.TryGetValue(pageUid, out var remapPreservedInkBitmap);
+                        var hasPreservedInkFrame = preservedInkFrames.TryGetValue(pageUid, out var remapPreservedInkEntry);
                         var remapAction = CrossPageInteractiveInkSlotRemapPolicy.Resolve(
                             slotPageChanged: true,
                             hasResolvedInkBitmap: interactiveInkBitmap != null,
@@ -1050,13 +1104,17 @@ public partial class PaintOverlayWindow
                         if (remapAction == CrossPageInteractiveInkSlotRemapAction.UsePreservedFrame && hasPreservedInkFrame)
                         {
                             usedPreservedInkFrame = true;
-                            TryAssignFrameSource(inkImg, remapPreservedInkBitmap);
+                            TryAssignFrameSource(inkImg, remapPreservedInkEntry.Bitmap);
+                            currentInkOffsetDip = remapPreservedInkEntry.HorizontalOffsetDip;
+                            SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                         }
                         else if (remapAction == CrossPageInteractiveInkSlotRemapAction.ClearCurrentFrame)
                         {
                             // Slot remapped to a different page and no preserved target frame available.
                             // Clear old-page ink to avoid cross-page ghost duplication.
                             TryAssignFrameSource(inkImg, null);
+                            currentInkOffsetDip = 0;
+                            SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                         }
                         if (interactiveInkBitmap == null)
                         {
@@ -1070,6 +1128,8 @@ public partial class PaintOverlayWindow
                                  interactionActive))
                     {
                         TryAssignFrameSource(inkImg, null);
+                        currentInkOffsetDip = 0;
+                        SetNeighborInkSlotTag(inkImg, baseTop, currentInkOffsetDip);
                     }
                     else if (slotPageChanged && interactiveInkBitmap == null)
                     {
@@ -1086,6 +1146,7 @@ public partial class PaintOverlayWindow
                         ? Visibility.Visible
                         : Visibility.Collapsed;
                 }
+                ApplyNeighborSharedTransform(img, inkImg, pageScaleRatio, baseTop);
             }
             else
             {
@@ -1099,13 +1160,13 @@ public partial class PaintOverlayWindow
                 if (noBitmapDecision.ClearCurrentFrame)
                 {
                     TryAssignFrameSource(inkImg, null);
+                    SetNeighborInkSlotTag(inkImg, baseTop, 0);
                 }
                 inkImg.Visibility = noBitmapDecision.KeepVisible && inkImg.Source != null
                     ? Visibility.Visible
                     : Visibility.Collapsed;
             }
         }
-
         if (missingPageBitmapCount > 0)
         {
             ScheduleCrossPageDisplayUpdateForMissingNeighborPages(missingPageBitmapCount);
@@ -1125,35 +1186,28 @@ public partial class PaintOverlayWindow
         for (int i = 0; i < _neighborPageImages.Count; i++)
         {
             var img = _neighborPageImages[i];
-            if (img.Visibility != Visibility.Visible || img.RenderTransform is not TransformGroup group)
+            if (img.Visibility != Visibility.Visible)
             {
                 continue;
             }
-            if (img.Tag is not double baseTop || group.Children.Count < 2)
+            if (img.Tag is not double baseTop)
             {
                 continue;
             }
-            if (group.Children[1] is TranslateTransform translate)
-            {
-                translate.X = _photoTranslate.X;
-                translate.Y = _photoTranslate.Y + baseTop;
-            }
+            var pageTransform = EnsureNeighborTransform(img);
+            pageTransform.Translate.X = _photoTranslate.X;
+            pageTransform.Translate.Y = _photoTranslate.Y + baseTop;
             if (i < _neighborInkImages.Count)
             {
                 var inkImg = _neighborInkImages[i];
-                if (inkImg.Visibility != Visibility.Visible || inkImg.RenderTransform is not TransformGroup inkGroup)
+                if (inkImg.Visibility != Visibility.Visible)
                 {
                     continue;
                 }
-                if (inkGroup.Children.Count < 2)
-                {
-                    continue;
-                }
-                if (inkGroup.Children[1] is TranslateTransform inkTranslate)
-                {
-                    inkTranslate.X = _photoTranslate.X;
-                    inkTranslate.Y = _photoTranslate.Y + baseTop;
-                }
+                var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, baseTop);
+                var inkTransform = EnsureNeighborTransform(inkImg);
+                inkTransform.Translate.X = _photoTranslate.X - (inkTag.HorizontalOffsetDip * inkTransform.Scale.ScaleX);
+                inkTransform.Translate.Y = _photoTranslate.Y + inkTag.BaseTop;
             }
         }
     }
@@ -1773,27 +1827,40 @@ public partial class PaintOverlayWindow
         double pageScaleRatio,
         double baseTop)
     {
-        if (pageImage.RenderTransform is TransformGroup existing
+        var scaleX = _photoScale.ScaleX * pageScaleRatio;
+        var scaleY = _photoScale.ScaleY * pageScaleRatio;
+
+        var pageTransform = EnsureNeighborTransform(pageImage);
+        pageTransform.Scale.ScaleX = scaleX;
+        pageTransform.Scale.ScaleY = scaleY;
+        pageTransform.Translate.X = _photoTranslate.X;
+        pageTransform.Translate.Y = _photoTranslate.Y + baseTop;
+
+        var inkTag = ResolveNeighborInkSlotTag(inkImage.Tag, baseTop);
+        var inkTransform = EnsureNeighborTransform(inkImage);
+        inkTransform.Scale.ScaleX = scaleX;
+        inkTransform.Scale.ScaleY = scaleY;
+        inkTransform.Translate.X = _photoTranslate.X - (inkTag.HorizontalOffsetDip * scaleX);
+        inkTransform.Translate.Y = _photoTranslate.Y + inkTag.BaseTop;
+    }
+
+    private static (TransformGroup Group, ScaleTransform Scale, TranslateTransform Translate) EnsureNeighborTransform(WpfImage image)
+    {
+        if (image.RenderTransform is TransformGroup existing
             && existing.Children.Count >= 2
             && existing.Children[0] is ScaleTransform existingScale
             && existing.Children[1] is TranslateTransform existingTranslate)
         {
-            existingScale.ScaleX = _photoScale.ScaleX * pageScaleRatio;
-            existingScale.ScaleY = _photoScale.ScaleY * pageScaleRatio;
-            existingTranslate.X = _photoTranslate.X;
-            existingTranslate.Y = _photoTranslate.Y + baseTop;
-            if (!ReferenceEquals(inkImage.RenderTransform, existing))
-            {
-                inkImage.RenderTransform = existing;
-            }
-            return;
+            return (existing, existingScale, existingTranslate);
         }
 
-        var transform = new TransformGroup();
-        transform.Children.Add(new ScaleTransform(_photoScale.ScaleX * pageScaleRatio, _photoScale.ScaleY * pageScaleRatio));
-        transform.Children.Add(new TranslateTransform(_photoTranslate.X, _photoTranslate.Y + baseTop));
-        pageImage.RenderTransform = transform;
-        inkImage.RenderTransform = transform;
+        var createdScale = new ScaleTransform();
+        var createdTranslate = new TranslateTransform();
+        var createdGroup = new TransformGroup();
+        createdGroup.Children.Add(createdScale);
+        createdGroup.Children.Add(createdTranslate);
+        image.RenderTransform = createdGroup;
+        return (createdGroup, createdScale, createdTranslate);
     }
 
     private void TryFlushCrossPageReplay()
@@ -1842,6 +1909,97 @@ public partial class PaintOverlayWindow
             ref _crossPageReplayState);
     }
 
+    private bool TryGetNeighborInkCacheEntry(int pageIndex, out InkBitmapCacheEntry entry)
+    {
+        entry = default;
+        var cacheKey = BuildNeighborInkCacheKey(pageIndex);
+        return !string.IsNullOrWhiteSpace(cacheKey)
+            && _neighborInkCache.TryGetValue(cacheKey, out entry);
+    }
+
+    private InkBitmapCacheEntry BuildNeighborInkCacheEntry(
+        InkPageData page,
+        BitmapSource pageBitmap,
+        List<InkStrokeData> strokes)
+    {
+        var renderPlan = ResolveNeighborInkRenderSurfacePlan(pageBitmap, strokes);
+        var bitmap = _inkStrokeRenderer.RenderPage(
+            page,
+            renderPlan.PixelWidth,
+            renderPlan.PixelHeight,
+            pageBitmap.DpiX,
+            pageBitmap.DpiY,
+            horizontalOffsetDip: renderPlan.HorizontalOffsetDip);
+        return new InkBitmapCacheEntry(page.PageIndex, strokes, bitmap, renderPlan.HorizontalOffsetDip);
+    }
+
+    private CrossPageNeighborInkRenderSurfacePlan ResolveNeighborInkRenderSurfacePlan(
+        BitmapSource pageBitmap,
+        IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)
+        {
+            return new CrossPageNeighborInkRenderSurfacePlan(0, 0, 0);
+        }
+
+        if (!TryResolveNeighborInkHorizontalBounds(strokes, out var minX, out var maxX))
+        {
+            return new CrossPageNeighborInkRenderSurfacePlan(pageBitmap.PixelWidth, pageBitmap.PixelHeight, 0);
+        }
+
+        var pageWidthDip = GetBitmapDisplayWidthInDip(pageBitmap);
+        return CrossPageNeighborInkRenderSurfacePolicy.Resolve(
+            pagePixelWidth: pageBitmap.PixelWidth,
+            pagePixelHeight: pageBitmap.PixelHeight,
+            dpiX: pageBitmap.DpiX,
+            pageWidthDip: pageWidthDip,
+            minStrokeXDip: minX,
+            maxStrokeXDip: maxX);
+    }
+
+    private static bool TryResolveNeighborInkHorizontalBounds(
+        IReadOnlyList<InkStrokeData> strokes,
+        out double minX,
+        out double maxX)
+    {
+        minX = double.PositiveInfinity;
+        maxX = double.NegativeInfinity;
+        var hasBounds = false;
+
+        for (var i = 0; i < strokes.Count; i++)
+        {
+            var stroke = strokes[i];
+            var geometry = stroke.CachedGeometry;
+            if (geometry == null)
+            {
+                geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+                if (geometry == null)
+                {
+                    continue;
+                }
+
+                if (geometry.CanFreeze)
+                {
+                    geometry.Freeze();
+                }
+
+                stroke.CachedGeometry = geometry;
+            }
+
+            var bounds = geometry.Bounds;
+            if (bounds.IsEmpty)
+            {
+                continue;
+            }
+
+            hasBounds = true;
+            minX = Math.Min(minX, bounds.Left);
+            maxX = Math.Max(maxX, bounds.Right);
+        }
+
+        return hasBounds && maxX > minX;
+    }
+
     private BitmapSource? ResolveNeighborInkBitmap(int pageIndex, BitmapSource pageBitmap, bool allowDeferredRender)
     {
         if (!_inkShowEnabled || !_inkCacheEnabled || pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)
@@ -1853,6 +2011,7 @@ public partial class PaintOverlayWindow
         {
             return null;
         }
+        if (TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)) return null;
         if (!_photoCache.TryGet(cacheKey, out var strokes) || strokes.Count == 0)
         {
             ScheduleNeighborInkSidecarLoad(cacheKey, pageIndex);
@@ -1861,6 +2020,7 @@ public partial class PaintOverlayWindow
         {
             if (_neighborInkCache.TryGetValue(cacheKey, out var cachedEntry))
             {
+                if (TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)) return null;
                 return cachedEntry.Bitmap;
             }
             return null;
@@ -1883,6 +2043,53 @@ public partial class PaintOverlayWindow
             return staleEntry.Bitmap;
         }
         return null;
+    }
+
+    private bool TryResolveRuntimeInkPageForCrossPageIndex(int pageIndex, out string sourcePath, out int runtimePageIndex)
+    {
+        sourcePath = string.Empty;
+        runtimePageIndex = 0;
+        if (pageIndex <= 0)
+        {
+            return false;
+        }
+
+        if (_photoDocumentIsPdf)
+        {
+            if (string.IsNullOrWhiteSpace(_currentDocumentPath))
+            {
+                return false;
+            }
+
+            sourcePath = _currentDocumentPath;
+            runtimePageIndex = pageIndex;
+            return true;
+        }
+
+        var sequenceIndex = pageIndex - 1;
+        if (sequenceIndex < 0 || sequenceIndex >= _photoSequencePaths.Count)
+        {
+            return false;
+        }
+
+        sourcePath = _photoSequencePaths[sequenceIndex];
+        runtimePageIndex = 1;
+        return !string.IsNullOrWhiteSpace(sourcePath);
+    }
+
+    private bool IsRuntimeInkPageClearedForCrossPageIndex(int pageIndex)
+    {
+        return TryResolveRuntimeInkPageForCrossPageIndex(pageIndex, out var sourcePath, out var runtimePageIndex)
+            && IsRuntimeInkPageExplicitlyCleared(sourcePath, runtimePageIndex);
+    }
+
+    private bool TryEnforceRuntimeEmptyGuardForCrossPageIndex(int pageIndex, int visibleNeighborSlotIndex = -1, string? knownCacheKey = null)
+    {
+        if (!IsRuntimeInkPageClearedForCrossPageIndex(pageIndex)) return false;
+        var cacheKey = !string.IsNullOrWhiteSpace(knownCacheKey) ? knownCacheKey : BuildNeighborInkCacheKey(pageIndex);
+        if (!string.IsNullOrWhiteSpace(cacheKey)) { _photoCache.Remove(cacheKey); _neighborInkCache.Remove(cacheKey); }
+        if (visibleNeighborSlotIndex >= 0 && visibleNeighborSlotIndex < _neighborInkImages.Count) { TryAssignFrameSource(_neighborInkImages[visibleNeighborSlotIndex], null); _neighborInkImages[visibleNeighborSlotIndex].Visibility = Visibility.Collapsed; }
+        return true;
     }
 
     private bool HasNeighborInkStrokes(int pageIndex)
@@ -1936,6 +2143,7 @@ public partial class PaintOverlayWindow
                 {
                     return;
                 }
+                if (TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)) return;
                 if (_photoCache.TryGet(cacheKey, out var existed) && existed.Count > 0)
                 {
                     return;
@@ -2002,21 +2210,16 @@ public partial class PaintOverlayWindow
                     SourcePath = _currentDocumentPath,
                     Strokes = currentStrokes
                 };
-                var bitmap = _inkStrokeRenderer.RenderPage(
-                    page,
-                    pageBitmap.PixelWidth,
-                    pageBitmap.PixelHeight,
-                    pageBitmap.DpiX,
-                    pageBitmap.DpiY);
+                var cacheEntry = BuildNeighborInkCacheEntry(page, pageBitmap, currentStrokes);
                 if (!_inkShowEnabled || !_inkCacheEnabled)
                 {
                     _neighborInkCache.Remove(cacheKey);
                     return;
                 }
-                _neighborInkCache[cacheKey] = new InkBitmapCacheEntry(pageIndex, currentStrokes, bitmap);
+                _neighborInkCache[cacheKey] = cacheEntry;
                 TrimNeighborInkCache(pageIndex);
                 // Prefer in-place slot replacement to avoid a full cross-page refresh flash.
-                if (TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, bitmap))
+                if (TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, cacheEntry.Bitmap, cacheEntry.HorizontalOffsetDip))
                 {
                     _inkDiagnostics?.OnCrossPageUpdateEvent("apply", CrossPageUpdateSources.NeighborRender, $"page={pageIndex}");
                 }
@@ -2130,7 +2333,7 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private bool TryApplyNeighborInkBitmapToVisibleSlot(int pageIndex, BitmapSource inkBitmap)
+    private bool TryApplyNeighborInkBitmapToVisibleSlot(int pageIndex, BitmapSource inkBitmap, double horizontalOffsetDip = 0)
     {
         if (!_inkShowEnabled || !_inkCacheEnabled || _neighborInkImages.Count == 0)
         {
@@ -2155,7 +2358,10 @@ public partial class PaintOverlayWindow
             }
 
             TryAssignFrameSource(inkImg, inkBitmap);
+            var baseTop = _neighborPageImages[i].Tag is double taggedTop ? taggedTop : 0;
+            SetNeighborInkSlotTag(inkImg, baseTop, horizontalOffsetDip);
             inkImg.Visibility = Visibility.Visible;
+            UpdateNeighborTransformsForPan();
             return true;
         }
 
@@ -2191,6 +2397,7 @@ public partial class PaintOverlayWindow
             {
                 continue;
             }
+            if (TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, visibleNeighborSlotIndex: i)) { continue; }
 
             TryPrimeNeighborInkCache(pageIndex, pageBitmap);
             var cacheKey = BuildNeighborInkCacheKey(pageIndex);
@@ -2202,7 +2409,7 @@ public partial class PaintOverlayWindow
             {
                 continue;
             }
-            TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, entry.Bitmap);
+            TryApplyNeighborInkBitmapToVisibleSlot(pageIndex, entry.Bitmap, entry.HorizontalOffsetDip);
         }
     }
 
@@ -2270,13 +2477,8 @@ public partial class PaintOverlayWindow
             SourcePath = sourcePath,
             Strokes = strokes
         };
-        var bitmap = _inkStrokeRenderer.RenderPage(
-            page,
-            pageBitmap.PixelWidth,
-            pageBitmap.PixelHeight,
-            pageBitmap.DpiX,
-            pageBitmap.DpiY);
-        _neighborInkCache[cacheKey] = new InkBitmapCacheEntry(pageIndex, strokes, bitmap);
+        var cacheEntry = BuildNeighborInkCacheEntry(page, pageBitmap, strokes);
+        _neighborInkCache[cacheKey] = cacheEntry;
         TrimNeighborInkCache(pageIndex);
     }
 

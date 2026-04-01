@@ -236,6 +236,21 @@ public partial class PaintOverlayWindow
                     return;
                 }
 
+                var runtimeStateKnown = _inkDirtyPages.TryGetRuntimeState(
+                    snapshot.SourcePath,
+                    snapshot.PageIndex,
+                    out _,
+                    out var runtimeHash,
+                    out _);
+                if (!InkAutoSaveSnapshotAdmissionPolicy.ShouldPersistSnapshot(
+                        runtimeStateKnown,
+                        runtimeHash,
+                        snapshot.SnapshotHash))
+                {
+                    _inkDiagnostics?.OnAutoSaveDeferred("stale-runtime-snapshot");
+                    return;
+                }
+
                 if (TryPersistSidecarSnapshot(snapshot, logFailure: attempt == InkSidecarAutoSaveRetryMax))
                 {
                     DispatchExportUiUpdate("autosave-persisted", () =>
@@ -299,7 +314,11 @@ public partial class PaintOverlayWindow
         return SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                snapshot.Persistence.SaveInkForFile(snapshot.SourcePath, snapshot.PageIndex, snapshot.Strokes);
+                PersistInkHistorySnapshot(
+                    snapshot.SourcePath,
+                    snapshot.PageIndex,
+                    snapshot.Strokes,
+                    snapshot.Persistence);
                 if (snapshot.Strokes.Count == 0 && _inkExport != null)
                 {
                     _inkExport.RemoveCompositeOutputsForPage(snapshot.SourcePath, snapshot.PageIndex);
@@ -397,6 +416,31 @@ public partial class PaintOverlayWindow
             }
 
             var clonedStrokes = CloneInkStrokes(loaded);
+            var loadedHash = ComputeInkHash(clonedStrokes);
+            var runtimeStateKnown = _inkDirtyPages.TryGetRuntimeState(
+                sourcePath,
+                pageIndex,
+                out _,
+                out var runtimeHash,
+                out var runtimeDirty);
+            if (!InkSidecarLoadAdmissionPolicy.ShouldApplyLoadedSnapshot(
+                    runtimeStateKnown,
+                    runtimeHash,
+                    runtimeDirty,
+                    loadedHash))
+            {
+                var rejectedCacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
+                if (!string.IsNullOrWhiteSpace(rejectedCacheKey))
+                {
+                    _photoCache.Remove(rejectedCacheKey);
+                    InvalidateNeighborInkCache(rejectedCacheKey);
+                }
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[InkPersist] Skip sidecar snapshot due runtime conflict: source={sourcePath}, page={pageIndex}, runtimeHash={runtimeHash}, loadedHash={loadedHash}, dirty={runtimeDirty}");
+                return (Loaded: false, Strokes: new List<InkStrokeData>());
+            }
+
             var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
             if (!string.IsNullOrWhiteSpace(cacheKey))
             {
