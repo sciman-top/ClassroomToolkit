@@ -183,7 +183,8 @@ internal sealed class InkDirtyPageCoordinator
 
     internal static string BuildRuntimePageStateKey(string sourcePath, int pageIndex)
     {
-        return $"src|{sourcePath}|page|{pageIndex}";
+        var normalizedSourcePath = NormalizeSourcePath(sourcePath);
+        return $"src|{normalizedSourcePath}|page|{pageIndex}";
     }
 
     internal static bool TryParseRuntimePageStateKey(string runtimeKey, out string sourcePath, out int pageIndex)
@@ -210,6 +211,23 @@ internal sealed class InkDirtyPageCoordinator
         }
 
         return !string.IsNullOrWhiteSpace(sourcePath);
+    }
+
+    private static string NormalizeSourcePath(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return Path.GetFullPath(sourcePath);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return sourcePath;
+        }
     }
 
     private sealed class InkPageRuntimeState

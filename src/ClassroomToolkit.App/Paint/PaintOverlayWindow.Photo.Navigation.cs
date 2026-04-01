@@ -1214,6 +1214,7 @@ public partial class PaintOverlayWindow
 
         var inkImgFirst = _neighborInkImages[slotIndex];
         var targetInkBitmap = _inkShowEnabled ? inkBitmap : null;
+        var currentInkOffsetDip = 0.0;
         var shouldReplaceSeedFrame = CrossPageInteractiveSeedInkFramePolicy.ShouldReplaceFrame(
             _inkShowEnabled,
             hasCurrentFrame: inkImgFirst.Source != null,
@@ -1224,10 +1225,16 @@ public partial class PaintOverlayWindow
                 targetInkBitmap))
         {
             inkImgFirst.Source = targetInkBitmap;
+            if (targetInkBitmap != null
+                && TryGetNeighborInkCacheEntry(previousPage, out var cachedEntry)
+                && ReferenceEquals(cachedEntry.Bitmap, targetInkBitmap))
+            {
+                currentInkOffsetDip = cachedEntry.HorizontalOffsetDip;
+            }
         }
         inkImgFirst.Visibility = inkImgFirst.Source != null ? Visibility.Visible : Visibility.Collapsed;
         inkImgFirst.Uid = pageUid;
-        inkImgFirst.Tag = baseTop;
+        SetNeighborInkSlotTag(inkImgFirst, baseTop, currentInkOffsetDip);
         ApplyNeighborSharedTransform(pageImg, inkImgFirst, pageScaleRatio, baseTop);
 
         _neighborPagesCanvas.Visibility = Visibility.Visible;

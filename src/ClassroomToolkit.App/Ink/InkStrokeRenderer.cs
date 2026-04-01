@@ -28,14 +28,24 @@ public sealed class InkStrokeRenderer
         int pixelWidth,
         int pixelHeight,
         double dpiX,
-        double dpiY)
+        double dpiY,
+        double horizontalOffsetDip = 0)
     {
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
+            var hasOffset = Math.Abs(horizontalOffsetDip) > 0.01;
+            if (hasOffset)
+            {
+                dc.PushTransform(new TranslateTransform(horizontalOffsetDip, 0));
+            }
             foreach (var stroke in page.Strokes)
             {
                 RenderStroke(dc, stroke);
+            }
+            if (hasOffset)
+            {
+                dc.Pop();
             }
         }
         var bitmap = new RenderTargetBitmap(pixelWidth, pixelHeight, dpiX, dpiY, PixelFormats.Pbgra32);

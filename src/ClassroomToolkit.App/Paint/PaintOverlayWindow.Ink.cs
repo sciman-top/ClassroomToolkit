@@ -1225,6 +1225,21 @@ public partial class PaintOverlayWindow
         return _inkDirtyPages.IsDirty(_currentDocumentPath, _currentPageIndex);
     }
 
+    private bool IsRuntimeInkPageExplicitlyCleared(string sourcePath, int pageIndex)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return false;
+        }
+
+        if (!_inkDirtyPages.TryGetRuntimeState(sourcePath, pageIndex, out _, out var runtimeHash, out _))
+        {
+            return false;
+        }
+
+        return string.Equals(runtimeHash, "empty", StringComparison.Ordinal);
+    }
+
     private bool IsInkOperationActive()
     {
         return _strokeInProgress || _isErasing || _isDrawingShape || _isRegionSelecting;

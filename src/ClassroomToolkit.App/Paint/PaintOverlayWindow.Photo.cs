@@ -198,6 +198,12 @@ public partial class PaintOverlayWindow
             return false;
         }
 
+        if (TryEnforceRuntimeEmptyGuardForCurrentPage())
+        {
+            _neighborInkCache.Remove(cacheKey);
+            return false;
+        }
+
         EnsureRasterSurface();
         if (_rasterSurface == null)
         {
@@ -362,7 +368,7 @@ public partial class PaintOverlayWindow
         return BuildPhotoCacheKey(_photoSequencePaths[arrayIndex]);
     }
 
-    private sealed record InkBitmapCacheEntry(int PageIndex, List<InkStrokeData> Strokes, BitmapSource Bitmap);
+    private readonly record struct InkBitmapCacheEntry(int PageIndex, List<InkStrokeData> Strokes, BitmapSource Bitmap, double HorizontalOffsetDip = 0);
     
 
 

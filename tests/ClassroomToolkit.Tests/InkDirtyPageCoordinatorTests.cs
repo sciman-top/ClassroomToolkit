@@ -83,4 +83,17 @@ public sealed class InkDirtyPageCoordinatorTests
         dirtyInDir.Should().ContainSingle()
             .Which.Should().Be((file1, 1));
     }
+
+    [Fact]
+    public void IsDirty_ShouldMatchRelativeAndFullPath_ForSameFile()
+    {
+        var coordinator = new InkDirtyPageCoordinator();
+        var root = TestPathHelper.CreateDirectory("ctk_coordinator_path_normalize");
+        var sourceFullPath = Path.Combine(root, "page-1.pdf");
+        var sourceRelativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), sourceFullPath);
+
+        coordinator.MarkModified(sourceRelativePath, 1, "h1");
+
+        coordinator.IsDirty(sourceFullPath, 1).Should().BeTrue();
+    }
 }

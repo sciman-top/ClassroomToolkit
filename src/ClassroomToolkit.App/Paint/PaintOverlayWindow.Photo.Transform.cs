@@ -137,10 +137,17 @@ public partial class PaintOverlayWindow
 
     private void RequestPhotoTransformInkRedraw()
     {
-        if (IsPhotoInkModeActive())
+        if (!IsPhotoInkModeActive())
         {
-            RequestInkRedraw();
+            return;
         }
+
+        if (TryEnforceRuntimeEmptyGuardForCurrentPage())
+        {
+            return;
+        }
+
+        RequestInkRedraw();
     }
 
     private void SyncPhotoInteractiveRefreshAnchor()
@@ -1062,4 +1069,3 @@ public partial class PaintOverlayWindow
         RequestPhotoTransformInkRedraw();
     }
 }
-
