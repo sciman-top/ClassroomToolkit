@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
@@ -89,6 +90,11 @@ public static class StartupCompatibilityProbe
     private const int MinSupportedWindowsBuild = 19045; // Win10 22H2
     private const int ProcessQueryLimitedInformation = 0x1000;
     private const uint TokenQuery = 0x0008;
+    private const ushort ImageFileMachineUnknown = 0x0000;
+    private const ushort ImageFileMachineI386 = 0x014c;
+    private const ushort ImageFileMachineAmd64 = 0x8664;
+    private const ushort ImageFileMachineArm64 = 0xAA64;
+    private const string VcppRuntimeRegistryPath = @"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64";
     private static readonly string[] DefaultPresentationProcessTokens =
     {
         "powerpnt",
@@ -104,8 +110,12 @@ public static class StartupCompatibilityProbe
 
         EvaluatePlatform(issues);
         EvaluateSettingsPath(settingsPath, issues);
+        EvaluateVcppRuntime(issues);
         EvaluateNativeDependencies(issues);
         EvaluatePresentationPrivilegeConsistency(
+            issues,
+            BuildPresentationProcessTokens(presentationClassifierOverridesJson));
+        EvaluatePresentationArchitectureConsistency(
             issues,
             BuildPresentationProcessTokens(presentationClassifierOverridesJson));
 
@@ -230,6 +240,28 @@ public static class StartupCompatibilityProbe
         }
     }
 
+    private static void EvaluateVcppRuntime(ICollection<StartupCompatibilityIssue> issues)
+    {
+        if (!TryGetVcppRuntimeVersion(out var version, out var error))
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "vcpp-runtime-unknown",
+                Message: $"无法确认 VC++ 运行库状态：{error}",
+                Suggestion: "建议安装/修复 Visual C++ Redistributable 2015-2022（x64）。",
+                IsBlocking: false));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "vcpp-runtime-missing",
+                Message: "未检测到 Visual C++ Redistributable 2015-2022（x64）。",
+                Suggestion: "请安装/修复 VC++ 2015-2022 x64 运行库后重试。",
+                IsBlocking: false));
+        }
+    }
+
     internal static bool TryProbeNativeLibraryLoad(string libraryPath, out string error)
     {
         error = string.Empty;
@@ -319,6 +351,56 @@ public static class StartupCompatibilityProbe
                 Message:
                 $"部分 PPT/WPS 进程权限级别无法探测：{string.Join("; ", unknownProcesses)}",
                 Suggestion: "若翻页控制异常，请优先统一权限级别并检查安全软件拦截。",
+                IsBlocking: false));
+        }
+    }
+
+    private static void EvaluatePresentationArchitectureConsistency(
+        ICollection<StartupCompatibilityIssue> issues,
+        IReadOnlyList<string> processTokens)
+    {
+        var appArch = RuntimeInformation.ProcessArchitecture;
+        var mismatchedProcesses = new List<string>();
+        var unknownProcesses = new List<string>();
+        foreach (var process in EnumeratePresentationProcesses(processTokens))
+        {
+            try
+            {
+                if (!TryGetProcessArchitecture(process.Id, out var processArch, out var error))
+                {
+                    unknownProcesses.Add($"{process.ProcessName}({process.Id}): {error}");
+                    continue;
+                }
+
+                if (processArch != appArch)
+                {
+                    mismatchedProcesses.Add($"{process.ProcessName}({process.Id})={processArch}");
+                }
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        if (mismatchedProcesses.Count > 0)
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "presentation-arch-mismatch",
+                Message:
+                $"检测到 PPT/WPS 与程序位数可能不一致（App={appArch}）：{string.Join(", ", mismatchedProcesses)}",
+                Suggestion:
+                "建议统一为 x64（程序与 Office/WPS 同位数），否则翻页控制可能降级或不稳定。",
+                IsBlocking: false));
+        }
+
+        if (unknownProcesses.Count > 0)
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "presentation-arch-unknown",
+                Message:
+                $"部分 PPT/WPS 进程位数无法探测：{string.Join("; ", unknownProcesses)}",
+                Suggestion: "若翻页控制异常，请检查安全软件拦截并优先使用 x64 版本。",
                 IsBlocking: false));
         }
     }
@@ -516,6 +598,187 @@ public static class StartupCompatibilityProbe
         }
     }
 
+    internal static bool TryGetVcppRuntimeVersion(out string version, out string error)
+    {
+        version = string.Empty;
+        error = string.Empty;
+
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(VcppRuntimeRegistryPath);
+            if (key == null)
+            {
+                return true;
+            }
+
+            var installed = ToInt32OrDefault(key.GetValue("Installed"));
+            if (installed != 1)
+            {
+                return true;
+            }
+
+            var major = ToInt32OrDefault(key.GetValue("Major"));
+            var minor = ToInt32OrDefault(key.GetValue("Minor"));
+            var bld = ToInt32OrDefault(key.GetValue("Bld"));
+            version = $"{major}.{minor}.{bld}";
+            return true;
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    internal static bool TryGetProcessArchitecture(
+        int processId,
+        out Architecture architecture,
+        out string error)
+    {
+        architecture = Architecture.X64;
+        error = string.Empty;
+
+        IntPtr processHandle = IntPtr.Zero;
+        try
+        {
+            processHandle = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+            if (processHandle == IntPtr.Zero)
+            {
+                error = $"open-process-failed:{Marshal.GetLastWin32Error()}";
+                return false;
+            }
+
+            if (!TryDetectProcessMachine(processHandle, out var processMachine, out error))
+            {
+                return false;
+            }
+
+            architecture = MapMachineToArchitecture(processMachine);
+            return true;
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            error = ex.Message;
+            return false;
+        }
+        finally
+        {
+            if (processHandle != IntPtr.Zero)
+            {
+                _ = CloseHandle(processHandle);
+            }
+        }
+    }
+
+    internal static Architecture MapMachineToArchitecture(ushort machine)
+    {
+        return machine switch
+        {
+            ImageFileMachineI386 => Architecture.X86,
+            ImageFileMachineAmd64 => Architecture.X64,
+            ImageFileMachineArm64 => Architecture.Arm64,
+            _ => RuntimeInformation.OSArchitecture
+        };
+    }
+
+    private static bool TryDetectProcessMachine(
+        IntPtr processHandle,
+        out ushort processMachine,
+        out string error)
+    {
+        processMachine = ImageFileMachineUnknown;
+        error = string.Empty;
+
+        if (processHandle == IntPtr.Zero)
+        {
+            error = "invalid-handle";
+            return false;
+        }
+
+        if (TryGetMachineFromWow64Process2(processHandle, out processMachine, out var wow64v2Error))
+        {
+            return true;
+        }
+
+        if (!string.Equals(wow64v2Error, "entry-point-not-found", StringComparison.OrdinalIgnoreCase))
+        {
+            error = wow64v2Error;
+            return false;
+        }
+
+        if (!TryGetMachineFromWow64Process(processHandle, out processMachine, out error))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryGetMachineFromWow64Process2(
+        IntPtr processHandle,
+        out ushort processMachine,
+        out string error)
+    {
+        processMachine = ImageFileMachineUnknown;
+        error = string.Empty;
+
+        try
+        {
+            if (!IsWow64Process2(processHandle, out processMachine, out var nativeMachine))
+            {
+                error = $"iswow64process2-failed:{Marshal.GetLastWin32Error()}";
+                return false;
+            }
+
+            if (processMachine == ImageFileMachineUnknown)
+            {
+                processMachine = nativeMachine == ImageFileMachineUnknown
+                    ? ImageFileMachineAmd64
+                    : nativeMachine;
+            }
+            return true;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            error = "entry-point-not-found";
+            return false;
+        }
+    }
+
+    private static bool TryGetMachineFromWow64Process(
+        IntPtr processHandle,
+        out ushort processMachine,
+        out string error)
+    {
+        processMachine = ImageFileMachineUnknown;
+        error = string.Empty;
+
+        if (!IsWow64Process(processHandle, out var isWow64))
+        {
+            error = $"iswow64process-failed:{Marshal.GetLastWin32Error()}";
+            return false;
+        }
+
+        processMachine = isWow64 ? ImageFileMachineI386 : ImageFileMachineAmd64;
+        return true;
+    }
+
+    private static int ToInt32OrDefault(object? value, int fallback = 0)
+    {
+        if (value is int intValue)
+        {
+            return intValue;
+        }
+
+        if (value is string str
+            && int.TryParse(str, out var parsed))
+        {
+            return parsed;
+        }
+
+        return fallback;
+    }
+
     private static bool IsNonFatal(Exception ex)
     {
         return ex is not (
@@ -541,6 +804,15 @@ public static class StartupCompatibilityProbe
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr OpenProcess(int processAccess, bool inheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool IsWow64Process(IntPtr processHandle, out bool wow64Process);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool IsWow64Process2(
+        IntPtr processHandle,
+        out ushort processMachine,
+        out ushort nativeMachine);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool OpenProcessToken(

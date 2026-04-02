@@ -1,5 +1,6 @@
 using ClassroomToolkit.Services.Compatibility;
 using FluentAssertions;
+using System.Runtime.InteropServices;
 
 namespace ClassroomToolkit.Tests;
 
@@ -84,5 +85,31 @@ public sealed class StartupCompatibilityProbeTests
         {
             File.Delete(filePath);
         }
+    }
+
+    [Theory]
+    [InlineData(0x014c, Architecture.X86)]
+    [InlineData(0x8664, Architecture.X64)]
+    [InlineData(0xAA64, Architecture.Arm64)]
+    public void MapMachineToArchitecture_ShouldMapKnownMachineValues(
+        ushort machine,
+        Architecture expected)
+    {
+        var result = StartupCompatibilityProbe.MapMachineToArchitecture(machine);
+
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void TryGetProcessArchitecture_ShouldReturnTrue_ForCurrentProcess()
+    {
+        var success = StartupCompatibilityProbe.TryGetProcessArchitecture(
+            Environment.ProcessId,
+            out var architecture,
+            out var error);
+
+        success.Should().BeTrue();
+        error.Should().BeEmpty();
+        architecture.Should().BeOneOf(Architecture.X64, Architecture.X86, Architecture.Arm64);
     }
 }
