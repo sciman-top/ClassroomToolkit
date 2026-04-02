@@ -1,0 +1,115 @@
+[CmdletBinding()]
+param(
+    [string]$Configuration = "Debug",
+    [string]$MatrixId = "BL-UNKNOWN",
+    [string]$PresentationVendor = "Unknown",
+    [string]$PresentationEdition = "Unknown",
+    [string]$PresentationVersion = "Unknown",
+    [string]$PresentationProcessName = "Unknown",
+    [string]$PresentationClassSignature = "Unknown",
+    [string]$PresentationArch = "Unknown",
+    [string]$PrivilegeMatch = "Unknown",
+    [string]$OutputPath = "",
+    [switch]$RunPreflight
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+function Get-VcppRuntimeVersion {
+    try {
+        $key = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction Stop
+        if ($null -ne $key -and $key.Installed -eq 1) {
+            return "{0}.{1}.{2}" -f $key.Major, $key.Minor, $key.Bld
+        }
+        return "NotInstalled"
+    }
+    catch {
+        return "Unknown"
+    }
+}
+
+function Get-Elevation {
+    try {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            return "Admin"
+        }
+        return "Standard"
+    }
+    catch {
+        return "Unknown"
+    }
+}
+
+$machine = $env:COMPUTERNAME
+$os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+$osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+$procArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
+$dotnetVersion = (& dotnet --version)
+$vcpp = Get-VcppRuntimeVersion
+$appElevation = Get-Elevation
+
+$preflightResult = "NotRun"
+$preflightDetail = "Skipped"
+if ($RunPreflight) {
+    try {
+        powershell -File scripts/validation/run-compatibility-preflight.ps1 -Configuration $Configuration | Out-Host
+        $preflightResult = "Pass"
+        $preflightDetail = "scripts/validation/run-compatibility-preflight.ps1"
+    }
+    catch {
+        $preflightResult = "Fail"
+        $preflightDetail = $_.Exception.Message
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $safeMachine = ($machine -replace "[^a-zA-Z0-9_-]", "-")
+    $OutputPath = "docs/compatibility/reports/$stamp-$safeMachine-$MatrixId.md"
+}
+
+$outputDir = Split-Path -Parent $OutputPath
+if (-not [string]::IsNullOrWhiteSpace($outputDir)) {
+    New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+}
+
+$now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+$content = @"
+# Compatibility Matrix Execution Report
+
+Date: $now
+Matrix ID: $MatrixId
+Machine: $machine
+
+## Environment
+- OS: $os
+- OS architecture: $osArch
+- App process architecture: $procArch
+- .NET runtime: $dotnetVersion
+- VC++ runtime (x64): $vcpp
+- App elevation: $appElevation
+
+## Presentation Software
+- Vendor: $PresentationVendor
+- Edition/channel: $PresentationEdition
+- Version: $PresentationVersion
+- Process name: $PresentationProcessName
+- Class/window signature: $PresentationClassSignature
+- Presentation architecture: $PresentationArch
+- Privilege consistency: $PrivilegeMatch
+
+## Gate Evidence
+- Preflight result: $preflightResult
+- Preflight detail: $preflightDetail
+
+## Verdict
+- Status: $(if ($preflightResult -eq "Pass") { "Pass" } elseif ($preflightResult -eq "Fail") { "Fail" } else { "Pending" })
+- Notes: Fill compatibility observations and remediation actions here.
+"@
+
+Set-Content -Path $OutputPath -Value $content -Encoding UTF8
+Write-Host "[compat-matrix] report generated: $OutputPath"
