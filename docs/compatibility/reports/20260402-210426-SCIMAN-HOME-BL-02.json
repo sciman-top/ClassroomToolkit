@@ -1,0 +1,30 @@
+﻿{
+    "generatedAt":  "2026-04-02 21:04:26",
+    "matrixId":  "BL-02",
+    "machine":  "SCIMAN-HOME",
+    "environment":  {
+                        "os":  "Microsoft Windows 10.0.26200 ",
+                        "osArchitecture":  "X64",
+                        "appProcessArchitecture":  "X64",
+                        "dotnetRuntime":  "10.0.201",
+                        "vcppRuntimeX64":  "14.50.35719",
+                        "appElevation":  "Standard"
+                    },
+    "presentation":  {
+                         "vendor":  "PowerPoint",
+                         "edition":  "LTSC",
+                         "version":  "Unknown",
+                         "processName":  "POWERPNT",
+                         "classSignature":  "pptviewwndclass",
+                         "architecture":  "x64",
+                         "privilegeConsistency":  "Yes"
+                     },
+    "gate":  {
+                 "preflightResult":  "Pass",
+                 "preflightDetail":  "scripts/validation/run-compatibility-preflight.ps1"
+             },
+    "verdict":  {
+                    "status":  "Pass",
+                    "markdownReport":  "docs/compatibility/reports/20260402-210426-SCIMAN-HOME-BL-02.md"
+                }
+}

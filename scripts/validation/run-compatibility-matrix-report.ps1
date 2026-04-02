@@ -10,6 +10,9 @@ param(
     [string]$PresentationArch = "Unknown",
     [string]$PrivilegeMatch = "Unknown",
     [string]$OutputPath = "",
+    [string]$OutputJsonPath = "",
+    [switch]$EmitJson,
+    [switch]$FailOnPreflightFailure,
     [switch]$RunPreflight
 )
 
@@ -71,6 +74,18 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = "docs/compatibility/reports/$stamp-$safeMachine-$MatrixId.md"
 }
 
+$resolvedStatus = "Pending"
+if ($preflightResult -eq "Pass") {
+    $resolvedStatus = "Pass"
+}
+elseif ($preflightResult -eq "Fail") {
+    $resolvedStatus = "Fail"
+}
+
+if (($EmitJson -or -not [string]::IsNullOrWhiteSpace($OutputJsonPath)) -and [string]::IsNullOrWhiteSpace($OutputJsonPath)) {
+    $OutputJsonPath = [System.IO.Path]::ChangeExtension($OutputPath, ".json")
+}
+
 $outputDir = Split-Path -Parent $OutputPath
 if (-not [string]::IsNullOrWhiteSpace($outputDir)) {
     New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -107,9 +122,56 @@ Machine: $machine
 - Preflight detail: $preflightDetail
 
 ## Verdict
-- Status: $(if ($preflightResult -eq "Pass") { "Pass" } elseif ($preflightResult -eq "Fail") { "Fail" } else { "Pending" })
+- Status: $resolvedStatus
 - Notes: Fill compatibility observations and remediation actions here.
 "@
 
 Set-Content -Path $OutputPath -Value $content -Encoding UTF8
 Write-Host "[compat-matrix] report generated: $OutputPath"
+
+if ($EmitJson -or -not [string]::IsNullOrWhiteSpace($OutputJsonPath)) {
+    $jsonOutputDir = Split-Path -Parent $OutputJsonPath
+    if (-not [string]::IsNullOrWhiteSpace($jsonOutputDir)) {
+        New-Item -ItemType Directory -Force -Path $jsonOutputDir | Out-Null
+    }
+
+    $jsonPayload = [ordered]@{
+        generatedAt = $now
+        matrixId = $MatrixId
+        machine = $machine
+        environment = [ordered]@{
+            os = $os
+            osArchitecture = $osArch
+            appProcessArchitecture = $procArch
+            dotnetRuntime = $dotnetVersion
+            vcppRuntimeX64 = $vcpp
+            appElevation = $appElevation
+        }
+        presentation = [ordered]@{
+            vendor = $PresentationVendor
+            edition = $PresentationEdition
+            version = $PresentationVersion
+            processName = $PresentationProcessName
+            classSignature = $PresentationClassSignature
+            architecture = $PresentationArch
+            privilegeConsistency = $PrivilegeMatch
+        }
+        gate = [ordered]@{
+            preflightResult = $preflightResult
+            preflightDetail = $preflightDetail
+        }
+        verdict = [ordered]@{
+            status = $resolvedStatus
+            markdownReport = $OutputPath
+        }
+    }
+
+    $jsonText = $jsonPayload | ConvertTo-Json -Depth 8
+    Set-Content -Path $OutputJsonPath -Value $jsonText -Encoding UTF8
+    Write-Host "[compat-matrix] json generated: $OutputJsonPath"
+}
+
+if ($FailOnPreflightFailure -and $RunPreflight -and $preflightResult -eq "Fail") {
+    Write-Error "[compat-matrix] preflight failed and FailOnPreflightFailure is enabled."
+    exit 2
+}
