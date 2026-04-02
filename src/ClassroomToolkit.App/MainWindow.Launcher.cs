@@ -361,7 +361,7 @@ public partial class MainWindow
             return;
         }
         var settingsPath = _configurationService.SettingsIniPath;
-        _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", token =>
+        _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", async token =>
         {
             var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);
             if (!result.HasIssues)
@@ -377,13 +377,17 @@ public partial class MainWindow
                 return;
             }
 
+            await Task.Delay(
+                MainWindowRuntimeDefaults.StartupDiagnosticsDialogDelayMs,
+                token).ConfigureAwait(false);
+
             void ShowDiagnosticsDialog()
             {
                 if (_backgroundTasksCancellation.IsCancellationRequested || token.IsCancellationRequested)
                 {
                     return;
                 }
-                if (!IsLoaded)
+                if (!IsLoaded || !IsVisible || WindowState == WindowState.Minimized)
                 {
                     return;
                 }

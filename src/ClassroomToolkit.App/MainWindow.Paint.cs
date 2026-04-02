@@ -436,6 +436,20 @@ public partial class MainWindow
                 _settings.PresentationClassifierLastLearnDetail = string.Empty;
                 _settings.PresentationClassifierRecentLearnRecordsJson = string.Empty;
             }
+            else
+            {
+                var overridesChanged = !string.Equals(
+                    _settings.PresentationClassifierOverridesJson ?? string.Empty,
+                    dialog.PresentationClassifierOverridesJson ?? string.Empty,
+                    StringComparison.Ordinal);
+                _settings.PresentationClassifierOverridesJson = dialog.PresentationClassifierOverridesJson ?? string.Empty;
+                if (overridesChanged)
+                {
+                    _settings.PresentationClassifierLastLearnUtc = string.Empty;
+                    _settings.PresentationClassifierLastLearnDetail = string.Empty;
+                    _settings.PresentationClassifierRecentLearnRecordsJson = string.Empty;
+                }
+            }
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
             _settings.BrushOpacity = dialog.BrushOpacity;
@@ -555,7 +569,6 @@ public partial class MainWindow
         ApplySurfaceZOrderDecision(decision);
     }
 }
-
 
 
 

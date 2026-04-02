@@ -52,6 +52,12 @@ public partial class App : WpfApplication
         if (startupCompatibility.HasWarnings)
         {
             Debug.WriteLine($"[StartupCompatibility] {startupCompatibility.BuildMessage(includeWarnings: true)}");
+            var warningMessage = BuildStartupWarningMessage(startupCompatibility, startupCompatibilityReportPath);
+            System.Windows.MessageBox.Show(
+                warningMessage,
+                "启动兼容性提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
 
         if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
@@ -197,10 +203,13 @@ public partial class App : WpfApplication
         try
         {
             var configuration = _services?.GetService<IConfigurationService>();
+            var settings = _services?.GetService<AppSettings>();
             var settingsPath = configuration?.SettingsDocumentPath
                 ?? configuration?.SettingsIniPath
                 ?? Path.Combine(AppDataDirectory, "settings.json");
-            return StartupCompatibilityProbe.Collect(settingsPath);
+            return StartupCompatibilityProbe.Collect(
+                settingsPath,
+                settings?.PresentationClassifierOverridesJson);
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -233,6 +242,25 @@ public partial class App : WpfApplication
         if (!string.IsNullOrWhiteSpace(reportPath))
         {
             lines.Add(string.Empty);
+            lines.Add($"诊断报告：{reportPath}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildStartupWarningMessage(
+        StartupCompatibilityReport report,
+        string? reportPath)
+    {
+        var lines = new List<string>
+        {
+            "检测到可降级运行的兼容性风险：",
+            report.BuildMessage(includeWarnings: true),
+            string.Empty,
+            "程序将继续启动。建议尽快按提示修复，避免课堂中断。"
+        };
+        if (!string.IsNullOrWhiteSpace(reportPath))
+        {
             lines.Add($"诊断报告：{reportPath}");
         }
 

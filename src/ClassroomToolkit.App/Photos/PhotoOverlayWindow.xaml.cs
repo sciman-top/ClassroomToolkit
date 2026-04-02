@@ -81,10 +81,14 @@ public partial class PhotoOverlayWindow : Window
         // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
         NameText.Visibility = Visibility.Collapsed;
 
+        // 先清空上一张图并进入遮挡态，避免窗口可见时先闪出旧图。
+        PhotoImage.Source = null;
+        PhotoImage.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = Visibility.Visible;
+
         EnsureOverlayVisible();
         if (TryGetCachedBitmap(path, out var cachedBitmap))
         {
-            LoadingMask.Visibility = Visibility.Collapsed;
             ApplyLoadedBitmap(
                 requestId,
                 cachedBitmap,
@@ -93,11 +97,6 @@ public partial class PhotoOverlayWindow : Window
                 hideWhenFailed: false);
             return;
         }
-
-        // 未命中缓存时，进入异步加载占位态
-        PhotoImage.Source = null;
-        PhotoImage.Visibility = Visibility.Collapsed;
-        LoadingMask.Visibility = Visibility.Visible;
 
         _ = SafeTaskRunner.Run(
             "PhotoOverlayWindow.ShowPhoto.LoadBitmap",
@@ -415,4 +414,3 @@ public partial class PhotoOverlayWindow : Window
     }
 
 }
-

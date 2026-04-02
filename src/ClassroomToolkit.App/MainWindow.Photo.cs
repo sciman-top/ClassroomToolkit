@@ -561,6 +561,11 @@ public partial class MainWindow
         double translateX,
         double translateY)
     {
+        if (!_settings.PhotoRememberTransform)
+        {
+            return;
+        }
+
         var changed = PhotoUnifiedTransformChangePolicy.HasChanged(
             _settings.PhotoUnifiedTransformEnabled,
             _settings.PhotoUnifiedScaleX,
@@ -601,6 +606,5 @@ public partial class MainWindow
             forwardPresentationKey: overlay.ForwardKeyboardToPresentation);
     }
 }
-
 
 

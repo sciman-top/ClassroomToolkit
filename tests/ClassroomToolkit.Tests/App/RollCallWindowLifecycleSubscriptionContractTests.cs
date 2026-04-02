@@ -57,6 +57,17 @@ public sealed class RollCallWindowLifecycleSubscriptionContractTests
         source.Should().NotContain("_groupOverlay.Closed += (s, e) => _groupOverlay = null;");
     }
 
+    [Fact]
+    public void RollCallWindow_ShouldDifferentiateMinimizeAndCloseActions()
+    {
+        var source = File.ReadAllText(GetSourcePath("RollCallWindow.Windowing.cs"));
+
+        source.Should().Contain("private void OnMinimizeClick(object sender, RoutedEventArgs e)");
+        source.Should().Contain("HideRollCall();");
+        source.Should().Contain("private void OnCloseClick(object sender, RoutedEventArgs e)");
+        source.Should().Contain("RequestClose();");
+    }
+
     private static string GetSourcePath(string fileName)
     {
         return TestPathHelper.ResolveRepoPath(

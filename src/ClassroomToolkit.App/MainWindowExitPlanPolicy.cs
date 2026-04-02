@@ -4,7 +4,8 @@ internal readonly record struct MainWindowExitPlan(
     bool ShouldExit,
     bool ShouldCancelBackgroundTasks,
     bool ShouldCloseBubbleWindow,
-    bool ShouldCloseRollCallWindow);
+    bool ShouldCloseRollCallWindow,
+    bool ShouldCloseImageManagerWindow);
 
 internal static class MainWindowExitPlanPolicy
 {
@@ -12,7 +13,8 @@ internal static class MainWindowExitPlanPolicy
         bool allowClose,
         bool backgroundTasksCancellationRequested,
         bool hasBubbleWindow,
-        bool hasRollCallWindow)
+        bool hasRollCallWindow,
+        bool hasImageManagerWindow)
     {
         if (allowClose)
         {
@@ -20,13 +22,15 @@ internal static class MainWindowExitPlanPolicy
                 ShouldExit: false,
                 ShouldCancelBackgroundTasks: false,
                 ShouldCloseBubbleWindow: false,
-                ShouldCloseRollCallWindow: false);
+                ShouldCloseRollCallWindow: false,
+                ShouldCloseImageManagerWindow: false);
         }
 
         return new MainWindowExitPlan(
             ShouldExit: true,
             ShouldCancelBackgroundTasks: !backgroundTasksCancellationRequested,
             ShouldCloseBubbleWindow: hasBubbleWindow,
-            ShouldCloseRollCallWindow: hasRollCallWindow);
+            ShouldCloseRollCallWindow: hasRollCallWindow,
+            ShouldCloseImageManagerWindow: hasImageManagerWindow);
     }
 }

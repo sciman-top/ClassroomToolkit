@@ -34,7 +34,6 @@ public partial class ImageManagerWindow : Window
     private const int ThumbnailRefreshDebounceMilliseconds = 90;
     private const int ImageAppendBatchSize = 48;
     private const int FolderNodeRenderBatchSize = 64;
-    private static readonly int ThumbnailWorkerConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
 
     private IntPtr _hwnd;
     private readonly List<ImageItem> _navigableCache = new();
@@ -70,6 +69,12 @@ public partial class ImageManagerWindow : Window
             OnThumbnailRefreshDebounceTick,
             Dispatcher.CurrentDispatcher);
         _thumbnailRefreshDebounceTimer.Stop();
+        _thumbnailBackgroundQueueTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(ThumbnailBackgroundQueueIntervalMilliseconds),
+            DispatcherPriority.Background,
+            OnThumbnailBackgroundQueueTick,
+            Dispatcher.CurrentDispatcher);
+        _thumbnailBackgroundQueueTimer.Stop();
         InitializeComponent();
         DataContext = ViewModel;
 
@@ -93,6 +98,7 @@ public partial class ImageManagerWindow : Window
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
+        _imageListScrollViewer = FindDescendant<ScrollViewer>(ImageList);
         _ = InitializeTreeAsync(_lifecycleCancellation.Token);
         InitializeDefaultFolder();
         EnterInitialMaximizedState();
@@ -492,6 +498,14 @@ public partial class ImageManagerWindow : Window
         {
             ThumbnailSizeSlider.IsEnabled = !listMode;
         }
+
+        if (listMode)
+        {
+            _thumbnailBackgroundQueueTimer.Stop();
+            return;
+        }
+
+        QueueVisibleRegionThumbnails();
     }
 
     private void OnThumbnailSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -514,6 +528,7 @@ public partial class ImageManagerWindow : Window
         }
 
         ImageList?.Items.Refresh();
+        QueueVisibleRegionThumbnails();
     }
 
     private void AddFavorite(string path)
@@ -701,6 +716,8 @@ public partial class ImageManagerWindow : Window
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
         _thumbnailCts = new CancellationTokenSource();
+        ResetThumbnailPendingQueue();
+        _thumbnailBackgroundQueueTimer.Stop();
         var token = _thumbnailCts.Token;
         ViewModel.Images.Clear();
         _navigableDirty = true;
@@ -756,6 +773,8 @@ public partial class ImageManagerWindow : Window
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
         _thumbnailCts = null;
+        _thumbnailBackgroundQueueTimer.Stop();
+        ResetThumbnailPendingQueue();
         ViewModel.CurrentFolder = string.Empty;
         CurrentFolderText.Text = "此电脑";
         ViewModel.Images.Clear();
@@ -769,6 +788,20 @@ public partial class ImageManagerWindow : Window
     {
         if (token.IsCancellationRequested || _isClosing || requestId != Volatile.Read(ref _loadImagesRequestId))
         {
+            return;
+        }
+
+        var decodeWidth = ResolveThumbnailDecodeWidth();
+        if (TryGetCachedThumbnail(
+                item.Path,
+                isPdf,
+                decodeWidth,
+                item.Modified,
+                out var cachedThumbnail,
+                out var cachedPageCount)
+            && cachedThumbnail != null)
+        {
+            _ = TryDispatchThumbnailUpdateAsync(item, cachedThumbnail, cachedPageCount, token, requestId);
             return;
         }
 
@@ -798,7 +831,7 @@ public partial class ImageManagerWindow : Window
                     }
                     else
                     {
-                        thumbnail = LoadThumbnail(item.Path);
+                        thumbnail = LoadThumbnail(item.Path, decodeWidth);
                     }
                 }
                 finally { TryReleaseThumbnailSemaphore(); }
@@ -808,6 +841,7 @@ public partial class ImageManagerWindow : Window
                     return;
                 }
 
+                PutThumbnailCache(item.Path, isPdf, decodeWidth, item.Modified, thumbnail, pageCount);
                 await TryDispatchThumbnailUpdateAsync(item, thumbnail, pageCount, token, requestId);
             },
             token,
@@ -905,9 +939,17 @@ public partial class ImageManagerWindow : Window
         SourceInitialized -= OnWindowSourceInitialized;
         _thumbnailRefreshDebounceTimer.Stop();
         _thumbnailRefreshDebounceTimer.Tick -= OnThumbnailRefreshDebounceTick;
+        _thumbnailBackgroundQueueTimer.Stop();
+        _thumbnailBackgroundQueueTimer.Tick -= OnThumbnailBackgroundQueueTick;
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
         _thumbnailCts = null;
+        ResetThumbnailPendingQueue();
+        lock (_thumbnailCacheLock)
+        {
+            _thumbnailCache.Clear();
+            _thumbnailCacheLru.Clear();
+        }
         try
         {
             _thumbnailSemaphore.Dispose();
@@ -1115,9 +1157,11 @@ public partial class ImageManagerWindow : Window
                 ViewModel.Images.Add(item);
                 if (!item.IsFolder)
                 {
-                    QueueThumbnailLoad(item, item.IsPdf, token, requestId);
+                    EnqueuePendingThumbnail(item);
                 }
             }
+
+            QueueVisibleRegionThumbnails();
 
             if (upperBound < result.Count)
             {
@@ -1139,6 +1183,8 @@ public partial class ImageManagerWindow : Window
                 }
             }
         }
+
+        QueueVisibleRegionThumbnails();
     }
 
     private void RemoveMinimizeButton()
@@ -1496,5 +1542,3 @@ public sealed class PdfBackgroundConverter : System.Windows.Data.IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         => System.Windows.Data.Binding.DoNothing;
 }
-
-

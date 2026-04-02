@@ -1327,6 +1327,7 @@ public partial class PaintOverlayWindow : Window
         if (PhotoTransformMemoryTogglePolicy.ShouldResetUserDirtyState(_rememberPhotoTransform))
         {
             _photoUserTransformDirty = false;
+            _photoPageTransforms.Clear();
         }
         if (PhotoTransformMemoryTogglePolicy.ShouldResetUnifiedTransformState(_rememberPhotoTransform))
         {
@@ -1441,8 +1442,8 @@ public partial class PaintOverlayWindow : Window
 
     public void SetPhotoUnifiedTransformState(bool enabled, double scaleX, double scaleY, double translateX, double translateY)
     {
-        _photoUnifiedTransformReady = enabled;
-        if (!enabled)
+        _photoUnifiedTransformReady = enabled && _rememberPhotoTransform;
+        if (!_photoUnifiedTransformReady)
         {
             return;
         }
@@ -1452,6 +1453,7 @@ public partial class PaintOverlayWindow : Window
         _lastPhotoTranslateY = translateY;
         _photoUserTransformDirty = true;
         if (PhotoUnifiedTransformApplyPolicy.ShouldApplyRuntimeTransform(
+                _rememberPhotoTransform,
                 IsPhotoInkModeActive(),
                 IsCrossPageDisplayActive()))
         {

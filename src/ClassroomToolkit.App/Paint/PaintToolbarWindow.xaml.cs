@@ -29,6 +29,7 @@ public partial class PaintToolbarWindow : Window
     private double _uiScale = ToolbarScaleDefaults.Default;
     private bool _modeInitialized;
     private PaintToolMode _currentMode = PaintToolMode.Brush;
+    private readonly PaintToolSelectionManager _toolSelectionManager = new(PaintToolMode.Brush);
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -132,17 +133,17 @@ public partial class PaintToolbarWindow : Window
         }
         if (!_modeInitialized)
         {
-            UpdateToolButtons(_shapeType == PaintShapeType.None ? PaintToolMode.Brush : PaintToolMode.Shape);
+            ForceToolMode(_shapeType == PaintShapeType.None ? PaintToolMode.Brush : PaintToolMode.Shape);
             _modeInitialized = true;
             return;
         }
         if (_shapeType == PaintShapeType.None && _currentMode == PaintToolMode.Shape)
         {
-            UpdateToolButtons(PaintToolMode.Brush);
+            SelectToolMode(PaintToolMode.Brush, allowToggleOffCurrent: false);
         }
         else if (_shapeType != PaintShapeType.None && _currentMode == PaintToolMode.Brush)
         {
-            UpdateToolButtons(PaintToolMode.Shape);
+            SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
         }
     }
 
@@ -164,7 +165,7 @@ public partial class PaintToolbarWindow : Window
 
 
 
-    private void OnModeChecked(object sender, RoutedEventArgs e)
+    private void OnModeButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is not ToggleButton || _initializing)
         {
@@ -172,40 +173,18 @@ public partial class PaintToolbarWindow : Window
         }
         if (ReferenceEquals(sender, CursorButton))
         {
-            UpdateToolButtons(PaintToolMode.Cursor);
+            SelectToolMode(PaintToolMode.Cursor, allowToggleOffCurrent: false);
             return;
         }
         if (ReferenceEquals(sender, EraserButton))
         {
-            UpdateToolButtons(PaintToolMode.Eraser);
+            SelectToolMode(PaintToolMode.Eraser, allowToggleOffCurrent: true);
             return;
         }
         if (ReferenceEquals(sender, RegionEraseButton))
         {
-            UpdateToolButtons(PaintToolMode.RegionErase);
+            SelectToolMode(PaintToolMode.RegionErase, allowToggleOffCurrent: true);
             return;
-        }
-    }
-
-    private void OnModeUnchecked(object sender, RoutedEventArgs e)
-    {
-        if (_initializing)
-        {
-            return;
-        }
-        if (ReferenceEquals(sender, CursorButton) && _currentMode == PaintToolMode.Cursor)
-        {
-            UpdateToolButtons(PaintToolMode.Brush);
-            return;
-        }
-        if (ReferenceEquals(sender, EraserButton) && _currentMode == PaintToolMode.Eraser)
-        {
-            UpdateToolButtons(PaintToolMode.Brush);
-            return;
-        }
-        if (ReferenceEquals(sender, RegionEraseButton) && _currentMode == PaintToolMode.RegionErase)
-        {
-            UpdateToolButtons(PaintToolMode.Brush);
         }
     }
 
@@ -229,7 +208,7 @@ public partial class PaintToolbarWindow : Window
         UpdateQuickColorSelection(selectedColor);
         
         // 始终同步回画笔模式，避免工具高亮状态残留
-        UpdateToolButtons(PaintToolMode.Brush);
+        SelectToolMode(PaintToolMode.Brush, allowToggleOffCurrent: false);
         
         // 重置形状类型（如果需要）
         if (shouldResetShape)
@@ -276,7 +255,7 @@ public partial class PaintToolbarWindow : Window
     {
         var shapeType = ResolveEffectiveShapeType();
         ApplyShapeType(shapeType);
-        UpdateToolButtons(PaintToolMode.Shape);
+        SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: true);
     }
 
     private void OpenShapeMenu()
@@ -301,7 +280,7 @@ public partial class PaintToolbarWindow : Window
         }
 
         ApplyShapeType(type);
-        UpdateToolButtons(PaintToolMode.Shape);
+        SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
     }
 
     private void OnBoardClick(object sender, RoutedEventArgs e)
@@ -321,8 +300,25 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: photo open callback failed: {ex.Message}"));
     }
 
-    private void UpdateToolButtons(PaintToolMode mode)
+    private void SelectToolMode(PaintToolMode requestedMode, bool allowToggleOffCurrent)
     {
+        var resolved = _toolSelectionManager.Select(requestedMode, allowToggleOffCurrent);
+        ApplyToolMode(resolved);
+    }
+
+    private void ForceToolMode(PaintToolMode mode)
+    {
+        _toolSelectionManager.Reset(mode);
+        ApplyToolMode(mode);
+    }
+
+    private void ApplyToolMode(PaintToolMode mode)
+    {
+        if (_currentMode == mode)
+        {
+            return;
+        }
+
         _initializing = true;
         try
         {
@@ -464,7 +460,7 @@ public partial class PaintToolbarWindow : Window
         // 如果当前不是画笔模式，切换到画笔模式
         if (_currentMode != PaintToolMode.Brush)
         {
-            UpdateToolButtons(PaintToolMode.Brush);
+            SelectToolMode(PaintToolMode.Brush, allowToggleOffCurrent: false);
         }
         
         // 更新颜色选择状态

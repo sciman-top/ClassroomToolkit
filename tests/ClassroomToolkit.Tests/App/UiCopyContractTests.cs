@@ -22,6 +22,7 @@ public sealed class UiCopyContractTests
 
         xaml.Should().Contain("切换点名/倒计时");
         xaml.Should().Contain("打开点名设置");
+        xaml.Should().Contain("隐藏点名（功能继续）");
         xaml.Should().Contain("关闭点名窗口");
         xaml.Should().Contain("正在加载名单...");
     }

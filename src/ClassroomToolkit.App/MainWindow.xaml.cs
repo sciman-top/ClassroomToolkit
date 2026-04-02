@@ -145,8 +145,7 @@ public partial class MainWindow : Window
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
         ScheduleAutoExitTimer();
-        ScheduleInkCleanup();
-        WarmupRollCallData();
+        ScheduleStartupWarmups();
         var toggleAction = MainWindowLoadedToggleActionPolicy.Resolve(_settings.LauncherMinimized);
         if (toggleAction == MainWindowLoadedToggleAction.MinimizeLauncher)
         {
@@ -161,7 +160,47 @@ public partial class MainWindow : Window
 
     private void WarmupRollCallData()
     {
-        // Warmup is performed inside RollCallWindow initialization.
+        EnsureRollCallWindow();
+        _rollCallWindow?.WarmupData();
+    }
+
+    private void ScheduleStartupWarmups()
+    {
+        QueueStartupWarmup(
+            operation: "warmup-rollcall-data",
+            action: WarmupRollCallData,
+            priority: DispatcherPriority.ContextIdle);
+        QueueStartupWarmup(
+            operation: "schedule-ink-cleanup",
+            action: ScheduleInkCleanup,
+            priority: DispatcherPriority.Background);
+    }
+
+    private void QueueStartupWarmup(string operation, Action action, DispatcherPriority priority)
+    {
+        if (_backgroundTasksCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        void ExecuteWarmup()
+        {
+            if (_backgroundTasksCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            ExecuteLifecycleSafe("startup-warmup", operation, action);
+        }
+
+        var scheduled = TryBeginInvoke(
+            ExecuteWarmup,
+            priority,
+            $"StartupWarmup.{operation}");
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            ExecuteWarmup();
+        }
     }
 
     // ── Roll-call ──
@@ -630,10 +669,11 @@ public partial class MainWindow : Window
     private void RequestExit()
     {
         var exitPlan = MainWindowExitPlanPolicy.Resolve(
-            _allowClose,
-            _backgroundTasksCancellation.IsCancellationRequested,
-            _bubbleWindow != null,
-            _rollCallWindow != null);
+            allowClose: _allowClose,
+            backgroundTasksCancellationRequested: _backgroundTasksCancellation.IsCancellationRequested,
+            hasBubbleWindow: _bubbleWindow != null,
+            hasRollCallWindow: _rollCallWindow != null,
+            hasImageManagerWindow: _imageManagerWindow != null);
         if (!exitPlan.ShouldExit)
         {
             return;
@@ -661,6 +701,11 @@ public partial class MainWindow : Window
             var rollCallWindow = _rollCallWindow;
             ExecuteLifecycleSafe(phase, "close-rollcall-window", rollCallWindow.RequestClose);
             _rollCallWindow = null;
+        }
+        if (exitPlan.ShouldCloseImageManagerWindow && _imageManagerWindow != null)
+        {
+            var imageManagerWindow = _imageManagerWindow;
+            ExecuteLifecycleSafe(phase, "close-image-manager-window", imageManagerWindow.Close);
         }
         
         ExecuteLifecycleSafe(phase, "close-paint-window-orchestrator", _paintWindowOrchestrator.Close);
@@ -840,10 +885,6 @@ public partial class MainWindow : Window
         _backgroundTasksCancellation.Dispose();
     }
 }
-
-
-
-
 
 
 

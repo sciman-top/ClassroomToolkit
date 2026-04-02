@@ -812,7 +812,7 @@ public partial class PaintOverlayWindow
         _lastPhotoTranslateX = _photoTranslate.X;
         _lastPhotoTranslateY = _photoTranslate.Y;
         _photoUserTransformDirty = userAdjusted;
-        if (IsCrossPageDisplayActive())
+        if (_rememberPhotoTransform && IsCrossPageDisplayActive())
         {
             _photoUnifiedTransformReady = true;
             SchedulePhotoUnifiedTransformSave();

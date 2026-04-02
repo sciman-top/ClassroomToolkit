@@ -63,6 +63,7 @@ public partial class RollCallWindow : Window
     private int _speechUnavailableNotifiedState;
     private int _remoteHookUnavailableNotifiedState;
     private bool _initialized;
+    private bool _warmupStarted;
     private bool _dataLoaded;
     private bool _settingsSaveFailedNotified;
     private bool _hovering;
@@ -100,6 +101,7 @@ public partial class RollCallWindow : Window
         _dataPath = dataPath;
         _settingsService = settingsService;
         _settings = settings;
+        RefreshRollCallSettingsSnapshot();
         _hookService = hookService;
         _remoteHookCoordinator = new RollCallRemoteHookCoordinator(
             RegisterRemoteHookAsync,
@@ -160,6 +162,56 @@ public partial class RollCallWindow : Window
         
         IsVisibleChanged += OnWindowVisibilityChanged;
         StateChanged += OnWindowStateChanged;
+    }
+
+    private void RefreshRollCallSettingsSnapshot()
+    {
+        AppSettings? latest = null;
+        SafeActionExecutionExecutor.TryExecute(
+            () => latest = _settingsService.Load(),
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatInitializationFailureMessage(
+                    ex.GetType().Name,
+                    $"reload-settings: {ex.Message}")));
+        if (latest == null)
+        {
+            return;
+        }
+
+        _settings.RollCallShowId = latest.RollCallShowId;
+        _settings.RollCallShowName = latest.RollCallShowName;
+        _settings.RollCallRemoteEnabled = latest.RollCallRemoteEnabled;
+        _settings.RollCallRemoteGroupSwitchEnabled = latest.RollCallRemoteGroupSwitchEnabled;
+        _settings.RollCallShowPhoto = latest.RollCallShowPhoto;
+        _settings.RollCallPhotoDurationSeconds = latest.RollCallPhotoDurationSeconds;
+        _settings.RollCallPhotoSharedClass = latest.RollCallPhotoSharedClass;
+        _settings.RollCallTimerSoundEnabled = latest.RollCallTimerSoundEnabled;
+        _settings.RollCallTimerSoundVariant = latest.RollCallTimerSoundVariant;
+        _settings.RollCallTimerReminderEnabled = latest.RollCallTimerReminderEnabled;
+        _settings.RollCallTimerReminderIntervalMinutes = latest.RollCallTimerReminderIntervalMinutes;
+        _settings.RollCallTimerReminderSoundVariant = latest.RollCallTimerReminderSoundVariant;
+        _settings.RollCallMode = latest.RollCallMode;
+        _settings.RollCallTimerMode = latest.RollCallTimerMode;
+        _settings.RollCallTimerMinutes = latest.RollCallTimerMinutes;
+        _settings.RollCallTimerSeconds = latest.RollCallTimerSeconds;
+        _settings.RollCallTimerSecondsLeft = latest.RollCallTimerSecondsLeft;
+        _settings.RollCallStopwatchSeconds = latest.RollCallStopwatchSeconds;
+        _settings.RollCallTimerRunning = latest.RollCallTimerRunning;
+        _settings.RollCallWindowX = latest.RollCallWindowX;
+        _settings.RollCallWindowY = latest.RollCallWindowY;
+        _settings.RollCallWindowWidth = latest.RollCallWindowWidth;
+        _settings.RollCallWindowHeight = latest.RollCallWindowHeight;
+        _settings.RollCallIdFontSize = latest.RollCallIdFontSize;
+        _settings.RollCallNameFontSize = latest.RollCallNameFontSize;
+        _settings.RollCallTimerFontSize = latest.RollCallTimerFontSize;
+        _settings.RollCallSpeechEnabled = latest.RollCallSpeechEnabled;
+        _settings.RollCallSpeechEngine = latest.RollCallSpeechEngine;
+        _settings.RollCallSpeechVoiceId = latest.RollCallSpeechVoiceId;
+        _settings.RollCallSpeechOutputId = latest.RollCallSpeechOutputId;
+        _settings.RemotePresenterKey = latest.RemotePresenterKey;
+        _settings.RemoteGroupSwitchKey = latest.RemoteGroupSwitchKey;
+        _settings.RollCallCurrentClass = latest.RollCallCurrentClass;
+        _settings.RollCallCurrentGroup = latest.RollCallCurrentGroup;
     }
 
     public IReadOnlyList<string> AvailableClasses => _viewModel.AvailableClasses;
@@ -287,6 +339,18 @@ public partial class RollCallWindow : Window
         _ = HandleLoadedAsync(_lifecycleCancellation.Token);
     }
 
+    public void WarmupData()
+    {
+        if (_warmupStarted || _dataLoaded || _lifecycleCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _warmupStarted = true;
+        _viewModel.WarmupData(_dataPath);
+        _ = _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+    }
+
     private async Task HandleLoadedAsync(CancellationToken cancellationToken)
     {
         if (_initialized)
@@ -298,8 +362,11 @@ public partial class RollCallWindow : Window
             _initialized = true;
             cancellationToken.ThrowIfCancellationRequested();
             ApplySettings(_settings, updatePhoto: false);
-            _viewModel.WarmupData(_dataPath);
-            await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+            if (!_viewModel.IsDataReady)
+            {
+                _viewModel.WarmupData(_dataPath);
+                await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+            }
             cancellationToken.ThrowIfCancellationRequested();
             RestoreGroupSelection();
             // 启动时不显示之前点名状态的学生照片，避免意外显示
@@ -333,4 +400,3 @@ public partial class RollCallWindow : Window
         }
     }
 }
-

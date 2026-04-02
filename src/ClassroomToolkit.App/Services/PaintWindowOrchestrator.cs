@@ -91,6 +91,15 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
             return;
         }
 
+        if (OverlayWindow != null || ToolbarWindow != null)
+        {
+            _logger.LogWarning(
+                "Detected partial paint window lifecycle state. Rebuilding pair. overlayExists={OverlayExists}, toolbarExists={ToolbarExists}",
+                OverlayWindow != null,
+                ToolbarWindow != null);
+            Close();
+        }
+
         _logger.LogInformation("Creating Paint Overlay and Toolbar windows.");
         var windows = _paintWindowFactory.Create();
         OverlayWindow = windows.overlay;

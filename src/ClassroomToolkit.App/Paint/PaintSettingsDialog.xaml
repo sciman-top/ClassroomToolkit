@@ -412,6 +412,61 @@
                                         <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式（更稳定）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
                                         <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征（实验功能）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
                                         <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空演示识别规则覆盖（保存后生效）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
+                                        <TextBlock Text="识别规则包（签名）"
+                                                   Foreground="{StaticResource Brush_Text_Secondary}"
+                                                   FontSize="13"
+                                                   Margin="0,12,0,8"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="ExportClassifierPackageButton"
+                                                    Content="导出规则包"
+                                                    Height="30"
+                                                    Margin="0,0,6,0"
+                                                    Style="{StaticResource Style_SecondaryButton}"
+                                                    Click="OnExportClassifierPackageClick"/>
+                                            <Button Grid.Column="1"
+                                                    x:Name="ImportClassifierPackageButton"
+                                                    Content="导入规则包"
+                                                    Height="30"
+                                                    Margin="6,0,0,0"
+                                                    Style="{StaticResource Style_SecondaryButton}"
+                                                    Click="OnImportClassifierPackageClick"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="CopyClassifierPackageButton"
+                                                    Content="复制规则包"
+                                                    Height="30"
+                                                    Margin="0,0,6,0"
+                                                    Style="{StaticResource Style_SecondaryButton}"
+                                                    Click="OnCopyClassifierPackageClick"/>
+                                            <Button Grid.Column="1"
+                                                    x:Name="ImportClassifierPackageFromClipboardButton"
+                                                    Content="粘贴并导入"
+                                                    Height="30"
+                                                    Margin="6,0,0,0"
+                                                    Style="{StaticResource Style_SecondaryButton}"
+                                                    Click="OnImportClassifierPackageFromClipboardClick"/>
+                                        </Grid>
+                                        <Button x:Name="UndoClassifierPackageImportButton"
+                                                Content="撤销最近导入"
+                                                Height="30"
+                                                Margin="0,0,0,8"
+                                                HorizontalAlignment="Left"
+                                                MinWidth="132"
+                                                Style="{StaticResource Style_SecondaryButton}"
+                                                Click="OnUndoClassifierPackageImportClick"/>
+                                        <TextBlock x:Name="PresentationClassifierPackageStatusText"
+                                                   Text="规则包状态：未初始化。"
+                                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>
@@ -434,5 +489,3 @@
         </Grid>
     </Border>
 </Window>
-
-

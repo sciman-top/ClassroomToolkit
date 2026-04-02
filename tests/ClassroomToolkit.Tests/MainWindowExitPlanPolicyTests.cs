@@ -12,12 +12,14 @@ public sealed class MainWindowExitPlanPolicyTests
             allowClose: true,
             backgroundTasksCancellationRequested: false,
             hasBubbleWindow: true,
-            hasRollCallWindow: true);
+            hasRollCallWindow: true,
+            hasImageManagerWindow: true);
 
         plan.ShouldExit.Should().BeFalse();
         plan.ShouldCancelBackgroundTasks.Should().BeFalse();
         plan.ShouldCloseBubbleWindow.Should().BeFalse();
         plan.ShouldCloseRollCallWindow.Should().BeFalse();
+        plan.ShouldCloseImageManagerWindow.Should().BeFalse();
     }
 
     [Fact]
@@ -27,7 +29,8 @@ public sealed class MainWindowExitPlanPolicyTests
             allowClose: false,
             backgroundTasksCancellationRequested: false,
             hasBubbleWindow: false,
-            hasRollCallWindow: false);
+            hasRollCallWindow: false,
+            hasImageManagerWindow: false);
 
         plan.ShouldExit.Should().BeTrue();
         plan.ShouldCancelBackgroundTasks.Should().BeTrue();
@@ -40,11 +43,13 @@ public sealed class MainWindowExitPlanPolicyTests
             allowClose: false,
             backgroundTasksCancellationRequested: true,
             hasBubbleWindow: true,
-            hasRollCallWindow: false);
+            hasRollCallWindow: false,
+            hasImageManagerWindow: true);
 
         plan.ShouldExit.Should().BeTrue();
         plan.ShouldCancelBackgroundTasks.Should().BeFalse();
         plan.ShouldCloseBubbleWindow.Should().BeTrue();
         plan.ShouldCloseRollCallWindow.Should().BeFalse();
+        plan.ShouldCloseImageManagerWindow.Should().BeTrue();
     }
 }

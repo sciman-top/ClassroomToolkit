@@ -46,6 +46,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     private string _speechOutputId = string.Empty;
     private IReadOnlyList<string> _availableClasses = Array.Empty<string>();
     private bool _canPersistWorkbook = true;
+    private bool _isDataReady;
     private bool _disposed;
     private readonly CancellationTokenSource _disposeCancellation = new();
     private readonly Action _timerCompletedHandler;
@@ -268,6 +269,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     }
 
     public bool CanPersistWorkbook => _canPersistWorkbook;
+    public bool IsDataReady => _isDataReady;
 
     public bool TimerSoundEnabled
     {

@@ -76,7 +76,7 @@ public partial class ImageManagerWindow
                     ex.Message)));
     }
 
-    private static ImageSource? LoadThumbnail(string path)
+    private static ImageSource? LoadThumbnail(string path, int decodePixelWidth)
     {
         return ExecuteIoSafe<ImageSource?>(
             () =>
@@ -84,7 +84,7 @@ public partial class ImageManagerWindow
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.DecodePixelWidth = 240;
+            bitmap.DecodePixelWidth = decodePixelWidth;
             bitmap.UriSource = new Uri(path, UriKind.Absolute);
             bitmap.EndInit();
             bitmap.Freeze();

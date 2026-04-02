@@ -116,13 +116,41 @@ public sealed partial class RollCallViewModel
         }
 
         RollCallLoadResult result;
-        try
+        var pendingPreloadTask = TryGetMatchingPreloadTask(_dataPath);
+        if (pendingPreloadTask != null)
         {
-            result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+            try
+            {
+                result = await pendingPreloadTask.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                {
+                    result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
+                        _dataPath,
+                        ex.GetType().Name,
+                        ex.Message));
+                result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+            }
         }
-        catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+        else
         {
-            return;
+            try
+            {
+                result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+            {
+                return;
+            }
         }
         if (_disposed || _disposeCancellation.IsCancellationRequested)
         {
@@ -136,6 +164,30 @@ public sealed partial class RollCallViewModel
         {
             ApplyLoadResult(result, preferredClass);
         }, DispatcherPriority.Render);
+    }
+
+    private Task<RollCallLoadResult>? TryGetMatchingPreloadTask(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return null;
+        }
+
+        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
+        {
+            return null;
+        }
+
+        lock (_preloadLock)
+        {
+            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+                || _preloadedWriteTimeUtc != writeTimeUtc)
+            {
+                return null;
+            }
+
+            return _preloadTask;
+        }
     }
 
     private RollCallLoadResult LoadDataCore()
@@ -232,6 +284,7 @@ public sealed partial class RollCallViewModel
         }
 
         _workbook = result.Workbook;
+        _isDataReady = true;
         _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
         _classStates.Clear();
         foreach (var pair in result.ClassStates)

@@ -221,6 +221,7 @@
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ScrollViewer.CanContentScroll="False"
+                              ScrollViewer.ScrollChanged="OnImageListScrollChanged"
                               Foreground="{StaticResource Brush_Text_Primary}"
                               ItemContainerStyle="{StaticResource Style_ManagementThumbnailListViewItem}">
                         <ListView.ItemsPanel>

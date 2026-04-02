@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Services.Compatibility;
 
@@ -88,15 +89,25 @@ public static class StartupCompatibilityProbe
     private const int MinSupportedWindowsBuild = 19045; // Win10 22H2
     private const int ProcessQueryLimitedInformation = 0x1000;
     private const uint TokenQuery = 0x0008;
+    private static readonly string[] DefaultPresentationProcessTokens =
+    {
+        "powerpnt",
+        "wpp",
+        "wppt"
+    };
 
-    public static StartupCompatibilityReport Collect(string settingsPath)
+    public static StartupCompatibilityReport Collect(
+        string settingsPath,
+        string? presentationClassifierOverridesJson = null)
     {
         var issues = new List<StartupCompatibilityIssue>();
 
         EvaluatePlatform(issues);
         EvaluateSettingsPath(settingsPath, issues);
         EvaluateNativeDependencies(issues);
-        EvaluatePresentationPrivilegeConsistency(issues);
+        EvaluatePresentationPrivilegeConsistency(
+            issues,
+            BuildPresentationProcessTokens(presentationClassifierOverridesJson));
 
         return new StartupCompatibilityReport(issues);
     }
@@ -186,13 +197,22 @@ public static class StartupCompatibilityProbe
                 Suggestion: "请重新解压完整发布包，避免手动删减 DLL；必要时重新执行安装。",
                 IsBlocking: false));
         }
+        else if (TryProbeNativeLibraryLoad(sqlitePath, out var sqliteLoadError))
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "native-sqlite-load-failed",
+                Message: $"本地依赖加载失败：{sqlitePath}（{sqliteLoadError}）",
+                Suggestion: "请安装/修复 VC++ 运行库（x64），并确认杀毒软件未拦截本地 DLL。",
+                IsBlocking: false));
+        }
 
         var pdfiumCandidates = new[]
         {
             Path.Combine(baseDirectory, "x64", "pdfium.dll"),
             Path.Combine(baseDirectory, "pdfium.dll")
         };
-        if (!pdfiumCandidates.Any(File.Exists))
+        var pdfiumPath = pdfiumCandidates.FirstOrDefault(File.Exists);
+        if (string.IsNullOrWhiteSpace(pdfiumPath))
         {
             issues.Add(new StartupCompatibilityIssue(
                 Code: "native-pdfium-missing",
@@ -200,10 +220,53 @@ public static class StartupCompatibilityProbe
                 Suggestion: "请确认安装目录完整，或改用离线标准包重新部署。",
                 IsBlocking: false));
         }
+        else if (TryProbeNativeLibraryLoad(pdfiumPath, out var pdfiumLoadError))
+        {
+            issues.Add(new StartupCompatibilityIssue(
+                Code: "native-pdfium-load-failed",
+                Message: $"PDF 渲染依赖加载失败：{pdfiumPath}（{pdfiumLoadError}）",
+                Suggestion: "请安装/修复 VC++ 运行库（x64），并检查 pdfium 相关文件是否被安全软件隔离。",
+                IsBlocking: false));
+        }
+    }
+
+    internal static bool TryProbeNativeLibraryLoad(string libraryPath, out string error)
+    {
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(libraryPath))
+        {
+            error = "path-empty";
+            return true;
+        }
+
+        IntPtr handle = IntPtr.Zero;
+        try
+        {
+            if (NativeLibrary.TryLoad(libraryPath, out handle))
+            {
+                return false;
+            }
+
+            error = $"load-failed:{Marshal.GetLastPInvokeError()}";
+            return true;
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            error = ex.Message;
+            return true;
+        }
+        finally
+        {
+            if (handle != IntPtr.Zero)
+            {
+                NativeLibrary.Free(handle);
+            }
+        }
     }
 
     private static void EvaluatePresentationPrivilegeConsistency(
-        ICollection<StartupCompatibilityIssue> issues)
+        ICollection<StartupCompatibilityIssue> issues,
+        IReadOnlyList<string> processTokens)
     {
         if (!TryGetCurrentProcessElevation(out var currentElevated, out var currentError))
         {
@@ -217,7 +280,7 @@ public static class StartupCompatibilityProbe
 
         var mismatchedProcesses = new List<string>();
         var unknownProcesses = new List<string>();
-        foreach (var process in EnumeratePresentationProcesses())
+        foreach (var process in EnumeratePresentationProcesses(processTokens))
         {
             try
             {
@@ -287,13 +350,12 @@ public static class StartupCompatibilityProbe
 
     private static IEnumerable<Process> EnumeratePresentationProcesses()
     {
-        var acceptedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "POWERPNT",
-            "WPP",
-            "WPPT"
-        };
+        return EnumeratePresentationProcesses(DefaultPresentationProcessTokens);
+    }
 
+    private static IEnumerable<Process> EnumeratePresentationProcesses(
+        IReadOnlyList<string> processTokens)
+    {
         Process[] processes;
         try
         {
@@ -307,7 +369,7 @@ public static class StartupCompatibilityProbe
 
         foreach (var process in processes)
         {
-            if (acceptedNames.Contains(process.ProcessName))
+            if (IsPresentationProcessNameMatch(process.ProcessName, processTokens))
             {
                 yield return process;
             }
@@ -316,6 +378,88 @@ public static class StartupCompatibilityProbe
                 process.Dispose();
             }
         }
+    }
+
+    internal static IReadOnlyList<string> BuildPresentationProcessTokens(
+        string? presentationClassifierOverridesJson)
+    {
+        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddProcessTokens(tokens, DefaultPresentationProcessTokens);
+
+        if (!PresentationClassifierOverridesParser.TryParse(
+                presentationClassifierOverridesJson,
+                out var overrides,
+                out _))
+        {
+            return tokens.ToArray();
+        }
+
+        AddProcessTokens(tokens, overrides.AdditionalWpsProcessTokens);
+        AddProcessTokens(tokens, overrides.AdditionalOfficeProcessTokens);
+        return tokens.ToArray();
+    }
+
+    internal static bool IsPresentationProcessNameMatch(
+        string processName,
+        IReadOnlyList<string> processTokens)
+    {
+        if (string.IsNullOrWhiteSpace(processName)
+            || processTokens == null
+            || processTokens.Count == 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < processTokens.Count; i++)
+        {
+            var token = processTokens[i];
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                continue;
+            }
+
+            if (processName.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void AddProcessTokens(ISet<string> target, IReadOnlyList<string> source)
+    {
+        if (source == null || source.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            var normalized = NormalizeProcessToken(source[i]);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                continue;
+            }
+
+            target.Add(normalized);
+        }
+    }
+
+    private static string NormalizeProcessToken(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[..^4];
+        }
+
+        return normalized;
     }
 
     private static bool TryGetProcessElevation(int processId, out bool elevated, out string error)

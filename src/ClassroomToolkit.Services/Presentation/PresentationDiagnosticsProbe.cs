@@ -1,4 +1,5 @@
 using ClassroomToolkit.Interop.Presentation;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.Services.Presentation;
 
@@ -54,6 +55,7 @@ public static class PresentationDiagnosticsProbe
         {
             lines.Add($"前台窗口进程：{foreground.Info.ProcessName}");
             lines.Add($"前台窗口类名：{FormatClassNames(foreground.Info.ClassNames)}");
+            lines.Add(BuildProcessVersionDiagnosticLine("前台窗口版本", foreground.Info.ProcessId));
             var check = resolver.CheckWindow(foreground.Handle, classifier);
             if (check != null)
             {
@@ -80,6 +82,7 @@ public static class PresentationDiagnosticsProbe
             var check = resolver.CheckWindow(target.Handle, classifier);
             lines.Add($"检测到演示窗口：{target.Info.ProcessName}");
             lines.Add($"演示窗口类名：{FormatClassNames(target.Info.ClassNames)}");
+            lines.Add(BuildProcessVersionDiagnosticLine("演示窗口版本", target.Info.ProcessId));
             if (check != null)
             {
                 lines.Add($"演示窗口判定：{check.Type} 评分={check.Score}");
@@ -145,6 +148,67 @@ public static class PresentationDiagnosticsProbe
             overrides.AdditionalWpsProcessTokens.Count
             + overrides.AdditionalOfficeProcessTokens.Count;
         return true;
+    }
+
+    internal static string BuildProcessVersionDiagnosticLine(
+        string label,
+        uint processId)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            label = "进程版本";
+        }
+
+        if (!TryGetProcessVersionInfo(
+                processId,
+                out var fileVersion,
+                out var productVersion,
+                out var error))
+        {
+            return $"{label}：无法读取（{error}）";
+        }
+
+        var normalizedFileVersion = string.IsNullOrWhiteSpace(fileVersion) ? "未知" : fileVersion;
+        var normalizedProductVersion = string.IsNullOrWhiteSpace(productVersion) ? "未知" : productVersion;
+        return $"{label}：File={normalizedFileVersion}; Product={normalizedProductVersion}";
+    }
+
+    private static bool TryGetProcessVersionInfo(
+        uint processId,
+        out string fileVersion,
+        out string productVersion,
+        out string error)
+    {
+        fileVersion = string.Empty;
+        productVersion = string.Empty;
+        error = string.Empty;
+
+        if (processId == 0)
+        {
+            error = "invalid-process-id";
+            return false;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById((int)processId);
+            var modulePath = process.MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(modulePath))
+            {
+                error = "main-module-unavailable";
+                return false;
+            }
+
+            var versionInfo = FileVersionInfo.GetVersionInfo(modulePath);
+            fileVersion = versionInfo.FileVersion ?? string.Empty;
+            productVersion = versionInfo.ProductVersion ?? string.Empty;
+            return true;
+        }
+        catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            error = ex.GetType().Name;
+            return false;
+        }
     }
 
     private static bool TryCheckWpsHook(out string error)
