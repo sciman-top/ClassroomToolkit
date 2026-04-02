@@ -1,17 +1,22 @@
 using System.Windows;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
 public partial class DiagnosticsDialog : Window
 {
     private readonly DiagnosticsResult _result;
+    private readonly AppSettingsService? _settingsService;
+    private readonly AppSettings? _settings;
 
-    public DiagnosticsDialog(DiagnosticsResult result)
+    public DiagnosticsDialog(DiagnosticsResult result, AppSettingsService? settingsService = null, AppSettings? settings = null)
     {
         InitializeComponent();
         _result = result;
+        _settingsService = settingsService;
+        _settings = settings;
         Title = result.Title;
         SummaryText.Text = result.Summary;
         DetailBox.Text = result.Detail;
@@ -91,6 +96,29 @@ public partial class DiagnosticsDialog : Window
         // 直接关闭窗口，不设置 DialogResult
         // 调用方会通过 SafeShowDialog 的返回值知道结果
         Close();
+    }
+
+    private void OnResetStartupWarningsClick(object sender, RoutedEventArgs e)
+    {
+        if (_settingsService == null || _settings == null)
+        {
+            System.Windows.MessageBox.Show(
+                this,
+                "当前窗口未接入设置服务，无法重置启动提示状态。",
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        _settings.StartupCompatibilitySuppressedIssueCodes.Clear();
+        _settingsService.Save(_settings);
+        System.Windows.MessageBox.Show(
+            this,
+            "已重新启用启动兼容性提示。下次启动会再次检测并弹出相关告警。",
+            "已恢复",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)

@@ -198,12 +198,15 @@ public static class StartupCompatibilityProbe
             return;
         }
 
-        var sqlitePath = Path.Combine(baseDirectory, "e_sqlite3.dll");
-        if (!File.Exists(sqlitePath))
+        var sqlitePath = ResolveNativeDependencyPath(
+            baseDirectory,
+            "e_sqlite3.dll",
+            RuntimeInformation.ProcessArchitecture);
+        if (string.IsNullOrWhiteSpace(sqlitePath))
         {
             issues.Add(new StartupCompatibilityIssue(
                 Code: "native-sqlite-missing",
-                Message: $"缺少本地依赖：{sqlitePath}",
+                Message: $"缺少本地依赖：{Path.Combine(baseDirectory, "e_sqlite3.dll")}",
                 Suggestion: "请重新解压完整发布包，避免手动删减 DLL；必要时重新执行安装。",
                 IsBlocking: false));
         }
@@ -238,6 +241,80 @@ public static class StartupCompatibilityProbe
                 Suggestion: "请安装/修复 VC++ 运行库（x64），并检查 pdfium 相关文件是否被安全软件隔离。",
                 IsBlocking: false));
         }
+    }
+
+    internal static string? ResolveNativeDependencyPath(
+        string baseDirectory,
+        string fileName,
+        Architecture processArchitecture)
+    {
+        if (string.IsNullOrWhiteSpace(baseDirectory)
+            || string.IsNullOrWhiteSpace(fileName)
+            || !Directory.Exists(baseDirectory))
+        {
+            return null;
+        }
+
+        foreach (var candidate in EnumerateNativeDependencyCandidates(baseDirectory, fileName, processArchitecture))
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateNativeDependencyCandidates(
+        string baseDirectory,
+        string fileName,
+        Architecture processArchitecture)
+    {
+        yield return Path.Combine(baseDirectory, fileName);
+
+        foreach (var runtimeId in BuildPreferredWindowsRuntimeIds(processArchitecture))
+        {
+            yield return Path.Combine(baseDirectory, "runtimes", runtimeId, "native", fileName);
+        }
+    }
+
+    private static IReadOnlyList<string> BuildPreferredWindowsRuntimeIds(Architecture processArchitecture)
+    {
+        var runtimeIds = new List<string>();
+        void Add(string runtimeId)
+        {
+            if (!runtimeIds.Contains(runtimeId, StringComparer.OrdinalIgnoreCase))
+            {
+                runtimeIds.Add(runtimeId);
+            }
+        }
+
+        switch (processArchitecture)
+        {
+            case Architecture.X64:
+                Add("win-x64");
+                Add("win-x86");
+                break;
+            case Architecture.X86:
+                Add("win-x86");
+                Add("win-x64");
+                break;
+            case Architecture.Arm64:
+                Add("win-arm64");
+                Add("win-x64");
+                break;
+            case Architecture.Arm:
+                Add("win-arm");
+                Add("win-arm64");
+                break;
+        }
+
+        Add("win-x64");
+        Add("win-x86");
+        Add("win-arm64");
+        Add("win-arm");
+        return runtimeIds;
     }
 
     private static void EvaluateVcppRuntime(ICollection<StartupCompatibilityIssue> issues)

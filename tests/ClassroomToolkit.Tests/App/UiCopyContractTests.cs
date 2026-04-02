@@ -11,8 +11,17 @@ public sealed class UiCopyContractTests
 
         xaml.Should().Contain("开启画笔（长按可调设置）");
         xaml.Should().Contain("打开点名/倒计时（长按可调设置）");
+        xaml.Should().Contain("打开系统兼容性诊断");
         xaml.Should().Contain("打开全局设置");
-        xaml.Should().Contain("查看关于信息");
+        xaml.Should().Contain("查看产品信息");
+        xaml.Should().Contain("Text=\"sciman课堂工具箱\"");
+
+        xaml.IndexOf("x:Name=\"DiagnosticsButton\"", StringComparison.Ordinal)
+            .Should()
+            .BeLessThan(xaml.IndexOf("x:Name=\"AboutButton\"", StringComparison.Ordinal));
+        xaml.IndexOf("x:Name=\"AboutButton\"", StringComparison.Ordinal)
+            .Should()
+            .BeLessThan(xaml.IndexOf("x:Name=\"SettingsButton\"", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -70,6 +79,10 @@ public sealed class UiCopyContractTests
         timerSetXaml.Should().Contain("常用时长");
         timerSetXaml.Should().Contain("关闭倒计时设置");
         timerSetXaml.Should().Contain("可输入 0-150，滑杆范围为 0-25。");
+        aboutXaml.Should().Contain("Title=\"产品信息\"");
+        aboutXaml.Should().Contain("Text=\"产品信息\"");
+        aboutXaml.Should().Contain("关闭产品信息窗口");
+        aboutXaml.Should().NotContain("关于窗口");
     }
 
     private static string GetXamlPath(params string[] segments)

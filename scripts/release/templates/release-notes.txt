@@ -1,4 +1,4 @@
-ClassroomToolkit 发布说明
+sciman课堂工具箱 发布说明
 
 版本: __VERSION__
 包类型: __PACKAGE_KIND__

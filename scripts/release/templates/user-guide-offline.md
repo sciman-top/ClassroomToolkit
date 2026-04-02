@@ -1,4 +1,4 @@
-# ClassroomToolkit 离线版使用说明
+# sciman课堂工具箱 离线版使用说明
 
 - 版本：`__VERSION__`
 - 生成时间：`__GENERATED_AT__`
@@ -10,7 +10,7 @@
 - 本版与标准版分开输出，离线版目录会额外包含 `prereq/`。
 
 ## 启动方式
-1. 直接运行 `ClassroomToolkit.App.exe`。
+1. 直接运行 `sciman Classroom Toolkit.exe`。
 2. 首次运行建议先打开“系统兼容性诊断”确认环境状态。
 3. 若要在其他电脑先安装运行时，可使用 `prereq/` 目录中的 runtime 安装包。
 
@@ -23,7 +23,7 @@
 
 ## 常见问题
 1. 翻页/遥控不稳定  
-- 确认 ClassroomToolkit 与 PPT/WPS 权限级别一致。
+- 确认 sciman课堂工具箱 与 PPT/WPS 权限级别一致。
 - 检查安全软件是否拦截键盘钩子与输入投递。
 - 在设置中优先使用消息投递模式进行兜底。
 

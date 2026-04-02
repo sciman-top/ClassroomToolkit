@@ -47,5 +47,5 @@ if ($installer -eq $null) {
 
 Write-Host ".NET Desktop Runtime $RequiredMajor.x is missing."
 Write-Host "Installer: $($installer.FullName)"
-Write-Host "Please install runtime manually, then relaunch ClassroomToolkit."
+Write-Host "Please install runtime manually, then relaunch sciman Classroom Toolkit."
 exit 10

@@ -183,17 +183,17 @@ function Invoke-PublishCompatibilityProbe {
         Pop-Location
     }
 
-    $runtimeConfigPath = Join-Path $fddDir "ClassroomToolkit.App.runtimeconfig.json"
+    $runtimeConfigPath = Join-Path $fddDir "sciman Classroom Toolkit.runtimeconfig.json"
     $windowsDesktopRuntimeVersion = Assert-WindowsDesktopRuntimeMajor -RuntimeConfigPath $runtimeConfigPath -ExpectedMajor "10"
 
-    $fddExePath = Join-Path $fddDir "ClassroomToolkit.App.exe"
+    $fddExePath = Join-Path $fddDir "sciman Classroom Toolkit.exe"
     $fddPdfiumPath = Join-Path $fddDir "x64\pdfium.dll"
     $fddSqlitePath = Join-Path $fddDir "e_sqlite3.dll"
     Assert-PathExistsOrThrow -Path $fddExePath
     Assert-PathExistsOrThrow -Path $fddPdfiumPath
     Assert-PathExistsOrThrow -Path $fddSqlitePath
 
-    $scdExePath = Join-Path $scdDir "ClassroomToolkit.App.exe"
+    $scdExePath = Join-Path $scdDir "sciman Classroom Toolkit.exe"
     $scdHostFxrPath = Join-Path $scdDir "hostfxr.dll"
     $scdCoreClrPath = Join-Path $scdDir "coreclr.dll"
     $scdVcruntimePath = Join-Path $scdDir "vcruntime140_cor3.dll"
@@ -277,10 +277,10 @@ if ($propertyGroup.Authors -ne "sciman") {
 if ($propertyGroup.Company -ne $expectedCompany) {
     throw "Unexpected Company in csproj. Current=$($propertyGroup.Company)"
 }
-if ($propertyGroup.Product -ne "ClassroomToolkit") {
+if ($propertyGroup.Product -ne "sciman Classroom Toolkit") {
     throw "Unexpected Product in csproj. Current=$($propertyGroup.Product)"
 }
-if ($propertyGroup.AssemblyTitle -ne "ClassroomToolkit") {
+if ($propertyGroup.AssemblyTitle -ne "sciman Classroom Toolkit") {
     throw "Unexpected AssemblyTitle in csproj. Current=$($propertyGroup.AssemblyTitle)"
 }
 if ([string]::IsNullOrWhiteSpace($propertyGroup.Description)) {

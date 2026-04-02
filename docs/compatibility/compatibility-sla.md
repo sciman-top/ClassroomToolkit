@@ -1,4 +1,4 @@
-# Compatibility SLA (ClassroomToolkit)
+# Compatibility SLA (sciman Classroom Toolkit)
 
 Last updated: 2026-04-02
 
@@ -61,3 +61,4 @@ Mandatory order:
 - Tier A blocking compatibility bug: hotfix target <= 48h
 - Tier A warning affecting classroom flow: fix target <= 5 business days
 - Tier B compatibility request: evaluate + override package decision <= 5 business days
+

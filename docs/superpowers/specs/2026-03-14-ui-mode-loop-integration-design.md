@@ -1,4 +1,4 @@
-# ClassroomToolkit UI Mode Loop 接入设计
+# sciman课堂工具箱 UI Mode Loop 接入设计
 
 日期：2026-03-14  
 状态：Draft for Review  
@@ -565,3 +565,4 @@ generic 层后续可补：
 - UI mode 持有“这次终态外观重构做哪些任务”的执行图
 
 只有这样，两个技能的边界才清晰，自动化也才不会跑错目标。
+

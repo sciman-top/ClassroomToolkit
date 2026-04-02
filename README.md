@@ -1,12 +1,12 @@
-# ClassroomToolkit
+# sciman Classroom Toolkit
 
-> 面向课堂教学场景的 Windows 桌面辅助工具集，聚焦点名、计时、批注和演示控制。
+> 中文名：sciman课堂工具箱。面向课堂教学场景的 Windows 桌面辅助工具集，聚焦点名、计时、批注和演示控制。
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-ClassroomToolkit 不是一个“大而全”的教学平台。它更接近一组面向真实课堂的本地工具：老师打开就能用，尽量减少切换窗口、临场找功能和重新配置的时间。
+sciman Classroom Toolkit 不是一个“大而全”的教学平台。它更接近一组面向真实课堂的本地工具：老师打开就能用，尽量减少切换窗口、临场找功能和重新配置的时间。
 
 适合以下场景：
 
@@ -28,7 +28,7 @@ ClassroomToolkit 不是一个“大而全”的教学平台。它更接近一组
 
 ## 项目边界
 
-ClassroomToolkit 当前聚焦单机、本地、课堂即时使用，不覆盖下面这些方向：
+sciman Classroom Toolkit 当前聚焦单机、本地、课堂即时使用，不覆盖下面这些方向：
 
 - 不提供教务管理、成绩管理、作业分发等平台能力
 - 不默认依赖云端账号、联网同步或服务器部署
@@ -48,7 +48,7 @@ ClassroomToolkit 当前聚焦单机、本地、课堂即时使用，不覆盖下
 
 ### 普通使用者
 
-推荐从 GitHub Releases 下载发布包，解压后直接运行 `ClassroomToolkit.exe`。
+推荐从 GitHub Releases 下载发布包，解压后直接运行 `sciman Classroom Toolkit.exe`。
 
 ### 发布形态（当前）
 

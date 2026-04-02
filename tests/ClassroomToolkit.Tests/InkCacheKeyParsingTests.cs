@@ -1,4 +1,5 @@
 using System.Reflection;
+using ClassroomToolkit.App.Paint;
 using FluentAssertions;
 using Xunit;
 
@@ -14,8 +15,7 @@ public sealed class InkCacheKeyParsingTests
     [InlineData("unknown|abc", false, "", 1)]
     public void TryParseCacheKey_ShouldParseExpectedValues(string key, bool expectedOk, string expectedPath, int expectedPage)
     {
-        var type = Type.GetType("ClassroomToolkit.App.Paint.PaintOverlayWindow, ClassroomToolkit.App");
-        type.Should().NotBeNull();
+        var type = typeof(PaintOverlayWindow);
 
         var method = type!.GetMethod(
             "TryParseCacheKey",

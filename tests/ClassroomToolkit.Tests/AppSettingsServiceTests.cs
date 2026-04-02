@@ -67,6 +67,37 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void Load_ShouldReadLegacyRollCallSectionName()
+    {
+        var path = CreateTempIniPath("ctool_app_settings");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                [RollCall]
+                show_photo=True
+                photo_duration_seconds=7
+                current_group=第2组
+                """);
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.RollCallShowPhoto.Should().BeTrue();
+            settings.RollCallPhotoDurationSeconds.Should().Be(7);
+            settings.RollCallCurrentGroup.Should().Be("第2组");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_ShouldPersistPhotoUnifiedTransformState()
     {
         var path = CreateTempIniPath("ctool_app_settings");

@@ -8,11 +8,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>sciman Classroom Toolkit</AssemblyName>
     <Authors>sciman</Authors>
     <Company>sciman逸居</Company>
-    <Product>ClassroomToolkit</Product>
-    <Description>课堂教学辅助工具</Description>
-    <AssemblyTitle>ClassroomToolkit</AssemblyTitle>
+    <Product>sciman Classroom Toolkit</Product>
+    <Description>sciman课堂工具箱，面向课堂教学场景的 Windows 桌面辅助工具集</Description>
+    <AssemblyTitle>sciman Classroom Toolkit</AssemblyTitle>
     <Version>1.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
     <InformationalVersion>1.0.0</InformationalVersion>
@@ -39,12 +40,11 @@
   </ItemGroup>
   <ItemGroup Condition="Exists('..\..\student_photos')">
     <Content Include="..\..\student_photos\**\*">
+      <Link>student_photos\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <TargetPath>student_photos\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 </Project>
-
-
-
 
 

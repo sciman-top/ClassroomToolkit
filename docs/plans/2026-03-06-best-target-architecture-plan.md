@@ -1,4 +1,4 @@
-# ClassroomToolkit 终态最佳架构总方案（唯一执行口径）
+# sciman课堂工具箱 终态最佳架构总方案（唯一执行口径）
 
 最后更新：2026-03-10  
 状态：active
@@ -158,3 +158,4 @@
 - 最终验收清单：`docs/validation/target-architecture-final-acceptance.md`
 - ADR：约束与裁决依据
 - `docs/validation/phase-*.md`：历史阶段记录，保留但不再作为当前执行口径
+

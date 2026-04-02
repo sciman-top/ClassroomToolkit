@@ -191,6 +191,15 @@ function Get-GitCommit {
     }
 }
 
+function Get-UnicodeText {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int[]]$CodePoints
+    )
+
+    return -join ($CodePoints | ForEach-Object { [char]$_ })
+}
+
 function Write-ReleaseManifest {
     param(
         [Parameter(Mandatory = $true)]
@@ -277,6 +286,9 @@ $releaseRoot = Join-Path $repoRoot "artifacts\release\$Version"
 $standardDir = Join-Path $releaseRoot "standard"
 $offlineDir = Join-Path $releaseRoot "offline"
 $templateDir = Join-Path $scriptRoot "templates"
+$launcherFileName = Get-UnicodeText -CodePoints 0x542F,0x52A8,0x002E,0x0062,0x0061,0x0074
+$userGuideFileName = Get-UnicodeText -CodePoints 0x4F7F,0x7528,0x8BF4,0x660E,0x002E,0x006D,0x0064
+$releaseNotesFileName = Get-UnicodeText -CodePoints 0x53D1,0x5E03,0x8BF4,0x660E,0x002E,0x0074,0x0078,0x0074
 $buildStandard = $PackageMode -eq "both" -or $PackageMode -eq "standard"
 $buildOffline = $PackageMode -eq "both" -or $PackageMode -eq "offline"
 
@@ -369,18 +381,18 @@ if ($buildOffline -and -not [string]::IsNullOrWhiteSpace($resolvedInstaller)) {
 }
 
 if ($buildStandard) {
-    Copy-Item -LiteralPath (Join-Path $templateDir "start-standard.bat") -Destination (Join-Path $standardDir "启动.bat") -Force
+    Copy-Item -LiteralPath (Join-Path $templateDir "start-standard.bat") -Destination (Join-Path $standardDir $launcherFileName) -Force
     Copy-Item -LiteralPath (Join-Path $templateDir "bootstrap-runtime.ps1") -Destination (Join-Path $standardDir "bootstrap-runtime.ps1") -Force
 }
 
 if ($buildStandard) {
-    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-standard.md") -OutputPath (Join-Path $standardDir "使用说明.md") -Tokens @{
+    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-standard.md") -OutputPath (Join-Path $standardDir $userGuideFileName) -Tokens @{
         VERSION = $Version
         GENERATED_AT = $generatedAt
     }
 }
 if ($buildOffline) {
-    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-offline.md") -OutputPath (Join-Path $offlineDir "使用说明.md") -Tokens @{
+    Render-Template -TemplatePath (Join-Path $templateDir "user-guide-offline.md") -OutputPath (Join-Path $offlineDir $userGuideFileName) -Tokens @{
         VERSION = $Version
         GENERATED_AT = $generatedAt
     }
@@ -389,7 +401,7 @@ if ($buildOffline) {
 $defaultSourceUrl = "https://github.com/<owner>/<repo>/releases/tag/v$Version"
 $resolvedSourceUrl = if ([string]::IsNullOrWhiteSpace($ReleaseNotesSourceUrl)) { $defaultSourceUrl } else { $ReleaseNotesSourceUrl }
 if ($buildStandard) {
-    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $standardDir "发布说明.txt") -Tokens @{
+    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $standardDir $releaseNotesFileName) -Tokens @{
         VERSION = $Version
         GENERATED_AT = $generatedAt
         PACKAGE_KIND = "standard"
@@ -397,7 +409,7 @@ if ($buildStandard) {
     }
 }
 if ($buildOffline) {
-    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $offlineDir "发布说明.txt") -Tokens @{
+    Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $offlineDir $releaseNotesFileName) -Tokens @{
         VERSION = $Version
         GENERATED_AT = $generatedAt
         PACKAGE_KIND = "offline"
@@ -415,12 +427,12 @@ if ($buildOffline) {
 $archives = New-Object System.Collections.Generic.List[string]
 if (-not $SkipZip) {
     if ($buildStandard) {
-        $standardBase = Join-Path $releaseRoot "ClassroomToolkit-$Version-standard"
+        $standardBase = Join-Path $releaseRoot "sciman-Classroom-Toolkit-$Version-standard"
         $standardArchive = Compress-Directory -SourceDirectory $standardDir -DestinationBasePath $standardBase -Format $ArchiveFormat
         $archives.Add($standardArchive) | Out-Null
     }
     if ($buildOffline) {
-        $offlineBase = Join-Path $releaseRoot "ClassroomToolkit-$Version-offline"
+        $offlineBase = Join-Path $releaseRoot "sciman-Classroom-Toolkit-$Version-offline"
         $offlineArchive = Compress-Directory -SourceDirectory $offlineDir -DestinationBasePath $offlineBase -Format $ArchiveFormat
         $archives.Add($offlineArchive) | Out-Null
     }

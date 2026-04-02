@@ -144,6 +144,7 @@ public sealed partial class RollCallViewModel
 
         CurrentStudentId = IdentityUtils.CompactText(student.StudentId);
         CurrentStudentName = IdentityUtils.NormalizeText(student.Name);
+        RefreshCurrentStudentPhotoPath();
         return true;
     }
 
@@ -210,8 +211,7 @@ public sealed partial class RollCallViewModel
 
         if (updatePhoto)
         {
-            var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
-            CurrentStudentPhotoPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+            RefreshCurrentStudentPhotoPath();
         }
     }
 
@@ -220,6 +220,23 @@ public sealed partial class RollCallViewModel
         CurrentStudentId = ShowId ? "学号" : string.Empty;
         CurrentStudentName = ShowName ? "姓名" : string.Empty;
         CurrentStudentPhotoPath = null;
+    }
+
+    private void RefreshCurrentStudentPhotoPath()
+    {
+        var className = string.IsNullOrWhiteSpace(PhotoSharedClass) ? ActiveClassName : PhotoSharedClass;
+        var resolvedPath = _photoResolver.ResolvePhotoPath(className, CurrentStudentId);
+        if (string.Equals(CurrentStudentPhotoPath, resolvedPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Force WPF to drop previous bitmap frame before binding a different path.
+        CurrentStudentPhotoPath = null;
+        if (!string.IsNullOrWhiteSpace(resolvedPath))
+        {
+            CurrentStudentPhotoPath = resolvedPath;
+        }
     }
 
     public void SaveState()

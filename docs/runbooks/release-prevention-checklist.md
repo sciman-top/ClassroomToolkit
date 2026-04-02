@@ -1,4 +1,4 @@
-# 发布前预防措施清单（ClassroomToolkit）
+# 发布前预防措施清单（sciman课堂工具箱）
 
 ## 目标
 - 在正式对外发布前，把运行时、兼容性、翻页/遥控稳定性、误报风险的预防动作全部前置完成。
@@ -112,3 +112,4 @@ powershell -File scripts/release/clean-release-artifacts.ps1 -Apply -IncludeRunt
 ## 七、备注
 - 当前阶段可先完成脚本与流程固化，不立即执行正式发布。
 - 正式发布时再填入目标版本号与 runtime 安装包路径。
+

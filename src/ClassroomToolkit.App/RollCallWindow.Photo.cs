@@ -25,18 +25,26 @@ public partial class RollCallWindow
             _lastPhotoStudentId = null;
             return;
         }
-        
-        _lastPhotoStudentId = studentId;
+
+        if (_photoOverlay != null
+            && !string.IsNullOrWhiteSpace(_lastPhotoStudentId)
+            && !string.Equals(_lastPhotoStudentId, studentId, StringComparison.OrdinalIgnoreCase))
+        {
+            ClosePhotoOverlay();
+        }
+
         var resolver = EnsurePhotoResolver();
         var className = ResolvePhotoClassName();
         var path = resolver.ResolvePhotoPath(className, studentId);
         if (string.IsNullOrWhiteSpace(path))
         {
             HidePhotoOverlay();
+            _lastPhotoStudentId = null;
             return;
         }
         var overlay = EnsurePhotoOverlay();
         overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.CurrentStudentId, _viewModel.PhotoDurationSeconds, this);
+        _lastPhotoStudentId = studentId;
     }
 
     private StudentPhotoResolver EnsurePhotoResolver()

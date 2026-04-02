@@ -64,7 +64,7 @@ public partial class AboutDialog : Window
     {
         var payload = string.Join(Environment.NewLine, new[]
         {
-            "课堂工具箱",
+            "sciman课堂工具箱",
             VersionText.Text,
             "作者：广州番禺王耀强",
             "公众号：sciman逸居",

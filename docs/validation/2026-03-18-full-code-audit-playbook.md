@@ -1,4 +1,4 @@
-# 全量代码审查执行手册（ClassroomToolkit）
+# 全量代码审查执行手册（sciman课堂工具箱）
 
 最后更新：2026-03-18  
 适用范围：`src/` 与 `tests/` 全仓审查、PR 闸门、发布前回归
@@ -109,3 +109,4 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Releas
 ## 7. 变更影响模板（执行时必填）
 
 `影响模块=；影响数据/配置=；UI/交互=；Interop/外部依赖=；验证与回滚=`
+

@@ -1,4 +1,4 @@
-# ClassroomToolkit UI/窗口体系终态重构设计
+# sciman课堂工具箱 UI/窗口体系终态重构设计
 
 日期：2026-03-14  
 状态：Approved Design Baseline  
@@ -1200,3 +1200,4 @@ Verification：
 
 - `docs/validation/ui-window-system-progress.md` 与 `docs/validation/ui-window-system-acceptance.md` 记录的是 repo-local loop 与验收门禁痕迹，不替代本设计文档的终态规范权威性。
 - 后续若实施结果与本文件冲突，应优先回到本设计文档复核，再决定是否需要新增 ADR 或设计修订。
+

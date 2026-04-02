@@ -1,4 +1,4 @@
-# ClassroomToolkit UI 视觉终态重构 Implementation Plan
+# sciman Classroom Toolkit UI 视觉终态重构 Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -519,3 +519,4 @@ For each review:
 ## Execution Handoff
 
 Plan complete and saved to `docs/superpowers/plans/2026-03-15-ui-visual-endstate-implementation-plan.md`. Ready to execute?
+

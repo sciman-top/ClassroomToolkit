@@ -33,6 +33,25 @@ public partial class MainWindow
         _ = TryShowDialogWithDiagnostics(dialog, nameof(AboutDialog));
     }
 
+    private void OnDiagnosticsClick(object sender, RoutedEventArgs e)
+    {
+        var settingsPath = string.IsNullOrWhiteSpace(_configurationService.SettingsDocumentPath)
+            ? _configurationService.SettingsIniPath
+            : _configurationService.SettingsDocumentPath;
+        var studentPath = ResolveStudentWorkbookPath();
+        var photoRoot = _settings.InkPhotoRootPath;
+        var result = SystemDiagnostics.CollectSystemDiagnostics(
+            _settings,
+            settingsPath,
+            studentPath,
+            photoRoot);
+        var dialog = new DiagnosticsDialog(result, _settingsService, _settings)
+        {
+            Owner = this
+        };
+        _ = TryShowDialogWithDiagnostics(dialog, nameof(DiagnosticsDialog));
+    }
+
     private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / MainWindowRuntimeDefaults.LauncherMinutesToSeconds);
@@ -360,10 +379,18 @@ public partial class MainWindow
         {
             return;
         }
-        var settingsPath = _configurationService.SettingsIniPath;
+        var settingsPath = string.IsNullOrWhiteSpace(_configurationService.SettingsDocumentPath)
+            ? _configurationService.SettingsIniPath
+            : _configurationService.SettingsDocumentPath;
+        var studentPath = ResolveStudentWorkbookPath();
+        var photoRoot = _settings.InkPhotoRootPath;
         _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", async token =>
         {
-            var result = SystemDiagnostics.CollectQuickDiagnostics(settingsPath);
+            var result = SystemDiagnostics.CollectSystemDiagnostics(
+                _settings,
+                settingsPath,
+                studentPath,
+                photoRoot);
             if (!result.HasIssues)
             {
                 return;
@@ -391,7 +418,7 @@ public partial class MainWindow
                 {
                     return;
                 }
-                var dialog = new DiagnosticsDialog(result)
+                var dialog = new DiagnosticsDialog(result, _settingsService, _settings)
                 {
                     Owner = this
                 };

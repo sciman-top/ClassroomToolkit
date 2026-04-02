@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         mc:Ignorable="d"
-        Title="Classroom Toolkit" 
+        Title="sciman课堂工具箱" 
         Height="300" Width="300"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -32,10 +32,19 @@
             </Grid.RowDefinitions>
 
             <!-- 1. 顶部装饰 (拖拽把手 - Pill) -->
-            <Grid Grid.Row="0" Height="18" Style="{StaticResource Style_WorkShellTitleBar}">
-                <Rectangle Width="28" Height="4" RadiusX="2" RadiusY="2" 
-                           Fill="{StaticResource Brush_Border_Strong}"
-                           VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0.70"/>
+            <Grid Grid.Row="0" Height="34" Style="{StaticResource Style_WorkShellTitleBar}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Rectangle Width="28" Height="4" RadiusX="2" RadiusY="2" 
+                               Fill="{StaticResource Brush_Border_Strong}"
+                               HorizontalAlignment="Center" Opacity="0.70"/>
+                    <TextBlock Text="sciman课堂工具箱"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource Brush_Text_Secondary}"
+                               Opacity="0.92"
+                               HorizontalAlignment="Center"
+                               Margin="0,6,0,0"/>
+                </StackPanel>
             </Grid>
 
             <!-- 2. 核心功能区 -->
@@ -82,15 +91,20 @@
 
                     <!-- 右侧功能 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="DiagnosticsButton"
+                                Style="{StaticResource Style_WorkShellMiniButton}"
+                                Tag="{StaticResource Icon_Apps}"
+                                Click="OnDiagnosticsClick" ToolTip="打开系统兼容性诊断"/>
+
+                        <Button x:Name="AboutButton"
+                                Style="{StaticResource Style_WorkShellMiniButton}"
+                                Tag="{StaticResource Icon_Info}"
+                                Click="OnAboutClick" ToolTip="查看产品信息"/>
+
                         <Button x:Name="SettingsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
                                 Click="OnLauncherSettingsClick" ToolTip="打开全局设置"/>
-                        
-                        <Button x:Name="AboutButton"
-                                Style="{StaticResource Style_WorkShellMiniButton}"
-                                Tag="{StaticResource Icon_Info}"
-                                Click="OnAboutClick" ToolTip="查看关于信息"/>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
                         

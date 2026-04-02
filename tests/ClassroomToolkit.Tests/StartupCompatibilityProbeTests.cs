@@ -87,6 +87,23 @@ public sealed class StartupCompatibilityProbeTests
         }
     }
 
+    [Fact]
+    public void ResolveNativeDependencyPath_ShouldFindSqliteUnderRidNativeFolder()
+    {
+        var root = TestPathHelper.CreateDirectory("startup-native");
+        var ridFolder = Path.Combine(root, "runtimes", "win-x64", "native");
+        Directory.CreateDirectory(ridFolder);
+        var sqlitePath = Path.Combine(ridFolder, "e_sqlite3.dll");
+        File.WriteAllText(sqlitePath, "placeholder");
+
+        var resolved = StartupCompatibilityProbe.ResolveNativeDependencyPath(
+            root,
+            "e_sqlite3.dll",
+            Architecture.X64);
+
+        resolved.Should().Be(sqlitePath);
+    }
+
     [Theory]
     [InlineData(0x014c, Architecture.X86)]
     [InlineData(0x8664, Architecture.X64)]

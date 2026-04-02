@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.App.Ink;
@@ -27,7 +28,7 @@ public sealed class AppSettingsService
             ?? new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         var settings = new AppSettings();
 
-        if (data.TryGetValue("RollCallTimer", out var roll))
+        if (TryGetRollCallSection(data, out var roll))
         {
             settings.RollCallShowId = GetBool(roll, "show_id", settings.RollCallShowId);
             settings.RollCallShowName = GetBool(roll, "show_name", settings.RollCallShowName);
@@ -255,6 +256,14 @@ public sealed class AppSettingsService
                 "ui_defaults_optimized",
                 settings.UiDefaultsOptimized);
         }
+        if (data.TryGetValue("Diagnostics", out var diagnostics))
+        {
+            settings.StartupCompatibilitySuppressedIssueCodes = ParseList(
+                GetString(
+                    diagnostics,
+                    "startup_compatibility_suppressed_issue_codes",
+                    string.Empty));
+        }
 
         return settings;
     }
@@ -410,6 +419,10 @@ public sealed class AppSettingsService
         launcher["auto_exit_seconds"] = NormalizeLauncherAutoExitSeconds(settings.LauncherAutoExitSeconds).ToString(CultureInfo.InvariantCulture);
         launcher["ui_defaults_optimized"] = settings.UiDefaultsOptimized ? "True" : "False";
 
+        var diagnostics = GetOrCreate(data, "Diagnostics");
+        diagnostics["startup_compatibility_suppressed_issue_codes"] =
+            JoinList(settings.StartupCompatibilitySuppressedIssueCodes);
+
         _store.Save(data);
     }
 
@@ -421,6 +434,25 @@ public sealed class AppSettingsService
             data[key] = section;
         }
         return section;
+    }
+
+    private static bool TryGetRollCallSection(
+        Dictionary<string, Dictionary<string, string>> data,
+        [NotNullWhen(true)] out Dictionary<string, string>? roll)
+    {
+        if (data.TryGetValue("RollCallTimer", out roll))
+        {
+            return true;
+        }
+
+        // Backward compatibility for legacy settings section name.
+        if (data.TryGetValue("RollCall", out roll))
+        {
+            return true;
+        }
+
+        roll = null!;
+        return false;
     }
 
     private static string GetString(Dictionary<string, string> section, string key, string fallback)

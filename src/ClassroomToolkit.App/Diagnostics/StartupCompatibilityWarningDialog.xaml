@@ -1,10 +1,10 @@
-<Window x:Class="ClassroomToolkit.App.Diagnostics.DiagnosticsDialog"
+<Window x:Class="ClassroomToolkit.App.Diagnostics.StartupCompatibilityWarningDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="系统兼容性诊断"
-        Width="620" Height="420"
+        Title="启动兼容性提示"
+        Width="620" Height="430"
         MinWidth="520" MinHeight="340"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -14,22 +14,20 @@
     <Border Style="{StaticResource Style_ManagementShellWindowBorder}" TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Title -->
-                <RowDefinition Height="*"/>    <!-- Content -->
-                <RowDefinition Height="Auto"/> <!-- Buttons -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="系统兼容性诊断" Style="{StaticResource Style_ManagementShellTitleText}"/>
-                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnCloseClick" ToolTip="关闭诊断窗口">
+                <TextBlock Text="启动兼容性提示" Style="{StaticResource Style_ManagementShellTitleText}"/>
+                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnContinueClick" ToolTip="关闭提示">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_ManagementShellDivider}"/>
 
-            <!-- 2. 内容 -->
             <Border Grid.Row="1" Style="{StaticResource Style_ManagementShellContentBorder}">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
@@ -43,11 +41,9 @@
                                FontSize="14"
                                Foreground="{StaticResource Brush_Primary}"
                                TextWrapping="Wrap"
-                               Margin="0,0,0,10" />
+                               Margin="0,0,0,10"/>
 
                     <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
-                        <!-- Global TabControl style applied automatically -->
-
                         <TabItem Header="详情">
                             <TextBox x:Name="DetailBox"
                                      IsReadOnly="True"
@@ -80,25 +76,30 @@
                 </Grid>
             </Border>
 
-            <!-- 3. 按钮 -->
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <TextBlock Text="诊断详情仅用于本机兼容性排查。"
-                               Grid.Column="0"
-                               Style="{StaticResource Style_ManagementShellFooterText}"
-                               Margin="0,0,12,0"
-                               TextTrimming="CharacterEllipsis"/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="重新启用启动提示" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="Auto" MinWidth="148" Margin="0,0,8,0" Click="OnResetStartupWarningsClick" />
-                        <Button Content="导出诊断包" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="108" Margin="0,0,8,0" Click="OnExportBundleClick" />
-                        <Button Content="复制全部" Style="{StaticResource Style_ManagementShellFooterActionButton}" Margin="0,0,8,0" Click="OnCopyClick" />
-                        <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="88" Height="32" Click="OnCloseClick" />
-                    </StackPanel>
+                    <CheckBox x:Name="SuppressCheckBox"
+                              Grid.Row="0"
+                              Content="同一问题不再提示"
+                              VerticalAlignment="Center"
+                              Margin="0,0,0,8"/>
+
+                    <Grid Grid.Row="1">
+                        <TextBlock Text="程序将继续启动；如需重新启用提示，可在系统兼容性诊断中恢复。"
+                                   Style="{StaticResource Style_ManagementShellFooterText}"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Content="继续启动"
+                                    Style="{StaticResource Style_PrimaryButton}"
+                                    Width="96"
+                                    Height="32"
+                                    Click="OnContinueClick"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

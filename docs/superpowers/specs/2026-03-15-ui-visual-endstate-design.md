@@ -1,4 +1,4 @@
-# ClassroomToolkit UI 视觉终态重构设计
+# sciman课堂工具箱 UI 视觉终态重构设计
 
 日期：2026-03-15  
 状态：Approved Design Baseline  
@@ -489,3 +489,4 @@ ClassroomToolkit 已具备一套可用的深色主题和多窗口体系，但当
 - 约束上严格服从课堂高频使用的性能红线
 
 该设计获用户确认后，下一步应基于本设计编写实施计划，再进入代码改造阶段。
+

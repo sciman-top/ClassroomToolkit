@@ -28,7 +28,9 @@ foreach ($f in $errorFiles) {
 }
 
 # 2) GC counters (snapshot)
-$dotnetProc = Get-Process | Where-Object { $_.ProcessName -like "ClassroomToolkit*" } | Select-Object -First 1
+$dotnetProc = Get-Process | Where-Object {
+    $_.ProcessName -like "sciman Classroom Toolkit*" -or $_.ProcessName -like "ClassroomToolkit*"
+} | Select-Object -First 1
 $gcInfo = $null
 if ($dotnetProc) {
     try {

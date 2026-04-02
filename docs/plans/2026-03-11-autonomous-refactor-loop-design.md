@@ -1,4 +1,4 @@
-# ClassroomToolkit Autonomous Refactor Loop Design
+# sciman Classroom Toolkit Autonomous Refactor Loop Design
 
 Last updated: 2026-03-11  
 Status: active
@@ -256,3 +256,4 @@ After this repo-local version proves itself, extract these generic pieces later:
 - State machine
 - Blocker and resume protocol
 - Generic supervisor template
+

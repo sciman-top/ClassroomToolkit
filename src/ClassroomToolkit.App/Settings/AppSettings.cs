@@ -62,6 +62,7 @@ public sealed class AppSettings
     public string PresentationClassifierRecentLearnRecordsJson { get; set; } = string.Empty;
     public bool PresetRecommendationInitialized { get; set; } = false;
     public bool UiDefaultsOptimized { get; set; } = false;
+    public List<string> StartupCompatibilitySuppressedIssueCodes { get; set; } = new();
     public int LauncherX { get; set; } = UnsetPosition;
     public int LauncherY { get; set; } = UnsetPosition;
     public int LauncherBubbleX { get; set; } = UnsetPosition;

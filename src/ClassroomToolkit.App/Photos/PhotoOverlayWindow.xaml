@@ -23,8 +23,8 @@
             </Image.Effect>
         </Image>
 
-        <!-- 遮挡层：用于在切换照片时隐藏旧照片 -->
-        <Border x:Name="LoadingMask" Background="Transparent" Visibility="Collapsed" Panel.ZIndex="100"/>
+        <!-- 遮挡层：用于在切换照片时覆盖旧帧，避免切图闪现 -->
+        <Border x:Name="LoadingMask" Background="{StaticResource Brush_OverlayMask}" Visibility="Collapsed" Panel.ZIndex="100"/>
 
         <!-- 学生姓名：动态定位到照片顶部 -->
         <TextBlock x:Name="NameText" 
@@ -70,4 +70,3 @@
         </Border>
     </Canvas>
 </Window>
-

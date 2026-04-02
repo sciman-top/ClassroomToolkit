@@ -55,7 +55,7 @@ public partial class PhotoOverlayWindow : Window
         _autoCloseTimer.Tick -= OnAutoCloseTick;
         SourceInitialized -= OnOverlaySourceInitialized;
         Closed -= OnOverlayClosed;
-        ClearPhotoCache();
+        ClearPhotoCache(enterHideGuardState: false);
     }
 
     public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
@@ -65,6 +65,7 @@ public partial class PhotoOverlayWindow : Window
 
         if (IsShowingSamePhoto(path))
         {
+            Opacity = 1.0;
             _currentPhotoPath = path;
             _currentStudentId = normalizedStudentId;
             NameText.Text = studentName ?? string.Empty;
@@ -80,6 +81,8 @@ public partial class PhotoOverlayWindow : Window
         NameText.Text = studentName ?? string.Empty;
         // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
         NameText.Visibility = Visibility.Collapsed;
+        // 显示窗口前先透明，避免系统复用上一帧导致旧图闪现。
+        Opacity = 0.0;
 
         // 先清空上一张图并进入遮挡态，避免窗口可见时先闪出旧图。
         PhotoImage.Source = null;
@@ -87,6 +90,8 @@ public partial class PhotoOverlayWindow : Window
         LoadingMask.Visibility = Visibility.Visible;
 
         EnsureOverlayVisible();
+        // 窗口复显后再次施加透明保护，避免复显首帧复用旧合成帧。
+        Opacity = 0.0;
         if (TryGetCachedBitmap(path, out var cachedBitmap))
         {
             ApplyLoadedBitmap(
@@ -231,7 +236,9 @@ public partial class PhotoOverlayWindow : Window
     {
         Interlocked.Increment(ref _photoLoadRequestId);
         _autoCloseTimer.Stop();
-        ClearPhotoCache();
+        ClearPhotoCache(enterHideGuardState: true);
+        LoadingMask.Visibility = Visibility.Visible;
+        Opacity = 0.0;
         Hide();
     }
 
@@ -245,12 +252,14 @@ public partial class PhotoOverlayWindow : Window
         CloseOverlay();
     }
 
-    private void ClearPhotoCache()
+    private void ClearPhotoCache(bool enterHideGuardState)
     {
         PhotoImage.Source = null;
+        PhotoImage.Visibility = Visibility.Collapsed;
         NameText.Text = string.Empty;
         NameText.Visibility = Visibility.Collapsed;
-        LoadingMask.Visibility = Visibility.Collapsed;
+        LoadingMask.Visibility = enterHideGuardState ? Visibility.Visible : Visibility.Collapsed;
+        Opacity = enterHideGuardState ? 0.0 : 1.0;
         var studentId = _currentStudentId;
         _currentStudentId = null;
         _currentPhotoPath = null;
@@ -300,6 +309,7 @@ public partial class PhotoOverlayWindow : Window
         PhotoImage.Source = bitmap;
         PhotoImage.Visibility = Visibility.Visible;
         LoadingMask.Visibility = Visibility.Collapsed;
+        Opacity = 1.0;
 
         void ApplyOverlayLayoutAfterPhotoLoad()
         {

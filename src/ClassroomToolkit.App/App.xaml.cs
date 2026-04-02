@@ -8,6 +8,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Application.UseCases.RollCall;
@@ -38,6 +39,7 @@ public partial class App : WpfApplication
 
         var startupCompatibility = CollectStartupCompatibilityReport();
         var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
+        var settings = _services?.GetService<AppSettings>();
         if (startupCompatibility.HasBlockingIssues)
         {
             var message = BuildStartupBlockingMessage(startupCompatibility, startupCompatibilityReportPath);
@@ -49,15 +51,27 @@ public partial class App : WpfApplication
             Shutdown(-1);
             return;
         }
-        if (startupCompatibility.HasWarnings)
+        var visibleWarningReport = StartupCompatibilitySuppressionPolicy.FilterWarnings(
+            startupCompatibility,
+            settings?.StartupCompatibilitySuppressedIssueCodes);
+        if (visibleWarningReport.HasWarnings)
         {
-            Debug.WriteLine($"[StartupCompatibility] {startupCompatibility.BuildMessage(includeWarnings: true)}");
-            var warningMessage = BuildStartupWarningMessage(startupCompatibility, startupCompatibilityReportPath);
-            System.Windows.MessageBox.Show(
+            Debug.WriteLine($"[StartupCompatibility] {visibleWarningReport.BuildMessage(includeWarnings: true)}");
+            var warningMessage = BuildStartupWarningMessage(visibleWarningReport, startupCompatibilityReportPath);
+            var suggestionMessage = BuildStartupWarningSuggestion(visibleWarningReport);
+            var dialog = new Diagnostics.StartupCompatibilityWarningDialog(
+                "检测到可降级运行的兼容性风险。",
                 warningMessage,
-                "启动兼容性提示",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                suggestionMessage);
+            _ = dialog.SafeShowDialog();
+            if (dialog.SuppressCurrentIssues && settings != null)
+            {
+                settings.StartupCompatibilitySuppressedIssueCodes =
+                    StartupCompatibilitySuppressionPolicy.MergeSuppressedWarningCodes(
+                        settings.StartupCompatibilitySuppressedIssueCodes,
+                        visibleWarningReport);
+                _services?.GetService<AppSettingsService>()?.Save(settings);
+            }
         }
 
         if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
@@ -265,6 +279,15 @@ public partial class App : WpfApplication
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildStartupWarningSuggestion(StartupCompatibilityReport report)
+    {
+        return string.Join(
+            Environment.NewLine + Environment.NewLine,
+            report.Issues
+                .Where(static issue => !issue.IsBlocking && !string.IsNullOrWhiteSpace(issue.Suggestion))
+                .Select(issue => $"{issue.Code}{Environment.NewLine}{issue.Suggestion}"));
     }
 
     private string? PersistStartupCompatibilityReport(StartupCompatibilityReport report)

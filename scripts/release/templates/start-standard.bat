@@ -2,7 +2,7 @@
 setlocal
 chcp 65001 >nul
 
-set "APP_EXE=%~dp0ClassroomToolkit.App.exe"
+set "APP_EXE=%~dp0sciman Classroom Toolkit.exe"
 set "BOOTSTRAP_PS1=%~dp0bootstrap-runtime.ps1"
 
 if not exist "%APP_EXE%" (

@@ -351,22 +351,6 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "classroomtoolkit.app": {
-        "type": "Project",
-        "dependencies": {
-          "ClassroomToolkit.Application": "[1.0.0, )",
-          "ClassroomToolkit.Domain": "[1.0.0, )",
-          "ClassroomToolkit.Infra": "[1.0.0, )",
-          "ClassroomToolkit.Interop": "[1.0.0, )",
-          "ClassroomToolkit.Services": "[1.0.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[8.0.1, )",
-          "Microsoft.Extensions.Logging": "[8.0.0, )",
-          "Microsoft.Extensions.Logging.Console": "[8.0.0, )",
-          "PdfiumViewer.Core": "[1.0.4, )",
-          "PdfiumViewer.Native.x86_64.no_v8-no_xfa": "[2018.4.8.256, )",
-          "System.Speech": "[8.0.0, )"
-        }
-      },
       "classroomtoolkit.application": {
         "type": "Project",
         "dependencies": {
@@ -395,6 +379,22 @@
           "ClassroomToolkit.Application": "[1.0.0, )",
           "ClassroomToolkit.Domain": "[1.0.0, )",
           "ClassroomToolkit.Interop": "[1.0.0, )",
+          "System.Speech": "[8.0.0, )"
+        }
+      },
+      "sciman Classroom Toolkit": {
+        "type": "Project",
+        "dependencies": {
+          "ClassroomToolkit.Application": "[1.0.0, )",
+          "ClassroomToolkit.Domain": "[1.0.0, )",
+          "ClassroomToolkit.Infra": "[1.0.0, )",
+          "ClassroomToolkit.Interop": "[1.0.0, )",
+          "ClassroomToolkit.Services": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection": "[8.0.1, )",
+          "Microsoft.Extensions.Logging": "[8.0.0, )",
+          "Microsoft.Extensions.Logging.Console": "[8.0.0, )",
+          "PdfiumViewer.Core": "[1.0.4, )",
+          "PdfiumViewer.Native.x86_64.no_v8-no_xfa": "[2018.4.8.256, )",
           "System.Speech": "[8.0.0, )"
         }
       }
