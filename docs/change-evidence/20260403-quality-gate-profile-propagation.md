@@ -1,0 +1,9 @@
+规则ID=R2/R6/R8
+影响模块=scripts/quality
+当前落点=scripts/quality/run-local-quality-gates.ps1
+目标归宿=quality gate profile 语义一致（full/quick 透传到 stable-tests）
+迁移批次=20260403-1
+风险等级=低
+执行命令=1) powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug
+验证证据=输出包含 "[stable-tests] Using profile: full" 且通过 3113 测试；门禁链路通过
+回滚动作=将 scripts/quality/run-local-quality-gates.ps1 中 stable-tests 调用参数从 -Profile $Profile 改回 -Profile quick
