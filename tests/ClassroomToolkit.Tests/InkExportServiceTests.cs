@@ -415,6 +415,207 @@ public sealed class InkExportServiceTests : IDisposable
         persisted.Keys.Should().NotContain("orphan+笔迹.png");
     }
 
+    [Fact]
+    public void BuildExportFingerprint_ShouldChange_WhenCalligraphyCompositeDetailsChange()
+    {
+        var sourcePath = Path.Combine(_tempDir, "fingerprint.png");
+        File.WriteAllText(sourcePath, "dummy");
+        var options = new InkExportOptions();
+        var baseStroke = new InkStrokeData
+        {
+            Type = InkStrokeType.Brush,
+            BrushStyle = ClassroomToolkit.App.Paint.PaintBrushStyle.Calligraphy,
+            ColorHex = "#112233",
+            Opacity = 200,
+            BrushSize = 8.5,
+            GeometryPath = "M 0,0 L 10,10",
+            ReferenceWidth = 100,
+            ReferenceHeight = 80,
+            CalligraphyRenderMode = ClassroomToolkit.App.Paint.CalligraphyRenderMode.Ink,
+            CalligraphyInkBloomEnabled = true,
+            CalligraphySealEnabled = true,
+            CalligraphyOverlayOpacityThreshold = 210,
+            MaskSeed = 42,
+            InkFlow = 0.67,
+            StrokeDirectionX = 0.4,
+            StrokeDirectionY = -0.2
+        };
+        baseStroke.Ribbons.Add(new InkRibbonData
+        {
+            RibbonT = 0.5,
+            Opacity = 0.3,
+            GeometryPath = "M 1,1 L 2,2"
+        });
+        baseStroke.Blooms.Add(new InkBloomData
+        {
+            Opacity = 0.2,
+            GeometryPath = "M 2,2 L 3,3"
+        });
+
+        var fingerprintA = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { baseStroke }, options);
+
+        var changedRibbon = CloneStrokeForFingerprint(baseStroke);
+        changedRibbon.Ribbons[0].GeometryPath = "M 1,1 L 4,4";
+        var fingerprintB = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { changedRibbon }, options);
+
+        var changedMaskSeed = CloneStrokeForFingerprint(baseStroke);
+        changedMaskSeed.MaskSeed = 43;
+        var fingerprintC = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { changedMaskSeed }, options);
+
+        fingerprintB.Should().NotBe(fingerprintA);
+        fingerprintC.Should().NotBe(fingerprintA);
+    }
+
+    [Fact]
+    public void BuildExportFingerprint_ShouldStayStable_ForEquivalentStrokePayload()
+    {
+        var sourcePath = Path.Combine(_tempDir, "fingerprint-stable.png");
+        File.WriteAllText(sourcePath, "dummy");
+        var options = new InkExportOptions();
+        var stroke = new InkStrokeData
+        {
+            Type = InkStrokeType.Shape,
+            BrushStyle = ClassroomToolkit.App.Paint.PaintBrushStyle.StandardRibbon,
+            ColorHex = "#ABCDEF",
+            Opacity = 255,
+            BrushSize = 4,
+            GeometryPath = "M 0,0 L 1,1",
+            ReferenceWidth = 120,
+            ReferenceHeight = 90
+        };
+
+        var fingerprint1 = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { stroke }, options);
+        var fingerprint2 = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { CloneStrokeForFingerprint(stroke) }, options);
+
+        fingerprint1.Should().Be(fingerprint2);
+    }
+
+    [Fact]
+    public void ExportAllPagesForFile_ShouldReExport_WhenCalligraphyOverlayPayloadChanges()
+    {
+        var sourcePath = Path.Combine(_tempDir, "calligraphy-export.png");
+        SaveSolidPng(sourcePath, 200, 200, Colors.White);
+
+        var baseStroke = new InkStrokeData
+        {
+            Type = InkStrokeType.Brush,
+            BrushStyle = ClassroomToolkit.App.Paint.PaintBrushStyle.Calligraphy,
+            ColorHex = "#222222",
+            Opacity = 255,
+            BrushSize = 8,
+            GeometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(20, 20, 60, 30))),
+            ReferenceWidth = 200,
+            ReferenceHeight = 200,
+            CalligraphyRenderMode = ClassroomToolkit.App.Paint.CalligraphyRenderMode.Ink,
+            CalligraphyInkBloomEnabled = true,
+            CalligraphySealEnabled = true
+        };
+        baseStroke.Ribbons.Add(new InkRibbonData
+        {
+            GeometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(24, 24, 50, 20))),
+            Opacity = 0.22,
+            RibbonT = 0.5
+        });
+
+        var docV1 = new InkDocumentData
+        {
+            SourcePath = sourcePath,
+            Pages = new List<InkPageData>
+            {
+                new()
+                {
+                    PageIndex = 1,
+                    Strokes = new List<InkStrokeData> { CloneStrokeForFingerprint(baseStroke) }
+                }
+            }
+        };
+
+        var first = _service.ExportAllPagesForFile(sourcePath, docV1, new InkExportOptions());
+        first.Should().ContainSingle();
+        var outputPath = first[0];
+        var firstWrite = File.GetLastWriteTimeUtc(outputPath);
+
+        Thread.Sleep(40);
+
+        var changedStroke = CloneStrokeForFingerprint(baseStroke);
+        changedStroke.Ribbons[0].GeometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(24, 24, 55, 20)));
+        var docV2 = new InkDocumentData
+        {
+            SourcePath = sourcePath,
+            Pages = new List<InkPageData>
+            {
+                new()
+                {
+                    PageIndex = 1,
+                    Strokes = new List<InkStrokeData> { changedStroke }
+                }
+            }
+        };
+
+        var second = _service.ExportAllPagesForFile(sourcePath, docV2, new InkExportOptions());
+        second.Should().ContainSingle();
+        second[0].Should().Be(outputPath);
+        var secondWrite = File.GetLastWriteTimeUtc(outputPath);
+        secondWrite.Should().BeAfter(firstWrite);
+    }
+
+    private static InkStrokeData CloneStrokeForFingerprint(InkStrokeData stroke)
+    {
+        var clone = new InkStrokeData
+        {
+            Type = stroke.Type,
+            BrushStyle = stroke.BrushStyle,
+            GeometryPath = stroke.GeometryPath,
+            ColorHex = stroke.ColorHex,
+            Opacity = stroke.Opacity,
+            BrushSize = stroke.BrushSize,
+            MaskSeed = stroke.MaskSeed,
+            InkFlow = stroke.InkFlow,
+            StrokeDirectionX = stroke.StrokeDirectionX,
+            StrokeDirectionY = stroke.StrokeDirectionY,
+            CalligraphyRenderMode = stroke.CalligraphyRenderMode,
+            ReferenceWidth = stroke.ReferenceWidth,
+            ReferenceHeight = stroke.ReferenceHeight,
+            CalligraphyInkBloomEnabled = stroke.CalligraphyInkBloomEnabled,
+            CalligraphySealEnabled = stroke.CalligraphySealEnabled,
+            CalligraphyOverlayOpacityThreshold = stroke.CalligraphyOverlayOpacityThreshold
+        };
+        foreach (var ribbon in stroke.Ribbons)
+        {
+            clone.Ribbons.Add(new InkRibbonData
+            {
+                GeometryPath = ribbon.GeometryPath,
+                Opacity = ribbon.Opacity,
+                RibbonT = ribbon.RibbonT
+            });
+        }
+        foreach (var bloom in stroke.Blooms)
+        {
+            clone.Blooms.Add(new InkBloomData
+            {
+                GeometryPath = bloom.GeometryPath,
+                Opacity = bloom.Opacity
+            });
+        }
+        return clone;
+    }
+
+    private static string BuildExportFingerprintViaReflection(
+        string sourcePath,
+        int pageIndex,
+        IReadOnlyList<InkStrokeData> strokes,
+        InkExportOptions options)
+    {
+        var method = typeof(InkExportService).GetMethod(
+            "BuildExportFingerprint",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        method.Should().NotBeNull();
+
+        var value = method!.Invoke(null, new object?[] { sourcePath, pageIndex, strokes, options });
+        value.Should().BeOfType<string>();
+        return (string)value!;
+    }
+
     private static void SaveSolidPng(string path, int width, int height, Color color)
     {
         var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);

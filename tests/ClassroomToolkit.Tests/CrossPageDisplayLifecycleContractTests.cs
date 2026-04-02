@@ -1,4 +1,5 @@
 using System.IO;
+using ClassroomToolkit.App.Paint;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -6,14 +7,20 @@ namespace ClassroomToolkit.Tests;
 public sealed class CrossPageDisplayLifecycleContractTests
 {
     [Fact]
-    public void UpdateCrossPageDisplay_ShouldClearNeighborPages_WhenSinglePageOrInvalidCurrentFrame()
+    public void CrossPageDisplayClearPolicy_ShouldClearNeighborPages_WhenSinglePageOrInvalidCurrentFrame()
     {
-        var source = File.ReadAllText(GetSourcePath());
-
-        source.Should().Contain("if (totalPages <= 1)");
-        source.Should().Contain("ClearNeighborPages();");
-        source.Should().Contain("if (currentBitmap == null)");
-        source.Should().Contain("if (currentPageHeight <= 0)");
+        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+            totalPages: 1,
+            hasCurrentBitmap: true,
+            currentPageHeight: 100).Should().BeTrue();
+        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+            totalPages: 5,
+            hasCurrentBitmap: false,
+            currentPageHeight: 100).Should().BeTrue();
+        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+            totalPages: 5,
+            hasCurrentBitmap: true,
+            currentPageHeight: 0).Should().BeTrue();
     }
 
     [Fact]
@@ -26,12 +33,14 @@ public sealed class CrossPageDisplayLifecycleContractTests
     }
 
     [Fact]
-    public void ScheduleNeighborInkRender_ShouldRejectStaleDocumentCacheKey()
+    public void CrossPageNeighborInkRenderAdmissionPolicy_ShouldRejectStaleDocumentCacheKey()
     {
-        var source = File.ReadAllText(GetSourcePath());
-
-        source.Should().Contain("var expectedCacheKey = BuildNeighborInkCacheKey(pageIndex);");
-        source.Should().Contain("!string.Equals(cacheKey, expectedCacheKey, StringComparison.Ordinal)");
+        CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(
+            cacheKey: "docA|3",
+            expectedCacheKey: "docB|3").Should().BeTrue();
+        CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(
+            cacheKey: "docA|3",
+            expectedCacheKey: "docA|3").Should().BeFalse();
     }
 
     [Fact]

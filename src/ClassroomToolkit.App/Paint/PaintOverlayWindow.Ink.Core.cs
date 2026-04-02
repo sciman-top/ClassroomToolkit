@@ -26,6 +26,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private readonly record struct InkRedrawVersionStamp(long TransformVersion, long StrokeVersion);
+
     private bool _calligraphyInkBloomEnabled = true;
     private bool _calligraphySealEnabled = true;
     private byte _calligraphyOverlayOpacityThreshold = 230;
@@ -34,6 +36,8 @@ public partial class PaintOverlayWindow
     private WhiteboardBrushPreset _whiteboardPreset = WhiteboardBrushPreset.Balanced;
     private ClassroomWritingMode _classroomWritingMode = ClassroomWritingMode.Balanced;
     private int _inkRedrawToken;
+    private long _inkTransformVersion;
+    private long _inkStrokeVersion;
     private DateTime _lastInkRedrawUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
 
     // Ink Fields
@@ -118,6 +122,7 @@ public partial class PaintOverlayWindow
     private readonly InkStrokeRenderer _inkStrokeRenderer = new();
     private bool _redrawPending;
     private bool _redrawInProgress;
+    private InkRedrawVersionStamp _pendingInkRedrawVersionStamp;
     private bool _boardSuspendedPhotoCache;
     
     private enum InkCacheScope
@@ -257,6 +262,36 @@ public partial class PaintOverlayWindow
     private static double Lerp(double a, double b, double t)
     {
         return a + (b - a) * t;
+    }
+
+    private InkRedrawVersionStamp CaptureInkRedrawVersionStamp()
+    {
+        return new InkRedrawVersionStamp(_inkTransformVersion, _inkStrokeVersion);
+    }
+
+    private bool IsInkRedrawVersionCurrent(InkRedrawVersionStamp stamp)
+    {
+        return stamp.TransformVersion == _inkTransformVersion
+            && stamp.StrokeVersion == _inkStrokeVersion;
+    }
+
+    private static InkRedrawVersionStamp MergeInkRedrawVersionStamp(
+        InkRedrawVersionStamp current,
+        InkRedrawVersionStamp incoming)
+    {
+        return new InkRedrawVersionStamp(
+            Math.Max(current.TransformVersion, incoming.TransformVersion),
+            Math.Max(current.StrokeVersion, incoming.StrokeVersion));
+    }
+
+    private void MarkInkTransformVersionDirty()
+    {
+        Interlocked.Increment(ref _inkTransformVersion);
+    }
+
+    private void MarkInkStrokeVersionDirty()
+    {
+        Interlocked.Increment(ref _inkStrokeVersion);
     }
 
     private byte[] GetCompositeSurfaceBuffer(int requiredLength)
@@ -411,4 +446,3 @@ public partial class PaintOverlayWindow
         }
     }
 }
-

@@ -966,7 +966,32 @@ public sealed class InkExportService
                 .Append(stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
                 .Append(stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
                 .Append(stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.GeometryPath ?? string.Empty).Append(';');
+                .Append(stroke.CalligraphyRenderMode).Append(',')
+                .Append(stroke.CalligraphyInkBloomEnabled ? 1 : 0).Append(',')
+                .Append(stroke.CalligraphySealEnabled ? 1 : 0).Append(',')
+                .Append(stroke.CalligraphyOverlayOpacityThreshold).Append(',')
+                .Append(stroke.MaskSeed.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(stroke.InkFlow.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                .Append(stroke.StrokeDirectionX.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                .Append(stroke.StrokeDirectionY.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                .Append(stroke.GeometryPath ?? string.Empty).Append('|');
+
+            foreach (var ribbon in stroke.Ribbons)
+            {
+                builder.Append("r:")
+                    .Append(ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(ribbon.GeometryPath ?? string.Empty).Append('|');
+            }
+
+            foreach (var bloom in stroke.Blooms)
+            {
+                builder.Append("b:")
+                    .Append(bloom.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(bloom.GeometryPath ?? string.Empty).Append('|');
+            }
+
+            builder.Append(';');
         }
 
         var bytes = Encoding.UTF8.GetBytes(builder.ToString());
@@ -1195,7 +1220,5 @@ public sealed class InkExportService
         };
     }
 }
-
-
 
 

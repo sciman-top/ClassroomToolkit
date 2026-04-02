@@ -1259,6 +1259,7 @@ public partial class PaintOverlayWindow
     {
         if (updateActiveSnapshot)
         {
+            MarkInkStrokeVersionDirty();
             UpdateActiveCacheSnapshot();
         }
         SetInkCacheDirty();

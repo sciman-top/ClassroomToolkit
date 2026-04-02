@@ -147,6 +147,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        MarkInkTransformVersionDirty();
         RequestInkRedraw();
     }
 
@@ -190,8 +191,15 @@ public partial class PaintOverlayWindow
         {
             return point;
         }
-        var inverse = GetPhotoInverseMatrix();
-        return inverse.Transform(point);
+
+        return PhotoInkCoordinateMapper.ToPhotoSpace(
+            point,
+            _photoPageScale.ScaleX,
+            _photoPageScale.ScaleY,
+            _photoScale.ScaleX,
+            _photoScale.ScaleY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
     }
 
     private Geometry? ToPhotoGeometry(Geometry geometry)
@@ -203,15 +211,14 @@ public partial class PaintOverlayWindow
         {
             return geometry;
         }
-        var inverse = GetPhotoInverseMatrix();
-        var clone = geometry.Clone();
-        clone.Transform = new MatrixTransform(inverse);
-        var flattened = clone.GetFlattenedPathGeometry();
-        if (flattened.CanFreeze)
-        {
-            flattened.Freeze();
-        }
-        return flattened;
+        return PhotoInkCoordinateMapper.ToPhotoGeometry(
+            geometry,
+            _photoPageScale.ScaleX,
+            _photoPageScale.ScaleY,
+            _photoScale.ScaleX,
+            _photoScale.ScaleY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
     }
 
     private Geometry? ToScreenGeometry(Geometry geometry)
@@ -223,37 +230,37 @@ public partial class PaintOverlayWindow
         {
             return geometry;
         }
-        var transform = GetPhotoMatrix();
-        var clone = geometry.Clone();
-        clone.Transform = new MatrixTransform(transform);
-        if (clone.CanFreeze)
-        {
-            clone.Freeze();
-        }
-        return clone;
+        return PhotoInkCoordinateMapper.ToScreenGeometry(
+            geometry,
+            _photoPageScale.ScaleX,
+            _photoPageScale.ScaleY,
+            _photoScale.ScaleX,
+            _photoScale.ScaleY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
     }
 
     private Matrix GetPhotoMatrix()
     {
-        var matrix = Matrix.Identity;
-        matrix.Scale(_photoPageScale.ScaleX * _photoScale.ScaleX, _photoPageScale.ScaleY * _photoScale.ScaleY);
-        matrix.Translate(_photoTranslate.X, _photoTranslate.Y);
-        return matrix;
+        return PhotoInkCoordinateMapper.CreateForwardMatrix(
+            _photoPageScale.ScaleX,
+            _photoPageScale.ScaleY,
+            _photoScale.ScaleX,
+            _photoScale.ScaleY,
+            _photoTranslate.X,
+            _photoTranslate.Y);
     }
 
     private Matrix GetPhotoInverseMatrix()
     {
-        var scaleX = _photoPageScale.ScaleX * _photoScale.ScaleX;
-        var scaleY = _photoPageScale.ScaleY * _photoScale.ScaleY;
-        if (Math.Abs(scaleX) < PhotoTransformMathDefaults.InverseScaleEpsilon
-            || Math.Abs(scaleY) < PhotoTransformMathDefaults.InverseScaleEpsilon)
-        {
-            return Matrix.Identity;
-        }
-        var matrix = Matrix.Identity;
-        matrix.Scale(1.0 / scaleX, 1.0 / scaleY);
-        matrix.Translate(-_photoTranslate.X / scaleX, -_photoTranslate.Y / scaleY);
-        return matrix;
+        return PhotoInkCoordinateMapper.CreateInverseMatrix(
+            _photoPageScale.ScaleX,
+            _photoPageScale.ScaleY,
+            _photoScale.ScaleX,
+            _photoScale.ScaleY,
+            _photoTranslate.X,
+            _photoTranslate.Y,
+            PhotoTransformMathDefaults.InverseScaleEpsilon);
     }
 
     private bool TryBeginPhotoPan(MouseButtonEventArgs e)
@@ -387,6 +394,7 @@ public partial class PaintOverlayWindow
                 hadEffectiveMovement && !inertiaStarted,
                 hadCrossPageDragCommit && !inertiaStarted))
         {
+            MarkInkTransformVersionDirty();
             RequestInkRedraw();
         }
     }

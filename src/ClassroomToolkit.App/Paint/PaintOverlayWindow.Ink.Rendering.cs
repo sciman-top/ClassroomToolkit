@@ -739,10 +739,13 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        var requestedStamp = CaptureInkRedrawVersionStamp();
         if (_redrawPending)
         {
+            _pendingInkRedrawVersionStamp = MergeInkRedrawVersionStamp(_pendingInkRedrawVersionStamp, requestedStamp);
             return;
         }
+        _pendingInkRedrawVersionStamp = requestedStamp;
         var throttleActive = IsPhotoInkModeActive() && IsCrossPagePanOrDragActive();
         var elapsedMs = (GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds;
         _inkDiagnostics?.OnRedrawRequested(throttleActive && elapsedMs < InkRedrawMinIntervalMs);
@@ -766,7 +769,14 @@ public partial class PaintOverlayWindow
                         {
                             return;
                         }
+                        var scheduledStamp = _pendingInkRedrawVersionStamp;
                         _redrawPending = false;
+                        _pendingInkRedrawVersionStamp = default;
+                        if (!IsInkRedrawVersionCurrent(scheduledStamp))
+                        {
+                            RequestInkRedraw();
+                            return;
+                        }
                         if (_redrawInProgress)
                         {
                             return;
@@ -787,12 +797,14 @@ public partial class PaintOverlayWindow
                     if (!scheduled)
                     {
                         _redrawPending = false;
+                        _pendingInkRedrawVersionStamp = default;
                     }
                 },
                 lifecycleToken,
                 onError: ex =>
                 {
                     _redrawPending = false;
+                    _pendingInkRedrawVersionStamp = default;
                     Debug.WriteLine($"[InkRedraw] throttled-dispatch failed: {ex.GetType().Name} - {ex.Message}");
                 });
             return;
@@ -800,7 +812,14 @@ public partial class PaintOverlayWindow
         _redrawPending = true;
         var directScheduled = TryBeginInvoke(() =>
         {
+            var scheduledStamp = _pendingInkRedrawVersionStamp;
             _redrawPending = false;
+            _pendingInkRedrawVersionStamp = default;
+            if (!IsInkRedrawVersionCurrent(scheduledStamp))
+            {
+                RequestInkRedraw();
+                return;
+            }
             if (_redrawInProgress)
             {
                 return;
@@ -821,6 +840,7 @@ public partial class PaintOverlayWindow
         if (!directScheduled)
         {
             _redrawPending = false;
+            _pendingInkRedrawVersionStamp = default;
         }
     }
 
