@@ -2,7 +2,9 @@ param(
   [ValidateSet("quick", "full")]
   [string]$Profile = "quick",
   [string]$Configuration = "Debug",
-  [switch]$SkipBuildServerShutdown
+  [switch]$SkipBuildServerShutdown,
+  [switch]$EnableGovernanceChecks = $true,
+  [switch]$EmitGovernanceReport
 )
 
 Set-StrictMode -Version Latest
@@ -49,6 +51,7 @@ function Invoke-Step {
   )
 
   Write-Host "=== $Name ==="
+  $global:LASTEXITCODE = 0
   & $Action
   if ($LASTEXITCODE -ne 0) {
     throw "Step failed: $Name (exit=$LASTEXITCODE)"
@@ -75,6 +78,22 @@ Invoke-Step -Name "contract-invariant" -Action {
 
 Invoke-Step -Name "hotspot" -Action {
   & "$PSScriptRoot\check-hotspot-line-budgets.ps1"
+}
+
+if ($EnableGovernanceChecks) {
+  Invoke-Step -Name "waiver-health" -Action {
+    & "$PSScriptRoot\..\governance\check-waiver-health.ps1"
+  }
+
+  Invoke-Step -Name "evidence-completeness" -Action {
+    & "$PSScriptRoot\..\governance\check-evidence-completeness.ps1" -Mode all -Threshold 98
+  }
+
+  if ($EmitGovernanceReport) {
+    Invoke-Step -Name "endstate-doctor-report" -Action {
+      & "$PSScriptRoot\..\governance\run-doctor-endstate.ps1" -EvidenceThreshold 98
+    }
+  }
 }
 
 Invoke-Step -Name "stable-tests" -Action {

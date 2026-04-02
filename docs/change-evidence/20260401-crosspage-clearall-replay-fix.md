@@ -1,4 +1,4 @@
-# 2026-04-01 Cross-Page ClearAll Replay Fix
+﻿# 2026-04-01 Cross-Page ClearAll Replay Fix
 
 - Rule IDs: `R1` `R2` `R3` `R6` `R8`
 - Risk: Medium
@@ -98,3 +98,14 @@ That left a stale window where an older queued auto-save snapshot could still wr
    - `stash@{0}: pre-crosspage-clearall-cleanup-20260401`
 
 3. If later需要恢复清理前的用户改动，再基于该 stash 做审阅/回放，不要直接丢弃。
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

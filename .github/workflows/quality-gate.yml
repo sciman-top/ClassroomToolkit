@@ -52,6 +52,22 @@ jobs:
           dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build
           --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
 
+      - name: Hotspot Budget Gate
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1
+
+      - name: Waiver Health Gate
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/governance/check-waiver-health.ps1
+
+      - name: Evidence Completeness Gate (All)
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/governance/check-evidence-completeness.ps1 -Mode all -Threshold 98
+
+      - name: Endstate Doctor Gate (All)
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/governance/run-doctor-endstate.ps1 -EvidenceMode all -EvidenceThreshold 98
+
       - name: Resolve Stable Profile
         id: stable_profile
         shell: pwsh
@@ -107,4 +123,12 @@ jobs:
           path: |
             artifacts/TestResults/stable-tests-summary.json
             artifacts/TestResults/stable-tests-entries
+          if-no-files-found: warn
+
+      - name: Upload Governance Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-governance-reports
+          path: docs/governance/reports
           if-no-files-found: warn

@@ -1,4 +1,4 @@
-规则ID=R4/R6/R8 + platform_na(codex-status-noninteractive)
+﻿规则ID=R4/R6/R8 + platform_na(codex-status-noninteractive)
 影响模块=governance 安装链验收、项目硬门禁、规则同步
 当前落点=E:/CODE/ClassroomToolkit/{AGENTS.md,CLAUDE.md,GEMINI.md}
 目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/
@@ -30,3 +30,8 @@
 回滚动作=
 - 规则同步回滚：使用 governance-kit backups/backflow-20260402-004916/ClassroomToolkit/source-before 与 target-snapshot
 - 分发回滚：powershell -File E:/CODE/governance-kit/scripts/restore.ps1 -BackupDir <选定备份目录>
+
+# Backfill 2026-04-03
+回滚动作=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

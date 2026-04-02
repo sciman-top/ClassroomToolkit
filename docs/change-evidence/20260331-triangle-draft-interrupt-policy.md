@@ -1,4 +1,4 @@
-规则ID=R1,R2,R4,R6,R8
+﻿规则ID=R1,R2,R4,R6,R8
 影响模块=src/ClassroomToolkit.App/Paint
 当前落点=PaintOverlayWindow.Ink.cs / PaintOverlayWindow.xaml.cs（三角形草稿中断策略）
 目标归宿=未完成三角形仅为预览态；模式切换、形状切换、窗口失焦均取消草稿且不提交
@@ -56,3 +56,8 @@
   exit_code: 0
   key_output: commands listed (exec/review/login/...)
   timestamp: 2026-03-31
+
+# Backfill 2026-04-03
+回滚动作=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

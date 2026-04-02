@@ -1,4 +1,4 @@
-# 2026-03-28-rules-six-files-governance.md
+﻿# 2026-03-28-rules-six-files-governance.md
 
 - 规则ID: R1,R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,R12
 - 影响模块: 全局三文件 + 项目三文件
@@ -27,3 +27,14 @@
   - `rg -n "B\. 平台差异|A\.2 R1-R12|Execution Contract" GlobalUser/*.md *.md`
   - `git diff --no-index -- GlobalUser/AGENTS.md GlobalUser/CLAUDE.md`
   - `git diff --no-index -- AGENTS.md CLAUDE.md`
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

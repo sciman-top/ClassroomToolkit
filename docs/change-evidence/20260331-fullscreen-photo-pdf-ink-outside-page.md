@@ -1,4 +1,4 @@
-规则ID=R1,R2,R4,R6,R8
+﻿规则ID=R1,R2,R4,R6,R8
 影响模块=src/ClassroomToolkit.App/Paint
 当前落点=PaintOverlayWindow.Photo.Navigation.cs / PhotoInkCurrentPageClipPolicy.cs / PhotoInkPreviewClipPolicy.cs
 目标归宿=PDF/图片全屏时，页面外区域也可生成并显示笔迹（不再被当前页矩形裁剪）
@@ -108,3 +108,8 @@
 - test: PASS（3028 passed；首次因 FileLoggerProviderTests 文件锁竞争失败，复跑通过）
 - contract/invariant: PASS（24 passed）
 - hotspot: PASS
+
+# Backfill 2026-04-03
+回滚动作=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

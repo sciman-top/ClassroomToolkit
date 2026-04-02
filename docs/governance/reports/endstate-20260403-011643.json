@@ -1,0 +1,79 @@
+﻿{
+    "generated_at":  "2026-04-03T01:16:43",
+    "repo_root":  "E:\\CODE\\ClassroomToolkit",
+    "status":  "FAIL",
+    "endstate_score":  20,
+    "threshold":  {
+                      "good":  85,
+                      "warning":  70
+                  },
+    "dimensions":  {
+                       "precheck":  {
+                                        "status":  "PASS",
+                                        "checks":  [
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "dotnet"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "powershell"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "tests_project"
+                                                       }
+                                                   ],
+                                        "failed":  [
+
+                                                   ]
+                                    },
+                       "waiver":  {
+                                      "status":  "FAIL",
+                                      "parse_ok":  true,
+                                      "error":  "The variable \u0027$LASTEXITCODE\u0027 cannot be retrieved because it has not been set.",
+                                      "data":  {
+                                                   "status":  "PASS",
+                                                   "waiverDir":  "docs/governance/waivers",
+                                                   "totalFiles":  0,
+                                                   "activeCount":  0,
+                                                   "expiredUnrecoveredCount":  0,
+                                                   "checked":  [
+
+                                                               ],
+                                                   "violations":  [
+
+                                                                  ]
+                                               }
+                                  },
+                       "evidence":  {
+                                        "status":  "FAIL",
+                                        "parse_ok":  false,
+                                        "error":  "Cannot validate argument on parameter \u0027Mode\u0027. The argument \"-Threshold\" does not belong to the set \"changed,all\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.",
+                                        "data":  null
+                                    },
+                       "hotspot":  {
+                                       "status":  "FAIL",
+                                       "parse_ok":  false,
+                                       "error":  "json_parse_failed: Invalid JSON primitive: Microsoft.PowerShell.Commands.Internal.Format.FormatStartData.",
+                                       "data":  null
+                                   }
+                   },
+    "gaps":  [
+                 {
+                     "area":  "waiver",
+                     "severity":  "high",
+                     "detail":  "waiver fields invalid or expired unrecovered waiver exists"
+                 },
+                 {
+                     "area":  "evidence",
+                     "severity":  "medium",
+                     "detail":  "evidence completeness below threshold or critical fields missing"
+                 },
+                 {
+                     "area":  "hotspot",
+                     "severity":  "high",
+                     "detail":  "hotspot budget check failed"
+                 }
+             ]
+}

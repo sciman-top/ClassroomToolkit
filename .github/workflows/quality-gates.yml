@@ -16,7 +16,15 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "scripts/quality/run-local-quality-gates.ps1") {
-            powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile quick
+            powershell -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -EmitGovernanceReport
           } else {
             Write-Host "No project quality script found, skip."
           }
+
+      - name: Upload Governance Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gates-governance-reports
+          path: docs/governance/reports
+          if-no-files-found: warn

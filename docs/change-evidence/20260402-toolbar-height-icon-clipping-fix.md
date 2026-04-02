@@ -1,4 +1,4 @@
-# 20260402 toolbar-height-icon-clipping-fix
+﻿# 20260402 toolbar-height-icon-clipping-fix
 
 - rule_id: R1/R2/R6/R8
 - risk_level: low
@@ -39,3 +39,14 @@
 
 ## Rollback
 1. `git restore src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml`
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

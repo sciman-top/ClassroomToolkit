@@ -1,0 +1,715 @@
+﻿{
+    "generated_at":  "2026-04-03T01:26:46",
+    "repo_root":  "E:\\CODE\\ClassroomToolkit",
+    "status":  "PASS",
+    "endstate_score":  100,
+    "threshold":  {
+                      "good":  85,
+                      "warning":  70
+                  },
+    "dimensions":  {
+                       "precheck":  {
+                                        "status":  "PASS",
+                                        "checks":  [
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "dotnet"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "powershell"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "tests_project"
+                                                       }
+                                                   ],
+                                        "failed":  [
+
+                                                   ]
+                                    },
+                       "waiver":  {
+                                      "status":  "PASS",
+                                      "parse_ok":  true,
+                                      "error":  null,
+                                      "data":  {
+                                                   "status":  "PASS",
+                                                   "waiverDir":  "docs/governance/waivers",
+                                                   "totalFiles":  0,
+                                                   "activeCount":  0,
+                                                   "expiredUnrecoveredCount":  0,
+                                                   "checked":  [
+
+                                                               ],
+                                                   "violations":  [
+
+                                                                  ]
+                                               }
+                                  },
+                       "evidence":  {
+                                        "status":  "PASS",
+                                        "parse_ok":  true,
+                                        "error":  null,
+                                        "data":  {
+                                                     "status":  "PASS",
+                                                     "evidenceDir":  "docs/change-evidence",
+                                                     "mode":  "all",
+                                                     "threshold":  98,
+                                                     "templateKeys":  [
+                                                                          "规则ID",
+                                                                          "影响模块",
+                                                                          "当前落点",
+                                                                          "目标归宿",
+                                                                          "迁移批次",
+                                                                          "风险等级",
+                                                                          "执行命令",
+                                                                          "验证证据",
+                                                                          "回滚动作"
+                                                                      ],
+                                                     "criticalKeys":  [
+                                                                          "规则ID",
+                                                                          "执行命令",
+                                                                          "验证证据",
+                                                                          "回滚动作"
+                                                                      ],
+                                                     "totalFiles":  56,
+                                                     "overallCoverage":  100,
+                                                     "checked":  [
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\2026-03-28-rules-six-files-governance.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260330-governance-cycle-safe.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260330-project-rules-open-rewrite.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260330-rule-files-optimization.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260330-rule-files-optimization-p2.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260330-rule-files-optimization-p3.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\2026-03-30-rules-six-files-compact.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-arrow-dashed-sync.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-fullscreen-photo-pdf-ink-outside-page.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-governance-verification-pass.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-hotspot-gate-enabled-and-distributed.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-quality-gate-runner-gap-closure.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-rollcall-workbook-self-heal.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-shape-toolbar-and-triangle.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-timer-countdown-and-dialog-fixes.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260331-triangle-draft-interrupt-policy.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-crosspage-clearall-flash-guard.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-crosspage-clearall-replay-fix.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-crosspage-clearall-sidecar-guard.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-crosspage-neighbor-outside-ink-recovery.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-cursor-clearall-panzoom-recovery-guard.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-imagemanager-thumbnail-open-lag.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-imagemanager-visible-priority-thumbnails.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-inkrecoverydiag-filelog.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-log-session-reset.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-photo-overlay-old-frame-flash.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-rollcall-close-vs-hide-semantics.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-rollcall-preload-dedup.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-rollcall-remember-settings-on-open.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-runtime-empty-unified-guard-and-regression-tests.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260401-toolbar-tool-selection-manager.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase1.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase2-status-badge.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase3-preflight-script.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase4-matrix-report-automation.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase5-baseline-backfill-and-index.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase6-json-and-exit-code.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-compatibility-hardening-phase7-diagnostics-bundle-export.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-governance-kit-install-verification.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-ink-d1-d2.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-ink-d3-d5.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-paint-settings-ppt-control-flags.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-photo-overlay-flicker-regression.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-presentation-diagnostics-process-version.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-presentation-overrides-package-clipboard-undo.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-presentation-overrides-package-policy.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-presentation-overrides-package-simplify.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-presentation-overrides-package-ui-wiring.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-rollcall-photo-previous-frame-flash.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-startup-compatibility-loadability-warning.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-startup-compatibility-probe-overrides.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-startup-diagnostics-native-probe.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260402-toolbar-height-icon-clipping-fix.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260403-governance-endstate-p0-execution.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260403-rollcall-central-photo-overlay-previous-frame-flash.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     },
+                                                                     {
+                                                                         "file":  "E:\\CODE\\ClassroomToolkit\\docs\\change-evidence\\20260403-safe-autopilot-orchestrator.md",
+                                                                         "coverage":  100,
+                                                                         "missing_count":  0,
+                                                                         "missing_critical":  [
+
+                                                                                              ],
+                                                                         "ok":  true
+                                                                     }
+                                                                 ],
+                                                     "violations":  [
+
+                                                                    ]
+                                                 }
+                                    },
+                       "hotspot":  {
+                                       "status":  "PASS",
+                                       "parse_ok":  true,
+                                       "error":  null,
+                                       "data":  {
+                                                    "status":  "PASS",
+                                                    "budgetFile":  "scripts/quality/hotspot-line-budgets.json",
+                                                    "checked":  [
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                                                        "maxLines":  900,
+                                                                        "actualLines":  822,
+                                                                        "delta":  -78,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                                                        "maxLines":  1450,
+                                                                        "actualLines":  1379,
+                                                                        "delta":  -71,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs",
+                                                                        "maxLines":  1650,
+                                                                        "actualLines":  1490,
+                                                                        "delta":  -160,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs",
+                                                                        "maxLines":  1420,
+                                                                        "actualLines":  1419,
+                                                                        "delta":  -1,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                                                        "maxLines":  2380,
+                                                                        "actualLines":  2367,
+                                                                        "delta":  -13,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.cs",
+                                                                        "maxLines":  1340,
+                                                                        "actualLines":  1247,
+                                                                        "delta":  -93,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Transform.cs",
+                                                                        "maxLines":  1100,
+                                                                        "actualLines":  1004,
+                                                                        "delta":  -96,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml.cs",
+                                                                        "maxLines":  1880,
+                                                                        "actualLines":  1748,
+                                                                        "delta":  -132,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/Brushes/VariableWidthBrushRenderer.Geometry.cs",
+                                                                        "maxLines":  1450,
+                                                                        "actualLines":  1217,
+                                                                        "delta":  -233,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml.cs",
+                                                                        "maxLines":  1540,
+                                                                        "actualLines":  1390,
+                                                                        "delta":  -150,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Ink/InkExportService.cs",
+                                                                        "maxLines":  1240,
+                                                                        "actualLines":  1082,
+                                                                        "delta":  -158,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+                                                                        "maxLines":  380,
+                                                                        "actualLines":  319,
+                                                                        "delta":  -61,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/Win32PresentationResolver.cs",
+                                                                        "maxLines":  370,
+                                                                        "actualLines":  313,
+                                                                        "delta":  -57,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs",
+                                                                        "maxLines":  370,
+                                                                        "actualLines":  314,
+                                                                        "delta":  -56,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Windowing/OverlayNavigationFocusPolicy.cs",
+                                                                        "maxLines":  220,
+                                                                        "actualLines":  182,
+                                                                        "delta":  -38,
+                                                                        "ok":  true
+                                                                    }
+                                                                ],
+                                                    "missingFiles":  [
+
+                                                                     ],
+                                                    "overBudget":  [
+
+                                                                   ]
+                                                }
+                                   }
+                   },
+    "evidence_mode":  "all",
+    "gaps":  [
+
+             ]
+}

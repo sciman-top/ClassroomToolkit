@@ -1,4 +1,4 @@
-# 20260331-shape-toolbar-and-triangle
+﻿# 20260331-shape-toolbar-and-triangle
 
 - rule_id: `R1 R2 R6 R8`
 - risk_level: `medium`
@@ -72,3 +72,14 @@
 2. `git checkout -- src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Geometry.cs src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs`
 3. `git checkout -- src/ClassroomToolkit.App/Paint/PaintShapeType.cs src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml.cs src/ClassroomToolkit.App/Settings/AppSettingsService.cs src/ClassroomToolkit.App/Assets/Styles/Icons.xaml`
 4. 重新执行硬门禁链路确认回滚后状态。
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

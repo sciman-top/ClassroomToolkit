@@ -1,4 +1,4 @@
-rule_id=R1/R2/R4/R6/R8 + C2/C3/C4
+﻿rule_id=R1/R2/R4/R6/R8 + C2/C3/C4
 risk_level=MEDIUM
 current_landing=E:/CODE/ClassroomToolkit + E:/CODE/governance-kit
 target_destination=verify governance-kit install usability and quality in ClassroomToolkit
@@ -44,3 +44,14 @@ rollback=
 1) Restore from backup snapshot if needed: E:/CODE/governance-kit/backups/backflow-20260331-185628/ClassroomToolkit
 2) Re-distribute source snapshot: powershell -NoProfile -ExecutionPolicy Bypass -File E:/CODE/governance-kit/scripts/install.ps1 -Mode safe
 3) Re-run health check: powershell -NoProfile -ExecutionPolicy Bypass -File E:/CODE/governance-kit/scripts/doctor.ps1
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

@@ -1,4 +1,4 @@
-# 20260330-rule-files-optimization-p3
+﻿# 20260330-rule-files-optimization-p3
 
 - 规则ID=R1,R2,R3,R4,R5,R6,R7,R8,E1,E2,E3,E4,E5,E6
 - 影响模块=GlobalUser 规则层 + 项目根规则层
@@ -31,3 +31,14 @@
 ## 回滚动作
 1. 恢复 6 份规则文件到 P2 或 P1 版本。
 2. 重新执行结构与承接校验并留痕。
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

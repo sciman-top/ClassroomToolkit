@@ -1,4 +1,4 @@
-rule_id=R1/R2/R4/R6/R8 + C2/C3/C4/C6/C8
+﻿rule_id=R1/R2/R4/R6/R8 + C2/C3/C4/C6/C8
 risk_level=MEDIUM
 current_landing=E:/CODE/ClassroomToolkit + E:/CODE/governance-kit
 target_destination=enable executable hotspot gate and make it distributable via governance-kit
@@ -52,3 +52,14 @@ rollback=
 2) Revert governance-kit config updates in config/project-custom-files.json and config/targets.json.
 3) Restore from latest backflow snapshot under E:/CODE/governance-kit/backups/backflow-*/ClassroomToolkit if needed.
 4) Re-run install/verify/doctor to confirm rollback health state.
+
+# Backfill 2026-04-03
+当前落点=BACKFILL-2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
+回滚动作=BACKFILL-2026-04-03
+目标归宿=BACKFILL-2026-04-03
+迁移批次=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+影响模块=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

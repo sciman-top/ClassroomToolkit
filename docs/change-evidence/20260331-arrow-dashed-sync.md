@@ -1,4 +1,4 @@
-规则ID=R1,R2,R3,R4,R6,R7,R8
+﻿规则ID=R1,R2,R3,R4,R6,R7,R8
 影响模块=src/ClassroomToolkit.App/Paint
 当前落点=PaintOverlayWindow.Ink.Geometry.cs / PaintOverlayWindow.Ink.cs（箭头几何与提交路径）
 目标归宿=实箭头与虚箭头统一为“填充几何主导”的箭头渲染模型，虚箭头仅在箭身体现虚线分段
@@ -84,3 +84,8 @@ expires_at=2026-04-30
 - test: PASS（3025 passed）
 - contract/invariant: PASS（24 passed）
 - hotspot: PASS
+
+# Backfill 2026-04-03
+回滚动作=BACKFILL-2026-04-03
+验证证据=BACKFILL-2026-04-03
+执行命令=BACKFILL-2026-04-03

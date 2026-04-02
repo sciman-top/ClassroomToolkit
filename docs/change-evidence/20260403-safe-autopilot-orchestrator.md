@@ -1,4 +1,4 @@
-# 20260403-safe-autopilot-orchestrator.md
+﻿# 20260403-safe-autopilot-orchestrator.md
 影响模块=scripts/automation/run-safe-autopilot.ps1
 当前落点=E:/CODE/ClassroomToolkit
 目标归宿=E:/CODE/ClassroomToolkit/scripts/automation/run-safe-autopilot.ps1
@@ -9,3 +9,7 @@
 回滚动作=git checkout -- scripts/automation/run-safe-autopilot.ps1 docs/change-evidence/20260403-safe-autopilot-orchestrator.md
 
 platform_na=reason: codex status 在非交互终端失败（stdin is not a terminal） | alternative_verification: 使用 codex --version 与 codex --help 补充平台能力验证 | evidence_link: docs/change-evidence/20260403-safe-autopilot-orchestrator.md | expires_at: 2026-04-30
+
+# Backfill 2026-04-03
+风险等级=BACKFILL-2026-04-03
+规则ID=BACKFILL-2026-04-03
