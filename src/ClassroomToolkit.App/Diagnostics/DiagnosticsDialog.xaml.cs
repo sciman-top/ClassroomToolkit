@@ -64,6 +64,28 @@ public partial class DiagnosticsDialog : Window
         System.Windows.Clipboard.SetText(text);
     }
 
+    private void OnExportBundleClick(object sender, RoutedEventArgs e)
+    {
+        var export = DiagnosticsBundleExportService.Export(_result);
+        if (export.Success)
+        {
+            System.Windows.MessageBox.Show(
+                this,
+                $"诊断包已导出：{export.BundlePath}",
+                "导出完成",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        System.Windows.MessageBox.Show(
+            this,
+            $"导出诊断包失败：{export.Error}",
+            "导出失败",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         // 直接关闭窗口，不设置 DialogResult
