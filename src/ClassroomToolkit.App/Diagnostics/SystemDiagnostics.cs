@@ -6,6 +6,7 @@ using ClassroomToolkit.App;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.Services.Compatibility;
 using ClassroomToolkit.Services.Presentation;
 
 namespace ClassroomToolkit.App.Diagnostics;
@@ -29,6 +30,17 @@ public static class SystemDiagnostics
         lines.Add($"可执行文件：{Environment.ProcessPath ?? "unknown"}");
         lines.Add($"工作目录：{Environment.CurrentDirectory}");
         lines.Add($"程序目录：{AppDomain.CurrentDomain.BaseDirectory}");
+        var startupCompatibility = StartupCompatibilityProbe.Collect(
+            settingsPath,
+            settings.PresentationClassifierOverridesJson);
+        var startupStatus = StartupCompatibilityStatusPolicy.Resolve(startupCompatibility);
+        var startupBadge = StartupCompatibilityStatusPolicy.ToBadgeText(startupStatus);
+        lines.Add(startupBadge);
+        if (startupCompatibility.Issues.Count > 0)
+        {
+            lines.Add(
+                $"启动兼容问题统计：阻断={startupCompatibility.Issues.Count(issue => issue.IsBlocking)}，提示={startupCompatibility.Issues.Count(issue => !issue.IsBlocking)}");
+        }
 
         lines.Add($"设置文件：{settingsPath}");
         if (!TryReportWritable(settingsPath, lines, issues, fixes))
@@ -104,7 +116,8 @@ public static class SystemDiagnostics
         var title = "系统兼容性诊断";
         var detail = string.Join(Environment.NewLine, lines);
         var suggestion = BuildSuggestions(issues, fixes, okMessage: "✅ 当前系统环境良好，关键检查通过。");
-        return new DiagnosticsResult(issues.Count > 0, title, detail, suggestion);
+        var hasIssues = issues.Count > 0 || startupStatus != CompatibilityHealthStatus.Normal;
+        return new DiagnosticsResult(hasIssues, title, detail, suggestion, startupBadge);
     }
 
     public static DiagnosticsResult CollectQuickDiagnostics(string settingsPath)
@@ -116,6 +129,15 @@ public static class SystemDiagnostics
         lines.Add($"平台：{Environment.OSVersion.Platform}");
         lines.Add($".NET：{RuntimeInformation.FrameworkDescription}");
         lines.Add($"程序目录：{AppDomain.CurrentDomain.BaseDirectory}");
+        var startupCompatibility = StartupCompatibilityProbe.Collect(settingsPath);
+        var startupStatus = StartupCompatibilityStatusPolicy.Resolve(startupCompatibility);
+        var startupBadge = StartupCompatibilityStatusPolicy.ToBadgeText(startupStatus);
+        lines.Add(startupBadge);
+        if (startupCompatibility.Issues.Count > 0)
+        {
+            lines.Add(
+                $"启动兼容问题统计：阻断={startupCompatibility.Issues.Count(issue => issue.IsBlocking)}，提示={startupCompatibility.Issues.Count(issue => !issue.IsBlocking)}");
+        }
         lines.Add($"设置文件：{settingsPath}");
         if (!TryReportWritable(settingsPath, lines, issues, fixes))
         {
@@ -137,7 +159,8 @@ public static class SystemDiagnostics
         var title = "启动快速检查";
         var detail = string.Join(Environment.NewLine, lines);
         var suggestion = BuildSuggestions(issues, fixes, okMessage: "✅ 启动快速检查通过。");
-        return new DiagnosticsResult(issues.Count > 0, title, detail, suggestion);
+        var hasIssues = issues.Count > 0 || startupStatus != CompatibilityHealthStatus.Normal;
+        return new DiagnosticsResult(hasIssues, title, detail, suggestion, startupBadge);
     }
 
     private static bool TryReportWritable(
