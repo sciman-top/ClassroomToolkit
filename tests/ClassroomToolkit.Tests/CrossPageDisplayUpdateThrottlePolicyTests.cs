@@ -35,7 +35,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs - 5);
+        decision.DelayMs.Should().Be(19);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs - 10);
+        decision.DelayMs.Should().Be(14);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             photoPanning: true,
             crossPageDragging: false,
             inkOperationActive: false,
-            elapsedMs: CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs,
+            elapsedMs: 24,
             draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 
@@ -99,7 +99,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs - 4);
+        decision.DelayMs.Should().Be(20);
     }
 
     [Fact]
@@ -115,6 +115,6 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs - 6);
+        decision.DelayMs.Should().Be(18);
     }
 }

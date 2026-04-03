@@ -2140,6 +2140,12 @@ public partial class PaintOverlayWindow
                 {
                     return;
                 }
+                var expectedCacheKey = BuildNeighborInkCacheKey(pageIndex);
+                if (CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(cacheKey, expectedCacheKey))
+                {
+                    _inkDiagnostics?.OnCrossPageUpdateEvent("skip", CrossPageUpdateSources.NeighborSidecar, "stale-cache-key");
+                    return;
+                }
                 if (TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)) return;
                 if (_photoCache.TryGet(cacheKey, out var existed) && existed.Count > 0)
                 {

@@ -53,6 +53,15 @@ public sealed class CrossPageDisplayLifecycleContractTests
         source.Should().Contain("_inkDiagnostics?.OnCrossPageUpdateEvent(\"defer-abort\", source, abortDetail);");
     }
 
+    [Fact]
+    public void ScheduleNeighborInkSidecarLoad_ShouldRejectStaleDocumentCacheKey()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("ScheduleNeighborInkSidecarLoad(");
+        source.Should().Contain("_inkDiagnostics?.OnCrossPageUpdateEvent(\"skip\", CrossPageUpdateSources.NeighborSidecar, \"stale-cache-key\");");
+    }
+
     private static string GetSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(

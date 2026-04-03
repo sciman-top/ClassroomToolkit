@@ -16,7 +16,7 @@ public sealed class InkRuntimeTimingDefaultsTests
         InkRuntimeTimingDefaults.MonitorIdleIntervalMs.Should().Be(1400);
         InkRuntimeTimingDefaults.IdleThresholdMs.Should().Be(2500);
         InkRuntimeTimingDefaults.RedrawMinIntervalMs.Should().Be(16);
-        InkRuntimeTimingDefaults.PhotoPanRedrawThresholdDip.Should().Be(6);
+        InkRuntimeTimingDefaults.PhotoPanRedrawThresholdDip.Should().Be(3);
         InkRuntimeTimingDefaults.RedrawDispatchDelayMinMs.Should().Be(1);
         InkRuntimeTimingDefaults.SidecarAutoSaveDelayMs.Should().Be(600);
         InkRuntimeTimingDefaults.SidecarAutoSaveRetryMax.Should().Be(3);

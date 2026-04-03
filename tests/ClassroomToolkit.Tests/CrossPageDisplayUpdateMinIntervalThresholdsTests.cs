@@ -7,10 +7,10 @@ namespace ClassroomToolkit.Tests;
 public sealed class CrossPageDisplayUpdateMinIntervalThresholdsTests
 {
     [Fact]
-    public void Thresholds_ShouldMatchStabilizedValues()
+    public void Thresholds_ShouldMatchResponsiveValues()
     {
-        CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs.Should().Be(56);
-        CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs.Should().Be(42);
-        CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs.Should().Be(30);
+        CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs.Should().Be(24);
+        CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs.Should().Be(20);
+        CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs.Should().Be(16);
     }
 }

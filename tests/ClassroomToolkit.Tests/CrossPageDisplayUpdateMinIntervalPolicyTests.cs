@@ -16,7 +16,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
             draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 
-        value.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs);
+        value.Should().Be(24);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
             draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 
-        value.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs);
+        value.Should().Be(24);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
             draggingMinIntervalMs: 24,
             normalMinIntervalMs: 16);
 
-        value.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs);
+        value.Should().Be(24);
     }
 
     [Fact]

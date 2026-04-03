@@ -39,6 +39,6 @@ public sealed class CrossPageDisplayUpdateDispatchDecisionPolicyTests
             normalMinIntervalMs: 16);
 
         decision.Mode.Should().Be(CrossPageDisplayUpdateDispatchMode.Delayed);
-        decision.DelayMs.Should().Be(CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs - 6);
+        decision.DelayMs.Should().Be(18);
     }
 }

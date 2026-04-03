@@ -59,4 +59,17 @@ public sealed class PhotoInkPanRedrawPolicyTests
 
         shouldRequest.Should().BeTrue();
     }
+
+    [Fact]
+    public void ShouldRequest_ShouldUseResponsiveDefaultThreshold_ForSmallerPhotoPanDelta()
+    {
+        var shouldRequest = PhotoInkPanRedrawPolicy.ShouldRequest(
+            photoInkModeActive: true,
+            currentTranslateX: 103.2,
+            currentTranslateY: 200,
+            lastRedrawTranslateX: 100,
+            lastRedrawTranslateY: 200);
+
+        shouldRequest.Should().BeTrue();
+    }
 }

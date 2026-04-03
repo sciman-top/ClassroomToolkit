@@ -10,7 +10,7 @@ internal static class InkRuntimeTimingDefaults
     internal const int MonitorIdleIntervalMs = 1400;
     internal const int IdleThresholdMs = 2500;
     internal const int RedrawMinIntervalMs = 16;
-    internal const double PhotoPanRedrawThresholdDip = 6.0;
+    internal const double PhotoPanRedrawThresholdDip = 3.0;
     internal const int RedrawDispatchDelayMinMs = 1;
     internal const int SidecarAutoSaveDelayMs = 600;
     internal const int SidecarAutoSaveRetryMax = 3;

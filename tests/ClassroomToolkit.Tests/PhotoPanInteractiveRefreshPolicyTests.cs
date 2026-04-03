@@ -44,4 +44,16 @@ public sealed class PhotoPanInteractiveRefreshPolicyTests
 
         shouldRefresh.Should().BeTrue();
     }
+
+    [Fact]
+    public void ShouldRefresh_ShouldUseResponsiveDefaultThreshold_WhenNoOverrideProvided()
+    {
+        var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+            lastRefreshTranslateX: 100,
+            lastRefreshTranslateY: 200,
+            currentTranslateX: 100.8,
+            currentTranslateY: 200);
+
+        shouldRefresh.Should().BeTrue();
+    }
 }

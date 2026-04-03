@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Buffers;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
@@ -285,9 +286,18 @@ public partial class PaintOverlayWindow
 
         ClearSurface();
         var stride = width * 4;
-        var pixels = new byte[stride * height];
-        converted.CopyPixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
-        _rasterSurface.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+        var byteCount = stride * height;
+        var pool = ArrayPool<byte>.Shared;
+        var pixels = pool.Rent(byteCount);
+        try
+        {
+            converted.CopyPixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+            _rasterSurface.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+        }
+        finally
+        {
+            pool.Return(pixels, clearArray: false);
+        }
         return true;
     }
 
