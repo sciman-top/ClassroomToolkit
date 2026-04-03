@@ -14,7 +14,7 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: null!,
             canRoutePresentationInput: true,
-            forwardPresentationKey: _ => { });
+            tryForwardPresentationKey: _ => true);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -27,7 +27,7 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            forwardPresentationKey: null!);
+            tryForwardPresentationKey: null!);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -42,7 +42,11 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: false,
             tryHandlePhotoKey: _ => true,
             canRoutePresentationInput: true,
-            forwardPresentationKey: _ => forwarded = true);
+            tryForwardPresentationKey: _ =>
+            {
+                forwarded = true;
+                return true;
+            });
 
         handled.Should().BeFalse();
         forwarded.Should().BeFalse();
@@ -57,7 +61,11 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: key => key == Key.Right,
             canRoutePresentationInput: true,
-            forwardPresentationKey: _ => forwarded = true);
+            tryForwardPresentationKey: _ =>
+            {
+                forwarded = true;
+                return true;
+            });
 
         handled.Should().BeTrue();
         forwarded.Should().BeFalse();
@@ -72,7 +80,11 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            forwardPresentationKey: key => forwardedKey = key);
+            tryForwardPresentationKey: key =>
+            {
+                forwardedKey = key;
+                return true;
+            });
 
         handled.Should().BeTrue();
         forwardedKey.Should().Be(Key.PageDown);
@@ -87,7 +99,11 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            forwardPresentationKey: _ => forwarded = true);
+            tryForwardPresentationKey: _ =>
+            {
+                forwarded = true;
+                return true;
+            });
 
         handled.Should().BeFalse();
         forwarded.Should().BeFalse();
@@ -103,7 +119,11 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: _ => throw new InvalidOperationException("photo-failed"),
             canRoutePresentationInput: false,
-            forwardPresentationKey: _ => forwarded = true);
+            tryForwardPresentationKey: _ =>
+            {
+                forwarded = true;
+                return true;
+            });
 
         handled.Should().BeFalse();
         forwarded.Should().BeFalse();
@@ -117,7 +137,20 @@ public sealed class AuxWindowKeyRoutingHandlerTests
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            forwardPresentationKey: _ => throw new InvalidOperationException("forward-failed"));
+            tryForwardPresentationKey: _ => throw new InvalidOperationException("forward-failed"));
+
+        handled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryHandle_ShouldReturnFalse_WhenForwardReturnsFalse()
+    {
+        var handled = AuxWindowKeyRoutingHandler.TryHandle(
+            key: Key.PageDown,
+            overlayVisible: true,
+            tryHandlePhotoKey: _ => false,
+            canRoutePresentationInput: true,
+            tryForwardPresentationKey: _ => false);
 
         handled.Should().BeFalse();
     }

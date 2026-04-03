@@ -150,6 +150,19 @@ public partial class RollCallWindow
         }
     }
 
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (System.Windows.Application.Current?.MainWindow is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        if (mainWindow.TryHandleOverlayNavigationWheelFromAuxWindow(e.Delta))
+        {
+            e.Handled = true;
+        }
+    }
+
     private async Task StartKeyboardHookCoreAsync(Func<bool> isCurrent)
     {
         try
@@ -347,4 +360,3 @@ public partial class RollCallWindow
         }
     }
 }
-

@@ -75,6 +75,7 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
         UpdateShapeButtonIcon();
         PreviewKeyDown += OnPreviewKeyDown;
+        PreviewMouseWheel += OnPreviewMouseWheel;
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
         Closed += OnToolbarClosed;
@@ -96,6 +97,7 @@ public partial class PaintToolbarWindow : Window
     private void OnToolbarClosed(object? sender, EventArgs e)
     {
         PreviewKeyDown -= OnPreviewKeyDown;
+        PreviewMouseWheel -= OnPreviewMouseWheel;
         Loaded -= OnToolbarLoaded;
         IsVisibleChanged -= OnToolbarVisibleChanged;
         Closed -= OnToolbarClosed;
@@ -716,7 +718,26 @@ public partial class PaintToolbarWindow : Window
             overlayVisible: overlay.IsVisible,
             tryHandlePhotoKey: overlay.TryHandlePhotoKey,
             canRoutePresentationInput: overlay.CanRoutePresentationInputFromAuxWindow(),
-            forwardPresentationKey: overlay.ForwardKeyboardToPresentation);
+            tryForwardPresentationKey: overlay.ForwardKeyboardToPresentation);
+    }
+
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var overlay = _overlay;
+        if (overlay == null)
+        {
+            return;
+        }
+
+        var handled = AuxWindowWheelRoutingHandler.TryHandle(
+            delta: e.Delta,
+            overlayVisible: overlay.IsVisible,
+            canRoutePresentationInput: overlay.CanRoutePresentationInputFromAuxWindow(),
+            tryForwardPresentationWheel: overlay.ForwardWheelToPresentation);
+        if (handled)
+        {
+            e.Handled = true;
+        }
     }
 
 }

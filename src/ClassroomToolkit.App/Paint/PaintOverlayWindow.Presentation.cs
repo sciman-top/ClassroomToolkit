@@ -54,21 +54,54 @@ public partial class PaintOverlayWindow
         return PresentationWindowFocus.EnsureForeground(target.Handle);
     }
 
-    public void ForwardKeyboardToPresentation(Key key)
+    public bool ForwardKeyboardToPresentation(Key key)
     {
         if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
                 _presentationOptions.AllowOffice,
                 _presentationOptions.AllowWps))
         {
-            return;
+            return false;
         }
         if (!PresentationKeyCommandPolicy.TryMap(key, out var command))
         {
-            return;
+            return false;
         }
-        if (TrySendPresentationCommand(command))
+        return TrySendPresentationCommand(command);
+    }
+
+    public bool ForwardWheelToPresentation(int delta)
+    {
+        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+                _presentationOptions.AllowOffice,
+                _presentationOptions.AllowWps))
         {
+            return false;
         }
+        if (ShouldSuppressPresentationWheelFromRecentInkInput())
+        {
+            return false;
+        }
+
+        var foregroundType = ResolveForegroundPresentationType();
+        var executionAction = OverlayWheelPresentationExecutionPolicy.Resolve(
+            _wpsNavHookActive,
+            _wpsHookInterceptWheel,
+            _wpsHookBlockOnly,
+            isWpsForeground: OverlayPresentationRouteContextBuilder.MapRouteType(foregroundType) == OverlayPresentationRouteType.Wps,
+            WpsHookRecentlyFired(),
+            delta);
+        var command = executionAction switch
+        {
+            OverlayWheelPresentationExecutionAction.SendNext => ClassroomToolkit.Services.Presentation.PresentationCommand.Next,
+            OverlayWheelPresentationExecutionAction.SendPrevious => ClassroomToolkit.Services.Presentation.PresentationCommand.Previous,
+            _ => (ClassroomToolkit.Services.Presentation.PresentationCommand?)null
+        };
+        if (!command.HasValue)
+        {
+            return false;
+        }
+
+        return TrySendPresentationCommand(command.Value);
     }
 
     private void UpdatePresentationFocusMonitor()
@@ -946,4 +979,3 @@ public partial class PaintOverlayWindow
     }
 
 }
-

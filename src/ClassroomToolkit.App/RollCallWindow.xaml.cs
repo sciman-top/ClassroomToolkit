@@ -122,6 +122,7 @@ public partial class RollCallWindow : Window
         MouseLeave += OnWindowMouseLeave;
         Closing += OnClosing;
         PreviewKeyDown += OnPreviewKeyDown;
+        PreviewMouseWheel += OnPreviewMouseWheel;
 
         _stopwatch = new Stopwatch();
         _timer = new DispatcherTimer

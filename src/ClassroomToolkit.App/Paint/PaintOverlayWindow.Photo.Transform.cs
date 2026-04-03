@@ -722,12 +722,12 @@ public partial class PaintOverlayWindow
         }
         if (WindowState == WindowState.Minimized)
         {
-            _photoRestoreFullscreenPending = true;
+            _photoRestoreFullscreenPending = PhotoWindowStateRestorePolicy.ShouldArmFullscreenRestore(_photoFullscreen);
             // Save current zoom/pan state before minimizing
             SavePhotoTransformState(true);
             return;
         }
-        if (_photoRestoreFullscreenPending)
+        if (PhotoWindowStateRestorePolicy.ShouldRestoreFullscreen(_photoRestoreFullscreenPending, WindowState))
         {
             _photoRestoreFullscreenPending = false;
             _photoFullscreen = true;

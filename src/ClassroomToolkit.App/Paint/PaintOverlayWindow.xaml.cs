@@ -128,7 +128,7 @@ public partial class PaintOverlayWindow : Window
 
     private WpfPoint? _lastPointerPosition;
     private DateTime _lastPhotoGestureInputUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
-    private bool _presentationFocusRestoreEnabled = false;
+    private bool _presentationFocusRestoreEnabled = true;
 
     private readonly RefreshOrchestrator _refreshOrchestrator;
     private readonly PerfStats _perfMonitor;

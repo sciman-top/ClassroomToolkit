@@ -603,8 +603,21 @@ public partial class MainWindow
             overlayVisible: overlay.IsVisible,
             tryHandlePhotoKey: overlay.TryHandlePhotoKey,
             canRoutePresentationInput: overlay.CanRoutePresentationInputFromAuxWindow(),
-            forwardPresentationKey: overlay.ForwardKeyboardToPresentation);
+            tryForwardPresentationKey: overlay.ForwardKeyboardToPresentation);
+    }
+
+    internal bool TryHandleOverlayNavigationWheelFromAuxWindow(int delta)
+    {
+        var overlay = _overlayWindow;
+        if (overlay == null)
+        {
+            return false;
+        }
+
+        return Paint.AuxWindowWheelRoutingHandler.TryHandle(
+            delta,
+            overlayVisible: overlay.IsVisible,
+            canRoutePresentationInput: overlay.CanRoutePresentationInputFromAuxWindow(),
+            tryForwardPresentationWheel: overlay.ForwardWheelToPresentation);
     }
 }
-
-

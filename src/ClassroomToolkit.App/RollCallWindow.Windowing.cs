@@ -116,6 +116,7 @@ public partial class RollCallWindow
         Loaded -= OnLoaded;
         Closing -= OnClosing;
         PreviewKeyDown -= OnPreviewKeyDown;
+        PreviewMouseWheel -= OnPreviewMouseWheel;
         SourceInitialized -= OnSourceInitialized;
         MouseEnter -= OnWindowMouseEnter;
         MouseLeave -= OnWindowMouseLeave;

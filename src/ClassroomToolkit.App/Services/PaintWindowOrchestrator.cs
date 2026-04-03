@@ -383,11 +383,6 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         if (active)
         {
-            if (OverlayWindow.IsPhotoModeActive)
-            {
-                OverlayWindow.ExitPhotoMode();
-            }
-
             OverlayWindow.SetBoardColor(_currentSettings.BoardColor);
             OverlayWindow.SetBoardOpacity(255);
             return;

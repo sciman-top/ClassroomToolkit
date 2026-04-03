@@ -1,3 +1,13 @@
+规则ID=R1/R2/R4/R6/R8
+影响模块=src/ClassroomToolkit.App/Paint, tests/ClassroomToolkit.Tests, scripts/quality
+当前落点=ink/photo 性能平滑与跨页一致性
+目标归宿=跨页与平移缩放高频场景流畅且无串页
+迁移批次=20260403-1
+风险等级=中
+执行命令=1) dotnet build ClassroomToolkit.sln -c Debug; 2) dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; 3) dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"; 4) powershell -File scripts/quality/check-hotspot-line-budgets.ps1
+验证证据=focused regression PASS(49/49); contract/invariant PASS; hotspot PASS; continuous update 后全量 test PASS
+回滚动作=按文内 Rollback 小节回退阈值/sidecar 校验/ArrayPool 改动并复验门禁
+
 # 20260403-ink-photo-perf-smoothness
 
 - rule_id: R1/R2/R4/R6/R8

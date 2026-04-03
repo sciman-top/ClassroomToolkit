@@ -11,10 +11,10 @@ internal static class AuxWindowKeyRoutingHandler
         bool overlayVisible,
         Func<Key, bool> tryHandlePhotoKey,
         bool canRoutePresentationInput,
-        Action<Key> forwardPresentationKey)
+        Func<Key, bool> tryForwardPresentationKey)
     {
         ArgumentNullException.ThrowIfNull(tryHandlePhotoKey);
-        ArgumentNullException.ThrowIfNull(forwardPresentationKey);
+        ArgumentNullException.ThrowIfNull(tryForwardPresentationKey);
 
         if (!overlayVisible)
         {
@@ -36,11 +36,7 @@ internal static class AuxWindowKeyRoutingHandler
         }
 
         return SafeActionExecutionExecutor.TryExecute(
-            () =>
-            {
-                forwardPresentationKey(key);
-                return true;
-            },
+            () => tryForwardPresentationKey(key),
             fallback: false);
     }
 }

@@ -63,7 +63,7 @@ public partial class PaintOverlayWindow
                 shouldKeyboardFocus: false);
             return;
         }
-        var wasFullscreen = true;
+        var wasFullscreen = _photoModeActive ? _photoFullscreen : true;
         var wasPresentationFullscreen = false;
         if (!_photoModeActive && (_presentationOptions.AllowOffice || _presentationOptions.AllowWps))
         {
@@ -208,6 +208,7 @@ public partial class PaintOverlayWindow
             _photoUserTransformDirty = false;
         }
         _photoModeActive = false;
+        _boardSuspendedPhotoCache = false;
         UpdatePhotoContentTransforms(enabled: false);
         _photoFullscreen = false;
         _photoRestoreFullscreenPending = false;
@@ -277,6 +278,7 @@ public partial class PaintOverlayWindow
     {
         var wasFullscreen = _photoFullscreen;
         _photoFullscreen = fullscreen;
+        var fullscreenChanged = wasFullscreen != _photoFullscreen;
         if (_photoModeActive && wasFullscreen && !fullscreen)
         {
             SaveAndClearInkSurface();
@@ -337,6 +339,13 @@ public partial class PaintOverlayWindow
         }
 
         UpdateInputPassthrough();
+        if (PhotoWindowModeZOrderRetouchPolicy.ShouldRequest(_photoModeActive, fullscreenChanged))
+        {
+            var forceEnforce = PhotoWindowModeZOrderRetouchPolicy.ShouldForceEnforce(_photoFullscreen);
+            SafeActionExecutionExecutor.TryExecute(
+                () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(forceEnforce)),
+                ex => Debug.WriteLine($"[FloatingZOrderRequested] photo-window-mode callback failed: {ex.GetType().Name} - {ex.Message}"));
+        }
     }
 
     private void ApplyIdentityPhotoTransform()
