@@ -39,6 +39,12 @@ public partial class PaintOverlayWindow
     private long _inkTransformVersion;
     private long _inkStrokeVersion;
     private DateTime _lastInkRedrawUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
+    private int _inkRedrawTelemetryTotalSamples;
+    private int _inkRedrawTelemetryPartialSamples;
+    private DateTime _lastInkRedrawTelemetryLogUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
+    private readonly Queue<double> _inkRedrawTelemetryAllWindow = new();
+    private readonly Queue<double> _inkRedrawTelemetryPartialWindow = new();
+    private readonly Queue<double> _inkRedrawTelemetryFullWindow = new();
     private Int32Rect? _lastInkRedrawClipPixelRect;
     private Rect? _activeInkRedrawClipBoundsDip;
 
@@ -150,6 +156,10 @@ public partial class PaintOverlayWindow
     private const int InkMonitorIdleIntervalMs = InkRuntimeTimingDefaults.MonitorIdleIntervalMs;
     private const int InkIdleThresholdMs = InkRuntimeTimingDefaults.IdleThresholdMs;
     private const int InkRedrawMinIntervalMs = InkRuntimeTimingDefaults.RedrawMinIntervalMs;
+    private const int InkRedrawTelemetryWindowSize = 120;
+    private const int InkRedrawTelemetrySampleStride = 40;
+    private const double InkRedrawTelemetryLogMinIntervalSeconds = 30;
+    private static readonly bool InkRedrawTelemetryEnabled = InkRedrawTelemetryPolicy.ResolveEnabledFromEnvironment();
     private const int InkSidecarAutoSaveDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveDelayMs;
     private const int InkSidecarAutoSaveRetryMax = InkRuntimeTimingDefaults.SidecarAutoSaveRetryMax;
     private const int InkSidecarAutoSaveRetryDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveRetryDelayMs;
