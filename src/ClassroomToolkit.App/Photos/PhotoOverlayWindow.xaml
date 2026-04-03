@@ -25,18 +25,60 @@
 
         <Border x:Name="NameBadge"
                 Style="{StaticResource Style_FullscreenShellHintBadge}"
-                Padding="18,10"
+                Padding="4"
+                Visibility="Collapsed"
+                BorderThickness="0"
+                Background="Transparent"
+                Opacity="1"
                 Panel.ZIndex="10">
-            <Border.Effect>
-                <StaticResource ResourceKey="Shadow_Floating"/>
-            </Border.Effect>
-            <TextBlock x:Name="NameText" 
-                       Foreground="White" 
-                       FontSize="48" 
-                       FontWeight="Bold"
-                       TextAlignment="Center"
-                       TextWrapping="NoWrap"
-                       TextTrimming="CharacterEllipsis"/>
+            <Grid TextOptions.TextFormattingMode="Display"
+                  TextOptions.TextRenderingMode="ClearType"
+                  SnapsToDevicePixels="True">
+                <TextBlock Text="{Binding Text, ElementName=NameText}"
+                           Margin="-1,0,0,0"
+                           Foreground="{StaticResource Brush_Primary_Dark}"
+                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Text, ElementName=NameText}"
+                           Margin="1,0,0,0"
+                           Foreground="{StaticResource Brush_Primary_Dark}"
+                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Text, ElementName=NameText}"
+                           Margin="0,-1,0,0"
+                           Foreground="{StaticResource Brush_Primary_Dark}"
+                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Text, ElementName=NameText}"
+                           Margin="0,1,0,0"
+                           Foreground="{StaticResource Brush_Primary_Dark}"
+                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="NameText"
+                           Foreground="{StaticResource Brush_Text_Primary}"
+                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           TextAlignment="Center"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+            </Grid>
         </Border>
 
         <Button x:Name="CloseButtonLeft"
@@ -61,6 +103,9 @@
         </Button>
 
         <Border x:Name="CloseHintText" Style="{StaticResource Style_FullscreenShellHintBadge}" Padding="14,7" Panel.ZIndex="10">
+            <Border.Effect>
+                <StaticResource ResourceKey="Shadow_Floating"/>
+            </Border.Effect>
             <TextBlock Text="单击背景或关闭按钮即可退出" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
         </Border>
     </Canvas>

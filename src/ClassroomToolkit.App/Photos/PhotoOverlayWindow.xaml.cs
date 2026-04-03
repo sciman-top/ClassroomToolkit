@@ -68,8 +68,7 @@ public partial class PhotoOverlayWindow : Window
             Opacity = 1.0;
             _currentPhotoPath = path;
             _currentStudentId = normalizedStudentId;
-            NameText.Text = studentName ?? string.Empty;
-            NameText.Visibility = string.IsNullOrWhiteSpace(studentName) ? Visibility.Collapsed : Visibility.Visible;
+            UpdateStudentName(studentName, visible: !string.IsNullOrWhiteSpace(studentName));
             UpdateOverlayPositions();
             UpdateAutoCloseTimer(durationSeconds);
             EnsureOverlayVisible();
@@ -78,9 +77,7 @@ public partial class PhotoOverlayWindow : Window
 
         _currentPhotoPath = path;
         _currentStudentId = normalizedStudentId;
-        NameText.Text = studentName ?? string.Empty;
-        // 先隐藏姓名，避免在 Canvas 默认位置(0,0)即左上角闪现
-        NameText.Visibility = Visibility.Collapsed;
+        UpdateStudentName(studentName, visible: false);
         // 显示窗口前先透明，避免系统复用上一帧导致旧图闪现。
         Opacity = 0.0;
 
@@ -204,14 +201,17 @@ public partial class PhotoOverlayWindow : Window
         Canvas.SetLeft(PhotoImage, photoLeft);
         Canvas.SetTop(PhotoImage, photoTop);
 
-        // 定位姓名：在照片顶部居中，左右各留 30px
-        if (NameText.Visibility == Visibility.Visible)
+        // 定位姓名徽标：紧贴照片上边沿中央，保留少量安全边距。
+        if (NameBadge.Visibility == Visibility.Visible)
         {
-            NameText.MaxWidth = Math.Max(100, photoWidth - 60);
-            NameText.Measure(new WpfSize(NameText.MaxWidth, double.PositiveInfinity));
-            var nameWidth = NameText.DesiredSize.Width;
-            Canvas.SetLeft(NameText, photoLeft + (photoWidth - nameWidth) / 2);
-            Canvas.SetTop(NameText, photoTop + 30);
+            NameText.MaxWidth = Math.Max(220, photoWidth - 72);
+            NameBadge.MaxWidth = NameText.MaxWidth + 56;
+            NameBadge.Measure(new WpfSize(NameBadge.MaxWidth, double.PositiveInfinity));
+            var badgeWidth = NameBadge.DesiredSize.Width;
+            var badgeLeft = Math.Max(16, photoLeft + (photoWidth - badgeWidth) / 2);
+            var badgeTop = Math.Max(12, photoTop + 10);
+            Canvas.SetLeft(NameBadge, badgeLeft);
+            Canvas.SetTop(NameBadge, badgeTop);
         }
 
         // 定位关闭按钮：主入口固定在右下角
@@ -256,8 +256,7 @@ public partial class PhotoOverlayWindow : Window
     {
         PhotoImage.Source = null;
         PhotoImage.Visibility = Visibility.Collapsed;
-        NameText.Text = string.Empty;
-        NameText.Visibility = Visibility.Collapsed;
+        UpdateStudentName(null, visible: false);
         LoadingMask.Visibility = enterHideGuardState ? Visibility.Visible : Visibility.Collapsed;
         Opacity = enterHideGuardState ? 0.0 : 1.0;
         var studentId = _currentStudentId;
@@ -320,7 +319,7 @@ public partial class PhotoOverlayWindow : Window
 
             if (!string.IsNullOrWhiteSpace(studentName))
             {
-                NameText.Visibility = Visibility.Visible;
+                UpdateStudentName(studentName, visible: true);
             }
             UpdateOverlayPositions();
         }
@@ -393,6 +392,14 @@ public partial class PhotoOverlayWindow : Window
         {
             Show();
         }
+    }
+
+    private void UpdateStudentName(string? studentName, bool visible)
+    {
+        NameText.Text = studentName?.Trim() ?? string.Empty;
+        NameBadge.Visibility = visible && !string.IsNullOrWhiteSpace(NameText.Text)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private static BitmapImage? LoadBitmap(string path)
