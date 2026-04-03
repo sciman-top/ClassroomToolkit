@@ -97,7 +97,7 @@ if ($EnableGovernanceChecks) {
 }
 
 Invoke-Step -Name "stable-tests" -Action {
-  & "$PSScriptRoot\..\validation\run-stable-tests.ps1" -Configuration $Configuration -SkipBuild -Profile quick
+  & "$PSScriptRoot\..\validation\run-stable-tests.ps1" -Configuration $Configuration -SkipBuild -Profile $Profile
 }
 
 Invoke-BuildServerShutdown
