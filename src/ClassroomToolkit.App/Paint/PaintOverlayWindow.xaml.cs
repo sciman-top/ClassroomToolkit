@@ -162,6 +162,7 @@ public partial class PaintOverlayWindow : Window
     private ScaleTransform _photoScale = new ScaleTransform(PhotoTransformViewportDefaults.DefaultScale, PhotoTransformViewportDefaults.DefaultScale);
     private TranslateTransform _photoTranslate = new TranslateTransform(0, 0);
     private TranslateTransform _photoInkPanCompensation = new TranslateTransform(0, 0);
+    private Matrix _lastValidPhotoInverseMatrix = Matrix.Identity;
     private double _lastInkRedrawPhotoTranslateX;
     private double _lastInkRedrawPhotoTranslateY;
     private double _lastPhotoInteractiveRefreshTranslateX;

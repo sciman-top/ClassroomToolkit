@@ -37,9 +37,27 @@ public partial class App : WpfApplication
 
         base.OnStartup(e);
 
-        var startupCompatibility = CollectStartupCompatibilityReport();
+        var settingsPath = ResolveStartupSettingsPath();
+        var startupCompatibility = CollectStartupCompatibilityReport(settingsPath);
         var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
         var settings = _services?.GetService<AppSettings>();
+        var autoRemediation = StartupCompatibilityAutoRemediationPolicy.Apply(
+            startupCompatibility,
+            settings,
+            settingsPath);
+        if (autoRemediation.HasSettingsChanges && settings != null)
+        {
+            try
+            {
+                _services?.GetService<AppSettingsService>()?.Save(settings);
+                Debug.WriteLine(
+                    $"[StartupCompatibility] Auto remediation applied: {string.Join(" | ", autoRemediation.AppliedActions)}");
+            }
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                LogException(ex, "StartupCompatibilityAutoRemediationPersist");
+            }
+        }
         if (startupCompatibility.HasBlockingIssues)
         {
             var message = BuildStartupBlockingMessage(startupCompatibility, startupCompatibilityReportPath);
@@ -57,7 +75,10 @@ public partial class App : WpfApplication
         if (visibleWarningReport.HasWarnings)
         {
             Debug.WriteLine($"[StartupCompatibility] {visibleWarningReport.BuildMessage(includeWarnings: true)}");
-            var warningMessage = BuildStartupWarningMessage(visibleWarningReport, startupCompatibilityReportPath);
+            var warningMessage = BuildStartupWarningMessage(
+                visibleWarningReport,
+                startupCompatibilityReportPath,
+                autoRemediation);
             var suggestionMessage = BuildStartupWarningSuggestion(visibleWarningReport);
             var dialog = new Diagnostics.StartupCompatibilityWarningDialog(
                 "检测到可降级运行的兼容性风险。",
@@ -212,15 +233,19 @@ public partial class App : WpfApplication
         return fallbackToIni;
     }
 
-    private StartupCompatibilityReport CollectStartupCompatibilityReport()
+    private string ResolveStartupSettingsPath()
+    {
+        var configuration = _services?.GetService<IConfigurationService>();
+        return configuration?.SettingsDocumentPath
+            ?? configuration?.SettingsIniPath
+            ?? Path.Combine(AppDataDirectory, "settings.json");
+    }
+
+    private StartupCompatibilityReport CollectStartupCompatibilityReport(string settingsPath)
     {
         try
         {
-            var configuration = _services?.GetService<IConfigurationService>();
             var settings = _services?.GetService<AppSettings>();
-            var settingsPath = configuration?.SettingsDocumentPath
-                ?? configuration?.SettingsIniPath
-                ?? Path.Combine(AppDataDirectory, "settings.json");
             return StartupCompatibilityProbe.Collect(
                 settingsPath,
                 settings?.PresentationClassifierOverridesJson);
@@ -264,15 +289,25 @@ public partial class App : WpfApplication
 
     private static string BuildStartupWarningMessage(
         StartupCompatibilityReport report,
-        string? reportPath)
+        string? reportPath,
+        StartupCompatibilityAutoRemediationResult autoRemediation)
     {
         var lines = new List<string>
         {
             "检测到可降级运行的兼容性风险：",
             report.BuildMessage(includeWarnings: true),
-            string.Empty,
-            "程序将继续启动。建议尽快按提示修复，避免课堂中断。"
+            string.Empty
         };
+        if (autoRemediation.HasChanges)
+        {
+            lines.Add("已自动应用稳定性保护：");
+            for (var i = 0; i < autoRemediation.AppliedActions.Count; i++)
+            {
+                lines.Add($"- {autoRemediation.AppliedActions[i]}");
+            }
+            lines.Add(string.Empty);
+        }
+        lines.Add("程序将继续启动。建议尽快按提示修复，避免课堂中断。");
         if (!string.IsNullOrWhiteSpace(reportPath))
         {
             lines.Add($"诊断报告：{reportPath}");

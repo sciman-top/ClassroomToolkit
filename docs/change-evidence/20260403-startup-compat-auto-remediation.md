@@ -1,0 +1,13 @@
+规则ID=R1,R2,R4,R6,R8
+影响模块=src/ClassroomToolkit.App/App.xaml.cs; src/ClassroomToolkit.App/Diagnostics/StartupCompatibilityAutoRemediationPolicy.cs; tests/ClassroomToolkit.Tests/StartupCompatibilityAutoRemediationPolicyTests.cs
+当前落点=启动兼容性告警仅提示，位数不一致与设置目录缺失均依赖人工处理
+目标归宿=启动阶段自动执行可逆、低风险的兼容降级（message 模式 + 锁定降级策略）并自动补建缺失的设置目录
+迁移批次=2026-04-03-batch-1
+风险等级=中
+执行命令=codex status; codex --version; codex --help; dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"; powershell -File scripts/quality/check-hotspot-line-budgets.ps1
+验证证据=build 0 error; full test 3143 passed; contract/invariant 25 passed; hotspot PASS；platform_na: codex status 在非交互终端返回 "stdin is not a terminal"，已以 codex --version/codex --help 补证（codex-cli 0.118.0）
+回滚动作=删除 StartupCompatibilityAutoRemediationPolicy 接入（App.xaml.cs 中 Apply/Save 与提示拼接）；删除新增策略与测试文件；重建并重测硬门禁
+platform_na.reason=codex status 依赖交互式 stdin，当前执行环境为非交互终端
+platform_na.alternative_verification=codex --version + codex --help + 命令存在性预检（Get-Command dotnet/powershell）
+platform_na.evidence_link=docs/change-evidence/20260403-startup-compat-auto-remediation.md
+platform_na.expires_at=2026-05-03

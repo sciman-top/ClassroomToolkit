@@ -73,4 +73,46 @@ public sealed class PhotoInkCoordinateMapperTests
 
         inverse.Should().Be(Matrix.Identity);
     }
+
+    [Fact]
+    public void TryCreateInverseMatrix_ShouldReturnFalse_WhenScaleNearZero()
+    {
+        var ok = PhotoInkCoordinateMapper.TryCreateInverseMatrix(
+            pageScaleX: 0,
+            pageScaleY: 1,
+            photoScaleX: 1,
+            photoScaleY: 1,
+            translateX: 10,
+            translateY: 20,
+            out var matrix);
+
+        ok.Should().BeFalse();
+        matrix.Should().Be(Matrix.Identity);
+    }
+
+    [Fact]
+    public void TryCreateInverseMatrix_ShouldReturnValidMatrix_WhenScaleIsUsable()
+    {
+        var ok = PhotoInkCoordinateMapper.TryCreateInverseMatrix(
+            pageScaleX: 1.2,
+            pageScaleY: 0.8,
+            photoScaleX: 1.5,
+            photoScaleY: 1.5,
+            translateX: -40,
+            translateY: 25,
+            out var inverse);
+
+        ok.Should().BeTrue();
+        var forward = PhotoInkCoordinateMapper.CreateForwardMatrix(
+            pageScaleX: 1.2,
+            pageScaleY: 0.8,
+            photoScaleX: 1.5,
+            photoScaleY: 1.5,
+            translateX: -40,
+            translateY: 25);
+        var point = new Point(88.2, 31.6);
+        var roundTrip = inverse.Transform(forward.Transform(point));
+        roundTrip.X.Should().BeApproximately(point.X, 0.0001);
+        roundTrip.Y.Should().BeApproximately(point.Y, 0.0001);
+    }
 }

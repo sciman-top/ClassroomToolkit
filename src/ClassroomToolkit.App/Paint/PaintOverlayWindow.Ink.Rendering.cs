@@ -66,6 +66,12 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+
+        if (_activeInkRedrawClipBoundsDip.HasValue
+            && !renderGeometry.Bounds.IntersectsWith(_activeInkRedrawClipBoundsDip.Value))
+        {
+            return;
+        }
         
         if (photoInkModeActive
             && !PhotoInkViewportIntersectionPolicy.ShouldRender(
@@ -668,6 +674,46 @@ public partial class PaintOverlayWindow
         return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
+    private bool TryResolveInkRedrawClip(
+        out Int32Rect clipPixelRect,
+        out Rect clipBoundsDip)
+    {
+        clipPixelRect = default;
+        clipBoundsDip = Rect.Empty;
+        if (RasterImage.Clip is not RectangleGeometry clipGeometry)
+        {
+            return false;
+        }
+
+        var raw = clipGeometry.Rect;
+        if (raw.IsEmpty || raw.Width <= 0 || raw.Height <= 0)
+        {
+            return false;
+        }
+
+        clipBoundsDip = raw;
+        var dpiScaleX = _surfaceDpiX > 0 ? _surfaceDpiX / 96.0 : 1.0;
+        var dpiScaleY = _surfaceDpiY > 0 ? _surfaceDpiY / 96.0 : 1.0;
+        var left = (int)Math.Floor(raw.Left * dpiScaleX);
+        var top = (int)Math.Floor(raw.Top * dpiScaleY);
+        var right = (int)Math.Ceiling(raw.Right * dpiScaleX);
+        var bottom = (int)Math.Ceiling(raw.Bottom * dpiScaleY);
+
+        left = Math.Clamp(left, 0, _surfacePixelWidth);
+        top = Math.Clamp(top, 0, _surfacePixelHeight);
+        right = Math.Clamp(right, 0, _surfacePixelWidth);
+        bottom = Math.Clamp(bottom, 0, _surfacePixelHeight);
+        var width = right - left;
+        var height = bottom - top;
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        clipPixelRect = new Int32Rect(left, top, width, height);
+        return true;
+    }
+
 
 
     
@@ -690,6 +736,8 @@ public partial class PaintOverlayWindow
         }
         if (_inkStrokes.Count == 0)
         {
+            _lastInkRedrawClipPixelRect = null;
+            _activeInkRedrawClipBoundsDip = null;
             if (!_hasDrawing)
             {
                 _perfRedrawSurface.Add(redrawSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
@@ -719,11 +767,30 @@ public partial class PaintOverlayWindow
             }
             return;
         }
-        ClearSurface();
+
+        var usePartialClear = false;
+        if (TryResolveInkRedrawClip(out var clipPixelRect, out var clipBoundsDip)
+            && _lastInkRedrawClipPixelRect.HasValue
+            && _lastInkRedrawClipPixelRect.Value.Equals(clipPixelRect))
+        {
+            _activeInkRedrawClipBoundsDip = clipBoundsDip;
+            usePartialClear = true;
+            ClearSurface(clipPixelRect);
+        }
+        else
+        {
+            _activeInkRedrawClipBoundsDip = null;
+            ClearSurface();
+        }
+
         foreach (var stroke in _inkStrokes)
         {
             RenderStoredStroke(stroke);
         }
+        _activeInkRedrawClipBoundsDip = null;
+        _lastInkRedrawClipPixelRect = usePartialClear
+            ? _lastInkRedrawClipPixelRect
+            : (TryResolveInkRedrawClip(out var latestClipPixelRect, out _) ? latestClipPixelRect : null);
         _hasDrawing = _inkStrokes.Count > 0;
         ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: IsPhotoInkModeActive());
         _perfRedrawSurface.Add(redrawSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());

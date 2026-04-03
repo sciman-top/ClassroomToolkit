@@ -30,17 +30,41 @@ internal static class PhotoInkCoordinateMapper
         double translateY,
         double epsilon = PhotoTransformMathDefaults.InverseScaleEpsilon)
     {
+        return TryCreateInverseMatrix(
+            pageScaleX,
+            pageScaleY,
+            photoScaleX,
+            photoScaleY,
+            translateX,
+            translateY,
+            out var matrix,
+            epsilon)
+            ? matrix
+            : Matrix.Identity;
+    }
+
+    internal static bool TryCreateInverseMatrix(
+        double pageScaleX,
+        double pageScaleY,
+        double photoScaleX,
+        double photoScaleY,
+        double translateX,
+        double translateY,
+        out Matrix matrix,
+        double epsilon = PhotoTransformMathDefaults.InverseScaleEpsilon)
+    {
         var scaleX = pageScaleX * photoScaleX;
         var scaleY = pageScaleY * photoScaleY;
         if (Math.Abs(scaleX) < epsilon || Math.Abs(scaleY) < epsilon)
         {
-            return Matrix.Identity;
+            matrix = Matrix.Identity;
+            return false;
         }
 
-        var matrix = Matrix.Identity;
+        matrix = Matrix.Identity;
         matrix.Scale(1.0 / scaleX, 1.0 / scaleY);
         matrix.Translate(-translateX / scaleX, -translateY / scaleY);
-        return matrix;
+        return true;
     }
 
     internal static WpfPoint ToPhotoSpace(

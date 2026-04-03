@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -22,6 +23,7 @@ public sealed class InkExportService
 {
     private const string ExportFolderName = "笔迹合成图片";
     private const string ExportManifestFileName = ".ink-export.manifest.json";
+    private static readonly ConcurrentDictionary<string, object> ManifestWriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly InkPersistenceService _persistenceService;
     public InkExportService(InkPersistenceService persistenceService)
@@ -949,54 +951,74 @@ public sealed class InkExportService
             sourceTicks = 0L;
         }
 
-        var builder = new StringBuilder(Math.Max(256, strokes.Count * 96));
-        builder.Append(sourcePath).Append('|')
-            .Append(sourceTicks).Append('|')
-            .Append(pageIndex).Append('|')
-            .Append(options.Dpi).Append('|')
-            .Append(options.Format).Append('|')
-            .Append(options.JpegQuality).Append('|');
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        AppendHashField(hash, sourcePath);
+        AppendHashField(hash, sourceTicks.ToString(CultureInfo.InvariantCulture));
+        AppendHashField(hash, pageIndex.ToString(CultureInfo.InvariantCulture));
+        AppendHashField(hash, options.Dpi.ToString(CultureInfo.InvariantCulture));
+        AppendHashField(hash, options.Format);
+        AppendHashField(hash, options.JpegQuality.ToString(CultureInfo.InvariantCulture));
 
         foreach (var stroke in strokes)
         {
-            builder.Append(stroke.Type).Append(',')
-                .Append(stroke.BrushStyle).Append(',')
-                .Append(stroke.ColorHex).Append(',')
-                .Append(stroke.Opacity).Append(',')
-                .Append(stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.CalligraphyRenderMode).Append(',')
-                .Append(stroke.CalligraphyInkBloomEnabled ? 1 : 0).Append(',')
-                .Append(stroke.CalligraphySealEnabled ? 1 : 0).Append(',')
-                .Append(stroke.CalligraphyOverlayOpacityThreshold).Append(',')
-                .Append(stroke.MaskSeed.ToString(CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.InkFlow.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.StrokeDirectionX.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.StrokeDirectionY.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                .Append(stroke.GeometryPath ?? string.Empty).Append('|');
+            AppendHashToken(hash, stroke.Type.ToString());
+            AppendHashToken(hash, stroke.BrushStyle.ToString());
+            AppendHashToken(hash, stroke.ColorHex);
+            AppendHashToken(hash, stroke.Opacity.ToString(CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.CalligraphyRenderMode.ToString());
+            AppendHashToken(hash, (stroke.CalligraphyInkBloomEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
+            AppendHashToken(hash, (stroke.CalligraphySealEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.MaskSeed.ToString(CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.InkFlow.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.StrokeDirectionX.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashToken(hash, stroke.StrokeDirectionY.ToString("G17", CultureInfo.InvariantCulture));
+            AppendHashField(hash, stroke.GeometryPath);
 
             foreach (var ribbon in stroke.Ribbons)
             {
-                builder.Append("r:")
-                    .Append(ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                    .Append(ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                    .Append(ribbon.GeometryPath ?? string.Empty).Append('|');
+                AppendHashUtf8(hash, "r:");
+                AppendHashToken(hash, ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture));
+                AppendHashToken(hash, ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture));
+                AppendHashField(hash, ribbon.GeometryPath);
             }
 
             foreach (var bloom in stroke.Blooms)
             {
-                builder.Append("b:")
-                    .Append(bloom.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append(',')
-                    .Append(bloom.GeometryPath ?? string.Empty).Append('|');
+                AppendHashUtf8(hash, "b:");
+                AppendHashToken(hash, bloom.Opacity.ToString("G17", CultureInfo.InvariantCulture));
+                AppendHashField(hash, bloom.GeometryPath);
             }
 
-            builder.Append(';');
+            AppendHashUtf8(hash, ";");
         }
 
-        var bytes = Encoding.UTF8.GetBytes(builder.ToString());
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash);
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
+    private static void AppendHashField(IncrementalHash hash, string? value)
+    {
+        AppendHashUtf8(hash, value ?? string.Empty);
+        AppendHashUtf8(hash, "|");
+    }
+
+    private static void AppendHashToken(IncrementalHash hash, string? value)
+    {
+        AppendHashUtf8(hash, value ?? string.Empty);
+        AppendHashUtf8(hash, ",");
+    }
+
+    private static void AppendHashUtf8(IncrementalHash hash, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return;
+        }
+
+        hash.AppendData(Encoding.UTF8.GetBytes(value));
     }
 
     private static string GetManifestPath(string exportDir)
@@ -1062,19 +1084,33 @@ public sealed class InkExportService
         try
         {
             Directory.CreateDirectory(exportDir);
-            var staleKeys = manifest.Keys
-                .Where(key => string.IsNullOrWhiteSpace(key) || !File.Exists(Path.Combine(exportDir, key)))
-                .ToList();
-            foreach (var key in staleKeys)
-            {
-                manifest.Remove(key);
-            }
             var path = GetManifestPath(exportDir);
-            var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+            var writeLock = ManifestWriteLocks.GetOrAdd(path, _ => new object());
+            lock (writeLock)
             {
-                WriteIndented = true
-            });
-            File.WriteAllText(path, json);
+                var merged = File.Exists(path)
+                    ? LoadExportManifest(exportDir)
+                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var pair in manifest)
+                {
+                    merged[pair.Key] = pair.Value;
+                }
+
+                var staleKeys = merged.Keys
+                    .Where(key => string.IsNullOrWhiteSpace(key) || !File.Exists(Path.Combine(exportDir, key)))
+                    .ToList();
+                foreach (var key in staleKeys)
+                {
+                    merged.Remove(key);
+                }
+
+                var json = JsonSerializer.Serialize(merged, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(path, json);
+            }
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -1220,5 +1256,3 @@ public sealed class InkExportService
         };
     }
 }
-
-

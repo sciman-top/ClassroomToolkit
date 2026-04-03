@@ -39,6 +39,8 @@ public partial class PaintOverlayWindow
     private long _inkTransformVersion;
     private long _inkStrokeVersion;
     private DateTime _lastInkRedrawUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
+    private Int32Rect? _lastInkRedrawClipPixelRect;
+    private Rect? _activeInkRedrawClipBoundsDip;
 
     // Ink Fields
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
@@ -215,6 +217,11 @@ public partial class PaintOverlayWindow
 
     private void ClearSurface()
     {
+        ClearSurface(region: null);
+    }
+
+    private void ClearSurface(Int32Rect? region)
+    {
         var clearSw = Stopwatch.StartNew();
         EnsureRasterSurface();
         if (_rasterSurface == null)
@@ -222,9 +229,16 @@ public partial class PaintOverlayWindow
             _perfClearSurface.Add(clearSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
             return;
         }
-        var rect = new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
-        var stride = _surfacePixelWidth * 4;
-        var bytesRequired = stride * _surfacePixelHeight;
+
+        var rect = region ?? new Int32Rect(0, 0, _surfacePixelWidth, _surfacePixelHeight);
+        var stride = rect.Width * 4;
+        var bytesRequired = stride * rect.Height;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            _perfClearSurface.Add(clearSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
+            return;
+        }
+
         if (_clearSurfaceBuffer == null || _clearSurfaceBufferSize < bytesRequired)
         {
             _clearSurfaceBuffer = new byte[bytesRequired];

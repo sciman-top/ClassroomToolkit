@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using ClassroomToolkit.App.Ink;
 using FluentAssertions;
 using System.Windows;
@@ -557,6 +558,59 @@ public sealed class InkExportServiceTests : IDisposable
         second[0].Should().Be(outputPath);
         var secondWrite = File.GetLastWriteTimeUtc(outputPath);
         secondWrite.Should().BeAfter(firstWrite);
+    }
+
+    [Fact]
+    public async Task SaveExportManifest_ShouldMergeConcurrentWrites_ForSameExportDirectory()
+    {
+        var exportDir = Path.Combine(_tempDir, "笔迹合成图片");
+        Directory.CreateDirectory(exportDir);
+
+        var outputA = Path.Combine(exportDir, "a+笔迹.png");
+        var outputB = Path.Combine(exportDir, "b+笔迹.png");
+        File.WriteAllText(outputA, "a");
+        File.WriteAllText(outputB, "b");
+
+        var method = typeof(InkExportService).GetMethod(
+            "SaveExportManifest",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        method.Should().NotBeNull();
+
+        var startGate = new ManualResetEventSlim(false);
+        static Dictionary<string, string> BuildManifest(string fileName, string hash)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [fileName] = hash
+            };
+        }
+
+        var t1 = Task.Run(() =>
+        {
+            startGate.Wait();
+            for (var i = 0; i < 120; i++)
+            {
+                method!.Invoke(null, new object?[] { exportDir, BuildManifest("a+笔迹.png", "hash-a") });
+            }
+        });
+        var t2 = Task.Run(() =>
+        {
+            startGate.Wait();
+            for (var i = 0; i < 120; i++)
+            {
+                method!.Invoke(null, new object?[] { exportDir, BuildManifest("b+笔迹.png", "hash-b") });
+            }
+        });
+
+        startGate.Set();
+        await Task.WhenAll(t1, t2);
+
+        var manifestPath = Path.Combine(exportDir, ".ink-export.manifest.json");
+        File.Exists(manifestPath).Should().BeTrue();
+        var persisted = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(manifestPath));
+        persisted.Should().NotBeNull();
+        persisted!.Keys.Should().Contain("a+笔迹.png");
+        persisted.Keys.Should().Contain("b+笔迹.png");
     }
 
     private static InkStrokeData CloneStrokeForFingerprint(InkStrokeData stroke)

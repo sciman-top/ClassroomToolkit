@@ -192,14 +192,8 @@ public partial class PaintOverlayWindow
             return point;
         }
 
-        return PhotoInkCoordinateMapper.ToPhotoSpace(
-            point,
-            _photoPageScale.ScaleX,
-            _photoPageScale.ScaleY,
-            _photoScale.ScaleX,
-            _photoScale.ScaleY,
-            _photoTranslate.X,
-            _photoTranslate.Y);
+        var inverse = GetPhotoInverseMatrix();
+        return inverse.Transform(point);
     }
 
     private Geometry? ToPhotoGeometry(Geometry geometry)
@@ -211,14 +205,17 @@ public partial class PaintOverlayWindow
         {
             return geometry;
         }
-        return PhotoInkCoordinateMapper.ToPhotoGeometry(
-            geometry,
-            _photoPageScale.ScaleX,
-            _photoPageScale.ScaleY,
-            _photoScale.ScaleX,
-            _photoScale.ScaleY,
-            _photoTranslate.X,
-            _photoTranslate.Y);
+
+        var inverse = GetPhotoInverseMatrix();
+        var clone = geometry.Clone();
+        clone.Transform = new MatrixTransform(inverse);
+        var flattened = clone.GetFlattenedPathGeometry();
+        if (flattened.CanFreeze)
+        {
+            flattened.Freeze();
+        }
+
+        return flattened;
     }
 
     private Geometry? ToScreenGeometry(Geometry geometry)
@@ -253,14 +250,21 @@ public partial class PaintOverlayWindow
 
     private Matrix GetPhotoInverseMatrix()
     {
-        return PhotoInkCoordinateMapper.CreateInverseMatrix(
-            _photoPageScale.ScaleX,
-            _photoPageScale.ScaleY,
-            _photoScale.ScaleX,
-            _photoScale.ScaleY,
-            _photoTranslate.X,
-            _photoTranslate.Y,
-            PhotoTransformMathDefaults.InverseScaleEpsilon);
+        if (PhotoInkCoordinateMapper.TryCreateInverseMatrix(
+                _photoPageScale.ScaleX,
+                _photoPageScale.ScaleY,
+                _photoScale.ScaleX,
+                _photoScale.ScaleY,
+                _photoTranslate.X,
+                _photoTranslate.Y,
+                out var inverse,
+                PhotoTransformMathDefaults.InverseScaleEpsilon))
+        {
+            _lastValidPhotoInverseMatrix = inverse;
+            return inverse;
+        }
+
+        return _lastValidPhotoInverseMatrix;
     }
 
     private bool TryBeginPhotoPan(MouseButtonEventArgs e)
