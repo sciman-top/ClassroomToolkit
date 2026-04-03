@@ -10,10 +10,8 @@
         ResizeMode="NoResize">
     
     <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
-        <!-- 透明背景，点击关闭 -->
         <Rectangle x:Name="BackgroundRect" Fill="Transparent" MouseLeftButtonDown="OnCloseClick"/>
 
-        <!-- 照片：只缩小不放大，居中显示 -->
         <Image x:Name="PhotoImage" 
                Stretch="Uniform" 
                StretchDirection="DownOnly"
@@ -23,30 +21,30 @@
             </Image.Effect>
         </Image>
 
-        <!-- 遮挡层：用于在切换照片时覆盖旧帧，避免切图闪现 -->
         <Border x:Name="LoadingMask" Background="{StaticResource Brush_OverlayMask}" Visibility="Collapsed" Panel.ZIndex="100"/>
 
-        <!-- 学生姓名：动态定位到照片顶部 -->
-        <TextBlock x:Name="NameText" 
-                   Foreground="White" 
-                   FontSize="56" 
-                   FontWeight="Black"
-                   TextAlignment="Center"
-                   TextWrapping="NoWrap"
-                   TextTrimming="CharacterEllipsis"
-                   Panel.ZIndex="10">
-            <TextBlock.Effect>
+        <Border x:Name="NameBadge"
+                Style="{StaticResource Style_FullscreenShellHintBadge}"
+                Padding="18,10"
+                Panel.ZIndex="10">
+            <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>
-            </TextBlock.Effect>
-        </TextBlock>
+            </Border.Effect>
+            <TextBlock x:Name="NameText" 
+                       Foreground="White" 
+                       FontSize="48" 
+                       FontWeight="Bold"
+                       TextAlignment="Center"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"/>
+        </Border>
 
-        <!-- 底部关闭按钮 -->
         <Button x:Name="CloseButtonLeft"
                 Style="{StaticResource Style_FullscreenShellCloseButton}"
                 Click="OnCloseClick"
-                Opacity="0.6"
-                Width="64"
-                Height="64"
+                Opacity="0.64"
+                Width="56"
+                Height="56"
                 ToolTip="关闭全屏预览">
             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
@@ -54,19 +52,16 @@
         <Button x:Name="CloseButtonRight" 
                 Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
-                Opacity="0.6"
-                Width="64"
-                Height="64"
+                Opacity="0.64"
+                Width="56"
+                Height="56"
                 ToolTip="关闭全屏预览">
             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
         </Button>
 
-        <Border x:Name="CloseHintText" Style="{StaticResource Style_FullscreenShellHintBadge}" Padding="16,8" Panel.ZIndex="10">
-            <TextBlock Text="单击背景或关闭按钮即可退出" FontSize="14" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
-            <Border.Effect>
-                <StaticResource ResourceKey="Shadow_Floating"/>
-            </Border.Effect>
+        <Border x:Name="CloseHintText" Style="{StaticResource Style_FullscreenShellHintBadge}" Padding="14,7" Panel.ZIndex="10">
+            <TextBlock Text="单击背景或关闭按钮即可退出" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
         </Border>
     </Canvas>
 </Window>

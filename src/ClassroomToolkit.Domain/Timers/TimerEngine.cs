@@ -9,6 +9,7 @@ public sealed class TimerEngine
     private int _stopwatchSeconds;
     private int _reminderSeconds;
     private int _reminderCounter;
+    private TimeSpan _pendingElapsed = TimeSpan.Zero;
 
     public TimerMode Mode { get; private set; } = TimerMode.Countdown;
 
@@ -39,6 +40,7 @@ public sealed class TimerEngine
         Mode = mode;
         Running = false;
         _reminderCounter = 0;
+        _pendingElapsed = TimeSpan.Zero;
         if (Mode == TimerMode.Countdown)
         {
             _secondsLeft = _countdownSeconds;
@@ -66,6 +68,7 @@ public sealed class TimerEngine
         }
         _secondsLeft = _countdownSeconds;
         _reminderCounter = 0;
+        _pendingElapsed = TimeSpan.Zero;
         Running = false;
     }
 
@@ -76,6 +79,7 @@ public sealed class TimerEngine
         _secondsLeft = Math.Max(0, Math.Min(secondsLeft, _countdownSeconds));
         _stopwatchSeconds = Math.Max(0, stopwatchSeconds);
         _reminderCounter = 0;
+        _pendingElapsed = TimeSpan.Zero;
         Running = mode != TimerMode.Clock && running;
     }
 
@@ -108,6 +112,7 @@ public sealed class TimerEngine
     {
         Running = false;
         _reminderCounter = 0;
+        _pendingElapsed = TimeSpan.Zero;
         if (Mode == TimerMode.Countdown)
         {
             _secondsLeft = _countdownSeconds;
@@ -124,14 +129,23 @@ public sealed class TimerEngine
         {
             return;
         }
-        var totalSeconds = (int)Math.Floor(elapsed.TotalSeconds);
+        if (elapsed <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        _pendingElapsed += elapsed;
+        var totalSeconds = (int)Math.Floor(Math.Min(_pendingElapsed.TotalSeconds, int.MaxValue));
         if (totalSeconds <= 0)
         {
             return;
         }
+        _pendingElapsed -= TimeSpan.FromSeconds(totalSeconds);
+
         if (Mode == TimerMode.Stopwatch)
         {
-            _stopwatchSeconds = Math.Max(0, _stopwatchSeconds + totalSeconds);
+            var next = (long)_stopwatchSeconds + totalSeconds;
+            _stopwatchSeconds = next >= int.MaxValue ? int.MaxValue : (int)Math.Max(0, next);
             return;
         }
         if (Mode == TimerMode.Countdown)

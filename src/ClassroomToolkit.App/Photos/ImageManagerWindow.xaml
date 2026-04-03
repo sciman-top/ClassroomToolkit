@@ -21,7 +21,7 @@
         <local:PdfBackgroundConverter x:Key="PdfBackgroundConverter"/>
     </Window.Resources>
 
-    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="12" CornerRadius="16">
+    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="10">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -33,13 +33,13 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
+                    <TextBlock Text="资源管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="资源管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="76" Height="30" Margin="0,0,8,0"
+                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="30" Margin="0,0,8,0"
                             Style="{StaticResource Style_SecondaryButton}" Click="OnRestoreWindowClick"/>
-                    <Button Content="关闭" Width="60" Height="30"
+                    <Button Content="关闭" Width="56" Height="30"
                             Style="{StaticResource Style_DangerButton}" Click="OnCloseWindowClick"/>
                 </StackPanel>
             </Grid>
@@ -61,7 +61,7 @@
 
             <!-- 1. 收藏夹 -->
             <Border Grid.Row="0" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="8">
+                    BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="10">
                 <Expander Header="收藏夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <Grid Margin="0,8,0,0">
                         <Grid.RowDefinitions>
@@ -69,8 +69,8 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="添加" Width="60" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
-                            <Button Content="移除" Width="60" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
+                            <Button Content="添加" Width="56" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
+                            <Button Content="移除" Width="56" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
                         </StackPanel>
                         <ListBox Grid.Row="1" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -92,8 +92,8 @@
 
             <!-- 2. 最近目录 -->
             <Border Grid.Row="1" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,6,3,6" CornerRadius="8">
-                <Expander Header="最近目录" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
+                    BorderThickness="1" Padding="8,6" Margin="12,6,3,6" CornerRadius="10">
+                <Expander Header="最近使用" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
                              Margin="0,8,0,0"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -114,8 +114,8 @@
 
             <!-- 3. 此电脑 -->
             <Border Grid.Row="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="8">
-                <Expander Header="此电脑" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
+                    BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="10">
+                <Expander Header="文件夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               Margin="0,8,0,0"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -140,7 +140,7 @@
                               ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Cursor="SizeWE"
                               ShowsPreview="False" DragDelta="OnMainColumnSplitterDragDelta" DragCompleted="OnMainColumnSplitterDragCompleted"/>
 
-                <Border Grid.Column="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
+                <Border Grid.Column="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="10">
                     <DockPanel>
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -153,7 +153,7 @@
                                  FontSize="13"
                                  VerticalContentAlignment="Center"
                                  KeyDown="OnCurrentFolderTextKeyDown"
-                                 ToolTip="输入文件夹路径后按 Enter"/>
+                                 ToolTip="输入路径后按 Enter"/>
                     </Border>
                 </DockPanel>
 
@@ -167,15 +167,15 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <Button x:Name="BackButton" ToolTip="后退" Width="36" Height="30" Margin="0,0,6,0"
+                            <Button x:Name="BackButton" ToolTip="后退" Width="34" Height="30" Margin="0,0,6,0"
                                     Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_Back}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="ForwardButton" ToolTip="前进" Width="36" Height="30" Margin="0,0,6,0"
+                            <Button x:Name="ForwardButton" ToolTip="前进" Width="34" Height="30" Margin="0,0,6,0"
                                     Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_Forward}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="UpButton" ToolTip="向上" Width="36" Height="30" Margin="0,0,10,0"
+                            <Button x:Name="UpButton" ToolTip="上一级" Width="34" Height="30" Margin="0,0,10,0"
                                     Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -183,7 +183,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="72" Height="30" Margin="0,0,6,0"
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="68" Height="30" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -191,7 +191,7 @@
                                     <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="84" Height="30" Margin="0,0,10,0"
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="80" Height="30" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -199,7 +199,7 @@
                                     <TextBlock Text="缩略图" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <TextBlock Text="缩略图大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
+                            <TextBlock Text="缩略图" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
                                     ValueChanged="OnThumbnailSizeChanged" IsEnabled="{Binding IsThumbnailSizeSliderEnabled}"/>
@@ -212,7 +212,7 @@
                     </Grid>
                 </DockPanel>
 
-                <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
+                    <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
                            Text="当前没有可显示内容，请先在左侧选择文件夹。"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
@@ -293,7 +293,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="统一管理图片、PDF 与名单资源。"
+                    <TextBlock Text="统一管理 PDF、图片和相关资源。"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

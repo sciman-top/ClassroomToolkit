@@ -11,16 +11,16 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1"
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="12" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
             MouseLeftButtonDown="OnTitleBarDrag">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
         </Border.Effect>
 
-        <StackPanel Margin="16">
-            <Grid Margin="0,0,0,12">
-                <TextBlock Text="选择画板颜色" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" Width="24" Height="24" ToolTip="关闭颜色选择">
+        <StackPanel Margin="14">
+            <Grid Margin="0,0,0,10">
+                <TextBlock Text="白板颜色" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>

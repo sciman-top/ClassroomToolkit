@@ -36,7 +36,7 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="画笔设置" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭画笔设置" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -133,7 +133,7 @@
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="这里是总入口，会统一调整书写模式与场景参数。"
+                        <TextBlock Text="这里统一管理预设、书写手感和场景参数。"
                                    Margin="0,0,0,8"
                                    FontSize="12"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -239,7 +239,7 @@
                                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="界面与工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                                        <TextBlock Text="这里只保留影响工具栏显示和切换方式的设置。"
+                                        <TextBlock Text="这里只调整工具栏显示和切换方式。"
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="12"
                                                    Margin="0,0,0,12"/>
@@ -298,7 +298,7 @@
                             </Grid>
                             <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="说明：默认推荐保持当前设置；仅在卡顿或翻页不同步时再调整下方高级参数。"
+                            <TextBlock Text="说明：一般保持默认即可；仅在卡顿或翻页不同步时再调整高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -392,7 +392,7 @@
                             </Grid>
                             <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶（检测到全屏放映时）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="说明：默认推荐保持当前设置；仅在兼容异常时再调整高级参数。"
+                            <TextBlock Text="说明：一般保持默认即可；仅在兼容异常时再调整高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -489,3 +489,4 @@
         </Grid>
     </Border>
 </Window>
+

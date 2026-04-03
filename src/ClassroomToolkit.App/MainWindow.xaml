@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         mc:Ignorable="d"
-        Title="sciman课堂工具箱" 
+        Title="sciman课堂工具箱"
         Height="300" Width="300"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -16,7 +16,6 @@
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
 
-    <!-- 主布局容器 (Atmospheric Gradient) -->
     <Border x:Name="MainContainer"
             Style="{StaticResource Style_WorkShellWindowBorder}"
             MouseLeftButtonDown="OnDragAreaMouseDown">
@@ -24,55 +23,51 @@
             <StaticResource ResourceKey="Shadow_Dialog"/>
         </Border.Effect>
 
-        <Grid Margin="10,6,10,10">
+        <Grid Margin="10,8,10,10">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- 拖拽条 -->
-                <RowDefinition Height="Auto"/> <!-- 功能区 -->
-                <RowDefinition Height="Auto"/> <!-- 工具栏 -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- 1. 顶部装饰 (拖拽把手 - Pill) -->
-            <Grid Grid.Row="0" Height="34" Style="{StaticResource Style_WorkShellTitleBar}">
+            <Grid Grid.Row="0" Height="46" Style="{StaticResource Style_WorkShellTitleBar}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Rectangle Width="28" Height="4" RadiusX="2" RadiusY="2" 
-                               Fill="{StaticResource Brush_Border_Strong}"
-                               HorizontalAlignment="Center" Opacity="0.70"/>
                     <TextBlock Text="sciman课堂工具箱"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource Brush_Text_Secondary}"
-                               Opacity="0.92"
-                               HorizontalAlignment="Center"
-                               Margin="0,6,0,0"/>
+                               FontSize="17"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource Brush_Primary_Hover}"
+                               TextAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
-            <!-- 2. 核心功能区 -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                <!-- 屏幕画笔 -->
-                <Button x:Name="PaintButton" 
+            <Grid Grid.Row="1" Margin="0,4,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        x:Name="PaintButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="{Binding PaintButtonText}"
+                        Content="画笔"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
                         ToolTip="开启画笔（长按可调设置）"
                         behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}"/>
 
-                <!-- 点名/计时 -->
-                <Button x:Name="RollCallButton" 
+                <Button Grid.Column="1"
+                        x:Name="RollCallButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="{Binding RollCallButtonText}"
+                        Content="点名 / 计时"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
                         ToolTip="打开点名/倒计时（长按可调设置）"
                         behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}"/>
-            </StackPanel>
+            </Grid>
 
-            <!-- 3. 底部工具栏 (Floating Capsule) -->
             <Border Grid.Row="2"
                     Style="{StaticResource Style_WorkShellBottomBar}"
                     HorizontalAlignment="Center">
-                
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -80,38 +75,41 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- 最小化 -->
-                    <Button Grid.Column="0" x:Name="MinimizeButton"
+                    <Button Grid.Column="0"
+                            x:Name="MinimizeButton"
                             Style="{StaticResource Style_WorkShellMiniButton}"
                             Tag="{StaticResource Icon_Minimize}"
-                            Click="OnMinimizeClick" ToolTip="最小化"/>
+                            Click="OnMinimizeClick"
+                            ToolTip="最小化"/>
 
-                    <!-- 分隔 -->
                     <Rectangle Grid.Column="1" Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 
-                    <!-- 右侧功能 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                         <Button x:Name="DiagnosticsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Apps}"
-                                Click="OnDiagnosticsClick" ToolTip="打开系统兼容性诊断"/>
+                                Click="OnDiagnosticsClick"
+                                ToolTip="打开系统兼容性诊断"/>
 
                         <Button x:Name="AboutButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Info}"
-                                Click="OnAboutClick" ToolTip="查看产品信息"/>
+                                Click="OnAboutClick"
+                                ToolTip="查看产品信息"/>
 
                         <Button x:Name="SettingsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
-                                Click="OnLauncherSettingsClick" ToolTip="打开全局设置"/>
+                                Click="OnLauncherSettingsClick"
+                                ToolTip="打开全局设置"/>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
-                        
+
                         <Button x:Name="ExitButton"
                                 Style="{StaticResource Style_WorkShellMiniDangerButton}"
                                 Tag="{StaticResource Icon_Power}"
-                                Click="OnExitClick" ToolTip="退出程序"/>
+                                Click="OnExitClick"
+                                ToolTip="退出程序"/>
                     </StackPanel>
                 </Grid>
             </Border>

@@ -45,6 +45,34 @@ public sealed class TimerEngineTests
     }
 
     [Fact]
+    public void Stopwatch_ShouldAccumulateSubSecondTicks_WithoutLosingSeconds()
+    {
+        var engine = new TimerEngine();
+        engine.SetMode(TimerMode.Stopwatch);
+        engine.Start();
+
+        engine.Tick(TimeSpan.FromMilliseconds(600));
+        engine.Tick(TimeSpan.FromMilliseconds(600));
+
+        engine.StopwatchSeconds.Should().Be(1);
+    }
+
+    [Fact]
+    public void Countdown_ShouldAccumulateSubSecondTicks_WithoutSkippingCompletion()
+    {
+        var engine = new TimerEngine();
+        engine.SetCountdown(0, 2);
+        engine.Start();
+
+        engine.Tick(TimeSpan.FromMilliseconds(900));
+        engine.Tick(TimeSpan.FromMilliseconds(900));
+        engine.Tick(TimeSpan.FromMilliseconds(200));
+
+        engine.SecondsLeft.Should().Be(0);
+        engine.Running.Should().BeFalse();
+    }
+
+    [Fact]
     public void Reminder_ShouldTrigger()
     {
         var engine = new TimerEngine();

@@ -5,29 +5,26 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class RollCallWindowSettingsReloadContractTests
 {
     [Fact]
-    public void Constructor_ShouldReloadSettingsSnapshot_BeforeApplyWindowBounds()
+    public void Constructor_ShouldUseInjectedSettingsSnapshot_BeforeApplyWindowBounds()
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        var refreshIndex = source.IndexOf("RefreshRollCallSettingsSnapshot();", StringComparison.Ordinal);
+        var assignSettingsIndex = source.IndexOf("_settings = settings;", StringComparison.Ordinal);
         var applyBoundsIndex = source.IndexOf("ApplyWindowBounds(settings);", StringComparison.Ordinal);
 
-        refreshIndex.Should().BeGreaterThan(0);
+        assignSettingsIndex.Should().BeGreaterThan(0);
         applyBoundsIndex.Should().BeGreaterThan(0);
-        refreshIndex.Should().BeLessThan(applyBoundsIndex);
+        assignSettingsIndex.Should().BeLessThan(applyBoundsIndex);
+        source.Should().NotContain("RefreshRollCallSettingsSnapshot();");
     }
 
     [Fact]
-    public void RefreshRollCallSettingsSnapshot_ShouldLoadFromStore_AndSyncRollCallFields()
+    public void Constructor_ShouldNotReloadSettingsFromStore()
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        source.Should().Contain("_settingsService.Load()");
-        source.Should().Contain("_settings.RollCallShowId = latest.RollCallShowId;");
-        source.Should().Contain("_settings.RollCallShowPhoto = latest.RollCallShowPhoto;");
-        source.Should().Contain("_settings.RollCallTimerMode = latest.RollCallTimerMode;");
-        source.Should().Contain("_settings.RemotePresenterKey = latest.RemotePresenterKey;");
-        source.Should().Contain("_settings.RollCallCurrentGroup = latest.RollCallCurrentGroup;");
+        source.Should().NotContain("_settingsService.Load()");
+        source.Should().NotContain("private void RefreshRollCallSettingsSnapshot()");
     }
 
     private static string GetSourcePath()

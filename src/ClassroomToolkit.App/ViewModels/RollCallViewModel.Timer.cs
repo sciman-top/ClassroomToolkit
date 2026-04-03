@@ -81,7 +81,12 @@ public sealed partial class RollCallViewModel
 
     private void UpdateTimeDisplay()
     {
-        TimeDisplay = FormatTime(_timerEngine.Mode == TimerMode.Stopwatch ? _timerEngine.StopwatchSeconds : _timerEngine.SecondsLeft);
+        TimeDisplay = _timerEngine.Mode switch
+        {
+            TimerMode.Stopwatch => FormatTime(_timerEngine.StopwatchSeconds),
+            TimerMode.Clock => DateTime.Now.ToString("HH:mm:ss"),
+            _ => FormatTime(_timerEngine.SecondsLeft)
+        };
     }
 
     private string FormatTime(int totalSeconds)

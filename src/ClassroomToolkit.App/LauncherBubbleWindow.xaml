@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.LauncherBubbleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="60" Height="60"
+        Width="58" Height="58"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -11,55 +11,52 @@
         Focusable="False">
     
     <Grid Background="Transparent">
-        <!-- 悬浮球主体 -->
         <Border x:Name="BubbleBorder"
                 Style="{StaticResource Style_BubbleShellRoot}"
-                Width="46" Height="46" 
-                CornerRadius="23"
+                Width="44" Height="44"
+                CornerRadius="22"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}"
                 RenderTransformOrigin="0.5,0.5">
             <Border.RenderTransform>
                 <TranslateTransform x:Name="BubbleTranslate" Y="0"/>
             </Border.RenderTransform>
-            <!-- 图标 -->
             <Grid>
                  <Path Data="{StaticResource Icon_Apps}" 
                        Fill="{StaticResource Brush_Primary}" 
                        Stretch="Uniform" 
-                       Width="18" Height="18"
+                       Width="17" Height="17"
                        HorizontalAlignment="Center" 
                        VerticalAlignment="Center">
                      <Path.Effect>
-                         <DropShadowEffect Color="{StaticResource Color_Accent_Primary}" BlurRadius="12" ShadowDepth="0" Opacity="0.75"/>
+                         <DropShadowEffect Color="{StaticResource Color_Accent_Primary}" BlurRadius="8" ShadowDepth="0" Opacity="0.38"/>
                      </Path.Effect>
                  </Path>
             </Grid>
             
-            <!-- 鼠标交互反馈：三合一动画（放大+上浮+边框高亮） -->
             <Border.Triggers>
                 <EventTrigger RoutedEvent="MouseEnter">
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="Width" To="52" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetProperty="Height" To="52" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="-4" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Width" To="48" Duration="0:0:0.14"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Height" To="48" Duration="0:0:0.14"/>
+                            <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="-3" Duration="0:0:0.14"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Border_Focus}" Duration="0:0:0.15"/>
+                                            To="{StaticResource Color_Border_Focus}" Duration="0:0:0.14"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Bg_Input}" Duration="0:0:0.15"/>
+                                            To="{StaticResource Color_Bg_Input}" Duration="0:0:0.14"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
                 <EventTrigger RoutedEvent="MouseLeave">
                     <BeginStoryboard>
                         <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="Width" To="46" Duration="0:0:0.25"/>
-                            <DoubleAnimation Storyboard.TargetProperty="Height" To="46" Duration="0:0:0.25"/>
-                            <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.25"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Width" To="44" Duration="0:0:0.22"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Height" To="44" Duration="0:0:0.22"/>
+                            <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.22"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Border_Strong}" Duration="0:0:0.25"/>
+                                            To="{StaticResource Color_Border_Strong}" Duration="0:0:0.22"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Bg_Surface_1}" Duration="0:0:0.25"/>
+                                            To="{StaticResource Color_Bg_Surface_1}" Duration="0:0:0.22"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>

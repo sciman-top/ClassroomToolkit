@@ -8,11 +8,11 @@
          ======================================== -->
 
     <!-- ========== Density Tokens ========== -->
-    <sys:Double x:Key="Size_Button_Icon_Compact">32</sys:Double>
-    <sys:Double x:Key="Size_Button_Icon_Regular">34</sys:Double>
-    <sys:Double x:Key="Size_Button_Icon_Large">36</sys:Double>
-    <sys:Double x:Key="Size_Button_Action_Regular">88</sys:Double>
-    <sys:Double x:Key="Size_Button_Action_Height_Compact">32</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Compact">30</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Regular">32</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Large">34</sys:Double>
+    <sys:Double x:Key="Size_Button_Action_Regular">92</sys:Double>
+    <sys:Double x:Key="Size_Button_Action_Height_Compact">30</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Dialog">44</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Management">48</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Work">40</sys:Double>
@@ -39,18 +39,18 @@
     <Thickness x:Key="Spacing_Shell_DialogMargin">10</Thickness>
     <Thickness x:Key="Spacing_Shell_TitleInset">18,0,0,0</Thickness>
     <Thickness x:Key="Spacing_Shell_ActionBar">20,0,20,20</Thickness>
-    <Thickness x:Key="Spacing_Shell_ActionGap">0,0,10,0</Thickness>
+    <Thickness x:Key="Spacing_Shell_ActionGap">0,0,8,0</Thickness>
     <Thickness x:Key="Spacing_Shell_CloseButton_Dialog">0,0,10,0</Thickness>
     <Thickness x:Key="Spacing_Shell_CloseButton_Management">0,0,12,0</Thickness>
-    <Thickness x:Key="Spacing_Shell_WorkTitleBar">20,0,16,0</Thickness>
-    <Thickness x:Key="Spacing_Shell_WorkContent">20,4,20,8</Thickness>
-    <Thickness x:Key="Spacing_Shell_WorkBottomBar">20,0,20,16</Thickness>
+    <Thickness x:Key="Spacing_Shell_WorkTitleBar">18,0,14,0</Thickness>
+    <Thickness x:Key="Spacing_Shell_WorkContent">18,2,18,8</Thickness>
+    <Thickness x:Key="Spacing_Shell_WorkBottomBar">18,0,18,14</Thickness>
     <Thickness x:Key="Spacing_Shell_ManagementContent">12,8,12,8</Thickness>
     <Thickness x:Key="Size_DialogMargin_Standard">20</Thickness>
-    <CornerRadius x:Key="Radius_Shell_Dialog">16</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_Dialog">15</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_Management">14</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_Work">20</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_WorkBottomBar">16</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_Work">18</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_WorkBottomBar">14</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlaySideRail">20</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlayHintBadge">10</CornerRadius>
 
@@ -518,7 +518,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
-        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="Padding" Value="12,5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -564,7 +564,7 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
-        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="Padding" Value="12,5"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
@@ -867,16 +867,16 @@
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_WorkBottomBar}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="Padding" Value="6,3"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_WorkBottomBar}"/>
         <Setter Property="Effect" Value="{StaticResource Shadow_Floating}"/>
     </Style>
 
     <Style x:Key="Style_WorkShellHeroTileButton" TargetType="Button">
-        <Setter Property="Width" Value="76"/>
-        <Setter Property="Height" Value="84"/>
-        <Setter Property="Margin" Value="5"/>
-        <Setter Property="Background" Value="{StaticResource Gradient_Hero_Glow}"/>
+        <Setter Property="Width" Value="84"/>
+        <Setter Property="Height" Value="88"/>
+        <Setter Property="Margin" Value="6"/>
+        <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -886,7 +886,7 @@
                     <Grid>
                         <Border x:Name="glow"
                                 Margin="10"
-                                CornerRadius="18"
+                                CornerRadius="16"
                                 Background="{StaticResource Brush_Primary}"
                                 Opacity="0"
                                 Effect="{StaticResource Shadow_Glow_Primary}"/>
@@ -895,26 +895,28 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="18">
+                                CornerRadius="16">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="12"/>
+                                    <RowDefinition Height="10"/>
                                 </Grid.RowDefinitions>
 
                                 <Border x:Name="iconBg"
                                         Grid.Row="0"
-                                        Width="34"
-                                        Height="34"
+                                        Width="38"
+                                        Height="38"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        CornerRadius="11"
-                                        Background="{StaticResource Brush_Surface_Primary}">
-                                    <Border Width="24"
-                                            Height="24"
-                                            CornerRadius="8"
-                                            Background="{StaticResource Brush_InputBackground}">
+                                        CornerRadius="12"
+                                        Background="{StaticResource Brush_InputBackground}"
+                                        BorderBrush="{StaticResource Brush_Border_Subtle}"
+                                        BorderThickness="1">
+                                    <Border Width="26"
+                                            Height="26"
+                                            CornerRadius="9"
+                                            Background="{StaticResource Brush_Surface_Secondary}">
                                         <Path x:Name="icon"
                                               Width="{StaticResource Size_Icon_Glyph_LG}"
                                               Height="{StaticResource Size_Icon_Glyph_LG}"
@@ -929,7 +931,7 @@
                                 <TextBlock Grid.Row="1"
                                            HorizontalAlignment="Center"
                                            Text="{TemplateBinding Content}"
-                                           FontSize="11"
+                                           FontSize="12"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource Brush_Text_Secondary}"/>
 
@@ -953,9 +955,10 @@
                             </Setter>
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
-                            <Setter TargetName="glow" Property="Opacity" Value="0.45"/>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.22"/>
                             <Setter TargetName="AccentLine" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="iconBg" Property="Background" Value="{StaticResource Brush_Primary}"/>
+                            <Setter TargetName="iconBg" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                             <Setter TargetName="icon" Property="Fill" Value="{StaticResource Brush_Text_Primary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -973,8 +976,8 @@
     </Style>
 
     <Style x:Key="Style_WorkShellMiniButton" TargetType="Button">
-        <Setter Property="Width" Value="30"/>
-        <Setter Property="Height" Value="30"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
         <Setter Property="Margin" Value="2"/>
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -1051,7 +1054,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
-                <Setter Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -1159,8 +1162,8 @@
     </Style>
 
     <Style x:Key="Style_ColorBubbleToggle" TargetType="ToggleButton">
-        <Setter Property="Width" Value="30"/>
-        <Setter Property="Height" Value="30"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
         <Setter Property="Margin" Value="2,0"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -1171,15 +1174,15 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <Grid>
                         <Ellipse x:Name="Ring"
-                                 Width="30"
-                                 Height="30"
+                                 Width="28"
+                                 Height="28"
                                  Opacity="0"
                                  Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"
                                  StrokeThickness="2"/>
                         <Border x:Name="Dot"
-                                Width="22"
-                                Height="22"
-                                CornerRadius="11"
+                                Width="20"
+                                Height="20"
+                                CornerRadius="10"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{StaticResource Brush_Border_Strong}"
                                 BorderThickness="2">
@@ -1191,14 +1194,14 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Ring" Property="Opacity" Value="0.5"/>
-                            <Setter TargetName="Dot" Property="Width" Value="24"/>
-                            <Setter TargetName="Dot" Property="Height" Value="24"/>
-                            <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                            <Setter TargetName="Dot" Property="Width" Value="22"/>
+                            <Setter TargetName="Dot" Property="Height" Value="22"/>
+                            <Setter TargetName="Dot" Property="CornerRadius" Value="11"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Dot" Property="Width" Value="24"/>
-                            <Setter TargetName="Dot" Property="Height" Value="24"/>
-                            <Setter TargetName="Dot" Property="CornerRadius" Value="12"/>
+                            <Setter TargetName="Dot" Property="Width" Value="22"/>
+                            <Setter TargetName="Dot" Property="Height" Value="22"/>
+                            <Setter TargetName="Dot" Property="CornerRadius" Value="11"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1269,7 +1272,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="Padding" Value="5,4"/>
         <Setter Property="Effect" Value="{StaticResource Shadow_Floating}"/>
     </Style>
 
@@ -1318,7 +1321,7 @@
                 <Style TargetType="TabItem">
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
-                    <Setter Property="Padding" Value="14,6"/>
+                    <Setter Property="Padding" Value="12,5"/>
                     <Setter Property="FontSize" Value="13"/>
                     <Setter Property="FontWeight" Value="Normal"/>
                     <Setter Property="Cursor" Value="Hand"/>
@@ -1834,3 +1837,4 @@
     </Style>
 
 </ResourceDictionary>
+

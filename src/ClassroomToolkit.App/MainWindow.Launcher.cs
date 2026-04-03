@@ -375,7 +375,13 @@ public partial class MainWindow
 
     private void RunStartupDiagnostics()
     {
+        var startupWarningAlreadyShown =
+            System.Windows.Application.Current.Properties.Contains(App.StartupCompatibilityWarningShownPropertyKey);
         if (!StartupDiagnosticsGatePolicy.ShouldRun(Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG")))
+        {
+            return;
+        }
+        if (startupWarningAlreadyShown)
         {
             return;
         }

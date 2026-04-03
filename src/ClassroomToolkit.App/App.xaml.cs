@@ -21,6 +21,7 @@ namespace ClassroomToolkit.App;
 
 public partial class App : WpfApplication
 {
+    internal const string StartupCompatibilityWarningShownPropertyKey = "StartupCompatibilityWarningShown";
     private static readonly object LogWriteLock = new();
     private static readonly ConfigurationService AppConfiguration = new();
     private static readonly string AppRootDirectory = AppConfiguration.BaseDirectory;
@@ -36,6 +37,10 @@ public partial class App : WpfApplication
         ConfigureServices();
 
         base.OnStartup(e);
+
+        // Startup may show modal warning dialogs before MainWindow exists.
+        // Prevent WPF from treating that dialog as the last window and shutting down the app.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var settingsPath = ResolveStartupSettingsPath();
         var startupCompatibility = CollectStartupCompatibilityReport(settingsPath);
@@ -74,16 +79,23 @@ public partial class App : WpfApplication
             settings?.StartupCompatibilitySuppressedIssueCodes);
         if (visibleWarningReport.HasWarnings)
         {
+            Properties[StartupCompatibilityWarningShownPropertyKey] = true;
             Debug.WriteLine($"[StartupCompatibility] {visibleWarningReport.BuildMessage(includeWarnings: true)}");
             var warningMessage = BuildStartupWarningMessage(
                 visibleWarningReport,
                 startupCompatibilityReportPath,
                 autoRemediation);
             var suggestionMessage = BuildStartupWarningSuggestion(visibleWarningReport);
+            var diagnosticsPayload = BuildStartupSupportPayload(
+                visibleWarningReport,
+                startupCompatibilityReportPath,
+                autoRemediation);
             var dialog = new Diagnostics.StartupCompatibilityWarningDialog(
                 "检测到可降级运行的兼容性风险。",
                 warningMessage,
-                suggestionMessage);
+                suggestionMessage,
+                startupCompatibilityReportPath,
+                diagnosticsPayload);
             _ = dialog.SafeShowDialog();
             if (dialog.SuppressCurrentIssues && settings != null)
             {
@@ -101,6 +113,7 @@ public partial class App : WpfApplication
         }
         MainWindow = mainWindow;
         mainWindow.Show();
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         // 在启动时立即修复所有 BorderBrush 问题
         try
@@ -307,6 +320,16 @@ public partial class App : WpfApplication
             }
             lines.Add(string.Empty);
         }
+        var quickFixLines = BuildStartupWarningQuickFixLines(report);
+        if (quickFixLines.Count > 0)
+        {
+            lines.Add("快速修复：");
+            for (var i = 0; i < quickFixLines.Count; i++)
+            {
+                lines.Add($"{i + 1}. {quickFixLines[i]}");
+            }
+            lines.Add(string.Empty);
+        }
         lines.Add("程序将继续启动。建议尽快按提示修复，避免课堂中断。");
         if (!string.IsNullOrWhiteSpace(reportPath))
         {
@@ -316,6 +339,30 @@ public partial class App : WpfApplication
         return string.Join(Environment.NewLine, lines);
     }
 
+    private static IReadOnlyList<string> BuildStartupWarningQuickFixLines(
+        StartupCompatibilityReport report)
+    {
+        var issueCodes = new HashSet<string>(
+            report.Issues.Select(issue => issue.Code),
+            StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+
+        if (issueCodes.Contains("presentation-arch-mismatch"))
+        {
+            lines.Add("关闭本程序、PPT、WPS。");
+            lines.Add("确保程序与 Office/WPS 同位数（建议全部使用 x64）。");
+            lines.Add("若当前仅安装了 x86 WPS/Office，请改装 x64 版本后再重启。");
+        }
+        else if (issueCodes.Contains("presentation-arch-unknown"))
+        {
+            lines.Add("关闭本程序、PPT、WPS 后重启。");
+            lines.Add("临时关闭可能拦截进程探测的安全软件，再次启动复测。");
+            lines.Add("优先使用 x64 版本的 Office/WPS 以减少兼容波动。");
+        }
+
+        return lines;
+    }
+
     private static string BuildStartupWarningSuggestion(StartupCompatibilityReport report)
     {
         return string.Join(
@@ -323,6 +370,55 @@ public partial class App : WpfApplication
             report.Issues
                 .Where(static issue => !issue.IsBlocking && !string.IsNullOrWhiteSpace(issue.Suggestion))
                 .Select(issue => $"{issue.Code}{Environment.NewLine}{issue.Suggestion}"));
+    }
+
+    private static string BuildStartupSupportPayload(
+        StartupCompatibilityReport report,
+        string? reportPath,
+        StartupCompatibilityAutoRemediationResult autoRemediation)
+    {
+        var lines = new List<string>
+        {
+            "【ClassroomToolkit 启动兼容性诊断】",
+            $"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+            "结论：已自动切换到兼容优先模式，当前可继续上课。",
+            string.Empty,
+            "风险码："
+        };
+
+        foreach (var issue in report.Issues.Where(static issue => !issue.IsBlocking))
+        {
+            lines.Add($"- {issue.Code}: {issue.Message}");
+        }
+
+        if (autoRemediation.AppliedActions.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("已自动执行：");
+            for (var i = 0; i < autoRemediation.AppliedActions.Count; i++)
+            {
+                lines.Add($"- {autoRemediation.AppliedActions[i]}");
+            }
+        }
+
+        var quickFixLines = BuildStartupWarningQuickFixLines(report);
+        if (quickFixLines.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("建议处理：");
+            for (var i = 0; i < quickFixLines.Count; i++)
+            {
+                lines.Add($"{i + 1}. {quickFixLines[i]}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(reportPath))
+        {
+            lines.Add(string.Empty);
+            lines.Add($"诊断报告：{reportPath}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private string? PersistStartupCompatibilityReport(StartupCompatibilityReport report)

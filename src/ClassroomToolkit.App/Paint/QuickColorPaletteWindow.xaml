@@ -10,13 +10,16 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" CornerRadius="12" Padding="6,4"
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="12" Padding="6,5"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
         </Border.Effect>
-        <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1">
-            <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
-        </Border>
+        <StackPanel>
+            <TextBlock Text="快捷颜色" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,0,0,4"/>
+            <Border Background="{StaticResource Brush_Background_L2}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+                <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
+            </Border>
+        </StackPanel>
     </Border>
 </Window>
