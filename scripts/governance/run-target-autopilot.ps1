@@ -95,6 +95,18 @@ function Invoke-ShellCommand {
   }
 }
 
+function Emit-BrowserSessionHint {
+  param([string]$RepoPath)
+  $helperPath = Join-Path $RepoPath "tools\browser-session\start-browser-session.ps1"
+  if (-not (Test-Path -LiteralPath $helperPath)) {
+    return
+  }
+
+  Write-Host "browser_session.helper=$helperPath"
+  Write-Host "browser_session.start=powershell -ExecutionPolicy Bypass -File tools/browser-session/start-browser-session.ps1 -Action start -Name automation -Port 9222 -Url about:blank"
+  Write-Host "browser_session.attach=agent-browser --cdp 9222 open about:blank"
+}
+
 $kitRoot = Resolve-KitRoot -ProvidedPath $GovernanceKitRoot
 $analyzeScript = Join-Path $kitRoot "scripts/analyze-repo-governance.ps1"
 if (-not (Test-Path -LiteralPath $analyzeScript)) {
@@ -128,6 +140,7 @@ Write-Host "repo_root=$repoPath"
 Write-Host "governance_kit_root=$kitRoot"
 Write-Host "logs=$logRoot"
 Write-Host "mode=gate-orchestrator"
+Emit-BrowserSessionHint -RepoPath $repoPath
 
 if ($DryRun) {
   Write-Host "dry_run=true"
