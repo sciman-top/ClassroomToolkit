@@ -5,6 +5,33 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-ReleaseConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ConfigPath)) {
+        throw "Release config missing: $ConfigPath"
+    }
+
+    $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $config.Runtime -or $null -eq $config.Publish) {
+        throw "Invalid release config structure: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Runtime.Major)) {
+        throw "Runtime.Major missing in release config: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Runtime.Architecture)) {
+        throw "Runtime.Architecture missing in release config: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Publish.Rid)) {
+        throw "Publish.Rid missing in release config: $ConfigPath"
+    }
+
+    return $config
+}
+
 function Assert-PathExists {
     param(
         [Parameter(Mandatory = $true)]
@@ -33,18 +60,20 @@ function Assert-DesktopRuntimeInstallerExists {
         [Parameter(Mandatory = $true)]
         [string]$PrereqDirectory,
         [Parameter(Mandatory = $true)]
-        [string]$RuntimeMajor
+        [string]$RuntimeMajor,
+        [Parameter(Mandatory = $true)]
+        [string]$RuntimeArchitecture
     )
 
     if (-not (Test-Path -LiteralPath $PrereqDirectory)) {
         throw "Runtime prereq directory missing: $PrereqDirectory"
     }
 
-    $installer = Get-ChildItem -LiteralPath $PrereqDirectory -Filter "*desktop-runtime*$RuntimeMajor*win-x64*.exe" -File |
+    $installer = Get-ChildItem -LiteralPath $PrereqDirectory -Filter "*desktop-runtime*$RuntimeMajor*win-$RuntimeArchitecture*.exe" -File |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
     if ($null -eq $installer) {
-        throw "Runtime installer not found in $PrereqDirectory for major $RuntimeMajor (win-x64)."
+        throw "Runtime installer not found in $PrereqDirectory for major $RuntimeMajor (win-$RuntimeArchitecture)."
     }
 }
 
@@ -110,7 +139,7 @@ function Assert-PrepareDistributionPolicy {
     )
 
     Assert-FileContainsAllPatterns -Path $PrepareScriptPath -Patterns @(
-        '-r", "win-x64'
+        "release-config.json"
         '--self-contained", "false'
         '--self-contained", "true'
         "-p:PublishSingleFile=false",
@@ -119,7 +148,8 @@ function Assert-PrepareDistributionPolicy {
         "release-notes.txt",
         "release-manifest.json",
         "AllowOverwriteVersion",
-        "RunDefenderScan"
+        "RunDefenderScan",
+        "Resolve-ReleaseNotesSourceUrl"
     )
 }
 
@@ -142,7 +172,11 @@ function Invoke-PublishCompatibilityProbe {
         [Parameter(Mandatory = $true)]
         [string]$RepoRoot,
         [Parameter(Mandatory = $true)]
-        [string]$ProjectPath
+        [string]$ProjectPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PublishRid,
+        [Parameter(Mandatory = $true)]
+        [string]$RuntimeMajor
     )
 
     $probeRoot = Join-Path $RepoRoot "artifacts\release\preflight-compatibility-probe"
@@ -161,7 +195,7 @@ function Invoke-PublishCompatibilityProbe {
             "publish",
             $ProjectPath,
             "-c", "Release",
-            "-r", "win-x64",
+            "-r", $PublishRid,
             "--self-contained", "false",
             "-p:PublishSingleFile=false",
             "-p:PublishTrimmed=false",
@@ -172,7 +206,7 @@ function Invoke-PublishCompatibilityProbe {
             "publish",
             $ProjectPath,
             "-c", "Release",
-            "-r", "win-x64",
+            "-r", $PublishRid,
             "--self-contained", "true",
             "-p:PublishSingleFile=false",
             "-p:PublishTrimmed=false",
@@ -184,7 +218,7 @@ function Invoke-PublishCompatibilityProbe {
     }
 
     $runtimeConfigPath = Join-Path $fddDir "sciman Classroom Toolkit.runtimeconfig.json"
-    $windowsDesktopRuntimeVersion = Assert-WindowsDesktopRuntimeMajor -RuntimeConfigPath $runtimeConfigPath -ExpectedMajor "10"
+    $windowsDesktopRuntimeVersion = Assert-WindowsDesktopRuntimeMajor -RuntimeConfigPath $runtimeConfigPath -ExpectedMajor $RuntimeMajor
 
     $fddExePath = Join-Path $fddDir "sciman Classroom Toolkit.exe"
     $fddPdfiumPath = Join-Path $fddDir "x64\pdfium.dll"
@@ -249,6 +283,11 @@ function Get-PresentationSignatureMatrixSummary {
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..\..")).Path
+$releaseConfigPath = Join-Path $scriptRoot "release-config.json"
+$releaseConfig = Get-ReleaseConfig -ConfigPath $releaseConfigPath
+$runtimeMajor = [string]$releaseConfig.Runtime.Major
+$runtimeArchitecture = [string]$releaseConfig.Runtime.Architecture
+$publishRid = [string]$releaseConfig.Publish.Rid
 $csprojPath = Join-Path $repoRoot "src\ClassroomToolkit.App\ClassroomToolkit.App.csproj"
 $prepareScriptPath = Join-Path $scriptRoot "prepare-distribution.ps1"
 $releaseNotesTemplatePath = Join-Path $scriptRoot "templates\release-notes.txt"
@@ -259,7 +298,7 @@ Assert-PathExists -Path (Join-Path $scriptRoot "templates\bootstrap-runtime.ps1"
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\user-guide-standard.md")
 Assert-PathExists -Path (Join-Path $scriptRoot "templates\user-guide-offline.md")
 Assert-PathExists -Path $releaseNotesTemplatePath
-Assert-DesktopRuntimeInstallerExists -PrereqDirectory (Join-Path $scriptRoot "prereq") -RuntimeMajor "10"
+Assert-DesktopRuntimeInstallerExists -PrereqDirectory (Join-Path $scriptRoot "prereq") -RuntimeMajor $runtimeMajor -RuntimeArchitecture $runtimeArchitecture
 Assert-PathExists -Path (Join-Path $repoRoot "docs\runbooks\release-prevention-checklist.md")
 Assert-PrepareDistributionPolicy -PrepareScriptPath $prepareScriptPath
 Assert-ReleaseNotesTemplatePlaceholders -TemplatePath $releaseNotesTemplatePath
@@ -303,7 +342,7 @@ if (-not $SkipTests) {
     }
 }
 
-$probeReport = Invoke-PublishCompatibilityProbe -RepoRoot $repoRoot -ProjectPath "src/ClassroomToolkit.App/ClassroomToolkit.App.csproj"
+$probeReport = Invoke-PublishCompatibilityProbe -RepoRoot $repoRoot -ProjectPath "src/ClassroomToolkit.App/ClassroomToolkit.App.csproj" -PublishRid $publishRid -RuntimeMajor $runtimeMajor
 $presentationSignatureSummary = Get-PresentationSignatureMatrixSummary -RepoRoot $repoRoot
 $probeReportPath = Join-Path $repoRoot "artifacts\release\preflight-compatibility-report.json"
 ([pscustomobject]@{
@@ -311,7 +350,8 @@ $probeReportPath = Join-Path $repoRoot "artifacts\release\preflight-compatibilit
     PolicyChecks = [pscustomobject]@{
         PrepareDistributionScript = $prepareScriptPath
         ReleaseNotesTemplate = $releaseNotesTemplatePath
-        PublishPolicy = "win-x64 only; PublishSingleFile=false; PublishTrimmed=false; FDD+SCD"
+        ReleaseConfig = $releaseConfigPath
+        PublishPolicy = "$publishRid only; PublishSingleFile=false; PublishTrimmed=false; FDD+SCD"
         VersionImmutability = "prepare-distribution requires -AllowOverwriteVersion to overwrite"
     }
     PublishProbe = $probeReport

@@ -1,0 +1,132 @@
+name: release-package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (defaults to timestamp when empty)"
+        required: false
+        type: string
+      package_mode:
+        description: "Package mode"
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - standard
+          - offline
+      archive_format:
+        description: "Archive format"
+        required: true
+        default: zip
+        type: choice
+        options:
+          - zip
+          - 7z
+      ensure_latest_runtime:
+        description: "Resolve and bundle latest runtime for offline package"
+        required: true
+        default: true
+        type: boolean
+      run_defender_scan:
+        description: "Run Microsoft Defender scan on release output"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Release Metadata
+        id: meta
+        shell: pwsh
+        run: |
+          $version = ""
+          if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}"
+            if ($version.StartsWith("v")) {
+              $version = $version.Substring(1)
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($version) -and "${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}".Trim()
+          }
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = (Get-Date -Format "yyyy.MM.dd-HHmm")
+          }
+
+          $sourceUrl = "https://github.com/${{ github.repository }}/releases/tag/v$version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "release_notes_source_url=$sourceUrl" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked mode)
+        run: dotnet restore ClassroomToolkit.sln --locked-mode
+
+      - name: Build Release (warnings as errors)
+        run: dotnet build ClassroomToolkit.sln -c Release --no-restore /warnaserror
+
+      - name: Release Compatibility Preflight
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -SkipTests
+
+      - name: Prepare Distribution
+        shell: pwsh
+        run: |
+          $packageMode = "both"
+          $archiveFormat = "zip"
+          $ensureLatestRuntime = $true
+          $runDefenderScan = $false
+
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $packageMode = "${{ inputs.package_mode }}"
+            $archiveFormat = "${{ inputs.archive_format }}"
+            $ensureLatestRuntime = "${{ inputs.ensure_latest_runtime }}" -eq "true"
+            $runDefenderScan = "${{ inputs.run_defender_scan }}" -eq "true"
+          }
+
+          $args = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", "scripts/release/prepare-distribution.ps1",
+            "-Version", "${{ steps.meta.outputs.version }}",
+            "-PackageMode", $packageMode,
+            "-ArchiveFormat", $archiveFormat,
+            "-ReleaseNotesSourceUrl", "${{ steps.meta.outputs.release_notes_source_url }}"
+          )
+
+          if ($ensureLatestRuntime) {
+            $args += "-EnsureLatestRuntime"
+          }
+          if ($runDefenderScan) {
+            $args += "-RunDefenderScan"
+            $args += "-FailOnDefenderScanError"
+          }
+
+          & powershell @args
+
+      - name: Upload Release Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-${{ steps.meta.outputs.version }}
+          path: |
+            artifacts/release/${{ steps.meta.outputs.version }}
+            artifacts/release/preflight-compatibility-report.json
+          if-no-files-found: error

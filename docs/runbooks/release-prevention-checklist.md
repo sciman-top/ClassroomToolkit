@@ -76,6 +76,7 @@ powershell -File scripts/release/prepare-distribution.ps1 -Version 1.0.0 -Packag
 ```
  - 说明：同一 `Version` 默认禁止覆盖；若确需覆盖，显式追加 `-AllowOverwriteVersion`。
  - 说明：`-RunDefenderScan` 作为按需参数使用（例如疑似误报排查时）；如需扫描失败即终止，可追加 `-FailOnDefenderScanError`。
+ - 说明：若不传 `-ReleaseNotesSourceUrl`，脚本会尝试从 `git remote origin` 自动推导 GitHub Release 链接；非 GitHub 远端需显式传入。
 
 2. 发布前检查脚本
 ```powershell
@@ -88,11 +89,11 @@ powershell -File scripts/release/preflight-check.ps1
 - 如需更高压缩率可选 `-ArchiveFormat 7z`，前提是打包机已安装 `7z/7za`。
 
 4. 常用参数
-- `-EnsureLatestRuntime`：自动解析并下载当前频道最新 `WindowsDesktop Runtime x64` 到 `scripts/release/prereq/`，并随标准版打包。
-- `-RuntimeChannel 10.0`：指定 runtime 频道（默认 `10.0`）。
+- `-EnsureLatestRuntime`：自动解析并下载当前频道最新 `WindowsDesktop Runtime x64` 到 `scripts/release/prereq/`，并随离线版打包。
+- `-RuntimeChannel 10.0`：覆盖 `scripts/release/release-config.json` 中的 runtime 频道（默认读取配置文件）。
 - `-PackageMode standard|offline|both`：控制发布产物类型；建议日常先发 `standard`，离线场景再补 `offline`。
 - `-SkipZip`：仅生成目录，不生成压缩包。
-- `-ReleaseNotesSourceUrl <url>`：写入 `发布说明.txt` 的下载来源地址。
+- `-ReleaseNotesSourceUrl <url>`：写入 `发布说明.txt` 的下载来源地址（可选；缺省时自动推导）。
 - `-AllowOverwriteVersion`：允许覆盖同版本目录（默认关闭，防止同版本反复替换二进制）。
 - `-RunDefenderScan`：发布完成后对 `artifacts/release/<version>` 执行 Defender 扫描。
 - `-FailOnDefenderScanError`：配合 `-RunDefenderScan` 使用，扫描异常即失败退出。

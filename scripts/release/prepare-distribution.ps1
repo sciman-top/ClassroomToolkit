@@ -2,7 +2,7 @@ param(
     [string]$Version = "",
     [string]$RuntimeInstallerPath = "",
     [switch]$EnsureLatestRuntime,
-    [string]$RuntimeChannel = "10.0",
+    [string]$RuntimeChannel = "",
     [string]$ReleaseNotesSourceUrl = "",
     [ValidateSet("both", "standard", "offline")]
     [string]$PackageMode = "both",
@@ -17,6 +17,36 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Get-ReleaseConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ConfigPath)) {
+        throw "Release config missing: $ConfigPath"
+    }
+
+    $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $config.Runtime -or $null -eq $config.Publish) {
+        throw "Invalid release config structure: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Runtime.Major)) {
+        throw "Runtime.Major missing in release config: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Runtime.Channel)) {
+        throw "Runtime.Channel missing in release config: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Runtime.Architecture)) {
+        throw "Runtime.Architecture missing in release config: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$config.Publish.Rid)) {
+        throw "Publish.Rid missing in release config: $ConfigPath"
+    }
+
+    return $config
+}
 
 function Invoke-DotnetOrThrow {
     param(
@@ -191,6 +221,68 @@ function Get-GitCommit {
     }
 }
 
+function Get-GitRemoteOriginUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot
+    )
+
+    Push-Location $RepositoryRoot
+    try {
+        $remoteUrl = (& git remote get-url origin 2>$null)
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($remoteUrl)) {
+            return ""
+        }
+
+        return $remoteUrl.Trim()
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Convert-ToGithubHttpsRemoteUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RemoteUrl
+    )
+
+    if ($RemoteUrl -match "^https://github\.com/[^/\s]+/[^/\s]+(\.git)?/?$") {
+        return $RemoteUrl -replace "\.git/?$", ""
+    }
+    if ($RemoteUrl -match "^git@github\.com:([^/\s]+)/([^/\s]+?)(\.git)?$") {
+        return "https://github.com/$($Matches[1])/$($Matches[2])"
+    }
+    if ($RemoteUrl -match "^ssh://git@github\.com/([^/\s]+)/([^/\s]+?)(\.git)?/?$") {
+        return "https://github.com/$($Matches[1])/$($Matches[2])"
+    }
+
+    return ""
+}
+
+function Resolve-ReleaseNotesSourceUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot,
+        [AllowEmptyString()]
+        [string]$ExplicitSourceUrl,
+        [Parameter(Mandatory = $true)]
+        [string]$Version
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitSourceUrl)) {
+        return $ExplicitSourceUrl.Trim()
+    }
+
+    $originRemote = Get-GitRemoteOriginUrl -RepositoryRoot $RepositoryRoot
+    $githubRemote = Convert-ToGithubHttpsRemoteUrl -RemoteUrl $originRemote
+    if (-not [string]::IsNullOrWhiteSpace($githubRemote)) {
+        return "$githubRemote/releases/tag/v$Version"
+    }
+
+    throw "Unable to infer release notes source URL from git remote '$originRemote'. Pass -ReleaseNotesSourceUrl explicitly."
+}
+
 function Get-UnicodeText {
     param(
         [Parameter(Mandatory = $true)]
@@ -276,6 +368,12 @@ function Invoke-DefenderScan {
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..\..")).Path
+$releaseConfigPath = Join-Path $scriptRoot "release-config.json"
+$releaseConfig = Get-ReleaseConfig -ConfigPath $releaseConfigPath
+$runtimeMajor = [string]$releaseConfig.Runtime.Major
+$runtimeArchitecture = [string]$releaseConfig.Runtime.Architecture
+$publishRid = [string]$releaseConfig.Publish.Rid
+$resolvedRuntimeChannel = if ([string]::IsNullOrWhiteSpace($RuntimeChannel)) { [string]$releaseConfig.Runtime.Channel } else { $RuntimeChannel }
 $generatedAt = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -315,7 +413,7 @@ if (-not $SkipPublish) {
                 "publish",
                 "src/ClassroomToolkit.App/ClassroomToolkit.App.csproj",
                 "-c", "Release",
-                "-r", "win-x64",
+                "-r", $publishRid,
                 "--self-contained", "false",
                 "-p:PublishSingleFile=false",
                 "-p:PublishTrimmed=false",
@@ -328,7 +426,7 @@ if (-not $SkipPublish) {
                 "publish",
                 "src/ClassroomToolkit.App/ClassroomToolkit.App.csproj",
                 "-c", "Release",
-                "-r", "win-x64",
+                "-r", $publishRid,
                 "--self-contained", "true",
                 "-p:PublishSingleFile=false",
                 "-p:PublishTrimmed=false",
@@ -358,12 +456,12 @@ if ($buildOffline) {
         $resolvedInstaller = $candidate.Path
     }
     elseif ($EnsureLatestRuntime) {
-        $resolvedInstaller = Get-OrDownloadLatestRuntimeInstaller -Channel $RuntimeChannel -Architecture "x64" -PrereqDirectory $sourcePrereqDir
+        $resolvedInstaller = Get-OrDownloadLatestRuntimeInstaller -Channel $resolvedRuntimeChannel -Architecture $runtimeArchitecture -PrereqDirectory $sourcePrereqDir
     }
     else {
         $localPreReq = $sourcePrereqDir
         if (Test-Path -LiteralPath $localPreReq) {
-            $defaultInstaller = Get-ChildItem -LiteralPath $localPreReq -Filter "*desktop-runtime*10*win-x64*.exe" -File |
+            $defaultInstaller = Get-ChildItem -LiteralPath $localPreReq -Filter "*desktop-runtime*$runtimeMajor*win-$runtimeArchitecture*.exe" -File |
                 Sort-Object LastWriteTime -Descending |
                 Select-Object -First 1
             if ($defaultInstaller -ne $null) {
@@ -398,8 +496,7 @@ if ($buildOffline) {
     }
 }
 
-$defaultSourceUrl = "https://github.com/<owner>/<repo>/releases/tag/v$Version"
-$resolvedSourceUrl = if ([string]::IsNullOrWhiteSpace($ReleaseNotesSourceUrl)) { $defaultSourceUrl } else { $ReleaseNotesSourceUrl }
+$resolvedSourceUrl = Resolve-ReleaseNotesSourceUrl -RepositoryRoot $repoRoot -ExplicitSourceUrl $ReleaseNotesSourceUrl -Version $Version
 if ($buildStandard) {
     Render-Template -TemplatePath (Join-Path $templateDir "release-notes.txt") -OutputPath (Join-Path $standardDir $releaseNotesFileName) -Tokens @{
         VERSION = $Version
@@ -461,6 +558,7 @@ Write-Host "Release preparation completed."
 Write-Host "Version: $Version"
 Write-Host "Package mode: $PackageMode"
 Write-Host "Manifest: $manifestPath"
+Write-Host "Release notes source URL: $resolvedSourceUrl"
 if ($buildStandard) {
     Write-Host "Standard package: $standardDir"
 }

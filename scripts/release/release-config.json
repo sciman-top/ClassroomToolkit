@@ -1,0 +1,10 @@
+{
+  "Runtime": {
+    "Major": "10",
+    "Channel": "10.0",
+    "Architecture": "x64"
+  },
+  "Publish": {
+    "Rid": "win-x64"
+  }
+}
