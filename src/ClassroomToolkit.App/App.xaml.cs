@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System.Diagnostics;
-using System.Linq;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Startup;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Infra.Settings;
@@ -42,69 +42,21 @@ public partial class App : WpfApplication
         // Prevent WPF from treating that dialog as the last window and shutting down the app.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        var settingsPath = ResolveStartupSettingsPath();
-        var startupCompatibility = CollectStartupCompatibilityReport(settingsPath);
-        var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
-        var settings = _services?.GetService<AppSettings>();
-        var autoRemediation = StartupCompatibilityAutoRemediationPolicy.Apply(
-            startupCompatibility,
-            settings,
-            settingsPath);
-        if (autoRemediation.HasSettingsChanges && settings != null)
+        if (_services is null)
         {
-            try
-            {
-                _services?.GetService<AppSettingsService>()?.Save(settings);
-                Debug.WriteLine(
-                    $"[StartupCompatibility] Auto remediation applied: {string.Join(" | ", autoRemediation.AppliedActions)}");
-            }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-            {
-                LogException(ex, "StartupCompatibilityAutoRemediationPersist");
-            }
+            throw new InvalidOperationException("ServiceProvider is not configured.");
         }
-        if (startupCompatibility.HasBlockingIssues)
+
+        var startupOrchestrator = new StartupOrchestrator(
+            _services,
+            AppDataDirectory,
+            Properties,
+            StartupCompatibilityWarningShownPropertyKey,
+            LogException);
+        if (!startupOrchestrator.RunCompatibilityGate())
         {
-            var message = BuildStartupBlockingMessage(startupCompatibility, startupCompatibilityReportPath);
-            System.Windows.MessageBox.Show(
-                message,
-                "启动环境不兼容",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
             Shutdown(-1);
             return;
-        }
-        var visibleWarningReport = StartupCompatibilitySuppressionPolicy.FilterWarnings(
-            startupCompatibility,
-            settings?.StartupCompatibilitySuppressedIssueCodes);
-        if (visibleWarningReport.HasWarnings)
-        {
-            Properties[StartupCompatibilityWarningShownPropertyKey] = true;
-            Debug.WriteLine($"[StartupCompatibility] {visibleWarningReport.BuildMessage(includeWarnings: true)}");
-            var warningMessage = BuildStartupWarningMessage(
-                visibleWarningReport,
-                startupCompatibilityReportPath,
-                autoRemediation);
-            var suggestionMessage = BuildStartupWarningSuggestion(visibleWarningReport);
-            var diagnosticsPayload = BuildStartupSupportPayload(
-                visibleWarningReport,
-                startupCompatibilityReportPath,
-                autoRemediation);
-            var dialog = new Diagnostics.StartupCompatibilityWarningDialog(
-                "检测到可降级运行的兼容性风险。",
-                warningMessage,
-                suggestionMessage,
-                startupCompatibilityReportPath,
-                diagnosticsPayload);
-            _ = dialog.SafeShowDialog();
-            if (dialog.SuppressCurrentIssues && settings != null)
-            {
-                settings.StartupCompatibilitySuppressedIssueCodes =
-                    StartupCompatibilitySuppressionPolicy.MergeSuppressedWarningCodes(
-                        settings.StartupCompatibilitySuppressedIssueCodes,
-                        visibleWarningReport);
-                _services?.GetService<AppSettingsService>()?.Save(settings);
-            }
         }
 
         if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
@@ -202,6 +154,20 @@ public partial class App : WpfApplication
         services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
         services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
         services.AddSingleton<Ink.InkPersistenceService>();
+        var useInkHistorySqlite = AppFlags.UseSqliteBusinessStore
+            && BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(AppFlags.EnableExperimentalSqliteBackend);
+        Debug.WriteLine(
+            $"[Storage] InkHistory backend selected={(useInkHistorySqlite ? "Sqlite" : "Sidecar")}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
+        if (useInkHistorySqlite)
+        {
+            services.AddSingleton<IInkHistorySnapshotStore>(provider =>
+            {
+                var persistence = provider.GetRequiredService<Ink.InkPersistenceService>();
+                var bridge = new Ink.InkHistoryPersistenceBridge(persistence);
+                var sqliteAdapter = new InkHistorySqliteStoreAdapter(bridge);
+                return new InkHistorySnapshotStoreAdapter(sqliteAdapter);
+            });
+        }
         services.AddSingleton<Ink.InkExportOptions>();
         services.AddSingleton<Ink.InkExportService>();
         
@@ -244,198 +210,6 @@ public partial class App : WpfApplication
         }
 
         return fallbackToIni;
-    }
-
-    private string ResolveStartupSettingsPath()
-    {
-        var configuration = _services?.GetService<IConfigurationService>();
-        return configuration?.SettingsDocumentPath
-            ?? configuration?.SettingsIniPath
-            ?? Path.Combine(AppDataDirectory, "settings.json");
-    }
-
-    private StartupCompatibilityReport CollectStartupCompatibilityReport(string settingsPath)
-    {
-        try
-        {
-            var settings = _services?.GetService<AppSettings>();
-            return StartupCompatibilityProbe.Collect(
-                settingsPath,
-                settings?.PresentationClassifierOverridesJson);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            LogException(ex, "StartupCompatibilityProbe");
-            return new StartupCompatibilityReport(Array.Empty<StartupCompatibilityIssue>());
-        }
-    }
-
-    private static string BuildStartupBlockingMessage(
-        StartupCompatibilityReport report,
-        string? reportPath)
-    {
-        var baseMessage = report.BuildMessage(includeWarnings: false);
-        var hasPrivilegeMismatch =
-            report.Issues.Any(static issue => issue.Code == "presentation-privilege-mismatch");
-        if (!hasPrivilegeMismatch && string.IsNullOrWhiteSpace(reportPath))
-        {
-            return baseMessage;
-        }
-
-        var lines = new List<string> { baseMessage };
-        if (hasPrivilegeMismatch)
-        {
-            lines.Add(string.Empty);
-            lines.Add("快速修复：");
-            lines.Add("1. 关闭本程序、PPT、WPS。");
-            lines.Add("2. 统一以相同权限重启（都管理员或都非管理员）。");
-            lines.Add("3. 若仍失败，优先使用离线标准包重装后重试。");
-        }
-        if (!string.IsNullOrWhiteSpace(reportPath))
-        {
-            lines.Add(string.Empty);
-            lines.Add($"诊断报告：{reportPath}");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string BuildStartupWarningMessage(
-        StartupCompatibilityReport report,
-        string? reportPath,
-        StartupCompatibilityAutoRemediationResult autoRemediation)
-    {
-        var lines = new List<string>
-        {
-            "检测到可降级运行的兼容性风险：",
-            report.BuildMessage(includeWarnings: true),
-            string.Empty
-        };
-        if (autoRemediation.HasChanges)
-        {
-            lines.Add("已自动应用稳定性保护：");
-            for (var i = 0; i < autoRemediation.AppliedActions.Count; i++)
-            {
-                lines.Add($"- {autoRemediation.AppliedActions[i]}");
-            }
-            lines.Add(string.Empty);
-        }
-        var quickFixLines = BuildStartupWarningQuickFixLines(report);
-        if (quickFixLines.Count > 0)
-        {
-            lines.Add("快速修复：");
-            for (var i = 0; i < quickFixLines.Count; i++)
-            {
-                lines.Add($"{i + 1}. {quickFixLines[i]}");
-            }
-            lines.Add(string.Empty);
-        }
-        lines.Add("程序将继续启动。建议尽快按提示修复，避免课堂中断。");
-        if (!string.IsNullOrWhiteSpace(reportPath))
-        {
-            lines.Add($"诊断报告：{reportPath}");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static IReadOnlyList<string> BuildStartupWarningQuickFixLines(
-        StartupCompatibilityReport report)
-    {
-        var issueCodes = new HashSet<string>(
-            report.Issues.Select(issue => issue.Code),
-            StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-
-        if (issueCodes.Contains("presentation-arch-mismatch"))
-        {
-            lines.Add("关闭本程序、PPT、WPS。");
-            lines.Add("确保程序与 Office/WPS 同位数（建议全部使用 x64）。");
-            lines.Add("若当前仅安装了 x86 WPS/Office，请改装 x64 版本后再重启。");
-        }
-        else if (issueCodes.Contains("presentation-arch-unknown"))
-        {
-            lines.Add("关闭本程序、PPT、WPS 后重启。");
-            lines.Add("临时关闭可能拦截进程探测的安全软件，再次启动复测。");
-            lines.Add("优先使用 x64 版本的 Office/WPS 以减少兼容波动。");
-        }
-
-        return lines;
-    }
-
-    private static string BuildStartupWarningSuggestion(StartupCompatibilityReport report)
-    {
-        return string.Join(
-            Environment.NewLine + Environment.NewLine,
-            report.Issues
-                .Where(static issue => !issue.IsBlocking && !string.IsNullOrWhiteSpace(issue.Suggestion))
-                .Select(issue => $"{issue.Code}{Environment.NewLine}{issue.Suggestion}"));
-    }
-
-    private static string BuildStartupSupportPayload(
-        StartupCompatibilityReport report,
-        string? reportPath,
-        StartupCompatibilityAutoRemediationResult autoRemediation)
-    {
-        var lines = new List<string>
-        {
-            "【ClassroomToolkit 启动兼容性诊断】",
-            $"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-            "结论：已自动切换到兼容优先模式，当前可继续上课。",
-            string.Empty,
-            "风险码："
-        };
-
-        foreach (var issue in report.Issues.Where(static issue => !issue.IsBlocking))
-        {
-            lines.Add($"- {issue.Code}: {issue.Message}");
-        }
-
-        if (autoRemediation.AppliedActions.Count > 0)
-        {
-            lines.Add(string.Empty);
-            lines.Add("已自动执行：");
-            for (var i = 0; i < autoRemediation.AppliedActions.Count; i++)
-            {
-                lines.Add($"- {autoRemediation.AppliedActions[i]}");
-            }
-        }
-
-        var quickFixLines = BuildStartupWarningQuickFixLines(report);
-        if (quickFixLines.Count > 0)
-        {
-            lines.Add(string.Empty);
-            lines.Add("建议处理：");
-            for (var i = 0; i < quickFixLines.Count; i++)
-            {
-                lines.Add($"{i + 1}. {quickFixLines[i]}");
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(reportPath))
-        {
-            lines.Add(string.Empty);
-            lines.Add($"诊断报告：{reportPath}");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private string? PersistStartupCompatibilityReport(StartupCompatibilityReport report)
-    {
-        try
-        {
-            var logPath = Path.Combine(AppDataDirectory, "logs");
-            Directory.CreateDirectory(logPath);
-            var filePath = Path.Combine(logPath, "startup-compatibility-latest.json");
-            File.WriteAllText(filePath, report.ToJson());
-            return filePath;
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            LogException(ex, "StartupCompatibilityReportPersist");
-            return null;
-        }
     }
 
     private void RegisterGlobalExceptionHandlers()

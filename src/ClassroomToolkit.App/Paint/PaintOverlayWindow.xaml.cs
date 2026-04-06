@@ -150,6 +150,7 @@ public partial class PaintOverlayWindow : Window
     private const double PdfDefaultDpi = PhotoDocumentRuntimeDefaults.PdfDefaultDpi;
     private const int PdfCacheLimit = PhotoDocumentRuntimeDefaults.PdfCacheLimit;
     private bool _photoModeActive;
+    private bool _photoUnboundedInkCanvasEnabled;
     private bool _photoInputTelemetryEnabled;
     private bool _photoFullscreen;
     private bool _photoLoading;

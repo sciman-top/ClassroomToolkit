@@ -1,0 +1,149 @@
+{
+  "schema_version": "v1",
+  "owner": "governance-kit",
+  "description": "Tracked files policy for staging/push filtering. Block transient artifacts and local-only configs.",
+  "enforcement": {
+    "block_on_must_ignore": true,
+    "block_on_review_required": false
+  },
+  "rules": {
+    "must_ignore": [
+      {
+        "pattern": ".codex/**",
+        "reason": "agent local runtime and logs"
+      },
+      {
+        "pattern": ".claude/**",
+        "reason": "agent local runtime and logs"
+      },
+      {
+        "pattern": ".gemini/**",
+        "reason": "agent local runtime and logs"
+      },
+      {
+        "pattern": ".playwright-cli/**",
+        "reason": "browser automation local state"
+      },
+      {
+        "pattern": ".idea/**",
+        "reason": "IDE local settings"
+      },
+      {
+        "pattern": ".vscode/**",
+        "reason": "IDE local settings"
+      },
+      {
+        "pattern": "*.code-workspace",
+        "reason": "IDE local workspace"
+      },
+      {
+        "pattern": "*.suo",
+        "reason": "IDE local state"
+      },
+      {
+        "pattern": "*.user",
+        "reason": "IDE local state"
+      },
+      {
+        "pattern": "*.userosscache",
+        "reason": "IDE local state"
+      },
+      {
+        "pattern": "*.sln.docstates",
+        "reason": "IDE local state"
+      },
+      {
+        "pattern": "backups/**",
+        "reason": "local rollback snapshots"
+      },
+      {
+        "pattern": ".locks/**",
+        "reason": "local lock files"
+      },
+      {
+        "pattern": "logs/**",
+        "reason": "local logs"
+      },
+      {
+        "pattern": "tmp/**",
+        "reason": "temporary artifacts"
+      },
+      {
+        "pattern": "temp/**",
+        "reason": "temporary artifacts"
+      },
+      {
+        "pattern": "cache/**",
+        "reason": "temporary cache"
+      },
+      {
+        "pattern": "*.bak",
+        "reason": "backup artifact"
+      },
+      {
+        "pattern": "*.cache",
+        "reason": "cache artifact"
+      },
+      {
+        "pattern": "*.diff",
+        "reason": "debug artifact"
+      },
+      {
+        "pattern": "*.err",
+        "reason": "debug artifact"
+      },
+      {
+        "pattern": "*.log",
+        "reason": "log artifact"
+      },
+      {
+        "pattern": "*.orig",
+        "reason": "merge/debug artifact"
+      },
+      {
+        "pattern": "*.out",
+        "reason": "debug artifact"
+      },
+      {
+        "pattern": "*.pid",
+        "reason": "runtime artifact"
+      },
+      {
+        "pattern": "*.rej",
+        "reason": "patch reject artifact"
+      },
+      {
+        "pattern": "*.stackdump",
+        "reason": "crash artifact"
+      },
+      {
+        "pattern": "*.temp",
+        "reason": "temporary artifact"
+      },
+      {
+        "pattern": "*.tmp",
+        "reason": "temporary artifact"
+      }
+    ],
+    "review_required": [
+      {
+        "pattern": ".governance/waivers/*.md",
+        "reason": "waiver change requires owner confirmation and expiry review"
+      },
+      {
+        "pattern": "docs/change-evidence/*.md",
+        "reason": "evidence files should match actual command outputs and rollback"
+      }
+    ],
+    "must_track": [
+      {
+        "pattern": ".gitignore",
+        "reason": "ignore baseline is source of policy truth"
+      },
+      {
+        "pattern": ".governance/tracked-files-policy.json",
+        "reason": "tracked-files policy should be versioned"
+      }
+    ]
+  }
+}

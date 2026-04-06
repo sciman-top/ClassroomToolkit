@@ -53,3 +53,14 @@
 - 任何阻断级问题（崩溃/卡死/控制失效）直接判定人工门不通过
 - 回退依据：`docs/runbooks/migration-rollback-playbook.md`
 - 回退后需重新执行第 1 节自动化基线，再重跑人工回归
+
+## 7. 自动跳过口径（仅当用户明确要求）
+
+- 可使用：`powershell -File scripts/validation/run-final-acceptance-evidence.ps1 -SkipManualRegression`
+- 该模式不会宣称人工门通过，只会生成 `gate_na` 证据并标记补做时限。
+- 输出证据必须包含：
+  - `reason`
+  - `alternative_verification`
+  - `evidence_link`
+  - `expires_at`
+  - `recovery_plan`

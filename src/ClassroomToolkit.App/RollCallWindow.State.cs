@@ -96,10 +96,19 @@ public partial class RollCallWindow
         {
             UpdatePhotoDisplay();
         }
+
+        _settingsSnapshotApplied = true;
     }
 
     private void PersistSettings()
     {
+        if (!_settingsSnapshotApplied)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "RollCallWindow: Skip PersistSettings because settings snapshot has not been applied yet.");
+            return;
+        }
+
         CaptureWindowBounds();
         RollCallSettingsApplier.Apply(_settings, BuildPatchFromViewModel());
         _settings.RollCallMode = _viewModel.IsRollCallMode ? "roll_call" : "timer";
@@ -343,4 +352,3 @@ public partial class RollCallWindow
         }
     }
 }
-

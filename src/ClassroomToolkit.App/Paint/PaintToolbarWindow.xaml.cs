@@ -4,8 +4,11 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using ClassroomToolkit.App.Commands;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 using MediaColor = System.Windows.Media.Color;
@@ -30,6 +33,9 @@ public partial class PaintToolbarWindow : Window
     private bool _modeInitialized;
     private PaintToolMode _currentMode = PaintToolMode.Brush;
     private readonly PaintToolSelectionManager _toolSelectionManager = new(PaintToolMode.Brush);
+    private bool _directWhiteboardEntryArmed;
+    private readonly DispatcherTimer _regionCaptureResumeTimer;
+    private bool _resumeRegionCaptureArmed;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -39,6 +45,7 @@ public partial class PaintToolbarWindow : Window
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action? SettingsRequested;
     public event Action? PhotoOpenRequested;
+    public event Action? RegionCaptureRequested;
     public event Action<bool>? WhiteboardToggled;
 
     public ICommand OpenBoardColorCommand { get; }
@@ -79,6 +86,11 @@ public partial class PaintToolbarWindow : Window
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
         Closed += OnToolbarClosed;
+        _regionCaptureResumeTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(60)
+        };
+        _regionCaptureResumeTimer.Tick += OnRegionCaptureResumeTimerTick;
     }
 
     private void OnToolbarLoaded(object sender, RoutedEventArgs e)
@@ -96,6 +108,8 @@ public partial class PaintToolbarWindow : Window
 
     private void OnToolbarClosed(object? sender, EventArgs e)
     {
+        _regionCaptureResumeTimer.Stop();
+        _regionCaptureResumeTimer.Tick -= OnRegionCaptureResumeTimerTick;
         PreviewKeyDown -= OnPreviewKeyDown;
         PreviewMouseWheel -= OnPreviewMouseWheel;
         Loaded -= OnToolbarLoaded;
@@ -291,8 +305,68 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        _boardActive = BoardButton.IsChecked == true;
-        ApplyBoardState();
+
+        if (IsSessionCaptureWhiteboardActive())
+        {
+            ClearDirectWhiteboardEntryArm();
+            SetBoardActive(false);
+            _overlay?.ExitPhotoMode();
+            ShowBoardHint("已退出白板");
+            return;
+        }
+
+        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
+        if (whiteboardActive)
+        {
+            ClearDirectWhiteboardEntryArm();
+            SetBoardActive(false);
+            ShowBoardHint("已退出白板");
+            return;
+        }
+
+        if (_directWhiteboardEntryArmed && _overlay?.IsPhotoModeActive != true)
+        {
+            ClearDirectWhiteboardEntryArm();
+            SetBoardActive(true);
+            ShowBoardHint("已进入白板");
+            return;
+        }
+
+        if (_overlay?.IsPhotoModeActive == true)
+        {
+            SetBoardActive(true);
+            ShowBoardHint("已进入白板");
+            return;
+        }
+
+        ShowBoardHint("请框选截图区域");
+        SafeActionExecutionExecutor.TryExecute(
+            () => RegionCaptureRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture callback failed: {ex.Message}"));
+    }
+
+    private void ShowBoardHint(string message)
+    {
+        if (BoardHintBubble == null || BoardHintText == null)
+        {
+            return;
+        }
+
+        BoardHintText.Text = message;
+        BoardHintBubble.Visibility = Visibility.Visible;
+        BoardHintBubble.Opacity = 1;
+        BoardHintBubble.BeginAnimation(UIElement.OpacityProperty, null);
+
+        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(1000))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        fade.Completed += (_, _) =>
+        {
+            BoardHintBubble.Opacity = 0;
+            BoardHintBubble.Visibility = Visibility.Collapsed;
+        };
+        BoardHintBubble.BeginAnimation(UIElement.OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
     }
 
     private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
@@ -390,16 +464,20 @@ public partial class PaintToolbarWindow : Window
     private void ApplyBoardColor(MediaColor color)
     {
         _boardColor = color;
-        if (_overlay != null && _boardActive)
+        if (_overlay != null)
         {
             _overlay.SetBoardColor(color);
-            _overlay.SetBoardOpacity(255);
+            if (_boardActive)
+            {
+                _overlay.SetBoardOpacity(255);
+            }
         }
     }
 
     public void SetBoardActive(bool active)
     {
-        if (_boardActive == active)
+        var overlayWhiteboardActive = IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
+        if (_boardActive == active && overlayWhiteboardActive == active)
         {
             return;
         }
@@ -414,20 +492,100 @@ public partial class PaintToolbarWindow : Window
     {
         if (_overlay != null)
         {
-            if (_boardActive)
-            {
-                _overlay.SetBoardColor(_boardColor);
-                _overlay.SetBoardOpacity(255);
-            }
-            else
-            {
-                _overlay.SetBoardColor(Colors.Transparent);
-                _overlay.SetBoardOpacity(0);
-            }
+            _overlay.SetBoardColor(_boardColor);
+            _overlay.SetBoardOpacity(_boardActive ? (byte)255 : (byte)0);
         }
         SafeActionExecutionExecutor.TryExecute(
             () => WhiteboardToggled?.Invoke(_boardActive),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: whiteboard callback failed: {ex.Message}"));
+
+        // Keep toolbar state synchronized with overlay session scene.
+        var overlaySceneAfterApply = IsOverlayWhiteboardSceneActive();
+        if (overlaySceneAfterApply != _boardActive)
+        {
+            _boardActive = overlaySceneAfterApply;
+            _initializing = true;
+            BoardButton.IsChecked = _boardActive;
+            _initializing = false;
+        }
+    }
+
+    public void ArmDirectWhiteboardEntry()
+    {
+        _directWhiteboardEntryArmed = true;
+        _resumeRegionCaptureArmed = true;
+        if (!_regionCaptureResumeTimer.IsEnabled)
+        {
+            _regionCaptureResumeTimer.Start();
+        }
+    }
+
+    public void ClearDirectWhiteboardEntryArm()
+    {
+        _directWhiteboardEntryArmed = false;
+        _resumeRegionCaptureArmed = false;
+        _regionCaptureResumeTimer.Stop();
+    }
+
+    private void OnRegionCaptureResumeTimerTick(object? sender, EventArgs e)
+    {
+        if (!_resumeRegionCaptureArmed)
+        {
+            _regionCaptureResumeTimer.Stop();
+            return;
+        }
+        if (!IsVisible || !IsLoaded)
+        {
+            return;
+        }
+        if (BoardActive || _overlay?.IsWhiteboardActive == true)
+        {
+            ClearDirectWhiteboardEntryArm();
+            return;
+        }
+
+        var screenPoint = System.Windows.Forms.Cursor.Position;
+        if (IsPointInsideToolbar(screenPoint.X, screenPoint.Y))
+        {
+            return;
+        }
+
+        _resumeRegionCaptureArmed = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () => RegionCaptureRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture resume callback failed: {ex.Message}"));
+    }
+
+    private bool IsPointInsideToolbar(double screenX, double screenY)
+    {
+        var width = Math.Max(ActualWidth, 1);
+        var height = Math.Max(ActualHeight, 1);
+        return screenX >= Left
+            && screenX <= Left + width
+            && screenY >= Top
+            && screenY <= Top + height;
+    }
+
+    private bool IsOverlayWhiteboardSceneActive()
+    {
+        var overlay = _overlay;
+        if (overlay == null)
+        {
+            return false;
+        }
+
+        return overlay.CurrentSessionState.Scene == UiSceneKind.Whiteboard;
+    }
+
+    private bool IsSessionCaptureWhiteboardActive()
+    {
+        var overlay = _overlay;
+        if (overlay == null || !overlay.IsPhotoModeActive)
+        {
+            return false;
+        }
+
+        return RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath(overlay.CurrentDocumentPath);
     }
 
     private void OpenQuickColorDialog(int index)

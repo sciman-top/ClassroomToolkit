@@ -1080,4 +1080,43 @@ public partial class PaintOverlayWindow
         SavePhotoTransformState(userAdjusted: false);
         RequestPhotoTransformInkRedraw();
     }
+
+    public void CenterPhotoAtOriginalScale()
+    {
+        if (!_photoModeActive || PhotoBackground.Source is not BitmapSource bitmap)
+        {
+            return;
+        }
+        var viewportWidth = ResolvePhotoViewportWidth();
+        var viewportHeight = ResolvePhotoViewportHeight();
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
+        {
+            return;
+        }
+
+        var imageWidth = GetBitmapDisplayWidthInDip(bitmap) * _photoPageScale.ScaleX;
+        var imageHeight = GetBitmapDisplayHeightInDip(bitmap) * _photoPageScale.ScaleY;
+        if (imageWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || imageHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
+        {
+            return;
+        }
+
+        EnsurePhotoTransformsWritable();
+        _photoScale.ScaleX = PhotoTransformViewportDefaults.DefaultScale;
+        _photoScale.ScaleY = PhotoTransformViewportDefaults.DefaultScale;
+        _photoTranslate.X = (viewportWidth - imageWidth) * CrossPageViewportBoundsDefaults.CenterRatio;
+        _photoTranslate.Y = (viewportHeight - imageHeight) * CrossPageViewportBoundsDefaults.CenterRatio;
+        if (IsCrossPageDisplayActive())
+        {
+            ApplyCrossPageBoundaryLimits(includeSlack: false);
+            SyncCurrentPageToViewportCenter();
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.FitWidth);
+        }
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
+        SyncPhotoInteractiveRefreshAnchor();
+        SavePhotoTransformState(userAdjusted: true);
+        RequestPhotoTransformInkRedraw();
+    }
 }

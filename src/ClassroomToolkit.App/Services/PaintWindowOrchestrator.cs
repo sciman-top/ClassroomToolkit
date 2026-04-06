@@ -31,6 +31,7 @@ public interface IPaintWindowOrchestrator
     event Action? OverlayActivated;
     event Action? SettingsRequested;
     event Action? PhotoOpenRequested;
+    event Action? RegionCaptureRequested;
     event Action<UiSessionTransition>? OverlaySessionTransitionOccurred;
 
     void EnsureWindows(AppSettings settings);
@@ -66,6 +67,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     public event Action? OverlayActivated;
     public event Action? SettingsRequested;
     public event Action? PhotoOpenRequested;
+    public event Action? RegionCaptureRequested;
     public event Action<UiSessionTransition>? OverlaySessionTransitionOccurred;
 
     public PaintWindowOrchestrator(
@@ -198,6 +200,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         ToolbarWindow.WhiteboardToggled += OnToolbarWhiteboardToggled;
         ToolbarWindow.SettingsRequested += OnToolbarSettingsRequested;
         ToolbarWindow.PhotoOpenRequested += OnToolbarPhotoOpenRequested;
+        ToolbarWindow.RegionCaptureRequested += OnToolbarRegionCaptureRequested;
     }
 
     private void UnwireToolbarBehaviorEvents(PaintToolbarWindow? toolbarWindow)
@@ -217,6 +220,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         toolbarWindow.WhiteboardToggled -= OnToolbarWhiteboardToggled;
         toolbarWindow.SettingsRequested -= OnToolbarSettingsRequested;
         toolbarWindow.PhotoOpenRequested -= OnToolbarPhotoOpenRequested;
+        toolbarWindow.RegionCaptureRequested -= OnToolbarRegionCaptureRequested;
     }
 
     private void OnOverlayPhotoModeChanged(bool active)
@@ -261,6 +265,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     private void OnOverlayWindowClosed(object? sender, EventArgs e)
     {
+        if (ToolbarWindow?.BoardActive == true)
+        {
+            ToolbarWindow.SetBoardActive(false);
+        }
         if (sender is PaintOverlayWindow overlayWindow)
         {
             UnwireOverlayWindowEvents(overlayWindow);
@@ -328,10 +336,13 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         _currentSettings.BoardColor = color;
         _appSettingsService.Save(_currentSettings);
-        if (ToolbarWindow.BoardActive && !ToolbarWindow.HasOverlay)
+        if (!ToolbarWindow.HasOverlay)
         {
             OverlayWindow.SetBoardColor(color);
-            OverlayWindow.SetBoardOpacity(255);
+            if (ToolbarWindow.BoardActive)
+            {
+                OverlayWindow.SetBoardOpacity(255);
+            }
         }
     }
 
@@ -381,15 +392,11 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
             return;
         }
 
-        if (active)
-        {
-            OverlayWindow.SetBoardColor(_currentSettings.BoardColor);
-            OverlayWindow.SetBoardOpacity(255);
-            return;
-        }
-
-        OverlayWindow.SetBoardColor(Colors.Transparent);
-        OverlayWindow.SetBoardOpacity(0);
+        OverlayWindow.SetBoardColor(_currentSettings.BoardColor);
+        OverlayWindow.SetBoardOpacity(active ? (byte)255 : (byte)0);
+        RaiseEventSafely(
+            () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(true)),
+            nameof(FloatingZOrderRequested));
     }
 
     private void OnToolbarSettingsRequested()
@@ -397,6 +404,9 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
     private void OnToolbarPhotoOpenRequested()
         => RaiseEventSafely(() => PhotoOpenRequested?.Invoke(), nameof(PhotoOpenRequested));
+
+    private void OnToolbarRegionCaptureRequested()
+        => RaiseEventSafely(() => RegionCaptureRequested?.Invoke(), nameof(RegionCaptureRequested));
 
     private void RaiseEventSafely(Action callback, string eventName)
     {
@@ -438,16 +448,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.SetEraserSize(settings.EraserSize);
         OverlayWindow.SetShapeType(settings.ShapeType);
         
-        if (ToolbarWindow.BoardActive)
-        {
-            OverlayWindow.SetBoardColor(settings.BoardColor);
-            OverlayWindow.SetBoardOpacity(255);
-        }
-        else
-        {
-            OverlayWindow.SetBoardColor(Colors.Transparent);
-            OverlayWindow.SetBoardOpacity(0);
-        }
+        OverlayWindow.SetBoardColor(settings.BoardColor);
+        OverlayWindow.SetBoardOpacity(ToolbarWindow.BoardActive ? (byte)255 : (byte)0);
 
         OverlayWindow.UpdateOfficeMode(settings.OfficeInputMode);
         OverlayWindow.UpdateWpsMode(settings.WpsInputMode);
@@ -573,12 +575,20 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         {
             ToolbarWindow?.Hide();
         }
+        if (ToolbarWindow?.BoardActive == true)
+        {
+            ToolbarWindow.SetBoardActive(false);
+        }
     }
 
     public void Close()
     {
         var overlay = OverlayWindow;
         var toolbar = ToolbarWindow;
+        if (toolbar?.BoardActive == true)
+        {
+            toolbar.SetBoardActive(false);
+        }
         UnwireOverlayWindowEvents(overlay);
         UnwireToolbarBehaviorEvents(toolbar);
         UnwireToolbarWindowEvents(toolbar);

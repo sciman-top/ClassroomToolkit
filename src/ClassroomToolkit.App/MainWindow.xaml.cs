@@ -524,6 +524,7 @@ public partial class MainWindow : Window
         try
         {
             var coordination = CaptureFloatingWindowCoordinationSnapshot();
+            var launcherWindow = ResolveLauncherWindow(coordination.Launcher);
             var suppressionDecision = OverlayActivationSuppressionPolicy.Resolve(
                 _overlayActivatedRetouchState.SuppressNextApply);
             if (suppressionDecision.ShouldSuppress)
@@ -544,11 +545,14 @@ public partial class MainWindow : Window
                 _overlayWindow,
                 _toolbarWindow,
                 _rollCallWindow,
-                ResolveLauncherWindow(coordination.Launcher),
+                launcherWindow,
                 coordination.Runtime.ImageManagerVisible ? _imageManagerWindow : null);
             SessionTransitionDecisionStateUpdater.Apply(
                 ref _floatingCoordinationState,
                 state);
+            EnsureCriticalFloatingWindowsTopmost(
+                launcherWindow,
+                enforceZOrder: forceEnforceZOrder);
         }
         finally
         {
@@ -625,6 +629,17 @@ public partial class MainWindow : Window
             bubbleWindowExists: _bubbleWindow != null)
             ? _bubbleWindow
             : this;
+    }
+
+    private void EnsureCriticalFloatingWindowsTopmost(Window? launcherWindow, bool enforceZOrder)
+    {
+        var toolbarVisible = _toolbarWindow?.IsVisible == true;
+        var rollCallVisible = _rollCallWindow?.IsVisible == true;
+        var launcherVisible = launcherWindow?.IsVisible == true;
+
+        WindowTopmostExecutor.ApplyNoActivate(_toolbarWindow, toolbarVisible, enforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(_rollCallWindow, rollCallVisible, enforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(launcherWindow, launcherVisible, enforceZOrder);
     }
 
     private void SyncOverlayOwnedWindow(Window? child)
@@ -885,7 +900,6 @@ public partial class MainWindow : Window
         _backgroundTasksCancellation.Dispose();
     }
 }
-
 
 
 

@@ -54,25 +54,48 @@
 
                 <Grid Grid.Column="0">
                     <Grid.RowDefinitions>
-                        <RowDefinition x:Name="FavoritesRow" Height="2.1*" MinHeight="140"/>
-                        <RowDefinition x:Name="RecentsRow" Height="1.4*" MinHeight="120"/>
+                        <RowDefinition x:Name="CommonFoldersRow" Height="3.3*" MinHeight="250"/>
                         <RowDefinition x:Name="FolderTreeRow" Height="3.5*" MinHeight="240"/>
                     </Grid.RowDefinitions>
 
-            <!-- 1. 收藏夹 -->
+            <!-- 1. 常用目录（收藏 + 最近） -->
             <Border Grid.Row="0" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="10">
-                <Expander Header="收藏夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
+                <Expander Header="常用目录" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <Grid Margin="0,8,0,0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="添加" Width="56" Height="26" Margin="0,0,6,0" Click="OnAddFavoriteClick" Style="{StaticResource Style_Button_Teal}" FontSize="12"/>
-                            <Button Content="移除" Width="56" Height="26" Click="OnRemoveFavoriteClick" Style="{StaticResource Style_DangerButton}" FontSize="12"/>
-                        </StackPanel>
-                        <ListBox Grid.Row="1" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
+                        <UniformGrid Grid.Row="0" Columns="3" Margin="0,0,0,6">
+                            <Button Content="添加收藏"
+                                    Height="30"
+                                    MinWidth="86"
+                                    Margin="0,0,6,0"
+                                    VerticalContentAlignment="Center"
+                                    Click="OnAddFavoriteClick"
+                                    Style="{StaticResource Style_Button_Teal}"
+                                    FontSize="12"/>
+                            <Button Content="取消收藏"
+                                    Height="30"
+                                    MinWidth="86"
+                                    Margin="0,0,6,0"
+                                    VerticalContentAlignment="Center"
+                                    Click="OnRemoveFavoriteClick"
+                                    Style="{StaticResource Style_DangerButton}"
+                                    FontSize="12"/>
+                            <Button Content="清空最近"
+                                    Height="30"
+                                    MinWidth="86"
+                                    VerticalContentAlignment="Center"
+                                    Click="OnClearRecentsClick"
+                                    Style="{StaticResource Style_SecondaryButton}"
+                                    FontSize="12"/>
+                        </UniformGrid>
+                        <TextBlock Grid.Row="1" Text="收藏" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,0,4"/>
+                        <ListBox Grid.Row="2" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.CanContentScroll="True"
                                  VirtualizingPanel.IsVirtualizing="True"
@@ -80,40 +103,60 @@
                                  Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Path}"
-                                               TextTrimming="CharacterEllipsis"
-                                               Foreground="{StaticResource Brush_Text_Primary}"/>
+                                    <Grid Margin="0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Content="★" Width="22" Height="22" Margin="0,0,6,0"
+                                                Padding="0" ToolTip="取消收藏（保留到最近）"
+                                                Click="OnFavoriteStarToggleClick"
+                                                Tag="{Binding Path}"
+                                                Style="{StaticResource Style_SecondaryButton}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Path}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{StaticResource Brush_Text_Primary}"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+
+                        <Expander Grid.Row="3" Header="最近" IsExpanded="False" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0">
+                            <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
+                                     Margin="0,8,0,0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.CanContentScroll="True"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button Grid.Column="0" Content="☆" Width="22" Height="22" Margin="0,0,6,0"
+                                                    Padding="0" ToolTip="加入收藏"
+                                                    Click="OnRecentStarToggleClick"
+                                                    Tag="{Binding Path}"
+                                                    Style="{StaticResource Style_SecondaryButton}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Path}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource Brush_Text_Primary}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Expander>
                     </Grid>
                 </Expander>
             </Border>
 
-            <!-- 2. 最近目录 -->
-            <Border Grid.Row="1" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,6,3,6" CornerRadius="10">
-                <Expander Header="最近使用" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
-                    <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
-                             Margin="0,8,0,0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             ScrollViewer.CanContentScroll="True"
-                             VirtualizingPanel.IsVirtualizing="True"
-                             VirtualizingPanel.VirtualizationMode="Recycling"
-                             Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Path}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Foreground="{StaticResource Brush_Text_Primary}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Expander>
-            </Border>
-
             <!-- 3. 此电脑 -->
-            <Border Grid.Row="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
+            <Border Grid.Row="1" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
                     BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="10">
                 <Expander Header="文件夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"

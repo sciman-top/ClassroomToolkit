@@ -58,17 +58,7 @@ public sealed class ArchitectureDependencyTests
 
         var baselineAllowList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            @"src\ClassroomToolkit.App\Windowing\NativeCursorWindowGeometryInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\NativeWindowPlacementInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\NativeWindowStyleInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\NativeWindowTopmostInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\PresentationForegroundSuppressionInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Windowing\WindowHandleValidationInteropAdapter.cs",
-            @"src\ClassroomToolkit.App\Paint\IWpsNavHookClient.cs",
-            @"src\ClassroomToolkit.App\Paint\OverlayPresentationDispatchCoordinator.cs",
-            @"src\ClassroomToolkit.App\Paint\OverlayPresentationRouteContextBuilder.cs",
-            @"src\ClassroomToolkit.App\Paint\OverlayPresentationTargetSnapshotProvider.cs",
-            @"src\ClassroomToolkit.App\Paint\PresentationSlideshowDetectionPolicy.cs"
+            @"src\ClassroomToolkit.App\Windowing\NativeWindowStyleInteropAdapter.cs"
         };
 
         var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();

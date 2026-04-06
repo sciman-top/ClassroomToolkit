@@ -249,6 +249,7 @@ public partial class PaintSettingsDialog : Window
     private bool _sizeToContentCommitted;
     private readonly PresetSchemeRecommendation _presetRecommendation;
     private bool _suppressSectionDirtyTracking = true;
+    private bool _advancedModeEnabled;
     private string _workingPresentationClassifierOverridesJson = string.Empty;
     private PresetBrushSectionState _initialPresetBrushSectionState;
     private SceneSectionState _initialSceneSectionState;
@@ -443,6 +444,12 @@ public partial class PaintSettingsDialog : Window
         AttachSectionDirtyTrackingHandlers();
         _suppressPresetAutoCustom = false;
         UpdatePresetHint(_currentPresetScheme);
+        _advancedModeEnabled = false;
+        if (AdvancedModeCheck != null)
+        {
+            AdvancedModeCheck.IsChecked = _advancedModeEnabled;
+        }
+        UpdateAdvancedModeVisibility();
         ApplySceneCardsLayout(SceneCardsGrid?.ActualWidth ?? 0);
         _initialPresetBrushSectionState = CapturePresetBrushSectionStateFromControls();
         _initialSceneSectionState = CaptureSceneSectionStateFromControls();
@@ -1483,6 +1490,34 @@ public partial class PaintSettingsDialog : Window
     private void OnSceneCardsGridSizeChanged(object sender, SizeChangedEventArgs e)
     {
         ApplySceneCardsLayout(e.NewSize.Width);
+    }
+
+    private void OnAdvancedModeCheckChanged(object sender, RoutedEventArgs e)
+    {
+        _advancedModeEnabled = AdvancedModeCheck?.IsChecked == true;
+        UpdateAdvancedModeVisibility();
+    }
+
+    private void UpdateAdvancedModeVisibility()
+    {
+        var visibility = _advancedModeEnabled ? Visibility.Visible : Visibility.Collapsed;
+        if (PhotoAdvancedExpander != null)
+        {
+            PhotoAdvancedExpander.Visibility = visibility;
+            if (!_advancedModeEnabled)
+            {
+                PhotoAdvancedExpander.IsExpanded = false;
+            }
+        }
+
+        if (PresentationAdvancedExpander != null)
+        {
+            PresentationAdvancedExpander.Visibility = visibility;
+            if (!_advancedModeEnabled)
+            {
+                PresentationAdvancedExpander.IsExpanded = false;
+            }
+        }
     }
 
     private void ApplySceneCardsLayout(double availableWidth)

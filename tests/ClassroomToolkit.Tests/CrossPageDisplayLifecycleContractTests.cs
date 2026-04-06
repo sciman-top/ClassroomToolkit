@@ -26,7 +26,7 @@ public sealed class CrossPageDisplayLifecycleContractTests
     [Fact]
     public void ScheduleNeighborImagePrefetch_ShouldRevalidateSequenceBounds_InsideAsyncCallback()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = File.ReadAllText(GetHelpersSourcePath());
 
         source.Should().Contain("_photoSequencePaths.Count == 0 || pageIndex < 1 || pageIndex > _photoSequencePaths.Count");
         source.Should().Contain("var path = _photoSequencePaths[pageIndex - 1];");
@@ -69,5 +69,14 @@ public sealed class CrossPageDisplayLifecycleContractTests
             "ClassroomToolkit.App",
             "Paint",
             "PaintOverlayWindow.Photo.CrossPage.cs");
+    }
+
+    private static string GetHelpersSourcePath()
+    {
+        return TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.CrossPage.Helpers.cs");
     }
 }

@@ -26,6 +26,7 @@ public sealed class StartupCompatibilityWarningCopyContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "App.xaml.cs");
+            "Startup",
+            "StartupOrchestrator.cs");
     }
 }

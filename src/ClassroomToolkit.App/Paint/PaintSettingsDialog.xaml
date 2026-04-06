@@ -268,6 +268,21 @@
 
                         <TabItem Header="场景与兼容">
                             <StackPanel Margin="0,12,0,0">
+                <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="默认只显示课堂常用项，兼容与排障参数可按需展开。"
+                                   Foreground="{StaticResource Brush_Text_Secondary}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"/>
+                        <CheckBox x:Name="AdvancedModeCheck"
+                                  Content="显示高级兼容与排障选项"
+                                  Foreground="{StaticResource Brush_Text_Primary}"
+                                  FontSize="13"
+                                  Checked="OnAdvancedModeCheckChanged"
+                                  Unchecked="OnAdvancedModeCheckChanged"/>
+                    </StackPanel>
+                </Border>
                 <Grid x:Name="SceneCardsGrid" Margin="0,8,0,0" SizeChanged="OnSceneCardsGridSizeChanged">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -304,7 +319,7 @@
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
-                            <Expander Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander x:Name="PhotoAdvancedExpander" Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
@@ -398,7 +413,7 @@
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
-                            <Expander Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander x:Name="PresentationAdvancedExpander" Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">

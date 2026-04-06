@@ -1,5 +1,4 @@
 using System;
-using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Windowing;
 

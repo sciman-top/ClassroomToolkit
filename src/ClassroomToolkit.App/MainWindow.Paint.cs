@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
@@ -96,6 +100,7 @@ public partial class MainWindow
         _paintWindowOrchestrator.OverlayActivated += OnOverlayActivated;
         _paintWindowOrchestrator.SettingsRequested += OnOpenPaintSettings;
         _paintWindowOrchestrator.PhotoOpenRequested += OnOpenPhotoTeaching;
+        _paintWindowOrchestrator.RegionCaptureRequested += OnRegionCaptureRequested;
         _paintWindowOrchestrator.OverlaySessionTransitionOccurred += OnOverlaySessionTransitionOccurred;
         _paintOrchestratorEventsWired = true;
     }
@@ -568,7 +573,121 @@ public partial class MainWindow
 
         ApplySurfaceZOrderDecision(decision);
     }
+
+    private void OnRegionCaptureRequested()
+    {
+        EnsurePaintWindows();
+        var overlay = _overlayWindow;
+        if (overlay == null)
+        {
+            return;
+        }
+
+        var wasOverlayVisible = overlay.IsVisible;
+        if (wasOverlayVisible)
+        {
+            ExecuteLifecycleSafe("region-capture", "hide-overlay-only", overlay.Hide);
+        }
+
+        var captureResult = RegionScreenCaptureWorkflow.TryCaptureToPng(ResolveCapturePassthroughRegions());
+
+        if (wasOverlayVisible)
+        {
+            ExecuteLifecycleSafe("region-capture", "show-overlay-only", overlay.Show);
+            FloatingZOrderApplyExecutor.Apply(
+                requestZOrderApply: true,
+                forceEnforceZOrder: true,
+                RequestApplyZOrderPolicy);
+        }
+
+        if (!captureResult.Succeeded || string.IsNullOrWhiteSpace(captureResult.FilePath))
+        {
+            if (captureResult.CancelReason == RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled)
+            {
+                _toolbarWindow?.ArmDirectWhiteboardEntry();
+            }
+            else
+            {
+                _toolbarWindow?.ClearDirectWhiteboardEntryArm();
+            }
+            return;
+        }
+
+        _toolbarWindow?.ClearDirectWhiteboardEntryArm();
+        ShowPaintOverlayIfNeeded();
+        overlay = _overlayWindow;
+        if (overlay == null)
+        {
+            return;
+        }
+
+        var imagePath = captureResult.FilePath;
+        _toolbarWindow?.SetBoardActive(false);
+        overlay.SetSessionCaptureExportDirectory(ResolveSessionCaptureExportDirectory());
+        _photoNavigationSession.Reset(new List<string> { imagePath }, 0);
+        ApplyPhotoOverlayEntry(
+            overlay,
+            imagePath,
+            showInk: true,
+            allowInkOutsidePhoto: true,
+            preserveImageOriginalScale: true,
+            logAction: path => PhotoNavigationDiagnostics.Log("MainWindow.RegionCapture", $"enter path={path}"));
+        overlay.EnsurePhotoWindowedMode();
+        FloatingZOrderApplyExecutor.Apply(
+            requestZOrderApply: true,
+            forceEnforceZOrder: true,
+            RequestApplyZOrderPolicy);
+    }
+
+    private IReadOnlyCollection<Rectangle> ResolveCapturePassthroughRegions()
+    {
+        if (_toolbarWindow == null || !_toolbarWindow.IsVisible)
+        {
+            return Array.Empty<Rectangle>();
+        }
+
+        var width = Math.Max((int)Math.Ceiling(_toolbarWindow.ActualWidth), 1);
+        var height = Math.Max((int)Math.Ceiling(_toolbarWindow.ActualHeight), 1);
+        var x = (int)Math.Floor(_toolbarWindow.Left);
+        var y = (int)Math.Floor(_toolbarWindow.Top);
+        return new[] { new Rectangle(x, y, width, height) };
+    }
+
+    private string ResolveSessionCaptureExportDirectory()
+    {
+        var imageManagerCurrentFolder = _imageManagerWindow?.ViewModel?.CurrentFolder;
+        if (!string.IsNullOrWhiteSpace(imageManagerCurrentFolder) && System.IO.Directory.Exists(imageManagerCurrentFolder))
+        {
+            return imageManagerCurrentFolder;
+        }
+
+        var currentPhotoPath = _photoNavigationSession.GetCurrentPath();
+        if (!string.IsNullOrWhiteSpace(currentPhotoPath)
+            && !RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath(currentPhotoPath))
+        {
+            var directory = System.IO.Path.GetDirectoryName(currentPhotoPath);
+            if (!string.IsNullOrWhiteSpace(directory) && System.IO.Directory.Exists(directory))
+            {
+                return directory;
+            }
+        }
+
+        foreach (var folder in _settings.PhotoFavoriteFolders)
+        {
+            if (!string.IsNullOrWhiteSpace(folder) && System.IO.Directory.Exists(folder))
+            {
+                return folder;
+            }
+        }
+
+        foreach (var folder in _settings.PhotoRecentFolders)
+        {
+            if (!string.IsNullOrWhiteSpace(folder) && System.IO.Directory.Exists(folder))
+            {
+                return folder;
+            }
+        }
+
+        return string.Empty;
+    }
 }
-
-
-

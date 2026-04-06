@@ -282,10 +282,7 @@ public partial class ImageManagerWindow : Window
         {
             return;
         }
-        ViewModel.Favorites.Remove(selected);
-        SafeActionExecutionExecutor.TryExecute(
-            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
-            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+        RemoveFavorite(selected.Path, keepInRecents: true);
     }
 
     private void OnFavoritesSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -302,6 +299,39 @@ public partial class ImageManagerWindow : Window
         {
             OpenFolder(item.Path);
         }
+    }
+
+    private void OnClearRecentsClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Recents.Count == 0)
+        {
+            return;
+        }
+
+        ViewModel.Recents.Clear();
+        SafeActionExecutionExecutor.TryExecute(
+            () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
+            ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));
+    }
+
+    private void OnFavoriteStarToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path || string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        RemoveFavorite(path, keepInRecents: true);
+    }
+
+    private void OnRecentStarToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not string path || string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        AddFavorite(path);
     }
 
     private void OnFolderTreeSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -542,9 +572,41 @@ public partial class ImageManagerWindow : Window
             return;
         }
         ViewModel.Favorites.Insert(0, new FolderItem(path));
+        var existingRecent = ViewModel.Recents.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (existingRecent != null)
+        {
+            ViewModel.Recents.Remove(existingRecent);
+            SafeActionExecutionExecutor.TryExecute(
+                () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
+                ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));
+        }
         SafeActionExecutionExecutor.TryExecute(
             () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
             ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+    }
+
+    private void RemoveFavorite(string path, bool keepInRecents)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        var favorite = ViewModel.Favorites.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (favorite == null)
+        {
+            return;
+        }
+
+        ViewModel.Favorites.Remove(favorite);
+        SafeActionExecutionExecutor.TryExecute(
+            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
+            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+
+        if (keepInRecents)
+        {
+            UpdateRecents(path);
+        }
     }
 
     private void OpenFolder(string path, bool addToRecents = true, bool navigate = true)

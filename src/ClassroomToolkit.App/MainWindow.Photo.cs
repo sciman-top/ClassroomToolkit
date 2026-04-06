@@ -210,6 +210,8 @@ public partial class MainWindow
             overlay,
             selectedPath,
             showInk,
+            allowInkOutsidePhoto: false,
+            preserveImageOriginalScale: false,
             logAction: path => PhotoNavigationDiagnostics.Log("MainWindow.Select", $"enter path={path}"));
     }
 
@@ -217,6 +219,8 @@ public partial class MainWindow
         Paint.PaintOverlayWindow overlay,
         string? path,
         bool showInk,
+        bool allowInkOutsidePhoto,
+        bool preserveImageOriginalScale,
         Action<string> logAction)
     {
         var entryPlan = PhotoOverlayEntryPolicy.Resolve(!string.IsNullOrWhiteSpace(path));
@@ -226,6 +230,7 @@ public partial class MainWindow
         }
         if (!entryPlan.EnterPhotoMode || string.IsNullOrWhiteSpace(path))
         {
+            overlay.SetPhotoInkCanvasUnbounded(allowInkOutsidePhoto);
             return;
         }
         if (entryPlan.UpdateInkVisibility)
@@ -238,6 +243,11 @@ public partial class MainWindow
         }
         logAction(path);
         overlay.EnterPhotoMode(path);
+        overlay.SetPhotoInkCanvasUnbounded(allowInkOutsidePhoto);
+        if (preserveImageOriginalScale)
+        {
+            overlay.CenterPhotoAtOriginalScale();
+        }
         ApplySurfaceZOrderDecision(
             PhotoOverlayEntrySurfaceTransitionPolicy.Resolve(entryPlan.TouchPhotoSurface));
         if (entryPlan.FocusOverlay)
@@ -363,6 +373,8 @@ public partial class MainWindow
             _overlayWindow,
             nextPath,
             _settings.PhotoShowInkOverlay,
+            allowInkOutsidePhoto: false,
+            preserveImageOriginalScale: false,
             logAction: path => PhotoNavigationDiagnostics.Log("MainWindow.FileNav", $"enter nextPath={path}"));
     }
 

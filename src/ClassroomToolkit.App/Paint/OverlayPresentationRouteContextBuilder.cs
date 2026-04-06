@@ -1,5 +1,3 @@
-using ClassroomToolkit.Interop.Presentation;
-
 namespace ClassroomToolkit.App.Paint;
 
 internal static class OverlayPresentationRouteContextBuilder

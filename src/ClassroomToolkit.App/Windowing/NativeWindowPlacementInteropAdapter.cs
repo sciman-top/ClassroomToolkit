@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Windowing;
 

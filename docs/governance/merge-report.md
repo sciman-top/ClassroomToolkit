@@ -2,7 +2,7 @@
 
 repo=E:/CODE/ClassroomToolkit
 mode=safe
-time=2026-04-03 01:52:24
+time=2026-04-04 13:08:31
 
 - KEEP AGENTS.md -> E:\CODE\ClassroomToolkit\AGENTS.md
 - KEEP CLAUDE.md -> E:\CODE\ClassroomToolkit\CLAUDE.md
@@ -23,3 +23,6 @@ time=2026-04-03 01:52:24
 - KEEP backfill-evidence-template-fields.ps1 -> E:\CODE\ClassroomToolkit\scripts\governance\backfill-evidence-template-fields.ps1
 - KEEP run-project-governance-cycle.ps1 -> E:\CODE\ClassroomToolkit\scripts\governance\run-project-governance-cycle.ps1
 - KEEP run-target-autopilot.ps1 -> E:\CODE\ClassroomToolkit\scripts\governance\run-target-autopilot.ps1
+- KEEP start-browser-session.ps1 -> E:\CODE\ClassroomToolkit\tools\browser-session\start-browser-session.ps1
+- KEEP start-browser-session.bat -> E:\CODE\ClassroomToolkit\tools\browser-session\start-browser-session.bat
+- KEEP README.md -> E:\CODE\ClassroomToolkit\tools\browser-session\README.md

@@ -1,4 +1,3 @@
-using ClassroomToolkit.Interop.Presentation;
 using System.Diagnostics;
 using ClassroomToolkit.App.Windowing;
 

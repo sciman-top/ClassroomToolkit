@@ -1,57 +1,66 @@
-{
-  "schema_version": "1.0",
-  "project_type": "dotnet-wpf",
-  "release_enabled": true,
-  "owner": "ClassroomToolkit",
-  "policies": {
-    "signing": {
-      "required": false,
-      "mode": "none-personal"
-    },
-    "compatibility": {
-      "matrix_required": true,
-      "minimum_os": [
-        "Windows 10 22H2",
-        "Windows 11 22H2"
-      ],
-      "architectures": [
-        "x64"
-      ]
-    },
-    "packaging": {
-      "default_channel": "standard",
-      "channels": [
-        "standard",
-        "offline"
-      ],
-      "require_framework_dependent": true,
-      "require_self_contained": true
-    },
-    "anti_false_positive": {
-      "prefer_zip": true,
-      "disallow_self_extracting_archive": true,
-      "disallow_obfuscation": true,
-      "disallow_runtime_downloader": true
-    },
-    "traceability": {
-      "require_sha256": true,
-      "require_release_manifest": true,
-      "require_changelog": true
-    }
-  },
-  "gates": {
-    "build": "dotnet build ClassroomToolkit.sln -c Debug",
-    "test": "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
-    "contract_invariant": "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests\"",
-    "hotspot": "powershell -File scripts/quality/check-hotspot-line-budgets.ps1"
-  },
-  "release": {
-    "preflight": "powershell -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -SkipTests",
-    "prepare": "powershell -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <version> -PackageMode both",
-    "workflow_files": [
-      ".github/workflows/release-package.yml"
-    ],
-    "output_root": "artifacts/release",
-    "manifest": "artifacts/release/<version>/release-manifest.json"
-  }
+﻿{
+    "schema_version":  "1.0",
+    "project_type":  "dotnet-wpf",
+    "release_enabled":  true,
+    "owner":  "ClassroomToolkit",
+    "classification":  {
+                           "release_decision":  "enabled-by-signals",
+                           "detected_release_signals":  [
+                                                            "scripts/release/preflight-check.ps1",
+                                                            "scripts/release/prepare-distribution.ps1",
+                                                            "docs/runbooks/release-prevention-checklist.md",
+                                                            ".github/workflows/release-package.yml"
+                                                        ]
+                       },
+    "policies":  {
+                     "signing":  {
+                                     "required":  false,
+                                     "mode":  "none-personal"
+                                 },
+                     "compatibility":  {
+                                           "matrix_required":  true,
+                                           "minimum_os":  [
+                                                              "Windows 10 22H2",
+                                                              "Windows 11 22H2"
+                                                          ],
+                                           "architectures":  [
+                                                                 "x64"
+                                                             ]
+                                       },
+                     "packaging":  {
+                                       "default_channel":  "standard",
+                                       "channels":  [
+                                                        "standard",
+                                                        "offline"
+                                                    ],
+                                       "require_framework_dependent":  true,
+                                       "require_self_contained":  true
+                                   },
+                     "anti_false_positive":  {
+                                                 "prefer_zip":  true,
+                                                 "disallow_self_extracting_archive":  true,
+                                                 "disallow_obfuscation":  true,
+                                                 "disallow_runtime_downloader":  false
+                                             },
+                     "traceability":  {
+                                          "require_sha256":  true,
+                                          "require_release_manifest":  true,
+                                          "require_changelog":  true
+                                      }
+                 },
+    "gates":  {
+                  "build":  "dotnet build ClassroomToolkit.sln -c Debug",
+                  "test":  "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug",
+                  "contract_invariant":  "dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter \"FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests\"",
+                  "hotspot":  "powershell -File scripts/quality/check-hotspot-line-budgets.ps1 -AsJson"
+              },
+    "release":  {
+                    "preflight":  "powershell -File scripts/release/preflight-check.ps1 -SkipTests",
+                    "prepare":  "powershell -File scripts/release/prepare-distribution.ps1 -Version \u003cversion\u003e -PackageMode both",
+                    "workflow_files":  [
+                                           ".github/workflows/release-package.yml"
+                                       ],
+                    "output_root":  "artifacts/release",
+                    "manifest":  "artifacts/release/\u003cversion\u003e/release-manifest.json"
+                }
 }

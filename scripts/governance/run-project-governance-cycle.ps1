@@ -1,6 +1,10 @@
 param(
   [string]$RepoRoot = ".",
   [string]$GovernanceKitRoot = "",
+  [string]$IssueId = "project-governance-cycle-default",
+  [ValidateSet("auto", "plan", "requirement", "bugfix", "acceptance")]
+  [string]$ClarificationScenario = "auto",
+  [string]$ClarificationContextFile = "",
   [ValidateSet("plan", "safe")]
   [string]$Mode = "safe",
   [switch]$ShowScope
@@ -53,6 +57,9 @@ $args = @(
   "-File", $runner,
   "-RepoPath", $repoPath,
   "-RepoName", (Split-Path -Leaf $repoPath),
+  "-IssueId", $IssueId,
+  "-ClarificationScenario", $ClarificationScenario,
+  "-ClarificationContextFile", $ClarificationContextFile,
   "-Mode", $Mode
 )
 if ($ShowScope.IsPresent) { $args += "-ShowScope" }

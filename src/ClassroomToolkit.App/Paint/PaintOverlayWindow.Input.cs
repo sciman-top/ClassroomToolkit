@@ -833,6 +833,11 @@ public partial class PaintOverlayWindow
 
     private bool ShouldSuppressCrossPageOutOfPageBrushMove(BrushInputSample input, bool switchedPageThisFrame)
     {
+        if (_photoUnboundedInkCanvasEnabled)
+        {
+            return false;
+        }
+
         if (PhotoBackground.Source is not BitmapSource currentBitmap)
         {
             return false;
@@ -1605,6 +1610,5 @@ public partial class PaintOverlayWindow
     {
     }
 }
-
 
 

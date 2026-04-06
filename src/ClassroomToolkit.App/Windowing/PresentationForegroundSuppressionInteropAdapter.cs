@@ -6,6 +6,6 @@ internal static class PresentationForegroundSuppressionInteropAdapter
 {
     internal static IDisposable SuppressForeground()
     {
-        return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.SuppressForeground();
+        return PresentationWindowFocus.SuppressForeground();
     }
 }

@@ -6,6 +6,6 @@ internal static class WindowHandleValidationInteropAdapter
 {
     internal static bool IsValid(IntPtr hwnd)
     {
-        return hwnd != IntPtr.Zero && ClassroomToolkit.Interop.NativeMethods.IsWindow(hwnd);
+        return hwnd != IntPtr.Zero && NativeMethods.IsWindow(hwnd);
     }
 }

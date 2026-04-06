@@ -63,6 +63,7 @@ public partial class RollCallWindow : Window
     private int _speechUnavailableNotifiedState;
     private int _remoteHookUnavailableNotifiedState;
     private bool _initialized;
+    private bool _settingsSnapshotApplied;
     private bool _warmupStarted;
     private bool _dataLoaded;
     private bool _settingsSaveFailedNotified;

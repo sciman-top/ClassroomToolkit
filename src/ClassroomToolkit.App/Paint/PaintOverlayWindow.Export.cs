@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using MessageBox = System.Windows.MessageBox;
@@ -23,9 +24,10 @@ public partial class PaintOverlayWindow
 {
     private static readonly JsonSerializerOptions InkHistoryJsonOptions = CreateInkHistoryJsonOptions();
     private InkPersistenceService? _inkPersistence;
-    private ClassroomToolkit.Infra.Storage.InkHistorySqliteStoreAdapter? _inkHistorySqliteAdapter;
+    private IInkHistorySnapshotStore? _inkHistorySnapshotStore;
     private InkExportService? _inkExport;
     private InkExportOptions _inkExportOptions = new();
+    private string _sessionCaptureExportDirectory = string.Empty;
     private sealed record SidecarPersistSnapshot(
         InkPersistenceService Persistence,
         string SourcePath,
@@ -88,17 +90,39 @@ public partial class PaintOverlayWindow
         InkPersistenceService persistence,
         InkExportService export,
         InkExportOptions? exportOptions = null,
-        ClassroomToolkit.Infra.Storage.InkHistorySqliteStoreAdapter? inkHistorySqliteAdapter = null)
+        IInkHistorySnapshotStore? inkHistorySnapshotStore = null)
     {
         ArgumentNullException.ThrowIfNull(persistence);
         ArgumentNullException.ThrowIfNull(export);
 
         _inkPersistence = persistence;
-        _inkHistorySqliteAdapter = inkHistorySqliteAdapter;
+        _inkHistorySnapshotStore = inkHistorySnapshotStore;
         _inkExport = export;
         if (exportOptions != null)
         {
             _inkExportOptions = exportOptions;
+        }
+    }
+
+    public void SetSessionCaptureExportDirectory(string? directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            _sessionCaptureExportDirectory = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(directoryPath);
+            _sessionCaptureExportDirectory = Directory.Exists(fullPath)
+                ? fullPath
+                : string.Empty;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            _sessionCaptureExportDirectory = string.Empty;
+            System.Diagnostics.Debug.WriteLine($"[InkExport] invalid session capture export directory: {ex.Message}");
         }
     }
 
@@ -498,7 +522,7 @@ public partial class PaintOverlayWindow
         List<InkStrokeData> strokes,
         InkPersistenceService persistence)
     {
-        var historyAdapter = _inkHistorySqliteAdapter;
+        var historyAdapter = _inkHistorySnapshotStore;
         if (historyAdapter == null)
         {
             persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
@@ -514,7 +538,7 @@ public partial class PaintOverlayWindow
         int pageIndex,
         InkPersistenceService persistence)
     {
-        var historyAdapter = _inkHistorySqliteAdapter;
+        var historyAdapter = _inkHistorySnapshotStore;
         if (historyAdapter == null)
         {
             return persistence.LoadInkPageForFile(sourcePath, pageIndex) ?? new List<InkStrokeData>();
@@ -568,8 +592,109 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        if (TryExportCurrentSessionRegionCapture())
+        {
+            return;
+        }
+
         var sourceDir = Path.GetDirectoryName(_currentDocumentPath) ?? string.Empty;
         ExportDirectory(sourceDir);
+    }
+
+    private bool TryExportCurrentSessionRegionCapture()
+    {
+        if (_inkExport == null || _inkPersistence == null || string.IsNullOrWhiteSpace(_currentDocumentPath))
+        {
+            return false;
+        }
+
+        if (!RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath(_currentDocumentPath))
+        {
+            return false;
+        }
+
+        if (!File.Exists(_currentDocumentPath))
+        {
+            ShowExportMessageSafe("export-session-capture-missing", "当前区域截图临时文件不存在，无法导出。", "导出失败", MessageBoxImage.Warning);
+            return true;
+        }
+
+        if (!FlushDirtyInkPagesToSidecarForExport(directoryPath: null))
+        {
+            return true;
+        }
+
+        var exported = SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                var savedSourcePath = BuildTimestampedPersistentCapturePath(Path.GetExtension(_currentDocumentPath), _sessionCaptureExportDirectory);
+                File.Copy(_currentDocumentPath, savedSourcePath, overwrite: false);
+
+                var inkDoc = BuildInkDocumentForExport(_currentDocumentPath);
+                var exportResult = _inkExport.ExportAllPagesForFileDetailed(savedSourcePath, inkDoc, _inkExportOptions);
+                var compositeDir = InkExportService.GetExportDirectory(savedSourcePath);
+                ShowExportMessageSafe(
+                    "export-session-capture-complete",
+                    $"导出完成：\n原图：{savedSourcePath}\n合成图目录：{compositeDir}",
+                    "导出完成",
+                    MessageBoxImage.Information);
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[InkExport] session capture exported source={savedSourcePath}, compositeCount={exportResult.OutputPaths.Count}, compositeDir={compositeDir}");
+                return true;
+            },
+            fallback: false,
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkExport] export session capture failed: {ex.GetType().Name} - {ex.Message}"));
+
+        if (!exported)
+        {
+            ShowExportMessageSafe("export-session-capture-error", "区域截图导出失败。", "导出失败", MessageBoxImage.Warning);
+        }
+
+        return true;
+    }
+
+    private static string BuildTimestampedPersistentCapturePath(string? extension, string? preferredDirectory)
+    {
+        var normalizedExtension = string.IsNullOrWhiteSpace(extension)
+            ? ".png"
+            : extension!;
+        var captureRoot = ResolvePersistentCaptureRootDirectory(preferredDirectory);
+        Directory.CreateDirectory(captureRoot);
+
+        var timestamp = DateTime.Now;
+        var baseName = $"capture-{timestamp:yyyyMMdd-HHmmss-fff}";
+        var candidatePath = Path.Combine(captureRoot, $"{baseName}{normalizedExtension}");
+        var suffix = 1;
+        while (File.Exists(candidatePath))
+        {
+            candidatePath = Path.Combine(captureRoot, $"{baseName}-{suffix:D2}{normalizedExtension}");
+            suffix++;
+        }
+
+        return candidatePath;
+    }
+
+    private static string ResolvePersistentCaptureRootDirectory(string? preferredDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredDirectory))
+        {
+            try
+            {
+                var fullPath = Path.GetFullPath(preferredDirectory);
+                if (Directory.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"[InkExport] preferred capture export root invalid: {ex.Message}");
+            }
+        }
+
+        return RegionScreenCaptureWorkflow.GetPersistentCaptureRootDirectory();
     }
 
     private void ExportCurrentFile()

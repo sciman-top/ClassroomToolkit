@@ -120,6 +120,7 @@ public partial class PaintOverlayWindow
         if (_photoModeActive)
         {
             RefreshPhotoBackgroundVisibility();
+            PhotoWindowFrame.Background = ResolvePhotoWindowBackgroundBrush();
             PhotoControlLayer.Visibility = _photoModeActive
                 ? Visibility.Visible
                 : Visibility.Collapsed;

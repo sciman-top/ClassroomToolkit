@@ -60,20 +60,21 @@
         </ContextMenu>
     </Window.Resources>
 
-    <Border x:Name="ToolbarContainer"
-            Background="{StaticResource Brush_Surface_Primary}"
-            BorderBrush="{StaticResource Brush_Border_Subtle}"
-            BorderThickness="1"
-            CornerRadius="22"
-            Height="46"
-            Padding="8,4"
-            MouseLeftButtonDown="OnToolbarDrag"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
-        <Border.Effect>
-            <StaticResource ResourceKey="Shadow_Floating"/>
-        </Border.Effect>
+    <Grid>
+        <Border x:Name="ToolbarContainer"
+                Background="{StaticResource Brush_Surface_Primary}"
+                BorderBrush="{StaticResource Brush_Border_Subtle}"
+                BorderThickness="1"
+                CornerRadius="22"
+                Height="46"
+                Padding="8,4"
+                MouseLeftButtonDown="OnToolbarDrag"
+                TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+            <Border.Effect>
+                <StaticResource ResourceKey="Shadow_Floating"/>
+            </Border.Effect>
 
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <Grid Width="16" Background="Transparent" Cursor="SizeAll" Margin="0,0,4,0" ToolTip="拖动工具条"
                   VerticalAlignment="Stretch">
                 <WrapPanel Width="10" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.48">
@@ -153,13 +154,32 @@
                 <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_ResourceTool_Icon}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
 
-            <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="白板，长按改颜色" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">
+            <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="单击区域截图，再次点击进白板，长按改颜色" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">
                  <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </ToggleButton>
 
             <Button x:Name="SettingsButton" Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="画笔设置">
                 <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Accent_Violet}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
-        </StackPanel>
-    </Border>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="BoardHintBubble"
+                Visibility="Collapsed"
+                Opacity="0"
+                IsHitTestVisible="False"
+                Background="#D0202020"
+                BorderBrush="#66FFFFFF"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="10,4"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,-30,0,0">
+            <TextBlock x:Name="BoardHintText"
+                       Foreground="White"
+                       FontSize="12"
+                       FontWeight="SemiBold"/>
+        </Border>
+    </Grid>
 </Window>

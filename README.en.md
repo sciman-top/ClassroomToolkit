@@ -24,7 +24,7 @@ sciman Classroom Toolkit is not trying to be a full school platform. It is a set
 |------|------|------|
 | Roll Call / Timer | Random selection, student photo display, voice announcement, countdown / stopwatch, remote-key trigger | Participation, time-boxed tasks, group presentations |
 | Pen / Whiteboard | Screen annotation, regular pen / brush / eraser, color and stroke settings, ink save and replay | Solving problems, marking key points, live explanation |
-| Images / PDF | Full-screen viewing, paging, zooming, panning, annotation overlay | Worksheet review, image analysis, PDF lecture notes |
+| Images / PDF | Full-screen viewing, paging, zooming, panning, annotation overlay, one-click region capture into whiteboard | Worksheet review, image analysis, PDF lecture notes, quick in-class snippet explanation |
 | PPT / WPS | Slide-show detection, page navigation, wheel mapping, overlay annotation | Lesson presentation and slide-based teaching |
 | Launcher | Floating entry point for all tools | Fast switching during class |
 
@@ -122,6 +122,17 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
+
+If you want a persistent browser session for future automation, use the helper script in this repo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/browser-session/start-browser-session.ps1 -Name github -Url https://github.com/sciman-top/ClassroomToolkit
+agent-browser --cdp 9222 open https://github.com/sciman-top/ClassroomToolkit
+```
+
+The script launches Chrome or Edge with a dedicated profile so your login state stays separate from your daily browser.
+
+Full details are in [tools/browser-session/README.md](/E:/CODE/ClassroomToolkit/tools/browser-session/README.md).
 
 Repository layout:
 

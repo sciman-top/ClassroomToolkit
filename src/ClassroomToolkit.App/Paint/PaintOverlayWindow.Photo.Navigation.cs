@@ -46,6 +46,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        _photoUnboundedInkCanvasEnabled = false;
         ResetCrossPageReplayState();
         _crossPageUpdateDeferredByInkInput = false;
         RecoverInkWalForDirectory(sourcePath);
@@ -208,6 +209,7 @@ public partial class PaintOverlayWindow
             _photoUserTransformDirty = false;
         }
         _photoModeActive = false;
+        _photoUnboundedInkCanvasEnabled = false;
         _boardSuspendedPhotoCache = false;
         UpdatePhotoContentTransforms(enabled: false);
         _photoFullscreen = false;
@@ -234,6 +236,33 @@ public partial class PaintOverlayWindow
         _globalInkHistory.Clear();
         ClearInkSurfaceState();
         DispatchSessionEvent(new ExitPhotoFullscreenEvent());
+    }
+
+    public void EnsurePhotoWindowedMode()
+    {
+        if (!_photoModeActive || !_photoFullscreen)
+        {
+            return;
+        }
+
+        _photoFullscreen = false;
+        SetPhotoWindowMode(fullscreen: false);
+    }
+
+    public void SetPhotoInkCanvasUnbounded(bool enabled)
+    {
+        if (_photoUnboundedInkCanvasEnabled == enabled)
+        {
+            return;
+        }
+
+        _photoUnboundedInkCanvasEnabled = enabled;
+        UpdatePhotoInkClip();
+        if (IsPhotoInkModeActive())
+        {
+            MarkInkTransformVersionDirty();
+            RequestInkRedraw();
+        }
     }
 
     private void EvictRuntimeInkCacheForClosedPhotoSession()
@@ -291,7 +320,7 @@ public partial class PaintOverlayWindow
             : new Thickness(0);
         if (_photoModeActive)
         {
-            PhotoWindowFrame.Background = TryFindResource("Brush_Background") as MediaBrush ?? MediaBrushes.White;
+            PhotoWindowFrame.Background = ResolvePhotoWindowBackgroundBrush();
         }
         else
         {
@@ -346,6 +375,23 @@ public partial class PaintOverlayWindow
                 () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(forceEnforce)),
                 ex => Debug.WriteLine($"[FloatingZOrderRequested] photo-window-mode callback failed: {ex.GetType().Name} - {ex.Message}"));
         }
+    }
+
+    private MediaBrush ResolvePhotoWindowBackgroundBrush()
+    {
+        if (_boardColor.A == 0)
+        {
+            return MediaBrushes.White;
+        }
+
+        var color = System.Windows.Media.Color.FromArgb(255, _boardColor.R, _boardColor.G, _boardColor.B);
+        var brush = new SolidColorBrush(color);
+        if (brush.CanFreeze)
+        {
+            brush.Freeze();
+        }
+
+        return brush;
     }
 
     private void ApplyIdentityPhotoTransform()
@@ -419,7 +465,7 @@ public partial class PaintOverlayWindow
     {
         Rect rasterClipBounds = Rect.Empty;
         Rect previewClipBounds = Rect.Empty;
-        if (PhotoBackground.Source is BitmapSource bitmap)
+        if (!_photoUnboundedInkCanvasEnabled && PhotoBackground.Source is BitmapSource bitmap)
         {
             var usePhotoTransform = ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
             _ = TryBuildImageScreenRect(bitmap, _photoContentTransform, out var currentPageScreenRect);
