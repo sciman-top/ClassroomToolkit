@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.Ink.InkSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="笔迹记录与回看"
+        Title="笔迹记录"
         Height="Auto" Width="432"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
@@ -21,7 +21,7 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="笔迹记录与回看" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <TextBlock Text="笔迹记录" Style="{StaticResource Style_DialogShellTitleText}"/>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -31,7 +31,7 @@
 
             <Border Grid.Row="1" Margin="16,14,16,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
-                    <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录与回看" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录" Margin="0,0,0,10"/>
                     <CheckBox x:Name="InkReplayPreviousCheck" Content="显示上次课的笔迹" Margin="0,0,0,12"/>
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>

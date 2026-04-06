@@ -25,60 +25,21 @@
 
         <Border x:Name="NameBadge"
                 Style="{StaticResource Style_FullscreenShellHintBadge}"
-                Padding="4"
+                Padding="10,6"
                 Visibility="Collapsed"
-                BorderThickness="0"
-                Background="Transparent"
+                BorderThickness="1"
+                Background="{StaticResource Brush_GlassSurface}"
                 Opacity="1"
                 Panel.ZIndex="10">
-            <Grid TextOptions.TextFormattingMode="Display"
-                  TextOptions.TextRenderingMode="ClearType"
-                  SnapsToDevicePixels="True">
-                <TextBlock Text="{Binding Text, ElementName=NameText}"
-                           Margin="-1,0,0,0"
-                           Foreground="{StaticResource Brush_Primary_Dark}"
-                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                           FontSize="52"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding Text, ElementName=NameText}"
-                           Margin="1,0,0,0"
-                           Foreground="{StaticResource Brush_Primary_Dark}"
-                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                           FontSize="52"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding Text, ElementName=NameText}"
-                           Margin="0,-1,0,0"
-                           Foreground="{StaticResource Brush_Primary_Dark}"
-                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                           FontSize="52"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding Text, ElementName=NameText}"
-                           Margin="0,1,0,0"
-                           Foreground="{StaticResource Brush_Primary_Dark}"
-                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                           FontSize="52"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock x:Name="NameText"
-                           Foreground="{StaticResource Brush_Text_Primary}"
-                           FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                           FontSize="52"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           TextWrapping="NoWrap"
-                           TextTrimming="CharacterEllipsis"/>
-            </Grid>
+            <TextBlock x:Name="NameText"
+                       MaxWidth="720"
+                       Foreground="{StaticResource Brush_Text_Primary}"
+                       FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
+                       FontSize="42"
+                       FontWeight="Bold"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis"/>
         </Border>
 
         <Button x:Name="CloseButtonLeft"
@@ -106,7 +67,7 @@
             <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>
             </Border.Effect>
-            <TextBlock Text="单击背景或关闭按钮即可退出" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
+            <TextBlock Text="单击空白处关闭" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
         </Border>
     </Canvas>
 </Window>

@@ -28,9 +28,16 @@
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
 
             <Border Grid.Row="1" Margin="16,14,16,6" Style="{StaticResource Style_SettingCardBorder}" Padding="8">
-                <ListBox x:Name="ClassList"
-                         MaxHeight="240" MinHeight="120"
-                         Style="{StaticResource Style_CleanListBox}"/>
+                <StackPanel>
+                    <TextBlock Text="选择后将用于当前点名窗口。"
+                               Margin="4,0,4,8"
+                               Foreground="{StaticResource Brush_Text_Tertiary}"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
+                    <ListBox x:Name="ClassList"
+                             MaxHeight="240" MinHeight="120"
+                             Style="{StaticResource Style_CleanListBox}"/>
+                </StackPanel>
             </Border>
 
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">

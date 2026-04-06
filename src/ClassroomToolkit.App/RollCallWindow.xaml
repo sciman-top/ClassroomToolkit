@@ -48,7 +48,8 @@
                             Padding="12,5"
                             Margin="0,0,8,0"
                             Height="30"
-                            ToolTip="切换点名/倒计时"
+                            MinWidth="102"
+                            ToolTip="切换模式"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
@@ -73,27 +74,32 @@
                             Click="OnClassSelectClick"
                             Padding="12,5"
                             Height="30"
-                            MinWidth="96"
+                            MinWidth="108"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding ClassButtonLabel}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Brush_Text_Primary}"/>
+                        <TextBlock Text="{Binding ClassButtonLabel}"
+                                   FontWeight="SemiBold"
+                                   FontSize="12"
+                                   Foreground="{StaticResource Brush_Text_Primary}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="144"/>
                     </Button>
                 </StackPanel>
 
                 <!-- 右侧：窗口控制 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="打开点名设置">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="点名设置">
                         <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="隐藏点名（功能继续）" Margin="4,0,0,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化，功能继续" Margin="4,0,0,0">
                         <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
                     
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭点名窗口" Margin="4,0,0,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭" Margin="4,0,0,0">
                         <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>

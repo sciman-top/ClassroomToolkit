@@ -21,10 +21,10 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <TextBlock Text="系统兼容性诊断" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
+                    <TextBlock Text="兼容诊断" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="本机环境检查" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
-                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnCloseClick" ToolTip="关闭诊断窗口">
+                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnCloseClick" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -92,7 +92,7 @@
                                Margin="0,0,12,0"
                                TextTrimming="CharacterEllipsis"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="重新启用启动提示" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="Auto" MinWidth="148" Margin="0,0,8,0" Click="OnResetStartupWarningsClick" />
+                        <Button Content="恢复启动提示" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="Auto" MinWidth="132" Margin="0,0,8,0" Click="OnResetStartupWarningsClick" />
                         <Button Content="导出诊断包" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="104" Margin="0,0,8,0" Click="OnExportBundleClick" />
                         <Button Content="复制全部" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="88" Margin="0,0,8,0" Click="OnCopyClick" />
                         <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="84" Height="30" Click="OnCloseClick" />

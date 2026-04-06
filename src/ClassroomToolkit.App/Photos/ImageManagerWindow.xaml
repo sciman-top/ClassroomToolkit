@@ -34,7 +34,7 @@
                     <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="资源管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="资源管理视图" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="文件夹、PDF 与图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="30" Margin="0,0,8,0"
@@ -256,7 +256,7 @@
                 </DockPanel>
 
                     <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
-                           Text="当前没有可显示内容，请先在左侧选择文件夹。"
+                           Text="先在左侧选择文件夹"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
                     <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"

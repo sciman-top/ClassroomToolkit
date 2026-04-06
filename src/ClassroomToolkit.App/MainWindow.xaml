@@ -6,7 +6,7 @@
         xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         mc:Ignorable="d"
         Title="sciman课堂工具箱"
-        Height="300" Width="300"
+        Height="316" Width="332"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="{x:Null}"
@@ -40,7 +40,7 @@
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="0,4,0,10">
+            <Grid Grid.Row="1" Margin="0,6,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -52,16 +52,16 @@
                         Content="画笔"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
-                        ToolTip="开启画笔（长按可调设置）"
+                        ToolTip="开启画笔，长按设置"
                         behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}"/>
 
                 <Button Grid.Column="1"
                         x:Name="RollCallButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="点名 / 计时"
+                        Content="点名与计时"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
-                        ToolTip="打开点名/倒计时（长按可调设置）"
+                        ToolTip="点名与计时，长按设置"
                         behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}"/>
             </Grid>
 
@@ -89,19 +89,19 @@
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Apps}"
                                 Click="OnDiagnosticsClick"
-                                ToolTip="打开系统兼容性诊断"/>
+                                ToolTip="兼容诊断"/>
 
                         <Button x:Name="AboutButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Info}"
                                 Click="OnAboutClick"
-                                ToolTip="查看产品信息"/>
+                                ToolTip="关于"/>
 
                         <Button x:Name="SettingsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
                                 Click="OnLauncherSettingsClick"
-                                ToolTip="打开全局设置"/>
+                                ToolTip="设置"/>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 
@@ -109,7 +109,7 @@
                                 Style="{StaticResource Style_WorkShellMiniDangerButton}"
                                 Tag="{StaticResource Icon_Power}"
                                 Click="OnExitClick"
-                                ToolTip="退出程序"/>
+                                ToolTip="退出"/>
                     </StackPanel>
                 </Grid>
             </Border>

@@ -22,7 +22,7 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="产品信息" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick" ToolTip="关闭产品信息窗口">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -41,7 +41,7 @@
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="sciman课堂工具箱" FontSize="18" FontWeight="Bold"/>
                             <TextBlock x:Name="VersionText" Text="版本 -" FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource Brush_Primary}" FontWeight="SemiBold"/>
-                            <TextBlock Text="课堂常用工具集合" FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource Brush_Text_Tertiary}"/>
+                            <TextBlock Text="课堂常用工具" FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource Brush_Text_Tertiary}"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -64,7 +64,7 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="sciman逸居" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0"/>
 
                             <TextBlock Grid.Row="2" Text="交流群" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="0,8,0,0"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="初中物理教研 Q群：323728546" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="初中物理教研群 323728546" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap"/>
                         </Grid>
                     </Border>
 
@@ -92,12 +92,12 @@
                 <Button Content="复制信息"
                         Style="{StaticResource Style_DialogShellSecondaryActionButton}"
                         Height="30"
-                        ToolTip="复制软件信息"
+                        ToolTip="复制信息"
                         Click="OnCopyInfoClick"/>
                 <Button Content="关闭"
                         Style="{StaticResource Style_DialogShellPrimaryActionButton}"
                         Height="30"
-                        ToolTip="关闭产品信息窗口"
+                        ToolTip="关闭"
                         Click="OnCloseClick"/>
             </StackPanel>
         </Grid>

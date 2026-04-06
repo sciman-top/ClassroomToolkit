@@ -21,10 +21,10 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <TextBlock Text="启动兼容性提示" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
+                    <TextBlock Text="兼容提示" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="已切换到兼容优先模式" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
-                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnContinueClick" ToolTip="关闭提示">
+                <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnContinueClick" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -106,16 +106,16 @@
                                    VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="OpenReportButton"
-                                    Content="打开诊断报告"
+                                    Content="诊断报告"
                                     Style="{StaticResource Style_SecondaryButton}"
-                                    Width="116"
+                                    Width="96"
                                     Height="30"
                                     Margin="0,0,8,0"
                                     Click="OnOpenReportClick"/>
                             <Button x:Name="CopyDiagnosticsButton"
-                                    Content="复制诊断信息"
+                                    Content="复制诊断"
                                     Style="{StaticResource Style_SecondaryButton}"
-                                    Width="116"
+                                    Width="96"
                                     Height="30"
                                     Margin="0,0,8,0"
                                     Click="OnCopyDiagnosticsClick"/>

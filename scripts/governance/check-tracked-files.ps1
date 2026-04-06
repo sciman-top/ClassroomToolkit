@@ -1,7 +1,7 @@
 param(
   [string]$RepoPath = ".",
   [string]$PolicyPath = "",
-  [ValidateSet("staged", "outgoing", "both")]
+  [ValidateSet("staged", "pending", "outgoing", "both")]
   [string]$Scope = "both",
   [switch]$AsJson
 )
@@ -89,6 +89,40 @@ function Get-StagedPaths {
   $r = Invoke-GitLines -Repo $Repo -Args @("diff", "--cached", "--name-only", "--diff-filter=ACMR")
   if (-not $r.ok) { return @() }
   return @($r.lines | ForEach-Object { ([string]$_).Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_ -replace '\\', '/' })
+}
+
+function Get-PendingPaths {
+  param([string]$Repo)
+
+  $pathSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+  foreach ($p in @(Get-StagedPaths -Repo $Repo)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$p)) {
+      [void]$pathSet.Add(([string]$p -replace '\\', '/'))
+    }
+  }
+
+  $unstaged = Invoke-GitLines -Repo $Repo -Args @("diff", "--name-only", "--diff-filter=ACMR")
+  if ($unstaged.ok) {
+    foreach ($p in @($unstaged.lines)) {
+      $path = ([string]$p).Trim()
+      if (-not [string]::IsNullOrWhiteSpace($path)) {
+        [void]$pathSet.Add(($path -replace '\\', '/'))
+      }
+    }
+  }
+
+  $untracked = Invoke-GitLines -Repo $Repo -Args @("ls-files", "--others", "--exclude-standard")
+  if ($untracked.ok) {
+    foreach ($p in @($untracked.lines)) {
+      $path = ([string]$p).Trim()
+      if (-not [string]::IsNullOrWhiteSpace($path)) {
+        [void]$pathSet.Add(($path -replace '\\', '/'))
+      }
+    }
+  }
+
+  return @($pathSet)
 }
 
 function Get-OutgoingPaths {
@@ -181,11 +215,15 @@ if ($policyFound -and $null -ne $policy) {
 }
 
 $stagedPaths = @()
+$pendingPaths = @()
 $outgoingPaths = @()
 $outgoingNote = "skipped_by_scope"
 switch ($Scope) {
   "staged" {
     $stagedPaths = @(Get-StagedPaths -Repo $repo)
+  }
+  "pending" {
+    $pendingPaths = @(Get-PendingPaths -Repo $repo)
   }
   "outgoing" {
     $outgoingState = Get-OutgoingPaths -Repo $repo
@@ -201,7 +239,7 @@ switch ($Scope) {
 }
 
 $pathSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-foreach ($p in @($stagedPaths + $outgoingPaths)) {
+foreach ($p in @($stagedPaths + $pendingPaths + $outgoingPaths)) {
   if (-not [string]::IsNullOrWhiteSpace($p)) {
     [void]$pathSet.Add(($p -replace '\\', '/'))
   }
@@ -222,6 +260,7 @@ $result = [pscustomobject]@{
   policy_found = $policyFound
   scope = $Scope
   staged_count = $stagedPaths.Count
+  pending_count = $pendingPaths.Count
   outgoing_count = $outgoingPaths.Count
   outgoing_note = $outgoingNote
   checked_paths_count = $effectivePaths.Count

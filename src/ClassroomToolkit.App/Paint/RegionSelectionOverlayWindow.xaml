@@ -6,7 +6,7 @@
         ShowInTaskbar="False"
         Topmost="True"
         AllowsTransparency="True"
-        Background="#33000000"
+        Background="{StaticResource Brush_OverlayMask}"
         Focusable="True"
         Cursor="Cross"
         PreviewKeyDown="OnPreviewKeyDown"
@@ -18,7 +18,7 @@
         TouchUp="OnTouchUp">
     <Canvas x:Name="RootCanvas">
         <TextBlock x:Name="HintText"
-                   Text="拖拽选择区域，Enter确认，Esc取消"
+                   Text="拖拽选择，Enter 确认，Esc 取消"
                    Foreground="White"
                    FontSize="15"
                    FontWeight="SemiBold"
@@ -26,8 +26,8 @@
                    Canvas.Top="20"/>
         <Rectangle x:Name="SelectionRect"
                    Visibility="Collapsed"
-                   Stroke="#FF44A7FF"
+                   Stroke="{StaticResource Brush_Border_Focus}"
                    StrokeThickness="2"
-                   Fill="#33FFFFFF"/>
+                   Fill="{StaticResource Brush_White_Translucent}"/>
     </Canvas>
 </Window>

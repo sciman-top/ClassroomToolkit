@@ -53,8 +53,13 @@
                           CanContentScroll="False">
                 <Grid>
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
-                        <TabItem Header="笔触与预设">
+                        <TabItem Header="基础">
                             <StackPanel Margin="0,12,0,0">
+                <TextBlock Text="先调整常用笔感和预设，兼容项按需展开。"
+                           Margin="0,0,0,12"
+                           Foreground="{StaticResource Brush_Text_Tertiary}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
                 <!-- 基础画笔参数 -->
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
@@ -82,15 +87,15 @@
                     <TextBlock Text="毛笔预设" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0" FontWeight="Medium"/>
                     <StackPanel Grid.Column="1">
                         <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
-                        <Expander Header="毛笔高级（不建议调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                        <Expander Header="毛笔高级" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                             <Border Style="{StaticResource Style_SettingCardBorder}"
                                     Margin="0,8,0,0"
                                     Padding="10"
                                     Background="{StaticResource Brush_Surface_Secondary}"
                                     CornerRadius="8">
                                 <StackPanel>
-                                    <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团（更润更厚）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
-                                    <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复（填补白点）" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
+                                    <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
+                                    <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
                                     <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度弱化阈值" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,4,0,4"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -106,13 +111,13 @@
                     </StackPanel>
                 </Grid>
 
-                <Expander x:Name="WritingModeOverrideExpander" Header="书写模式覆盖（按需）" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
+                <Expander x:Name="WritingModeOverrideExpander" Header="书写模式" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
                     <Border Style="{StaticResource Style_SettingCardBorder}"
                             Margin="0,8,0,0"
                             Padding="12"
                             Background="{StaticResource Brush_Surface_Secondary}">
                         <StackPanel>
-                            <TextBlock Text="整体效果请优先在&quot;整套预设&quot;中选择；此处仅在需要时覆盖书写手感。"
+                            <TextBlock Text="优先使用整套预设；这里只在需要时微调手感。"
                                        Foreground="{StaticResource Brush_Text_Secondary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -133,7 +138,7 @@
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="这里统一管理预设、书写手感和场景参数。"
+                        <TextBlock Text="这里统一管理预设、手感和场景参数。"
                                    Margin="0,0,0,8"
                                    FontSize="12"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -167,7 +172,7 @@
                         <TextBlock x:Name="PresetSchemeHintText" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <TextBlock x:Name="PresetManagedHintText" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <Button x:Name="ConvertToCustomEditingButton"
-                                Content="切换为自定义后编辑"
+                                Content="转为自定义"
                                 Margin="0,8,0,0"
                                 Padding="12,0"
                                 Height="30"
@@ -266,17 +271,22 @@
                             </StackPanel>
                         </TabItem>
 
-                        <TabItem Header="场景与兼容">
+                        <TabItem Header="兼容">
                             <StackPanel Margin="0,12,0,0">
+                <TextBlock Text="仅在课堂环境不稳定或排障时再调整这里的选项。"
+                           Margin="0,0,0,12"
+                           Foreground="{StaticResource Brush_Text_Tertiary}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="默认只显示课堂常用项，兼容与排障参数可按需展开。"
+                        <TextBlock Text="默认只显示常用项，兼容与排障参数按需展开。"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,8"/>
                         <CheckBox x:Name="AdvancedModeCheck"
-                                  Content="显示高级兼容与排障选项"
+                                  Content="显示高级兼容与排障项"
                                   Foreground="{StaticResource Brush_Text_Primary}"
                                   FontSize="13"
                                   Checked="OnAdvancedModeCheckChanged"
@@ -313,13 +323,13 @@
                             </Grid>
                             <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="说明：一般保持默认即可；仅在卡顿或翻页不同步时再调整高级参数。"
+                            <TextBlock Text="一般保持默认；仅在卡顿或翻页不同步时再调高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
-                            <Expander x:Name="PhotoAdvancedExpander" Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander x:Name="PhotoAdvancedExpander" Header="高级参数" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
@@ -406,14 +416,14 @@
                                 <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
                             </Grid>
                             <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="ForceForegroundCheck" Content="自动置顶（检测到全屏放映时）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="说明：一般保持默认即可；仅在兼容异常时再调整高级参数。"
+                            <CheckBox x:Name="ForceForegroundCheck" Content="全屏放映时自动置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="一般保持默认；仅在兼容异常时再调高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
-                            <Expander x:Name="PresentationAdvancedExpander" Header="高级参数（一般无需调整）" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                            <Expander x:Name="PresentationAdvancedExpander" Header="高级参数" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                                 <Border Margin="0,8,0,0" Padding="10" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Brush_Border}" Background="{StaticResource Brush_Surface_Secondary}">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,10">
@@ -424,9 +434,9 @@
                                             <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式（更稳定）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
-                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征（实验功能）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
-                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空演示识别规则覆盖（保存后生效）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
+                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空识别规则覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
                                         <TextBlock Text="识别规则包（签名）"
                                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                                    FontSize="13"
@@ -496,8 +506,8 @@
 
             <!-- 3. 按钮 -->
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
-                <Button Content="仅重置当前页" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
-                <Button Content="重置全部设置" Width="118" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
+                <Button Content="重置本页" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
+                <Button Content="全部重置" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
                 <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>

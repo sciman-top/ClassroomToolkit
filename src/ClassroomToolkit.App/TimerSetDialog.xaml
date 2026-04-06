@@ -22,7 +22,7 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="倒计时设置" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭倒计时设置">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -38,7 +38,7 @@
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
                         <TextBlock Text="分钟" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"
-                                   ToolTip="可输入 0-150，滑杆范围为 0-25。"/>
+                                   ToolTip="可输入 0-150，滑杆到 25。"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button x:Name="MinutesDownButton" Content="−" Width="30" Height="30" Margin="0,0,2,0"
                                     FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"

@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.AutoExitDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="启动器设置"
+        Title="自动关闭"
         Height="Auto" Width="408"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
@@ -20,7 +20,7 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="启动器设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <TextBlock Text="自动关闭" Style="{StaticResource Style_DialogShellTitleText}"/>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -31,7 +31,7 @@
             <Border Grid.Row="1" Margin="20,16,20,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
                     <TextBlock Text="自动关闭时间（分钟）" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                    <TextBlock Text="设为 0 时不自动关闭。" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,10"/>
+                    <TextBlock Text="设为 0 表示不自动关闭。" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,10"/>
                     <TextBox x:Name="MinutesBox" Padding="8,4"/>
                 </StackPanel>
             </Border>
