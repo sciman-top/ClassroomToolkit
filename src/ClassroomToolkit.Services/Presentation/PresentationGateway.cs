@@ -76,7 +76,9 @@ public sealed class PresentationGateway : IPresentationGateway
             AllowOffice = options.AllowOffice,
             AllowWps = options.AllowWps,
             WpsDebounceMs = options.WpsDebounceMs,
-            LockStrategyWhenDegraded = options.LockStrategyWhenDegraded
+            LockStrategyWhenDegraded = options.LockStrategyWhenDegraded,
+            AutoFallbackFailureThreshold = options.AutoFallbackFailureThreshold,
+            AutoFallbackProbeIntervalCommands = options.AutoFallbackProbeIntervalCommands
         };
     }
 }

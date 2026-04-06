@@ -50,11 +50,15 @@ public sealed class AppSettings
     public bool ControlMsPpt { get; set; } = true;
     public bool ControlWpsPpt { get; set; } = true;
     public string OfficeInputMode { get; set; } = WpsInputModeDefaults.Auto;
-    public string WpsInputMode { get; set; } = WpsInputModeDefaults.Message;
+    public string WpsInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; set; } = true;
     public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
     public int WpsDebounceMs { get; set; } = PaintPresetDefaults.WpsDebounceBalancedMs;
     public bool PresentationLockStrategyWhenDegraded { get; set; } = true;
+    public int PresentationAutoFallbackFailureThreshold { get; set; } =
+        ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault;
+    public int PresentationAutoFallbackProbeIntervalCommands { get; set; } =
+        ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault;
     public bool PresentationClassifierAutoLearnEnabled { get; set; } = false;
     public string PresentationClassifierOverridesJson { get; set; } = string.Empty;
     public string PresentationClassifierLastLearnUtc { get; set; } = string.Empty;

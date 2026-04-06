@@ -64,7 +64,7 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="sciman逸居" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0"/>
 
                             <TextBlock Grid.Row="2" Text="交流群" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="0,8,0,0"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="初中物理教研群 323728546" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="初中物理教研群（323728546）" FontSize="13" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap"/>
                         </Grid>
                     </Border>
 

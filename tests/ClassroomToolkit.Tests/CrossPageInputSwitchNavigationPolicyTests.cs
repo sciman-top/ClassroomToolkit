@@ -9,7 +9,7 @@ public sealed class CrossPageInputSwitchNavigationPolicyTests
     [InlineData((int)PaintToolMode.Brush, true, false, false)]
     [InlineData((int)PaintToolMode.Eraser, false, true, false)]
     [InlineData((int)PaintToolMode.RegionErase, false, false, true)]
-    public void Resolve_ShouldReturnStablePath_WhenMutatingInkAcrossPages(
+    public void Resolve_ShouldPreferInteractiveBrushPath_WhileMutatingInkAcrossPages(
         int modeValue,
         bool strokeInProgress,
         bool isErasing,
@@ -21,8 +21,16 @@ public sealed class CrossPageInputSwitchNavigationPolicyTests
             isErasing,
             isRegionSelecting);
 
-        plan.InteractiveSwitch.Should().BeFalse();
-        plan.DeferCrossPageDisplayUpdate.Should().BeFalse();
+        if ((PaintToolMode)modeValue == PaintToolMode.Brush)
+        {
+            plan.InteractiveSwitch.Should().BeTrue();
+            plan.DeferCrossPageDisplayUpdate.Should().BeTrue();
+        }
+        else
+        {
+            plan.InteractiveSwitch.Should().BeFalse();
+            plan.DeferCrossPageDisplayUpdate.Should().BeFalse();
+        }
     }
 
     [Theory]
@@ -46,7 +54,7 @@ public sealed class CrossPageInputSwitchNavigationPolicyTests
     }
 
     [Fact]
-    public void Resolve_ShouldReturnStablePath_WhenSwitchWasTriggeredByActiveBrushMutation()
+    public void Resolve_ShouldReturnInteractivePath_WhenSwitchWasTriggeredByActiveBrushMutation()
     {
         var plan = CrossPageInputSwitchNavigationPolicy.Resolve(
             PaintToolMode.Brush,
@@ -55,7 +63,7 @@ public sealed class CrossPageInputSwitchNavigationPolicyTests
             isRegionSelecting: false,
             inputTriggeredByActiveInkMutation: true);
 
-        plan.InteractiveSwitch.Should().BeFalse();
-        plan.DeferCrossPageDisplayUpdate.Should().BeFalse();
+        plan.InteractiveSwitch.Should().BeTrue();
+        plan.DeferCrossPageDisplayUpdate.Should().BeTrue();
     }
 }

@@ -77,6 +77,8 @@ public static class SystemDiagnostics
         lines.Add($"WPS滚轮映射：{(settings.WpsWheelForward ? "启用" : "禁用")}");
         lines.Add($"WPS去抖毫秒：{settings.WpsDebounceMs}");
         lines.Add($"降级策略锁定：{(settings.PresentationLockStrategyWhenDegraded ? "启用" : "禁用")}");
+        lines.Add($"自动降级阈值：连续失败 {settings.PresentationAutoFallbackFailureThreshold} 次");
+        lines.Add($"自动探活窗口：{settings.PresentationAutoFallbackProbeIntervalCommands} 次 message 后探活");
         lines.Add($"演示规则自动学习：{(settings.PresentationClassifierAutoLearnEnabled ? "启用" : "禁用")}");
         lines.Add($"演示识别规则覆盖：{(string.IsNullOrWhiteSpace(settings.PresentationClassifierOverridesJson) ? "未配置" : "已配置")}");
         AppendClassifierOverrideSummary(lines, settings.PresentationClassifierOverridesJson);

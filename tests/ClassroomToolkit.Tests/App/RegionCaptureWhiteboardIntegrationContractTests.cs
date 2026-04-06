@@ -19,10 +19,23 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     }
 
     [Fact]
+    public void ToolbarNonBoardActions_ShouldClearRegionCaptureResumeArm_AndExitWhiteboardForToolSwitch()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: true);");
+        source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: false);");
+        source.Should().Contain("ClearDirectWhiteboardEntryArm();");
+        source.Should().Contain("ExitWhiteboardForToolSwitchIfNeeded();");
+        source.Should().Contain("SetBoardActive(false);");
+    }
+
+    [Fact]
     public void RegionCaptureFlow_ShouldKeepScreenshotVisible_AndAvoidFullscreenEntry()
     {
         var source = File.ReadAllText(GetMainWindowPaintSourcePath());
         var photoSource = File.ReadAllText(GetMainWindowPhotoSourcePath());
+        var inputSource = File.ReadAllText(GetOverlayInputSourcePath());
         var overlayPhotoNavSource = File.ReadAllText(GetOverlayPhotoNavigationSourcePath());
         var overlayPhotoTransformSource = File.ReadAllText(GetOverlayPhotoTransformSourcePath());
 
@@ -34,6 +47,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         photoSource.Should().Contain("overlay.EnterPhotoMode(path);");
         photoSource.Should().Contain("overlay.SetPhotoInkCanvasUnbounded(allowInkOutsidePhoto);");
         photoSource.Should().Contain("overlay.CenterPhotoAtOriginalScale();");
+        inputSource.Should().Contain("ZoomPhoto(e.Delta, PhotoZoomAnchorPolicy.ResolveViewportCenter(OverlayRoot));");
         overlayPhotoNavSource.Should().Contain("public void SetPhotoInkCanvasUnbounded(bool enabled)");
         overlayPhotoNavSource.Should().Contain("if (!_photoUnboundedInkCanvasEnabled && PhotoBackground.Source is BitmapSource bitmap)");
         overlayPhotoTransformSource.Should().Contain("public void CenterPhotoAtOriginalScale()");

@@ -273,14 +273,14 @@
 
                         <TabItem Header="兼容">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="仅在课堂环境不稳定或排障时再调整这里的选项。"
+                <TextBlock Text="常用参数优先，高级项按需开启。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="12"
                            TextWrapping="Wrap"/>
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="默认只显示常用项，兼容与排障参数按需展开。"
+                        <TextBlock Text="高级项默认折叠。"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
@@ -323,7 +323,7 @@
                             </Grid>
                             <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="一般保持默认；仅在卡顿或翻页不同步时再调高级参数。"
+                            <TextBlock Text="仅排障时调整高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -417,7 +417,7 @@
                             </Grid>
                             <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
                             <CheckBox x:Name="ForceForegroundCheck" Content="全屏放映时自动置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="一般保持默认；仅在兼容异常时再调高级参数。"
+                            <TextBlock Text="仅兼容异常时调整高级参数。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -435,6 +435,22 @@
                                             <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
                                         </Grid>
                                         <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <Grid Margin="0,10,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="降级阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <ComboBox Grid.Column="1" x:Name="FallbackFailureThresholdCombo" Height="34" FontSize="13"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="探活窗口" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
+                                            <ComboBox Grid.Column="1" x:Name="FallbackProbeIntervalCombo" Height="34" FontSize="13"/>
+                                        </Grid>
                                         <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
                                         <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空识别规则覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
                                         <TextBlock Text="识别规则包（签名）"

@@ -59,6 +59,8 @@ internal static class PresetSchemeInitializationPolicy
         settings.WpsInputMode = parameters.WpsInputMode;
         settings.WpsWheelForward = parameters.WpsWheelForward;
         settings.PresentationLockStrategyWhenDegraded = parameters.LockStrategyWhenDegraded;
+        settings.PresentationAutoFallbackFailureThreshold = parameters.AutoFallbackFailureThreshold;
+        settings.PresentationAutoFallbackProbeIntervalCommands = parameters.AutoFallbackProbeIntervalCommands;
         settings.ClassroomWritingMode = parameters.ClassroomWritingMode;
         settings.WpsDebounceMs = parameters.WpsDebounceMs;
         settings.PhotoPostInputRefreshDelayMs = parameters.PhotoPostInputRefreshDelayMs;
@@ -77,7 +79,7 @@ internal static class PresetSchemeInitializationPolicy
 
     private static bool ShouldApplyRecommendation(AppSettings settings, string currentScheme)
     {
-        if (currentScheme is PresetSchemeDefaults.Responsive or PresetSchemeDefaults.Stable or PresetSchemeDefaults.DualScreen)
+        if (currentScheme is PresetSchemeDefaults.Responsive or PresetSchemeDefaults.Stable)
         {
             return false;
         }
@@ -88,6 +90,18 @@ internal static class PresetSchemeInitializationPolicy
         }
 
         if (!settings.WpsWheelForward || !settings.PresentationLockStrategyWhenDegraded)
+        {
+            return false;
+        }
+
+        if (settings.PresentationAutoFallbackFailureThreshold
+            != ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault)
+        {
+            return false;
+        }
+
+        if (settings.PresentationAutoFallbackProbeIntervalCommands
+            != ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault)
         {
             return false;
         }
@@ -131,11 +145,15 @@ internal static class PresetSchemeInitializationPolicy
             return PresetSchemeDefaults.Custom;
         }
 
+        if (normalized == PresetSchemeDefaults.DualScreen)
+        {
+            return PresetSchemeDefaults.Stable;
+        }
+
         return normalized is PresetSchemeDefaults.Custom
             or PresetSchemeDefaults.Balanced
             or PresetSchemeDefaults.Responsive
             or PresetSchemeDefaults.Stable
-            or PresetSchemeDefaults.DualScreen
             ? normalized
             : PresetSchemeDefaults.Custom;
     }

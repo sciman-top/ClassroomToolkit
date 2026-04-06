@@ -201,12 +201,16 @@ public sealed class AppSettingsServiceTests
             var initial = service.Load();
             initial.WpsDebounceMs = 120;
             initial.PresentationLockStrategyWhenDegraded = false;
+            initial.PresentationAutoFallbackFailureThreshold = 3;
+            initial.PresentationAutoFallbackProbeIntervalCommands = 12;
 
             service.Save(initial);
             var reloaded = service.Load();
 
             reloaded.WpsDebounceMs.Should().Be(120);
             reloaded.PresentationLockStrategyWhenDegraded.Should().BeFalse();
+            reloaded.PresentationAutoFallbackFailureThreshold.Should().Be(3);
+            reloaded.PresentationAutoFallbackProbeIntervalCommands.Should().Be(12);
         }
         finally
         {
@@ -387,6 +391,8 @@ public sealed class AppSettingsServiceTests
                     "preset_scheme": "legacy",
                     "wps_input_mode": "invalid_mode",
                     "wps_debounce_ms": "-12",
+                    "presentation_auto_fallback_failure_threshold": "0",
+                    "presentation_auto_fallback_probe_interval_commands": "1000",
                     "toolbar_scale": "3.7",
                     "ink_export_max_parallel_files": "-5",
                     "ink_retention_days": "-9",
@@ -412,7 +418,7 @@ public sealed class AppSettingsServiceTests
             var settings = service.Load();
 
             settings.PresetScheme.Should().Be(PresetSchemeDefaults.Custom);
-            settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
+            settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Auto);
             settings.OfficeInputMode.Should().Be(WpsInputModeDefaults.Auto);
             settings.StylusAdaptivePressureProfile.Should().Be(0);
             settings.StylusAdaptiveSampleRateTier.Should().Be(0);
@@ -420,6 +426,8 @@ public sealed class AppSettingsServiceTests
             settings.StylusPressureCalibratedLow.Should().Be(0.0);
             settings.StylusPressureCalibratedHigh.Should().Be(1.0);
             settings.WpsDebounceMs.Should().Be(0);
+            settings.PresentationAutoFallbackFailureThreshold.Should().Be(1);
+            settings.PresentationAutoFallbackProbeIntervalCommands.Should().Be(100);
             settings.PaintToolbarScale.Should().Be(ToolbarScaleDefaults.Max);
             settings.InkExportMaxParallelFiles.Should().Be(0);
             settings.InkRetentionDays.Should().Be(0);
@@ -521,6 +529,8 @@ public sealed class AppSettingsServiceTests
             settings.StylusPressureCalibratedLow = 0.94;
             settings.StylusPressureCalibratedHigh = 0.945;
             settings.WpsDebounceMs = -99;
+            settings.PresentationAutoFallbackFailureThreshold = 999;
+            settings.PresentationAutoFallbackProbeIntervalCommands = -1;
             settings.PaintToolbarScale = 0.1;
             settings.InkExportMaxParallelFiles = -6;
             settings.InkRetentionDays = -3;
@@ -543,6 +553,8 @@ public sealed class AppSettingsServiceTests
             reloaded.StylusPressureCalibratedLow.Should().Be(0.0);
             reloaded.StylusPressureCalibratedHigh.Should().Be(1.0);
             reloaded.WpsDebounceMs.Should().Be(0);
+            reloaded.PresentationAutoFallbackFailureThreshold.Should().Be(10);
+            reloaded.PresentationAutoFallbackProbeIntervalCommands.Should().Be(1);
             reloaded.PaintToolbarScale.Should().Be(ToolbarScaleDefaults.Min);
             reloaded.InkExportMaxParallelFiles.Should().Be(0);
             reloaded.InkRetentionDays.Should().Be(0);

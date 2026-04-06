@@ -14,8 +14,8 @@ public sealed class PresentationControlService
     private PresentationCommand? _lastWpsCommandType;
     private IntPtr _lastWpsTarget = IntPtr.Zero;
     private readonly uint _currentProcessId;
-    private bool _wpsAutoForceMessage;
-    private bool _officeAutoForceMessage;
+    private readonly Dictionary<IntPtr, AutoFallbackState> _wpsAutoFallbackStates = new();
+    private readonly Dictionary<IntPtr, AutoFallbackState> _officeAutoFallbackStates = new();
     private readonly IForegroundWindowController _foregroundController;
 
     public PresentationControlService(
@@ -41,17 +41,27 @@ public sealed class PresentationControlService
         _currentProcessId = (uint)Environment.ProcessId;
     }
 
-    public bool IsWpsAutoForcedMessage => _wpsAutoForceMessage;
-    public bool IsOfficeAutoForcedMessage => _officeAutoForceMessage;
+    public bool IsWpsAutoForcedMessage => HasForcedState(_wpsAutoFallbackStates);
+    public bool IsOfficeAutoForcedMessage => HasForcedState(_officeAutoFallbackStates);
+
+    public bool IsWpsAutoForcedMessageForTarget(IntPtr targetHandle)
+    {
+        return IsTargetForced(_wpsAutoFallbackStates, targetHandle);
+    }
+
+    public bool IsOfficeAutoForcedMessageForTarget(IntPtr targetHandle)
+    {
+        return IsTargetForced(_officeAutoFallbackStates, targetHandle);
+    }
 
     public void ResetWpsAutoFallback()
     {
-        _wpsAutoForceMessage = false;
+        _wpsAutoFallbackStates.Clear();
     }
 
     public void ResetOfficeAutoFallback()
     {
-        _officeAutoForceMessage = false;
+        _officeAutoFallbackStates.Clear();
     }
 
     public bool TrySendForeground(PresentationCommand command, PresentationControlOptions options)
@@ -183,28 +193,40 @@ public sealed class PresentationControlService
         {
             if (targetType == PresentationType.Wps)
             {
-                _wpsAutoForceMessage = false;
+                _wpsAutoFallbackStates.Remove(target.Handle);
             }
             else if (targetType == PresentationType.Office)
             {
-                _officeAutoForceMessage = false;
+                _officeAutoFallbackStates.Remove(target.Handle);
             }
         }
 
         var strategy = options.Strategy;
         if (targetType == PresentationType.Wps
             && options.LockStrategyWhenDegraded
-            && _wpsAutoForceMessage
+            && IsWpsAutoForcedMessageForTarget(target.Handle)
             && strategy != InputStrategy.Message)
         {
-            strategy = InputStrategy.Message;
+            if (!TryConsumeFallbackProbeBudget(
+                    _wpsAutoFallbackStates,
+                    target.Handle,
+                    NormalizeProbeInterval(options.AutoFallbackProbeIntervalCommands)))
+            {
+                strategy = InputStrategy.Message;
+            }
         }
         if (targetType == PresentationType.Office
             && options.LockStrategyWhenDegraded
-            && _officeAutoForceMessage
+            && IsOfficeAutoForcedMessageForTarget(target.Handle)
             && strategy != InputStrategy.Message)
         {
-            strategy = InputStrategy.Message;
+            if (!TryConsumeFallbackProbeBudget(
+                    _officeAutoFallbackStates,
+                    target.Handle,
+                    NormalizeProbeInterval(options.AutoFallbackProbeIntervalCommands)))
+            {
+                strategy = InputStrategy.Message;
+            }
         }
 
         var sent = TrySendWithStrategy(target, command, options, strategy, out var effectiveType);
@@ -214,7 +236,10 @@ public sealed class PresentationControlService
             {
                 if (options.LockStrategyWhenDegraded)
                 {
-                    _wpsAutoForceMessage = true;
+                    MarkFallbackFailure(
+                        _wpsAutoFallbackStates,
+                        target.Handle,
+                        NormalizeFailureThreshold(options.AutoFallbackFailureThreshold));
                 }
                 sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
             }
@@ -222,9 +247,34 @@ public sealed class PresentationControlService
             {
                 if (options.LockStrategyWhenDegraded)
                 {
-                    _officeAutoForceMessage = true;
+                    MarkFallbackFailure(
+                        _officeAutoFallbackStates,
+                        target.Handle,
+                        NormalizeFailureThreshold(options.AutoFallbackFailureThreshold));
                 }
                 sent = TrySendWithStrategy(target, command, options, InputStrategy.Message, out _);
+            }
+        }
+        else if (sent && strategy != InputStrategy.Message)
+        {
+            if (effectiveType == PresentationType.Wps)
+            {
+                _wpsAutoFallbackStates.Remove(target.Handle);
+            }
+            else if (effectiveType == PresentationType.Office)
+            {
+                _officeAutoFallbackStates.Remove(target.Handle);
+            }
+        }
+        else if (sent && strategy == InputStrategy.Message)
+        {
+            if (effectiveType == PresentationType.Wps)
+            {
+                RememberForcedMessageSuccess(_wpsAutoFallbackStates, target.Handle);
+            }
+            else if (effectiveType == PresentationType.Office)
+            {
+                RememberForcedMessageSuccess(_officeAutoFallbackStates, target.Handle);
             }
         }
         return sent;
@@ -347,4 +397,95 @@ public sealed class PresentationControlService
         _foregroundController.EnsureForeground(target);
         return _foregroundController.IsForeground(target);
     }
+
+    private static bool HasForcedState(Dictionary<IntPtr, AutoFallbackState> states)
+    {
+        foreach (var state in states.Values)
+        {
+            if (state.ForceMessage)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsTargetForced(Dictionary<IntPtr, AutoFallbackState> states, IntPtr targetHandle)
+    {
+        return targetHandle != IntPtr.Zero
+            && states.TryGetValue(targetHandle, out var state)
+            && state.ForceMessage;
+    }
+
+    private static void MarkFallbackFailure(
+        Dictionary<IntPtr, AutoFallbackState> states,
+        IntPtr targetHandle,
+        int failureThreshold)
+    {
+        if (targetHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var previous = states.TryGetValue(targetHandle, out var existing)
+            ? existing
+            : default;
+        var failures = previous.Failures + 1;
+        states[targetHandle] = new AutoFallbackState(
+            Failures: failures,
+            ForceMessage: failures >= failureThreshold,
+            MessageCommandsSinceLock: 0);
+    }
+
+    private static bool TryConsumeFallbackProbeBudget(
+        Dictionary<IntPtr, AutoFallbackState> states,
+        IntPtr targetHandle,
+        int probeInterval)
+    {
+        if (targetHandle == IntPtr.Zero
+            || !states.TryGetValue(targetHandle, out var state)
+            || !state.ForceMessage)
+        {
+            return false;
+        }
+
+        if (state.MessageCommandsSinceLock < probeInterval)
+        {
+            return false;
+        }
+
+        states[targetHandle] = state with { MessageCommandsSinceLock = 0 };
+        return true;
+    }
+
+    private static void RememberForcedMessageSuccess(Dictionary<IntPtr, AutoFallbackState> states, IntPtr targetHandle)
+    {
+        if (targetHandle == IntPtr.Zero
+            || !states.TryGetValue(targetHandle, out var state)
+            || !state.ForceMessage)
+        {
+            return;
+        }
+
+        states[targetHandle] = state with
+        {
+            MessageCommandsSinceLock = state.MessageCommandsSinceLock + 1
+        };
+    }
+
+    private static int NormalizeFailureThreshold(int rawThreshold)
+    {
+        return Math.Clamp(rawThreshold, min: 1, max: 10);
+    }
+
+    private static int NormalizeProbeInterval(int rawInterval)
+    {
+        return Math.Clamp(rawInterval, min: 1, max: 100);
+    }
+
+    private readonly record struct AutoFallbackState(
+        int Failures,
+        bool ForceMessage,
+        int MessageCommandsSinceLock);
 }

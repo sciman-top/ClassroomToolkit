@@ -144,6 +144,16 @@ public sealed class AppSettingsService
                 paint,
                 "presentation_lock_strategy_when_degraded",
                 settings.PresentationLockStrategyWhenDegraded);
+            settings.PresentationAutoFallbackFailureThreshold = NormalizePresentationAutoFallbackFailureThreshold(
+                GetInt(
+                    paint,
+                    "presentation_auto_fallback_failure_threshold",
+                    settings.PresentationAutoFallbackFailureThreshold));
+            settings.PresentationAutoFallbackProbeIntervalCommands = NormalizePresentationAutoFallbackProbeIntervalCommands(
+                GetInt(
+                    paint,
+                    "presentation_auto_fallback_probe_interval_commands",
+                    settings.PresentationAutoFallbackProbeIntervalCommands));
             settings.PresentationClassifierAutoLearnEnabled = GetBool(
                 paint,
                 "presentation_classifier_auto_learn_enabled",
@@ -351,6 +361,12 @@ public sealed class AppSettingsService
         paint["wps_debounce_ms"] = NormalizeWpsDebounceMs(settings.WpsDebounceMs).ToString(CultureInfo.InvariantCulture);
         paint["presentation_lock_strategy_when_degraded"] =
             settings.PresentationLockStrategyWhenDegraded ? "True" : "False";
+        paint["presentation_auto_fallback_failure_threshold"] =
+            NormalizePresentationAutoFallbackFailureThreshold(settings.PresentationAutoFallbackFailureThreshold)
+                .ToString(CultureInfo.InvariantCulture);
+        paint["presentation_auto_fallback_probe_interval_commands"] =
+            NormalizePresentationAutoFallbackProbeIntervalCommands(settings.PresentationAutoFallbackProbeIntervalCommands)
+                .ToString(CultureInfo.InvariantCulture);
         paint["presentation_classifier_auto_learn_enabled"] =
             settings.PresentationClassifierAutoLearnEnabled ? "True" : "False";
         paint["presentation_classifier_overrides_json"] =
@@ -680,11 +696,15 @@ public sealed class AppSettingsService
             return PresetSchemeDefaults.Custom;
         }
 
+        if (normalized == PresetSchemeDefaults.DualScreen)
+        {
+            return PresetSchemeDefaults.Stable;
+        }
+
         return normalized is PresetSchemeDefaults.Custom
             or PresetSchemeDefaults.Balanced
             or PresetSchemeDefaults.Responsive
             or PresetSchemeDefaults.Stable
-            or PresetSchemeDefaults.DualScreen
             ? normalized
             : PresetSchemeDefaults.Custom;
     }
@@ -714,6 +734,22 @@ public sealed class AppSettingsService
     private static int NormalizeWpsDebounceMs(int debounceMs)
     {
         return Math.Max(0, debounceMs);
+    }
+
+    private static int NormalizePresentationAutoFallbackFailureThreshold(int threshold)
+    {
+        return Math.Clamp(
+            threshold,
+            min: 1,
+            max: 10);
+    }
+
+    private static int NormalizePresentationAutoFallbackProbeIntervalCommands(int interval)
+    {
+        return Math.Clamp(
+            interval,
+            min: 1,
+            max: 100);
     }
 
     private static double NormalizePaintToolbarScale(double scale)

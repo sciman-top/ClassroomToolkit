@@ -22,7 +22,17 @@ internal static class CrossPageInputSwitchNavigationPolicy
                 || mode == PaintToolMode.Eraser
                 || mode == PaintToolMode.RegionErase))
         {
-            // Prefer correctness over transition smoothness while mutating ink across seam.
+            // Brush seam continuation needs the interactive path so the current page and
+            // its neighbor frames stay coherent while the stroke crosses the seam.
+            if (mode == PaintToolMode.Brush)
+            {
+                return new CrossPageInputSwitchNavigationPlan(
+                    InteractiveSwitch: true,
+                    DeferCrossPageDisplayUpdate: true);
+            }
+
+            // Eraser and region erase still prefer the stable path because their geometry
+            // mutations are not resumed as a continuous stroke across the seam.
             return new CrossPageInputSwitchNavigationPlan(
                 InteractiveSwitch: false,
                 DeferCrossPageDisplayUpdate: false);

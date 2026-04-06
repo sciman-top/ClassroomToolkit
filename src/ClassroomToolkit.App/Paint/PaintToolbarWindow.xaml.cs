@@ -187,6 +187,7 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
+        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         if (ReferenceEquals(sender, CursorButton))
         {
             SelectToolMode(PaintToolMode.Cursor, allowToggleOffCurrent: false);
@@ -210,6 +211,7 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
+        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         
         var index = ResolveQuickColorIndex(button.Tag);
         if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
@@ -245,6 +247,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         if (_overlay != null)
         {
             _overlay.ClearAll();
@@ -257,6 +260,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         if (_overlay != null)
         {
             _overlay.Undo();
@@ -269,6 +273,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnShapeButtonClick(object sender, RoutedEventArgs e)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         var shapeType = ResolveEffectiveShapeType();
         ApplyShapeType(shapeType);
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: true);
@@ -295,6 +300,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
+        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         ApplyShapeType(type);
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
     }
@@ -371,6 +377,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         SafeActionExecutionExecutor.TryExecute(
             () => PhotoOpenRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: photo open callback failed: {ex.Message}"));
@@ -590,6 +597,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OpenQuickColorDialog(int index)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         var picker = new QuickColorPaletteWindow
         {
             Owner = this
@@ -710,9 +718,30 @@ public partial class PaintToolbarWindow : Window
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
+        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         SafeActionExecutionExecutor.TryExecute(
             () => SettingsRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: settings callback failed: {ex.Message}"));
+    }
+
+    private void PrepareForNonBoardToolbarAction(bool exitWhiteboard)
+    {
+        ClearDirectWhiteboardEntryArm();
+        if (exitWhiteboard)
+        {
+            ExitWhiteboardForToolSwitchIfNeeded();
+        }
+    }
+
+    private void ExitWhiteboardForToolSwitchIfNeeded()
+    {
+        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
+        if (!whiteboardActive)
+        {
+            return;
+        }
+
+        SetBoardActive(false);
     }
 
     private void UpdateQuickColorSelection(MediaColor color)

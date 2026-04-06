@@ -15,6 +15,8 @@ public sealed record PresentationControlOptions(
     bool AllowOffice = true,
     bool WheelAsKey = false,
     int WpsDebounceMs = 200,
-    bool LockStrategyWhenDegraded = true);
+    bool LockStrategyWhenDegraded = true,
+    int AutoFallbackFailureThreshold = 2,
+    int AutoFallbackProbeIntervalCommands = 8);
 
 public readonly record struct PresentationTarget(nint Handle);

@@ -377,6 +377,8 @@ public partial class PaintOverlayWindow : Window
             WheelAsKey = false,
             WpsDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs,
             LockStrategyWhenDegraded = true,
+            AutoFallbackFailureThreshold = ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault,
+            AutoFallbackProbeIntervalCommands = ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault,
             AllowOffice = true,
             AllowWps = true
         };

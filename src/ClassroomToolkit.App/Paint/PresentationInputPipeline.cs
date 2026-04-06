@@ -56,7 +56,7 @@ internal sealed class PresentationInputPipeline
         WpsForceMessageFallback = true;
     }
 
-    public InputStrategy ResolveWpsSendMode(bool targetIsValid)
+    public InputStrategy ResolveWpsSendMode(bool targetIsValid, IntPtr targetHandle = default)
     {
         if (WpsForceMessageFallback)
         {
@@ -65,7 +65,10 @@ internal sealed class PresentationInputPipeline
 
         if (WpsStrategy == InputStrategy.Auto)
         {
-            if (_presentationService.IsWpsAutoForcedMessage)
+            var forceMessage = targetHandle == IntPtr.Zero
+                ? _presentationService.IsWpsAutoForcedMessage
+                : _presentationService.IsWpsAutoForcedMessageForTarget(targetHandle);
+            if (forceMessage)
             {
                 return InputStrategy.Message;
             }
@@ -97,6 +100,8 @@ internal sealed class PresentationInputPipeline
             WheelAsKey = currentOptions.WheelAsKey,
             WpsDebounceMs = currentOptions.WpsDebounceMs,
             LockStrategyWhenDegraded = currentOptions.LockStrategyWhenDegraded,
+            AutoFallbackFailureThreshold = currentOptions.AutoFallbackFailureThreshold,
+            AutoFallbackProbeIntervalCommands = currentOptions.AutoFallbackProbeIntervalCommands,
             AllowOffice = false,
             AllowWps = true
         };
@@ -120,6 +125,8 @@ internal sealed class PresentationInputPipeline
             WheelAsKey = currentOptions.WheelAsKey,
             WpsDebounceMs = currentOptions.WpsDebounceMs,
             LockStrategyWhenDegraded = currentOptions.LockStrategyWhenDegraded,
+            AutoFallbackFailureThreshold = currentOptions.AutoFallbackFailureThreshold,
+            AutoFallbackProbeIntervalCommands = currentOptions.AutoFallbackProbeIntervalCommands,
             AllowOffice = true,
             AllowWps = false
         };

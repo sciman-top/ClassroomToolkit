@@ -7,6 +7,8 @@ internal readonly record struct PresetSchemeManagedParameters(
     string WpsInputMode,
     bool WpsWheelForward,
     bool LockStrategyWhenDegraded,
+    int AutoFallbackFailureThreshold,
+    int AutoFallbackProbeIntervalCommands,
     ClassroomWritingMode ClassroomWritingMode,
     int WpsDebounceMs,
     int PhotoPostInputRefreshDelayMs,
@@ -31,6 +33,8 @@ internal static class PresetSchemePolicy
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
+                    AutoFallbackFailureThreshold: 2,
+                    AutoFallbackProbeIntervalCommands: 8,
                     ClassroomWritingMode.Balanced,
                     PaintPresetDefaults.WpsDebounceBalancedMs,
                     PaintPresetDefaults.PostInputBalancedMs,
@@ -43,6 +47,8 @@ internal static class PresetSchemePolicy
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
+                    AutoFallbackFailureThreshold: 3,
+                    AutoFallbackProbeIntervalCommands: 6,
                     ClassroomWritingMode.Responsive,
                     PaintPresetDefaults.WpsDebounceResponsiveMs,
                     PaintPresetDefaults.PostInputResponsiveMs,
@@ -55,6 +61,8 @@ internal static class PresetSchemePolicy
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
+                    AutoFallbackFailureThreshold: 2,
+                    AutoFallbackProbeIntervalCommands: 12,
                     ClassroomWritingMode.Stable,
                     PaintPresetDefaults.WpsDebounceStableMs,
                     PaintPresetDefaults.PostInputStableMs,
@@ -67,12 +75,14 @@ internal static class PresetSchemePolicy
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
+                    AutoFallbackFailureThreshold: 2,
+                    AutoFallbackProbeIntervalCommands: 12,
                     ClassroomWritingMode.Stable,
-                    PaintPresetDefaults.WpsDebounceDualScreenMs,
-                    PaintPresetDefaults.PostInputDualScreenMs,
-                    PaintPresetDefaults.WheelZoomDualScreen,
-                    PaintPresetDefaults.GestureSensitivityDualScreen,
-                    PaintPresetDefaults.InertiaProfileDualScreen);
+                    PaintPresetDefaults.WpsDebounceStableMs,
+                    PaintPresetDefaults.PostInputStableMs,
+                    PaintPresetDefaults.WheelZoomStable,
+                    PaintPresetDefaults.GestureSensitivityStable,
+                    PaintPresetDefaults.InertiaProfileStable);
                 return true;
             default:
                 parameters = default;
@@ -87,12 +97,12 @@ internal static class PresetSchemePolicy
         {
             if (configured == PresetSchemeDefaults.Custom || Matches(settings, configured))
             {
-                return configured;
+                return NormalizeLegacyScheme(configured);
             }
 
             if (TryInferByParameters(settings, out var inferred))
             {
-                return inferred;
+                return NormalizeLegacyScheme(inferred);
             }
 
             return PresetSchemeDefaults.Custom;
@@ -100,7 +110,7 @@ internal static class PresetSchemePolicy
 
         if (TryInferByParameters(settings, out var fallbackInferred))
         {
-            return fallbackInferred;
+            return NormalizeLegacyScheme(fallbackInferred);
         }
 
         return PresetSchemeDefaults.Custom;
@@ -128,15 +138,9 @@ internal static class PresetSchemePolicy
         bool lowSampleRate = sampleRateTier == StylusSampleRateTier.Low;
         if (lowPressureReliability || lowSampleRate)
         {
-            bool keepDualScreen = lowSampleRate
-                && string.Equals(
-                    (settings.PresetScheme ?? string.Empty).Trim(),
-                    PresetSchemeDefaults.DualScreen,
-                    StringComparison.OrdinalIgnoreCase);
-            var recommended = keepDualScreen ? PresetSchemeDefaults.DualScreen : PresetSchemeDefaults.Stable;
             return new PresetSchemeRecommendation(
-                recommended,
-                $"设备画像：{profileSummary}，建议使用{(keepDualScreen ? "双屏投影" : "高稳定")}以提升容错。",
+                PresetSchemeDefaults.Stable,
+                $"设备画像：{profileSummary}，建议使用高稳定以提升容错。",
                 HasAdaptiveSignal: true);
         }
 
@@ -184,7 +188,13 @@ internal static class PresetSchemePolicy
 
         if (Matches(settings, PresetSchemeDefaults.DualScreen))
         {
-            scheme = PresetSchemeDefaults.DualScreen;
+            scheme = PresetSchemeDefaults.Stable;
+            return true;
+        }
+
+        if (MatchesLegacyDualScreenParameters(settings))
+        {
+            scheme = PresetSchemeDefaults.Stable;
             return true;
         }
 
@@ -202,6 +212,8 @@ internal static class PresetSchemePolicy
         return string.Equals(settings.WpsInputMode, parameters.WpsInputMode, StringComparison.OrdinalIgnoreCase)
             && settings.WpsWheelForward == parameters.WpsWheelForward
             && settings.PresentationLockStrategyWhenDegraded == parameters.LockStrategyWhenDegraded
+            && settings.PresentationAutoFallbackFailureThreshold == parameters.AutoFallbackFailureThreshold
+            && settings.PresentationAutoFallbackProbeIntervalCommands == parameters.AutoFallbackProbeIntervalCommands
             && settings.ClassroomWritingMode == parameters.ClassroomWritingMode
             && settings.WpsDebounceMs == parameters.WpsDebounceMs
             && settings.PhotoPostInputRefreshDelayMs == parameters.PhotoPostInputRefreshDelayMs
@@ -282,5 +294,30 @@ internal static class PresetSchemePolicy
             or PresetSchemeDefaults.Responsive
             or PresetSchemeDefaults.Stable
             or PresetSchemeDefaults.DualScreen;
+    }
+
+    private static string NormalizeLegacyScheme(string scheme)
+    {
+        return string.Equals(scheme, PresetSchemeDefaults.DualScreen, StringComparison.OrdinalIgnoreCase)
+            ? PresetSchemeDefaults.Stable
+            : scheme;
+    }
+
+    private static bool MatchesLegacyDualScreenParameters(AppSettings settings)
+    {
+        return string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Message, StringComparison.OrdinalIgnoreCase)
+            && settings.WpsWheelForward
+            && settings.PresentationLockStrategyWhenDegraded
+            && settings.PresentationAutoFallbackFailureThreshold == 2
+            && settings.PresentationAutoFallbackProbeIntervalCommands == 16
+            && settings.ClassroomWritingMode == ClassroomWritingMode.Stable
+            && settings.WpsDebounceMs == PaintPresetDefaults.WpsDebounceDualScreenMs
+            && settings.PhotoPostInputRefreshDelayMs == PaintPresetDefaults.PostInputDualScreenMs
+            && Math.Abs(settings.PhotoWheelZoomBase - PaintPresetDefaults.WheelZoomDualScreen) < PaintSettingsDefaults.DoubleComparisonEpsilon
+            && Math.Abs(settings.PhotoGestureZoomSensitivity - PaintPresetDefaults.GestureSensitivityDualScreen) < PaintSettingsDefaults.DoubleComparisonEpsilon
+            && string.Equals(
+                PhotoInertiaProfileDefaults.Normalize(settings.PhotoInertiaProfile),
+                PaintPresetDefaults.InertiaProfileDualScreen,
+                StringComparison.OrdinalIgnoreCase);
     }
 }

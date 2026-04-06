@@ -18,6 +18,16 @@ public sealed class CrossPageNeighborInkRenderSurfaceContractTests
         rendererSource.Should().Contain("dc.PushTransform(new TranslateTransform(horizontalOffsetDip, 0));");
     }
 
+    [Fact]
+    public void ResolveNeighborInkBitmap_ShouldSynchronouslyRebuild_WhenInteractivePathDisablesDeferredRender()
+    {
+        var crossPageSource = File.ReadAllText(GetCrossPageSourcePath());
+
+        crossPageSource.Should().Contain("if (!allowDeferredRender)");
+        crossPageSource.Should().Contain("var rebuiltEntry = BuildNeighborInkCacheEntry(page, pageBitmap, strokes);");
+        crossPageSource.Should().Contain("return rebuiltEntry.Bitmap;");
+    }
+
     private static string GetCrossPageSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(

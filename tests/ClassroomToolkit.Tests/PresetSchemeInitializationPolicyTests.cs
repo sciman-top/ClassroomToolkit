@@ -52,6 +52,8 @@ public sealed class PresetSchemeInitializationPolicyTests
         result.RecommendationHasAdaptiveSignal.Should().BeTrue();
         settings.PresetScheme.Should().Be(PresetSchemeDefaults.Stable);
         settings.PresetRecommendationInitialized.Should().BeTrue();
+        settings.PresentationAutoFallbackFailureThreshold.Should().Be(2);
+        settings.PresentationAutoFallbackProbeIntervalCommands.Should().Be(12);
     }
 
     [Fact]

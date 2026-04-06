@@ -344,6 +344,16 @@ public partial class PaintOverlayWindow
         }
     }
 
+    public void UpdatePresentationAutoFallbackFailureThreshold(int threshold)
+    {
+        _presentationOptions.AutoFallbackFailureThreshold = Math.Clamp(threshold, min: 1, max: 10);
+    }
+
+    public void UpdatePresentationAutoFallbackProbeIntervalCommands(int interval)
+    {
+        _presentationOptions.AutoFallbackProbeIntervalCommands = Math.Clamp(interval, min: 1, max: 100);
+    }
+
     public void UpdatePresentationClassifierOverrides(string rawOverridesJson)
     {
         var hasParseError = false;
@@ -794,7 +804,7 @@ public partial class PaintOverlayWindow
     private InputStrategy ResolveWpsSendMode(
         PresentationTarget target)
     {
-        return _presentationInputPipeline.ResolveWpsSendMode(target.IsValid);
+        return _presentationInputPipeline.ResolveWpsSendMode(target.IsValid, target.Handle);
     }
 
     private void MarkWpsHookUnavailable(bool notify)
@@ -973,6 +983,7 @@ public partial class PaintOverlayWindow
             $"[PresentationState] reason={reason}; allowWps={_presentationOptions.AllowWps}; allowOffice={_presentationOptions.AllowOffice}; " +
             $"wpsMode={_presentationOptions.Strategy}; officeMode={_presentationInputPipeline.OfficeStrategy}; wheelAsKey={_presentationOptions.WheelAsKey}; " +
             $"wpsDebounceMs={_presentationOptions.WpsDebounceMs}; lockOnDegrade={_presentationOptions.LockStrategyWhenDegraded}; " +
+            $"fallbackThreshold={_presentationOptions.AutoFallbackFailureThreshold}; fallbackProbe={_presentationOptions.AutoFallbackProbeIntervalCommands}; " +
             $"hookActive={_wpsNavHookActive}; hookKeyboard={_wpsHookInterceptKeyboard}; hookWheel={_wpsHookInterceptWheel}; " +
             $"forceMessage={_presentationInputPipeline.WpsForceMessageFallback}; photoMode={_photoModeActive}; boardMode={IsBoardActive()}; " +
             $"fullscreen={_presentationFullscreenActive}; fgType={_foregroundPresentationType}; currentType={_currentPresentationType}");

@@ -82,7 +82,7 @@
                                 <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="34"/>
                             </Grid>
                         </Border>
-                        <TextBlock Text="一般保持默认；需要突出信息时再调整。"
+                        <TextBlock Text="按需调整。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="12"
@@ -126,7 +126,7 @@
                             <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" Height="34"/>
                         </Grid>
                         </Border>
-                        <TextBlock Text="当前版本使用系统默认播报设备。"
+                        <TextBlock Text="播报设备使用系统默认。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="12"
@@ -172,7 +172,7 @@
                             <ComboBox x:Name="RemoteGroupSwitchKeyCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="34"/>
                         </Grid>
                         </Border>
-                        <TextBlock Text="同时启用两个按键时，请确保不相同。"
+                        <TextBlock Text="两个按键请勿重复。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="12"
@@ -224,7 +224,7 @@
                             </StackPanel>
                         </Grid>
                         </Border>
-                        <TextBlock Text="默认建议关闭定时语音提醒；开启后会按间隔播报。"
+                        <TextBlock Text="开启后按设定间隔提醒。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="12"

@@ -58,27 +58,6 @@ public partial class PaintSettingsDialog : Window
         [ClassroomWritingMode.Balanced] = "课堂默认推荐：稳和快比较均衡，大多数触屏一体机可直接使用。",
         [ClassroomWritingMode.Responsive] = "适合较新高性能一体机，跟手更快，轻微抖动会更容易显现。"
     };
-    private static readonly (string Label, string Value)[] WpsModeChoices =
-    {
-        ("兼容优先（推荐，PostMessage）", WpsInputModeDefaults.Message),
-        ("自动判断", WpsInputModeDefaults.Auto),
-        ("性能优先（SendInput）", WpsInputModeDefaults.Raw)
-    };
-    private static readonly (string Label, string Value)[] OfficeModeChoices =
-    {
-        ("自动判断（推荐）", WpsInputModeDefaults.Auto),
-        ("强制原始输入（SendInput）", WpsInputModeDefaults.Raw),
-        ("兼容排障（PostMessage，画笔态可能无效）", WpsInputModeDefaults.Message)
-    };
-    private static readonly (string Label, int Value)[] WpsDebounceChoices =
-    {
-        ("关闭（0ms）", 0),
-        ("80 ms（更灵敏）", 80),
-        ("120 ms（推荐）", 120),
-        ("160 ms（跨屏稳）", 160),
-        ("200 ms（更稳）", 200),
-        ("300 ms（更稳）", 300)
-    };
     private static readonly double[] ToolbarScaleChoices =
     {
         ToolbarScaleDefaults.Min,
@@ -112,20 +91,20 @@ public partial class PaintSettingsDialog : Window
         ("更快（80ms）", PaintPresetDefaults.PostInputResponsiveMs),
         ("平衡（120ms，推荐/默认）", PaintPresetDefaults.PostInputBalancedMs),
         ("稳定（140ms）", PaintPresetDefaults.PostInputStableMs),
-        ("跨屏稳（160ms）", PaintPresetDefaults.PostInputDualScreenMs),
+        ("稳态增强（160ms）", PaintPresetDefaults.PostInputDualScreenMs),
         ("保守（180ms）", 180)
     };
     private static readonly (string Label, double Value)[] WheelZoomBaseChoices =
     {
         ("细腻（慢）", PaintPresetDefaults.WheelZoomStable),
-        ("跨屏稳（中慢）", PaintPresetDefaults.WheelZoomDualScreen),
+        ("平稳（中慢）", PaintPresetDefaults.WheelZoomDualScreen),
         ("平衡（推荐/默认）", PaintPresetDefaults.WheelZoomBalanced),
         ("迅速（快）", PaintPresetDefaults.WheelZoomResponsive)
     };
     private static readonly (string Label, double Value)[] GestureSensitivityChoices =
     {
         ("柔和（0.8x）", PaintPresetDefaults.GestureSensitivityStable),
-        ("跨屏稳（0.9x）", PaintPresetDefaults.GestureSensitivityDualScreen),
+        ("平稳（0.9x）", PaintPresetDefaults.GestureSensitivityDualScreen),
         ("标准（1.0x，推荐/默认）", PhotoZoomInputDefaults.GestureSensitivityDefault),
         ("灵敏（1.2x）", PaintPresetDefaults.GestureSensitivityResponsive)
     };
@@ -140,16 +119,14 @@ public partial class PaintSettingsDialog : Window
         ("自定义（不覆盖）", PresetSchemeDefaults.Custom),
         ("课堂平衡（推荐）", PresetSchemeDefaults.Balanced),
         ("高灵敏（流畅优先）", PresetSchemeDefaults.Responsive),
-        ("高稳定（容错优先）", PresetSchemeDefaults.Stable),
-        ("双屏投影（跨屏优先）", PresetSchemeDefaults.DualScreen)
+        ("高稳定（容错优先）", PresetSchemeDefaults.Stable)
     };
     private static readonly Dictionary<string, string> PresetHints = new(StringComparer.OrdinalIgnoreCase)
     {
         [PresetSchemeDefaults.Custom] = string.Empty,
         [PresetSchemeDefaults.Balanced] = "课堂通用推荐：使用「课堂通用」书写模式，整体稳和快均衡。",
         [PresetSchemeDefaults.Responsive] = "流畅优先：使用「跟手优先」书写模式，适合高性能设备。",
-        [PresetSchemeDefaults.Stable] = "稳定优先：使用「稳笔模式」，适合老旧设备或复杂环境。",
-        [PresetSchemeDefaults.DualScreen] = "跨屏优先：使用「稳笔模式」，适合主屏+投影授课。"
+        [PresetSchemeDefaults.Stable] = "稳定优先：使用「稳笔模式」，适合老旧设备或复杂环境。"
     };
     private const string PresetManagedHintForCustom = "";
     private const string PresetManagedHintForPreset =
@@ -170,6 +147,8 @@ public partial class PaintSettingsDialog : Window
         string WpsInputMode,
         bool WpsWheelForward,
         bool LockStrategyWhenDegraded,
+        int AutoFallbackFailureThreshold,
+        int AutoFallbackProbeIntervalCommands,
         int WpsDebounceMs,
         int PhotoPostInputRefreshDelayMs,
         double PhotoWheelZoomBase,
@@ -194,6 +173,8 @@ public partial class PaintSettingsDialog : Window
         bool ForcePresentationForegroundOnFullscreen,
         int WpsDebounceMs,
         bool LockStrategyWhenDegraded,
+        int PresentationAutoFallbackFailureThreshold,
+        int PresentationAutoFallbackProbeIntervalCommands,
         bool PresentationClassifierAutoLearnEnabled,
         bool PresentationClassifierClearOverridesRequested,
         string PresentationClassifierOverridesJson);
@@ -205,10 +186,14 @@ public partial class PaintSettingsDialog : Window
     public bool ControlMsPpt { get; private set; }
     public bool ControlWpsPpt { get; private set; }
     public string OfficeInputMode { get; private set; } = WpsInputModeDefaults.Auto;
-    public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Message;
+    public string WpsInputMode { get; private set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; private set; }
     public int WpsDebounceMs { get; private set; } = PaintPresetDefaults.WpsDebounceDefaultMs;
     public bool PresentationLockStrategyWhenDegraded { get; private set; } = true;
+    public int PresentationAutoFallbackFailureThreshold { get; private set; } =
+        ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault;
+    public int PresentationAutoFallbackProbeIntervalCommands { get; private set; } =
+        ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault;
     public bool PresentationClassifierAutoLearnEnabled { get; private set; }
     public bool PresentationClassifierClearOverridesRequested { get; private set; }
     public string PresentationClassifierOverridesJson { get; private set; } = string.Empty;
@@ -315,6 +300,30 @@ public partial class PaintSettingsDialog : Window
             settings.WpsDebounceMs,
             string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.WpsDebounceMs} ms）"));
         SelectIntCombo(WpsDebounceCombo, settings.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+        foreach (var (label, value) in FallbackFailureThresholdChoices)
+        {
+            FallbackFailureThresholdCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        EnsureIntComboOption(
+            FallbackFailureThresholdCombo,
+            settings.PresentationAutoFallbackFailureThreshold,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.PresentationAutoFallbackFailureThreshold} 次）"));
+        SelectIntCombo(
+            FallbackFailureThresholdCombo,
+            settings.PresentationAutoFallbackFailureThreshold,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+        foreach (var (label, value) in FallbackProbeIntervalChoices)
+        {
+            FallbackProbeIntervalCombo.Items.Add(new WpfComboBoxItem { Content = label, Tag = value });
+        }
+        EnsureIntComboOption(
+            FallbackProbeIntervalCombo,
+            settings.PresentationAutoFallbackProbeIntervalCommands,
+            string.Create(CultureInfo.InvariantCulture, $"自定义（{settings.PresentationAutoFallbackProbeIntervalCommands} 次）"));
+        SelectIntCombo(
+            FallbackProbeIntervalCombo,
+            settings.PresentationAutoFallbackProbeIntervalCommands,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
         WpsWheelCheck.IsChecked = settings.WpsWheelForward;
         LockStrategyOnDegradeCheck.IsChecked = settings.PresentationLockStrategyWhenDegraded;
         PresentationClassifierAutoLearnCheck.IsChecked = settings.PresentationClassifierAutoLearnEnabled;
@@ -516,6 +525,12 @@ public partial class PaintSettingsDialog : Window
         WpsWheelForward = WpsWheelCheck.IsChecked == true;
         WpsDebounceMs = ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
         PresentationLockStrategyWhenDegraded = LockStrategyOnDegradeCheck.IsChecked != false;
+        PresentationAutoFallbackFailureThreshold = ResolveIntCombo(
+            FallbackFailureThresholdCombo,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+        PresentationAutoFallbackProbeIntervalCommands = ResolveIntCombo(
+            FallbackProbeIntervalCombo,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
         PresentationClassifierAutoLearnEnabled = PresentationClassifierAutoLearnCheck.IsChecked == true;
         PresentationClassifierClearOverridesRequested = PresentationClassifierClearOverridesCheck.IsChecked == true;
         PresentationClassifierOverridesJson = PresentationClassifierClearOverridesRequested
@@ -631,6 +646,14 @@ public partial class PaintSettingsDialog : Window
                     SelectComboByTag(OfficeModeCombo, defaults.OfficeInputMode, WpsInputModeDefaults.Auto);
                     SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
                     SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+                    SelectIntCombo(
+                        FallbackFailureThresholdCombo,
+                        defaults.PresentationAutoFallbackFailureThreshold,
+                        fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+                    SelectIntCombo(
+                        FallbackProbeIntervalCombo,
+                        defaults.PresentationAutoFallbackProbeIntervalCommands,
+                        fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
                     WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
                     LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
                     PresentationClassifierAutoLearnCheck.IsChecked = defaults.PresentationClassifierAutoLearnEnabled;
@@ -871,6 +894,8 @@ public partial class PaintSettingsDialog : Window
     private void AttachPresetManagedControlHandlers()
     {
         WpsModeCombo.SelectionChanged += OnPresetManagedComboChanged;
+        FallbackFailureThresholdCombo.SelectionChanged += OnPresetManagedComboChanged;
+        FallbackProbeIntervalCombo.SelectionChanged += OnPresetManagedComboChanged;
         WpsDebounceCombo.SelectionChanged += OnPresetManagedComboChanged;
         PostInputRefreshDelayCombo.SelectionChanged += OnPresetManagedComboChanged;
         WheelZoomBaseCombo.SelectionChanged += OnPresetManagedComboChanged;
@@ -885,6 +910,8 @@ public partial class PaintSettingsDialog : Window
     private void DetachPresetManagedControlHandlers()
     {
         WpsModeCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        FallbackFailureThresholdCombo.SelectionChanged -= OnPresetManagedComboChanged;
+        FallbackProbeIntervalCombo.SelectionChanged -= OnPresetManagedComboChanged;
         WpsDebounceCombo.SelectionChanged -= OnPresetManagedComboChanged;
         PostInputRefreshDelayCombo.SelectionChanged -= OnPresetManagedComboChanged;
         WheelZoomBaseCombo.SelectionChanged -= OnPresetManagedComboChanged;
@@ -913,6 +940,8 @@ public partial class PaintSettingsDialog : Window
         OfficeModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         WpsModeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         WpsDebounceCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        FallbackFailureThresholdCombo.SelectionChanged += OnSectionDirtySelectionChanged;
+        FallbackProbeIntervalCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         ShapeCombo.SelectionChanged += OnSectionDirtySelectionChanged;
         ToolbarScaleCombo.SelectionChanged += OnSectionDirtySelectionChanged;
 
@@ -962,6 +991,8 @@ public partial class PaintSettingsDialog : Window
         OfficeModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         WpsModeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         WpsDebounceCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        FallbackFailureThresholdCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
+        FallbackProbeIntervalCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         ShapeCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
         ToolbarScaleCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
 
@@ -1066,6 +1097,12 @@ public partial class PaintSettingsDialog : Window
             GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
             WpsWheelCheck.IsChecked == true,
             LockStrategyOnDegradeCheck.IsChecked != false,
+            ResolveIntCombo(
+                FallbackFailureThresholdCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault),
+            ResolveIntCombo(
+                FallbackProbeIntervalCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault),
             ResolveClassroomWritingMode(),
             ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
             ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
@@ -1079,6 +1116,14 @@ public partial class PaintSettingsDialog : Window
         SelectComboByTag(WpsModeCombo, parameters.WpsInputMode, WpsInputModeDefaults.Auto);
         LockStrategyOnDegradeCheck.IsChecked = parameters.LockStrategyWhenDegraded;
         WpsWheelCheck.IsChecked = parameters.WpsWheelForward;
+        SelectIntCombo(
+            FallbackFailureThresholdCombo,
+            parameters.AutoFallbackFailureThreshold,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+        SelectIntCombo(
+            FallbackProbeIntervalCombo,
+            parameters.AutoFallbackProbeIntervalCommands,
+            fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
         SelectClassroomWritingMode(parameters.ClassroomWritingMode);
         SelectIntCombo(WpsDebounceCombo, parameters.WpsDebounceMs, fallback: parameters.WpsDebounceMs);
         SelectIntCombo(PostInputRefreshDelayCombo, parameters.PhotoPostInputRefreshDelayMs, fallback: parameters.PhotoPostInputRefreshDelayMs);
@@ -1096,6 +1141,7 @@ public partial class PaintSettingsDialog : Window
     private static string FormatManagedParameters(PresetSchemeManagedParameters parameters)
     {
         return $"mode={parameters.WpsInputMode}; wheel={parameters.WpsWheelForward}; lock={parameters.LockStrategyWhenDegraded}; " +
+               $"fallbackFail={parameters.AutoFallbackFailureThreshold}; fallbackProbe={parameters.AutoFallbackProbeIntervalCommands}; " +
                $"writing={parameters.ClassroomWritingMode}; debounce={parameters.WpsDebounceMs}; postInput={parameters.PhotoPostInputRefreshDelayMs}; " +
                $"wheelZoom={parameters.PhotoWheelZoomBase:0.####}; gesture={parameters.PhotoGestureZoomSensitivity:0.###}; " +
                $"inertia={parameters.PhotoInertiaProfile}";
@@ -1112,6 +1158,8 @@ public partial class PaintSettingsDialog : Window
         WpsDebounceCombo.ToolTip = tip;
         WpsWheelCheck.ToolTip = tip;
         LockStrategyOnDegradeCheck.ToolTip = tip;
+        FallbackFailureThresholdCombo.ToolTip = tip;
+        FallbackProbeIntervalCombo.ToolTip = tip;
         PostInputRefreshDelayCombo.ToolTip = tip;
         WheelZoomBaseCombo.ToolTip = tip;
         GestureSensitivityCombo.ToolTip = tip;
@@ -1121,6 +1169,8 @@ public partial class PaintSettingsDialog : Window
         WpsDebounceCombo.IsEnabled = isCustom;
         WpsWheelCheck.IsEnabled = isCustom;
         LockStrategyOnDegradeCheck.IsEnabled = isCustom;
+        FallbackFailureThresholdCombo.IsEnabled = isCustom;
+        FallbackProbeIntervalCombo.IsEnabled = isCustom;
         PostInputRefreshDelayCombo.IsEnabled = isCustom;
         WheelZoomBaseCombo.IsEnabled = isCustom;
         GestureSensitivityCombo.IsEnabled = isCustom;
@@ -1150,6 +1200,12 @@ public partial class PaintSettingsDialog : Window
             WpsInputMode: GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto),
             WpsWheelForward: WpsWheelCheck.IsChecked == true,
             LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false,
+            AutoFallbackFailureThreshold: ResolveIntCombo(
+                FallbackFailureThresholdCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault),
+            AutoFallbackProbeIntervalCommands: ResolveIntCombo(
+                FallbackProbeIntervalCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault),
             WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
             PhotoPostInputRefreshDelayMs: ResolveIntCombo(PostInputRefreshDelayCombo, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs),
             PhotoWheelZoomBase: ResolveDoubleCombo(WheelZoomBaseCombo, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault),
@@ -1177,6 +1233,12 @@ public partial class PaintSettingsDialog : Window
             ForcePresentationForegroundOnFullscreen: ForceForegroundCheck.IsChecked == true,
             WpsDebounceMs: ResolveIntCombo(WpsDebounceCombo, fallback: PaintPresetDefaults.WpsDebounceDefaultMs),
             LockStrategyWhenDegraded: LockStrategyOnDegradeCheck.IsChecked != false,
+            PresentationAutoFallbackFailureThreshold: ResolveIntCombo(
+                FallbackFailureThresholdCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault),
+            PresentationAutoFallbackProbeIntervalCommands: ResolveIntCombo(
+                FallbackProbeIntervalCombo,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault),
             PresentationClassifierAutoLearnEnabled: PresentationClassifierAutoLearnCheck.IsChecked == true,
             PresentationClassifierClearOverridesRequested: PresentationClassifierClearOverridesCheck.IsChecked == true,
             PresentationClassifierOverridesJson: _workingPresentationClassifierOverridesJson);
@@ -1210,6 +1272,14 @@ public partial class PaintSettingsDialog : Window
             SelectComboByTag(WpsModeCombo, state.WpsInputMode, WpsInputModeDefaults.Auto);
             WpsWheelCheck.IsChecked = state.WpsWheelForward;
             LockStrategyOnDegradeCheck.IsChecked = state.LockStrategyWhenDegraded;
+            SelectIntCombo(
+                FallbackFailureThresholdCombo,
+                state.AutoFallbackFailureThreshold,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+            SelectIntCombo(
+                FallbackProbeIntervalCombo,
+                state.AutoFallbackProbeIntervalCommands,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
             SelectIntCombo(WpsDebounceCombo, state.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
             SelectIntCombo(PostInputRefreshDelayCombo, state.PhotoPostInputRefreshDelayMs, fallback: PaintPresetDefaults.PostInputRefreshDefaultMs);
             SelectDoubleCombo(WheelZoomBaseCombo, state.PhotoWheelZoomBase, fallback: PhotoZoomInputDefaults.WheelZoomBaseDefault);
@@ -1257,6 +1327,14 @@ public partial class PaintSettingsDialog : Window
             ForceForegroundCheck.IsChecked = state.ForcePresentationForegroundOnFullscreen;
             SelectIntCombo(WpsDebounceCombo, state.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
             LockStrategyOnDegradeCheck.IsChecked = state.LockStrategyWhenDegraded;
+            SelectIntCombo(
+                FallbackFailureThresholdCombo,
+                state.PresentationAutoFallbackFailureThreshold,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+            SelectIntCombo(
+                FallbackProbeIntervalCombo,
+                state.PresentationAutoFallbackProbeIntervalCommands,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
             PresentationClassifierAutoLearnCheck.IsChecked = state.PresentationClassifierAutoLearnEnabled;
             PresentationClassifierClearOverridesCheck.IsChecked = state.PresentationClassifierClearOverridesRequested;
             _workingPresentationClassifierOverridesJson =
@@ -1305,6 +1383,14 @@ public partial class PaintSettingsDialog : Window
             SelectComboByTag(PresetSchemeCombo, defaultPreset, PresetSchemeDefaults.Custom);
             _currentPresetScheme = defaultPreset;
             SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
+            SelectIntCombo(
+                FallbackFailureThresholdCombo,
+                defaults.PresentationAutoFallbackFailureThreshold,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault);
+            SelectIntCombo(
+                FallbackProbeIntervalCombo,
+                defaults.PresentationAutoFallbackProbeIntervalCommands,
+                fallback: ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault);
             WpsWheelCheck.IsChecked = defaults.WpsWheelForward;
             LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
             PresentationClassifierAutoLearnCheck.IsChecked = defaults.PresentationClassifierAutoLearnEnabled;
@@ -1395,6 +1481,8 @@ public partial class PaintSettingsDialog : Window
             || !string.Equals(current.WpsInputMode, initial.WpsInputMode, StringComparison.OrdinalIgnoreCase)
             || current.WpsWheelForward != initial.WpsWheelForward
             || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded
+            || current.AutoFallbackFailureThreshold != initial.AutoFallbackFailureThreshold
+            || current.AutoFallbackProbeIntervalCommands != initial.AutoFallbackProbeIntervalCommands
             || current.WpsDebounceMs != initial.WpsDebounceMs
             || current.PhotoPostInputRefreshDelayMs != initial.PhotoPostInputRefreshDelayMs
             || Math.Abs(current.PhotoWheelZoomBase - initial.PhotoWheelZoomBase) > PaintSettingsDefaults.DoubleComparisonEpsilon
@@ -1423,6 +1511,8 @@ public partial class PaintSettingsDialog : Window
             || current.ForcePresentationForegroundOnFullscreen != initial.ForcePresentationForegroundOnFullscreen
             || current.WpsDebounceMs != initial.WpsDebounceMs
             || current.LockStrategyWhenDegraded != initial.LockStrategyWhenDegraded
+            || current.PresentationAutoFallbackFailureThreshold != initial.PresentationAutoFallbackFailureThreshold
+            || current.PresentationAutoFallbackProbeIntervalCommands != initial.PresentationAutoFallbackProbeIntervalCommands
             || current.PresentationClassifierAutoLearnEnabled != initial.PresentationClassifierAutoLearnEnabled
             || current.PresentationClassifierClearOverridesRequested != initial.PresentationClassifierClearOverridesRequested
             || !string.Equals(

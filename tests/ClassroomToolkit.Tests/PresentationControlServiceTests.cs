@@ -524,6 +524,177 @@ public sealed class PresentationControlServiceTests
         sender.MessageKeyAttempts.Should().Be(2);
     }
 
+    [Fact]
+    public void WpsRawFallback_WithLockEnabled_ShouldLockAfterTwoConsecutiveFailures()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new StrategyAwareInputSender();
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var target = new PresentationTarget(
+            new IntPtr(1234),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = true,
+            WpsDebounceMs = 0
+        };
+
+        var first = service.TrySendToTarget(target, PresentationCommand.Next, options);
+        var second = service.TrySendToTarget(target, PresentationCommand.Next, options);
+        var third = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        first.Should().BeTrue();
+        second.Should().BeTrue();
+        third.Should().BeTrue();
+        sender.RawKeyAttempts.Should().Be(2);
+        sender.MessageKeyAttempts.Should().Be(3);
+        service.IsWpsAutoForcedMessageForTarget(target.Handle).Should().BeTrue();
+    }
+
+    [Fact]
+    public void WpsRawFallback_WithLockEnabled_ShouldNotAffectDifferentTarget()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new HandleAwareStrategyInputSender();
+        sender.SetRawResult(new IntPtr(1111), succeed: false);
+        sender.SetRawResult(new IntPtr(2222), succeed: true);
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var targetA = new PresentationTarget(
+            new IntPtr(1111),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var targetB = new PresentationTarget(
+            new IntPtr(2222),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = true,
+            WpsDebounceMs = 0
+        };
+
+        service.TrySendToTarget(targetA, PresentationCommand.Next, options).Should().BeTrue();
+        service.TrySendToTarget(targetA, PresentationCommand.Next, options).Should().BeTrue();
+        service.IsWpsAutoForcedMessageForTarget(targetA.Handle).Should().BeTrue();
+
+        service.TrySendToTarget(targetB, PresentationCommand.Next, options).Should().BeTrue();
+        sender.RawAttemptsByHandle[targetB.Handle].Should().Be(1);
+        service.IsWpsAutoForcedMessageForTarget(targetB.Handle).Should().BeFalse();
+    }
+
+    [Fact]
+    public void WpsRawFallback_WithLockEnabled_ShouldAutoProbeAndRecoverAfterMessageWindow()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new HandleAwareStrategyInputSender();
+        var targetHandle = new IntPtr(3333);
+        sender.SetRawResult(targetHandle, succeed: false);
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var target = new PresentationTarget(
+            targetHandle,
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = true,
+            WpsDebounceMs = 0
+        };
+
+        // 先触发锁定（2次 raw 失败）。
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        service.IsWpsAutoForcedMessageForTarget(targetHandle).Should().BeTrue();
+        sender.RawAttemptsByHandle[targetHandle].Should().Be(2);
+
+        // 锁定期间累计 message 成功，尚未到探活窗口前不应再尝试 raw。
+        sender.SetRawResult(targetHandle, succeed: true);
+        for (var i = 0; i < 8; i++)
+        {
+            service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        }
+        sender.RawAttemptsByHandle[targetHandle].Should().Be(2);
+
+        // 到达探活窗口后，应自动尝试 raw 并恢复。
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        sender.RawAttemptsByHandle[targetHandle].Should().Be(3);
+        service.IsWpsAutoForcedMessageForTarget(targetHandle).Should().BeFalse();
+
+        // 恢复后下一次继续 raw 主路径。
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        sender.RawAttemptsByHandle[targetHandle].Should().Be(4);
+    }
+
+    [Fact]
+    public void WpsRawFallback_WithCustomThreshold_ShouldDelayLockUntilConfiguredFailures()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new StrategyAwareInputSender();
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var target = new PresentationTarget(
+            new IntPtr(7777),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = true,
+            AutoFallbackFailureThreshold = 3,
+            WpsDebounceMs = 0
+        };
+
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        service.IsWpsAutoForcedMessageForTarget(target.Handle).Should().BeFalse();
+        service.TrySendToTarget(target, PresentationCommand.Next, options).Should().BeTrue();
+        service.IsWpsAutoForcedMessageForTarget(target.Handle).Should().BeTrue();
+
+        sender.RawKeyAttempts.Should().Be(3);
+        sender.MessageKeyAttempts.Should().Be(3);
+    }
+
     private sealed class RecordingInputSender : IInputSender
     {
         public int KeyCalls { get; private set; }
@@ -612,6 +783,39 @@ public sealed class PresentationControlServiceTests
             }
 
             MessageKeyAttempts++;
+            return true;
+        }
+
+        public bool SendWheel(IntPtr hwnd, int delta, InputStrategy strategy)
+        {
+            return false;
+        }
+    }
+
+    private sealed class HandleAwareStrategyInputSender : IInputSender
+    {
+        private readonly Dictionary<IntPtr, bool> _rawResultByHandle = new();
+        public Dictionary<IntPtr, int> RawAttemptsByHandle { get; } = new();
+        public Dictionary<IntPtr, int> MessageAttemptsByHandle { get; } = new();
+
+        public void SetRawResult(IntPtr handle, bool succeed)
+        {
+            _rawResultByHandle[handle] = succeed;
+        }
+
+        public bool SendKey(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, InputStrategy strategy, bool keyDownOnly)
+        {
+            if (strategy == InputStrategy.Raw)
+            {
+                RawAttemptsByHandle[hwnd] = RawAttemptsByHandle.TryGetValue(hwnd, out var count)
+                    ? count + 1
+                    : 1;
+                return _rawResultByHandle.TryGetValue(hwnd, out var succeed) && succeed;
+            }
+
+            MessageAttemptsByHandle[hwnd] = MessageAttemptsByHandle.TryGetValue(hwnd, out var messageCount)
+                ? messageCount + 1
+                : 1;
             return true;
         }
 

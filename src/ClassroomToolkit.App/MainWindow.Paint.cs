@@ -433,6 +433,8 @@ public partial class MainWindow
             _settings.WpsWheelForward = dialog.WpsWheelForward;
             _settings.WpsDebounceMs = dialog.WpsDebounceMs;
             _settings.PresentationLockStrategyWhenDegraded = dialog.PresentationLockStrategyWhenDegraded;
+            _settings.PresentationAutoFallbackFailureThreshold = dialog.PresentationAutoFallbackFailureThreshold;
+            _settings.PresentationAutoFallbackProbeIntervalCommands = dialog.PresentationAutoFallbackProbeIntervalCommands;
             _settings.PresentationClassifierAutoLearnEnabled = dialog.PresentationClassifierAutoLearnEnabled;
             if (dialog.PresentationClassifierClearOverridesRequested)
             {

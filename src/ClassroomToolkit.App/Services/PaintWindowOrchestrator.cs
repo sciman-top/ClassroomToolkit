@@ -458,6 +458,8 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.UpdateWpsWheelMapping(settings.WpsWheelForward);
         OverlayWindow.UpdateWpsDebounceMs(settings.WpsDebounceMs);
         OverlayWindow.UpdatePresentationDegradeLock(settings.PresentationLockStrategyWhenDegraded);
+        OverlayWindow.UpdatePresentationAutoFallbackFailureThreshold(settings.PresentationAutoFallbackFailureThreshold);
+        OverlayWindow.UpdatePresentationAutoFallbackProbeIntervalCommands(settings.PresentationAutoFallbackProbeIntervalCommands);
         OverlayWindow.UpdatePresentationTargets(settings.ControlMsPpt, settings.ControlWpsPpt);
         OverlayWindow.UpdatePresentationForegroundPolicy(settings.ForcePresentationForegroundOnFullscreen);
         OverlayWindow.UpdateInkCacheEnabled(settings.InkCacheEnabled);
