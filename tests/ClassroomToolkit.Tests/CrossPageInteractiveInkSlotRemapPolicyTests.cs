@@ -7,7 +7,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class CrossPageInteractiveInkSlotRemapPolicyTests
 {
     [Fact]
-    public void Resolve_ShouldClearCurrentFrame_WhenSlotChangedDuringInkOperationEvenIfPreservedExists()
+    public void Resolve_ShouldUsePreservedFrame_WhenSlotChangedDuringInkOperationAndPreservedExists()
     {
         var action = CrossPageInteractiveInkSlotRemapPolicy.Resolve(
             slotPageChanged: true,
@@ -16,7 +16,7 @@ public sealed class CrossPageInteractiveInkSlotRemapPolicyTests
             hasPreservedInkFrame: true,
             inkOperationActive: true);
 
-        action.Should().Be(CrossPageInteractiveInkSlotRemapAction.ClearCurrentFrame);
+        action.Should().Be(CrossPageInteractiveInkSlotRemapAction.UsePreservedFrame);
     }
 
     [Fact]

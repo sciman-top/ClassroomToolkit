@@ -525,7 +525,8 @@ public partial class PaintOverlayWindow
                 baseHoldInkReplacement,
                 interactionActive,
                 hasCurrentInkFrame: inkImg.Source != null,
-                inkOperationActive: IsInkOperationActive());
+                inkOperationActive: IsInkOperationActive(),
+                slotPageChanged: slotPageChanged);
             var usedPreservedInkFrame = false;
             if (bitmap != null)
             {
@@ -1550,6 +1551,33 @@ public partial class PaintOverlayWindow
         if (_neighborInkCache.TryGetValue(cacheKey, out var primedEntry) && ReferenceEquals(primedEntry.Strokes, strokes))
         {
             return primedEntry.Bitmap;
+        }
+        if (!allowDeferredRender)
+        {
+            // Interactive seam switching should prioritize continuity for the previous page.
+            // When cache misses the latest stroke snapshot, build neighbor ink frame now
+            // instead of returning null/stale frame and waiting for a deferred pass.
+            var sourcePath = _currentDocumentPath;
+            if (!_photoDocumentIsPdf)
+            {
+                var arrayIndex = pageIndex - 1;
+                if (arrayIndex >= 0 && arrayIndex < _photoSequencePaths.Count)
+                {
+                    sourcePath = _photoSequencePaths[arrayIndex];
+                }
+            }
+
+            var page = new InkPageData
+            {
+                PageIndex = pageIndex,
+                DocumentName = IoPath.GetFileNameWithoutExtension(sourcePath),
+                SourcePath = sourcePath,
+                Strokes = strokes
+            };
+            var rebuiltEntry = BuildNeighborInkCacheEntry(page, pageBitmap, strokes);
+            _neighborInkCache[cacheKey] = rebuiltEntry;
+            TrimNeighborInkCache(pageIndex);
+            return rebuiltEntry.Bitmap;
         }
         if (allowDeferredRender)
         {

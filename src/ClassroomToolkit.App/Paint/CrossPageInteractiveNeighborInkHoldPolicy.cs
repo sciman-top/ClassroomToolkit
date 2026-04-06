@@ -6,8 +6,16 @@ internal static class CrossPageInteractiveNeighborInkHoldPolicy
         bool baseHoldReplacement,
         bool interactionActive,
         bool hasCurrentInkFrame,
-        bool inkOperationActive)
+        bool inkOperationActive,
+        bool slotPageChanged)
     {
+        // Slot remap means this slot now points to another page. Holding current frame here
+        // keeps old-page ink alive on the wrong slot and manifests as seam flash/jitter.
+        if (slotPageChanged)
+        {
+            return false;
+        }
+
         if (baseHoldReplacement)
         {
             return true;

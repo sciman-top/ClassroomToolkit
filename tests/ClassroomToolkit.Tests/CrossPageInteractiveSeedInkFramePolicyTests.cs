@@ -13,7 +13,8 @@ public sealed class CrossPageInteractiveSeedInkFramePolicyTests
             .ShouldReplaceFrame(
                 inkShowEnabled: false,
                 hasCurrentFrame: true,
-                hasResolvedTargetFrame: false)
+                hasResolvedTargetFrame: false,
+                slotPageChanged: false)
             .Should()
             .BeTrue();
     }
@@ -25,7 +26,8 @@ public sealed class CrossPageInteractiveSeedInkFramePolicyTests
             .ShouldReplaceFrame(
                 inkShowEnabled: true,
                 hasCurrentFrame: true,
-                hasResolvedTargetFrame: true)
+                hasResolvedTargetFrame: true,
+                slotPageChanged: false)
             .Should()
             .BeTrue();
     }
@@ -37,7 +39,8 @@ public sealed class CrossPageInteractiveSeedInkFramePolicyTests
             .ShouldReplaceFrame(
                 inkShowEnabled: true,
                 hasCurrentFrame: true,
-                hasResolvedTargetFrame: false)
+                hasResolvedTargetFrame: false,
+                slotPageChanged: false)
             .Should()
             .BeFalse();
     }
@@ -49,7 +52,21 @@ public sealed class CrossPageInteractiveSeedInkFramePolicyTests
             .ShouldReplaceFrame(
                 inkShowEnabled: true,
                 hasCurrentFrame: false,
-                hasResolvedTargetFrame: false)
+                hasResolvedTargetFrame: false,
+                slotPageChanged: false)
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
+    public void ShouldReplaceFrame_ShouldClearStaleFrame_WhenSlotRemappedAndTargetMissing()
+    {
+        CrossPageInteractiveSeedInkFramePolicy
+            .ShouldReplaceFrame(
+                inkShowEnabled: true,
+                hasCurrentFrame: true,
+                hasResolvedTargetFrame: false,
+                slotPageChanged: true)
             .Should()
             .BeTrue();
     }

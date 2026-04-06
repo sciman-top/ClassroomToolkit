@@ -13,7 +13,8 @@ public sealed class CrossPageInteractiveNeighborInkHoldPolicyTests
             baseHoldReplacement: true,
             interactionActive: false,
             hasCurrentInkFrame: false,
-            inkOperationActive: false);
+            inkOperationActive: false,
+            slotPageChanged: false);
 
         hold.Should().BeTrue();
     }
@@ -25,7 +26,8 @@ public sealed class CrossPageInteractiveNeighborInkHoldPolicyTests
             baseHoldReplacement: false,
             interactionActive: true,
             hasCurrentInkFrame: true,
-            inkOperationActive: true);
+            inkOperationActive: true,
+            slotPageChanged: false);
 
         hold.Should().BeTrue();
     }
@@ -37,7 +39,8 @@ public sealed class CrossPageInteractiveNeighborInkHoldPolicyTests
             baseHoldReplacement: false,
             interactionActive: true,
             hasCurrentInkFrame: true,
-            inkOperationActive: false);
+            inkOperationActive: false,
+            slotPageChanged: false);
 
         hold.Should().BeFalse();
     }
@@ -53,7 +56,28 @@ public sealed class CrossPageInteractiveNeighborInkHoldPolicyTests
             baseHoldReplacement: false,
             interactionActive: interactionActive,
             hasCurrentInkFrame: hasCurrentInkFrame,
-            inkOperationActive: false);
+            inkOperationActive: false,
+            slotPageChanged: false);
+
+        hold.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(true, true, true, true)]
+    [InlineData(true, false, true, false)]
+    [InlineData(false, true, true, true)]
+    public void Resolve_ShouldReturnFalse_WhenSlotPageChanged(
+        bool baseHoldReplacement,
+        bool interactionActive,
+        bool hasCurrentInkFrame,
+        bool inkOperationActive)
+    {
+        var hold = CrossPageInteractiveNeighborInkHoldPolicy.Resolve(
+            baseHoldReplacement: baseHoldReplacement,
+            interactionActive: interactionActive,
+            hasCurrentInkFrame: hasCurrentInkFrame,
+            inkOperationActive: inkOperationActive,
+            slotPageChanged: true);
 
         hold.Should().BeFalse();
     }

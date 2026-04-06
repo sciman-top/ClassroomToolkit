@@ -5,7 +5,8 @@ internal static class CrossPageInteractiveSeedInkFramePolicy
     internal static bool ShouldReplaceFrame(
         bool inkShowEnabled,
         bool hasCurrentFrame,
-        bool hasResolvedTargetFrame)
+        bool hasResolvedTargetFrame,
+        bool slotPageChanged)
     {
         if (!inkShowEnabled)
         {
@@ -14,6 +15,13 @@ internal static class CrossPageInteractiveSeedInkFramePolicy
 
         if (hasResolvedTargetFrame)
         {
+            return true;
+        }
+
+        if (slotPageChanged)
+        {
+            // Slot remapped to another page and target ink frame is still unresolved:
+            // clear stale old-page frame to avoid one-frame flash on seam crossing.
             return true;
         }
 

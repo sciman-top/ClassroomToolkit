@@ -87,7 +87,7 @@ public partial class PaintOverlayWindow
                 e.Handled = true;
                 return;
             }
-            ZoomPhoto(e.Delta, e.GetPosition(OverlayRoot));
+            ZoomPhoto(e.Delta, PhotoZoomAnchorPolicy.ResolveViewportCenter(OverlayRoot));
             LogPhotoInputTelemetry("wheel", $"delta={e.Delta}");
             e.Handled = true;
             return;
@@ -819,7 +819,11 @@ public partial class PaintOverlayWindow
         MarkInkInput();
         _lastPointerPosition = position;
         var switchedPage = TrySwitchActiveImagePageForInput(input);
-        ResumeCrossPageInputOperationAfterSwitch(switchedPage, input);
+        var consumedByCrossPageResume = ResumeCrossPageInputOperationAfterSwitch(switchedPage, input);
+        if (consumedByCrossPageResume)
+        {
+            return;
+        }
         if (ShouldSuppressCrossPageOutOfPageBrushMove(input, switchedPage))
         {
             _inkDiagnostics?.OnCrossPageUpdateEvent(
@@ -1124,7 +1128,7 @@ public partial class PaintOverlayWindow
         return handlingPlan.ShouldHandle;
     }
 
-    private void ResumeCrossPageInputOperationAfterSwitch(bool switchedPage, BrushInputSample input)
+    private bool ResumeCrossPageInputOperationAfterSwitch(bool switchedPage, BrushInputSample input)
     {
         var pendingSeed = _pendingCrossPageBrushContinuationSample;
         var replayCurrentInput = _pendingCrossPageBrushReplayCurrentInput;
@@ -1152,14 +1156,74 @@ public partial class PaintOverlayWindow
             CapturePointerInput();
             _visualHost.Clear();
             BeginBrushStrokeContinuation(seed, renderInitialPreview: false);
-            // Keep the current input sample update in the normal pointer-move path only.
-            // This avoids a cross-page switch frame doing two preview updates with the same sample.
-            return;
+            if (!executionPlan.ShouldUpdateBrushAfterContinuation)
+            {
+                return false;
+            }
+
+            // Replay the current sample immediately after seam continuation so the
+            // first segment on the new page stays aligned with stylus motion.
+            BrushInputSample? lastChangedSample = null;
+            AppendCrossPageContinuationSamples(seed, input, ref lastChangedSample);
+            if (TryUpdateBrushStrokeGeometry(input))
+            {
+                lastChangedSample = input;
+            }
+            if (lastChangedSample.HasValue)
+            {
+                FlushBrushStrokePreview(lastChangedSample.Value);
+            }
+            return true;
         }
 
         if (executionPlan.Action == CrossPageInputResumeAction.BeginEraser)
         {
             BeginEraser(input.Position);
+        }
+
+        return false;
+    }
+
+    private void AppendCrossPageContinuationSamples(
+        BrushInputSample previous,
+        BrushInputSample current,
+        ref BrushInputSample? lastChangedSample)
+    {
+        var distance = (current.Position - previous.Position).Length;
+        if (distance <= 0.5)
+        {
+            return;
+        }
+
+        long totalTicks = Math.Max(1, current.TimestampTicks - previous.TimestampTicks);
+        var segmentCount = Math.Clamp(
+            (int)Math.Ceiling(distance / 0.9),
+            2,
+            64);
+        if (segmentCount <= 2)
+        {
+            return;
+        }
+
+        for (int i = 1; i < segmentCount; i++)
+        {
+            var t = i / (double)segmentCount;
+            if (t >= 1.0)
+            {
+                break;
+            }
+
+            var position = new WpfPoint(
+                previous.Position.X + ((current.Position.X - previous.Position.X) * t),
+                previous.Position.Y + ((current.Position.Y - previous.Position.Y) * t));
+            var timestampTicks = previous.TimestampTicks + Math.Max(
+                1,
+                (long)Math.Round(totalTicks * t));
+            var sample = CreateInterpolatedBrushSample(previous, current, position, timestampTicks, t);
+            if (TryUpdateBrushStrokeGeometry(sample))
+            {
+                lastChangedSample = sample;
+            }
         }
     }
 
@@ -1317,10 +1381,7 @@ public partial class PaintOverlayWindow
                 HandleStylusBrushMoveBatch(stylusPoints);
                 break;
             case StylusMoveExecutionAction.HandleStylusPointsIndividually:
-                foreach (var stylusPoint in stylusPoints)
-                {
-                    HandlePointerMove(CreateStylusInputSample(stylusPoint));
-                }
+                HandleStylusPointsIndividually(stylusPoints);
                 break;
         }
 
@@ -1364,6 +1425,23 @@ public partial class PaintOverlayWindow
         if (lastChangedSample.HasValue)
         {
             FlushBrushStrokePreview(lastChangedSample.Value);
+        }
+    }
+
+    private void HandleStylusPointsIndividually(StylusPointCollection stylusPoints)
+    {
+        long nowTicks = Stopwatch.GetTimestamp();
+        long spanTicks = ResolveStylusBatchSpanTicks(nowTicks, stylusPoints.Count);
+        long stepTicks = StylusBatchDispatchPolicy.ResolveStepTicks(spanTicks, stylusPoints.Count);
+        long batchStartTicks = StylusBatchDispatchPolicy.ResolveBatchStartTicks(nowTicks, stepTicks, stylusPoints.Count);
+
+        for (int index = 0; index < stylusPoints.Count; index++)
+        {
+            var stylusPoint = stylusPoints[index];
+            long timestampTicks = EnsureMonotonicStylusTimestamp(batchStartTicks + (stepTicks * index));
+            var sample = CreateStylusInputSample(stylusPoint, timestampTicks);
+            HandlePointerMove(sample);
+            RememberStylusSampleTimestamp(sample.TimestampTicks);
         }
     }
 

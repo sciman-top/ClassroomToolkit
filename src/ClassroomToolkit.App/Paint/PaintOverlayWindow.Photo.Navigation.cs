@@ -1270,10 +1270,12 @@ public partial class PaintOverlayWindow
         var inkImgFirst = _neighborInkImages[slotIndex];
         var targetInkBitmap = _inkShowEnabled ? inkBitmap : null;
         var currentInkOffsetDip = 0.0;
+        var slotPageChanged = !string.Equals(inkImgFirst.Uid, pageUid, StringComparison.Ordinal);
         var shouldReplaceSeedFrame = CrossPageInteractiveSeedInkFramePolicy.ShouldReplaceFrame(
             _inkShowEnabled,
             hasCurrentFrame: inkImgFirst.Source != null,
-            hasResolvedTargetFrame: targetInkBitmap != null);
+            hasResolvedTargetFrame: targetInkBitmap != null,
+            slotPageChanged: slotPageChanged);
         if (shouldReplaceSeedFrame
             && CrossPageFrameSourceAssignmentPolicy.ShouldAssign(
                 inkImgFirst.Source,

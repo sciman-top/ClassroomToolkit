@@ -21,10 +21,17 @@ internal static class CrossPageInteractiveInkSlotRemapPolicy
             return CrossPageInteractiveInkSlotRemapAction.KeepCurrentFrame;
         }
 
-        // During active ink mutation, preserved slot frames can belong to the previous
-        // page mapping and cause one-frame cross-page ghost flashes on remap.
+        // During active ink mutation, prefer preserved frame for the target page when available.
+        // This avoids clear-then-fill flashes on seam crossing while keeping ownership by page uid.
         if (inkOperationActive)
         {
+            if (hasPreservedInkFrame)
+            {
+                return CrossPageInteractiveInkSlotRemapAction.UsePreservedFrame;
+            }
+
+            // Slot remapped without a preserved target frame: keeping current frame would
+            // display old-page ink on the new slot (flash + jitter during seam crossing).
             return hasCurrentInkFrame
                 ? CrossPageInteractiveInkSlotRemapAction.ClearCurrentFrame
                 : CrossPageInteractiveInkSlotRemapAction.KeepCurrentFrame;
