@@ -61,6 +61,18 @@
         "reason": "local lock files"
       },
       {
+        "pattern": "docs/governance/metrics-auto.md",
+        "reason": "auto-generated runtime metrics snapshot"
+      },
+      {
+        "pattern": "docs/governance/alerts-latest.md",
+        "reason": "auto-generated recurring review alert snapshot"
+      },
+      {
+        "pattern": "docs/governance/reviews/**",
+        "reason": "auto-generated monthly governance reviews"
+      },
+      {
         "pattern": "logs/**",
         "reason": "local logs"
       },

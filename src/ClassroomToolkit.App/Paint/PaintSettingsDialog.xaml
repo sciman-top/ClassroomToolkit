@@ -30,6 +30,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
                 <RowDefinition Height="*"/> <!-- Content -->
+                <RowDefinition Height="Auto"/> <!-- Summary -->
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
@@ -55,11 +56,15 @@
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
                         <TabItem Header="基础">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="先调整常用笔感和预设，兼容项按需展开。"
+                <TextBlock Text="先调整整套预设，再按需微调基础参数。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="12"
                            TextWrapping="Wrap"/>
+                <TextBlock Text="笔触与预设"
+                           Margin="0,0,0,8"
+                           Foreground="{StaticResource Brush_Text_Secondary}"
+                           FontWeight="SemiBold"/>
                 <!-- 基础画笔参数 -->
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
@@ -75,19 +80,11 @@
                         <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="白板笔预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <ComboBox Grid.Column="1" x:Name="WhiteboardPresetCombo" Height="36"/>
-                </Grid>
-
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="90"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="毛笔预设" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0" FontWeight="Medium"/>
+                    <TextBlock Text="笔触预设" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0" FontWeight="Medium"/>
                     <StackPanel Grid.Column="1">
+                        <ComboBox x:Name="WhiteboardPresetCombo" Height="36" Margin="0,0,0,8"/>
                         <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
-                        <Expander Header="毛笔高级" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
+                        <Expander x:Name="CalligraphyAdvancedExpander" Header="毛笔高级" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                             <Border Style="{StaticResource Style_SettingCardBorder}"
                                     Margin="0,8,0,0"
                                     Padding="10"
@@ -111,34 +108,10 @@
                     </StackPanel>
                 </Grid>
 
-                <Expander x:Name="WritingModeOverrideExpander" Header="书写模式" IsExpanded="False" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}">
-                    <Border Style="{StaticResource Style_SettingCardBorder}"
-                            Margin="0,8,0,0"
-                            Padding="12"
-                            Background="{StaticResource Brush_Surface_Secondary}">
-                        <StackPanel>
-                            <TextBlock Text="优先使用整套预设；这里只在需要时微调手感。"
-                                       Foreground="{StaticResource Brush_Text_Secondary}"
-                                       FontSize="12"
-                                       TextWrapping="Wrap"
-                                       Margin="0,0,0,10"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="书写模式" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                                <ComboBox Grid.Column="1" x:Name="ClassroomWritingModeCombo" Height="34"/>
-                            </Grid>
-                            <TextBlock x:Name="ClassroomWritingModeHint" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                </Expander>
-
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="这里统一管理预设、手感和场景参数。"
+                        <TextBlock Text="这里统一管理预设、手感和场景参数。选择后会自动应用。"
                                    Margin="0,0,0,8"
                                    FontSize="12"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -146,31 +119,20 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="PresetSchemeCombo" Height="34" SelectionChanged="OnPresetSchemeChanged"/>
-                            <Button Grid.Column="1"
-                                    x:Name="ReapplyPresetButton"
-                                    Content="应用所选"
-                                    Margin="8,0,0,0"
-                                    Padding="12,0"
-                                    Height="34"
-                                    MinWidth="72"
-                                    Style="{StaticResource Style_SecondaryButton}"
-                                    Click="OnReapplyPresetClick"/>
-                            <Button Grid.Column="2"
-                                    x:Name="RestoreCustomPresetButton"
-                                    Content="恢复自定义"
-                                    Margin="8,0,0,0"
-                                    Padding="12,0"
-                                    Height="34"
-                                    MinWidth="92"
-                                    Style="{StaticResource Style_SecondaryButton}"
-                                    Click="OnRestoreCustomPresetClick"/>
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="书写模式" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                            <ComboBox Grid.Column="1" x:Name="ClassroomWritingModeCombo" Height="34"/>
                         </Grid>
                         <TextBlock x:Name="PresetSchemeHintText" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <TextBlock x:Name="PresetManagedHintText" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="ClassroomWritingModeHint" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <Button x:Name="ConvertToCustomEditingButton"
                                 Content="转为自定义"
                                 Margin="0,8,0,0"
@@ -183,26 +145,20 @@
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="PresetSchemeRecommendationText"
                                        Foreground="{StaticResource Brush_Text_Secondary}"
                                        FontSize="12"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap"/>
-                            <Button Grid.Column="1"
-                                    x:Name="ApplyRecommendedPresetButton"
-                                    Content="套用推荐"
-                                    Margin="12,0,0,0"
-                                    Padding="12,0"
-                                    Height="30"
-                                    MinWidth="92"
-                                    Style="{StaticResource Style_SecondaryButton}"
-                                    Click="OnApplyRecommendedPresetClick"/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
+                <TextBlock Text="基础微调"
+                           Margin="0,16,0,8"
+                           Foreground="{StaticResource Brush_Text_Secondary}"
+                           FontWeight="SemiBold"/>
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="90"/>
@@ -220,9 +176,9 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="40"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="不透明度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <Slider Grid.Column="1" x:Name="BrushOpacitySlider" Minimum="0" Maximum="100" ValueChanged="OnBrushOpacityChanged" Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="2" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    <TextBlock Text="橡皮粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                    <Slider Grid.Column="1" x:Name="EraserSizeSlider" Minimum="6" Maximum="60" ValueChanged="OnEraserSizeChanged" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="2" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                 <Grid Margin="0,0,0,20">
@@ -231,9 +187,9 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="40"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="橡皮粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <Slider Grid.Column="1" x:Name="EraserSizeSlider" Minimum="6" Maximum="60" ValueChanged="OnEraserSizeChanged" Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="2" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    <TextBlock Text="不透明度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                    <Slider Grid.Column="1" x:Name="BrushOpacitySlider" Minimum="0" Maximum="100" ValueChanged="OnBrushOpacityChanged" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="2" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                             </StackPanel>
@@ -520,8 +476,15 @@
                 </Grid>
             </ScrollViewer>
 
+            <TextBlock x:Name="ChangeSummaryText"
+                       Grid.Row="2"
+                       Margin="24,0,24,8"
+                       Foreground="{StaticResource Brush_Text_Tertiary}"
+                       FontSize="12"
+                       TextWrapping="Wrap"/>
+
             <!-- 3. 按钮 -->
-            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+            <StackPanel Grid.Row="3" Style="{StaticResource Style_DialogShellActionBar}">
                 <Button Content="重置本页" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
                 <Button Content="全部重置" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnRestoreAllDefaultsClick"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>

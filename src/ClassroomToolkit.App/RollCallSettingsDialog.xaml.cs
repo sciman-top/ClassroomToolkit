@@ -357,6 +357,12 @@ public partial class RollCallSettingsDialog : Window
         {
             return;
         }
+
+        SetTabHeader(SettingsTabs, 0, "显示", IsDisplayTabDirty());
+        SetTabHeader(SettingsTabs, 1, "语音", IsSpeechTabDirty());
+        SetTabHeader(SettingsTabs, 2, "遥控", IsRemoteTabDirty());
+        SetTabHeader(SettingsTabs, 3, "提醒", IsTimerTabDirty());
+        UpdateChangeSummaryText();
     }
 
     private bool IsDisplayTabDirty()
@@ -1026,6 +1032,51 @@ public partial class RollCallSettingsDialog : Window
         combo.SelectedValue = fallback;
     }
 
+    private void UpdateChangeSummaryText()
+    {
+        if (ChangeSummaryText == null)
+        {
+            return;
+        }
+
+        var dirtyTabs = new List<string>(4);
+        if (IsDisplayTabDirty())
+        {
+            dirtyTabs.Add("显示");
+        }
+        if (IsSpeechTabDirty())
+        {
+            dirtyTabs.Add("语音");
+        }
+        if (IsRemoteTabDirty())
+        {
+            dirtyTabs.Add("遥控");
+        }
+        if (IsTimerTabDirty())
+        {
+            dirtyTabs.Add("提醒");
+        }
+
+        ChangeSummaryText.Text = dirtyTabs.Count == 0
+            ? "本次未修改任何设置。"
+            : $"本次已修改：{string.Join("、", dirtyTabs)}。";
+    }
+
+    private static void SetTabHeader(System.Windows.Controls.TabControl? tabs, int index, string baseHeader, bool isDirty)
+    {
+        if (tabs == null || index < 0 || index >= tabs.Items.Count)
+        {
+            return;
+        }
+
+        if (tabs.Items[index] is not System.Windows.Controls.TabItem tabItem)
+        {
+            return;
+        }
+
+        tabItem.Header = isDirty ? $"{baseHeader} *" : baseHeader;
+    }
+
     private sealed record ComboOption(string Value, string Label);
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -1036,4 +1087,3 @@ public partial class RollCallSettingsDialog : Window
         }
     }
 }
-

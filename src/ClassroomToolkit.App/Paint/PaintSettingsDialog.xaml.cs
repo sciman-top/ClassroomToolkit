@@ -12,6 +12,8 @@ using MediaColors = System.Windows.Media.Colors;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using WpfGrid = System.Windows.Controls.Grid;
+using WpfTabControl = System.Windows.Controls.TabControl;
+using WpfTabItem = System.Windows.Controls.TabItem;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -116,17 +118,17 @@ public partial class PaintSettingsDialog : Window
     };
     private static readonly (string Label, string Value)[] PresetSchemeChoices =
     {
-        ("自定义（不覆盖）", PresetSchemeDefaults.Custom),
+        ("自定义（高级）", PresetSchemeDefaults.Custom),
         ("课堂平衡（推荐）", PresetSchemeDefaults.Balanced),
-        ("高灵敏（流畅优先）", PresetSchemeDefaults.Responsive),
-        ("高稳定（容错优先）", PresetSchemeDefaults.Stable)
+        ("高灵敏（新设备）", PresetSchemeDefaults.Responsive),
+        ("高稳定（老设备）", PresetSchemeDefaults.Stable)
     };
     private static readonly Dictionary<string, string> PresetHints = new(StringComparer.OrdinalIgnoreCase)
     {
         [PresetSchemeDefaults.Custom] = string.Empty,
-        [PresetSchemeDefaults.Balanced] = "课堂通用推荐：使用「课堂通用」书写模式，整体稳和快均衡。",
-        [PresetSchemeDefaults.Responsive] = "流畅优先：使用「跟手优先」书写模式，适合高性能设备。",
-        [PresetSchemeDefaults.Stable] = "稳定优先：使用「稳笔模式」，适合老旧设备或复杂环境。"
+        [PresetSchemeDefaults.Balanced] = "课堂通用推荐：大多数设备可直接使用，稳和快均衡。",
+        [PresetSchemeDefaults.Responsive] = "高灵敏（新设备）：跟手更快，适合高性能一体机。",
+        [PresetSchemeDefaults.Stable] = "高稳定（老设备）：抗抖与容错更强，适合老旧设备或复杂环境。"
     };
     private const string PresetManagedHintForCustom = "";
     private const string PresetManagedHintForPreset =
@@ -230,7 +232,6 @@ public partial class PaintSettingsDialog : Window
     private bool _suppressPresetAutoCustom = true;
     private string _currentPresetScheme = PresetSchemeDefaults.Custom;
     private PresetSchemeManagedParameters _customManagedSnapshot;
-    private bool _hasCustomManagedSnapshot;
     private bool _sizeToContentCommitted;
     private readonly PresetSchemeRecommendation _presetRecommendation;
     private bool _suppressSectionDirtyTracking = true;
@@ -284,10 +285,6 @@ public partial class PaintSettingsDialog : Window
         var initialPreset = ResolveInitialPresetScheme(settings);
         SelectComboByTag(PresetSchemeCombo, initialPreset, PresetSchemeDefaults.Custom);
         UpdatePresetHint(initialPreset);
-        if (WritingModeOverrideExpander != null)
-        {
-            WritingModeOverrideExpander.IsExpanded = false;
-        }
         _currentPresetScheme = initialPreset;
         _suppressPresetSelectionChanged = false;
         _presetRecommendation = PresetSchemePolicy.ResolveRecommendation(settings);
@@ -719,21 +716,8 @@ public partial class PaintSettingsDialog : Window
             SaveCurrentAsCustomSnapshot();
         }
         UpdatePresetHint(preset);
-        UpdateWritingModeOverrideExpanderState(preset);
         ApplyPresetScheme(preset);
         _currentPresetScheme = preset;
-    }
-
-    private void OnReapplyPresetClick(object sender, RoutedEventArgs e)
-    {
-        var preset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
-        if (string.Equals(preset, PresetSchemeDefaults.Custom, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        ApplyPresetScheme(preset);
-        UpdatePresetHint(preset);
     }
 
     private void OnConvertToCustomEditingClick(object sender, RoutedEventArgs e)
@@ -746,51 +730,6 @@ public partial class PaintSettingsDialog : Window
 
         SaveCurrentAsCustomSnapshot();
         SelectComboByTag(PresetSchemeCombo, PresetSchemeDefaults.Custom, PresetSchemeDefaults.Custom);
-    }
-
-    private void OnApplyRecommendedPresetClick(object sender, RoutedEventArgs e)
-    {
-        if (!PresetSchemePolicy.TryResolveManagedParameters(_presetRecommendation.Scheme, out _))
-        {
-            return;
-        }
-
-        var currentPreset = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
-        if (string.Equals(currentPreset, _presetRecommendation.Scheme, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        SelectComboByTag(PresetSchemeCombo, _presetRecommendation.Scheme, PresetSchemeDefaults.Balanced);
-    }
-
-    private void OnRestoreCustomPresetClick(object sender, RoutedEventArgs e)
-    {
-        if (!_hasCustomManagedSnapshot)
-        {
-            return;
-        }
-
-        if (!IsCustomScheme(GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom)))
-        {
-            return;
-        }
-
-        _suppressPresetAutoCustom = true;
-        try
-        {
-            ApplyManagedParametersToControls(_customManagedSnapshot);
-        }
-        finally
-        {
-            _suppressPresetAutoCustom = false;
-        }
-
-        _currentPresetScheme = PresetSchemeDefaults.Custom;
-        UpdateClassroomWritingModeHint(_customManagedSnapshot.ClassroomWritingMode);
-        UpdatePresetHint(PresetSchemeDefaults.Custom);
-        UpdateWritingModeOverrideExpanderState(PresetSchemeDefaults.Custom);
-        System.Diagnostics.Debug.WriteLine($"[PaintPreset] restored custom snapshot: {FormatManagedParameters(_customManagedSnapshot)}");
     }
 
     private void ApplyPresetScheme(string preset)
@@ -831,20 +770,19 @@ public partial class PaintSettingsDialog : Window
             hint = PresetHints[PresetSchemeDefaults.Custom];
         }
         PresetSchemeHintText.Text = hint;
+        PresetSchemeHintText.Visibility = string.IsNullOrWhiteSpace(hint)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         if (PresetManagedHintText != null)
         {
             var isCustom = IsCustomScheme(preset);
-            PresetManagedHintText.Text = isCustom
+            var managedHint = isCustom
                 ? PresetManagedHintForCustom
                 : PresetManagedHintForPreset;
-        }
-        if (ReapplyPresetButton != null)
-        {
-            ReapplyPresetButton.IsEnabled = !IsCustomScheme(preset);
-        }
-        if (RestoreCustomPresetButton != null)
-        {
-            RestoreCustomPresetButton.IsEnabled = IsCustomScheme(preset) && _hasCustomManagedSnapshot;
+            PresetManagedHintText.Text = managedHint;
+            PresetManagedHintText.Visibility = string.IsNullOrWhiteSpace(managedHint)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
         UpdateManagedControlVisualState(preset);
         UpdatePresetRecommendation(preset);
@@ -1068,7 +1006,6 @@ public partial class PaintSettingsDialog : Window
         }
         _currentPresetScheme = PresetSchemeDefaults.Custom;
         UpdatePresetHint(PresetSchemeDefaults.Custom);
-        UpdateWritingModeOverrideExpanderState(PresetSchemeDefaults.Custom);
     }
 
     private static bool IsCustomScheme(string preset)
@@ -1087,7 +1024,6 @@ public partial class PaintSettingsDialog : Window
     private void SaveCurrentAsCustomSnapshot()
     {
         _customManagedSnapshot = CaptureManagedParametersFromControls();
-        _hasCustomManagedSnapshot = true;
         System.Diagnostics.Debug.WriteLine($"[PaintPreset] save custom snapshot: {FormatManagedParameters(_customManagedSnapshot)}");
     }
 
@@ -1301,7 +1237,6 @@ public partial class PaintSettingsDialog : Window
         UpdateCalligraphyOptionState();
         UpdateClassroomWritingModeHint(state.ClassroomWritingMode);
         UpdatePresetHint(state.PresetScheme);
-        UpdateWritingModeOverrideExpanderState(state.PresetScheme);
     }
 
     private void ApplySceneSectionState(SceneSectionState state)
@@ -1457,10 +1392,11 @@ public partial class PaintSettingsDialog : Window
 
     private void UpdateSectionDirtyStates()
     {
-        if (_suppressSectionDirtyTracking)
-        {
-            return;
-        }
+        if (_suppressSectionDirtyTracking) return;
+        SetTabHeader(SettingsTabControl, 0, "基础", IsPresetBrushSectionDirty());
+        SetTabHeader(SettingsTabControl, 1, "工具栏", IsAdvancedSectionDirty());
+        SetTabHeader(SettingsTabControl, 2, "兼容", IsSceneSectionDirty());
+        UpdateChangeSummaryText();
     }
 
     private bool IsPresetBrushSectionDirty()
@@ -1529,9 +1465,16 @@ public partial class PaintSettingsDialog : Window
             || Math.Abs(current.ToolbarScale - initial.ToolbarScale) > PaintSettingsDefaults.ComboTagComparisonEpsilon;
     }
 
+    private static void SetTabHeader(WpfTabControl? tabs, int index, string baseHeader, bool isDirty)
+    {
+        if (tabs == null || index < 0 || index >= tabs.Items.Count) return;
+        if (tabs.Items[index] is not WpfTabItem tabItem) return;
+        tabItem.Header = isDirty ? $"{baseHeader} *" : baseHeader;
+    }
+
     private void UpdatePresetRecommendation(string currentPreset)
     {
-        if (PresetSchemeRecommendationText == null || ApplyRecommendedPresetButton == null)
+        if (PresetSchemeRecommendationText == null)
         {
             return;
         }
@@ -1541,7 +1484,7 @@ public partial class PaintSettingsDialog : Window
         if (!isRecommendedValid)
         {
             PresetSchemeRecommendationText.Text = string.Empty;
-            ApplyRecommendedPresetButton.IsEnabled = false;
+            PresetSchemeRecommendationText.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -1550,8 +1493,11 @@ public partial class PaintSettingsDialog : Window
         var prefix = alreadyApplied
             ? $"设备画像推荐：{recommendedLabel}（已应用）。"
             : $"设备画像推荐：{recommendedLabel}。";
-        PresetSchemeRecommendationText.Text = $"{prefix}{_presetRecommendation.Reason}";
-        ApplyRecommendedPresetButton.IsEnabled = !alreadyApplied;
+        var recommendation = $"{prefix}{_presetRecommendation.Reason}";
+        PresetSchemeRecommendationText.Text = recommendation;
+        PresetSchemeRecommendationText.Visibility = string.IsNullOrWhiteSpace(recommendation)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     private static string ResolvePresetDisplayName(string scheme)
@@ -1565,16 +1511,6 @@ public partial class PaintSettingsDialog : Window
         }
 
         return "课堂平衡（推荐）";
-    }
-
-    private void UpdateWritingModeOverrideExpanderState(string preset)
-    {
-        if (WritingModeOverrideExpander == null)
-        {
-            return;
-        }
-
-        WritingModeOverrideExpander.IsExpanded = IsCustomScheme(preset);
     }
 
     private void OnSceneCardsGridSizeChanged(object sender, SizeChangedEventArgs e)
@@ -1683,8 +1619,18 @@ public partial class PaintSettingsDialog : Window
     private void UpdateCalligraphyOptionState()
     {
         bool isCalligraphy = ResolveBrushStyle() == PaintBrushStyle.Calligraphy;
+        CalligraphyPresetCombo.Visibility = isCalligraphy ? Visibility.Visible : Visibility.Collapsed;
+        WhiteboardPresetCombo.Visibility = isCalligraphy ? Visibility.Collapsed : Visibility.Visible;
         CalligraphyPresetCombo.IsEnabled = isCalligraphy;
         WhiteboardPresetCombo.IsEnabled = !isCalligraphy;
+        if (CalligraphyAdvancedExpander != null)
+        {
+            CalligraphyAdvancedExpander.Visibility = isCalligraphy ? Visibility.Visible : Visibility.Collapsed;
+            if (!isCalligraphy)
+            {
+                CalligraphyAdvancedExpander.IsExpanded = false;
+            }
+        }
         CalligraphyInkBloomCheck.IsEnabled = isCalligraphy;
         CalligraphySealCheck.IsEnabled = isCalligraphy;
         CalligraphyOverlayThresholdLabel.IsEnabled = isCalligraphy;
