@@ -45,6 +45,19 @@ public sealed class WindowTopmostExecutorTests
         adapter.CallCount.Should().Be(0);
     }
 
+    [Fact]
+    public void TryApplyHandleNoActivate_ShouldSkip_WhenDragOperationIsActive()
+    {
+        var adapter = new FakeTopmostAdapter((1, true, 0));
+
+        using var _ = WindowTopmostExecutor.PushInteropAdapterForTest(adapter);
+        using var dragScope = WindowDragOperationState.Begin();
+        var result = WindowTopmostExecutor.TryApplyHandleNoActivate(new IntPtr(1), enabled: true);
+
+        result.Should().BeFalse();
+        adapter.CallCount.Should().Be(0);
+    }
+
     private sealed class FakeTopmostAdapter : IWindowTopmostInteropAdapter
     {
         private readonly (int Seq, bool Success, int Error)[] _steps;

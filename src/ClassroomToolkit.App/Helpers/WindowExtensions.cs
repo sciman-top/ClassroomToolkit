@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using ClassroomToolkit.App;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Helpers;
 
@@ -15,6 +16,7 @@ public static class WindowExtensions
 
         try
         {
+            using var _ = WindowDragOperationState.Begin();
             window.DragMove();
             return true;
         }

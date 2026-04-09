@@ -24,6 +24,7 @@ public partial class LauncherBubbleWindow : Window
     private System.Drawing.Rectangle _dragWorkingArea;
     private bool _hasDragScreenArea;
     private IntPtr _hwnd;
+    private IDisposable? _dragScope;
     
     // 拖动阈值：移动超过此距离才算拖动，否则算点击
     private const double DragThreshold = 5.0;
@@ -64,6 +65,7 @@ public partial class LauncherBubbleWindow : Window
 
     private void OnWindowClosed(object? sender, EventArgs e)
     {
+        EndDragScope();
         MouseLeftButtonDown -= OnMouseDown;
         MouseMove -= OnMouseMove;
         MouseLeftButtonUp -= OnMouseUp;
@@ -147,6 +149,7 @@ public partial class LauncherBubbleWindow : Window
         _dragOffset = e.GetPosition(this);
         _dragStartPosition = new System.Windows.Point(Left, Top);
         TryUpdateDragScreenArea(PointToScreen(_dragOffset));
+        BeginDragScope();
         
         // 捕获鼠标，防止拖动时失去鼠标事件
         CaptureMouse();
@@ -205,6 +208,7 @@ public partial class LauncherBubbleWindow : Window
         
         _dragging = false;
         _hasDragScreenArea = false;
+        EndDragScope();
         
         // 释放鼠标捕获
         ReleaseMouseCapture();
@@ -253,6 +257,18 @@ public partial class LauncherBubbleWindow : Window
         _moved = false;
     }
 
+    private void BeginDragScope()
+    {
+        EndDragScope();
+        _dragScope = WindowDragOperationState.Begin();
+    }
+
+    private void EndDragScope()
+    {
+        _dragScope?.Dispose();
+        _dragScope = null;
+    }
+
     private static void TryExecuteNonFatal(Action action)
     {
         try
@@ -298,4 +314,3 @@ public partial class LauncherBubbleWindow : Window
     }
 
 }
-

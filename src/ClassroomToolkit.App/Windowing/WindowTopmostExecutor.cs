@@ -22,6 +22,11 @@ internal static class WindowTopmostExecutor
             return;
         }
 
+        if (WindowDragOperationState.IsActive)
+        {
+            return;
+        }
+
         if (window.Topmost != enabled)
         {
             window.Topmost = enabled;
@@ -44,6 +49,11 @@ internal static class WindowTopmostExecutor
     internal static bool TryApplyHandleNoActivate(IntPtr hwnd, bool enabled)
     {
         if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        if (WindowDragOperationState.IsActive)
         {
             return false;
         }
