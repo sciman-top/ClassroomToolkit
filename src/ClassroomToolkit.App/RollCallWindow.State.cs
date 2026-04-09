@@ -15,14 +15,14 @@ public partial class RollCallWindow
     private void OnDataLoadFailed(string message)
     {
         var owner = System.Windows.Application.Current?.MainWindow;
-        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册读取失败，请检查文件是否被占用或已损坏。" : message;
+        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册读取失败，请检查是否被占用或已损坏。" : message;
         ShowRollCallInfoMessageSafe("data-load-failed", detail, owner);
     }
 
     private void OnDataSaveFailed(string message)
     {
         var owner = System.Windows.Application.Current?.MainWindow;
-        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册保存失败，请关闭 Excel 后重试。" : message;
+        var detail = string.IsNullOrWhiteSpace(message) ? "学生名册保存失败，请先关闭 Excel。" : message;
         ShowRollCallInfoMessageSafe("data-save-failed", detail, owner);
     }
 
@@ -156,7 +156,7 @@ public partial class RollCallWindow
                 return;
             }
             var owner = System.Windows.Application.Current?.MainWindow;
-            var detail = $"设置保存失败：{saveFailure.Message}\n请检查设置文件权限或磁盘状态。";
+            var detail = $"设置保存失败：{saveFailure.Message}\n请检查权限或磁盘状态。";
             ShowRollCallInfoMessageSafe("settings-save-failed", detail, owner);
         }
     }
@@ -334,7 +334,7 @@ public partial class RollCallWindow
         void ShowSpeechUnavailableNotice()
         {
             var owner = System.Windows.Application.Current?.MainWindow;
-            var message = "语音播报不可用，可能缺少系统语音包或相关组件。请安装中文语音包后重启。";
+            var message = "语音播报不可用，可能缺少系统语音包或组件。请安装中文语音包后重启。";
             ShowRollCallInfoMessageSafe("speech-unavailable", message, owner);
         }
 

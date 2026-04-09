@@ -37,7 +37,7 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <TextBlock Text="画笔设置" Style="{StaticResource Style_DialogShellTitleText}"/>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭画笔设置" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -56,7 +56,7 @@
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
                         <TabItem Header="基础">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="先调整整套预设，再按需微调基础参数。"
+                <TextBlock Text="先选预设，再调参数。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="12"
@@ -93,7 +93,7 @@
                                 <StackPanel>
                                     <CheckBox x:Name="CalligraphyInkBloomCheck" Content="顿笔墨团" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
                                     <CheckBox x:Name="CalligraphySealCheck" Content="空洞修复" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,8"/>
-                                    <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度弱化阈值" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,4,0,4"/>
+                                    <TextBlock x:Name="CalligraphyOverlayThresholdLabel" Text="低不透明度阈值" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,4,0,4"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -111,7 +111,7 @@
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="这里统一管理预设、手感和场景参数。选择后会自动应用。"
+                        <TextBlock Text="统一管理预设、手感和场景。"
                                    Margin="0,0,0,8"
                                    FontSize="12"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -134,7 +134,7 @@
                         <TextBlock x:Name="PresetManagedHintText" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <TextBlock x:Name="ClassroomWritingModeHint" Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <Button x:Name="ConvertToCustomEditingButton"
-                                Content="转为自定义"
+                                Content="切换为自定义"
                                 Margin="0,8,0,0"
                                 Padding="12,0"
                                 Height="30"
@@ -200,7 +200,7 @@
                                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                                     <StackPanel>
                                         <TextBlock Text="界面与工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                                        <TextBlock Text="这里只调整工具栏显示和切换方式。"
+                                        <TextBlock Text="只调显示和切换。"
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="12"
                                                    Margin="0,0,0,12"/>
@@ -229,20 +229,20 @@
 
                         <TabItem Header="兼容">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="常用参数优先，高级项按需开启。"
+                <TextBlock Text="常用项优先，高级项按需开。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="12"
                            TextWrapping="Wrap"/>
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="高级项默认折叠。"
+                        <TextBlock Text="高级项默认收起。"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,8"/>
                         <CheckBox x:Name="AdvancedModeCheck"
-                                  Content="显示高级兼容与排障项"
+                                  Content="显示高级项"
                                   Foreground="{StaticResource Brush_Text_Primary}"
                                   FontSize="13"
                                   Checked="OnAdvancedModeCheckChanged"
@@ -277,9 +277,9 @@
                                 <TextBlock Text="导出范围" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                 <ComboBox Grid.Column="1" x:Name="InkExportScopeCombo" Height="34" FontSize="13"/>
                             </Grid>
-                            <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="连页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放/平移位置" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="仅排障时调整高级参数。"
+                            <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="跨页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放和平移" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="排障时再调。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -336,7 +336,7 @@
                                             <TextBlock Text="拖拽惯性预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志（仅排障）" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>
@@ -371,9 +371,9 @@
                                 <TextBlock Text="WPS 演示文稿" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                 <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
                             </Grid>
-                            <CheckBox x:Name="WpsWheelCheck" Content="滚轮映射为翻页键" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="ForceForegroundCheck" Content="全屏放映时自动置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <TextBlock Text="仅兼容异常时调整高级参数。"
+                            <CheckBox x:Name="WpsWheelCheck" Content="滚轮翻页" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="ForceForegroundCheck" Content="全屏置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="兼容异常时再调。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -390,7 +390,7 @@
                                             <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后固定兼容模式" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定兼容" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
                                         <Grid Margin="0,10,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="80"/>
@@ -407,9 +407,9 @@
                                             <TextBlock Text="探活窗口" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
                                             <ComboBox Grid.Column="1" x:Name="FallbackProbeIntervalCombo" Height="34" FontSize="13"/>
                                         </Grid>
-                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习放映窗口特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
-                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清空识别规则覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
-                                        <TextBlock Text="识别规则包（签名）"
+                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清除覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
+                                        <TextBlock Text="规则包"
                                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                                    FontSize="13"
                                                    Margin="0,12,0,8"/>
@@ -419,14 +419,14 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Button x:Name="ExportClassifierPackageButton"
-                                                    Content="导出规则包"
+                                                    Content="导出包"
                                                     Height="30"
                                                     Margin="0,0,6,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnExportClassifierPackageClick"/>
                                             <Button Grid.Column="1"
                                                     x:Name="ImportClassifierPackageButton"
-                                                    Content="导入规则包"
+                                                    Content="导入包"
                                                     Height="30"
                                                     Margin="6,0,0,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
@@ -438,21 +438,21 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Button x:Name="CopyClassifierPackageButton"
-                                                    Content="复制规则包"
+                                                    Content="复制包"
                                                     Height="30"
                                                     Margin="0,0,6,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnCopyClassifierPackageClick"/>
                                             <Button Grid.Column="1"
                                                     x:Name="ImportClassifierPackageFromClipboardButton"
-                                                    Content="粘贴并导入"
+                                                    Content="粘贴导入"
                                                     Height="30"
                                                     Margin="6,0,0,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnImportClassifierPackageFromClipboardClick"/>
                                         </Grid>
                                         <Button x:Name="UndoClassifierPackageImportButton"
-                                                Content="撤销最近导入"
+                                                Content="撤销导入"
                                                 Height="30"
                                                 Margin="0,0,0,8"
                                                 HorizontalAlignment="Left"
@@ -460,7 +460,7 @@
                                                 Style="{StaticResource Style_SecondaryButton}"
                                                 Click="OnUndoClassifierPackageImportClick"/>
                                         <TextBlock x:Name="PresentationClassifierPackageStatusText"
-                                                   Text="规则包状态：未初始化。"
+                                                   Text="规则包：未初始化。"
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="12"
                                                    TextWrapping="Wrap"/>

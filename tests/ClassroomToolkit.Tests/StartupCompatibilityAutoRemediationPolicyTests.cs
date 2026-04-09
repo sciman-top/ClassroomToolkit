@@ -114,7 +114,7 @@ public sealed class StartupCompatibilityAutoRemediationPolicyTests
             result.HasChanges.Should().BeTrue();
             result.HasSettingsChanges.Should().BeFalse();
             Directory.Exists(Path.GetDirectoryName(settingsPath)!).Should().BeTrue();
-            result.AppliedActions.Should().ContainSingle(action => action.Contains("已自动创建设置目录"));
+        result.AppliedActions.Should().ContainSingle(action => action.Contains("已创建设置目录"));
         }
         finally
         {

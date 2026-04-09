@@ -13,7 +13,7 @@ public sealed class StartupCompatibilityWarningDialogContractTests
 
         xaml.Should().Contain("x:Name=\"OpenReportButton\"");
         xaml.Should().Contain("x:Name=\"CopyDiagnosticsButton\"");
-        xaml.Should().Contain("已自动切换到兼容优先模式，可继续上课；如需重新启用提示，可在系统兼容性诊断中恢复。");
+        xaml.Should().Contain("已切到兼容优先模式。可在兼容诊断恢复提示。");
         codeBehind.Should().Contain("Process.Start(new ProcessStartInfo(_reportPath) { UseShellExecute = true });");
         codeBehind.Should().Contain("System.Windows.Clipboard.SetText(_diagnosticsPayload);");
         codeBehind.Should().Contain("string? diagnosticsPayload = null");

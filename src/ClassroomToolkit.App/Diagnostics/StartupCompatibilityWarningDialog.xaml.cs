@@ -67,7 +67,7 @@ public partial class StartupCompatibilityWarningDialog : Window
         {
             System.Windows.MessageBox.Show(
                 $"打开诊断报告失败：{ex.Message}",
-                "启动兼容性提示",
+                "兼容提示",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -88,7 +88,7 @@ public partial class StartupCompatibilityWarningDialog : Window
         {
             System.Windows.MessageBox.Show(
                 $"复制诊断信息失败：{ex.Message}",
-                "启动兼容性提示",
+                "兼容提示",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

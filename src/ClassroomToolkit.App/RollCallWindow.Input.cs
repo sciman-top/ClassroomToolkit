@@ -58,8 +58,8 @@ public partial class RollCallWindow
     {
         var group = _viewModel.CurrentGroup;
         var prompt = group == ClassroomToolkit.Domain.Utilities.IdentityUtils.AllGroupName
-            ? "确定要重置所有分组的点名状态并重新开始吗？"
-            : $"确定要重置“{group}”分组的点名状态并重新开始吗？";
+            ? "确定要重置所有分组点名状态并重新开始吗？"
+            : $"确定要重置“{group}”分组点名状态并重新开始吗？";
         if (!TryShowRollCallConfirmationSafe("reset-rollcall-group", prompt))
         {
             return;
@@ -309,7 +309,7 @@ public partial class RollCallWindow
         void ShowUnavailableNotice()
         {
             var owner = System.Windows.Application.Current?.MainWindow;
-            var message = $"翻页笔全局监听不可用，可能被系统权限或安全软件拦截。可尝试以管理员身份运行。";
+            var message = "翻页笔监听不可用，可能被拦截。可尝试以管理员身份运行。";
             ShowRollCallInfoMessageSafe("remote-hook-unavailable", message, owner);
         }
 

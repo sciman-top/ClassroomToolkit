@@ -49,7 +49,7 @@
                             Margin="0,0,8,0"
                             Height="30"
                             MinWidth="102"
-                            ToolTip="切换模式"
+                            ToolTip="切换点名/计时模式"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
@@ -94,7 +94,7 @@
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化，功能继续" Margin="4,0,0,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化，功能继续运行" Margin="4,0,0,0">
                         <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
@@ -290,7 +290,7 @@
                         </Button>
 
                         <!-- 播放/暂停按钮：使用 Teal 色调 -->
-                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="34" Click="OnTimerStartPauseClick" ToolTip="开始或暂停">
+                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="34" Click="OnTimerStartPauseClick" ToolTip="开始/暂停计时">
                             <Path Fill="{StaticResource Brush_Text_Black}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">

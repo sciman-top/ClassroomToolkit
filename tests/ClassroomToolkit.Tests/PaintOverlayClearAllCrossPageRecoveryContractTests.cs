@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using FluentAssertions;
 
@@ -8,7 +9,11 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
     [Fact]
     public void ClearPhotoInkStateAfterClearAll_ShouldCancelPendingAutoSaveBeforePersistingEmptySnapshot()
     {
-        var source = File.ReadAllText(GetOverlaySourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow*.cs");
 
         source.Should().Contain("_inkSidecarAutoSaveTimer?.Stop();");
         source.Should().Contain("_inkSidecarAutoSaveGate.NextGeneration();");
@@ -18,7 +23,11 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
     [Fact]
     public void ClearAll_ShouldAlwaysClearInMemoryInkStrokesBeforeNotify()
     {
-        var source = File.ReadAllText(GetOverlaySourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow*.cs");
 
         source.Should().Contain("if (_inkStrokes.Count > 0)");
         source.Should().Contain("_inkStrokes.Clear();");
@@ -28,7 +37,11 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
     [Fact]
     public void RequestPhotoTransformInkRedraw_ShouldUseUnifiedRuntimeEmptyGuard()
     {
-        var source = File.ReadAllText(GetTransformSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Transform*.cs");
 
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCurrentPage()");
         source.Should().Contain("RequestInkRedraw();");
@@ -45,31 +58,16 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
     [Fact]
     public void CrossPageNeighborPipelines_ShouldUseUnifiedRuntimeEmptyGuard()
     {
-        var source = File.ReadAllText(GetCrossPageSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.CrossPage*.cs");
 
         source.Should().Contain("private bool TryEnforceRuntimeEmptyGuardForCrossPageIndex(");
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)");
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, visibleNeighborSlotIndex: i)");
     }
-
-    private static string GetOverlaySourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.xaml.cs");
-    }
-
-    private static string GetTransformSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.Transform.cs");
-    }
-
     private static string GetPhotoSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(
@@ -79,12 +77,4 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
             "PaintOverlayWindow.Photo.cs");
     }
 
-    private static string GetCrossPageSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.CrossPage.cs");
-    }
 }

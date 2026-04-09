@@ -8,7 +8,11 @@ public sealed class CrossPageNeighborInkRenderSurfaceContractTests
     [Fact]
     public void CrossPageNeighborInkPipeline_ShouldCarryHorizontalOffsetThroughRenderAndSlotTransform()
     {
-        var crossPageSource = File.ReadAllText(GetCrossPageSourcePath());
+        var crossPageSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.CrossPage*.cs");
         var rendererSource = File.ReadAllText(GetRendererSourcePath());
 
         crossPageSource.Should().Contain("CrossPageNeighborInkRenderSurfacePolicy.Resolve(");
@@ -21,20 +25,15 @@ public sealed class CrossPageNeighborInkRenderSurfaceContractTests
     [Fact]
     public void ResolveNeighborInkBitmap_ShouldSynchronouslyRebuild_WhenInteractivePathDisablesDeferredRender()
     {
-        var crossPageSource = File.ReadAllText(GetCrossPageSourcePath());
+        var crossPageSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.CrossPage*.cs");
 
         crossPageSource.Should().Contain("if (!allowDeferredRender)");
         crossPageSource.Should().Contain("var rebuiltEntry = BuildNeighborInkCacheEntry(page, pageBitmap, strokes);");
         crossPageSource.Should().Contain("return rebuiltEntry.Bitmap;");
-    }
-
-    private static string GetCrossPageSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.CrossPage.cs");
     }
 
     private static string GetRendererSourcePath()

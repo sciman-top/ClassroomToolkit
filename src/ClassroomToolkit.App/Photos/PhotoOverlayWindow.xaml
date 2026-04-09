@@ -48,7 +48,7 @@
                 Opacity="0.64"
                 Width="56"
                 Height="56"
-                ToolTip="关闭全屏预览">
+                ToolTip="关闭预览">
             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
         </Button>
@@ -58,7 +58,7 @@
                 Opacity="0.64"
                 Width="56"
                 Height="56"
-                ToolTip="关闭全屏预览">
+                ToolTip="关闭预览">
             <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
         </Button>
@@ -67,7 +67,7 @@
             <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>
             </Border.Effect>
-            <TextBlock Text="单击空白处关闭" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
+            <TextBlock Text="点击空白关闭" FontSize="13" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
         </Border>
     </Canvas>
 </Window>

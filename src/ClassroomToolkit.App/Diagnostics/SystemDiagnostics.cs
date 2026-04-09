@@ -45,7 +45,7 @@ public static class SystemDiagnostics
         lines.Add($"设置文件：{settingsPath}");
         if (!TryReportWritable(settingsPath, lines, issues, fixes))
         {
-            fixes.Add("请将程序放到可写目录（如用户目录/桌面），或以管理员身份运行。");
+            fixes.Add("请放到可写目录，或以管理员身份运行。");
         }
 
         lines.Add($"学生数据文件：{studentPath}");
@@ -55,19 +55,19 @@ public static class SystemDiagnostics
         }
         else
         {
-            lines.Add("学生数据文件：不存在（首次会自动生成模板）");
+            lines.Add("学生数据文件：不存在（首次会生成模板）");
         }
 
-        lines.Add($"照片根目录：{photoRoot}");
+        lines.Add($"图片留存目录：{photoRoot}");
         if (!Directory.Exists(photoRoot))
         {
-            lines.Add("照片目录：不存在（首次使用会自动创建）");
+            lines.Add("照片目录：不存在（首次会创建）");
         }
         if (TryDetectMultipleSolutionRoots(out var baseRoot, out var currentRoot))
         {
             lines.Add($"检测到多个目录：{baseRoot} / {currentRoot}");
-            issues.Add("检测到多个 ClassroomToolkit 目录：学生数据可能来自非当前目录。");
-            fixes.Add("请确认当前运行目录与数据目录一致，必要时移动或清理多余副本。");
+            issues.Add("检测到多个目录：学生数据可能来自非当前目录。");
+            fixes.Add("请确认目录一致，必要时清理多余副本。");
         }
 
         lines.Add($"控制Office演示：{(settings.ControlMsPpt ? "启用" : "禁用")}");
@@ -105,17 +105,17 @@ public static class SystemDiagnostics
             if (!string.IsNullOrWhiteSpace(voiceError))
             {
                 lines.Add($"语音包检测错误：{voiceError}");
-                issues.Add("语音播报可能不可用：语音包检测异常。");
-                fixes.Add("尝试在 Windows“语音/讲述人/语言包”中安装中文语音后重启。");
+                issues.Add("语音播报可能不可用：语音包异常。");
+            fixes.Add("在 Windows“语音/讲述人/语言包”里安装中文语音后重启。");
             }
         }
         else
         {
             issues.Add("当前系统不是 Windows，部分功能不可用。");
-            fixes.Add("请在 Windows 10/11 上运行以使用完整功能。");
+            fixes.Add("请在 Windows 10/11 上运行。");
         }
 
-        var title = "系统兼容性诊断";
+        var title = "兼容诊断";
         var detail = string.Join(Environment.NewLine, lines);
         var suggestion = BuildSuggestions(issues, fixes, okMessage: "✅ 当前系统环境良好，关键检查通过。");
         var hasIssues = issues.Count > 0 || startupStatus != CompatibilityHealthStatus.Normal;
@@ -143,22 +143,22 @@ public static class SystemDiagnostics
         lines.Add($"设置文件：{settingsPath}");
         if (!TryReportWritable(settingsPath, lines, issues, fixes))
         {
-            fixes.Add("请将程序放到可写目录（如用户目录/桌面），或以管理员身份运行。");
+            fixes.Add("请放到可写目录，或以管理员身份运行。");
         }
         if (TryDetectMultipleSolutionRoots(out var baseRoot, out var currentRoot))
         {
             lines.Add($"检测到多个目录：{baseRoot} / {currentRoot}");
-            issues.Add("检测到多个 ClassroomToolkit 目录：学生数据可能来自非当前目录。");
-            fixes.Add("请确认当前运行目录与数据目录一致，必要时移动或清理多余副本。");
+            issues.Add("检测到多个目录：学生数据可能来自非当前目录。");
+            fixes.Add("请确认目录一致，必要时清理多余副本。");
         }
 
         if (!OperatingSystem.IsWindows())
         {
             issues.Add("当前系统不是 Windows，部分功能不可用。");
-            fixes.Add("请在 Windows 10/11 上运行以使用完整功能。");
+            fixes.Add("请在 Windows 10/11 上运行。");
         }
 
-        var title = "启动快速检查";
+        var title = "快速检查";
         var detail = string.Join(Environment.NewLine, lines);
         var suggestion = BuildSuggestions(issues, fixes, okMessage: "✅ 启动快速检查通过。");
         var hasIssues = issues.Count > 0 || startupStatus != CompatibilityHealthStatus.Normal;
@@ -187,7 +187,7 @@ public static class SystemDiagnostics
         if (!writable)
         {
             issues.Add("设置目录不可写：配置无法保存。");
-            fixes.Add("请确认当前目录具备写入权限。");
+            fixes.Add("请确认当前目录可写。");
         }
         return writable;
     }

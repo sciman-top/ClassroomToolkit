@@ -35,9 +35,21 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     {
         var source = File.ReadAllText(GetMainWindowPaintSourcePath());
         var photoSource = File.ReadAllText(GetMainWindowPhotoSourcePath());
-        var inputSource = File.ReadAllText(GetOverlayInputSourcePath());
-        var overlayPhotoNavSource = File.ReadAllText(GetOverlayPhotoNavigationSourcePath());
-        var overlayPhotoTransformSource = File.ReadAllText(GetOverlayPhotoTransformSourcePath());
+        var inputSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input*.cs");
+        var overlayPhotoNavSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Navigation*.cs");
+        var overlayPhotoTransformSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Transform*.cs");
 
         source.Should().Contain("_toolbarWindow?.SetBoardActive(false);");
         source.Should().Contain("allowInkOutsidePhoto: true,");
@@ -56,7 +68,11 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void RegionCaptureUnboundedInkMode_ShouldBypassOutOfPageMoveSuppression()
     {
-        var inputSource = File.ReadAllText(GetOverlayInputSourcePath());
+        var inputSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input*.cs");
 
         inputSource.Should().Contain("if (_photoUnboundedInkCanvasEnabled)");
         inputSource.Should().Contain("return false;");
@@ -68,7 +84,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         var xaml = File.ReadAllText(GetToolbarXamlPath());
 
         xaml.Should().NotContain("x:Name=\"RegionCaptureButton\"");
-        xaml.Should().Contain("ToolTip=\"单击区域截图，再次点击进白板，长按改颜色\"");
+        xaml.Should().Contain("ToolTip=\"单击截图，双击白板，长按改色\"");
     }
 
     private static string GetToolbarSourcePath()
@@ -105,30 +121,4 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
             "MainWindow.Photo.cs");
     }
 
-    private static string GetOverlayPhotoNavigationSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.Navigation.cs");
-    }
-
-    private static string GetOverlayInputSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Input.cs");
-    }
-
-    private static string GetOverlayPhotoTransformSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.Transform.cs");
-    }
 }

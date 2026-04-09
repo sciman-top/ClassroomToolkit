@@ -411,14 +411,14 @@ public partial class RollCallSettingsDialog : Window
     {
         var enabled = RemoteEnabledCheck.IsChecked == true;
         RemoteKeyCombo.IsEnabled = enabled;
-        RemoteKeyCombo.ToolTip = enabled ? null : "启用“使用翻页笔进行点名”后可设置点名按键。";
+        RemoteKeyCombo.ToolTip = enabled ? null : "开启后可设置点名按键。";
     }
 
     private void UpdateRemoteGroupSwitchEnabled()
     {
         var enabled = RemoteGroupSwitchCheck.IsChecked == true;
         RemoteGroupSwitchKeyCombo.IsEnabled = enabled;
-        RemoteGroupSwitchKeyCombo.ToolTip = enabled ? null : "启用“使用翻页笔切换分组”后可设置分组按键。";
+        RemoteGroupSwitchKeyCombo.ToolTip = enabled ? null : "开启后可设置分组按键。";
     }
 
     private void UpdatePhotoControls()
@@ -426,7 +426,7 @@ public partial class RollCallSettingsDialog : Window
         var enabled = ShowPhotoCheck.IsChecked == true;
         PhotoDurationSlider.IsEnabled = enabled;
         PhotoSharedCombo.IsEnabled = enabled;
-        var disabledTip = "启用“启用学生照片显示”后可设置照片时长和照片来源。";
+        var disabledTip = "开启后可设置照片时长和来源。";
         PhotoDurationSlider.ToolTip = enabled ? null : disabledTip;
         PhotoSharedCombo.ToolTip = enabled ? null : disabledTip;
     }
@@ -440,11 +440,11 @@ public partial class RollCallSettingsDialog : Window
     private void UpdateTimerControls()
     {
         TimerSoundCombo.IsEnabled = TimerSoundCheck.IsChecked == true;
-        TimerSoundCombo.ToolTip = TimerSoundCheck.IsChecked == true ? null : "启用“计时结束播放音效”后可选择结束音效。";
+        TimerSoundCombo.ToolTip = TimerSoundCheck.IsChecked == true ? null : "开启后可选择结束音效。";
         var reminderEnabled = ReminderSoundCheck.IsChecked == true;
         ReminderSoundCombo.IsEnabled = reminderEnabled;
         ReminderIntervalSlider.IsEnabled = reminderEnabled;
-        var reminderTip = "启用“定时语音提醒”后可设置提醒音效和提醒间隔。";
+        var reminderTip = "开启后可设置提醒音效和间隔。";
         ReminderSoundCombo.ToolTip = reminderEnabled ? null : reminderTip;
         ReminderIntervalSlider.ToolTip = reminderEnabled ? null : reminderTip;
     }
@@ -501,7 +501,7 @@ public partial class RollCallSettingsDialog : Window
         if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true && 
             string.Equals(keyText, groupKeyText, StringComparison.OrdinalIgnoreCase))
         {
-            System.Windows.MessageBox.Show("点名按键与分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("点名按键和分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
 
@@ -539,7 +539,7 @@ public partial class RollCallSettingsDialog : Window
     private void OnRestoreAllDefaultsClick(object sender, RoutedEventArgs e)
     {
         var result = System.Windows.MessageBox.Show(
-            "将恢复点名设置窗口中的全部默认参数，是否继续？",
+            "恢复点名设置为默认值，是否继续？",
             "重置全部设置",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Question);
@@ -1058,7 +1058,7 @@ public partial class RollCallSettingsDialog : Window
         }
 
         ChangeSummaryText.Text = dirtyTabs.Count == 0
-            ? "本次未修改任何设置。"
+            ? "本次未修改设置。"
             : $"本次已修改：{string.Join("、", dirtyTabs)}。";
     }
 

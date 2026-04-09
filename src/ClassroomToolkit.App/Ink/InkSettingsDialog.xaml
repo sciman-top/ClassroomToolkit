@@ -32,7 +32,7 @@
             <Border Grid.Row="1" Margin="16,14,16,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
                     <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录" Margin="0,0,0,10"/>
-                    <CheckBox x:Name="InkReplayPreviousCheck" Content="显示上次课的笔迹" Margin="0,0,0,12"/>
+                    <CheckBox x:Name="InkReplayPreviousCheck" Content="显示上次笔迹" Margin="0,0,0,12"/>
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -41,9 +41,9 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,8,0"/>
                         <TextBox x:Name="InkRetentionDaysBox" Grid.Column="1" Height="30" VerticalContentAlignment="Center" Padding="4,0"/>
-                        <TextBlock Grid.Column="2" Text="填 0 表示不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="8,0,0,0"/>
+                        <TextBlock Grid.Column="2" Text="0 表示不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="8,0,0,0"/>
                     </Grid>
-                    <TextBlock Text="照片存储路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,6,0,4"/>
+                    <TextBlock Text="笔迹保存路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,6,0,4"/>
                     <TextBox x:Name="InkPhotoPathBox" Height="30"/>
                 </StackPanel>
             </Border>

@@ -33,7 +33,7 @@ internal static class StartupCompatibilityAutoRemediationPolicy
 
         if (TryEnsureSettingsDirectory(issueCodes, settingsPath, out var createdDirectory))
         {
-            appliedActions.Add($"已自动创建设置目录：{createdDirectory}");
+            appliedActions.Add($"已创建设置目录：{createdDirectory}");
         }
 
         if (settings != null && ShouldEnforceConservativePresentationMode(issueCodes))
@@ -44,7 +44,7 @@ internal static class StartupCompatibilityAutoRemediationPolicy
                     StringComparison.OrdinalIgnoreCase))
             {
                 settings.OfficeInputMode = WpsInputModeDefaults.Message;
-                appliedActions.Add("已将 Office 演示控制策略切换为兼容优先（PostMessage）。");
+                appliedActions.Add("Office 已切到兼容优先（PostMessage）。");
                 hasSettingsChanges = true;
             }
 
@@ -54,14 +54,14 @@ internal static class StartupCompatibilityAutoRemediationPolicy
                     StringComparison.OrdinalIgnoreCase))
             {
                 settings.WpsInputMode = WpsInputModeDefaults.Message;
-                appliedActions.Add("已将 WPS 演示控制策略切换为兼容优先（PostMessage）。");
+                appliedActions.Add("WPS 已切到兼容优先（PostMessage）。");
                 hasSettingsChanges = true;
             }
 
             if (!settings.PresentationLockStrategyWhenDegraded)
             {
                 settings.PresentationLockStrategyWhenDegraded = true;
-                appliedActions.Add("已启用“降级后固定兼容模式”以避免课堂中策略抖动。");
+                appliedActions.Add("已启用“降级后固定兼容模式”。");
                 hasSettingsChanges = true;
             }
         }

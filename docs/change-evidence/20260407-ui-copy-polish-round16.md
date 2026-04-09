@@ -1,0 +1,25 @@
+# 20260407 UI Copy Polish Round16
+
+## 依据
+- 继续压缩画笔设置页里剩下的高级项和规则包标题。
+- 目标是保留上下文可理解性，同时减少冗余字词。
+
+## 变更
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml`
+  - 将高级项默认说明收紧为“高级项默认收起。”。
+  - 将兼容相关开关和规则包标题进一步收短。
+
+## 验证
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`
+- `powershell -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+## 结果
+- build: PASS
+- test: PASS
+- contract/invariant: PASS
+- hotspot: PASS
+
+## 回滚
+- 若“收起”“锁定兼容”“自动学习特征”过于省略，回退为上一版表述。

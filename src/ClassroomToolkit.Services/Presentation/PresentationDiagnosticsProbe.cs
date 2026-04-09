@@ -217,23 +217,28 @@ public static class PresentationDiagnosticsProbe
         try
         {
             using var hook = new WpsSlideshowNavigationHook();
-            if (!hook.Available)
+            try
             {
-                return false;
-            }
+                if (!hook.Available)
+                {
+                    return false;
+                }
 
-            if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out var started, out error))
+                if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out var started, out error))
+                {
+                    return false;
+                }
+                if (!started && hook.LastError != 0)
+                {
+                    error = $"Win32 Error {hook.LastError}";
+                }
+
+                return started;
+            }
+            finally
             {
                 hook.Stop();
-                return false;
             }
-            if (!started && hook.LastError != 0)
-            {
-                error = $"Win32 Error {hook.LastError}";
-            }
-
-            hook.Stop();
-            return started;
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -248,19 +253,24 @@ public static class PresentationDiagnosticsProbe
         try
         {
             using var hook = new KeyboardHook();
-            if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out error))
+            try
+            {
+                if (!TryWaitTask(hook.StartAsync(), HookStartWaitTimeoutMs, out error))
+                {
+                    return false;
+                }
+                var active = hook.IsActive;
+                if (!active && hook.LastError != 0)
+                {
+                    error = $"Win32 Error {hook.LastError}";
+                }
+
+                return active;
+            }
+            finally
             {
                 hook.Stop();
-                return false;
             }
-            var active = hook.IsActive;
-            if (!active && hook.LastError != 0)
-            {
-                error = $"Win32 Error {hook.LastError}";
-            }
-
-            hook.Stop();
-            return active;
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -290,14 +300,17 @@ public static class PresentationDiagnosticsProbe
         error = string.Empty;
         try
         {
-            if (!task.Wait(timeoutMs))
-            {
-                error = "startup timeout";
-                return false;
-            }
-
-            result = task.Result;
+            result = task
+                .WaitAsync(TimeSpan.FromMilliseconds(timeoutMs))
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
             return true;
+        }
+        catch (TimeoutException)
+        {
+            error = "startup timeout";
+            return false;
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -315,13 +328,17 @@ public static class PresentationDiagnosticsProbe
         error = string.Empty;
         try
         {
-            if (!task.Wait(timeoutMs))
-            {
-                error = "startup timeout";
-                return false;
-            }
-
+            task
+                .WaitAsync(TimeSpan.FromMilliseconds(timeoutMs))
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
             return true;
+        }
+        catch (TimeoutException)
+        {
+            error = "startup timeout";
+            return false;
         }
         catch (Exception ex) when (PresentationExceptionFilterPolicy.IsNonFatal(ex))
         {

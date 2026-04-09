@@ -389,7 +389,7 @@ public partial class PaintOverlayWindow
 
         var result = ShowExportConfirmationSafe(
             "prompt-load-sidecar-ink",
-            "检测到此文件有保存的笔迹，是否加载？",
+            "检测到该文件有笔迹，是否加载？",
             "加载笔迹",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -615,7 +615,7 @@ public partial class PaintOverlayWindow
 
         if (!File.Exists(_currentDocumentPath))
         {
-            ShowExportMessageSafe("export-session-capture-missing", "当前区域截图临时文件不存在，无法导出。", "导出失败", MessageBoxImage.Warning);
+            ShowExportMessageSafe("export-session-capture-missing", "截图临时文件不存在，无法导出。", "导出失败", MessageBoxImage.Warning);
             return true;
         }
 
@@ -807,7 +807,7 @@ public partial class PaintOverlayWindow
         var filesToExport = filesToExportSet.ToList();
         if (filesToExport.Count == 0)
         {
-            ShowExportMessageSafe("export-directory-empty", "当前目录没有可导出的笔迹合成记录。", "导出", MessageBoxImage.Information);
+            ShowExportMessageSafe("export-directory-empty", "当前目录没有可导出内容。", "导出", MessageBoxImage.Information);
             return;
         }
 
@@ -920,7 +920,7 @@ public partial class PaintOverlayWindow
                     var done = Interlocked.Increment(ref completed);
                     DispatchExportUiUpdate("directory-progress-update", () =>
                     {
-                        progressText.Text = $"正在导出 ({done}/{total}, 并发 {maxParallel}): {Path.GetFileName(sourcePath)}";
+                        progressText.Text = $"导出中 ({done}/{total}, 并发 {maxParallel})：{Path.GetFileName(sourcePath)}";
                     });
                 });
 
@@ -935,7 +935,7 @@ public partial class PaintOverlayWindow
                     }
                     ShowExportMessageSafe(
                         "export-directory-complete",
-                        $"导出完成：新增 {exportedCount}，跳过 {skippedCount}，失败 {failedCount}\n输出文件 {outputs.Count} 个。",
+                        $"导出完成：新增 {exportedCount}，跳过 {skippedCount}，失败 {failedCount}\n共 {outputs.Count} 个文件。",
                         "导出完成",
                         MessageBoxImage.Information);
                 });
@@ -955,7 +955,7 @@ public partial class PaintOverlayWindow
 
                     ShowExportMessageSafe(
                         "export-directory-failed",
-                        $"导出过程中出现异常：{ex.Message}",
+                        $"导出异常：{ex.Message}",
                         "导出失败",
                         MessageBoxImage.Warning);
                 });
@@ -1054,7 +1054,7 @@ public partial class PaintOverlayWindow
         var details = string.Join("\n", topFailures);
         ShowExportMessageSafe(
             "export-preflush-failed",
-            $"导出前自动保存校验失败，已中止导出。\n失败 {flushResult.Failures.Count} 页：\n{details}",
+            $"自动保存失败，已中止导出。\n失败 {flushResult.Failures.Count} 页：\n{details}",
             "导出已中止",
             MessageBoxImage.Warning);
         return false;

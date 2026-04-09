@@ -1,4 +1,3 @@
-using System.IO;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -8,7 +7,11 @@ public sealed class ImageManagerThumbnailDispatchFallbackContractTests
     [Fact]
     public void TryDispatchThumbnailUpdateAsync_ShouldApplyInlineFallback_WhenInvokeAsyncFailsOnUiThread()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Photos",
+            "ImageManagerWindow*.cs");
 
         source.Should().Contain("if (Dispatcher.CheckAccess()");
         source.Should().Contain("item.Thumbnail = thumbnail;");
@@ -19,18 +22,13 @@ public sealed class ImageManagerThumbnailDispatchFallbackContractTests
     [Fact]
     public void AppendScanResultsAsync_ShouldSwallowShutdownRace_WhenYieldDispatchThrows()
     {
-        var source = File.ReadAllText(GetSourcePath());
-
-        source.Should().Contain("catch (OperationCanceledException) when (_isClosing)");
-        source.Should().Contain("catch (ObjectDisposedException)");
-    }
-
-    private static string GetSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
+        var source = ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
             "Photos",
-            "ImageManagerWindow.xaml.cs");
+            "ImageManagerWindow*.cs");
+
+        source.Should().Contain("catch (OperationCanceledException) when (_isClosing)");
+        source.Should().Contain("catch (ObjectDisposedException)");
     }
 }

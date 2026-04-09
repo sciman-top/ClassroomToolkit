@@ -91,7 +91,7 @@ internal sealed class StartupOrchestrator
                 startupCompatibilityReportPath,
                 autoRemediation);
             var dialog = new StartupCompatibilityWarningDialog(
-                "检测到可降级运行的兼容性风险。",
+                "发现可降级运行风险。",
                 warningMessage,
                 suggestionMessage,
                 startupCompatibilityReportPath,
@@ -152,8 +152,8 @@ internal sealed class StartupOrchestrator
             lines.Add(string.Empty);
             lines.Add("快速修复：");
             lines.Add("1. 关闭本程序、PPT、WPS。");
-            lines.Add("2. 统一以相同权限重启（都管理员或都非管理员）。");
-            lines.Add("3. 若仍失败，优先使用离线标准包重装后重试。");
+            lines.Add("2. 用相同权限重启。");
+            lines.Add("3. 若仍失败，先重装标准包。");
         }
         if (!string.IsNullOrWhiteSpace(reportPath))
         {
@@ -171,13 +171,13 @@ internal sealed class StartupOrchestrator
     {
         var lines = new List<string>
         {
-            "检测到可降级运行的兼容性风险：",
+            "发现可降级运行风险：",
             report.BuildMessage(includeWarnings: true),
             string.Empty
         };
         if (autoRemediation.HasChanges)
         {
-            lines.Add("已自动应用稳定性保护：");
+            lines.Add("已应用稳定性保护：");
             for (var i = 0; i < autoRemediation.AppliedActions.Count; i++)
             {
                 lines.Add($"- {autoRemediation.AppliedActions[i]}");
@@ -194,7 +194,7 @@ internal sealed class StartupOrchestrator
             }
             lines.Add(string.Empty);
         }
-        lines.Add("程序将继续启动。建议尽快按提示修复，避免课堂中断。");
+            lines.Add("程序将继续启动。请尽快修复。");
         if (!string.IsNullOrWhiteSpace(startupCompatibilityReportPath))
         {
             lines.Add($"诊断报告：{startupCompatibilityReportPath}");
@@ -214,14 +214,14 @@ internal sealed class StartupOrchestrator
         if (issueCodes.Contains("presentation-arch-mismatch"))
         {
             lines.Add("关闭本程序、PPT、WPS。");
-            lines.Add("确保程序与 Office/WPS 同位数（建议全部使用 x64）。");
-            lines.Add("若当前仅安装了 x86 WPS/Office，请改装 x64 版本后再重启。");
+            lines.Add("确保同位数，建议都用 x64。");
+            lines.Add("若只装 x86 WPS/Office，请改装 x64 后重启。");
         }
         else if (issueCodes.Contains("presentation-arch-unknown"))
         {
             lines.Add("关闭本程序、PPT、WPS 后重启。");
-            lines.Add("临时关闭可能拦截进程探测的安全软件，再次启动复测。");
-            lines.Add("优先使用 x64 版本的 Office/WPS 以减少兼容波动。");
+            lines.Add("临时关闭拦截探测的软件，再次启动复测。");
+            lines.Add("优先用 x64 版 Office/WPS，减少波动。");
         }
 
         return lines;
@@ -245,7 +245,7 @@ internal sealed class StartupOrchestrator
         {
             "【ClassroomToolkit 启动兼容性诊断】",
             $"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-            "结论：已自动切换到兼容优先模式，当前可继续上课。",
+            "结论：已切到兼容优先模式，可继续上课。",
             string.Empty,
             "风险码："
         };

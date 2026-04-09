@@ -29,7 +29,7 @@
 
             <Border Grid.Row="1" Margin="16,14,16,6" Style="{StaticResource Style_SettingCardBorder}" Padding="8">
                 <StackPanel>
-                    <TextBlock Text="选择后将用于当前点名窗口。"
+                    <TextBlock Text="选择后应用到当前点名窗口。"
                                Margin="4,0,4,8"
                                Foreground="{StaticResource Brush_Text_Tertiary}"
                                FontSize="12"

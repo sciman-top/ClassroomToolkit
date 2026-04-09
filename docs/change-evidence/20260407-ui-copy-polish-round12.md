@@ -1,0 +1,26 @@
+# 20260407 UI Copy Polish Round12
+
+## 依据
+- 继续压缩画笔设置页里的规则包操作按钮。
+- 目标是减少重复词，保持上下文可理解。
+
+## 变更
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml`
+  - 将规则包区域标题和按钮统一收短。
+- `tests/ClassroomToolkit.Tests/App/UiCopyContractTests.cs`
+  - 同步更新规则包按钮文案契约。
+
+## 验证
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`
+- `powershell -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+## 结果
+- build: PASS
+- test: PASS
+- contract/invariant: PASS
+- hotspot: PASS
+
+## 回滚
+- 若规则包按钮过短引起歧义，回退为上一版“规则包”完整按钮名。

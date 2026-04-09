@@ -30,8 +30,8 @@
 
             <Border Grid.Row="1" Margin="20,16,20,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
-                    <TextBlock Text="自动关闭时间（分钟）" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                    <TextBlock Text="设为 0 表示不自动关闭。" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,10"/>
+                    <TextBlock Text="自动关闭（分钟）" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="0 表示不自动关闭。" FontSize="12" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,10"/>
                     <TextBox x:Name="MinutesBox" Padding="8,4"/>
                 </StackPanel>
             </Border>

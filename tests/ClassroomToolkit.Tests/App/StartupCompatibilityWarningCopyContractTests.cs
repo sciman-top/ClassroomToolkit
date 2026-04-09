@@ -12,13 +12,17 @@ public sealed class StartupCompatibilityWarningCopyContractTests
 
         source.Should().Contain("BuildStartupWarningQuickFixLines");
         source.Should().Contain("issueCodes.Contains(\"presentation-arch-mismatch\")");
-        source.Should().Contain("确保程序与 Office/WPS 同位数（建议全部使用 x64）。");
-        source.Should().Contain("若当前仅安装了 x86 WPS/Office，请改装 x64 版本后再重启。");
+        source.Should().Contain("确保同位数，建议都用 x64。");
+        source.Should().Contain("若只装 x86 WPS/Office，请改装 x64 后重启。");
+        source.Should().Contain("发现可降级运行风险。");
+        source.Should().Contain("程序将继续启动。请尽快修复。");
         source.Should().Contain("startupCompatibilityReportPath");
         source.Should().Contain("BuildStartupSupportPayload");
         source.Should().Contain("风险码：");
         source.Should().Contain("已自动执行：");
         source.Should().Contain("建议处理：");
+        source.Should().Contain("发现可降级运行风险。");
+        source.Should().Contain("发现可降级运行风险：");
     }
 
     private static string GetSourcePath()

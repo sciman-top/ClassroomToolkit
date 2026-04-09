@@ -52,7 +52,7 @@
                         Content="画笔"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
-                        ToolTip="开启画笔，长按设置"
+                        ToolTip="打开画笔，长按可设置"
                         behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}"/>
 
                 <Button Grid.Column="1"
@@ -61,7 +61,7 @@
                         Content="点名与计时"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
-                        ToolTip="点名与计时，长按设置"
+                        ToolTip="点名与计时，长按可设置"
                         behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}"/>
             </Grid>
 
@@ -89,7 +89,7 @@
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Apps}"
                                 Click="OnDiagnosticsClick"
-                                ToolTip="兼容诊断"/>
+                                ToolTip="兼容性诊断"/>
 
                         <Button x:Name="AboutButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"

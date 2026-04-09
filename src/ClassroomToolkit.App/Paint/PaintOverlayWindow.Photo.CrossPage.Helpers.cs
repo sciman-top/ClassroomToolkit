@@ -502,4 +502,46 @@ public partial class PaintOverlayWindow
         _photoPageScale.ScaleY = ratio;
         UpdatePhotoInkClip();
     }
+
+    private void ApplyNeighborSharedTransform(
+        WpfImage pageImage,
+        WpfImage inkImage,
+        double pageScaleRatio,
+        double baseTop)
+    {
+        var scaleX = _photoScale.ScaleX * pageScaleRatio;
+        var scaleY = _photoScale.ScaleY * pageScaleRatio;
+
+        var pageTransform = EnsureNeighborTransform(pageImage);
+        pageTransform.Scale.ScaleX = scaleX;
+        pageTransform.Scale.ScaleY = scaleY;
+        pageTransform.Translate.X = _photoTranslate.X;
+        pageTransform.Translate.Y = _photoTranslate.Y + baseTop;
+
+        var inkTag = ResolveNeighborInkSlotTag(inkImage.Tag, baseTop);
+        var inkTransform = EnsureNeighborTransform(inkImage);
+        inkTransform.Scale.ScaleX = scaleX;
+        inkTransform.Scale.ScaleY = scaleY;
+        inkTransform.Translate.X = _photoTranslate.X - (inkTag.HorizontalOffsetDip * scaleX);
+        inkTransform.Translate.Y = _photoTranslate.Y + inkTag.BaseTop;
+    }
+
+    private static (TransformGroup Group, ScaleTransform Scale, TranslateTransform Translate) EnsureNeighborTransform(WpfImage image)
+    {
+        if (image.RenderTransform is TransformGroup existing
+            && existing.Children.Count >= 2
+            && existing.Children[0] is ScaleTransform existingScale
+            && existing.Children[1] is TranslateTransform existingTranslate)
+        {
+            return (existing, existingScale, existingTranslate);
+        }
+
+        var createdScale = new ScaleTransform();
+        var createdTranslate = new TranslateTransform();
+        var createdGroup = new TransformGroup();
+        createdGroup.Children.Add(createdScale);
+        createdGroup.Children.Add(createdTranslate);
+        image.RenderTransform = createdGroup;
+        return (createdGroup, createdScale, createdTranslate);
+    }
 }

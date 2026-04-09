@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.Diagnostics.StartupCompatibilityWarningDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="启动兼容性提示"
+        Title="兼容提示"
         Width="640" Height="448"
         MinWidth="540" MinHeight="360"
         WindowStartupLocation="CenterScreen"
@@ -22,7 +22,7 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <TextBlock Text="兼容提示" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="已切换到兼容优先模式" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="兼容优先" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnContinueClick" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
@@ -88,7 +88,7 @@
 
                     <CheckBox x:Name="SuppressCheckBox"
                               Grid.Row="0"
-                              Content="同一问题不再提示"
+                              Content="本问题不再提示"
                               VerticalAlignment="Center"
                               Margin="0,0,0,8"/>
 
@@ -98,7 +98,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="已自动切换到兼容优先模式，可继续上课；如需重新启用提示，可在系统兼容性诊断中恢复。"
+                        <TextBlock Text="已切到兼容优先模式。可在兼容诊断恢复提示。"
                                    Style="{StaticResource Style_ManagementShellFooterText}"
                                    Grid.Column="0"
                                    Margin="0,0,12,0"

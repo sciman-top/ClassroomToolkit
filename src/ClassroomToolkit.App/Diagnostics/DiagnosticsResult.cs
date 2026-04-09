@@ -14,12 +14,12 @@ public sealed record DiagnosticsResult(
             if (string.IsNullOrWhiteSpace(HealthBadge))
             {
                 return HasIssues
-                    ? "检测到系统环境存在潜在兼容性问题。"
+                    ? "检测到潜在兼容问题。"
                     : "系统环境检测正常。";
             }
 
             return HasIssues
-                ? $"{HealthBadge}（检测到潜在兼容性问题）"
+                ? $"{HealthBadge}（检测到潜在兼容问题）"
                 : $"{HealthBadge}（系统环境检测正常）";
         }
     }

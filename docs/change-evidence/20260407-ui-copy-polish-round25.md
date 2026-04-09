@@ -1,0 +1,24 @@
+# 20260407 UI Copy Polish Round25
+
+## 依据
+- 继续压缩启动兼容输出里的稳定性保护标题句。
+- 目标是减少重复词，同时保留后续动作列表的可读性。
+
+## 变更
+- `src/ClassroomToolkit.App/Startup/StartupOrchestrator.cs`
+  - 将“已自动应用稳定性保护”收短为“已应用稳定性保护”。
+
+## 验证
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests|FullyQualifiedName~StartupCompatibilityAutoRemediationPolicyTests|FullyQualifiedName~StartupCompatibilityWarningCopyContractTests"`
+- `powershell -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+## 结果
+- build: PASS
+- test: PASS
+- contract/invariant: PASS
+- hotspot: PASS
+
+## 回滚
+- 若“已应用稳定性保护”在上下文里不够明确，回退到上一版表述。

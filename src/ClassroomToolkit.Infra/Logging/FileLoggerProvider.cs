@@ -9,6 +9,7 @@ namespace ClassroomToolkit.Infra.Logging;
 public class FileLoggerProvider : ILoggerProvider
 {
     private readonly record struct LogQueueItem(DateTime Timestamp, string Message);
+    private const int QueueBatchSize = 64;
     private const int QueueDrainTimeoutMs = 3000;
     private const int QueueCancelGraceTimeoutMs = 1000;
 
@@ -84,13 +85,12 @@ public class FileLoggerProvider : ILoggerProvider
     {
         try
         {
-            foreach (var item in _messageQueue.GetConsumingEnumerable())
+            foreach (var item in _messageQueue.GetConsumingEnumerable(_cancellationTokenSource.Token))
             {
                 try
                 {
-                    var logFile = Path.Combine(_logDirectory, $"app_{item.Timestamp:yyyyMMdd}.log");
-                    // Simple append, could be optimized with buffering
-                    File.AppendAllText(logFile, item.Message + Environment.NewLine, Encoding.UTF8);
+                    var batch = BuildQueueBatch(item);
+                    FlushBatch(batch);
                 }
                 catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
@@ -105,6 +105,49 @@ public class FileLoggerProvider : ILoggerProvider
         catch (ObjectDisposedException)
         {
             // Expected when queue resources are disposed during shutdown races.
+        }
+    }
+
+    private List<LogQueueItem> BuildQueueBatch(LogQueueItem firstItem)
+    {
+        var batch = new List<LogQueueItem>(QueueBatchSize)
+        {
+            firstItem
+        };
+
+        while (batch.Count < QueueBatchSize && _messageQueue.TryTake(out var queued))
+        {
+            batch.Add(queued);
+        }
+
+        return batch;
+    }
+
+    private void FlushBatch(IReadOnlyList<LogQueueItem> batch)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        var groupedLines = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in batch)
+        {
+            var path = Path.Combine(_logDirectory, $"app_{item.Timestamp:yyyyMMdd}.log");
+            if (!groupedLines.TryGetValue(path, out var builder))
+            {
+                builder = new StringBuilder(capacity: 256);
+                groupedLines[path] = builder;
+            }
+
+            builder.Append(item.Message);
+            builder.Append(Environment.NewLine);
+        }
+
+        foreach (var entry in groupedLines)
+        {
+            File.AppendAllText(entry.Key, entry.Value.ToString(), Encoding.UTF8);
         }
     }
 

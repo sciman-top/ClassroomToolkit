@@ -104,7 +104,7 @@ public partial class DiagnosticsDialog : Window
         {
             System.Windows.MessageBox.Show(
                 this,
-                "当前窗口未接入设置服务，无法重置启动提示状态。",
+                "当前窗口未接入设置服务，无法重置启动提示。",
                 "提示",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -115,7 +115,7 @@ public partial class DiagnosticsDialog : Window
         _settingsService.Save(_settings);
         System.Windows.MessageBox.Show(
             this,
-            "已重新启用启动兼容性提示。下次启动会再次检测并弹出相关告警。",
+            "已重新启用启动兼容性提示。下次启动会再次检测。",
             "已恢复",
             MessageBoxButton.OK,
             MessageBoxImage.Information);

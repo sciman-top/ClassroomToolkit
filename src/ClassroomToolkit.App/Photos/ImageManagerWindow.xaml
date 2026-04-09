@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Photos"
         xmlns:converters="clr-namespace:ClassroomToolkit.App.Converters"
-        Title="PDF/图片管理"
+        Title="资源管理"
         Width="1100"
         Height="700"
         MinWidth="960"
@@ -34,7 +34,7 @@
                     <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="资源管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="文件夹、PDF 与图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="文件夹、PDF、图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="30" Margin="0,0,8,0"
@@ -109,7 +109,7 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <Button Grid.Column="0" Content="★" Width="22" Height="22" Margin="0,0,6,0"
-                                                Padding="0" ToolTip="取消收藏（保留到最近）"
+                                                Padding="0" ToolTip="取消收藏，保留最近"
                                                 Click="OnFavoriteStarToggleClick"
                                                 Tag="{Binding Path}"
                                                 Style="{StaticResource Style_SecondaryButton}"/>
@@ -196,7 +196,7 @@
                                  FontSize="13"
                                  VerticalContentAlignment="Center"
                                  KeyDown="OnCurrentFolderTextKeyDown"
-                                 ToolTip="输入路径后按 Enter"/>
+                                 ToolTip="输入后回车"/>
                     </Border>
                 </DockPanel>
 
@@ -226,7 +226,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="68" Height="30" Margin="0,0,6,0"
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="68" Height="30" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -234,7 +234,7 @@
                                     <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="12"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="80" Height="30" Margin="0,0,10,0"
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="80" Height="30" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -256,7 +256,7 @@
                 </DockPanel>
 
                     <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
-                           Text="先在左侧选择文件夹"
+                           Text="先选左侧文件夹"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
                     <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
@@ -336,7 +336,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="统一管理 PDF、图片和相关资源。"
+                    <TextBlock Text="管理文件、PDF、图片。"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

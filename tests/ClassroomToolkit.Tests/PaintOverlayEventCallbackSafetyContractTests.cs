@@ -8,7 +8,11 @@ public sealed class PaintOverlayEventCallbackSafetyContractTests
     [Fact]
     public void PhotoNavigationAndModeEvents_ShouldBeGuardedBySafeActionExecutor()
     {
-        var source = File.ReadAllText(GetPhotoNavigationSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Navigation*.cs");
 
         source.Should().Contain("SafeActionExecutionExecutor.TryExecute(");
         source.Should().Contain("PhotoModeChanged?.Invoke(true)");
@@ -21,8 +25,16 @@ public sealed class PaintOverlayEventCallbackSafetyContractTests
     public void PresentationAndTransformEvents_ShouldBeGuardedBySafeActionExecutor()
     {
         var presentation = File.ReadAllText(GetPresentationSourcePath());
-        var transform = File.ReadAllText(GetTransformSourcePath());
-        var root = File.ReadAllText(GetRootSourcePath());
+        var transform = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Transform*.cs");
+        var root = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow*.cs");
 
         presentation.Should().Contain("SafeActionExecutionExecutor.TryExecute(");
         presentation.Should().Contain("PresentationForegroundDetected?.Invoke");
@@ -33,16 +45,6 @@ public sealed class PaintOverlayEventCallbackSafetyContractTests
         root.Should().Contain("PhotoCursorModeFocusRequested?.Invoke()");
         root.Should().Contain("SafeActionExecutionExecutor.TryExecute(");
     }
-
-    private static string GetPhotoNavigationSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.Navigation.cs");
-    }
-
     private static string GetPresentationSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(
@@ -50,23 +52,5 @@ public sealed class PaintOverlayEventCallbackSafetyContractTests
             "ClassroomToolkit.App",
             "Paint",
             "PaintOverlayWindow.Presentation.cs");
-    }
-
-    private static string GetTransformSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Photo.Transform.cs");
-    }
-
-    private static string GetRootSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.xaml.cs");
     }
 }
