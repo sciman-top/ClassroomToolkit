@@ -12,7 +12,7 @@ public sealed class PhotoOverlayAsyncLoadDispatchContractTests
 
         source.Should().Contain("void ApplyLoadedBitmapOnUi()");
         source.Should().Contain("if (Dispatcher.CheckAccess())");
-        source.Should().Contain("await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Background);");
+        source.Should().Contain("await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Normal);");
         source.Should().Contain("if (!scheduled && Dispatcher.CheckAccess())");
         source.Should().Contain("ApplyLoadedBitmapOnUi();");
     }

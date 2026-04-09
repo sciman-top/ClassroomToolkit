@@ -50,8 +50,7 @@ public sealed class RollCallWindowLifecycleSubscriptionContractTests
         source.Should().Contain("_viewModel.ReminderTriggered -= OnReminderTriggered;");
         source.Should().Contain("_viewModel.DataLoadFailed -= OnDataLoadFailed;");
         source.Should().Contain("_viewModel.DataSaveFailed -= OnDataSaveFailed;");
-        source.Should().Contain("_photoResolver?.Dispose();");
-        source.Should().Contain("_photoResolver = null;");
+        source.Should().Contain("ClosePhotoOverlay();");
         source.Should().Contain("_viewModel.Dispose();");
         source.Should().Contain("_lifecycleCancellation.Dispose();");
         source.Should().NotContain("_groupOverlay.Closed += (s, e) => _groupOverlay = null;");
@@ -66,6 +65,22 @@ public sealed class RollCallWindowLifecycleSubscriptionContractTests
         source.Should().Contain("HideRollCall();");
         source.Should().Contain("private void OnCloseClick(object sender, RoutedEventArgs e)");
         source.Should().Contain("RequestClose();");
+    }
+
+    [Fact]
+    public void HideRollCall_ShouldNotHidePhotoOverlay()
+    {
+        var source = File.ReadAllText(GetSourcePath("RollCallWindow.Windowing.cs"));
+        var hideStart = source.IndexOf("public void HideRollCall()", StringComparison.Ordinal);
+        var minimizeStart = source.IndexOf("private void OnMinimizeClick", StringComparison.Ordinal);
+
+        hideStart.Should().BeGreaterThan(0);
+        minimizeStart.Should().BeGreaterThan(hideStart);
+
+        var hideSource = source.Substring(hideStart, minimizeStart - hideStart);
+        hideSource.Should().Contain("Hide");
+        hideSource.Should().NotContain("HidePhotoOverlay();");
+        hideSource.Should().NotContain("ClosePhotoOverlay();");
     }
 
     private static string GetSourcePath(string fileName)

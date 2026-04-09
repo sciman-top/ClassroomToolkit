@@ -8,6 +8,7 @@ using System.IO;
 using System.Diagnostics;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Startup;
 using ClassroomToolkit.Application.Abstractions;
@@ -34,6 +35,7 @@ public partial class App : WpfApplication
     {
         // 注册全局异常处理
         RegisterGlobalExceptionHandlers();
+        PhotoOverlayDiagnostics.InitializeSession(Path.Combine(AppDataDirectory, "logs"));
         ConfigureServices();
 
         base.OnStartup(e);

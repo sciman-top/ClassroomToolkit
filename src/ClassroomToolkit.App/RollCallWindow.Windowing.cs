@@ -69,13 +69,13 @@ public partial class RollCallWindow
     }
 
     /// <summary>
-    /// 统一的隐藏点名窗口操作：保存状态、隐藏照片叠加、更新组名显示。
+    /// 统一的隐藏点名控制窗操作：保存状态、更新组名显示。
+    /// 照片叠加窗由点名照片生命周期独立控制，避免最小化时误隐藏当前照片。
     /// 用于最小化按钮和启动器"隐藏点名"按钮的归一处理。
     /// </summary>
     public void HideRollCall()
     {
         ExecuteRollCallSafe("hide-rollcall-window", Hide);
-        HidePhotoOverlay();
         UpdateGroupNameDisplay();
         PersistSettings();
         _viewModel.SaveState();
@@ -85,6 +85,12 @@ public partial class RollCallWindow
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
     {
+        if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.HideRollCallWindowFromChildRequest();
+            return;
+        }
+
         HideRollCall();
     }
 
@@ -140,8 +146,6 @@ public partial class RollCallWindow
         StopKeyboardHook();
         _remoteHookStartGate.Dispose();
         ClosePhotoOverlay();
-        _photoResolver?.Dispose();
-        _photoResolver = null;
         if (_groupOverlay != null)
         {
             _groupOverlay.Closed -= OnGroupOverlayClosed;
@@ -290,6 +294,21 @@ public partial class RollCallWindow
     private void ShowGroupOverlay()
     {
         UpdateGroupNameDisplay();
+    }
+
+    internal void RetouchAuxOverlayWindowsTopmost(bool enforceZOrder)
+    {
+        var photoVisible = _photoOverlay?.IsVisible == true;
+        var groupVisible = _groupOverlay?.IsVisible == true;
+
+        WindowTopmostExecutor.ApplyNoActivate(_photoOverlay, photoVisible, enforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(_groupOverlay, groupVisible, enforceZOrder);
+    }
+
+    internal bool HasVisibleAuxOverlay()
+    {
+        return _photoOverlay?.IsVisible == true
+            || _groupOverlay?.IsVisible == true;
     }
 
     private void UpdateGroupNameDisplay()

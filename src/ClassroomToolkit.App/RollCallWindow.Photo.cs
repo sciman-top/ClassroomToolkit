@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Utilities;
-using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 
@@ -15,61 +14,52 @@ public partial class RollCallWindow
         if (forceHide || !_viewModel.ShowPhoto || !_viewModel.IsRollCallMode)
         {
             HidePhotoOverlay();
-            _lastPhotoStudentId = null;
             return;
         }
         var studentId = _viewModel.CurrentStudentId;
         if (string.IsNullOrWhiteSpace(studentId))
         {
             HidePhotoOverlay();
-            _lastPhotoStudentId = null;
             return;
         }
 
-        if (_photoOverlay != null
-            && !string.IsNullOrWhiteSpace(_lastPhotoStudentId)
-            && !string.Equals(_lastPhotoStudentId, studentId, StringComparison.OrdinalIgnoreCase))
-        {
-            ClosePhotoOverlay();
-        }
-
-        var resolver = EnsurePhotoResolver();
-        var className = ResolvePhotoClassName();
-        var path = resolver.ResolvePhotoPath(className, studentId);
+        // Keep overlay source consistent with in-window preview source.
+        // This avoids dual-path divergence between minimized and non-minimized states.
+        var path = _viewModel.CurrentStudentPhotoPath;
         if (string.IsNullOrWhiteSpace(path))
         {
+            PhotoOverlayDiagnostics.Log(
+                "rollcall-skip",
+                $"studentId={studentId} reason=no-photo-path");
             HidePhotoOverlay();
-            _lastPhotoStudentId = null;
             return;
         }
+        PhotoOverlayDiagnostics.Log(
+            "rollcall-request",
+            $"studentId={studentId} path={System.IO.Path.GetFileName(path)} duration={_viewModel.PhotoDurationSeconds} rollVisible={IsVisible} rollState={WindowState} groupOverlayVisible={_groupOverlay?.IsVisible == true}");
+        RecreateHiddenPhotoOverlayIfNeeded();
         var overlay = EnsurePhotoOverlay();
         overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.CurrentStudentId, _viewModel.PhotoDurationSeconds, this);
-        _lastPhotoStudentId = studentId;
     }
 
-    private StudentPhotoResolver EnsurePhotoResolver()
+    private void RecreateHiddenPhotoOverlayIfNeeded()
     {
-        if (_photoResolver != null)
+        if (_photoOverlay == null || _photoOverlay.IsVisible)
         {
-            return _photoResolver;
+            return;
         }
-        var root = ResolvePhotoRoot();
-        _photoResolver = new StudentPhotoResolver(root);
-        return _photoResolver;
-    }
 
-    private string ResolvePhotoRoot()
-    {
-        return StudentResourceLocator.ResolveStudentPhotoRoot();
-    }
-
-    private string ResolvePhotoClassName()
-    {
-        if (!string.IsNullOrWhiteSpace(_viewModel.PhotoSharedClass))
-        {
-            return _viewModel.PhotoSharedClass;
-        }
-        return _viewModel.ActiveClassName;
+        var overlay = _photoOverlay;
+        _photoOverlay = null;
+        overlay.PhotoClosed -= OnPhotoClosed;
+        SafeActionExecutionExecutor.TryExecute(
+            overlay.Close,
+            ex => System.Diagnostics.Debug.WriteLine(
+                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                    "recreate-hidden-overlay",
+                    ex.GetType().Name,
+                    ex.Message)));
+        PhotoOverlayDiagnostics.Log("overlay-recreate", "reason=hidden-window-recreate");
     }
 
     private PhotoOverlayWindow EnsurePhotoOverlay()
@@ -125,8 +115,5 @@ public partial class RollCallWindow
     private void OnPhotoClosed(string? studentId)
     {
         _ = studentId;
-        // Do not invalidate resolver cache on regular overlay close.
-        // Frequent close/show cycles are part of normal roll-call flow; clearing the whole
-        // class index here causes repeated directory re-index and visible latency spikes.
     }
 }
