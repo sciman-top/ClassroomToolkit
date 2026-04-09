@@ -6,11 +6,11 @@ namespace ClassroomToolkit.App.Photos;
 
 internal static class PhotoOverlayDiagnostics
 {
-    // Enabled by default for diagnosis; set CTK_PHOTO_OVERLAY_TRACE=0 to disable.
+    // Disabled by default; set CTK_PHOTO_OVERLAY_TRACE=1 to enable diagnostics.
     private static readonly object FileWriteLock = new();
-    private static readonly bool Enabled = !string.Equals(
+    private static readonly bool Enabled = string.Equals(
         Environment.GetEnvironmentVariable("CTK_PHOTO_OVERLAY_TRACE"),
-        "0",
+        "1",
         StringComparison.Ordinal);
     private static string? _logFilePath;
 

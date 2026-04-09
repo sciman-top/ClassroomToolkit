@@ -648,6 +648,7 @@ public partial class PaintToolbarWindow : Window
     private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
     {
         var result = false;
+        using var _ = FloatingTopmostDialogSuppressionState.Enter();
         SafeActionExecutionExecutor.TryExecute(
             () => result = dialog.SafeShowDialog() == true,
             ex => System.Diagnostics.Debug.WriteLine(

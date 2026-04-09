@@ -1,0 +1,6 @@
+{
+  "name": "governance-kit-internal",
+  "version": "0.1.0",
+  "description": "Internal Codex plugin for governance-oriented reusable workflows.",
+  "skills": "./skills/"
+}

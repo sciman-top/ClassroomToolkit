@@ -55,6 +55,27 @@ function Add-Alert {
   }) | Out-Null
 }
 
+function Normalize-StringArray {
+  param([object]$Value)
+  if ($null -eq $Value -or $Value -isnot [System.Array]) {
+    return ,([object[]]@())
+  }
+  return ,([object[]]@($Value | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique))
+}
+
+function Test-StringArraySetEqual {
+  param([object]$A, [object]$B)
+  $left = Normalize-StringArray -Value $A
+  $right = Normalize-StringArray -Value $B
+  if ($left.Count -ne $right.Count) { return $false }
+  for ($i = 0; $i -lt $left.Count; $i++) {
+    if (-not $left[$i].Equals($right[$i], [System.StringComparison]::OrdinalIgnoreCase)) {
+      return $false
+    }
+  }
+  return $true
+}
+
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 $kitRoot = $repoPath
 $commonPath = Join-Path $kitRoot "scripts\lib\common.ps1"
@@ -85,6 +106,8 @@ if ($null -eq $policy) {
       metrics_snapshot_stale = [pscustomobject]@{ enabled = $true; severity = "medium"; max_age_days = 8 }
       waiver_expired_unrecovered = [pscustomobject]@{ enabled = $true; severity = "high" }
       platform_na_expired = [pscustomobject]@{ enabled = $true; severity = "medium" }
+      release_distribution_policy_drift = [pscustomobject]@{ enabled = $true; severity = "high" }
+      low_value_orphan_custom_sources = [pscustomobject]@{ enabled = $false; severity = "medium" }
     }
   }
 }
@@ -207,12 +230,133 @@ if ([bool]$policy.triggers.platform_na_expired.enabled) {
   }
 }
 
+# 5) release-distribution-policy drift
+$releasePolicyDriftCount = 0
+if ($null -ne $policy.triggers.PSObject.Properties['release_distribution_policy_drift'] -and [bool]$policy.triggers.release_distribution_policy_drift.enabled) {
+  $releasePolicyPath = Join-Path $kitRoot "config\release-distribution-policy.json"
+  $repositoriesPath = Join-Path $kitRoot "config\repositories.json"
+  $releaseProfileRoot = Join-Path $kitRoot "source\project"
+  $steps.Add([pscustomobject]@{ name = "release-distribution-policy-drift"; exit_code = 0 }) | Out-Null
+
+  if ((Test-Path -LiteralPath $releasePolicyPath -PathType Leaf) -and (Test-Path -LiteralPath $repositoriesPath -PathType Leaf) -and (Test-Path -LiteralPath $releaseProfileRoot -PathType Container)) {
+    $rdPolicy = $null
+    $reposList = @()
+    try {
+      $rdPolicy = Get-Content -LiteralPath $releasePolicyPath -Raw | ConvertFrom-Json
+      $reposList = @((Get-Content -LiteralPath $repositoriesPath -Raw | ConvertFrom-Json))
+    } catch {
+      $rdPolicy = $null
+      $reposList = @()
+    }
+
+    if ($null -ne $rdPolicy -and $null -ne $rdPolicy.default -and $rdPolicy.repos -is [System.Array]) {
+      foreach ($rp in @($rdPolicy.repos)) {
+        if ($null -eq $rp -or [string]::IsNullOrWhiteSpace([string]$rp.repoName)) { continue }
+        $rpName = [string]$rp.repoName
+        $repoPath = $null
+        foreach ($repoEntry in $reposList) {
+          $repoText = [string]$repoEntry
+          if ((Split-Path -Leaf $repoText).Equals($rpName, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $repoPath = $repoText
+            break
+          }
+        }
+        if ([string]::IsNullOrWhiteSpace($repoPath) -or -not (Test-Path -LiteralPath $repoPath)) { continue }
+
+        $profilePath = Join-Path $releaseProfileRoot "$rpName\custom\.governance\release-profile.json"
+        if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { continue }
+        $profile = $null
+        try {
+          $profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+        } catch {
+          $releasePolicyDriftCount++
+          continue
+        }
+        if ($null -eq $profile -or $null -eq $profile.policies -or $null -eq $profile.policies.signing -or $null -eq $profile.policies.packaging) {
+          $releasePolicyDriftCount++
+          continue
+        }
+
+        $signingDefault = $rdPolicy.default.signing
+        $packagingDefault = $rdPolicy.default.packaging
+        $signingRepo = if ($null -ne $rp.PSObject.Properties['signing']) { $rp.signing } else { $null }
+        $packagingRepo = if ($null -ne $rp.PSObject.Properties['packaging']) { $rp.packaging } else { $null }
+
+        $expectedSigningRequired = if ($null -ne $signingRepo -and $signingRepo.PSObject.Properties['required']) { [bool]$signingRepo.required } else { [bool]$signingDefault.required }
+        $expectedSigningMode = if ($null -ne $signingRepo -and $signingRepo.PSObject.Properties['mode']) { [string]$signingRepo.mode } else { [string]$signingDefault.mode }
+        $expectedAllowPaid = if ($null -ne $signingRepo -and $signingRepo.PSObject.Properties['allow_paid_signing']) { [bool]$signingRepo.allow_paid_signing } else { [bool]$signingDefault.allow_paid_signing }
+        $expectedDefaultChannel = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['default_channel']) { [string]$packagingRepo.default_channel } else { [string]$packagingDefault.default_channel }
+        $expectedRequireFramework = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['require_framework_dependent']) { [bool]$packagingRepo.require_framework_dependent } else { [bool]$packagingDefault.require_framework_dependent }
+        $expectedRequireSelfContained = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['require_self_contained']) { [bool]$packagingRepo.require_self_contained } else { [bool]$packagingDefault.require_self_contained }
+        $expectedChannels = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['channels']) { @($packagingRepo.channels) } else { @($packagingDefault.channels) }
+        $expectedForms = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['distribution_forms']) { @($packagingRepo.distribution_forms) } else { @($packagingDefault.distribution_forms) }
+        $expectedModes = if ($null -ne $packagingRepo -and $packagingRepo.PSObject.Properties['network_modes']) { @($packagingRepo.network_modes) } else { @($packagingDefault.network_modes) }
+
+        $profileSigning = $profile.policies.signing
+        $profilePackaging = $profile.policies.packaging
+        $drifted = $false
+        if ([bool]$profileSigning.required -ne $expectedSigningRequired) { $drifted = $true }
+        if ([string]$profileSigning.mode -ne $expectedSigningMode) { $drifted = $true }
+        if ([bool]$profileSigning.allow_paid_signing -ne $expectedAllowPaid) { $drifted = $true }
+        if ([string]$profilePackaging.default_channel -ne $expectedDefaultChannel) { $drifted = $true }
+        if ([bool]$profilePackaging.require_framework_dependent -ne $expectedRequireFramework) { $drifted = $true }
+        if ([bool]$profilePackaging.require_self_contained -ne $expectedRequireSelfContained) { $drifted = $true }
+        if (-not (Test-StringArraySetEqual -A $profilePackaging.channels -B $expectedChannels)) { $drifted = $true }
+        if (-not (Test-StringArraySetEqual -A $profilePackaging.distribution_forms -B $expectedForms)) { $drifted = $true }
+        if (-not (Test-StringArraySetEqual -A $profilePackaging.network_modes -B $expectedModes)) { $drifted = $true }
+
+        if ($drifted) {
+          $releasePolicyDriftCount++
+        }
+      }
+    }
+  }
+
+  if ($releasePolicyDriftCount -gt 0) {
+    Add-Alert -List $alerts `
+      -Id "release_distribution_policy_drift" `
+      -Severity ([string]$policy.triggers.release_distribution_policy_drift.severity) `
+      -Reason ("release_distribution_policy_drift_count={0}" -f $releasePolicyDriftCount) `
+      -RecommendedAction "Run scripts/suggest-release-profile.ps1 for drifted repos and write back to source/project/<Repo>/custom/.governance/release-profile.json, then rerun gates." `
+      -Evidence "config/release-distribution-policy.json + source/project/*/custom/.governance/release-profile.json"
+  }
+}
+
+# 6) low-value orphan custom source trigger
+$orphanCustomCount = 0
+if ($null -ne $policy.triggers.PSObject.Properties['low_value_orphan_custom_sources'] -and [bool]$policy.triggers.low_value_orphan_custom_sources.enabled) {
+  $orphanScript = Join-Path $kitRoot "scripts\check-orphan-custom-sources.ps1"
+  if (Test-Path -LiteralPath $orphanScript -PathType Leaf) {
+    $orphanOut = & $psExe -NoProfile -ExecutionPolicy Bypass -File $orphanScript -AsJson 2>&1
+    $orphanExit = $LASTEXITCODE
+    $steps.Add([pscustomobject]@{ name = "orphan-custom-source-scan"; exit_code = [int]$orphanExit }) | Out-Null
+    $orphanObj = $null
+    $orphanText = [string]::Join([Environment]::NewLine, @($orphanOut))
+    if (-not [string]::IsNullOrWhiteSpace($orphanText)) {
+      try { $orphanObj = $orphanText | ConvertFrom-Json } catch { $orphanObj = $null }
+    }
+    if ($null -ne $orphanObj -and $orphanObj.PSObject.Properties.Name -contains "orphan_count") {
+      $orphanCustomCount = [int]$orphanObj.orphan_count
+    }
+    if ($orphanCustomCount -gt 0) {
+      Add-Alert -List $alerts `
+        -Id "low_value_orphan_custom_sources" `
+        -Severity ([string]$policy.triggers.low_value_orphan_custom_sources.severity) `
+        -Reason ("orphan_custom_source_count={0}" -f $orphanCustomCount) `
+        -RecommendedAction "Run scripts/check-orphan-custom-sources.ps1 and prune or map orphan custom files." `
+        -Evidence "scripts/check-orphan-custom-sources.ps1"
+    }
+  }
+}
+
 $result = [pscustomobject]@{
   schema_version = "1.0"
   generated_at = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
   repo_root = ($repoPath -replace '\\', '/')
   status = if ($alerts.Count -eq 0) { "OK" } else { "ALERT" }
   alert_count = $alerts.Count
+  orphan_custom_source_count = [int]$orphanCustomCount
+  release_distribution_policy_drift_count = [int]$releasePolicyDriftCount
   alerts = @($alerts)
   steps = @($steps)
   policy_path = ($policyPath -replace '\\', '/')

@@ -55,8 +55,6 @@ public partial class RollCallWindow : Window
     private readonly LatestOnlyAsyncGate _remoteHookStartGate = new();
     private readonly CancellationTokenSource _lifecycleCancellation = new();
     private PhotoOverlayWindow? _photoOverlay;
-    private StudentPhotoResolver? _photoResolver;
-    private string? _lastPhotoStudentId;
     private bool _allowClose;
     private bool _timerStateApplied;
     private bool _rollStateDirty;
@@ -187,13 +185,50 @@ public partial class RollCallWindow : Window
     private bool TryShowDialogSafe(Window dialog, string dialogName)
     {
         var result = false;
+        ArgumentNullException.ThrowIfNull(dialog);
+
+        if (dialog.Owner == null)
+        {
+            dialog.Owner = this;
+        }
+
+        dialog.ShowInTaskbar = false;
+        dialog.Topmost = true;
+
+        var restoreOwnerTopmost = Topmost;
+        var loweredOwnerTopmost = false;
+
+        using var _ = FloatingTopmostDialogSuppressionState.Enter();
         SafeActionExecutionExecutor.TryExecute(
-            () => result = dialog.SafeShowDialog() == true,
+            () =>
+            {
+                if (restoreOwnerTopmost)
+                {
+                    Topmost = false;
+                    loweredOwnerTopmost = true;
+                }
+
+                result = dialog.SafeShowDialog() == true;
+            },
             ex => System.Diagnostics.Debug.WriteLine(
                 RollCallWindowDiagnosticsPolicy.FormatDialogShowFailureMessage(
                     dialogName,
                     ex.GetType().Name,
                     ex.Message)));
+        if (loweredOwnerTopmost)
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    Topmost = restoreOwnerTopmost;
+                    WindowTopmostExecutor.ApplyNoActivate(this, enabled: restoreOwnerTopmost, enforceZOrder: true);
+                },
+                ex => System.Diagnostics.Debug.WriteLine(
+                    RollCallWindowDiagnosticsPolicy.FormatDialogShowFailureMessage(
+                        dialogName,
+                        ex.GetType().Name,
+                        ex.Message)));
+        }
         return result;
     }
 

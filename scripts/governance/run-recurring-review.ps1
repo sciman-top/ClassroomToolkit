@@ -58,6 +58,7 @@ function Write-AlertSnapshot([object]$ReviewResult, [string]$RootPath) {
   [void]$lines.Add(("observe_overdue={0}" -f $ReviewResult.summary.observe_overdue))
   [void]$lines.Add(("waiver_remind_count={0}" -f $ReviewResult.summary.waiver_remind_count))
   [void]$lines.Add(("waiver_block_count={0}" -f $ReviewResult.summary.waiver_block_count))
+  [void]$lines.Add(("release_distribution_policy_drift_count={0}" -f $ReviewResult.summary.release_distribution_policy_drift_count))
   if (@($ReviewResult.alerts).Count -gt 0) {
     [void]$lines.Add("alerts=")
     foreach ($a in @($ReviewResult.alerts)) {
@@ -125,6 +126,8 @@ if ($metrics.exit_code -ne 0) {
 }
 
 $updateTriggerAlertCount = 0
+$orphanCustomSourceCount = 0
+$releaseDistributionPolicyDriftCount = 0
 if ($trigger.exit_code -ne 0) {
   $triggerObj = $null
   if (-not [string]::IsNullOrWhiteSpace($trigger.output)) {
@@ -136,6 +139,12 @@ if ($trigger.exit_code -ne 0) {
   }
   if ($null -ne $triggerObj -and $triggerObj.PSObject.Properties.Name -contains "alert_count") {
     $updateTriggerAlertCount = [int]$triggerObj.alert_count
+  }
+  if ($null -ne $triggerObj -and $triggerObj.PSObject.Properties.Name -contains "orphan_custom_source_count") {
+    $orphanCustomSourceCount = [int]$triggerObj.orphan_custom_source_count
+  }
+  if ($null -ne $triggerObj -and $triggerObj.PSObject.Properties.Name -contains "release_distribution_policy_drift_count") {
+    $releaseDistributionPolicyDriftCount = [int]$triggerObj.release_distribution_policy_drift_count
   }
   if ($updateTriggerAlertCount -gt 0) {
     [void]$alerts.Add(("update triggers alert count={0}" -f $updateTriggerAlertCount))
@@ -159,6 +168,8 @@ $result = [pscustomobject]@{
     waiver_block_count = [int]$waiverBlockCount
     metrics_exit_code = [int]$metrics.exit_code
     update_trigger_alert_count = [int]$updateTriggerAlertCount
+    orphan_custom_source_count = [int]$orphanCustomSourceCount
+    release_distribution_policy_drift_count = [int]$releaseDistributionPolicyDriftCount
     update_trigger_exit_code = [int]$trigger.exit_code
   }
   steps = @(
@@ -190,6 +201,8 @@ Write-Host ("observe_overdue={0}" -f $result.summary.observe_overdue)
 Write-Host ("waiver_remind_count={0}" -f $result.summary.waiver_remind_count)
 Write-Host ("waiver_block_count={0}" -f $result.summary.waiver_block_count)
 Write-Host ("update_trigger_alert_count={0}" -f $result.summary.update_trigger_alert_count)
+Write-Host ("orphan_custom_source_count={0}" -f $result.summary.orphan_custom_source_count)
+Write-Host ("release_distribution_policy_drift_count={0}" -f $result.summary.release_distribution_policy_drift_count)
 if ($result.ok) {
   Write-Host "result=OK"
   if (-not [string]::IsNullOrWhiteSpace($alertSnapshotPath)) {

@@ -25,8 +25,8 @@ internal static class RollCallRemoteHookActionExecutionCoordinator
 
         if (tryRollNext(out var message))
         {
-            updatePhotoDisplay();
             speakStudentName();
+            updatePhotoDisplay();
             scheduleRollStateSave();
             return;
         }

@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly List<ZOrderSurface> _surfaceStack = new();
     private SurfaceZOrderDecisionRuntimeState _surfaceZOrderDecisionState = SurfaceZOrderDecisionRuntimeState.Default;
     private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
+    private readonly DispatcherTimer _floatingTopmostWatchdogTimer;
     private IDisposable? _presentationForegroundSuppression;
     private bool _zOrderPolicyApplying;
     private FloatingCoordinationRuntimeState _floatingCoordinationState = FloatingCoordinationRuntimeState.Default;
@@ -112,6 +113,11 @@ public partial class MainWindow : Window
         _autoExitTimer.Tick += OnAutoExitTimerTick;
         _presentationForegroundSuppressionTimer = new DispatcherTimer();
         _presentationForegroundSuppressionTimer.Tick += OnPresentationForegroundSuppressionTimerTick;
+        _floatingTopmostWatchdogTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(FloatingTopmostWatchdogPolicy.ResolveIntervalMs())
+        };
+        _floatingTopmostWatchdogTimer.Tick += OnFloatingTopmostWatchdogTick;
         _mainViewModel.OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);
         _mainViewModel.OpenPaintSettingsCommand = new RelayCommand(OnOpenPaintSettings);
         DataContext = _mainViewModel;
@@ -132,6 +138,33 @@ public partial class MainWindow : Window
         ReleasePresentationForegroundSuppression();
     }
 
+    private void OnFloatingTopmostWatchdogTick(object? sender, EventArgs e)
+    {
+        if (FloatingTopmostDialogSuppressionState.IsSuppressed)
+        {
+            return;
+        }
+
+        var launcherVisible = LauncherVisibilityPolicy.IsVisibleForTopmost(
+            launcherMinimized: _settings.LauncherMinimized,
+            mainVisible: IsVisible,
+            mainMinimized: WindowState == WindowState.Minimized,
+            bubbleVisible: _bubbleWindow?.IsVisible == true,
+            bubbleMinimized: _bubbleWindow?.WindowState == WindowState.Minimized);
+        var shouldRetouch = FloatingTopmostWatchdogPolicy.ShouldForceRetouch(
+            toolbarVisible: _toolbarWindow?.IsVisible == true,
+            rollCallVisible: _rollCallWindow?.IsVisible == true,
+            launcherVisible: launcherVisible,
+            imageManagerVisible: _imageManagerWindow?.IsVisible == true,
+            rollCallAuxOverlayVisible: _rollCallWindow?.HasVisibleAuxOverlay() == true);
+        if (!shouldRetouch)
+        {
+            return;
+        }
+
+        RequestApplyZOrderPolicy(forceEnforceZOrder: true);
+    }
+
     private void OnMainWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
     {
         if (MainWindowVisibleChangedPolicy.ShouldEnsureVisible(IsVisible))
@@ -145,6 +178,7 @@ public partial class MainWindow : Window
         ApplyLauncherPosition();
         WindowPlacementHelper.EnsureVisible(this);
         ScheduleAutoExitTimer();
+        _floatingTopmostWatchdogTimer.Start();
         ScheduleStartupWarmups();
         var toggleAction = MainWindowLoadedToggleActionPolicy.Resolve(_settings.LauncherMinimized);
         if (toggleAction == MainWindowLoadedToggleAction.MinimizeLauncher)
@@ -271,6 +305,18 @@ public partial class MainWindow : Window
         rollCallWindow.Closed += OnRollCallWindowClosed;
     }
 
+    internal void HideRollCallWindowFromChildRequest()
+    {
+        if (_rollCallWindow == null || !_rollCallWindow.IsVisible)
+        {
+            return;
+        }
+
+        var transitionPlan = RollCallVisibilityTransitionPolicy.Resolve(
+            CaptureRollCallVisibilityTransitionContext());
+        ApplyRollCallTransition(transitionPlan);
+        UpdateToggleButtons();
+    }
     private void OnRollCallWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
     {
         UpdateToggleButtons();
@@ -374,6 +420,13 @@ public partial class MainWindow : Window
 
     private void RequestApplyZOrderPolicy(bool forceEnforceZOrder = false)
     {
+        if (FloatingTopmostDialogSuppressionState.IsSuppressed)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "RequestApplyZOrderPolicy skipped: dialog-topmost-suppressed");
+            return;
+        }
+
         var nowUtc = GetCurrentUtcTimestamp();
         var previousRequestState = _zOrderRequestState;
         var interactionState = CaptureOverlayInteractionState();
@@ -636,10 +689,19 @@ public partial class MainWindow : Window
         var toolbarVisible = _toolbarWindow?.IsVisible == true;
         var rollCallVisible = _rollCallWindow?.IsVisible == true;
         var launcherVisible = launcherWindow?.IsVisible == true;
+        var imageManagerVisible = _imageManagerWindow?.IsVisible == true;
+        var rollCallAuxOverlayVisible = _rollCallWindow?.HasVisibleAuxOverlay() == true;
+        var strictEnforceZOrder = enforceZOrder || FloatingTopmostWatchdogPolicy.ShouldForceRetouch(
+            toolbarVisible,
+            rollCallVisible,
+            launcherVisible,
+            imageManagerVisible,
+            rollCallAuxOverlayVisible);
 
-        WindowTopmostExecutor.ApplyNoActivate(_toolbarWindow, toolbarVisible, enforceZOrder);
-        WindowTopmostExecutor.ApplyNoActivate(_rollCallWindow, rollCallVisible, enforceZOrder);
-        WindowTopmostExecutor.ApplyNoActivate(launcherWindow, launcherVisible, enforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(_toolbarWindow, toolbarVisible, strictEnforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(_rollCallWindow, rollCallVisible, strictEnforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(launcherWindow, launcherVisible, strictEnforceZOrder);
+        _rollCallWindow?.RetouchAuxOverlayWindowsTopmost(strictEnforceZOrder);
     }
 
     private void SyncOverlayOwnedWindow(Window? child)
@@ -765,6 +827,7 @@ public partial class MainWindow : Window
     private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
     {
         var result = false;
+        using var _ = FloatingTopmostDialogSuppressionState.Enter();
         SafeActionExecutionExecutor.TryExecute(
             () => DialogShowResultStateUpdater.MarkFromDialogResult(ref result, dialog.SafeShowDialog()),
             ex => System.Diagnostics.Debug.WriteLine(
@@ -893,18 +956,15 @@ public partial class MainWindow : Window
         IsVisibleChanged -= OnMainWindowVisibleChanged;
         _autoExitTimer.Stop();
         _presentationForegroundSuppressionTimer.Stop();
+        _floatingTopmostWatchdogTimer.Stop();
         _autoExitTimer.Tick -= OnAutoExitTimerTick;
         _presentationForegroundSuppressionTimer.Tick -= OnPresentationForegroundSuppressionTimerTick;
+        _floatingTopmostWatchdogTimer.Tick -= OnFloatingTopmostWatchdogTick;
         ReleasePresentationForegroundSuppression();
         ExecuteLifecycleSafe("main-window-closed", "cancel-background-tasks", () => _backgroundTasksCancellation.Cancel());
         _backgroundTasksCancellation.Dispose();
     }
 }
-
-
-
-
-
 
 
 

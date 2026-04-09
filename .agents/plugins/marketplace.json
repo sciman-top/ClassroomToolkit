@@ -1,0 +1,20 @@
+{
+  "name": "governance-local-plugins",
+  "interface": {
+    "displayName": "Governance Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "governance-kit-internal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/governance-kit-internal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

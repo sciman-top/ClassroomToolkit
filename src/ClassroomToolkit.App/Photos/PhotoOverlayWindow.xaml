@@ -6,8 +6,8 @@
         Background="{x:Null}"
         ShowInTaskbar="False"
         Topmost="True"
-        WindowState="Maximized"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
     
     <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
         <Rectangle x:Name="BackgroundRect" Fill="Transparent" MouseLeftButtonDown="OnCloseClick"/>
@@ -21,7 +21,7 @@
             </Image.Effect>
         </Image>
 
-        <Border x:Name="LoadingMask" Background="{StaticResource Brush_OverlayMask}" Visibility="Collapsed" Panel.ZIndex="100"/>
+        <Border x:Name="LoadingMask" Background="{StaticResource Brush_OverlayMask}" Visibility="Collapsed" Panel.ZIndex="8" IsHitTestVisible="False"/>
 
         <Border x:Name="NameBadge"
                 Style="{StaticResource Style_FullscreenShellHintBadge}"
@@ -30,7 +30,7 @@
                 BorderThickness="1"
                 Background="{StaticResource Brush_GlassSurface}"
                 Opacity="1"
-                Panel.ZIndex="10">
+                Panel.ZIndex="120">
             <TextBlock x:Name="NameText"
                        MaxWidth="720"
                        Foreground="{StaticResource Brush_Text_Primary}"
@@ -55,6 +55,16 @@
         <Button x:Name="CloseButtonRight" 
                 Style="{StaticResource Style_FullscreenShellCloseButton}" 
                 Click="OnCloseClick" 
+                Opacity="0.64"
+                Width="56"
+                Height="56"
+                ToolTip="关闭预览">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
+        <Button x:Name="CloseButtonCenter"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Click="OnCloseClick"
                 Opacity="0.64"
                 Width="56"
                 Height="56"

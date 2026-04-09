@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -52,6 +53,7 @@ public partial class RollCallGroupOverlayWindow : Window
             _autoCloseTimer.Stop();
             OverlayBorder.Opacity = 1;
             Show();
+            WindowTopmostExecutor.ApplyNoActivate(this, enabled: true, enforceZOrder: true);
         }
         else
         {
@@ -65,6 +67,7 @@ public partial class RollCallGroupOverlayWindow : Window
             }
             
             Show();
+            WindowTopmostExecutor.ApplyNoActivate(this, enabled: true, enforceZOrder: true);
         }
     }
 

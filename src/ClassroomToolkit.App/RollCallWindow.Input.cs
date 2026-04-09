@@ -43,8 +43,8 @@ public partial class RollCallWindow
         }
         if (_viewModel.TryRollNext(out var message))
         {
-            UpdatePhotoDisplay();
             SpeakStudentName();
+            UpdatePhotoDisplay();
             ScheduleRollStateSave();
             return;
         }
@@ -129,7 +129,6 @@ public partial class RollCallWindow
         SaveSettingsSafe();
         ApplySettings(_settings, updatePhoto: false);
         HidePhotoOverlay();
-        _lastPhotoStudentId = null;
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -274,7 +273,7 @@ public partial class RollCallWindow
             () =>
             {
                 _ = Dispatcher.BeginInvoke(
-                    DispatcherPriority.Background,
+                    DispatcherPriority.Normal,
                     new Action(ExecuteOnUi));
                 scheduled = true;
             },
