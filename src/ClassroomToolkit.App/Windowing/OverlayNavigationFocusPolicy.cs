@@ -1,44 +1,6 @@
 namespace ClassroomToolkit.App.Windowing;
 
-internal readonly record struct OverlayNavigationFocusPlan(
-    bool ActivateOverlay,
-    bool KeyboardFocusOverlay);
-
-internal readonly record struct OverlayNavigationFocusPlanDecision(
-    OverlayNavigationFocusPlan Plan,
-    OverlayNavigationActivateReason ActivateReason,
-    OverlayNavigationKeyboardFocusReason KeyboardFocusReason);
-
-internal enum OverlayNavigationActivateReason
-{
-    None = 0,
-    AvoidActivateRequested = 1,
-    OverlayAlreadyActive = 2,
-    BlockedByToolbar = 3,
-    BlockedByRollCall = 4,
-    BlockedByImageManager = 5,
-    BlockedByLauncher = 6
-}
-
-internal readonly record struct OverlayNavigationActivateDecision(
-    bool ShouldActivateOverlay,
-    OverlayNavigationActivateReason Reason);
-
-internal enum OverlayNavigationKeyboardFocusReason
-{
-    None = 0,
-    OverlayNotVisible = 1,
-    BlockedByToolbar = 2,
-    BlockedByRollCall = 3,
-    BlockedByImageManager = 4,
-    BlockedByLauncher = 5
-}
-
-internal readonly record struct OverlayNavigationKeyboardFocusDecision(
-    bool ShouldKeyboardFocusOverlay,
-    OverlayNavigationKeyboardFocusReason Reason);
-
-internal static class OverlayNavigationFocusPolicy
+internal static partial class OverlayNavigationFocusPolicy
 {
     internal static OverlayNavigationFocusPlanDecision ResolvePlanDecision(
         bool avoidActivate,
@@ -141,14 +103,7 @@ internal static class OverlayNavigationFocusPolicy
         return guardDecision.IsBlocked
             ? new OverlayNavigationActivateDecision(
                 ShouldActivateOverlay: false,
-                Reason: guardDecision.Reason switch
-                {
-                    FloatingActivationGuardReason.ToolbarActive => OverlayNavigationActivateReason.BlockedByToolbar,
-                    FloatingActivationGuardReason.RollCallActive => OverlayNavigationActivateReason.BlockedByRollCall,
-                    FloatingActivationGuardReason.ImageManagerActive => OverlayNavigationActivateReason.BlockedByImageManager,
-                    FloatingActivationGuardReason.LauncherActive => OverlayNavigationActivateReason.BlockedByLauncher,
-                    _ => OverlayNavigationActivateReason.BlockedByToolbar
-                })
+                Reason: MapBlockedActivateReason(guardDecision.Reason))
             : new OverlayNavigationActivateDecision(
                 ShouldActivateOverlay: true,
                 Reason: OverlayNavigationActivateReason.None);
@@ -169,14 +124,7 @@ internal static class OverlayNavigationFocusPolicy
         return guardDecision.IsBlocked
             ? new OverlayNavigationKeyboardFocusDecision(
                 ShouldKeyboardFocusOverlay: false,
-                Reason: guardDecision.Reason switch
-                {
-                    FloatingActivationGuardReason.ToolbarActive => OverlayNavigationKeyboardFocusReason.BlockedByToolbar,
-                    FloatingActivationGuardReason.RollCallActive => OverlayNavigationKeyboardFocusReason.BlockedByRollCall,
-                    FloatingActivationGuardReason.ImageManagerActive => OverlayNavigationKeyboardFocusReason.BlockedByImageManager,
-                    FloatingActivationGuardReason.LauncherActive => OverlayNavigationKeyboardFocusReason.BlockedByLauncher,
-                    _ => OverlayNavigationKeyboardFocusReason.BlockedByToolbar
-                })
+                Reason: MapBlockedKeyboardFocusReason(guardDecision.Reason))
             : new OverlayNavigationKeyboardFocusDecision(
                 ShouldKeyboardFocusOverlay: true,
                 Reason: OverlayNavigationKeyboardFocusReason.None);

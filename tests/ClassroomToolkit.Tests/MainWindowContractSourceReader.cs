@@ -14,7 +14,15 @@ internal static class MainWindowContractSourceReader
             "src",
             "ClassroomToolkit.App",
             "MainWindow.Lifecycle.cs"));
+        var zOrderSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.ZOrder.cs"));
+        var rollCallSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.RollCall.cs"));
 
-        return string.Concat(coreSource, "\n", lifecycleSource);
+        return string.Concat(coreSource, "\n", lifecycleSource, "\n", zOrderSource, "\n", rollCallSource);
     }
 }

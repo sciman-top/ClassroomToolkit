@@ -1,4 +1,3 @@
-using System.IO;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -8,7 +7,7 @@ public sealed class PaintSettingsDialogSizeToContentContractTests
     [Fact]
     public void OnDialogLoaded_ShouldCommitSizeToContentOnlyAfterDispatcherCallbackRuns()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = ReadPaintSettingsDialogSources();
 
         source.Should().Contain("var scheduled = PaintActionInvoker.TryInvoke(() =>");
         source.Should().Contain("_sizeToContentCommitted = true;");
@@ -17,12 +16,10 @@ public sealed class PaintSettingsDialogSizeToContentContractTests
         source.Should().Contain("if (Dispatcher.CheckAccess())");
     }
 
-    private static string GetSourcePath()
+    private static string ReadPaintSettingsDialogSources()
     {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintSettingsDialog.xaml.cs");
+        return ContractSourceAggregationHelper.ReadSourcesInDirectory(
+            ["src", "ClassroomToolkit.App", "Paint"],
+            "PaintSettingsDialog*.cs");
     }
 }

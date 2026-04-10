@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,97 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private bool TryGetNeighborInkCacheEntry(int pageIndex, out InkBitmapCacheEntry entry)
+    {
+        entry = default;
+        var cacheKey = BuildNeighborInkCacheKey(pageIndex);
+        return !string.IsNullOrWhiteSpace(cacheKey)
+            && _neighborInkCache.TryGetValue(cacheKey, out entry);
+    }
+
+    private InkBitmapCacheEntry BuildNeighborInkCacheEntry(
+        InkPageData page,
+        BitmapSource pageBitmap,
+        List<InkStrokeData> strokes)
+    {
+        var renderPlan = ResolveNeighborInkRenderSurfacePlan(pageBitmap, strokes);
+        var bitmap = _inkStrokeRenderer.RenderPage(
+            page,
+            renderPlan.PixelWidth,
+            renderPlan.PixelHeight,
+            pageBitmap.DpiX,
+            pageBitmap.DpiY,
+            horizontalOffsetDip: renderPlan.HorizontalOffsetDip);
+        return new InkBitmapCacheEntry(page.PageIndex, strokes, bitmap, renderPlan.HorizontalOffsetDip);
+    }
+
+    private CrossPageNeighborInkRenderSurfacePlan ResolveNeighborInkRenderSurfacePlan(
+        BitmapSource pageBitmap,
+        IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)
+        {
+            return new CrossPageNeighborInkRenderSurfacePlan(0, 0, 0);
+        }
+
+        if (!TryResolveNeighborInkHorizontalBounds(strokes, out var minX, out var maxX))
+        {
+            return new CrossPageNeighborInkRenderSurfacePlan(pageBitmap.PixelWidth, pageBitmap.PixelHeight, 0);
+        }
+
+        var pageWidthDip = GetBitmapDisplayWidthInDip(pageBitmap);
+        return CrossPageNeighborInkRenderSurfacePolicy.Resolve(
+            pagePixelWidth: pageBitmap.PixelWidth,
+            pagePixelHeight: pageBitmap.PixelHeight,
+            dpiX: pageBitmap.DpiX,
+            pageWidthDip: pageWidthDip,
+            minStrokeXDip: minX,
+            maxStrokeXDip: maxX);
+    }
+
+    private static bool TryResolveNeighborInkHorizontalBounds(
+        IReadOnlyList<InkStrokeData> strokes,
+        out double minX,
+        out double maxX)
+    {
+        minX = double.PositiveInfinity;
+        maxX = double.NegativeInfinity;
+        var hasBounds = false;
+
+        for (var i = 0; i < strokes.Count; i++)
+        {
+            var stroke = strokes[i];
+            var geometry = stroke.CachedGeometry;
+            if (geometry == null)
+            {
+                geometry = InkGeometrySerializer.Deserialize(stroke.GeometryPath);
+                if (geometry == null)
+                {
+                    continue;
+                }
+
+                if (geometry.CanFreeze)
+                {
+                    geometry.Freeze();
+                }
+
+                stroke.CachedGeometry = geometry;
+            }
+
+            var bounds = geometry.Bounds;
+            if (bounds.IsEmpty)
+            {
+                continue;
+            }
+
+            hasBounds = true;
+            minX = Math.Min(minX, bounds.Left);
+            maxX = Math.Max(maxX, bounds.Right);
+        }
+
+        return hasBounds && maxX > minX;
+    }
+
     private BitmapSource? ResolveNeighborInkBitmap(int pageIndex, BitmapSource pageBitmap, bool allowDeferredRender)
     {
         if (!_inkShowEnabled || !_inkCacheEnabled || pageBitmap.PixelWidth <= 0 || pageBitmap.PixelHeight <= 0)

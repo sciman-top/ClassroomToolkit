@@ -1,4 +1,3 @@
-using System.IO;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -8,7 +7,7 @@ public sealed class PaintSettingsDialogPresentationControlContractTests
     [Fact]
     public void ConstructorAndConfirm_ShouldNotForcePresentationControlFlagsToTrue()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = ReadPaintSettingsDialogSources();
 
         source.Should().Contain("ControlMsPpt = settings.ControlMsPpt;");
         source.Should().Contain("ControlWpsPpt = settings.ControlWpsPpt;");
@@ -16,12 +15,10 @@ public sealed class PaintSettingsDialogPresentationControlContractTests
         source.Should().NotContain("ControlWpsPpt = true;");
     }
 
-    private static string GetSourcePath()
+    private static string ReadPaintSettingsDialogSources()
     {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintSettingsDialog.xaml.cs");
+        return ContractSourceAggregationHelper.ReadSourcesInDirectory(
+            ["src", "ClassroomToolkit.App", "Paint"],
+            "PaintSettingsDialog*.cs");
     }
 }
