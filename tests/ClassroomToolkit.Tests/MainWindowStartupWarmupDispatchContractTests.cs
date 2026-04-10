@@ -24,6 +24,6 @@ public sealed class MainWindowStartupWarmupDispatchContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "MainWindow.xaml.cs");
+            "MainWindow.Lifecycle.cs");
     }
 }

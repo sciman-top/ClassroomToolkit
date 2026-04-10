@@ -26,6 +26,6 @@ public sealed class MainWindowSettingsSaveNotificationContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "MainWindow.xaml.cs");
+            "MainWindow.Lifecycle.cs");
     }
 }

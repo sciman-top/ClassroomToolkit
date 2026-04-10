@@ -178,6 +178,54 @@
   - `PaintOverlayWindow.Ink.cs` 体积进一步由 `509` -> `313` 行
   - 记录逻辑与擦除/形状/跨页逻辑完成结构化解耦
 
+### 2.12 Paint overlay decomposition batch 7 (context/lifecycle flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.ContextLifecycle.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将上下文、缓存、脏标记、跨页视觉同步、输入监控节流相关方法迁移到独立 partial
+  - 迁移过程中出现一次编译失败（因文件缺失导致方法引用丢失），已恢复并通过全门禁复验
+- effect:
+  - `PaintOverlayWindow.Ink.cs` 体积进一步由 `313` -> `134` 行
+  - 主文件仅保留擦除核心逻辑，子域边界清晰
+
+### 2.13 Ink export decomposition batch 3 (rendering flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Ink/InkExportService.Rendering.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Ink/InkExportService.cs`
+- action:
+  - 将渲染与加载相关方法迁移到独立 partial：
+    - `CompositeImage`
+    - `LoadBackground/LoadPdfPage/LoadImage`
+    - `GetPdfPageCount`
+    - `SaveImage`
+  - `InkExportService` 主文件改为 `partial`，保留现有入口与契约方法
+- effect:
+  - `InkExportService.cs` 体积进一步由 `1011` -> `908` 行
+  - 导出主流程与底层渲染细节分离，维护复杂度下降
+
+### 2.14 MainWindow decomposition batch 1 (lifecycle/startup/exit flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/MainWindow.Lifecycle.cs`
+- modified files:
+  - `src/ClassroomToolkit.App/MainWindow.xaml.cs`
+  - `tests/ClassroomToolkit.Tests/App/MainWindowSettingsSaveNotificationContractTests.cs`
+  - `tests/ClassroomToolkit.Tests/MainWindowStartupWarmupDispatchContractTests.cs`
+  - `tests/ClassroomToolkit.Tests/App/RollCallWindowSettingsReloadContractTests.cs`
+  - `tests/ClassroomToolkit.Tests/MainWindowExitLifecycleContractTests.cs`
+- action:
+  - 将 MainWindow 生命周期相关逻辑拆分到独立 partial（加载、预热、退出、设置保存、关闭清理）。
+  - `MainWindow.xaml.cs` 保留字段/构造/点名与 Z-order 主编排，降低单文件认知负担。
+  - 适配契约测试源码定位：由单文件路径迁移为生命周期 partial 路径，保持原契约语义不变。
+- effect:
+  - `MainWindow.xaml.cs` 行数由 `979` 降到 `589`。
+  - 生命周期逻辑职责边界更清晰，后续可继续独立演进与测试。
+
 ## 3) Verification
 
 本批次执行后全门禁通过：
@@ -208,6 +256,12 @@
 新增擦除核心拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
 新增笔迹记录拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增上下文生命周期拆分并修复后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增 InkExport 渲染流程拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增 MainWindow 生命周期拆分并同步更新契约测试后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
 ## 4) Boundary Notes
 
