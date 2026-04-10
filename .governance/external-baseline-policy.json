@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "checks": {
+    "ssdf": {
+      "enabled": true,
+      "level": "recommended",
+      "evidence_any_of": [
+        "docs/governance/ssdf-mapping.md",
+        ".governance/ssdf-mapping.md",
+        "docs/governance/ssdf-checklist.md"
+      ]
+    },
+    "slsa": {
+      "enabled": true,
+      "level": "recommended",
+      "evidence_any_of": [
+        ".github/workflows/slsa.yml",
+        ".github/workflows/slsa-provenance.yml",
+        "docs/governance/slsa-target-level.md"
+      ]
+    },
+    "sbom": {
+      "enabled": true,
+      "level": "recommended",
+      "evidence_any_of": [
+        "scripts/quality/run-supply-chain-checks.ps1",
+        ".github/workflows/sbom.yml",
+        "docs/governance/sbom-policy.md"
+      ]
+    },
+    "scorecard": {
+      "enabled": true,
+      "level": "recommended",
+      "evidence_any_of": [
+        ".github/workflows/scorecard.yml",
+        "docs/governance/scorecard-policy.md"
+      ]
+    }
+  }
+}

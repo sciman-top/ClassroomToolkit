@@ -124,6 +124,8 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
 
     private readonly BrushPhysicsConfig _config;
     private readonly BrushMoveTelemetry _moveTelemetry = new BrushMoveTelemetry();
+    private SolidColorBrush? _cachedRenderBrush;
+    private int _cachedRenderColorKey = int.MinValue;
 
     public bool IsActive => _isActive;
     public int GeometryVersion => _geometryVersion;
@@ -148,6 +150,8 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         _smoothedWidth = ClampWidth(baseSize * 0.8);
         _smoothedPos = new WpfPoint(0, 0);
         _lastInkFlow = 1.0;
+        _cachedRenderBrush = null;
+        _cachedRenderColorKey = int.MinValue;
     }
 
     public void OnDown(BrushInputSample input)
@@ -548,9 +552,27 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
         {
             return;
         }
-        var brush = new SolidColorBrush(_color);
-        brush.Freeze();
+        var brush = GetCachedRenderBrush(_color);
         dc.DrawGeometry(brush, null, core);
+    }
+
+    private SolidColorBrush GetCachedRenderBrush(WpfColor color)
+    {
+        int key = (color.A << 24) | (color.R << 16) | (color.G << 8) | color.B;
+        if (_cachedRenderBrush != null && _cachedRenderColorKey == key)
+        {
+            return _cachedRenderBrush;
+        }
+
+        var brush = new SolidColorBrush(color);
+        if (brush.CanFreeze)
+        {
+            brush.Freeze();
+        }
+
+        _cachedRenderBrush = brush;
+        _cachedRenderColorKey = key;
+        return brush;
     }
 
     /// <summary>

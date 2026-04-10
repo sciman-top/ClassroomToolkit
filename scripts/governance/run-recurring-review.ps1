@@ -23,12 +23,14 @@ $rolloutScript = Join-Path $kitRoot "scripts\rollout-status.ps1"
 $waiverScript = Join-Path $kitRoot "scripts\check-waivers.ps1"
 $metricsScript = Join-Path $kitRoot "scripts\collect-governance-metrics.ps1"
 $triggerScript = Join-Path $kitRoot "scripts\governance\check-update-triggers.ps1"
+$externalBaselineScript = Join-Path $kitRoot "scripts\governance\check-external-baselines.ps1"
 $requiredScripts = @($doctorScript, $rolloutScript, $waiverScript, $metricsScript, $triggerScript)
 foreach ($script in $requiredScripts) {
   if (-not (Test-Path -LiteralPath $script -PathType Leaf)) {
     throw "Missing recurring review dependency: $script"
   }
 }
+$hasExternalBaselineScript = (Test-Path -LiteralPath $externalBaselineScript -PathType Leaf)
 
 $psExe = Get-CurrentPowerShellPath
 
@@ -76,6 +78,15 @@ $rollout = Invoke-StepText -Name "rollout-status" -ScriptPath $rolloutScript -Ar
 $waiver = Invoke-StepText -Name "check-waivers" -ScriptPath $waiverScript -Args @()
 $metrics = Invoke-StepText -Name "collect-governance-metrics" -ScriptPath $metricsScript -Args @()
 $trigger = Invoke-StepText -Name "check-update-triggers" -ScriptPath $triggerScript -Args @("-RepoRoot", $repoPath, "-AsJson")
+if ($hasExternalBaselineScript) {
+  $externalBaseline = Invoke-StepText -Name "check-external-baselines" -ScriptPath $externalBaselineScript -Args @("-RepoRoot", $repoPath, "-AsJson")
+} else {
+  $externalBaseline = [pscustomobject]@{
+    name = "check-external-baselines"
+    exit_code = 0
+    output = ""
+  }
+}
 
 $alerts = [System.Collections.Generic.List[string]]::new()
 $doctorHealth = "UNKNOWN"
@@ -128,8 +139,12 @@ if ($metrics.exit_code -ne 0) {
 $updateTriggerAlertCount = 0
 $orphanCustomSourceCount = 0
 $releaseDistributionPolicyDriftCount = 0
+ $externalBaselineStatus = "UNKNOWN"
+ $externalBaselineAdvisoryCount = 0
+ $externalBaselineWarnCount = 0
 if ($trigger.exit_code -ne 0) {
   $triggerObj = $null
+  $rawTriggerText = [string]$trigger.output
   if (-not [string]::IsNullOrWhiteSpace($trigger.output)) {
     try {
       $triggerObj = $trigger.output | ConvertFrom-Json
@@ -146,10 +161,70 @@ if ($trigger.exit_code -ne 0) {
   if ($null -ne $triggerObj -and $triggerObj.PSObject.Properties.Name -contains "release_distribution_policy_drift_count") {
     $releaseDistributionPolicyDriftCount = [int]$triggerObj.release_distribution_policy_drift_count
   }
+  if ($null -eq $triggerObj) {
+    $alertCountMatch = [regex]::Match($rawTriggerText, "(?m)^alert_count=([0-9]+)\s*$")
+    $orphanCountMatch = [regex]::Match($rawTriggerText, "(?m)^orphan_custom_source_count=([0-9]+)\s*$")
+    $driftCountMatch = [regex]::Match($rawTriggerText, "(?m)^release_distribution_policy_drift_count=([0-9]+)\s*$")
+    if ($alertCountMatch.Success) {
+      $updateTriggerAlertCount = [int]$alertCountMatch.Groups[1].Value
+    }
+    if ($orphanCountMatch.Success) {
+      $orphanCustomSourceCount = [int]$orphanCountMatch.Groups[1].Value
+    }
+    if ($driftCountMatch.Success) {
+      $releaseDistributionPolicyDriftCount = [int]$driftCountMatch.Groups[1].Value
+    }
+  }
   if ($updateTriggerAlertCount -gt 0) {
     [void]$alerts.Add(("update triggers alert count={0}" -f $updateTriggerAlertCount))
   } else {
     [void]$alerts.Add("check-update-triggers failed")
+  }
+}
+
+if (-not $hasExternalBaselineScript) {
+  $externalBaselineStatus = "UNAVAILABLE"
+} elseif ($externalBaseline.exit_code -eq 0 -and -not [string]::IsNullOrWhiteSpace($externalBaseline.output)) {
+  $externalObj = $null
+  $rawText = [string]$externalBaseline.output
+  try {
+    $externalObj = $rawText | ConvertFrom-Json
+  } catch {
+    $start = $rawText.IndexOf("{")
+    $end = $rawText.LastIndexOf("}")
+    if ($start -ge 0 -and $end -ge $start) {
+      try {
+        $externalObj = $rawText.Substring($start, $end - $start + 1) | ConvertFrom-Json
+      } catch {
+        $externalObj = $null
+      }
+    }
+  }
+  if ($null -ne $externalObj) {
+    if ($externalObj.PSObject.Properties.Name -contains "status") {
+      $externalBaselineStatus = [string]$externalObj.status
+    }
+    if ($null -ne $externalObj.summary -and $externalObj.summary.PSObject.Properties.Name -contains "advisory_count") {
+      $externalBaselineAdvisoryCount = [int]$externalObj.summary.advisory_count
+    }
+    if ($null -ne $externalObj.summary -and $externalObj.summary.PSObject.Properties.Name -contains "warn_count") {
+      $externalBaselineWarnCount = [int]$externalObj.summary.warn_count
+    }
+  } else {
+    $statusMatch = [regex]::Match($rawText, "(?m)^status=([A-Z]+)\s*$")
+    $advisoryMatch = [regex]::Match($rawText, "(?m)^advisory_count=([0-9]+)\s*$")
+    $warnMatch = [regex]::Match($rawText, "(?m)^warn_count=([0-9]+)\s*$")
+    if ($statusMatch.Success) {
+      $externalBaselineStatus = $statusMatch.Groups[1].Value
+      if ($advisoryMatch.Success) {
+        $externalBaselineAdvisoryCount = [int]$advisoryMatch.Groups[1].Value
+      }
+      if ($warnMatch.Success) {
+        $externalBaselineWarnCount = [int]$warnMatch.Groups[1].Value
+      }
+    } else {
+      $externalBaselineStatus = "PARSE_ERROR"
+    }
   }
 }
 
@@ -170,14 +245,19 @@ $result = [pscustomobject]@{
     update_trigger_alert_count = [int]$updateTriggerAlertCount
     orphan_custom_source_count = [int]$orphanCustomSourceCount
     release_distribution_policy_drift_count = [int]$releaseDistributionPolicyDriftCount
+    external_baseline_status = $externalBaselineStatus
+    external_baseline_advisory_count = [int]$externalBaselineAdvisoryCount
+    external_baseline_warn_count = [int]$externalBaselineWarnCount
     update_trigger_exit_code = [int]$trigger.exit_code
+    external_baseline_exit_code = [int]$externalBaseline.exit_code
   }
   steps = @(
     [pscustomobject]@{ name = "doctor"; exit_code = [int]$doctor.exit_code },
     [pscustomobject]@{ name = "rollout-status"; exit_code = [int]$rollout.exit_code },
     [pscustomobject]@{ name = "check-waivers"; exit_code = [int]$waiver.exit_code },
     [pscustomobject]@{ name = "collect-governance-metrics"; exit_code = [int]$metrics.exit_code },
-    [pscustomobject]@{ name = "check-update-triggers"; exit_code = [int]$trigger.exit_code }
+    [pscustomobject]@{ name = "check-update-triggers"; exit_code = [int]$trigger.exit_code },
+    [pscustomobject]@{ name = "check-external-baselines"; exit_code = [int]$externalBaseline.exit_code }
   )
 }
 
@@ -203,6 +283,9 @@ Write-Host ("waiver_block_count={0}" -f $result.summary.waiver_block_count)
 Write-Host ("update_trigger_alert_count={0}" -f $result.summary.update_trigger_alert_count)
 Write-Host ("orphan_custom_source_count={0}" -f $result.summary.orphan_custom_source_count)
 Write-Host ("release_distribution_policy_drift_count={0}" -f $result.summary.release_distribution_policy_drift_count)
+Write-Host ("external_baseline_status={0}" -f $result.summary.external_baseline_status)
+Write-Host ("external_baseline_advisory_count={0}" -f $result.summary.external_baseline_advisory_count)
+Write-Host ("external_baseline_warn_count={0}" -f $result.summary.external_baseline_warn_count)
 if ($result.ok) {
   Write-Host "result=OK"
   if (-not [string]::IsNullOrWhiteSpace($alertSnapshotPath)) {

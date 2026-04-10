@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "decision_mode": "hard_guard_plus_score",
+  "hard_guards": {
+    "require_explicit_parallel_intent": true,
+    "block_when_no_disjoint_write_set_evidence": true,
+    "block_when_high_risk_release": true,
+    "block_when_critical_path_blocking": true
+  },
+  "scoring": {
+    "spawn_threshold": 70,
+    "consider_threshold": 45,
+    "weights": {
+      "explicit_parallel_intent": 35,
+      "has_work_iterations": 20,
+      "disjoint_write_set_evidence": 20,
+      "critical_path_blocking": -30,
+      "high_risk_release": -30,
+      "single_slice_only": -20
+    }
+  },
+  "limits": {
+    "max_parallel_agents": 3,
+    "max_parallel_agents_on_windows": 2
+  },
+  "signals": {
+    "parallel_intent_when_max_work_iterations_gt_1": true,
+    "parallel_intent_env_var": "GOVERNANCE_PARALLEL_INTENT",
+    "high_risk_env_var": "GOVERNANCE_HIGH_RISK_RELEASE",
+    "disjoint_write_set_env_var": "GOVERNANCE_DISJOINT_WRITESET_OK"
+  },
+  "evidence": {
+    "emit_decision_json": true,
+    "required_fields": [
+      "issue_id",
+      "decision_mode",
+      "spawn_parallel_subagents",
+      "max_parallel_agents",
+      "decision_score",
+      "reason_codes",
+      "hard_guard_hits",
+      "signals",
+      "policy_path"
+    ]
+  }
+}

@@ -26,6 +26,7 @@ public partial class PhotoOverlayWindow : Window
     private string? _currentPhotoPath;
     private IntPtr _hwnd;
     private int _photoLoadRequestId;
+    private CancellationTokenSource? _photoLoadCts;
     private string? _cachedBitmapPath;
     private BitmapSource? _cachedBitmap;
     private static readonly SolidColorBrush OpaqueFrameGuardBrush = CreateOpaqueFrameGuardBrush();
@@ -55,6 +56,7 @@ public partial class PhotoOverlayWindow : Window
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
         Interlocked.Increment(ref _photoLoadRequestId);
+        CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
         _autoCloseTimer.Tick -= OnAutoCloseTick;
         SourceInitialized -= OnOverlaySourceInitialized;
@@ -65,6 +67,7 @@ public partial class PhotoOverlayWindow : Window
     public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
     {
         var requestId = Interlocked.Increment(ref _photoLoadRequestId);
+        CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
         var deferShowUntilBitmapReady = !IsVisible;
         var normalizedStudentId = studentId?.Trim();
@@ -135,16 +138,26 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
+        _photoLoadCts = new CancellationTokenSource();
+        var loadToken = _photoLoadCts.Token;
         _ = SafeTaskRunner.Run(
             "PhotoOverlayWindow.ShowPhoto.LoadBitmap",
             async cancellationToken =>
             {
-                _ = cancellationToken;
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var loadStart = DateTime.UtcNow;
                 PhotoOverlayDiagnostics.Log(
                     "load-start",
                     $"req={requestId} path={IOPath.GetFileName(path)}");
                 var bitmap = await LoadBitmapAsync(path);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
                 var decodeElapsedMs = (DateTime.UtcNow - loadStart).TotalMilliseconds;
                 PhotoOverlayDiagnostics.Log(
                     "load-decoded",
@@ -224,7 +237,7 @@ public partial class PhotoOverlayWindow : Window
                     ApplyLoadedBitmapOnUi();
                 }
             },
-            CancellationToken.None,
+            loadToken,
             ex =>
             {
                 System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap async: {path}. Error: {ex.Message}");
@@ -239,11 +252,11 @@ public partial class PhotoOverlayWindow : Window
         // 更新背景矩形大小
         BackgroundRect.Width = e.NewSize.Width;
         BackgroundRect.Height = e.NewSize.Height;
-        
+
         // 更新遮挡层大小
         LoadingMask.Width = e.NewSize.Width;
         LoadingMask.Height = e.NewSize.Height;
-        
+
         // 重新计算布局
         UpdateOverlayPositions();
     }
@@ -289,7 +302,7 @@ public partial class PhotoOverlayWindow : Window
         // 定位关闭按钮：主入口固定在右下角
         var buttonMargin = 30.0;
         var buttonSize = 56.0;
-        
+
         Canvas.SetLeft(CloseButtonLeft, photoLeft + buttonMargin);
         Canvas.SetTop(CloseButtonLeft, photoTop + photoHeight - buttonMargin - buttonSize);
 
@@ -309,6 +322,7 @@ public partial class PhotoOverlayWindow : Window
     public void CloseOverlay()
     {
         Interlocked.Increment(ref _photoLoadRequestId);
+        CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
         _autoCloseDueUtc = default;
         PhotoOverlayDiagnostics.Log(
@@ -463,16 +477,6 @@ public partial class PhotoOverlayWindow : Window
         UpdateAutoCloseTimer(durationSeconds);
     }
 
-    private static Task<BitmapImage?> LoadBitmapAsync(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-        {
-            return Task.FromResult<BitmapImage?>(null);
-        }
-
-        return Task.Run(() => LoadBitmap(path));
-    }
-
     private bool IsShowingSamePhoto(string path)
     {
         return !string.IsNullOrWhiteSpace(path)
@@ -541,9 +545,9 @@ public partial class PhotoOverlayWindow : Window
             }
             bitmap.EndInit();
             bitmap.Freeze();
-            
+
             // GC.Collect(); // Removed aggressive GC
-            
+
             return bitmap;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -628,6 +632,38 @@ public partial class PhotoOverlayWindow : Window
         var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x09, 0x10, 0x16));
         brush.Freeze();
         return brush;
+    }
+
+    private void CancelPendingPhotoLoad()
+    {
+        var cts = Interlocked.Exchange(ref _photoLoadCts, null);
+        if (cts == null)
+        {
+            return;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Ignore races during shutdown.
+        }
+        finally
+        {
+            cts.Dispose();
+        }
+    }
+
+    private static Task<BitmapImage?> LoadBitmapAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return Task.FromResult<BitmapImage?>(null);
+        }
+
+        return Task.FromResult(LoadBitmap(path));
     }
 
 }

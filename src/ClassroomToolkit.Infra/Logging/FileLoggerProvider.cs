@@ -21,6 +21,7 @@ public class FileLoggerProvider : ILoggerProvider
     private readonly Task _processQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _disposeState;
+    private int _queueResourcesDisposed;
 
     public FileLoggerProvider(
         string logDirectory,
@@ -131,13 +132,16 @@ public class FileLoggerProvider : ILoggerProvider
             return;
         }
 
-        var groupedLines = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
+        var groupedLines = new Dictionary<string, StringBuilder>(
+            capacity: Math.Min(batch.Count, QueueBatchSize),
+            comparer: StringComparer.OrdinalIgnoreCase);
         foreach (var item in batch)
         {
             var path = Path.Combine(_logDirectory, $"app_{item.Timestamp:yyyyMMdd}.log");
             if (!groupedLines.TryGetValue(path, out var builder))
             {
-                builder = new StringBuilder(capacity: 256);
+                var initialCapacity = Math.Max(256, item.Message.Length + Environment.NewLine.Length);
+                builder = new StringBuilder(capacity: initialCapacity);
                 groupedLines[path] = builder;
             }
 
@@ -147,7 +151,14 @@ public class FileLoggerProvider : ILoggerProvider
 
         foreach (var entry in groupedLines)
         {
-            File.AppendAllText(entry.Key, entry.Value.ToString(), Encoding.UTF8);
+            try
+            {
+                File.AppendAllText(entry.Key, entry.Value.ToString(), Encoding.UTF8);
+            }
+            catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+            {
+                // Isolate single-file IO failures so other batched log files still flush.
+            }
         }
     }
 
@@ -162,15 +173,20 @@ public class FileLoggerProvider : ILoggerProvider
         {
             foreach (var file in Directory.EnumerateFiles(_logDirectory, "app_*.log", SearchOption.TopDirectoryOnly))
             {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-                {
-                    // Best effort cleanup; continue with current session logging.
-                }
+                TryDeleteLogFileBestEffort(file);
             }
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // Best effort cleanup; continue with current session logging.
+        }
+    }
+
+    private static void TryDeleteLogFileBestEffort(string filePath)
+    {
+        try
+        {
+            File.Delete(filePath);
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -206,6 +222,11 @@ public class FileLoggerProvider : ILoggerProvider
             {
                 // Avoid disposing shared queue objects while worker thread is still unwinding.
                 _loggers.Clear();
+                _ = _processQueueTask.ContinueWith(
+                    _ => DisposeQueueResourcesOnce(),
+                    CancellationToken.None,
+                    TaskContinuationOptions.None,
+                    TaskScheduler.Default);
                 return;
             }
         }
@@ -214,8 +235,7 @@ public class FileLoggerProvider : ILoggerProvider
             // Ignore
         }
 
-        _cancellationTokenSource.Dispose();
-        _messageQueue.Dispose();
+        DisposeQueueResourcesOnce();
         _loggers.Clear();
     }
 
@@ -229,6 +249,32 @@ public class FileLoggerProvider : ILoggerProvider
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             return false;
+        }
+    }
+
+    private void DisposeQueueResourcesOnce()
+    {
+        if (Interlocked.Exchange(ref _queueResourcesDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _cancellationTokenSource.Dispose();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // Ignore disposal races during shutdown.
+        }
+
+        try
+        {
+            _messageQueue.Dispose();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // Ignore disposal races during shutdown.
         }
     }
 }
@@ -276,10 +322,10 @@ public class FileLogger : ILogger
 
         var now = _provider.GetCurrentTime();
         var logRecord = $"[{now:yyyy-MM-dd HH:mm:ss.fff}] [{logLevel}] [{_categoryName}] {message}";
-        
+
         if (exception != null)
         {
-             logRecord += Environment.NewLine + exception.ToString();
+            logRecord += Environment.NewLine + exception.ToString();
         }
 
         _provider.EnqueueMessage(now, logRecord);

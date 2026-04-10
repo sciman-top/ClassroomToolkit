@@ -158,6 +158,8 @@ public class MarkerBrushRenderer : IBrushRenderer
     private int _previewBasePointCount;
     private SolidColorBrush? _cachedRenderBrush;
     private int _cachedRenderColorKey = int.MinValue;
+    private readonly List<WpfPoint> _ribbonLeftBuffer = new();
+    private readonly List<WpfPoint> _ribbonRightBuffer = new();
 
     public bool IsActive => _isActive;
     public int GeometryVersion => _geometryVersion;
@@ -529,8 +531,12 @@ public class MarkerBrushRenderer : IBrushRenderer
         }
         SmoothSamplePositionsAdaptive(samples);
 
-        var left = new List<WpfPoint>(samples.Count);
-        var right = new List<WpfPoint>(samples.Count);
+        _ribbonLeftBuffer.Clear();
+        _ribbonRightBuffer.Clear();
+        _ribbonLeftBuffer.EnsureCapacity(samples.Count);
+        _ribbonRightBuffer.EnsureCapacity(samples.Count);
+        var left = _ribbonLeftBuffer;
+        var right = _ribbonRightBuffer;
         var lastNormal = new Vector(0, 0);
 
         for (int i = 0; i < samples.Count; i++)

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "default_mode": "lite",
+  "lite_output_template": ".governance/templates/lite-response.md",
+  "task_snapshot_template": ".governance/templates/task-snapshot-minimal.md",
+  "clarification_trigger_template": ".governance/templates/clarification-trigger.md",
+  "evidence_minimal_template": ".governance/templates/evidence-minimal.md",
+  "task_snapshot_required_before_execution": true,
+  "clarification": {
+    "mode_default": "direct_fix",
+    "trigger_attempt_threshold": 2,
+    "trigger_on_semantic_conflict": true,
+    "max_questions": 3
+  },
+  "output": {
+    "milestone_echo_one_liner": "我在做X，为了Y，验收看Z",
+    "expand_only_on_user_request": true
+  },
+  "suggestion": {
+    "default_mode": "lite",
+    "max_suggestions_lite": 1,
+    "dedupe_enabled": true
+  },
+  "token_guard": {
+    "max_total_words_per_turn": 120,
+    "fallback_mode_when_budget_tight": "lite"
+  },
+  "evidence": {
+    "require_minimal_fields": true
+  }
+}

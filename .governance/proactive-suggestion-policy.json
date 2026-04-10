@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "default_mode": "lite",
+  "fallback_mode": "silent",
+  "modes": {
+    "silent": {
+      "max_suggestions": 0
+    },
+    "lite": {
+      "max_suggestions": 1,
+      "max_words_per_suggestion": 20,
+      "explanation_style": "one_sentence_actionable",
+      "allow_topic_repetition": false
+    },
+    "standard": {
+      "max_suggestions": 2,
+      "max_words_per_suggestion": 36,
+      "explanation_style": "brief_with_reason",
+      "allow_topic_repetition": false
+    }
+  },
+  "triggers": {
+    "requirement_clarification": true,
+    "solution_design": true,
+    "architecture_choice": true,
+    "pre_release_review": true,
+    "simple_mechanical_change": false,
+    "bugfix_mechanical": false,
+    "formatting_only": false
+  },
+  "standard_upgrade_guard": {
+    "enabled": true,
+    "require_trigger_match": true,
+    "require_non_mechanical_context": true,
+    "max_standard_upgrades_per_issue": 1
+  },
+  "dedupe": {
+    "enabled": true,
+    "scope": "issue_level",
+    "topic_signature_fields": [
+      "goal",
+      "scope",
+      "constraints",
+      "acceptance"
+    ],
+    "cooldown_turns": 6,
+    "allow_retrigger_on_goal_change": true,
+    "state_store_path": ".codex/proactive-suggestions/state.json",
+    "max_history_items": 200
+  },
+  "token_guard": {
+    "prefer_mode_when_budget_tight": "lite",
+    "force_silent_on_user_opt_out": true,
+    "max_total_suggestion_words_per_turn": 80,
+    "max_total_suggestion_words_per_issue": 240,
+    "downgrade_to_silent_when_over_issue_budget": true
+  },
+  "response_shape": {
+    "summary_first": true,
+    "max_summary_lines": 3,
+    "expand_only_on_user_request": true,
+    "omit_background_when_not_requested": true
+  },
+  "templates": {
+    "risk_preemption": "风险：<一句话>; 建议：<一步动作>。",
+    "alternative_option": "备选：<一句话>; 适用条件：<一句话>。",
+    "acceptance_hint": "验收：<可观察结果一句话>。"
+  },
+  "gates": {
+    "prefer_lightweight_verification_during_iteration": true,
+    "require_full_gates_before_claim_done": true
+  },
+  "evidence": {
+    "required_fields": [
+      "proactive_suggestion_mode",
+      "suggestion_count",
+      "suggestion_topics",
+      "topic_signature",
+      "dedupe_skipped",
+      "user_opt_out",
+      "token_guard_applied"
+    ]
+  }
+}

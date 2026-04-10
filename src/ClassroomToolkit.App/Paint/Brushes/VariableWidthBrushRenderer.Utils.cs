@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
@@ -75,16 +74,28 @@ public partial class VariableWidthBrushRenderer
 
         int count = _points.Count;
         var keep = new bool[count];
-        var anchors = new List<int> { 0, 1, count - 2, count - 1 };
+        var anchorMask = new bool[count];
+        MarkAnchor(anchorMask, 0);
+        MarkAnchor(anchorMask, 1);
+        MarkAnchor(anchorMask, count - 2);
+        MarkAnchor(anchorMask, count - 1);
         double cornerThreshold = Math.Clamp(_config.RdpCornerPreserveAngleDegrees, 12.0, 160.0);
         for (int i = 1; i < count - 1; i++)
         {
             if (IsCornerCandidate(i, cornerThreshold))
             {
+                MarkAnchor(anchorMask, i);
+            }
+        }
+
+        var anchors = new List<int>(count);
+        for (int i = 0; i < count; i++)
+        {
+            if (anchorMask[i])
+            {
                 anchors.Add(i);
             }
         }
-        anchors = anchors.Where(index => index >= 0 && index < count).Distinct().OrderBy(index => index).ToList();
         foreach (var anchor in anchors)
         {
             keep[anchor] = true;
@@ -109,6 +120,14 @@ public partial class VariableWidthBrushRenderer
         {
             _points.Clear();
             _points.AddRange(simplified);
+        }
+
+        static void MarkAnchor(bool[] mask, int index)
+        {
+            if ((uint)index < (uint)mask.Length)
+            {
+                mask[index] = true;
+            }
         }
     }
 

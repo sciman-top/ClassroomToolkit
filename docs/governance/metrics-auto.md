@@ -1,10 +1,10 @@
-﻿period=2026-04-07
+﻿period=2026-04-11
 repo=E:/CODE/ClassroomToolkit
 rule_version=9.38
 gate_pass_rate=N/A
 rollback_rate=N/A
 patch_recovery_overdue_rate=N/A
-evidence_completeness_rate=38.82%
+evidence_completeness_rate=22.70%
 learning_loop_evidence_rate=0.00%
 waiver_active_count=0
 waiver_expired_unrecovered_count=0
