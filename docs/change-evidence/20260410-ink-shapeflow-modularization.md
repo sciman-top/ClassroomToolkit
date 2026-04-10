@@ -1,0 +1,9 @@
+规则ID=CTK-INK-SHAPEFLOW-MODULARIZATION-20260410
+影响模块=PaintOverlayWindow.Ink shape flow
+当前落点=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs
+目标归宿=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.ShapeFlow.cs
+迁移批次=2026-04-10-ink-shapeflow-batch
+风险等级=low
+执行命令=dotnet build ClassroomToolkit.sln -c Debug; powershell -File scripts/quality/run-local-quality-gates.ps1
+验证证据=build pass; run-local-quality-gates pass (build/contract-invariant/hotspot/waiver-health/evidence-completeness/stable-tests)
+回滚动作=将 BeginShape/UpdateShapePreview/EndShape/ClearShapePreview/EnsureActiveShapePreview/CommitShapeGeometry/triangle state helpers 移回 PaintOverlayWindow.Ink.cs 并删除 PaintOverlayWindow.Ink.ShapeFlow.cs，然后重跑门禁

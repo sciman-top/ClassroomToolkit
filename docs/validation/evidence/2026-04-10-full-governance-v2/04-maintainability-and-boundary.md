@@ -100,6 +100,19 @@
   - `PaintOverlayWindow.Ink.cs` 体积进一步由 `867` -> `760` 行
   - 跨页逻辑与通用 Ink 流程解耦，后续问题定位更直接
 
+### 2.9 Paint overlay decomposition batch 4 (shape flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.ShapeFlow.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将形状绘制流程（普通形状 + 三角形分步交互 + 草稿取消）搬迁到独立 partial
+  - 方法签名与调用链保持不变
+- effect:
+  - `PaintOverlayWindow.Ink.cs` 体积进一步由 `760` -> `559` 行
+  - 形状交互子域与其他 Ink 流程彻底分离，维护与排障效率提升
+
 ## 3) Verification
 
 本批次执行后全门禁通过：
@@ -118,6 +131,8 @@
 新增 InkExport 指纹辅助拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
 新增跨页区域擦除拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增形状流程拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
 ## 4) Boundary Notes
 
