@@ -1,4 +1,4 @@
-规则ID=R2,R6,R8
+﻿规则ID=R2,R6,R8
 影响模块=
 - 全仓最终稳态复验（无新增功能改动）
 当前落点=连续重构后进入收口窗口，需要确认四段硬门禁稳定通过
@@ -24,3 +24,9 @@
 - 进入收口阶段：后续仅执行缺陷修复、风险消减与最终提交整理，不再继续大规模结构拆分
 回滚动作=
 - 本批无代码改动；回滚不适用
+
+# Backfill 2026-04-03
+影响模块=legacy-governance-evidence
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

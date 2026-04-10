@@ -14,29 +14,21 @@ internal readonly record struct WindowStyleInteropRetryDecision(
 
 internal static class WindowStyleInteropRetryPolicy
 {
-    private const int MaxRetryAttempts = WindowInteropRetryDefaults.MaxRetryAttempts;
-    private const int ErrorInvalidWindowHandle = WindowInteropRetryDefaults.ErrorInvalidWindowHandle;
-    private const int ErrorInvalidHandle = WindowInteropRetryDefaults.ErrorInvalidHandle;
-
     internal static WindowStyleInteropRetryDecision Resolve(int attempt, int errorCode)
     {
-        if (attempt >= MaxRetryAttempts)
+        var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
+        return coreDecision switch
         {
-            return new WindowStyleInteropRetryDecision(
+            WindowInteropRetryCoreDecision.MaxAttemptsReached => new WindowStyleInteropRetryDecision(
                 ShouldRetry: false,
-                Reason: WindowStyleInteropRetryReason.MaxAttemptsReached);
-        }
-
-        if (errorCode is ErrorInvalidWindowHandle or ErrorInvalidHandle)
-        {
-            return new WindowStyleInteropRetryDecision(
+                Reason: WindowStyleInteropRetryReason.MaxAttemptsReached),
+            WindowInteropRetryCoreDecision.InvalidHandleError => new WindowStyleInteropRetryDecision(
                 ShouldRetry: false,
-                Reason: WindowStyleInteropRetryReason.InvalidHandleError);
-        }
-
-        return new WindowStyleInteropRetryDecision(
-            ShouldRetry: true,
-            Reason: WindowStyleInteropRetryReason.RetryableError);
+                Reason: WindowStyleInteropRetryReason.InvalidHandleError),
+            _ => new WindowStyleInteropRetryDecision(
+                ShouldRetry: true,
+                Reason: WindowStyleInteropRetryReason.RetryableError)
+        };
     }
 
     internal static bool ShouldRetry(int attempt, int errorCode)

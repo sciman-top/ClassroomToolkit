@@ -1,4 +1,4 @@
-规则ID=R1/R2/R3/R6/R8
+﻿规则ID=R1/R2/R3/R6/R8
 影响模块=src/ClassroomToolkit.App/Paint/CrossPageInteractiveInkSlotRemapPolicy.cs; src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs; tests/ClassroomToolkit.Tests/CrossPageInteractiveInkSlotRemapPolicyTests.cs; tests/ClassroomToolkit.Tests/CrossPageInputResumeExecutionContractTests.cs
 当前落点=跨页交互槽位重映射与续笔首段插值
 目标归宿=减少跨页前页笔迹闪烁；提升跨页首段跟手流畅度
@@ -17,3 +17,8 @@
 - 相关策略/契约测试通过，完整门禁通过。
 回滚动作=
 - git restore --source=HEAD~1 src/ClassroomToolkit.App/Paint/CrossPageInteractiveInkSlotRemapPolicy.cs src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs tests/ClassroomToolkit.Tests/CrossPageInteractiveInkSlotRemapPolicyTests.cs tests/ClassroomToolkit.Tests/CrossPageInputResumeExecutionContractTests.cs
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

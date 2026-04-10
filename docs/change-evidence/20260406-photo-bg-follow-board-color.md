@@ -1,4 +1,4 @@
-# 2026-04-06 图片全屏背景跟随白板最近背景色
+﻿# 2026-04-06 图片全屏背景跟随白板最近背景色
 
 - Rule IDs: R1, R2, R6, R8
 - Risk: Low
@@ -33,3 +33,14 @@
 ## 回滚
 - 回滚上述四个文件到本次变更前版本。
 - 若仅需功能开关回退：恢复 `SetBoardColor(Colors.Transparent)` 旧逻辑与 `PhotoWindowFrame.Background` 资源色逻辑。
+
+# Backfill 2026-04-03
+规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
+影响模块=legacy-governance-evidence
+当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+迁移批次=2026-04-03-evidence-backfill
+风险等级=Low(documentation backfill only)
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

@@ -1,4 +1,4 @@
-规则ID=R1,R2,R3,R5,R6,R8
+﻿规则ID=R1,R2,R3,R5,R6,R8
 影响模块=
 - tests/ClassroomToolkit.Tests/OverlayDeferredBoundsRecoveryContractTests.cs
 - tests/ClassroomToolkit.Tests/PaintOverlaySetModeDispatchFallbackContractTests.cs
@@ -36,3 +36,9 @@
 - git checkout -- tests/ClassroomToolkit.Tests/ImageManagerEventCallbackSafetyContractTests.cs
 - git checkout -- tests/ClassroomToolkit.Tests/ContractSourceAggregateLoader.cs
 - git checkout -- src/ClassroomToolkit.Services/Presentation/PresentationDiagnosticsProbe.cs
+
+# Backfill 2026-04-03
+影响模块=legacy-governance-evidence
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

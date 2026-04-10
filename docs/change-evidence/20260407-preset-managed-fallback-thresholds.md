@@ -1,4 +1,4 @@
-规则ID=R1,R2,R4,R6,R8
+﻿规则ID=R1,R2,R4,R6,R8
 影响模块=PaintSettingsDialog(预设托管),PresetSchemePolicy,PresetSchemeInitializationPolicy,PresentationControlOptions,AppSettings
 当前落点=src/ClassroomToolkit.App/Paint + src/ClassroomToolkit.Services/Presentation + tests/ClassroomToolkit.Tests
 目标归宿=放映控制自动回退参数（失败阈值/探活窗口）可配置、可持久化、可被预设托管且可验证
@@ -27,3 +27,8 @@
 - git restore --source=HEAD~1 src/ClassroomToolkit.App/Settings/AppSettings.cs src/ClassroomToolkit.App/Settings/AppSettingsService.cs
 - git restore --source=HEAD~1 src/ClassroomToolkit.Services/Presentation/PresentationControlOptions.cs src/ClassroomToolkit.Services/Presentation/PresentationControlService.cs src/ClassroomToolkit.Services/Presentation/PresentationGateway.cs
 - git restore --source=HEAD~1 tests/ClassroomToolkit.Tests/PresetSchemePolicyTests.cs tests/ClassroomToolkit.Tests/PresetSchemeInitializationPolicyTests.cs tests/ClassroomToolkit.Tests/PresentationControlServiceTests.cs tests/ClassroomToolkit.Tests/AppSettingsServiceTests.cs
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

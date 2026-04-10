@@ -1,0 +1,212 @@
+﻿{
+    "generated_at":  "2026-04-10T18:54:34",
+    "repo_root":  "E:\\CODE\\ClassroomToolkit",
+    "status":  "PASS",
+    "endstate_score":  100,
+    "threshold":  {
+                      "good":  85,
+                      "warning":  70
+                  },
+    "dimensions":  {
+                       "precheck":  {
+                                        "status":  "PASS",
+                                        "checks":  [
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "dotnet"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "powershell"
+                                                       },
+                                                       {
+                                                           "ok":  true,
+                                                           "name":  "tests_project"
+                                                       }
+                                                   ],
+                                        "failed":  [
+
+                                                   ]
+                                    },
+                       "waiver":  {
+                                      "status":  "PASS",
+                                      "parse_ok":  true,
+                                      "error":  null,
+                                      "data":  {
+                                                   "status":  "PASS",
+                                                   "waiverDir":  "docs/governance/waivers",
+                                                   "totalFiles":  0,
+                                                   "activeCount":  0,
+                                                   "expiredUnrecoveredCount":  0,
+                                                   "checked":  [
+
+                                                               ],
+                                                   "violations":  [
+
+                                                                  ]
+                                               }
+                                  },
+                       "evidence":  {
+                                        "status":  "PASS",
+                                        "parse_ok":  true,
+                                        "error":  null,
+                                        "data":  {
+                                                     "status":  "PASS",
+                                                     "evidenceDir":  "docs/change-evidence",
+                                                     "mode":  "changed",
+                                                     "threshold":  98,
+                                                     "templateKeys":  [
+                                                                          "规则ID",
+                                                                          "影响模块",
+                                                                          "当前落点",
+                                                                          "目标归宿",
+                                                                          "迁移批次",
+                                                                          "风险等级",
+                                                                          "执行命令",
+                                                                          "验证证据",
+                                                                          "回滚动作"
+                                                                      ],
+                                                     "criticalKeys":  [
+                                                                          "规则ID",
+                                                                          "执行命令",
+                                                                          "验证证据",
+                                                                          "回滚动作"
+                                                                      ],
+                                                     "totalFiles":  0,
+                                                     "overallCoverage":  100,
+                                                     "checked":  [
+
+                                                                 ],
+                                                     "violations":  [
+
+                                                                    ]
+                                                 }
+                                    },
+                       "hotspot":  {
+                                       "status":  "PASS",
+                                       "parse_ok":  true,
+                                       "error":  null,
+                                       "data":  {
+                                                    "status":  "PASS",
+                                                    "budgetFile":  "scripts/quality/hotspot-line-budgets.json",
+                                                    "checked":  [
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/MainWindow.xaml.cs",
+                                                                        "maxLines":  900,
+                                                                        "actualLines":  895,
+                                                                        "delta":  -5,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs",
+                                                                        "maxLines":  1450,
+                                                                        "actualLines":  798,
+                                                                        "delta":  -652,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs",
+                                                                        "maxLines":  1650,
+                                                                        "actualLines":  219,
+                                                                        "delta":  -1431,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs",
+                                                                        "maxLines":  1420,
+                                                                        "actualLines":  1103,
+                                                                        "delta":  -317,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs",
+                                                                        "maxLines":  2380,
+                                                                        "actualLines":  913,
+                                                                        "delta":  -1467,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.cs",
+                                                                        "maxLines":  1340,
+                                                                        "actualLines":  839,
+                                                                        "delta":  -501,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Transform.cs",
+                                                                        "maxLines":  1100,
+                                                                        "actualLines":  454,
+                                                                        "delta":  -646,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml.cs",
+                                                                        "maxLines":  1880,
+                                                                        "actualLines":  696,
+                                                                        "delta":  -1184,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Paint/Brushes/VariableWidthBrushRenderer.Geometry.cs",
+                                                                        "maxLines":  1450,
+                                                                        "actualLines":  1217,
+                                                                        "delta":  -233,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Photos/ImageManagerWindow.xaml.cs",
+                                                                        "maxLines":  1540,
+                                                                        "actualLines":  407,
+                                                                        "delta":  -1133,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Ink/InkExportService.cs",
+                                                                        "maxLines":  1240,
+                                                                        "actualLines":  1081,
+                                                                        "delta":  -159,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs",
+                                                                        "maxLines":  380,
+                                                                        "actualLines":  319,
+                                                                        "delta":  -61,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/Win32PresentationResolver.cs",
+                                                                        "maxLines":  370,
+                                                                        "actualLines":  313,
+                                                                        "delta":  -57,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs",
+                                                                        "maxLines":  370,
+                                                                        "actualLines":  314,
+                                                                        "delta":  -56,
+                                                                        "ok":  true
+                                                                    },
+                                                                    {
+                                                                        "path":  "src/ClassroomToolkit.App/Windowing/OverlayNavigationFocusPolicy.cs",
+                                                                        "maxLines":  220,
+                                                                        "actualLines":  182,
+                                                                        "delta":  -38,
+                                                                        "ok":  true
+                                                                    }
+                                                                ],
+                                                    "missingFiles":  [
+
+                                                                     ],
+                                                    "overBudget":  [
+
+                                                                   ]
+                                                }
+                                   }
+                   },
+    "evidence_mode":  "changed",
+    "gaps":  [
+
+             ]
+}

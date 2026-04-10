@@ -149,7 +149,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return default;
             }
 
-            using var connection = CreateOpenConnection(dbPath);
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
             EnsureSchema(connection);
 
             using var command = connection.CreateCommand();
@@ -169,7 +169,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return default;
             }
 
-            return new RollStateSnapshot(value, revision, TryParseUtcTimestamp(updatedAtRaw));
+            return new RollStateSnapshot(value, revision, SqliteStorageUtilities.TryParseUtcTimestamp(updatedAtRaw));
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -193,7 +193,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return false;
             }
 
-            using var connection = CreateOpenConnection(dbPath);
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
             EnsureSchema(connection);
 
             using var command = connection.CreateCommand();
@@ -226,7 +226,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
     {
         try
         {
-            using var connection = CreateOpenConnection(dbPath);
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
             EnsureSchema(connection);
             RollStateSerializer.TryReadWorkbookMetadata(
                 rollStateJson,
@@ -290,19 +290,6 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
     }
 
-    private static SqliteConnection CreateOpenConnection(string dbPath)
-    {
-        var directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var connection = new SqliteConnection($"Data Source={dbPath}");
-        connection.Open();
-        return connection;
-    }
-
     private static void EnsureSchema(SqliteConnection connection)
     {
         using var command = connection.CreateCommand();
@@ -324,7 +311,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             );
             """;
         command.ExecuteNonQuery();
-        EnsureColumnExists(connection, "student_workbook_state", "revision", "INTEGER NOT NULL DEFAULT 0");
+        SqliteStorageUtilities.EnsureColumnExists(connection, "student_workbook_state", "revision", "INTEGER NOT NULL DEFAULT 0");
     }
 
     private static WorkbookSnapshot FromWorkbook(StudentWorkbook workbook)
@@ -410,55 +397,4 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
     }
 
-    private static DateTime? TryParseUtcTimestamp(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        if (!DateTime.TryParse(
-                raw,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind,
-                out var parsed))
-        {
-            return null;
-        }
-
-        return parsed.ToUniversalTime();
-    }
-
-    private static void EnsureColumnExists(
-        SqliteConnection connection,
-        string tableName,
-        string columnName,
-        string columnDefinition)
-    {
-        if (HasColumn(connection, tableName, columnName))
-        {
-            return;
-        }
-
-        using var alter = connection.CreateCommand();
-        alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
-        alter.ExecuteNonQuery();
-    }
-
-    private static bool HasColumn(SqliteConnection connection, string tableName, string columnName)
-    {
-        using var pragma = connection.CreateCommand();
-        pragma.CommandText = $"PRAGMA table_info('{tableName}');";
-        using var reader = pragma.ExecuteReader();
-        while (reader.Read())
-        {
-            var name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-            if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

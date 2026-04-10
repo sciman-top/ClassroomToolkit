@@ -1,4 +1,4 @@
-规则ID=R1/R2/R3/R6/R8
+﻿规则ID=R1/R2/R3/R6/R8
 影响模块=src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs; tests/ClassroomToolkit.Tests/CrossPageInputResumeExecutionContractTests.cs
 当前落点=跨页输入恢复（ResumeCrossPageInputOperationAfterSwitch）
 目标归宿=跨页续笔首段即时回放并插值，避免首段直线与输入丢帧
@@ -19,3 +19,8 @@
   - recovery_plan: 关闭运行中的 Classroom Toolkit 与相关 VS 调试会话后，按固定顺序补跑 build -> test -> contract/invariant -> hotspot。
 回滚动作=
 - git restore --source=HEAD~1 src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Input.cs tests/ClassroomToolkit.Tests/CrossPageInputResumeExecutionContractTests.cs
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

@@ -1,4 +1,4 @@
-规则ID=R2,R5,R6,R8
+﻿规则ID=R2,R5,R6,R8
 影响模块=
 - tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs
 - tests/ClassroomToolkit.Tests/PaintOverlayEventCallbackSafetyContractTests.cs
@@ -23,3 +23,9 @@
 - git checkout -- tests/ClassroomToolkit.Tests/PaintOverlayEventCallbackSafetyContractTests.cs
 - git checkout -- tests/ClassroomToolkit.Tests/PaintOverlayClearAllCrossPageRecoveryContractTests.cs
 - git checkout -- tests/ClassroomToolkit.Tests/PhotoPanInertiaRenderingContractTests.cs
+
+# Backfill 2026-04-03
+影响模块=legacy-governance-evidence
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

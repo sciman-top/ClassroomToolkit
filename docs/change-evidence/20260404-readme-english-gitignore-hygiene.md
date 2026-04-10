@@ -1,4 +1,4 @@
-规则ID=R1,R4,R6,R8
+﻿规则ID=R1,R4,R6,R8
 影响模块=README.md, README.en.md, 使用指南.md, .gitignore, Git 跟踪清单, GitHub 仓库元信息
 当前落点=仓库根文档与 Git 发布治理
 目标归宿=中英文仓库入口文档、忽略规则、远端仓库展示信息
@@ -42,3 +42,8 @@
 回滚动作=
 - git revert <doc-commit-sha>
 - 如需恢复本地专用文件跟踪：git restore --staged .crossnote .geminiignore 后重新评估 .gitignore
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

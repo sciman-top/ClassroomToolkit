@@ -1,4 +1,4 @@
-# 2026-04-03 Paint Toolbar Order Shape Color
+﻿# 2026-04-03 Paint Toolbar Order Shape Color
 
 - rule_id: R1/R2/R6/R8
 - risk_level: low
@@ -44,3 +44,14 @@
 - evidence_link: `docs/change-evidence/20260403-paint-toolbar-order-shape-color.md`
 - expires_at: `2026-04-04`
 - recovery_plan: close the running `sciman Classroom Toolkit` process and Visual Studio build holders, then rerun the hard-gate sequence in order.
+
+# Backfill 2026-04-03
+规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
+影响模块=legacy-governance-evidence
+当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+迁移批次=2026-04-03-evidence-backfill
+风险等级=Low(documentation backfill only)
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

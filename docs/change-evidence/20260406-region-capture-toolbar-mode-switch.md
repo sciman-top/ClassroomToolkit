@@ -1,4 +1,4 @@
-# 变更证据：区域截图穿透工具条后的模式切换修复
+﻿# 变更证据：区域截图穿透工具条后的模式切换修复
 
 - date: 2026-04-06
 - scope: `PaintToolbarWindow` 非白板交互行为修复 + 契约测试补充
@@ -48,3 +48,14 @@
   - `git checkout -- src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`
   - `git checkout -- tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs`
   - `git checkout -- docs/change-evidence/20260406-region-capture-toolbar-mode-switch.md`
+
+# Backfill 2026-04-03
+规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
+影响模块=legacy-governance-evidence
+当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+迁移批次=2026-04-03-evidence-backfill
+风险等级=Low(documentation backfill only)
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

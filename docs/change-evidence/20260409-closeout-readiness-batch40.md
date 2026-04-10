@@ -1,4 +1,4 @@
-规则ID=R2,R6,R8
+﻿规则ID=R2,R6,R8
 影响模块=
 - 收口复验（无新增功能代码）
 当前落点=进入收口阶段，需要确认热点重构后系统处于稳定可交付状态
@@ -20,3 +20,9 @@
 - 已满足收口条件；后续建议切换为“仅缺陷修复 + 提交整理 + 发布前最终复验”
 回滚动作=
 - 本批无代码改动；回滚不适用
+
+# Backfill 2026-04-03
+影响模块=legacy-governance-evidence
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

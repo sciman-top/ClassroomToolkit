@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -952,73 +951,51 @@ public sealed class InkExportService
         }
 
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        AppendHashField(hash, sourcePath);
-        AppendHashField(hash, sourceTicks.ToString(CultureInfo.InvariantCulture));
-        AppendHashField(hash, pageIndex.ToString(CultureInfo.InvariantCulture));
-        AppendHashField(hash, options.Dpi.ToString(CultureInfo.InvariantCulture));
-        AppendHashField(hash, options.Format);
-        AppendHashField(hash, options.JpegQuality.ToString(CultureInfo.InvariantCulture));
+        InkExportFingerprintUtilities.AppendHashField(hash, sourcePath);
+        InkExportFingerprintUtilities.AppendHashField(hash, sourceTicks.ToString(CultureInfo.InvariantCulture));
+        InkExportFingerprintUtilities.AppendHashField(hash, pageIndex.ToString(CultureInfo.InvariantCulture));
+        InkExportFingerprintUtilities.AppendHashField(hash, options.Dpi.ToString(CultureInfo.InvariantCulture));
+        InkExportFingerprintUtilities.AppendHashField(hash, options.Format);
+        InkExportFingerprintUtilities.AppendHashField(hash, options.JpegQuality.ToString(CultureInfo.InvariantCulture));
 
         foreach (var stroke in strokes)
         {
-            AppendHashToken(hash, stroke.Type.ToString());
-            AppendHashToken(hash, stroke.BrushStyle.ToString());
-            AppendHashToken(hash, stroke.ColorHex);
-            AppendHashToken(hash, stroke.Opacity.ToString(CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.CalligraphyRenderMode.ToString());
-            AppendHashToken(hash, (stroke.CalligraphyInkBloomEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
-            AppendHashToken(hash, (stroke.CalligraphySealEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.MaskSeed.ToString(CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.InkFlow.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.StrokeDirectionX.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashToken(hash, stroke.StrokeDirectionY.ToString("G17", CultureInfo.InvariantCulture));
-            AppendHashField(hash, stroke.GeometryPath);
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.Type.ToString());
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.BrushStyle.ToString());
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.ColorHex);
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.Opacity.ToString(CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.CalligraphyRenderMode.ToString());
+            InkExportFingerprintUtilities.AppendHashToken(hash, (stroke.CalligraphyInkBloomEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, (stroke.CalligraphySealEnabled ? 1 : 0).ToString(CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.MaskSeed.ToString(CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.InkFlow.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.StrokeDirectionX.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashToken(hash, stroke.StrokeDirectionY.ToString("G17", CultureInfo.InvariantCulture));
+            InkExportFingerprintUtilities.AppendHashField(hash, stroke.GeometryPath);
 
             foreach (var ribbon in stroke.Ribbons)
             {
-                AppendHashUtf8(hash, "r:");
-                AppendHashToken(hash, ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture));
-                AppendHashToken(hash, ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture));
-                AppendHashField(hash, ribbon.GeometryPath);
+                InkExportFingerprintUtilities.AppendHashUtf8(hash, "r:");
+                InkExportFingerprintUtilities.AppendHashToken(hash, ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture));
+                InkExportFingerprintUtilities.AppendHashToken(hash, ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture));
+                InkExportFingerprintUtilities.AppendHashField(hash, ribbon.GeometryPath);
             }
 
             foreach (var bloom in stroke.Blooms)
             {
-                AppendHashUtf8(hash, "b:");
-                AppendHashToken(hash, bloom.Opacity.ToString("G17", CultureInfo.InvariantCulture));
-                AppendHashField(hash, bloom.GeometryPath);
+                InkExportFingerprintUtilities.AppendHashUtf8(hash, "b:");
+                InkExportFingerprintUtilities.AppendHashToken(hash, bloom.Opacity.ToString("G17", CultureInfo.InvariantCulture));
+                InkExportFingerprintUtilities.AppendHashField(hash, bloom.GeometryPath);
             }
 
-            AppendHashUtf8(hash, ";");
+            InkExportFingerprintUtilities.AppendHashUtf8(hash, ";");
         }
 
         return Convert.ToHexString(hash.GetHashAndReset());
-    }
-
-    private static void AppendHashField(IncrementalHash hash, string? value)
-    {
-        AppendHashUtf8(hash, value ?? string.Empty);
-        AppendHashUtf8(hash, "|");
-    }
-
-    private static void AppendHashToken(IncrementalHash hash, string? value)
-    {
-        AppendHashUtf8(hash, value ?? string.Empty);
-        AppendHashUtf8(hash, ",");
-    }
-
-    private static void AppendHashUtf8(IncrementalHash hash, string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return;
-        }
-
-        hash.AppendData(Encoding.UTF8.GetBytes(value));
     }
 
     private static string GetManifestPath(string exportDir)
@@ -1125,8 +1102,8 @@ public sealed class InkExportService
             return new List<InkStrokeData>();
         }
 
-        var targetWidth = GetBitmapWidthDip(background);
-        var targetHeight = GetBitmapHeightDip(background);
+        var targetWidth = InkExportScaleUtilities.GetBitmapWidthDip(background);
+        var targetHeight = InkExportScaleUtilities.GetBitmapHeightDip(background);
         if (targetWidth <= 0.5 || targetHeight <= 0.5)
         {
             return strokes.Select(CloneStroke).ToList();
@@ -1135,8 +1112,8 @@ public sealed class InkExportService
         var result = new List<InkStrokeData>(strokes.Count);
         foreach (var stroke in strokes)
         {
-            var scaleX = ResolveScale(targetWidth, stroke.ReferenceWidth, fallbackScale);
-            var scaleY = ResolveScale(targetHeight, stroke.ReferenceHeight, fallbackScale);
+            var scaleX = InkExportScaleUtilities.ResolveScale(targetWidth, stroke.ReferenceWidth, fallbackScale);
+            var scaleY = InkExportScaleUtilities.ResolveScale(targetHeight, stroke.ReferenceHeight, fallbackScale);
             var scaled = CloneStroke(stroke);
             scaled.GeometryPath = ScaleGeometryPath(stroke.GeometryPath, scaleX, scaleY);
             var brushScale = Math.Sqrt(Math.Abs(scaleX * scaleY));
@@ -1164,21 +1141,6 @@ public sealed class InkExportService
         return result;
     }
 
-    private static double ResolveScale(double target, double reference, double fallback)
-    {
-        if (reference > 0.5)
-        {
-            return target / reference;
-        }
-
-        if (Math.Abs(fallback) > 0.0001)
-        {
-            return fallback;
-        }
-
-        return 1.0;
-    }
-
     private static string ScaleGeometryPath(string geometryPath, double scaleX, double scaleY)
     {
         if (string.IsNullOrWhiteSpace(geometryPath))
@@ -1196,26 +1158,6 @@ public sealed class InkExportService
         clone.Transform = new ScaleTransform(scaleX, scaleY);
         var flattened = clone.GetFlattenedPathGeometry();
         return InkGeometrySerializer.Serialize(flattened);
-    }
-
-    private static double GetBitmapWidthDip(BitmapSource bitmap)
-    {
-        if (bitmap.Width > 0)
-        {
-            return bitmap.Width;
-        }
-        var dpiX = bitmap.DpiX > 0 ? bitmap.DpiX : 96.0;
-        return bitmap.PixelWidth * 96.0 / dpiX;
-    }
-
-    private static double GetBitmapHeightDip(BitmapSource bitmap)
-    {
-        if (bitmap.Height > 0)
-        {
-            return bitmap.Height;
-        }
-        var dpiY = bitmap.DpiY > 0 ? bitmap.DpiY : 96.0;
-        return bitmap.PixelHeight * 96.0 / dpiY;
     }
 
     private static InkStrokeData CloneStroke(InkStrokeData stroke)

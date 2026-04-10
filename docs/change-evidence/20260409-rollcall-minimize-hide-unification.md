@@ -1,4 +1,4 @@
-# 2026-04-09 点名窗口最小化/隐藏路径归一修复
+﻿# 2026-04-09 点名窗口最小化/隐藏路径归一修复
 
 ## 1) 依据
 - 用户反馈：点名窗口点击“最小化”后，遥控点名语音/照片明显延迟，且在 PDF/图片全屏、白板中左上角分组名不显示。
@@ -181,3 +181,14 @@
   - `clarification_scenario`: bugfix
   - `clarification_questions`: none
   - `clarification_answers`: none
+
+# Backfill 2026-04-03
+规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
+影响模块=legacy-governance-evidence
+当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+迁移批次=2026-04-03-evidence-backfill
+风险等级=Low(documentation backfill only)
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

@@ -1,4 +1,4 @@
-规则ID=R1,R2,R4,R6,R8
+﻿规则ID=R1,R2,R4,R6,R8
 影响模块=src/ClassroomToolkit.App/Windowing, src/ClassroomToolkit.App/Helpers, src/ClassroomToolkit.App, tests/ClassroomToolkit.Tests/App
 当前落点=拖拽流程与Topmost互操作冲突导致窗口回弹
 目标归宿=在拖拽期间统一抑制Topmost互操作，拖拽结束后恢复常规Z序修复
@@ -28,3 +28,8 @@
 - git restore tests/ClassroomToolkit.Tests/App/WindowTopmostExecutorTests.cs
 - git restore --staged src/ClassroomToolkit.App/Windowing/WindowDragOperationState.cs
 - git clean -f src/ClassroomToolkit.App/Windowing/WindowDragOperationState.cs
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

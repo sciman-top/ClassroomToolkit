@@ -1,4 +1,4 @@
-# 20260407 UI Copy Polish Round4
+﻿# 20260407 UI Copy Polish Round4
 
 ## 依据
 - 继续收紧剩余界面文案，优先缩短不改变语义的提示、说明和选项。
@@ -34,3 +34,14 @@
 
 ## 回滚
 - 若缩写导致歧义或契约回归，回退上述字符串修改，并同步恢复测试断言。
+
+# Backfill 2026-04-03
+规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
+影响模块=legacy-governance-evidence
+当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+迁移批次=2026-04-03-evidence-backfill
+风险等级=Low(documentation backfill only)
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

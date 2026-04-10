@@ -1,4 +1,4 @@
-规则ID=R1/R2/R3/R6/R8
+﻿规则ID=R1/R2/R3/R6/R8
 影响模块=src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs; tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfaceContractTests.cs
 当前落点=跨页邻页墨迹位图解析（ResolveNeighborInkBitmap）
 目标归宿=跨页交互渲染在缓存未命中时仍保持上一页墨迹连续可见
@@ -16,3 +16,8 @@
 - 门禁结果：build/test/contract/hotspot 全通过。
 回滚动作=
 - git restore --source=HEAD~1 src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfaceContractTests.cs
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

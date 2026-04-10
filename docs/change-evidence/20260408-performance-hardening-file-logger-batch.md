@@ -1,4 +1,4 @@
-规则ID=R1,R2,R3,R6,R8
+﻿规则ID=R1,R2,R3,R6,R8
 影响模块=src/ClassroomToolkit.Infra/Logging/FileLoggerProvider.cs
 当前落点=Infra logging queue writer
 目标归宿=保留现有日志契约，改为批量落盘减少 I/O 抖动
@@ -31,3 +31,8 @@ platform_na=
 - alternative_verification: 使用 codex --version 与 codex --help 补充平台信息，并执行仓库门禁命令完成运行态验证
 - evidence_link: docs/change-evidence/20260408-performance-hardening-file-logger-batch.md
 - expires_at: 2026-05-08
+
+# Backfill 2026-04-03
+执行命令=backfill-evidence-template-fields.ps1
+验证证据=template-field-backfill-2026-04-03
+回滚动作=git revert evidence backfill commit

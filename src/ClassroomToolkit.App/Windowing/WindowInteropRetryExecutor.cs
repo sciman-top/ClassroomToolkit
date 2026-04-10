@@ -88,12 +88,6 @@ internal static class WindowInteropRetryExecutor
 
     private static bool WaitBeforeRetry(int retrySleepMs, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.CanBeCanceled)
-        {
-            Thread.Sleep(retrySleepMs);
-            return true;
-        }
-
         try
         {
             return !cancellationToken.WaitHandle.WaitOne(retrySleepMs);
