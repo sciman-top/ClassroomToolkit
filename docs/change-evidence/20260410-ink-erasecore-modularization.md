@@ -1,0 +1,9 @@
+规则ID=CTK-INK-ERASECORE-MODULARIZATION-20260410
+影响模块=PaintOverlayWindow.Ink eraser/region core flow
+当前落点=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs
+目标归宿=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.EraseCore.cs
+迁移批次=2026-04-10-ink-erasecore-batch
+风险等级=low
+执行命令=dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; powershell -File scripts/quality/run-local-quality-gates.ps1
+验证证据=build pass; full test pass (3213); run-local-quality-gates pass (build/contract-invariant/hotspot/waiver-health/evidence-completeness/stable-tests)
+回滚动作=将 HideEraserPreview/ApplyEraserAt/EraseRect/ClearRegionSelection 移回 PaintOverlayWindow.Ink.cs 并删除 PaintOverlayWindow.Ink.EraseCore.cs，随后重跑全门禁

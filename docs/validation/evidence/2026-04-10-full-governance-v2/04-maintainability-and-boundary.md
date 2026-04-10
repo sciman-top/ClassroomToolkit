@@ -113,6 +113,32 @@
   - `PaintOverlayWindow.Ink.cs` 体积进一步由 `760` -> `559` 行
   - 形状交互子域与其他 Ink 流程彻底分离，维护与排障效率提升
 
+### 2.10 Paint overlay decomposition batch 5 (erase core flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.EraseCore.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将橡皮擦核心与区域擦除基础流程（`HideEraserPreview/ApplyEraserAt/EraseRect/ClearRegionSelection`）拆到独立 partial
+  - 保持签名与调用链不变，仅做职责分组
+- effect:
+  - 擦除子域与记录/回放流程彻底分离，后续局部修复影响面更小
+  - `PaintOverlayWindow.Ink.cs` 继续减负并提升可读性
+
+### 2.10 Paint overlay decomposition batch 5 (erase core flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.EraseCore.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将橡皮擦核心流程（点擦除、矩形擦除、区域选择清理）搬迁到独立 partial
+  - 保持行为不变，仅调整代码归属
+- effect:
+  - `PaintOverlayWindow.Ink.cs` 体积进一步由 `559` -> `509` 行
+  - 擦除逻辑与记录/渲染逻辑进一步解耦，后续演进边界更清晰
+
 ## 3) Verification
 
 本批次执行后全门禁通过：
@@ -134,6 +160,10 @@
 
 新增形状流程拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
+新增擦除核心流程拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增擦除核心拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
 ## 4) Boundary Notes
 
 - 本批次变更仅在：
@@ -145,6 +175,6 @@
 ## 5) Next Phase Candidate
 
 下一批建议进入：
-1. `src/ClassroomToolkit.App/Ink/InkExportService.cs`（1111 行）分段拆分计划。
-2. `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`（1103 行）职责切分计划。
+1. `src/ClassroomToolkit.App/Ink/InkExportService.cs`（`1062` 行）分段拆分计划。
+2. `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs`（`913` 行）职责切分计划。
 3. 对应新增“行为不变契约测试”后再实施拆分。
