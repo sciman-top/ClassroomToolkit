@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -21,8 +19,6 @@ namespace ClassroomToolkit.App.Ink;
 public sealed class InkExportService
 {
     private const string ExportFolderName = "笔迹合成图片";
-    private const string ExportManifestFileName = ".ink-export.manifest.json";
-    private static readonly ConcurrentDictionary<string, object> ManifestWriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly InkPersistenceService _persistenceService;
     public InkExportService(InkPersistenceService persistenceService)
@@ -1000,34 +996,17 @@ public sealed class InkExportService
 
     private static string GetManifestPath(string exportDir)
     {
-        return Path.Combine(exportDir, ExportManifestFileName);
+        return InkExportManifestUtilities.GetManifestPath(exportDir);
     }
 
     private static string GetManifestKey(string outputPath)
     {
-        return Path.GetFileName(outputPath);
+        return InkExportManifestUtilities.GetManifestKey(outputPath);
     }
 
     private static Dictionary<string, string> LoadExportManifest(string exportDir)
     {
-        var path = GetManifestPath(exportDir);
-        if (!File.Exists(path))
-        {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        try
-        {
-            var raw = File.ReadAllText(path);
-            var map = JsonSerializer.Deserialize<Dictionary<string, string>>(raw);
-            return map != null
-                ? new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
+        return InkExportManifestUtilities.LoadExportManifest(exportDir);
     }
 
     private static BitmapSource? GetOrRenderPdfPage(
@@ -1058,41 +1037,7 @@ public sealed class InkExportService
 
     private static void SaveExportManifest(string exportDir, Dictionary<string, string> manifest)
     {
-        try
-        {
-            Directory.CreateDirectory(exportDir);
-            var path = GetManifestPath(exportDir);
-            var writeLock = ManifestWriteLocks.GetOrAdd(path, _ => new object());
-            lock (writeLock)
-            {
-                var merged = File.Exists(path)
-                    ? LoadExportManifest(exportDir)
-                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var pair in manifest)
-                {
-                    merged[pair.Key] = pair.Value;
-                }
-
-                var staleKeys = merged.Keys
-                    .Where(key => string.IsNullOrWhiteSpace(key) || !File.Exists(Path.Combine(exportDir, key)))
-                    .ToList();
-                foreach (var key in staleKeys)
-                {
-                    merged.Remove(key);
-                }
-
-                var json = JsonSerializer.Serialize(merged, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-                File.WriteAllText(path, json);
-            }
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            // Ignore manifest write failures; export output is still valid.
-        }
+        InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
     }
 
     private static List<InkStrokeData> AdaptStrokesForBackground(IReadOnlyList<InkStrokeData>? strokes, BitmapSource background, double fallbackScale)

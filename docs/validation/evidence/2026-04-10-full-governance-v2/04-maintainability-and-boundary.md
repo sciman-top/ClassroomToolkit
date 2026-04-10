@@ -126,6 +126,32 @@
   - 擦除子域与记录/回放流程彻底分离，后续局部修复影响面更小
   - `PaintOverlayWindow.Ink.cs` 继续减负并提升可读性
 
+### 2.11 Ink export decomposition batch 3 (manifest utilities)
+
+- new file:
+  - `src/ClassroomToolkit.App/Ink/InkExportManifestUtilities.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Ink/InkExportService.cs`
+- action:
+  - 将导出清单（manifest）路径/键生成、读取、并发安全写入逻辑下沉到独立 utility
+  - `InkExportService` 保留同名薄封装方法，调用链保持不变
+- effect:
+  - `InkExportService` 继续减小职责面，导出主流程与清单 I/O 逻辑解耦
+  - 便于后续单独优化 manifest 一致性与并发策略
+
+### 2.12 Paint overlay decomposition batch 6 (stroke recording flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.StrokeRecording.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将运行期笔迹记录与掩码种子计算逻辑拆到独立 partial
+  - 记录入口、序列化字段与哈希算法保持不变
+- effect:
+  - `PaintOverlayWindow.Ink.cs` 进一步收敛为流程编排壳层
+  - 笔迹记录子域更易单独维护与测试
+
 ### 2.10 Paint overlay decomposition batch 5 (erase core flow)
 
 - new file:
@@ -138,6 +164,19 @@
 - effect:
   - `PaintOverlayWindow.Ink.cs` 体积进一步由 `559` -> `509` 行
   - 擦除逻辑与记录/渲染逻辑进一步解耦，后续演进边界更清晰
+
+### 2.11 Paint overlay decomposition batch 6 (stroke recording flow)
+
+- new file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.StrokeRecording.cs`
+- modified file:
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs`
+- action:
+  - 将运行时笔迹记录流程（刷子/形状记录、掩码种子计算）整体搬迁到独立 partial
+  - 保持原方法签名与调用路径不变
+- effect:
+  - `PaintOverlayWindow.Ink.cs` 体积进一步由 `509` -> `313` 行
+  - 记录逻辑与擦除/形状/跨页逻辑完成结构化解耦
 
 ## 3) Verification
 
@@ -162,7 +201,13 @@
 
 新增擦除核心流程拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
+新增 manifest utilities 拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增 stroke recording 拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
 新增擦除核心拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
+
+新增笔迹记录拆分后再次执行全门禁，结果仍为 PASS（`3213/3213`，契约 `25/25`，hotspot PASS）。
 
 ## 4) Boundary Notes
 
