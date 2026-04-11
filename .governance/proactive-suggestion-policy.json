@@ -15,7 +15,7 @@
     },
     "standard": {
       "max_suggestions": 2,
-      "max_words_per_suggestion": 36,
+      "max_words_per_suggestion": 30,
       "explanation_style": "brief_with_reason",
       "allow_topic_repetition": false
     }
@@ -27,6 +27,11 @@
     "pre_release_review": true,
     "simple_mechanical_change": false,
     "bugfix_mechanical": false,
+    "test_failure": true,
+    "ci_failure": true,
+    "core_config_change": true,
+    "pre_commit_check": true,
+    "compatibility_risk": true,
     "formatting_only": false
   },
   "standard_upgrade_guard": {
@@ -52,8 +57,8 @@
   "token_guard": {
     "prefer_mode_when_budget_tight": "lite",
     "force_silent_on_user_opt_out": true,
-    "max_total_suggestion_words_per_turn": 80,
-    "max_total_suggestion_words_per_issue": 240,
+    "max_total_suggestion_words_per_turn": 30,
+    "max_total_suggestion_words_per_issue": 120,
     "downgrade_to_silent_when_over_issue_budget": true
   },
   "response_shape": {

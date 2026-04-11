@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "thresholds": {
+    "min_first_pass_rate": 0.6,
+    "max_rework_after_clarification_rate": 0.35,
+    "max_average_response_token": 1800,
+    "max_single_task_token": 12000
+  },
+  "actions": {
+    "suggested_rollback_profile": {
+      "token_budget_mode": "standard",
+      "max_autonomous_iterations": 4,
+      "clarification_max_questions": 3
+    }
+  }
+}

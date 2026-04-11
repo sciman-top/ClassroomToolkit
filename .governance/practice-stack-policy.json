@@ -10,9 +10,9 @@
     "observability": "required",
     "progressive_delivery": "recommended",
     "hooks_ci_gates": "required",
-    "ssdf": "recommended",
-    "slsa": "recommended",
-    "sbom": "recommended",
-    "scorecard": "recommended"
+    "ssdf": "required",
+    "slsa": "required",
+    "sbom": "required",
+    "scorecard": "required"
   }
 }

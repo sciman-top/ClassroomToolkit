@@ -1,9 +1,13 @@
 {
   "schema_version": "1.0",
+  "enforcement": {
+    "block_on_warn": true,
+    "block_on_advisory": false
+  },
   "checks": {
     "ssdf": {
       "enabled": true,
-      "level": "recommended",
+      "level": "required",
       "evidence_any_of": [
         "docs/governance/ssdf-mapping.md",
         ".governance/ssdf-mapping.md",
@@ -12,7 +16,7 @@
     },
     "slsa": {
       "enabled": true,
-      "level": "recommended",
+      "level": "required",
       "evidence_any_of": [
         ".github/workflows/slsa.yml",
         ".github/workflows/slsa-provenance.yml",
@@ -21,7 +25,7 @@
     },
     "sbom": {
       "enabled": true,
-      "level": "recommended",
+      "level": "required",
       "evidence_any_of": [
         "scripts/quality/run-supply-chain-checks.ps1",
         ".github/workflows/sbom.yml",
@@ -30,7 +34,7 @@
     },
     "scorecard": {
       "enabled": true,
-      "level": "recommended",
+      "level": "required",
       "evidence_any_of": [
         ".github/workflows/scorecard.yml",
         "docs/governance/scorecard-policy.md"

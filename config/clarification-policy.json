@@ -1,0 +1,42 @@
+{
+  "enabled": true,
+  "max_clarifying_questions": 3,
+  "trigger_attempt_threshold": 2,
+  "trigger_on_conflict_signal": true,
+  "auto_resume_after_clarification": true,
+  "default_scenario": "bugfix",
+  "scenarios": {
+    "plan": {
+      "goal": "Align goals and boundaries before execution",
+      "question_prompts": [
+        "What is the primary business outcome for this round?",
+        "What is explicitly out of scope in this round?",
+        "What is the top acceptance criterion?"
+      ]
+    },
+    "requirement": {
+      "goal": "Turn ambiguous requirements into implementable input",
+      "question_prompts": [
+        "What is current behavior and expected behavior?",
+        "Which users/roles are affected?",
+        "Which compatibility constraints must be preserved?"
+      ]
+    },
+    "bugfix": {
+      "goal": "Locate root cause quickly and avoid wrong fixes",
+      "question_prompts": [
+        "What are stable repro steps and observed result?",
+        "What should the correct behavior be?",
+        "After which recent change did the issue start?"
+      ]
+    },
+    "acceptance": {
+      "goal": "Confirm delivery quality and release risk",
+      "question_prompts": [
+        "Which acceptance cases must all pass?",
+        "Which risks are acceptable vs not acceptable?",
+        "What is the rollback path if release fails?"
+      ]
+    }
+  }
+}

@@ -1,0 +1,468 @@
+﻿{
+    "version":  1,
+    "tool":  "repo-governance-hub",
+    "updated_at":  "2026-04-12T02:35:53",
+    "managed_count":  92,
+    "managed_files":  [
+                          {
+                              "path":  ".agents/plugins/marketplace.json",
+                              "source":  "source/project/ClassroomToolkit/custom/.agents/plugins/marketplace.json",
+                              "sha256":  "659A609E6C966703D84567987F660BA336BDB43A1FC0A547A8E2A2C0B99DC1A7"
+                          },
+                          {
+                              "path":  ".agents/skills/governance-refactor-safe/SKILL.md",
+                              "source":  "source/project/ClassroomToolkit/custom/.agents/skills/governance-refactor-safe/SKILL.md",
+                              "sha256":  "57CCE3A1EED77D2EF24038B08598E5BA566491497366EE69964EA79DB45171C3"
+                          },
+                          {
+                              "path":  ".agents/skills/governance-reuse-analyst/SKILL.md",
+                              "source":  "source/project/ClassroomToolkit/custom/.agents/skills/governance-reuse-analyst/SKILL.md",
+                              "sha256":  "4B0B54C7EA89D258D043E4D697D5EA006B68610AD556A4F230EE7D9CE55B79F1"
+                          },
+                          {
+                              "path":  ".codex/agents/planner.toml",
+                              "source":  "source/project/ClassroomToolkit/custom/.codex/agents/planner.toml",
+                              "sha256":  "3677A818F2122F7A92C056EE60F2B677A37DD9DA96C32C46279362AD4D37CA01"
+                          },
+                          {
+                              "path":  ".codex/agents/reuse-analyst.toml",
+                              "source":  "source/project/ClassroomToolkit/custom/.codex/agents/reuse-analyst.toml",
+                              "sha256":  "C5C12A4A9FFB9B5C7BDD62794AFFB215CBA9BC787EC10BCDAFCE03DF479FE935"
+                          },
+                          {
+                              "path":  ".codex/agents/reviewer.toml",
+                              "source":  "source/project/ClassroomToolkit/custom/.codex/agents/reviewer.toml",
+                              "sha256":  "93AB0EA0862DFF0E6064D05D5E2CEE1C5EA0FC949717B841EAE50E65736AEE80"
+                          },
+                          {
+                              "path":  ".codex/config.toml",
+                              "source":  "source/project/ClassroomToolkit/custom/.codex/config.toml",
+                              "sha256":  "5F1C20A889E33C74308264AE92E5850D1A12859278C8CCDCD7659708936868EA"
+                          },
+                          {
+                              "path":  ".github/workflows/quality-gate.yml",
+                              "source":  "source/project/ClassroomToolkit/custom/.github/workflows/quality-gate.yml",
+                              "sha256":  "661A9EA5F0A2A50282501033EEC0BE6DDC93571F5FD17823F43CD0C2119E97EA"
+                          },
+                          {
+                              "path":  ".github/workflows/quality-gates.yml",
+                              "source":  "source/project/ClassroomToolkit/custom/.github/workflows/quality-gates.yml",
+                              "sha256":  "04F9ED9D330D220C3785223C087894C9F17F6B55E4CAF9A24C605FE6272A3F5E"
+                          },
+                          {
+                              "path":  ".github/workflows/release-package.yml",
+                              "source":  "source/project/ClassroomToolkit/custom/.github/workflows/release-package.yml",
+                              "sha256":  "D0EF9E2C21BC827DE5E5B8E15C21E3D5081778D68F31E771E98DA0F6DB39B493"
+                          },
+                          {
+                              "path":  ".github/workflows/sbom.yml",
+                              "source":  "source/project/_common/custom/.github/workflows/sbom.yml",
+                              "sha256":  "B22A385917917273AB5E85F31CA7544AC54FFCC8268C6D1282A15D01B1A0F4B7"
+                          },
+                          {
+                              "path":  ".github/workflows/scorecard.yml",
+                              "source":  "source/project/_common/custom/.github/workflows/scorecard.yml",
+                              "sha256":  "BEECDA3C53827C304F4D91ACF0C14ED39C34171449DA35B38717B46D520B0241"
+                          },
+                          {
+                              "path":  ".github/workflows/slsa.yml",
+                              "source":  "source/project/_common/custom/.github/workflows/slsa.yml",
+                              "sha256":  "5D590D97AA27BBE2612B3BC7E6A9B766E1A88F389995CE2B9C5ECD71AAECEDEB"
+                          },
+                          {
+                              "path":  ".governance/anti-bloat-policy.json",
+                              "source":  "source/project/_common/custom/.governance/anti-bloat-policy.json",
+                              "sha256":  "60756DC85E191A080A2AFDE3264756A4B67B6C6E56C7F4DB062199C2F165A7C3"
+                          },
+                          {
+                              "path":  ".governance/external-baseline-policy.json",
+                              "source":  "source/project/_common/custom/.governance/external-baseline-policy.json",
+                              "sha256":  "9FFFDCA473B05573B4A6A4B25C70AEB2F74B5E49086C0023AB8398E7BD262A9E"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/CHECKLIST.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/CHECKLIST.md",
+                              "sha256":  "61943A7D82F50E0CA0F96E39BD4FA4383B213F7B27C8745B384AD9093BFC65E5"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/CONTRIBUTING.template.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/CONTRIBUTING.template.md",
+                              "sha256":  "A1D6B078AF90B6D36FE20A223BDD10A4CC3BB89611176E19B1AE93B2649935AA"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/ISSUE_TEMPLATE/bug_report.yml",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/ISSUE_TEMPLATE/bug_report.yml",
+                              "sha256":  "90E8E99203227D3E5160A054F1937342687FB23CF3EF8554726E9FA234ECA35F"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/ISSUE_TEMPLATE/feature_request.yml",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/ISSUE_TEMPLATE/feature_request.yml",
+                              "sha256":  "7625D6F106055A51AB61C75CD7770D4DCA87CC617C99864142E3730CBF801345"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/pull_request_template.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/pull_request_template.md",
+                              "sha256":  "8DD378C4F39404567AFAED179912F2594F5F68AC43D3100BBDD9B71FF2C229C3"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/README.template.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/README.template.md",
+                              "sha256":  "F72F1102561F9F772D8E52ADEAF090BF0FD061C9484F428FCD985D3F26151CDC"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/RELEASE_TEMPLATE.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/RELEASE_TEMPLATE.md",
+                              "sha256":  "FD21C56B207E40482AF80EE8DC21EFE0C187E7B4CD683524B016E8A763734DDD"
+                          },
+                          {
+                              "path":  ".governance/growth-pack/SECURITY.template.md",
+                              "source":  "source/project/_common/custom/.governance/growth-pack/SECURITY.template.md",
+                              "sha256":  "C295CE05D75257798B3909BCE1106B25770793FB89E3771DBF7AD7BCDB24BDF5"
+                          },
+                          {
+                              "path":  ".governance/practice-stack-policy.json",
+                              "source":  "source/project/_common/custom/.governance/practice-stack-policy.json",
+                              "sha256":  "0E44384F566843EEAE5F52F914D701AA624CF91FB06613B294404E0E68379B10"
+                          },
+                          {
+                              "path":  ".governance/proactive-suggestion-policy.json",
+                              "source":  "source/project/_common/custom/.governance/proactive-suggestion-policy.json",
+                              "sha256":  "26FE199FD5A6BEAA42C712D47C36CA150491E6D92D73D30E7B53E0E501E5EE1E"
+                          },
+                          {
+                              "path":  ".governance/release-profile.json",
+                              "source":  "source/project/ClassroomToolkit/custom/.governance/release-profile.json",
+                              "sha256":  "56C783E2454626AC6422A330CDD69B1603204500ACAE3C97C7FD42FC68128CA7"
+                          },
+                          {
+                              "path":  ".governance/skill-candidates/trigger-eval-runs.sample.jsonl",
+                              "source":  "source/project/_common/custom/.governance/skill-candidates/trigger-eval-runs.sample.jsonl",
+                              "sha256":  "B6C826D0482F837C045177BB6B7157DB71FDEF73FD748DAA2DEBA21DCB62AACF"
+                          },
+                          {
+                              "path":  ".governance/skill-promotion-policy.json",
+                              "source":  "source/project/_common/custom/.governance/skill-promotion-policy.json",
+                              "sha256":  "787E8D3D1E69BF4F03D6C1748CF259570DEB086F1E92059D08F8719613DA80D4"
+                          },
+                          {
+                              "path":  ".governance/subagent-trigger-policy.json",
+                              "source":  "source/project/_common/custom/.governance/subagent-trigger-policy.json",
+                              "sha256":  "5C235DE5E9A36FA85ADC552636218FC2A9A41E1CA7CE6D94DB580A9E482251AF"
+                          },
+                          {
+                              "path":  ".governance/templates/clarification-trigger.md",
+                              "source":  "source/project/_common/custom/.governance/templates/clarification-trigger.md",
+                              "sha256":  "06481554BF5BBED78A9076FE0DD542D734E56809EFE5D3769936554E5E855F8D"
+                          },
+                          {
+                              "path":  ".governance/templates/evidence-minimal.md",
+                              "source":  "source/project/_common/custom/.governance/templates/evidence-minimal.md",
+                              "sha256":  "2811999DFE40CA838E8ADBE04FFB4E6813326029B251FD9434E66B7C3ABEFA21"
+                          },
+                          {
+                              "path":  ".governance/templates/lite-response.md",
+                              "source":  "source/project/_common/custom/.governance/templates/lite-response.md",
+                              "sha256":  "FE3AD0DE9AB0C67B66FA69B80C5D46841DD613DCC3E1E5EB67C24163519C06AA"
+                          },
+                          {
+                              "path":  ".governance/templates/task-snapshot-minimal.md",
+                              "source":  "source/project/_common/custom/.governance/templates/task-snapshot-minimal.md",
+                              "sha256":  "88B97CAED00655BA920DF033C28FE833E85907402AB3F9C40461F3A2561F3E8C"
+                          },
+                          {
+                              "path":  ".governance/token-balance-policy.json",
+                              "source":  "source/project/_common/custom/.governance/token-balance-policy.json",
+                              "sha256":  "C9EC85889AC951C3E630D95CF64A042F09EEBFC6AFF3EBED70F0D0A0C6A96FD2"
+                          },
+                          {
+                              "path":  ".governance/token-saver-policy.json",
+                              "source":  "source/project/_common/custom/.governance/token-saver-policy.json",
+                              "sha256":  "C5D748C9134537E9F45CA9F926F800A3940C254616D54A333883D8D937A04933"
+                          },
+                          {
+                              "path":  ".governance/tracked-files-policy.json",
+                              "source":  "source/project/ClassroomToolkit/custom/.governance/tracked-files-policy.json",
+                              "sha256":  "101AE6C8D423613D33E8C90D2613A473CDB8BD7F1FD417E0FACF47BAED67B1B5"
+                          },
+                          {
+                              "path":  "AGENTS.md",
+                              "source":  "source/project/ClassroomToolkit/AGENTS.md",
+                              "sha256":  "49E41E932692720B5FF50ECFB36112E51A232E8E65C7387A3B3B3D7A56229D6B"
+                          },
+                          {
+                              "path":  "CLAUDE.md",
+                              "source":  "source/project/ClassroomToolkit/CLAUDE.md",
+                              "sha256":  "E2C2653D24C5DE2F55F4DDEFCB1347FE7383E8A6D5CE43E3AC0BD278564ABB82"
+                          },
+                          {
+                              "path":  "config/clarification-policy.json",
+                              "source":  "source/project/_common/custom/config/clarification-policy.json",
+                              "sha256":  "D3C556822D71F40869C198BB26880ECFA8CE5840CF5D774AD763C7A0DC857C2F"
+                          },
+                          {
+                              "path":  "docs/governance/sbom-policy.md",
+                              "source":  "source/project/_common/custom/docs/governance/sbom-policy.md",
+                              "sha256":  "3CA7B8654546522E688B828C3C9CD1D1DA8591C321232D08FE99C78A9CE04D78"
+                          },
+                          {
+                              "path":  "docs/governance/scorecard-policy.md",
+                              "source":  "source/project/_common/custom/docs/governance/scorecard-policy.md",
+                              "sha256":  "0F1AE25A2C0702B7BA7194FDF201C6B68EAA64BE25B551399474BA3297812923"
+                          },
+                          {
+                              "path":  "docs/governance/skill-trigger-eval-runbook.md",
+                              "source":  "source/project/_common/custom/docs/governance/skill-trigger-eval-runbook.md",
+                              "sha256":  "479E6AD7E14EDB89ABB54B5BE10CA9D5BF0910743E2970223491A96704753B95"
+                          },
+                          {
+                              "path":  "docs/governance/slsa-target-level.md",
+                              "source":  "source/project/_common/custom/docs/governance/slsa-target-level.md",
+                              "sha256":  "EC2EBEE862A37970170E1C9B59FD7086D06F7627A1DA971A77B009CF5179BE06"
+                          },
+                          {
+                              "path":  "docs/governance/ssdf-mapping.md",
+                              "source":  "source/project/_common/custom/docs/governance/ssdf-mapping.md",
+                              "sha256":  "FBA3048290C923E65EDC2F8246DD20FA350A27BCDED345969EB23550AD8403F5"
+                          },
+                          {
+                              "path":  "docs/PLANS.md",
+                              "source":  "source/project/ClassroomToolkit/custom/docs/PLANS.md",
+                              "sha256":  "545C797130061F4469C975074AE832E4BE428E6C60EEF0E929B8154C3DE45093"
+                          },
+                          {
+                              "path":  "docs/runbooks/release-prevention-checklist.md",
+                              "source":  "source/project/ClassroomToolkit/custom/docs/runbooks/release-prevention-checklist.md",
+                              "sha256":  "0884353C4A46BA4B790258B401EA8FBDAFFC1AB1BE7389D8B2E1FD059CAA2C82"
+                          },
+                          {
+                              "path":  "GEMINI.md",
+                              "source":  "source/project/ClassroomToolkit/GEMINI.md",
+                              "sha256":  "8D37518621115B34D17287212FEA0B846D027472FC73669A8C409FB1368A2A73"
+                          },
+                          {
+                              "path":  "plugins/repo-governance-hub-internal/.codex-plugin/plugin.json",
+                              "source":  "source/project/ClassroomToolkit/custom/plugins/repo-governance-hub-internal/.codex-plugin/plugin.json",
+                              "sha256":  "3CBDC5626A39C55B3D61DAE8567C9850FB25E374D8A7FA3119A1A65058B69068"
+                          },
+                          {
+                              "path":  "plugins/repo-governance-hub-internal/skills/governance-refactor-safe/SKILL.md",
+                              "source":  "source/project/ClassroomToolkit/custom/plugins/repo-governance-hub-internal/skills/governance-refactor-safe/SKILL.md",
+                              "sha256":  "E56E4C122DB3DB9F9A82B1A024708B085872C2F37EDF07EA142FE0489E38D82B"
+                          },
+                          {
+                              "path":  "plugins/repo-governance-hub-internal/skills/governance-reuse-analyst/SKILL.md",
+                              "source":  "source/project/ClassroomToolkit/custom/plugins/repo-governance-hub-internal/skills/governance-reuse-analyst/SKILL.md",
+                              "sha256":  "F65AB56780A55B7FCEA980B4280B26C52C62939CEAB285C17B85132D405D54F7"
+                          },
+                          {
+                              "path":  "scripts/governance/apply-growth-pack.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/apply-growth-pack.ps1",
+                              "sha256":  "3531C45D53E7B42DDFB01F9DFAA55EFE77C5EA7FA5E727BB8FF0CF25AD017A38"
+                          },
+                          {
+                              "path":  "scripts/governance/backfill-evidence-template-fields.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/backfill-evidence-template-fields.ps1",
+                              "sha256":  "905BF5EB1F8898DE9C69619836BAE5859E1D3753B878DA16255162C4A3930DA2"
+                          },
+                          {
+                              "path":  "scripts/governance/check-anti-bloat-budgets.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/check-anti-bloat-budgets.ps1",
+                              "sha256":  "166CE83FC8B2F14A8DFDC63D29912C6F394DE19A551D05437FFA3B3948572C4D"
+                          },
+                          {
+                              "path":  "scripts/governance/check-evidence-completeness.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/check-evidence-completeness.ps1",
+                              "sha256":  "343DBA5F3FAF99C5F3BA73D9B8C514A5901779240FCD9AFF570A1ED69FD246BD"
+                          },
+                          {
+                              "path":  "scripts/governance/check-external-baselines.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/check-external-baselines.ps1",
+                              "sha256":  "E3AA32A00F656DA0116BA57E9B5E21195B1F3BBA4C6121952C14A571BF9801CB"
+                          },
+                          {
+                              "path":  "scripts/governance/check-practice-stack.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/check-practice-stack.ps1",
+                              "sha256":  "B1AFBCBE536C366D584E906EC5BC66D926B6C459C2F37FA082C06848F0855FAA"
+                          },
+                          {
+                              "path":  "scripts/governance/check-skill-trigger-evals.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/check-skill-trigger-evals.ps1",
+                              "sha256":  "1BDC3C148DEF3A06E7B3D49A0057DB0AE795CD59D7365FA9C9FAFAD91FAE6046"
+                          },
+                          {
+                              "path":  "scripts/governance/check-token-balance.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/check-token-balance.ps1",
+                              "sha256":  "42F76BB375D2A0AFD4D2A5F359E70A2F1B0203E0959BA33607852B662A6BD289"
+                          },
+                          {
+                              "path":  "scripts/governance/check-tracked-files.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/check-tracked-files.ps1",
+                              "sha256":  "498AF7E2074F20CF7BB61A60A8F1A2FC5A4B7D8D18AC409531A5F7DCCB539B61"
+                          },
+                          {
+                              "path":  "scripts/governance/check-update-triggers.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/check-update-triggers.ps1",
+                              "sha256":  "B11668F44AD67A67E935EE2BCA833BF8F6CFA5610C179CA630589349486CB80E"
+                          },
+                          {
+                              "path":  "scripts/governance/check-waiver-health.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/check-waiver-health.ps1",
+                              "sha256":  "712CBFED1D877F52117A08F53CE25959E80770F5FF6A0FAB4DA9EE51B6088F11"
+                          },
+                          {
+                              "path":  "scripts/governance/promote-skill-candidates.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/promote-skill-candidates.ps1",
+                              "sha256":  "95EF52C0776C60236B122D06F4C55D0DF4E977094EDB794C2F7764BC4C253712"
+                          },
+                          {
+                              "path":  "scripts/governance/register-skill-candidate.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/register-skill-candidate.ps1",
+                              "sha256":  "671C5482CF368557624C4B60BBB04C4DF2584C7E3374199705D01580C5E15BCA"
+                          },
+                          {
+                              "path":  "scripts/governance/register-skill-trigger-eval-run.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/register-skill-trigger-eval-run.ps1",
+                              "sha256":  "4FC38E09DD9532696475A8AED2582E6AACF5B633FFEF142FA768383F42262DF2"
+                          },
+                          {
+                              "path":  "scripts/governance/report-growth-readiness.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/report-growth-readiness.ps1",
+                              "sha256":  "7F3731AF89DB949F237D9E58F4B334E0CAF5F58F3DC97563143C43656138B2E9"
+                          },
+                          {
+                              "path":  "scripts/governance/run-doctor-endstate.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-doctor-endstate.ps1",
+                              "sha256":  "6EBB23465BFA468DD629920B985B21B9972CB5B3101D60578E448A9EA22EA383"
+                          },
+                          {
+                              "path":  "scripts/governance/run-endstate-loop.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-endstate-loop.ps1",
+                              "sha256":  "5D8387D61790B77E16A00872CC845CDC0B0E3F4FFC8440968935681B45A48DA5"
+                          },
+                          {
+                              "path":  "scripts/governance/run-monthly-policy-review.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-monthly-policy-review.ps1",
+                              "sha256":  "05958334120C56D025E75565F383A02B6D7A73D5320C01D5E89E8077F0618BD3"
+                          },
+                          {
+                              "path":  "scripts/governance/run-project-governance-cycle.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-project-governance-cycle.ps1",
+                              "sha256":  "D139D0A0F4A832A679DC903CCE5DC898AE5A1F8E3A03592BEE2477685AEC069C"
+                          },
+                          {
+                              "path":  "scripts/governance/run-recurring-review.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-recurring-review.ps1",
+                              "sha256":  "9A43E7847A3A6DE68FFE829160CCE7CAD277E406240A58BFA833586FA970A75F"
+                          },
+                          {
+                              "path":  "scripts/governance/run-target-autopilot.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/governance/run-target-autopilot.ps1",
+                              "sha256":  "D03ECD8D6E0332D6EB013ED0E47562720FEC5C4498906E03B1D6B513CE2D3439"
+                          },
+                          {
+                              "path":  "scripts/governance/verify-growth-pack.ps1",
+                              "source":  "source/project/_common/custom/scripts/governance/verify-growth-pack.ps1",
+                              "sha256":  "34626E6FC1CE10DE2F1D2057C60E2001916C69A705CF61EBA362D120F5DC28AC"
+                          },
+                          {
+                              "path":  "scripts/quality/check-hotspot-line-budgets.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/quality/check-hotspot-line-budgets.ps1",
+                              "sha256":  "B1DF0F576F0B851341DD437E1A7C92A110D897B6621ADB20BDFDE454F16D432D"
+                          },
+                          {
+                              "path":  "scripts/quality/hotspot-line-budgets.json",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/quality/hotspot-line-budgets.json",
+                              "sha256":  "989A8D4E574240F623D584F44F0344FDF79976755DF90E0B6F5EECF3BF53990D"
+                          },
+                          {
+                              "path":  "scripts/quality/run-local-quality-gates.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/quality/run-local-quality-gates.ps1",
+                              "sha256":  "28549262A75DE037EFAE074E11359CD28FF1E1FACD8D9FA28C598AC65B92F73A"
+                          },
+                          {
+                              "path":  "scripts/quality/run-supply-chain-checks.ps1",
+                              "source":  "source/project/_common/custom/scripts/quality/run-supply-chain-checks.ps1",
+                              "sha256":  "B13040D532035A9DD25985993F2868E8E4152A18380E10EEB5DDAFD3208CDC33"
+                          },
+                          {
+                              "path":  "scripts/release/clean-release-artifacts.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/clean-release-artifacts.ps1",
+                              "sha256":  "CB4FD30D014070F0BDC2909D160C75A46627F4648939DE3B3CB6DA28F4F4E091"
+                          },
+                          {
+                              "path":  "scripts/release/preflight-check.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/preflight-check.ps1",
+                              "sha256":  "347D74C9D07F952B17F525B520F61DFF4C205FAE3724037135B301ADB2AC330D"
+                          },
+                          {
+                              "path":  "scripts/release/prepare-distribution.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/prepare-distribution.ps1",
+                              "sha256":  "6046AA3AD0ACC6096344FF616AE559D576AFF399B8F644CDC6FEA237429F3631"
+                          },
+                          {
+                              "path":  "scripts/release/release-config.json",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/release-config.json",
+                              "sha256":  "C560292DC6EAA907ECEEB6E5C86702871907C5A40280A2FA843DD4C635D6A4B2"
+                          },
+                          {
+                              "path":  "scripts/release/templates/bootstrap-runtime.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/templates/bootstrap-runtime.ps1",
+                              "sha256":  "9C0BE62D35A442386332EC0241AF087E0B211787488225654187DF7E40F107AA"
+                          },
+                          {
+                              "path":  "scripts/release/templates/release-notes.txt",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/templates/release-notes.txt",
+                              "sha256":  "8D8E2D31760685D486AE173D4597220D7767D415CBC542921C354207143501F5"
+                          },
+                          {
+                              "path":  "scripts/release/templates/start-standard.bat",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/templates/start-standard.bat",
+                              "sha256":  "7369D59FEBD92AB925D3EB900BE42D0DCE5069731ADB49396EB8F8CCE1E2A4A5"
+                          },
+                          {
+                              "path":  "scripts/release/templates/user-guide-offline.md",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/templates/user-guide-offline.md",
+                              "sha256":  "76699BC7DF4A150BEAF634ED07DD1AE96070A04939AACAAA1CE4DFFBBC0CC1C5"
+                          },
+                          {
+                              "path":  "scripts/release/templates/user-guide-standard.md",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/release/templates/user-guide-standard.md",
+                              "sha256":  "D8D017361DB9A9032933D4194ADBD02468249D8ADF1246DBB01B065D6272F72A"
+                          },
+                          {
+                              "path":  "scripts/validation/resolve-stable-profile.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/validation/resolve-stable-profile.ps1",
+                              "sha256":  "0815656401F56AEBED20A52CA0411C18226A3C0E957A82EC5AA7B67A4F7DA456"
+                          },
+                          {
+                              "path":  "scripts/validation/run-stable-tests.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/validation/run-stable-tests.ps1",
+                              "sha256":  "A0F171EE4AC39DB659364F41DA1B6D0F5BEAC8C3CC74E642A081ED7199E6C19C"
+                          },
+                          {
+                              "path":  "scripts/validation/stable-test-filters.json",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/validation/stable-test-filters.json",
+                              "sha256":  "208F13C2BFFF6BD6796BC910425C8323E95C472ECF99534752084F2284B2D342"
+                          },
+                          {
+                              "path":  "scripts/validation/validate-stable-test-config.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/scripts/validation/validate-stable-test-config.ps1",
+                              "sha256":  "2047CE19C2E9DC612B884F58CCEF6D09124A5059C56BDF07BEBF65C8B2903C87"
+                          },
+                          {
+                              "path":  "tools/browser-session/README.md",
+                              "source":  "source/project/ClassroomToolkit/custom/tools/browser-session/README.md",
+                              "sha256":  "39CF2D49543C3F02E3BABA0E659FBD80CB6A592EA320BFDD8381E1CC0A954989"
+                          },
+                          {
+                              "path":  "tools/browser-session/start-browser-session.bat",
+                              "source":  "source/project/ClassroomToolkit/custom/tools/browser-session/start-browser-session.bat",
+                              "sha256":  "928150098A1F274A064C38FA92D2CD6066DDB3D1A080EB1B3777EF4099AF4EFB"
+                          },
+                          {
+                              "path":  "tools/browser-session/start-browser-session.ps1",
+                              "source":  "source/project/ClassroomToolkit/custom/tools/browser-session/start-browser-session.ps1",
+                              "sha256":  "20A39B1BF2DB9D08BA6D8337CCA14CDBDAB4AD59559D28788460399395A38444"
+                          }
+                      ]
+}

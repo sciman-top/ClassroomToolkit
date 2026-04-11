@@ -1,0 +1,45 @@
+name: slsa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: Emit provenance placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build source archive
+        run: |
+          tar -czf source.tar.gz .
+
+      - name: Compute subject digest
+        id: hash
+        run: |
+          DIGEST=$(sha256sum source.tar.gz | awk '{print $1}')
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Write provenance note
+        run: |
+          cat > provenance-note.txt <<EOF
+          phase=observe
+          framework=SLSA
+          artifact=source.tar.gz
+          sha256=${{ steps.hash.outputs.digest }}
+          generated_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          EOF
+
+      - name: Upload provenance note
+        uses: actions/upload-artifact@v4
+        with:
+          name: slsa-provenance-note
+          path: provenance-note.txt

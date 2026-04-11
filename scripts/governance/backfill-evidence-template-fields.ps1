@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$EvidenceDir = "docs/change-evidence",
   [string]$TemplateFile = "docs/change-evidence/template.md",
   [switch]$DryRun
@@ -58,7 +58,7 @@ $defaultValues = @(
   "BACKFILL-LEGACY-EVIDENCE-2026-04-03",
   "legacy-governance-evidence",
   "E:/CODE/ClassroomToolkit/docs/change-evidence",
-  "E:/CODE/governance-kit/source/project/ClassroomToolkit/*",
+  "E:/CODE/repo-governance-hub/source/project/ClassroomToolkit/*",
   "2026-04-03-evidence-backfill",
   "Low(documentation backfill only)",
   "backfill-evidence-template-fields.ps1",
@@ -105,3 +105,5 @@ Write-Host ("[backfill] files_total={0} files_changed={1} dry_run={2}" -f $files
 if (-not $DryRun) {
   exit 0
 }
+
+

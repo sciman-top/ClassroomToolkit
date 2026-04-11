@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$RepoRoot = ".",
   [string]$GovernanceKitRoot = "",
   [string]$IssueId = "project-governance-cycle-default",
@@ -42,7 +42,7 @@ function Resolve-KitRoot {
     if ($null -ne $resolved) { return $resolved.Path }
   }
 
-  throw "Cannot resolve governance-kit root. Set git config governance.kitRoot or pass -GovernanceKitRoot."
+  throw "Cannot resolve repo-governance-hub root. Set git config governance.kitRoot or pass -GovernanceKitRoot."
 }
 
 $kitRoot = Resolve-KitRoot -ProvidedPath $GovernanceKitRoot
@@ -68,3 +68,4 @@ if ($ShowScope.IsPresent) { $args += "-ShowScope" }
 if ($LASTEXITCODE -ne 0) {
   throw "run-project-governance-cycle failed with exit code $LASTEXITCODE"
 }
+

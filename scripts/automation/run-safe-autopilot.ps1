@@ -1,6 +1,6 @@
 param(
     [string]$RepoRoot = ".",
-    [string]$GovernanceKitRoot = "E:/CODE/governance-kit",
+    [string]$GovernanceKitRoot = "E:/CODE/repo-governance-hub",
     [string]$CodexCommand = "codex",
     [ValidateSet("quick", "full")]
     [string]$QualityProfile = "quick",
@@ -276,7 +276,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoPath "scripts/quality/run-local
 }
 
 if (-not (Test-Path -LiteralPath (Join-Path $kitPath "scripts/run-project-governance-cycle.ps1"))) {
-    throw "Missing required script: E:/CODE/governance-kit/scripts/run-project-governance-cycle.ps1"
+    throw ("Missing required script: " + (Join-Path $kitPath "scripts/run-project-governance-cycle.ps1"))
 }
 
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null

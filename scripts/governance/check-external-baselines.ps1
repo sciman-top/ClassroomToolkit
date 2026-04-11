@@ -11,6 +11,10 @@ $policyPath = Join-Path $repoPath ".governance\external-baseline-policy.json"
 
 $defaultPolicy = [pscustomobject]@{
   schema_version = "1.0"
+  enforcement = [pscustomobject]@{
+    block_on_warn = $false
+    block_on_advisory = $false
+  }
   checks = [pscustomobject]@{
     ssdf = [pscustomobject]@{
       enabled = $true
@@ -167,6 +171,18 @@ if ($warnCount -gt 0) {
   $overall = "ADVISORY"
 }
 
+$blockOnWarn = $false
+$blockOnAdvisory = $false
+if ($null -ne $policy -and $null -ne $policy.PSObject.Properties["enforcement"] -and $null -ne $policy.enforcement) {
+  if ($null -ne $policy.enforcement.PSObject.Properties["block_on_warn"]) {
+    $blockOnWarn = [bool]$policy.enforcement.block_on_warn
+  }
+  if ($null -ne $policy.enforcement.PSObject.Properties["block_on_advisory"]) {
+    $blockOnAdvisory = [bool]$policy.enforcement.block_on_advisory
+  }
+}
+$shouldFailGate = ($blockOnWarn -and $warnCount -gt 0) -or ($blockOnAdvisory -and $advisoryCount -gt 0)
+
 $result = [pscustomobject]@{
   schema_version = "1.0"
   generated_at = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
@@ -178,6 +194,11 @@ $result = [pscustomobject]@{
     pass_count = $passCount
     advisory_count = $advisoryCount
     warn_count = $warnCount
+    should_fail_gate = $shouldFailGate
+  }
+  enforcement = [pscustomobject]@{
+    block_on_warn = $blockOnWarn
+    block_on_advisory = $blockOnAdvisory
   }
   checks = @($items)
 }
@@ -193,7 +214,9 @@ Write-Host ("enabled_check_count={0}" -f $result.summary.enabled_check_count)
 Write-Host ("pass_count={0}" -f $result.summary.pass_count)
 Write-Host ("advisory_count={0}" -f $result.summary.advisory_count)
 Write-Host ("warn_count={0}" -f $result.summary.warn_count)
+Write-Host ("should_fail_gate={0}" -f $result.summary.should_fail_gate)
 foreach ($item in $result.checks) {
   Write-Host ("[{0}] id={1} level={2} reason={3}" -f $item.status, $item.id, $item.level, $item.reason)
 }
+if ($shouldFailGate) { exit 1 }
 exit 0

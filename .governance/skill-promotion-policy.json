@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "threshold_count": 3,
+  "window_days": 14,
+  "cooldown_days": 14,
+  "max_promotions_per_run": 3,
+  "event_relative_path": ".governance/skill-candidates/events.jsonl",
+  "registry_relative_path": ".governance/skill-candidates/promotion-registry.json",
+  "skills_root": "E:/CODE/skills-manager",
+  "overrides_relative_path": "overrides",
+  "auto_run_skills_manager_gates": true,
+  "collapse_suffix_pattern": "^(.*-\\d{8})-[a-z]$",
+  "exclude_signature_patterns": [
+    "(?i)^autopilot-utf8-smoke"
+  ],
+  "summary_relative_path": ".governance/skill-candidates/last-promotion-summary.json",
+  "write_summary_file": true,
+  "require_user_ack": true,
+  "optimize_existing_without_ack": true,
+  "user_ack_env_var": "SKILL_PROMOTION_ACK",
+  "user_ack_expected_value": "YES",
+  "create_min_unique_repos": 2,
+  "optimize_min_new_variants": 1,
+  "require_trigger_eval_for_create": true,
+  "auto_register_trigger_eval_from_autopilot": true,
+  "trigger_eval_summary_relative_path": ".governance/skill-candidates/trigger-eval-summary.json",
+  "trigger_eval_min_validation_pass_rate": 0.7,
+  "trigger_eval_max_validation_false_trigger_rate": 0.2,
+  "block_create_when_eval_missing": true
+}
