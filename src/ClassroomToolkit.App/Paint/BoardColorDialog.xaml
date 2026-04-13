@@ -19,7 +19,7 @@
 
         <StackPanel Margin="14">
             <Grid Margin="0,0,0,10">
-                <TextBlock Text="颜色" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                <TextBlock Text="颜色" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
                 <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>

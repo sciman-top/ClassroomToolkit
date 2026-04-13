@@ -41,7 +41,7 @@
                     <Border Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
                         <TextBlock x:Name="SummaryText"
                                    FontWeight="SemiBold"
-                                   FontSize="14"
+                                   FontSize="{StaticResource FontSize_Title_Dialog}"
                                    Foreground="{StaticResource Brush_Primary}"
                                    TextWrapping="Wrap"/>
                     </Border>
@@ -57,7 +57,7 @@
                                      Background="{StaticResource Brush_InputBackground}"
                                      Foreground="{StaticResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
-                                     FontSize="12"
+                                     FontSize="{StaticResource FontSize_Body_S}"
                                      Margin="0,8,0,0"
                                      BorderThickness="0"/>
                         </TabItem>
@@ -71,7 +71,7 @@
                                      Background="{StaticResource Brush_InputBackground}"
                                      Foreground="{StaticResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
-                                     FontSize="12"
+                                     FontSize="{StaticResource FontSize_Body_S}"
                                      Margin="0,8,0,0"
                                      BorderThickness="0"/>
                         </TabItem>
@@ -95,7 +95,7 @@
                         <Button Content="恢复提示" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="Auto" MinWidth="132" Margin="0,0,8,0" Click="OnResetStartupWarningsClick" />
                         <Button Content="导出包" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="104" Margin="0,0,8,0" Click="OnExportBundleClick" />
                         <Button Content="复制结果" Style="{StaticResource Style_ManagementShellFooterActionButton}" Width="88" Margin="0,0,8,0" Click="OnCopyClick" />
-                        <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="84" Height="30" Click="OnCloseClick" />
+                        <Button Content="关闭" Style="{StaticResource Style_PrimaryButton}" Width="84" Height="{StaticResource Size_Button_Action_Height_Compact}" Click="OnCloseClick" />
                     </StackPanel>
                 </Grid>
             </Border>

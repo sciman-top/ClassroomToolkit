@@ -16,7 +16,7 @@
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
         </Border.Effect>
         <StackPanel>
-            <TextBlock Text="颜色" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,0,0,4"/>
+            <TextBlock Text="颜色" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,0,0,4"/>
             <Border Background="{StaticResource Brush_Surface_Primary}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
             </Border>
