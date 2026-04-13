@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Xml.Linq;
 
 namespace ClassroomToolkit.Tests.App;
 
@@ -7,13 +8,15 @@ public sealed class WidgetStylesContractTests
     [Fact]
     public void WidgetStyles_ShouldExposeStageAShellStyleKeys()
     {
-        var xaml = File.ReadAllText(GetWidgetStylesPath());
+        var document = LoadWidgetStyles();
 
         var requiredKeys = new[]
         {
+            "Style_ButtonFamilyBase",
             "Style_PrimaryButton",
             "Style_SecondaryButton",
             "Style_DangerButton",
+            "Style_ToggleButton",
             "Style_IconButton",
             "Style_IconButton_Active",
             "Style_WorkShellHeroTileButton",
@@ -26,8 +29,12 @@ public sealed class WidgetStylesContractTests
             "Style_ManagementThumbnailListViewItem",
             "Style_DialogShellWindowBorder",
             "Style_DialogShellTitleBar",
+            "Style_DialogShellTitleText",
             "Style_ManagementShellWindowBorder",
+            "Style_ManagementShellTitleBar",
+            "Style_ManagementShellTitleText",
             "Style_WorkShellWindowBorder",
+            "Style_WorkShellTitleBar",
             "Style_OverlayShellCloseButton",
             "Style_OverlayShellSideRail",
             "Style_OverlayShellHintBadge",
@@ -35,41 +42,45 @@ public sealed class WidgetStylesContractTests
             "Style_BubbleShellItem",
             "Style_BubbleShellSelectedItem",
             "Style_FullscreenShellSideRail",
-            "Style_FullscreenShellHintBadge"
+            "Style_FullscreenShellHintBadge",
+            "Style_ListViewItem_SelectionUnified",
+            "Style_ListBoxItem_SelectionUnified",
+            "Style_CleanListBox"
         };
 
         foreach (var key in requiredKeys)
         {
-            xaml.Should().Contain($"x:Key=\"{key}\"");
+            HasResourceKey(document, key).Should().BeTrue();
         }
     }
 
     [Fact]
     public void WidgetStyles_ShouldReferenceStageASemanticTokens()
     {
-        var xaml = File.ReadAllText(GetWidgetStylesPath());
+        var document = LoadWidgetStyles();
 
-        var requiredTokens = new[]
-        {
-            "Brush_Surface_Primary",
-            "Brush_Surface_Secondary",
-            "Brush_InputBackground",
-            "Brush_OverlayMask",
-            "Brush_Border_Subtle",
-            "Brush_Border_Strong",
-            "Brush_Border_Focus",
-            "Brush_Teaching",
-            "Gradient_Primary_Subtle",
-            "Gradient_Teaching_Subtle",
-            "Shadow_Dialog",
-            "Shadow_Floating",
-            "Shadow_Glow_Primary"
-        };
+        StyleUsesStaticResource(document, "Style_DialogShellWindowBorder", "Background", "Brush_AppBackground").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_DialogShellWindowBorder", "BorderBrush", "Brush_Border_Subtle").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_OverlayShellSideRail", "Background", "Brush_OverlayMask").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "Background", "Brush_OverlayMask").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "BorderBrush", "Brush_Border_Strong").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ButtonFamilyBase", "Padding", "Spacing_Control_ButtonFamily").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_SecondaryButton", "Padding", "Spacing_Control_ButtonFamily_Compact").Should().BeTrue();
+        TargetTypeStyleUsesStaticResource(document, "MenuItem", "Padding", "Spacing_Control_MenuItem").Should().BeTrue();
+    }
 
-        foreach (var token in requiredTokens)
-        {
-            xaml.Should().Contain(token, $"WidgetStyles should start consuming Stage A semantic token '{token}'");
-        }
+    [Fact]
+    public void WidgetStyles_ShouldApplyControlSpacingTokensInControlStyles()
+    {
+        var document = LoadWidgetStyles();
+
+        StyleUsesStaticResource(document, "Style_ButtonFamilyBase", "Padding", "Spacing_Control_ButtonFamily").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_SecondaryButton", "Padding", "Spacing_Control_ButtonFamily_Compact").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ListViewItem_SelectionUnified", "Padding", "Spacing_Control_ListItem").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ListBoxItem_SelectionUnified", "Padding", "Spacing_Control_ListItem").Should().BeTrue();
+        TargetTypeStyleUsesStaticResource(document, "TreeViewItem", "Padding", "Spacing_Control_TreeItem").Should().BeTrue();
+        TargetTypeStyleUsesStaticResource(document, "GridViewColumnHeader", "Padding", "Spacing_Control_Header").Should().BeTrue();
+        TargetTypeStyleUsesStaticResource(document, "TabItem", "Padding", "Spacing_Control_TabItem").Should().BeTrue();
     }
 
     private static string GetWidgetStylesPath()
@@ -80,5 +91,68 @@ public sealed class WidgetStylesContractTests
             "Assets",
             "Styles",
             "WidgetStyles.xaml");
+    }
+
+    private static XDocument LoadWidgetStyles() => XDocument.Load(GetWidgetStylesPath());
+
+    private static bool HasResourceKey(XDocument document, string key)
+    {
+        return document
+            .Descendants()
+            .Any(node => string.Equals((string?)node.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml")), key, StringComparison.Ordinal));
+    }
+
+    private static bool StyleUsesStaticResource(XDocument document, string styleKey, string propertyName, string resourceKey)
+    {
+        var style = document
+            .Descendants()
+            .Where(node => string.Equals(node.Name.LocalName, "Style", StringComparison.Ordinal))
+            .FirstOrDefault(node => string.Equals((string?)node.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml")), styleKey, StringComparison.Ordinal));
+        if (style is null)
+        {
+            return false;
+        }
+
+        return style
+            .Elements()
+            .Where(node => string.Equals(node.Name.LocalName, "Setter", StringComparison.Ordinal))
+            .Any(setter =>
+                string.Equals((string?)setter.Attribute("Property"), propertyName, StringComparison.Ordinal) &&
+                string.Equals(GetStaticResourceKey(setter), resourceKey, StringComparison.Ordinal));
+    }
+
+    private static bool TargetTypeStyleUsesStaticResource(XDocument document, string targetType, string propertyName, string resourceKey)
+    {
+        var styles = document
+            .Descendants()
+            .Where(node => string.Equals(node.Name.LocalName, "Style", StringComparison.Ordinal))
+            .Where(node => string.Equals((string?)node.Attribute("TargetType"), targetType, StringComparison.Ordinal) ||
+                           string.Equals((string?)node.Attribute("TargetType"), "{x:Type " + targetType + "}", StringComparison.Ordinal));
+
+        return styles
+            .SelectMany(style => style.Elements().Where(node => string.Equals(node.Name.LocalName, "Setter", StringComparison.Ordinal)))
+            .Any(setter =>
+                string.Equals((string?)setter.Attribute("Property"), propertyName, StringComparison.Ordinal) &&
+                string.Equals(GetStaticResourceKey(setter), resourceKey, StringComparison.Ordinal));
+    }
+
+    private static string? GetStaticResourceKey(XElement setter)
+    {
+        var inlineValue = (string?)setter.Attribute("Value");
+        if (!string.IsNullOrWhiteSpace(inlineValue))
+        {
+            var trimmed = inlineValue.Trim();
+            const string prefix = "{StaticResource ";
+            if (trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
+            {
+                return trimmed.Substring(prefix.Length, trimmed.Length - prefix.Length - 1).Trim();
+            }
+        }
+
+        var nestedStaticResource = setter
+            .Descendants()
+            .FirstOrDefault(node => string.Equals(node.Name.LocalName, "StaticResource", StringComparison.Ordinal));
+
+        return (string?)nestedStaticResource?.Attribute("ResourceKey");
     }
 }

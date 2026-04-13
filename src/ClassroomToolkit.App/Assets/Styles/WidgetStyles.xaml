@@ -8,9 +8,9 @@
          ======================================== -->
 
     <!-- ========== Density Tokens ========== -->
-    <sys:Double x:Key="Size_Button_Icon_Compact">30</sys:Double>
-    <sys:Double x:Key="Size_Button_Icon_Regular">32</sys:Double>
-    <sys:Double x:Key="Size_Button_Icon_Large">34</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Compact">32</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Regular">36</sys:Double>
+    <sys:Double x:Key="Size_Button_Icon_Large">40</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Regular">96</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Height_Compact">30</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Dialog">44</sys:Double>
@@ -46,6 +46,21 @@
     <Thickness x:Key="Spacing_Shell_WorkContent">18,2,18,8</Thickness>
     <Thickness x:Key="Spacing_Shell_WorkBottomBar">18,0,18,14</Thickness>
     <Thickness x:Key="Spacing_Shell_ManagementContent">12,8,12,8</Thickness>
+    <Thickness x:Key="Spacing_Control_Input">8,5</Thickness>
+    <Thickness x:Key="Spacing_Control_Dropdown">10,5</Thickness>
+    <Thickness x:Key="Spacing_Control_ButtonFamily">12,6</Thickness>
+    <Thickness x:Key="Spacing_Control_ButtonFamily_Compact">12,5</Thickness>
+    <Thickness x:Key="Spacing_Control_ActionButton">14,0</Thickness>
+    <Thickness x:Key="Spacing_Control_MenuItem">10,6</Thickness>
+    <Thickness x:Key="Spacing_Control_ListItem">8,6</Thickness>
+    <Thickness x:Key="Spacing_Control_TreeItem">4,2</Thickness>
+    <Thickness x:Key="Spacing_Control_Header">8,6</Thickness>
+    <Thickness x:Key="Spacing_Control_TabItem">12,5</Thickness>
+    <Thickness x:Key="Spacing_Control_WorkShellBottomBar">8,4</Thickness>
+    <Thickness x:Key="Spacing_Control_ManagementFooter">16,0</Thickness>
+    <Thickness x:Key="Spacing_Control_BubbleShellRoot">5,4</Thickness>
+    <Thickness x:Key="Spacing_Control_BubbleShellItem">4</Thickness>
+    <Thickness x:Key="Spacing_Control_OverlayHintBadge">10,4</Thickness>
     <Thickness x:Key="Size_DialogMargin_Standard">20</Thickness>
     <CornerRadius x:Key="Radius_Shell_Dialog">15</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_Management">14</CornerRadius>
@@ -53,6 +68,11 @@
     <CornerRadius x:Key="Radius_Shell_WorkBottomBar">14</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlaySideRail">20</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlayHintBadge">10</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_Panel">12</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_BubbleShellRoot">12</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_BubbleShellItem">8</CornerRadius>
+    <sys:Double x:Key="FontSize_Control_Label">13</sys:Double>
+    <sys:Double x:Key="FontSize_Control_Helper">12</sys:Double>
 
     <!-- ========== 0. 全局默认样式 (Global Defaults) - 修复文字可见性 ========== -->
     
@@ -69,8 +89,8 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="Padding" Value="10,6"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_MenuItem}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Helper}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
@@ -116,7 +136,7 @@
     <!-- MenuItem Style -->
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_MenuItem}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -131,7 +151,7 @@
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="Icon" ContentSource="Icon" Margin="6,0,6,0" VerticalAlignment="Center"/>
                             <ContentPresenter ContentSource="Header" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock x:Name="InputGestureText" Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="5,2,0,2" DockPanel.Dock="Right" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock x:Name="InputGestureText" Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="5,2,0,2" DockPanel.Dock="Right" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Control_Helper}"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -169,12 +189,12 @@
     <!-- ========== 1. 输入控件 (Inputs) ========== -->
 
     <Style TargetType="TextBox">
-        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_Input}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Background" Value="{StaticResource Brush_InputBackground}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="CaretBrush" Value="{StaticResource Brush_Primary}"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -237,7 +257,7 @@
 
     <Style TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_MenuItem}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -260,12 +280,12 @@
     </Style>
 
     <Style TargetType="ComboBox">
-        <Setter Property="Padding" Value="10,5"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_Dropdown}"/>
         <Setter Property="Background" Value="{StaticResource Brush_InputBackground}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -351,7 +371,7 @@
     <Style TargetType="CheckBox">
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="8,0,0,0"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
@@ -391,7 +411,7 @@
     <Style TargetType="RadioButton">
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="8,0,0,0"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
@@ -427,7 +447,7 @@
     <!-- Shared Button Family Base -->
     <Style x:Key="Style_ButtonFamilyBase" TargetType="Button">
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -518,7 +538,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
-        <Setter Property="Padding" Value="12,5"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily_Compact}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -564,8 +584,8 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
-        <Setter Property="Padding" Value="12,5"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily_Compact}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -781,13 +801,13 @@
         <Setter Property="MinWidth" Value="{StaticResource Size_Button_Action_Regular}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Action_Height_Compact}"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_ActionGap}"/>
-        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ActionButton}"/>
     </Style>
 
     <Style x:Key="Style_DialogShellPrimaryActionButton" TargetType="Button" BasedOn="{StaticResource Style_PrimaryButton}">
         <Setter Property="MinWidth" Value="{StaticResource Size_Button_Action_Regular}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Action_Height_Compact}"/>
-        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ActionButton}"/>
     </Style>
 
     <Style x:Key="Style_DialogShellSecondaryActionButton_Wide" TargetType="Button" BasedOn="{StaticResource Style_DialogShellSecondaryActionButton}">
@@ -806,7 +826,7 @@
 
     <Style x:Key="Style_ManagementShellTitleText" TargetType="TextBlock" BasedOn="{StaticResource Style_DialogShellTitleText}">
         <Setter Property="FontSize" Value="{StaticResource FontSize_Title_Management}"/>
-        <Setter Property="Margin" Value="20,0,0,0"/>
+        <Setter Property="Margin" Value="{StaticResource Spacing_Shell_TitleInset}"/>
     </Style>
 
     <Style x:Key="Style_ManagementShellSubtitleText" TargetType="TextBlock">
@@ -821,7 +841,7 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_ManagementContent}"/>
         <Setter Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
     </Style>
@@ -830,7 +850,7 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
-        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ManagementFooter}"/>
     </Style>
 
     <Style x:Key="Style_ManagementShellFooterText" TargetType="TextBlock">
@@ -871,7 +891,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_WorkBottomBar}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_WorkShellBottomBar}"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_WorkBottomBar}"/>
         <Setter Property="Effect" Value="{StaticResource Shadow_Floating}"/>
     </Style>
@@ -935,7 +955,7 @@
                                 <TextBlock Grid.Row="1"
                                            HorizontalAlignment="Center"
                                            Text="{TemplateBinding Content}"
-                                           FontSize="12"
+                                           FontSize="{StaticResource FontSize_Control_Helper}"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource Brush_Text_Secondary}"
                                            TextAlignment="Center"
@@ -1113,7 +1133,8 @@
 
     <Style x:Key="Style_ListViewItem_SelectionUnified" TargetType="ListViewItem">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ListItem}"/>
         <Setter Property="Margin" Value="0,1"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Template">
@@ -1269,7 +1290,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_OverlayHintBadge}"/>
-        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_OverlayHintBadge}"/>
         <Setter Property="Opacity" Value="{StaticResource Opacity_Overlay_HintBadge}"/>
     </Style>
 
@@ -1278,8 +1299,8 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="5,4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_BubbleShellRoot}"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_BubbleShellRoot}"/>
         <Setter Property="Effect" Value="{StaticResource Shadow_Floating}"/>
     </Style>
 
@@ -1287,8 +1308,8 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_BubbleShellItem}"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_BubbleShellItem}"/>
     </Style>
 
     <Style x:Key="Style_BubbleShellSelectedItem" TargetType="Border" BasedOn="{StaticResource Style_BubbleShellItem}">
@@ -1328,8 +1349,8 @@
                 <Style TargetType="TabItem">
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
-                    <Setter Property="Padding" Value="12,5"/>
-                    <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="Padding" Value="{StaticResource Spacing_Control_TabItem}"/>
+                    <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
                     <Setter Property="FontWeight" Value="Normal"/>
                     <Setter Property="Cursor" Value="Hand"/>
                     <Setter Property="Template">
@@ -1474,7 +1495,8 @@
     <Style x:Key="Style_ListBoxItem_SelectionUnified" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_ListItem}"/>
         <Setter Property="Margin" Value="0,1"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="Template">
@@ -1521,7 +1543,7 @@
     <!-- GridViewColumnHeader Style -->
     <Style TargetType="GridViewColumnHeader">
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_Header}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -1560,8 +1582,8 @@
     <Style TargetType="TreeViewItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
-        <Setter Property="Padding" Value="4,2"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="{StaticResource Spacing_Control_TreeItem}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="IsExpanded" Value="False"/>
