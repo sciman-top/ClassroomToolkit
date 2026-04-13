@@ -72,7 +72,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="笔触风格" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="36" SelectionChanged="OnBrushStyleChanged"/>
+                    <ComboBox Grid.Column="1" x:Name="BrushStyleCombo" Height="{StaticResource Size_Button_Icon_Regular}" SelectionChanged="OnBrushStyleChanged"/>
                 </Grid>
                 
                 <Grid Margin="0,0,0,16">
@@ -82,8 +82,8 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="笔触预设" VerticalAlignment="Top" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,6,0,0" FontWeight="Medium"/>
                     <StackPanel Grid.Column="1">
-                        <ComboBox x:Name="WhiteboardPresetCombo" Height="36" Margin="0,0,0,8"/>
-                        <ComboBox x:Name="CalligraphyPresetCombo" Height="36" Margin="0,0,0,8"/>
+                        <ComboBox x:Name="WhiteboardPresetCombo" Height="{StaticResource Size_Button_Icon_Regular}" Margin="0,0,0,8"/>
+                        <ComboBox x:Name="CalligraphyPresetCombo" Height="{StaticResource Size_Button_Icon_Regular}" Margin="0,0,0,8"/>
                         <Expander x:Name="CalligraphyAdvancedExpander" Header="毛笔高级" IsExpanded="False" Foreground="{StaticResource Brush_Text_Primary}">
                             <Border Style="{StaticResource Style_SettingCardBorder}"
                                     Margin="0,8,0,0"
@@ -120,7 +120,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="PresetSchemeCombo" Height="34" SelectionChanged="OnPresetSchemeChanged"/>
+                            <ComboBox x:Name="PresetSchemeCombo" Height="{StaticResource Size_Button_Icon_Regular}" SelectionChanged="OnPresetSchemeChanged"/>
                         </Grid>
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
@@ -128,7 +128,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="书写模式" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                            <ComboBox Grid.Column="1" x:Name="ClassroomWritingModeCombo" Height="34"/>
+                            <ComboBox Grid.Column="1" x:Name="ClassroomWritingModeCombo" Height="{StaticResource Size_Button_Icon_Regular}"/>
                         </Grid>
                         <TextBlock x:Name="PresetSchemeHintText" Margin="0,8,0,0" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
                         <TextBlock x:Name="PresetManagedHintText" Margin="0,6,0,0" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}" TextWrapping="Wrap"/>
@@ -137,7 +137,7 @@
                                 Content="切换为自定义"
                                 Margin="0,8,0,0"
                                 Padding="12,0"
-                                Height="30"
+                                Height="{StaticResource Size_Button_Action_Height_Compact}"
                                 MinWidth="132"
                                 HorizontalAlignment="Left"
                                 Style="{StaticResource Style_SecondaryButton}"
@@ -210,7 +210,7 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                                            <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="36"/>
+                                            <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="{StaticResource Size_Button_Icon_Regular}"/>
                                         </Grid>
 
                                         <Grid>
@@ -219,7 +219,7 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                                            <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="36"/>
+                                            <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="{StaticResource Size_Button_Icon_Regular}"/>
                                         </Grid>
                                     </StackPanel>
                                 </Border>
@@ -267,21 +267,21 @@
                             Padding="16"
                             Margin="0,0,6,0">
                         <StackPanel>
-                            <TextBlock Text="PDF/图片" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
-                            <CheckBox x:Name="InkSaveCheck" Content="保存笔迹" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <TextBlock Text="PDF/图片" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="{StaticResource FontSize_Body_M}"/>
+                            <CheckBox x:Name="InkSaveCheck" Content="保存笔迹" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,10"/>
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="110"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="导出范围" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                <ComboBox Grid.Column="1" x:Name="InkExportScopeCombo" Height="34" FontSize="13"/>
+                                <TextBlock Text="导出范围" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                <ComboBox Grid.Column="1" x:Name="InkExportScopeCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                             </Grid>
-                            <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="跨页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放和平移" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="PhotoCrossPageDisplayCheck" Content="跨页显示" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="PhotoRememberTransformCheck" Content="记住缩放和平移" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,10"/>
                             <TextBlock Text="排障时再调。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSize_Body_S}"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
@@ -293,50 +293,50 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="导出并行度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="导出并行度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="ExportParallelCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="邻页预加载" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="邻页预加载" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="NeighborPrefetchCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="抬笔后延迟刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="PostInputRefreshDelayCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="抬笔后延迟刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="PostInputRefreshDelayCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="滚轮缩放幅度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="WheelZoomBaseCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="滚轮缩放幅度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="WheelZoomBaseCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="手势缩放灵敏度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="GestureSensitivityCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="手势缩放灵敏度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="GestureSensitivityCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="拖拽惯性预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="拖拽惯性预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
-                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                     </StackPanel>
                                 </Border>
                             </Expander>
@@ -351,15 +351,15 @@
                             Padding="16"
                             Margin="6,0,0,0">
                         <StackPanel>
-                            <TextBlock Text="放映控制策略" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="13"/>
+                            <TextBlock Text="放映控制策略" FontWeight="Bold" Foreground="{StaticResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="{StaticResource FontSize_Body_M}"/>
 
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="112"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Office PPT" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                <ComboBox Grid.Column="1" x:Name="OfficeModeCombo" Height="34" FontSize="13"/>
+                                <TextBlock Text="Office PPT" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                <ComboBox Grid.Column="1" x:Name="OfficeModeCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                             </Grid>
 
                             <!-- WPS 策略 -->
@@ -368,14 +368,14 @@
                                     <ColumnDefinition Width="112"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="WPS 演示文稿" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="34" FontSize="13"/>
+                                <TextBlock Text="WPS 演示文稿" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                <ComboBox Grid.Column="1" x:Name="WpsModeCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                             </Grid>
-                            <CheckBox x:Name="WpsWheelCheck" Content="滚轮翻页" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
-                            <CheckBox x:Name="ForceForegroundCheck" Content="全屏置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="WpsWheelCheck" Content="滚轮翻页" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="ForceForegroundCheck" Content="全屏置顶" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,10"/>
                             <TextBlock Text="兼容异常时再调。"
                                        Foreground="{StaticResource Brush_Text_Tertiary}"
-                                       FontSize="12"
+                                       FontSize="{StaticResource FontSize_Body_S}"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
@@ -387,31 +387,31 @@
                                                 <ColumnDefinition Width="80"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="去抖阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="WpsDebounceCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
-                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定兼容" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13"/>
+                                        <CheckBox x:Name="LockStrategyOnDegradeCheck" Content="降级后锁定兼容" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         <Grid Margin="0,10,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="80"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="降级阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="FallbackFailureThresholdCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="降级阈值" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="FallbackFailureThresholdCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="80"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="探活窗口" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="13"/>
-                                            <ComboBox Grid.Column="1" x:Name="FallbackProbeIntervalCombo" Height="34" FontSize="13"/>
+                                            <TextBlock Text="探活窗口" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <ComboBox Grid.Column="1" x:Name="FallbackProbeIntervalCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
-                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,10,0,0"/>
-                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清除覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="13" Margin="0,8,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierAutoLearnCheck" Content="自动学习特征" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,10,0,0"/>
+                                        <CheckBox x:Name="PresentationClassifierClearOverridesCheck" Content="清除覆盖" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,8,0,0"/>
                                         <TextBlock Text="规则包"
                                                    Foreground="{StaticResource Brush_Text_Secondary}"
-                                                   FontSize="13"
+                                                   FontSize="{StaticResource FontSize_Body_M}"
                                                    Margin="0,12,0,8"/>
                                         <Grid Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
@@ -420,14 +420,14 @@
                                             </Grid.ColumnDefinitions>
                                             <Button x:Name="ExportClassifierPackageButton"
                                                     Content="导出包"
-                                                    Height="30"
+                                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                                     Margin="0,0,6,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnExportClassifierPackageClick"/>
                                             <Button Grid.Column="1"
                                                     x:Name="ImportClassifierPackageButton"
                                                     Content="导入包"
-                                                    Height="30"
+                                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                                     Margin="6,0,0,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnImportClassifierPackageClick"/>
@@ -439,21 +439,21 @@
                                             </Grid.ColumnDefinitions>
                                             <Button x:Name="CopyClassifierPackageButton"
                                                     Content="复制包"
-                                                    Height="30"
+                                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                                     Margin="0,0,6,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnCopyClassifierPackageClick"/>
                                             <Button Grid.Column="1"
                                                     x:Name="ImportClassifierPackageFromClipboardButton"
                                                     Content="粘贴导入"
-                                                    Height="30"
+                                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                                     Margin="6,0,0,0"
                                                     Style="{StaticResource Style_SecondaryButton}"
                                                     Click="OnImportClassifierPackageFromClipboardClick"/>
                                         </Grid>
                                         <Button x:Name="UndoClassifierPackageImportButton"
                                                 Content="撤销导入"
-                                                Height="30"
+                                                Height="{StaticResource Size_Button_Action_Height_Compact}"
                                                 Margin="0,0,0,8"
                                                 HorizontalAlignment="Left"
                                                 MinWidth="132"
