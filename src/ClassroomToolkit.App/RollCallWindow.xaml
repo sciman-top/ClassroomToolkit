@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Converters"
         x:Name="NameWindow"
-        Title="Classroom Toolkit"
+        Title="点名与计时"
         Height="420" Width="640"
         MinWidth="320" MinHeight="240"
         WindowStartupLocation="Manual"
@@ -27,7 +27,7 @@
 
         <Grid x:Name="RootGrid" MouseLeftButtonDown="OnBackgroundDrag" Background="Transparent">
             <Grid.RowDefinitions>
-                <RowDefinition Height="52"/>
+                <RowDefinition Height="{StaticResource Size_Shell_TitleBar_Management}"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -47,9 +47,9 @@
                             Click="OnToggleModeClick"
                             Padding="12,5"
                             Margin="0,0,8,0"
-                            Height="30"
+                            Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="102"
-                            ToolTip="切换点名/计时模式"
+                            ToolTip="切换模式"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
@@ -65,7 +65,7 @@
                                     </Style>
                                 </Path.Style>
                             </Path>
-                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                         </StackPanel>
                     </Button>
 
@@ -73,14 +73,14 @@
                     <Button Style="{StaticResource Style_SecondaryButton}"
                             Click="OnClassSelectClick"
                             Padding="12,5"
-                            Height="30"
+                            Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="108"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding ClassButtonLabel}"
                                    FontWeight="SemiBold"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    Foreground="{StaticResource Brush_Text_Primary}"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="144"/>
@@ -94,7 +94,7 @@
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化，功能继续运行" Margin="4,0,0,0">
+                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化并继续" Margin="4,0,0,0">
                         <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
@@ -117,7 +117,7 @@
 
                     <!-- 左侧：名字卡片 (重点展示) -->
                     <Border x:Name="RollNameCard" Grid.Column="0" 
-                            CornerRadius="18"
+                            CornerRadius="{StaticResource Radius_Shell_Work}"
                             BorderBrush="{StaticResource Brush_Border_Strong}"
                             BorderThickness="1"
                             MouseLeftButtonUp="OnRollClick"
@@ -153,7 +153,7 @@
                                 <!-- 学号 -->
                                 <TextBlock Text="{Binding CurrentStudentId}"
                                            Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="18"
+                                           FontSize="{StaticResource FontSize_Title_Management}"
                                            Foreground="{StaticResource Brush_Text_Secondary}"
                                            FontWeight="Bold"
                                            TextAlignment="Center"
@@ -168,7 +168,7 @@
                           VerticalAlignment="Center"
                           Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
                         <!-- 照片容器 -->
-                        <Border CornerRadius="14" ClipToBounds="True" Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+                        <Border CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" ClipToBounds="True" Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card"/>
                             </Border.Effect>
@@ -184,7 +184,7 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                             <TextBlock Text="{Binding CurrentStudentName}"
-                                       FontSize="18"
+                                       FontSize="{StaticResource FontSize_Title_Management}"
                                        FontWeight="Bold"
                                        Foreground="White"
                                        HorizontalAlignment="Center"
@@ -198,7 +198,7 @@
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
                     <Border x:Name="TimerCard" 
                             Background="{StaticResource Brush_Surface_Primary}" 
-                            CornerRadius="18" 
+                            CornerRadius="{StaticResource Radius_Shell_Work}" 
                             BorderBrush="{StaticResource Brush_Border_Focus}" BorderThickness="1">
                         <Border.Effect>
                             <StaticResource ResourceKey="Shadow_Glow_Primary"/>
@@ -242,7 +242,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding Label}"
-                                            Margin="3,0" Padding="10,5" MinWidth="44" Height="30"
+                                            Margin="3,0" MinWidth="44" Height="{StaticResource Size_Button_Action_Height_Compact}"
                                             Click="OnGroupEntryClick">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
@@ -271,14 +271,14 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Brush_Text_Black}"/>
+                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" Margin="3,0" Padding="10,5" Height="32">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="名单" FontWeight="SemiBold" FontSize="12"/>
+                                <TextBlock Text="名单" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -286,11 +286,11 @@
                     <!-- 计时操作 -->
                     <StackPanel x:Name="TimerActionsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
                         <Button Style="{StaticResource Style_SecondaryButton}" Margin="3,0" Click="OnTimerModeClick" Padding="10,5" MinWidth="64" Height="32">
-                             <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="12"/>
+                             <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                         </Button>
 
                         <!-- 播放/暂停按钮：使用 Teal 色调 -->
-                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="34" Click="OnTimerStartPauseClick" ToolTip="开始/暂停计时">
+                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="{StaticResource Size_Button_Icon_Regular}" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
                             <Path Fill="{StaticResource Brush_Text_Black}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">
@@ -309,7 +309,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Brush_Text_Black}"/>
+                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_SecondaryButton}" Margin="3,0" Click="OnTimerSetClick" Padding="10,5" MinWidth="64" Height="32"
@@ -317,7 +317,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="设置" FontWeight="SemiBold" FontSize="12"/>
+                                <TextBlock Text="设置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -353,8 +353,8 @@
                                  StrokeDashArray="20 10"
                                  Opacity="0.85"/>
                     </Border>
-                    <TextBlock Text="正在加载名单..."
-                               FontSize="13"
+                    <TextBlock Text="加载名单中..."
+                               FontSize="{StaticResource FontSize_Body_M}"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource Brush_Text_Secondary}"
                                HorizontalAlignment="Center"

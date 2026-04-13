@@ -26,13 +26,13 @@
                     <Border.Background>
                         <SolidColorBrush Color="{StaticResource Color_Bg_Overlay}"/>
                     </Border.Background>
-                    <DockPanel Margin="10,0" VerticalAlignment="Top" Height="34">
+                    <DockPanel Margin="10,0" VerticalAlignment="Top" Height="{StaticResource Size_Button_Icon_Regular}">
                         <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="16" Padding="14,0" Height="32" VerticalAlignment="Center" Margin="10,0,0,0">
                              <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                             </Border.Effect>
                             <TextBlock x:Name="PhotoTitleText" Text="PDF/图片预览" VerticalAlignment="Center"
-                                       Foreground="{StaticResource Brush_Text_Primary}" FontWeight="SemiBold" FontSize="13"/>
+                                       Foreground="{StaticResource Brush_Text_Primary}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_M}"/>
                         </Border>
                     </DockPanel>
                 </Border>
@@ -41,19 +41,19 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,6,12,0">
                     <Button x:Name="PhotoCloseButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick"
                             ToolTip="关闭预览"
-                            Width="36" Height="36" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                            Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Icon_Regular}" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
                 </StackPanel>
 
                 <!-- 底部两侧浮动控制 -->
-                <Button x:Name="PhotoCloseLeftButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="36" Height="36" ToolTip="关闭预览"
+                <Button x:Name="PhotoCloseLeftButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Icon_Regular}" ToolTip="关闭预览"
                         HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
-                <Button x:Name="PhotoCloseRightButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="36" Height="36" ToolTip="关闭预览"
+                <Button x:Name="PhotoCloseRightButton" Style="{StaticResource Style_FullscreenShellCloseButton}" Click="OnPhotoCloseClick" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Icon_Regular}" ToolTip="关闭预览"
                         HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -63,18 +63,18 @@
                 <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0,0,0" 
                         Style="{StaticResource Style_FullscreenShellSideRail}">
                     <StackPanel Orientation="Vertical">
-                         <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一页">
+                         <Button x:Name="PhotoPrevButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,4,0,2" ToolTip="上一页">
                             <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一页">
+                        <Button x:Name="PhotoNextButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,4" ToolTip="下一页">
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,2" ToolTip="按宽度适配">
+                        <Button x:Name="PhotoFitButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,2" ToolTip="按宽度适配">
                             <Path Data="{StaticResource Icon_FitWidth}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
-                        <Button x:Name="ExportInkButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="导出笔迹图片">
+                        <Button x:Name="ExportInkButtonLeft" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,6" ToolTip="导出笔迹图片">
                             <Path Data="{StaticResource Icon_Export}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
                     </StackPanel>
@@ -84,18 +84,18 @@
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" 
                         Style="{StaticResource Style_FullscreenShellSideRail}">
                     <StackPanel Orientation="Vertical">
-                        <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="40" Height="40" Margin="0,4,0,2" ToolTip="上一页">
+                        <Button x:Name="PhotoPrevButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoPrevClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,4,0,2" ToolTip="上一页">
                             <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="40" Height="40" Margin="0,2,0,4" ToolTip="下一页">
+                        <Button x:Name="PhotoNextButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoNextClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,4" ToolTip="下一页">
                             <Path Data="{StaticResource Icon_ArrowDown}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                   Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                         </Button>
-                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="40" Height="40" Margin="0,2,0,2" ToolTip="按宽度适配">
+                        <Button x:Name="PhotoFitButtonRight" Style="{StaticResource Style_IconButton}" Click="OnPhotoFitWidthClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,2" ToolTip="按宽度适配">
                             <Path Data="{StaticResource Icon_FitWidth}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
-                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="40" Height="40" Margin="0,2,0,6" ToolTip="导出笔迹图片">
+                        <Button x:Name="ExportInkButtonRight" Style="{StaticResource Style_IconButton}" Click="OnExportInkClick" Width="{StaticResource Size_Button_Icon_Large}" Height="{StaticResource Size_Button_Icon_Large}" Margin="0,2,0,6" ToolTip="导出笔迹图片">
                             <Path Data="{StaticResource Icon_Export}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                         </Button>
                     </StackPanel>
@@ -105,13 +105,13 @@
                         Style="{StaticResource Style_FullscreenShellHintBadge}">
                     <TextBlock Text="支持翻页、适宽、导出"
                                Foreground="{StaticResource Brush_Text_Secondary}"
-                               FontSize="11"/>
+                               FontSize="{StaticResource FontSize_Body_S}"/>
                 </Border>
             </Grid>
             <Grid x:Name="PhotoLoadingOverlay" Visibility="Collapsed" Background="{StaticResource Brush_OverlayMask}" Panel.ZIndex="20">
                 <Border Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
                         CornerRadius="12" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock x:Name="PhotoLoadingText" Text="正在加载页面..." Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="PhotoLoadingText" Text="加载页面中..." Foreground="White" FontSize="{StaticResource FontSize_Title_Dialog}" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </Grid>

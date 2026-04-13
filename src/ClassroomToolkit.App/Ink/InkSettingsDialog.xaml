@@ -39,12 +39,12 @@
                             <ColumnDefinition Width="64"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,0,8,0"/>
-                        <TextBox x:Name="InkRetentionDaysBox" Grid.Column="1" Height="30" VerticalContentAlignment="Center" Padding="4,0"/>
-                        <TextBlock Grid.Column="2" Text="0 表示不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="12" Margin="8,0,0,0"/>
+                        <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,8,0"/>
+                        <TextBox x:Name="InkRetentionDaysBox" Grid.Column="1" Height="{StaticResource Size_Button_Action_Height_Compact}" VerticalContentAlignment="Center" Padding="4,0"/>
+                        <TextBlock Grid.Column="2" Text="0 表示不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="8,0,0,0"/>
                     </Grid>
-                    <TextBlock Text="笔迹保存路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="12" Margin="0,6,0,4"/>
-                    <TextBox x:Name="InkPhotoPathBox" Height="30"/>
+                    <TextBlock Text="笔迹保存路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,6,0,4"/>
+                    <TextBox x:Name="InkPhotoPathBox" Height="{StaticResource Size_Button_Action_Height_Compact}"/>
                 </StackPanel>
             </Border>
 
