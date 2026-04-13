@@ -37,9 +37,9 @@
                     <TextBlock Text="文件夹、PDF、图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="30" Margin="0,0,8,0"
+                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,0"
                             Style="{StaticResource Style_SecondaryButton}" Click="OnRestoreWindowClick"/>
-                    <Button Content="关闭" Width="56" Height="30"
+                    <Button Content="关闭" Width="56" Height="{StaticResource Size_Button_Action_Height_Compact}"
                             Style="{StaticResource Style_DangerButton}" Click="OnCloseWindowClick"/>
                 </StackPanel>
             </Grid>
@@ -71,7 +71,7 @@
                         </Grid.RowDefinitions>
                         <UniformGrid Grid.Row="0" Columns="3" Margin="0,0,0,6">
                             <Button Content="添加收藏"
-                                    Height="30"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     MinWidth="86"
                                     Margin="0,0,6,0"
                                     VerticalContentAlignment="Center"
@@ -79,7 +79,7 @@
                                     Style="{StaticResource Style_Button_Teal}"
                                     FontSize="{StaticResource FontSize_Body_S}"/>
                             <Button Content="取消收藏"
-                                    Height="30"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     MinWidth="86"
                                     Margin="0,0,6,0"
                                     VerticalContentAlignment="Center"
@@ -87,7 +87,7 @@
                                     Style="{StaticResource Style_DangerButton}"
                                     FontSize="{StaticResource FontSize_Body_S}"/>
                             <Button Content="清空最近"
-                                    Height="30"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     MinWidth="86"
                                     VerticalContentAlignment="Center"
                                     Click="OnClearRecentsClick"
@@ -210,15 +210,15 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <Button x:Name="BackButton" ToolTip="后退" Width="34" Height="30" Margin="0,0,6,0"
+                            <Button x:Name="BackButton" ToolTip="后退" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
                                     Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_Back}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="ForwardButton" ToolTip="前进" Width="34" Height="30" Margin="0,0,6,0"
+                            <Button x:Name="ForwardButton" ToolTip="前进" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
                                     Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_Forward}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="UpButton" ToolTip="上一级" Width="34" Height="30" Margin="0,0,10,0"
+                            <Button x:Name="UpButton" ToolTip="上一级" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,10,0"
                                     Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" Padding="0">
                                 <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -226,7 +226,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="68" Height="30" Margin="0,0,6,0"
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="68" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -234,7 +234,7 @@
                                     <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="80" Height="30" Margin="0,0,10,0"
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="80" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"

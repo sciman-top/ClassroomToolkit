@@ -47,7 +47,7 @@
                             Click="OnToggleModeClick"
                             Padding="12,5"
                             Margin="0,0,8,0"
-                            Height="30"
+                            Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="102"
                             ToolTip="切换模式"
                             Background="{StaticResource Brush_InputBackground}"
@@ -73,7 +73,7 @@
                     <Button Style="{StaticResource Style_SecondaryButton}"
                             Click="OnClassSelectClick"
                             Padding="12,5"
-                            Height="30"
+                            Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="108"
                             Background="{StaticResource Brush_InputBackground}"
                             BorderThickness="1"
@@ -242,7 +242,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding Label}"
-                                            Margin="3,0" MinWidth="44" Height="30"
+                                            Margin="3,0" MinWidth="44" Height="{StaticResource Size_Button_Action_Height_Compact}"
                                             Click="OnGroupEntryClick">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
@@ -290,7 +290,7 @@
                         </Button>
 
                         <!-- 播放/暂停按钮：使用 Teal 色调 -->
-                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="34" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
+                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="{StaticResource Size_Button_Icon_Regular}" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
                             <Path Fill="{StaticResource Brush_Text_Black}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">
