@@ -9,8 +9,34 @@ public sealed class UiCopyContractTests
     {
         var xaml = File.ReadAllText(GetXamlPath("MainWindow.xaml"));
 
+        xaml.Should().Contain("Title=\"课堂工具箱\"");
+        xaml.Should().Contain("Text=\"课堂工具箱\"");
+        xaml.Should().Contain("ToolTip=\"画笔（长按设置）\"");
+        xaml.Should().Contain("ToolTip=\"点名与计时（长按设置）\"");
+        xaml.Should().Contain("ToolTip=\"兼容诊断\"");
+        xaml.Should().NotContain("Title=\"sciman课堂工具箱\"");
+        xaml.Should().NotContain("ToolTip=\"打开画笔，长按可设置\"");
+        xaml.Should().NotContain("ToolTip=\"点名与计时，长按可设置\"");
+        xaml.Should().NotContain("ToolTip=\"兼容性诊断\"");
         xaml.Should().Contain("Content=\"点名与计时\"");
         xaml.Should().NotContain("Content=\"点名 / 计时\"");
+    }
+
+    [Fact]
+    public void RollCallWindow_ShouldUseShortTitleAndLoadingCopy()
+    {
+        var xaml = File.ReadAllText(GetXamlPath("RollCallWindow.xaml"));
+
+        xaml.Should().Contain("Title=\"点名与计时\"");
+        xaml.Should().Contain("ToolTip=\"切换模式\"");
+        xaml.Should().Contain("ToolTip=\"最小化并继续\"");
+        xaml.Should().Contain("ToolTip=\"开始/暂停\"");
+        xaml.Should().Contain("Text=\"加载名单中...\"");
+        xaml.Should().NotContain("Title=\"Classroom Toolkit\"");
+        xaml.Should().NotContain("ToolTip=\"切换点名/计时模式\"");
+        xaml.Should().NotContain("ToolTip=\"最小化，功能继续运行\"");
+        xaml.Should().NotContain("ToolTip=\"开始/暂停计时\"");
+        xaml.Should().NotContain("Text=\"正在加载名单...\"");
     }
 
     [Fact]
