@@ -28,7 +28,7 @@
                           Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
                     <TextBlock Text="点名设置" Style="{StaticResource Style_DialogShellTitleText}"/>
                 </StackPanel>
-                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭点名设置">
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -51,7 +51,7 @@
                         <TextBlock Text="调整姓名、学号、照片。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                             <Grid>
@@ -91,7 +91,7 @@
                         <TextBlock Text="按需设置。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
@@ -102,7 +102,7 @@
                         <TextBlock Text="控制朗读、发音人、提醒声。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                         <Grid>
@@ -135,7 +135,7 @@
                         <TextBlock Text="播报设备默认跟随系统。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
@@ -146,7 +146,7 @@
                         <TextBlock Text="设置翻页笔和遥控。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                         <Grid>
@@ -243,7 +243,7 @@
                            Grid.Row="1"
                            Margin="4,10,4,0"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
-                           FontSize="12"
+                           FontSize="{StaticResource FontSize_Body_S}"
                            TextWrapping="Wrap"/>
             </Grid>
 
