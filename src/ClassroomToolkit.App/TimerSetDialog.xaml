@@ -37,19 +37,19 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="分钟" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"
+                        <TextBlock Text="分钟" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"
                                    ToolTip="可输入 0-150，滑杆到 25。"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button x:Name="MinutesDownButton" Content="−" Width="30" Height="30" Margin="0,0,2,0"
+                            <Button x:Name="MinutesDownButton" Content="−" Width="{StaticResource Size_Button_Icon_Compact}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,2,0"
                                     FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"
                                     Style="{StaticResource Style_SecondaryButton}"
                                     Padding="0"
                                     Cursor="Hand" Click="OnMinutesDownClick"
                                     PreviewMouseLeftButtonDown="OnMinutesDownMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave"/>
-                            <TextBox x:Name="MinutesBox" Width="68" Height="30" TextAlignment="Center" FontWeight="Bold" FontSize="16"
+                            <TextBox x:Name="MinutesBox" Width="68" Height="{StaticResource Size_Button_Action_Height_Compact}" TextAlignment="Center" FontWeight="Bold" FontSize="16"
                                      Foreground="{StaticResource Brush_Primary}" TextChanged="OnMinutesTextChanged"
                                      VerticalContentAlignment="Center"/>
-                            <Button x:Name="MinutesUpButton" Content="+" Width="30" Height="30" Margin="2,0,0,0"
+                            <Button x:Name="MinutesUpButton" Content="+" Width="{StaticResource Size_Button_Icon_Compact}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="2,0,0,0"
                                     FontSize="16" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}"
                                     Style="{StaticResource Style_SecondaryButton}"
                                     Padding="0"
@@ -66,14 +66,14 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_SettingCardBorder}" Margin="20,0,20,8" Padding="14,12">
                 <StackPanel>
-                    <TextBlock Text="常用时长" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
+                    <TextBlock Text="常用时长" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
                     <UniformGrid Columns="3">
-                        <Button Content="3 分钟" Tag="3" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="5 分钟" Tag="5" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="10 分钟" Tag="10" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="20 分钟" Tag="20" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="30 分钟" Tag="30" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="40 分钟" Tag="40" Height="30" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="3 分钟" Tag="3" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="5 分钟" Tag="5" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="10 分钟" Tag="10" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="20 分钟" Tag="20" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="30 分钟" Tag="30" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="40 分钟" Tag="40" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,8" Style="{StaticResource Style_SecondaryButton}" Click="OnPresetMinutesClick"/>
                     </UniformGrid>
                 </StackPanel>
             </Border>
@@ -86,7 +86,7 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="秒" FontSize="13" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="秒" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
                         <TextBox x:Name="SecondsBox" Width="60" HorizontalAlignment="Right" TextAlignment="Center" FontWeight="Bold" Foreground="{StaticResource Brush_Primary}" TextChanged="OnSecondsTextChanged"/>
                     </Grid>
 

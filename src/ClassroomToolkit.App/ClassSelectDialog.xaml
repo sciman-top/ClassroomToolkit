@@ -32,7 +32,7 @@
                     <TextBlock Text="选择后应用到当前点名窗口。"
                                Margin="4,0,4,8"
                                Foreground="{StaticResource Brush_Text_Tertiary}"
-                               FontSize="12"
+                               FontSize="{StaticResource FontSize_Body_S}"
                                TextWrapping="Wrap"/>
                     <ListBox x:Name="ClassList"
                              MaxHeight="240" MinHeight="120"
