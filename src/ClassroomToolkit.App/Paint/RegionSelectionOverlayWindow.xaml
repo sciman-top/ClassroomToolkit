@@ -20,7 +20,7 @@
         <TextBlock x:Name="HintText"
                    Text="拖拽选择，Enter 确认，Esc 取消"
                    Foreground="White"
-                   FontSize="15"
+                   FontSize="{StaticResource FontSize_Title_Management}"
                    FontWeight="SemiBold"
                    Canvas.Left="20"
                    Canvas.Top="20"/>

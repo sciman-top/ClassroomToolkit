@@ -25,7 +25,6 @@
     <Grid Margin="5">
         <Border x:Name="OverlayBorder" 
                 Style="{StaticResource Style_BubbleShellRoot}"
-                CornerRadius="10" 
                 Padding="12,6"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -35,7 +34,7 @@
 
             <TextBlock x:Name="GroupNameText" 
                        Foreground="{StaticResource Brush_Text_Primary}"
-                       FontSize="16" 
+                       FontSize="{StaticResource FontSize_Title_Management}" 
                        FontWeight="SemiBold" 
                        VerticalAlignment="Center"
                        Text="全部"/>
