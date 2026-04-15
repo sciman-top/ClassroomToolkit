@@ -1,6 +1,6 @@
 param(
     [string]$RepoRoot = ".",
-    [string]$GovernanceKitRoot = "E:/CODE/repo-governance-hub",
+    [string]$GovernanceKitRoot = "",
     [string]$CodexCommand = "codex",
     [ValidateSet("quick", "full")]
     [string]$QualityProfile = "quick",
@@ -22,7 +22,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
-$kitPath = (Resolve-Path -LiteralPath $GovernanceKitRoot).Path
+$kitCandidate = $GovernanceKitRoot
+if ([string]::IsNullOrWhiteSpace($kitCandidate)) {
+    $kitCandidate = Join-Path (Split-Path -Parent $repoPath) "repo-governance-hub"
+}
+elseif (-not [System.IO.Path]::IsPathRooted(($kitCandidate -replace '/', '\'))) {
+    $kitCandidate = Join-Path (Split-Path -Parent $repoPath) $kitCandidate
+}
+$kitPath = (Resolve-Path -LiteralPath $kitCandidate -ErrorAction SilentlyContinue).Path
+if ([string]::IsNullOrWhiteSpace($kitPath)) {
+    throw "Governance kit path not found: $kitCandidate"
+}
 $script:runId = [guid]::NewGuid().ToString("n")
 $script:startUtc = [DateTime]::UtcNow
 $logRoot = Join-Path $repoPath (".codex/logs/safe-autopilot/" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + $script:runId)

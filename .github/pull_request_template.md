@@ -1,12 +1,15 @@
-## Summary
+## Goal
+- <what this PR changes>
 
-## Risk Level
-- [ ] low
-- [ ] medium
-- [ ] high
+## Verification
+- [ ] Build passed
+- [ ] Tests passed
+- [ ] Contract/invariant unchanged or updated with migration notes
 
-## Compatibility Impact
+## Evidence
+- Command output:
+- Screenshots or logs:
 
-## Verification Evidence
-
-## Rollback Plan
+## Risks and Rollback
+- Risk:
+- Rollback:

@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "history_file": ".governance/token-efficiency-history.jsonl",
+  "min_points_for_trend": 4,
+  "max_allowed_increase_ratio": 0.02,
+  "block_on_regression": true,
+  "block_on_insufficient_history": false
+}

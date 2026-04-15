@@ -1,8 +1,8 @@
 # Governance-Kit 终态收敛路线图（ClassroomToolkit）
 
 日期：2026-04-03  
-适用仓库：`E:/CODE/ClassroomToolkit`  
-source of truth：`E:/CODE/governance-kit/source/project/ClassroomToolkit/*`
+适用仓库：`${WORKSPACE_ROOT}/ClassroomToolkit`
+source of truth：`${WORKSPACE_ROOT}/repo-governance-hub/source/project/ClassroomToolkit/*`
 
 ## 1. 目标定义（终态不是一次性状态）
 
@@ -83,8 +83,8 @@ source of truth：`E:/CODE/governance-kit/source/project/ClassroomToolkit/*`
 3. D5：回灌 `governance-kit/source/project/ClassroomToolkit/*` 并执行：
 
 ```powershell
-powershell -File E:/CODE/governance-kit/scripts/install.ps1 -Mode safe
-powershell -File E:/CODE/governance-kit/scripts/doctor.ps1
+powershell -File ${WORKSPACE_ROOT}/repo-governance-hub/scripts/install.ps1 -Mode safe
+powershell -File ${WORKSPACE_ROOT}/repo-governance-hub/scripts/doctor.ps1
 ```
 
 ## 6. 验收命令（本仓）

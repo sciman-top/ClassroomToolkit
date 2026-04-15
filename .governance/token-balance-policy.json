@@ -7,6 +7,26 @@
     "max_average_response_token": 1800,
     "max_single_task_token": 12000
   },
+  "thresholds_by_mode": {
+    "lite": {
+      "min_first_pass_rate": 0.58,
+      "max_rework_after_clarification_rate": 0.4,
+      "max_average_response_token": 1200,
+      "max_single_task_token": 8000
+    },
+    "standard": {
+      "min_first_pass_rate": 0.6,
+      "max_rework_after_clarification_rate": 0.35,
+      "max_average_response_token": 1800,
+      "max_single_task_token": 12000
+    },
+    "deep": {
+      "min_first_pass_rate": 0.6,
+      "max_rework_after_clarification_rate": 0.4,
+      "max_average_response_token": 2600,
+      "max_single_task_token": 18000
+    }
+  },
   "actions": {
     "suggested_rollback_profile": {
       "token_budget_mode": "standard",

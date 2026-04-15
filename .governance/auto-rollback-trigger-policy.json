@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "trigger_when": {
+    "token_balance_alert_or_violation": true,
+    "skill_trigger_eval_pass_rate_below": 0.7,
+    "skill_trigger_eval_false_trigger_rate_above": 0.2,
+    "high_risk_without_explicit_path_count_gt": 0,
+    "external_baseline_warn_count_gt": 0
+  },
+  "action": {
+    "rollback_path": "run-rollback-drill",
+    "mode": "safe"
+  }
+}

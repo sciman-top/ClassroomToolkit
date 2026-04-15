@@ -1,8 +1,8 @@
-﻿# 2026-04-03 Paint Toolbar Order Shape Color
+# 2026-04-03 Paint Toolbar Order Shape Color
 
 - rule_id: R1/R2/R6/R8
 - risk_level: low
-- active_rule_path: `E:/CODE/ClassroomToolkit/AGENTS.md`
+- active_rule_path: `D:/OneDrive/CODE/ClassroomToolkit/AGENTS.md`
 - current_landing: `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml`
 - target_destination: `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml`
 - rollback: restore the pre-change block order and remove `Brush_ShapeTool_Icon` / `Brush_ResourceTool_Icon`
@@ -48,8 +48,8 @@
 # Backfill 2026-04-03
 规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
 影响模块=legacy-governance-evidence
-当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
-目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=D:/OneDrive/CODE/repo-governance-hub/source/project/ClassroomToolkit/*
 迁移批次=2026-04-03-evidence-backfill
 风险等级=Low(documentation backfill only)
 执行命令=backfill-evidence-template-fields.ps1

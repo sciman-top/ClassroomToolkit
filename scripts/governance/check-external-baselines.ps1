@@ -51,6 +51,37 @@ $defaultPolicy = [pscustomobject]@{
         "docs/governance/scorecard-policy.md"
       )
     }
+    code_scanning = [pscustomobject]@{
+      enabled = $true
+      level = "recommended"
+      evidence_any_of = @(
+        ".github/workflows/codeql.yml"
+      )
+    }
+    dependency_review = [pscustomobject]@{
+      enabled = $true
+      level = "recommended"
+      evidence_any_of = @(
+        ".github/workflows/dependency-review.yml"
+      )
+    }
+    codeowners = [pscustomobject]@{
+      enabled = $true
+      level = "recommended"
+      evidence_any_of = @(
+        ".github/CODEOWNERS"
+      )
+    }
+    repository_rulesets = [pscustomobject]@{
+      enabled = $true
+      level = "recommended"
+      evidence_any_of = @(
+        ".governance/repository-ruleset-policy.json",
+        ".github/rulesets/default.json",
+        ".governance/repository-ruleset-config.json",
+        "docs/governance/repository-ruleset-policy.md"
+      )
+    }
   }
 }
 
@@ -85,7 +116,7 @@ function Test-AnyEvidenceExists {
 }
 
 $policy = Read-PolicyOrDefault -Path $policyPath
-$checkNames = @("ssdf", "slsa", "sbom", "scorecard")
+$checkNames = @("ssdf", "slsa", "sbom", "scorecard", "code_scanning", "dependency_review", "codeowners", "repository_rulesets")
 $items = [System.Collections.Generic.List[object]]::new()
 
 $warnCount = 0

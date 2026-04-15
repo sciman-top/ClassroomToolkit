@@ -345,7 +345,7 @@ function Resolve-ExecutionSkillPath {
         $candidatePaths += Join-Path $HOME ".codex/skills/autonomous-execution-loop/SKILL.md"
     }
 
-    $candidatePaths += "E:\\CODE\\skills-manager\\overrides\\autonomous-execution-loop\\SKILL.md"
+    $candidatePaths += Join-Path (Split-Path -Parent $RepoPath) "skills-manager\overrides\autonomous-execution-loop\SKILL.md"
     $candidatePaths += Join-Path $RepoPath ".codex/skills/autonomous-execution-loop/SKILL.md"
     $candidatePaths += Join-Path $RepoPath ".codex/skills/autonomous-refactor-loop/SKILL.md"
 
@@ -1409,5 +1409,4 @@ Auto-recovery note for this task:
 finally {
     Release-LoopLock -Path $lockFilePath
 }
-
 

@@ -1,4 +1,4 @@
-﻿# 2026-04-01 Cross-Page Neighbor Outside Ink Recovery
+# 2026-04-01 Cross-Page Neighbor Outside Ink Recovery
 
 - Rule IDs: `R1` `R2` `R3` `R6` `R8`
 - Risk: Medium
@@ -32,21 +32,21 @@ So the page looked correct only while it was the current page; once it became a 
 ## Changes
 
 1. Added neighbor render-surface planning:
-   - [CrossPageNeighborInkRenderSurfacePolicy.cs](E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/CrossPageNeighborInkRenderSurfacePolicy.cs)
+   - [CrossPageNeighborInkRenderSurfacePolicy.cs](D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/CrossPageNeighborInkRenderSurfacePolicy.cs)
    - Computes widened neighbor ink bitmap width from actual stroke horizontal bounds
    - Carries a `HorizontalOffsetDip` for left overflow
 
 2. Extended neighbor ink bitmap cache entry:
-   - [PaintOverlayWindow.Photo.cs](E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs)
+   - [PaintOverlayWindow.Photo.cs](D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.cs)
    - `InkBitmapCacheEntry` now stores `HorizontalOffsetDip`
 
 3. Updated ink renderer to support horizontal offset:
-   - [InkStrokeRenderer.cs](E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkStrokeRenderer.cs)
+   - [InkStrokeRenderer.cs](D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkStrokeRenderer.cs)
    - `RenderPage(...)` now accepts `horizontalOffsetDip`
    - Renders strokes under `TranslateTransform(horizontalOffsetDip, 0)`
 
 4. Restored cross-page neighbor ink offset pipeline:
-   - [PaintOverlayWindow.Photo.CrossPage.cs](E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs)
+   - [PaintOverlayWindow.Photo.CrossPage.cs](D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.CrossPage.cs)
    - resolves stroke horizontal bounds
    - widens neighbor ink render surface when needed
    - stores offset in cache
@@ -55,12 +55,12 @@ So the page looked correct only while it was the current page; once it became a 
    - reuses offset in async render replacement and visible-slot priming
 
 5. Restored interactive seed-path offset propagation:
-   - [PaintOverlayWindow.Photo.Navigation.cs](E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.cs)
+   - [PaintOverlayWindow.Photo.Navigation.cs](D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.cs)
    - seeded neighbor ink frame now carries cached `HorizontalOffsetDip`
 
 6. Added regression tests:
-   - [CrossPageNeighborInkRenderSurfacePolicyTests.cs](E:/CODE/ClassroomToolkit/tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfacePolicyTests.cs)
-   - [CrossPageNeighborInkRenderSurfaceContractTests.cs](E:/CODE/ClassroomToolkit/tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfaceContractTests.cs)
+   - [CrossPageNeighborInkRenderSurfacePolicyTests.cs](D:/OneDrive/CODE/ClassroomToolkit/tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfacePolicyTests.cs)
+   - [CrossPageNeighborInkRenderSurfaceContractTests.cs](D:/OneDrive/CODE/ClassroomToolkit/tests/ClassroomToolkit.Tests/CrossPageNeighborInkRenderSurfaceContractTests.cs)
 
 ## Verification
 

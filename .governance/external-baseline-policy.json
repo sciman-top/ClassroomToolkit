@@ -39,6 +39,37 @@
         ".github/workflows/scorecard.yml",
         "docs/governance/scorecard-policy.md"
       ]
+    },
+    "code_scanning": {
+      "enabled": true,
+      "level": "required",
+      "evidence_any_of": [
+        ".github/workflows/codeql.yml"
+      ]
+    },
+    "dependency_review": {
+      "enabled": true,
+      "level": "required",
+      "evidence_any_of": [
+        ".github/workflows/dependency-review.yml"
+      ]
+    },
+    "codeowners": {
+      "enabled": true,
+      "level": "required",
+      "evidence_any_of": [
+        ".github/CODEOWNERS"
+      ]
+    },
+    "repository_rulesets": {
+      "enabled": true,
+      "level": "recommended",
+      "evidence_any_of": [
+        ".governance/repository-ruleset-policy.json",
+        ".github/rulesets/default.json",
+        ".governance/repository-ruleset-config.json",
+        "docs/governance/repository-ruleset-policy.md"
+      ]
     }
   }
 }

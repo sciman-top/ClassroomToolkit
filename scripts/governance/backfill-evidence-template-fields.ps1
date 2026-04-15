@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$EvidenceDir = "docs/change-evidence",
   [string]$TemplateFile = "docs/change-evidence/template.md",
   [switch]$DryRun
@@ -57,8 +57,8 @@ if ($templateKeys.Count -eq 0) {
 $defaultValues = @(
   "BACKFILL-LEGACY-EVIDENCE-2026-04-03",
   "legacy-governance-evidence",
-  "E:/CODE/ClassroomToolkit/docs/change-evidence",
-  "E:/CODE/repo-governance-hub/source/project/ClassroomToolkit/*",
+  '${WORKSPACE_ROOT}/ClassroomToolkit/docs/change-evidence',
+  '${WORKSPACE_ROOT}/repo-governance-hub/source/project/ClassroomToolkit/*',
   "2026-04-03-evidence-backfill",
   "Low(documentation backfill only)",
   "backfill-evidence-template-fields.ps1",

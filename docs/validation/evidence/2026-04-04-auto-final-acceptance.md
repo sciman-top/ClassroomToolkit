@@ -1,4 +1,4 @@
-﻿# Final Acceptance Evidence
+# Final Acceptance Evidence
 
 - generated_at_utc: 2026-04-03T18:31:10.8371315+00:00
 - configuration: Debug
@@ -29,13 +29,13 @@
 ```text
 正在确定要还原的项目…
   所有项目均是最新的，无法还原。
-  ClassroomToolkit.Domain -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
-  ClassroomToolkit.Interop -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
-  ClassroomToolkit.Application -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
-  ClassroomToolkit.Infra -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
-  ClassroomToolkit.Services -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
-  ClassroomToolkit.App -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
-  ClassroomToolkit.Tests -> E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
+  ClassroomToolkit.Domain -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Interop -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Application -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
+  ClassroomToolkit.Infra -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.Services -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.App -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
+  ClassroomToolkit.Tests -> D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
 
 已成功生成。
     0 个警告
@@ -54,14 +54,14 @@
 ```text
 正在确定要还原的项目…
   所有项目均是最新的，无法还原。
-  ClassroomToolkit.Domain -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
-  ClassroomToolkit.Interop -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
-  ClassroomToolkit.Application -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
-  ClassroomToolkit.Services -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
-  ClassroomToolkit.Infra -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
-  ClassroomToolkit.App -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
-  ClassroomToolkit.Tests -> E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
-E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+  ClassroomToolkit.Domain -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Interop -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Application -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
+  ClassroomToolkit.Services -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.Infra -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.App -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
+  ClassroomToolkit.Tests -> D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
+D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
 总共 1 个测试文件与指定模式相匹配。
 
 已通过! - 失败:     0，通过:  3171，已跳过:     0，总计:  3171，持续时间: 2 s - ClassroomToolkit.Tests.dll (net10.0)
@@ -77,14 +77,14 @@ E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\
 ```text
 正在确定要还原的项目…
   所有项目均是最新的，无法还原。
-  ClassroomToolkit.Interop -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
-  ClassroomToolkit.Domain -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
-  ClassroomToolkit.Application -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
-  ClassroomToolkit.Services -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
-  ClassroomToolkit.Infra -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
-  ClassroomToolkit.App -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
-  ClassroomToolkit.Tests -> E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
-E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+  ClassroomToolkit.Interop -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Debug\net10.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Domain -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Debug\net10.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Application -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Debug\net10.0\ClassroomToolkit.Application.dll
+  ClassroomToolkit.Services -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Debug\net10.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.Infra -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Debug\net10.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.App -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\sciman Classroom Toolkit.dll
+  ClassroomToolkit.Tests -> D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll
+D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Debug\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
 总共 1 个测试文件与指定模式相匹配。
 
 已通过! - 失败:     0，通过:    25，已跳过:     0，总计:    25，持续时间: 250 ms - ClassroomToolkit.Tests.dll (net10.0)
@@ -132,16 +132,15 @@ src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs         
 ```text
 正在确定要还原的项目…
   所有项目均是最新的，无法还原。
-  ClassroomToolkit.Domain -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Release\net10.0\ClassroomToolkit.Domain.dll
-  ClassroomToolkit.Interop -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Release\net10.0-windows\ClassroomToolkit.Interop.dll
-  ClassroomToolkit.Application -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Release\net10.0\ClassroomToolkit.Application.dll
-  ClassroomToolkit.Services -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Release\net10.0-windows\ClassroomToolkit.Services.dll
-  ClassroomToolkit.Infra -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Release\net10.0\ClassroomToolkit.Infra.dll
-  ClassroomToolkit.App -> E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Release\net10.0-windows\sciman Classroom Toolkit.dll
-  ClassroomToolkit.Tests -> E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Release\net10.0-windows\ClassroomToolkit.Tests.dll
-E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Release\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+  ClassroomToolkit.Domain -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Domain\bin\Release\net10.0\ClassroomToolkit.Domain.dll
+  ClassroomToolkit.Interop -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Interop\bin\Release\net10.0-windows\ClassroomToolkit.Interop.dll
+  ClassroomToolkit.Application -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Application\bin\Release\net10.0\ClassroomToolkit.Application.dll
+  ClassroomToolkit.Services -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\bin\Release\net10.0-windows\ClassroomToolkit.Services.dll
+  ClassroomToolkit.Infra -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Infra\bin\Release\net10.0\ClassroomToolkit.Infra.dll
+  ClassroomToolkit.App -> D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Release\net10.0-windows\sciman Classroom Toolkit.dll
+  ClassroomToolkit.Tests -> D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Release\net10.0-windows\ClassroomToolkit.Tests.dll
+D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\bin\Release\net10.0-windows\ClassroomToolkit.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
 总共 1 个测试文件与指定模式相匹配。
 
 已通过! - 失败:     0，通过:  3171，已跳过:     0，总计:  3171，持续时间: 2 s - ClassroomToolkit.Tests.dll (net10.0)
 ```
-

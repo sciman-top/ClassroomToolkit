@@ -1,6 +1,6 @@
 ﻿param(
   [string]$RepoRoot = ".",
-  [string]$GovernanceKitRoot = "",
+  [string]$GovernanceRoot = "",
   [string]$IssueId = "project-governance-cycle-default",
   [ValidateSet("auto", "plan", "requirement", "bugfix", "acceptance")]
   [string]$ClarificationScenario = "auto",
@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 
-function Resolve-KitRoot {
+function Resolve-GovernanceRoot {
   param([string]$ProvidedPath)
 
   if (-not [string]::IsNullOrWhiteSpace($ProvidedPath)) {
@@ -26,7 +26,7 @@ function Resolve-KitRoot {
 
   $gitValue = ""
   try {
-    $gitValue = (& git -C $repoPath config --local --get governance.kitRoot 2>$null)
+    $gitValue = (& git -C $repoPath config --local --get governance.root 2>$null)
   }
   catch {
     $gitValue = ""
@@ -37,15 +37,15 @@ function Resolve-KitRoot {
     if ($null -ne $resolved) { return $resolved.Path }
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($env:GOVERNANCE_KIT_ROOT)) {
-    $resolved = Resolve-Path -LiteralPath $env:GOVERNANCE_KIT_ROOT -ErrorAction SilentlyContinue
+  if (-not [string]::IsNullOrWhiteSpace($env:GOVERNANCE_ROOT)) {
+    $resolved = Resolve-Path -LiteralPath $env:GOVERNANCE_ROOT -ErrorAction SilentlyContinue
     if ($null -ne $resolved) { return $resolved.Path }
   }
 
-  throw "Cannot resolve repo-governance-hub root. Set git config governance.kitRoot or pass -GovernanceKitRoot."
+  throw "Cannot resolve repo-governance-hub root. Set git config governance.root or pass -GovernanceRoot."
 }
 
-$kitRoot = Resolve-KitRoot -ProvidedPath $GovernanceKitRoot
+$kitRoot = Resolve-GovernanceRoot -ProvidedPath $GovernanceRoot
 $runner = Join-Path $kitRoot "scripts/run-project-governance-cycle.ps1"
 if (-not (Test-Path -LiteralPath $runner)) {
   throw "Missing runner script: $runner"

@@ -2,11 +2,14 @@
   "schema_version": "1.0",
   "enabled": true,
   "enforce": {
-    "block_on_violation": true
+    "block_on_violation": true,
+    "require_merge_or_deprecation_plan_on_violation": false,
+    "allow_with_active_plan": false,
+    "plan_path": ".governance/complexity-budget-plan.json"
   },
   "scope": {
     "prefer_git_pending": true,
-    "include_untracked": false,
+    "include_untracked": true,
     "scan_repo_when_no_pending": false,
     "max_repo_files": 200
   },
@@ -25,7 +28,8 @@
       ".java",
       ".kt",
       ".rb",
-      ".php"
+      ".php",
+      ".md"
     ],
     "exclude_paths": [
       ".git/",
@@ -38,8 +42,7 @@
       ".venv/",
       "coverage/",
       "docs/",
-      "tests/",
-      "source/project/"
+      "tests/"
     ]
   },
   "limits": {
@@ -94,6 +97,11 @@
     },
     {
       "repoName": "repo-governance-hub",
+      "enforce": {
+        "require_merge_or_deprecation_plan_on_violation": true,
+        "allow_with_active_plan": true,
+        "plan_path": ".governance/complexity-budget-plan.json"
+      },
       "mode_limits": {
         "deep": {
           "max_file_lines": 1250,

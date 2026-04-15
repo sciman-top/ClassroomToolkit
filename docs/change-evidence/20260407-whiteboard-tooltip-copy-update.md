@@ -1,4 +1,4 @@
-﻿# 20260407 Toolbar And Shell Copy Update
+# 20260407 Toolbar And Shell Copy Update
 
 - Rule: C.5 evidence and rollback traceability.
 - Risk: low
@@ -9,8 +9,8 @@
 # Backfill 2026-04-03
 规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
 影响模块=legacy-governance-evidence
-当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
-目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=D:/OneDrive/CODE/repo-governance-hub/source/project/ClassroomToolkit/*
 迁移批次=2026-04-03-evidence-backfill
 风险等级=Low(documentation backfill only)
 执行命令=backfill-evidence-template-fields.ps1

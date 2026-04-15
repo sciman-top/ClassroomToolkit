@@ -1,5 +1,111 @@
 {
   "schema_version": "1.0",
+  "metadata_version": "2026Q2.phase0",
+  "last_updated": "2026-04-13",
+  "core_set": [
+    "sdd",
+    "tdd",
+    "contract_testing",
+    "harness_engineering",
+    "policy_as_code",
+    "observability",
+    "hooks_ci_gates",
+    "ssdf",
+    "slsa",
+    "sbom",
+    "scorecard"
+  ],
+  "extended_set": [
+    "atdd_bdd",
+    "progressive_delivery",
+    "repository_rulesets"
+  ],
+  "practice_rollout_metadata": {
+    "sdd": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "spec template available + evidence template aligned"
+    },
+    "tdd": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "stable test profile available + fail-fast regression guard"
+    },
+    "atdd_bdd": {
+      "owner": "repo-governance-hub",
+      "tier": "Extended",
+      "mode": "observe",
+      "entry_criteria": "domain acceptance scenario catalog prepared"
+    },
+    "contract_testing": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "contract/invariant gate scripts pass in fixed order"
+    },
+    "harness_engineering": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "doctor + verify chain stable in three repos"
+    },
+    "policy_as_code": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "policy json validated + mapped to verify/doctor"
+    },
+    "observability": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "recurring review metrics populated and auditable"
+    },
+    "progressive_delivery": {
+      "owner": "repo-governance-hub",
+      "tier": "Extended",
+      "mode": "observe",
+      "entry_criteria": "rollout observe window meets promotion policy"
+    },
+    "hooks_ci_gates": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "pre-commit/pre-push + CI quality gates active"
+    },
+    "ssdf": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "ssdf mapping and external baseline checks pass"
+    },
+    "slsa": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "observe",
+      "entry_criteria": "provenance attestation pipeline verified in at least one repo"
+    },
+    "sbom": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "sbom workflow and supply-chain checks present"
+    },
+    "scorecard": {
+      "owner": "repo-governance-hub",
+      "tier": "Core",
+      "mode": "enforce",
+      "entry_criteria": "scorecard workflow active and recurring review stable"
+    },
+    "repository_rulesets": {
+      "owner": "repo-governance-hub",
+      "tier": "Extended",
+      "mode": "observe",
+      "entry_criteria": "ruleset policy/config/template validated without drift"
+    }
+  },
   "default": {
     "sdd": "required",
     "tdd": "required",
@@ -13,6 +119,7 @@
     "ssdf": "required",
     "slsa": "required",
     "sbom": "required",
-    "scorecard": "required"
+    "scorecard": "required",
+    "repository_rulesets": "recommended"
   }
 }

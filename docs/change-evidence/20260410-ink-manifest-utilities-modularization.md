@@ -1,7 +1,7 @@
 规则ID=CTK-INK-MANIFEST-UTILITIES-MODULARIZATION-20260410
 影响模块=InkExportService manifest read/write flow
-当前落点=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkExportService.cs
-目标归宿=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkExportManifestUtilities.cs
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkExportService.cs
+目标归宿=D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Ink/InkExportManifestUtilities.cs
 迁移批次=2026-04-10-ink-manifest-batch
 风险等级=low
 执行命令=dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; powershell -File scripts/quality/run-local-quality-gates.ps1

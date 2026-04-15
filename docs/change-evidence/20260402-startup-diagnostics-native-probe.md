@@ -1,4 +1,4 @@
-﻿# 2026-04-02 Startup Diagnostics Native Probe
+# 2026-04-02 Startup Diagnostics Native Probe
 
 - Rule IDs: `R1`, `R2`, `R3`, `R6`, `R8`
 - Risk: medium
@@ -10,7 +10,7 @@
 ## Basis
 
 - User reported repeated startup warning for missing `e_sqlite3.dll` while the published package was complete.
-- Local inspection showed `Debug` output contained `runtimes/win-x64/native/e_sqlite3.dll`, but startup probe only checked `[e_sqlite3.dll](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\e_sqlite3.dll)` at root.
+- Local inspection showed `Debug` output contained `runtimes/win-x64/native/e_sqlite3.dll`, but startup probe only checked `[e_sqlite3.dll](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\e_sqlite3.dll)` at root.
 - User also requested a visible place to reopen compatibility detection after suppressing repeated warnings.
 
 ## Commands
@@ -34,8 +34,8 @@
   - evidence_link: this file
   - expires_at: `2026-04-09`
 - Root cause evidence:
-  - `Debug` output contained `[e_sqlite3.dll](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\runtimes\win-x64\native\e_sqlite3.dll)`
-  - root-level `[e_sqlite3.dll](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\e_sqlite3.dll)` did not exist
+  - `Debug` output contained `[e_sqlite3.dll](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\runtimes\win-x64\native\e_sqlite3.dll)`
+  - root-level `[e_sqlite3.dll](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\bin\Debug\net10.0-windows\e_sqlite3.dll)` did not exist
 - Test evidence:
   - focused tests passed: `15/15`
   - full tests passed: `3103/3103`
@@ -44,19 +44,19 @@
 
 ## Changes
 
-- Added runtime-aware native dependency resolution in [StartupCompatibilityProbe.cs](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\Compatibility\StartupCompatibilityProbe.cs)
+- Added runtime-aware native dependency resolution in [StartupCompatibilityProbe.cs](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\Compatibility\StartupCompatibilityProbe.cs)
   - root directory remains first choice
   - fallback probes standard `.NET` runtime native paths such as `runtimes/win-x64/native`
-- Added explicit diagnostics entry to launcher bottom bar in [MainWindow.xaml](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.xaml)
-- Added direct diagnostics dialog handler in [MainWindow.Launcher.cs](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Launcher.cs)
+- Added explicit diagnostics entry to launcher bottom bar in [MainWindow.xaml](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.xaml)
+- Added direct diagnostics dialog handler in [MainWindow.Launcher.cs](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Launcher.cs)
 - Added regression coverage:
-  - [StartupCompatibilityProbeTests.cs](E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\StartupCompatibilityProbeTests.cs)
-  - [UiCopyContractTests.cs](E:\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\App\UiCopyContractTests.cs)
+  - [StartupCompatibilityProbeTests.cs](D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\StartupCompatibilityProbeTests.cs)
+  - [UiCopyContractTests.cs](D:\OneDrive\CODE\ClassroomToolkit\tests\ClassroomToolkit.Tests\App\UiCopyContractTests.cs)
 
 ## Rollback
 
-- Revert launcher diagnostics entry by removing `DiagnosticsButton` from [MainWindow.xaml](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.xaml) and `OnDiagnosticsClick` from [MainWindow.Launcher.cs](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Launcher.cs)
-- Revert runtime-aware probing by restoring root-only lookup in [StartupCompatibilityProbe.cs](E:\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\Compatibility\StartupCompatibilityProbe.cs)
+- Revert launcher diagnostics entry by removing `DiagnosticsButton` from [MainWindow.xaml](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.xaml) and `OnDiagnosticsClick` from [MainWindow.Launcher.cs](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.App\MainWindow.Launcher.cs)
+- Revert runtime-aware probing by restoring root-only lookup in [StartupCompatibilityProbe.cs](D:\OneDrive\CODE\ClassroomToolkit\src\ClassroomToolkit.Services\Compatibility\StartupCompatibilityProbe.cs)
 - Remove corresponding regression tests if behavior is intentionally changed
 
 # Backfill 2026-04-03

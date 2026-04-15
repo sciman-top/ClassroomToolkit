@@ -209,22 +209,8 @@ function Resolve-TokenBudgetMode {
     }
   }
 
-  $tokenSaverPath = Join-Path $RepoRootResolved ".governance\token-saver-policy.json"
-  if (Test-Path -LiteralPath $tokenSaverPath -PathType Leaf) {
-    try {
-      $tokenSaver = Get-Content -LiteralPath $tokenSaverPath -Raw | ConvertFrom-Json
-      if ($null -ne $tokenSaver.PSObject.Properties['default_mode']) {
-        $candidate = ([string]$tokenSaver.default_mode).Trim().ToLowerInvariant()
-        if (Test-TokenBudgetModeValue -Value $candidate) {
-          return $candidate
-        }
-      }
-    } catch {
-      # fallback to default
-    }
-  }
-
-  return "lite"
+  # Gate strictness should not inherit response style defaults (e.g. lite output mode).
+  return "standard"
 }
 
 function Normalize-RepoText {
@@ -376,6 +362,25 @@ $enforceBlock = $true
 if ($null -ne $policy.PSObject.Properties['enforce'] -and $null -ne $policy.enforce.PSObject.Properties['block_on_violation']) {
   $enforceBlock = [bool]$policy.enforce.block_on_violation
 }
+$requirePlanForViolation = $false
+$allowWithPlan = $false
+$complexityPlanPathResolved = [System.IO.Path]::GetFullPath((Join-Path $repoRootResolved ".governance\complexity-budget-plan.json"))
+if ($null -ne $policy.PSObject.Properties['enforce']) {
+  if ($null -ne $policy.enforce.PSObject.Properties['require_merge_or_deprecation_plan_on_violation']) {
+    $requirePlanForViolation = [bool]$policy.enforce.require_merge_or_deprecation_plan_on_violation
+  }
+  if ($null -ne $policy.enforce.PSObject.Properties['allow_with_active_plan']) {
+    $allowWithPlan = [bool]$policy.enforce.allow_with_active_plan
+  }
+  if ($null -ne $policy.enforce.PSObject.Properties['plan_path'] -and -not [string]::IsNullOrWhiteSpace([string]$policy.enforce.plan_path)) {
+    $planPathText = [string]$policy.enforce.plan_path
+    if ([System.IO.Path]::IsPathRooted($planPathText)) {
+      $complexityPlanPathResolved = [System.IO.Path]::GetFullPath($planPathText)
+    } else {
+      $complexityPlanPathResolved = [System.IO.Path]::GetFullPath((Join-Path $repoRootResolved $planPathText))
+    }
+  }
+}
 
 $scopePreferPending = $true
 $scopeIncludeUntracked = $true
@@ -464,6 +469,81 @@ if ($null -ne $repoOverride -and $null -ne $repoOverride.PSObject.Properties['mo
   $modeLimits = $repoOverride.mode_limits.PSObject.Properties[$tokenBudgetModeResolved].Value
   Apply-LimitOverrides -LimitObject $modeLimits
 }
+if ($null -ne $repoOverride -and $null -ne $repoOverride.PSObject.Properties['enforce']) {
+  if ($null -ne $repoOverride.enforce.PSObject.Properties['require_merge_or_deprecation_plan_on_violation']) {
+    $requirePlanForViolation = [bool]$repoOverride.enforce.require_merge_or_deprecation_plan_on_violation
+  }
+  if ($null -ne $repoOverride.enforce.PSObject.Properties['allow_with_active_plan']) {
+    $allowWithPlan = [bool]$repoOverride.enforce.allow_with_active_plan
+  }
+  if ($null -ne $repoOverride.enforce.PSObject.Properties['plan_path'] -and -not [string]::IsNullOrWhiteSpace([string]$repoOverride.enforce.plan_path)) {
+    $repoPlanPathText = [string]$repoOverride.enforce.plan_path
+    if ([System.IO.Path]::IsPathRooted($repoPlanPathText)) {
+      $complexityPlanPathResolved = [System.IO.Path]::GetFullPath($repoPlanPathText)
+    } else {
+      $complexityPlanPathResolved = [System.IO.Path]::GetFullPath((Join-Path $repoRootResolved $repoPlanPathText))
+    }
+  }
+}
+
+function Get-ComplexityPlanValidation {
+  param([string]$PlanPathResolved)
+
+  if ([string]::IsNullOrWhiteSpace($PlanPathResolved)) {
+    return [pscustomobject]@{ ok = $false; reason = 'plan_path_empty'; plan_type = $null; evidence_ref = $null }
+  }
+  if (-not (Test-Path -LiteralPath $PlanPathResolved -PathType Leaf)) {
+    return [pscustomobject]@{ ok = $false; reason = 'plan_file_missing'; plan_type = $null; evidence_ref = $null }
+  }
+
+  $planObj = $null
+  try {
+    $planObj = Get-Content -LiteralPath $PlanPathResolved -Raw | ConvertFrom-Json
+  } catch {
+    return [pscustomobject]@{ ok = $false; reason = 'plan_json_invalid'; plan_type = $null; evidence_ref = $null }
+  }
+
+  $entries = @()
+  if ($null -ne $planObj -and $null -ne $planObj.PSObject.Properties['entries']) {
+    $entries = @($planObj.entries)
+  }
+  if ($entries.Count -eq 0) {
+    return [pscustomobject]@{ ok = $false; reason = 'plan_entries_missing'; plan_type = $null; evidence_ref = $null }
+  }
+
+  $today = (Get-Date).Date
+  foreach ($entry in $entries) {
+    if ($null -eq $entry) { continue }
+    $planType = ""
+    if ($null -ne $entry.PSObject.Properties['plan_type']) {
+      $planType = ([string]$entry.plan_type).Trim().ToLowerInvariant()
+    }
+    if (@("merge", "deprecation") -notcontains $planType) { continue }
+
+    $status = "active"
+    if ($null -ne $entry.PSObject.Properties['status'] -and -not [string]::IsNullOrWhiteSpace([string]$entry.status)) {
+      $status = ([string]$entry.status).Trim().ToLowerInvariant()
+    }
+    if (@("active", "approved", "in_progress") -notcontains $status) { continue }
+
+    if ($null -ne $entry.PSObject.Properties['expires_at'] -and -not [string]::IsNullOrWhiteSpace([string]$entry.expires_at)) {
+      $expiresAtText = ([string]$entry.expires_at).Trim()
+      $expiresAt = [DateTime]::MinValue
+      if (-not [DateTime]::TryParseExact($expiresAtText, "yyyy-MM-dd", [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$expiresAt)) {
+        continue
+      }
+      if ($expiresAt.Date -lt $today) { continue }
+    }
+
+    $evidenceRef = $null
+    if ($null -ne $entry.PSObject.Properties['evidence_ref']) {
+      $evidenceRef = [string]$entry.evidence_ref
+    }
+    return [pscustomobject]@{ ok = $true; reason = 'plan_active'; plan_type = $planType; evidence_ref = $evidenceRef }
+  }
+
+  return [pscustomobject]@{ ok = $false; reason = 'no_active_merge_or_deprecation_plan'; plan_type = $null; evidence_ref = $null }
+}
 
 $limitsOut = @{
   max_file_lines = $maxFileLines
@@ -518,9 +598,13 @@ if ($scopePreferPending -and $gitAvailable) {
 
     if ([string]::IsNullOrWhiteSpace($pathPart)) { continue }
 
-    $fullPath = Join-Path $gitRoot $pathPart
-    if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
-      [void]$candidatePaths.Add([System.IO.Path]::GetFullPath($fullPath))
+    try {
+      $fullPath = Join-Path $gitRoot $pathPart
+      if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+        [void]$candidatePaths.Add([System.IO.Path]::GetFullPath($fullPath))
+      }
+    } catch {
+      continue
     }
   }
 
@@ -534,9 +618,13 @@ if ($candidatePaths.Count -eq 0 -and $scopeScanRepoWhenNoPending) {
     $trackedProbe = Invoke-GitSilent -RepoRoot $gitRoot -ArgsText "ls-files"
     $trackedFiles = @($trackedProbe.output | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
     foreach ($tracked in $trackedFiles) {
-      $fullPath = Join-Path $gitRoot ([string]$tracked)
-      if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
-        [void]$candidatePaths.Add([System.IO.Path]::GetFullPath($fullPath))
+      try {
+        $fullPath = Join-Path $gitRoot ([string]$tracked)
+        if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+          [void]$candidatePaths.Add([System.IO.Path]::GetFullPath($fullPath))
+        }
+      } catch {
+        continue
       }
     }
   } else {
@@ -569,7 +657,11 @@ $uniqueFiles = [System.Collections.Generic.HashSet[string]]::new([System.StringC
 
 foreach ($fullPath in @($candidatePaths)) {
   if (-not $uniqueFiles.Add($fullPath)) { continue }
-  if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) { continue }
+  try {
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) { continue }
+  } catch {
+    continue
+  }
 
   $baseRoot = if ($gitAvailable) { $gitRoot } else { $repoRootResolved }
   $relativePath = Get-RelativePathCompat -BasePath $baseRoot -TargetPath $fullPath
@@ -579,7 +671,12 @@ foreach ($fullPath in @($candidatePaths)) {
     continue
   }
 
-  $ext = ([System.IO.Path]::GetExtension($fullPath)).ToLowerInvariant()
+  $ext = ""
+  try {
+    $ext = ([System.IO.Path]::GetExtension($fullPath)).ToLowerInvariant()
+  } catch {
+    continue
+  }
   if (-not $includeSet.Contains($ext)) {
     continue
   }
@@ -657,6 +754,24 @@ if ($scopeUsed -eq 'pending' -and $totalEstimatedTokens -gt $maxTokensTotalPendi
     limit = $maxTokensTotalPending
     suggestion = 'narrow current change set: split into smaller commits or reduce feature surface.'
   })
+}
+
+if ($violations.Count -gt 0 -and $requirePlanForViolation) {
+  $planCheck = Get-ComplexityPlanValidation -PlanPathResolved $complexityPlanPathResolved
+  if ($planCheck.ok) {
+    if ($allowWithPlan) {
+      [void]$warnings.Add(("complexity budget exceeded but allowed by active {0} plan: {1}" -f [string]$planCheck.plan_type, ($complexityPlanPathResolved -replace '\\', '/')))
+      $violations = [System.Collections.Generic.List[object]]::new()
+    }
+  } else {
+    [void]$violations.Add([pscustomobject]@{
+      type = 'missing_merge_or_deprecation_plan'
+      file = '(policy)'
+      actual = [string]$planCheck.reason
+      limit = 'active merge/deprecation plan required'
+      suggestion = ('add an active merge/deprecation plan at {0} before accepting complexity budget overages.' -f ($complexityPlanPathResolved -replace '\\', '/'))
+    })
+  }
 }
 
 $status = if ($violations.Count -eq 0) { 'PASS' } else { 'FAIL' }

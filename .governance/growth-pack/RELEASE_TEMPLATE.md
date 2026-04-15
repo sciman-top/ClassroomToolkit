@@ -14,6 +14,11 @@
 ## Fixed
 - <bug fix>
 
+## Try it now
+- <shortest validation command>
+- <sample input or demo>
+- <expected signal>
+
 ## Breaking Changes
 - <none or scope>
 
@@ -21,6 +26,10 @@
 1. <step 1>
 2. <step 2>
 3. <verification>
+
+## Compatibility
+- <runtime / OS / dependency note>
+- <migration boundary>
 
 ## Rollback
 - <rollback command or path>

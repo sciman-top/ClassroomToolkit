@@ -1,7 +1,7 @@
 规则ID=R1/R2/R4/R6/R8 + E3/E4
 影响模块=scripts/quality, scripts/governance, .github/workflows, docs/change-evidence, docs/governance/reports, docs/runbooks
-当前落点=E:/CODE/ClassroomToolkit/scripts/{quality,governance}
-目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/scripts/{quality,governance}
+目标归宿=D:/OneDrive/CODE/repo-governance-hub/source/project/ClassroomToolkit/*
 迁移批次=2026-04-03-governance-endstate-p0-p1-p2
 风险等级=Medium(新增门禁脚本与编排，完成 evidence all 强制收敛)
 执行命令=see_command_list_below
@@ -52,5 +52,5 @@
 - 回滚 evidence 补齐：对 docs/change-evidence 的批量补齐提交执行 git revert。
 - 若需临时放行：使用 waiver（含 owner/expires_at/recovery_plan/evidence_link）。
 - 回灌后统一复验：
-  powershell -File E:/CODE/governance-kit/scripts/install.ps1 -Mode safe
-  powershell -File E:/CODE/governance-kit/scripts/doctor.ps1
+  powershell -File D:/OneDrive/CODE/repo-governance-hub/scripts/install.ps1 -Mode safe
+  powershell -File D:/OneDrive/CODE/repo-governance-hub/scripts/doctor.ps1

@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "governance-kit-internal",
+      "name": "repo-governance-hub-internal",
       "source": {
         "source": "local",
-        "path": "./plugins/governance-kit-internal"
+        "path": "./plugins/repo-governance-hub-internal"
       },
       "policy": {
         "installation": "AVAILABLE",

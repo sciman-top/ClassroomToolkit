@@ -10,6 +10,6 @@
 
 platform_na:
 - reason=`codex status` 在当前非交互终端返回 `stdin is not a terminal`
-- alternative_verification=`codex --version` 返回 `codex-cli 0.118.0`，`codex --help` 返回命令帮助；活动规则来源为仓库根 `E:\CODE\ClassroomToolkit\AGENTS.md`；本轮并行测试曾触发 WPF 临时输出文件锁，随后串行复跑全量测试通过
+- alternative_verification=`codex --version` 返回 `codex-cli 0.118.0`，`codex --help` 返回命令帮助；活动规则来源为仓库根 `D:\OneDrive\CODE\ClassroomToolkit\AGENTS.md`；本轮并行测试曾触发 WPF 临时输出文件锁，随后串行复跑全量测试通过
 - evidence_link=`docs/change-evidence/20260404-photo-overlay-name-clarity.md`
 - expires_at=`2026-04-11`

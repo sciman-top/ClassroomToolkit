@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "window_days": 30,
+  "minimum_sample_size": 20,
+  "minimum_coverage_rate": 0.8,
+  "required_fields": [
+    "decision_score",
+    "hard_guard_hits",
+    "reason_codes"
+  ],
+  "fail_on_breach": false
+}

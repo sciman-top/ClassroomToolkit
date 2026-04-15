@@ -1,6 +1,6 @@
 ﻿param(
   [string]$RepoRoot = ".",
-  [string]$GovernanceKitRoot = "",
+  [string]$GovernanceRoot = "",
   [string]$IssueId = "target-autopilot-default",
   [ValidateSet("auto", "plan", "requirement", "bugfix", "acceptance")]
   [string]$ClarificationScenario = "auto",
@@ -16,7 +16,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Resolve-KitRoot {
+function Resolve-GovernanceRoot {
   param([string]$ProvidedPath, [string]$RepoPath)
 
   if (-not [string]::IsNullOrWhiteSpace($ProvidedPath)) {
@@ -27,7 +27,7 @@ function Resolve-KitRoot {
 
   $gitValue = ""
   try {
-    $gitValue = (& git -C $RepoPath config --local --get governance.kitRoot 2>$null)
+    $gitValue = (& git -C $RepoPath config --local --get governance.root 2>$null)
   }
   catch {
     $gitValue = ""
@@ -38,16 +38,16 @@ function Resolve-KitRoot {
     if ($null -ne $resolved) { return $resolved.Path }
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($env:GOVERNANCE_KIT_ROOT)) {
-    $resolved = Resolve-Path -LiteralPath $env:GOVERNANCE_KIT_ROOT -ErrorAction SilentlyContinue
+  if (-not [string]::IsNullOrWhiteSpace($env:GOVERNANCE_ROOT)) {
+    $resolved = Resolve-Path -LiteralPath $env:GOVERNANCE_ROOT -ErrorAction SilentlyContinue
     if ($null -ne $resolved) { return $resolved.Path }
   }
 
-  throw "Cannot resolve repo-governance-hub root. Set git config governance.kitRoot or pass -GovernanceKitRoot."
+  throw "Cannot resolve repo-governance-hub root. Set git config governance.root or pass -GovernanceRoot."
 }
 
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
-$kitRoot = Resolve-KitRoot -ProvidedPath $GovernanceKitRoot -RepoPath $repoPath
+$kitRoot = Resolve-GovernanceRoot -ProvidedPath $GovernanceRoot -RepoPath $repoPath
 $sharedScript = Join-Path $kitRoot "scripts\governance\run-target-autopilot.ps1"
 
 if (-not (Test-Path -LiteralPath $sharedScript -PathType Leaf)) {
@@ -69,7 +69,7 @@ $invokeArgs = @(
   "-ExecutionPolicy", "Bypass",
   "-File", $sharedScript,
   "-RepoRoot", $RepoRoot,
-  "-GovernanceKitRoot", $kitRoot,
+  "-GovernanceRoot", $kitRoot,
   "-IssueId", $IssueId,
   "-ClarificationScenario", $ClarificationScenario,
   "-CodexCommand", $CodexCommand,

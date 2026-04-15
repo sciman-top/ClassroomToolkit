@@ -5,7 +5,7 @@
 迁移批次=20260401-rollcall-preload-dedup
 风险等级=低
 执行命令=codex status; codex --version; codex --help; Get-Command dotnet; Get-Command powershell; Test-Path tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj; dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"; powershell -File scripts/quality/check-hotspot-line-budgets.ps1
-验证证据=build/test/contract/hotspot 全部通过；首开路径由“预热+兜底二次Load”改为“优先等待同源预热任务完成”；active_rule_path=E:/CODE/ClassroomToolkit/AGENTS.md (source=project-doc)
+验证证据=build/test/contract/hotspot 全部通过；首开路径由“预热+兜底二次Load”改为“优先等待同源预热任务完成”；active_rule_path=D:/OneDrive/CODE/ClassroomToolkit/AGENTS.md (source=project-doc)
 回滚动作=git checkout -- src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs
 platform_na=cmd: codex status | reason: stdin is not a terminal（非交互终端限制） | alternative_verification: codex --version + codex --help + active_rule_path 记录 | evidence_link: docs/change-evidence/20260401-rollcall-preload-dedup.md | expires_at: 2026-05-01
 

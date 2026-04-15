@@ -1,4 +1,4 @@
-﻿规则ID=R1,R2,R3,R4,R6,R7,R8
+规则ID=R1,R2,R3,R4,R6,R7,R8
 影响模块=src/ClassroomToolkit.App/Paint
 当前落点=PaintOverlayWindow.Ink.Geometry.cs / PaintOverlayWindow.Ink.cs（箭头几何与提交路径）
 目标归宿=实箭头与虚箭头统一为“填充几何主导”的箭头渲染模型，虚箭头仅在箭身体现虚线分段
@@ -27,7 +27,7 @@
 [N/A记录]
 type=platform_na
 reason=codex status 在当前非交互终端返回 "stdin is not a terminal"
-alternative_verification=使用 codex --version 与 codex --help 完成平台能力与版本补证；并记录 active_rule_path=E:/CODE/ClassroomToolkit/AGENTS.md（项目级）
+alternative_verification=使用 codex --version 与 codex --help 完成平台能力与版本补证；并记录 active_rule_path=D:/OneDrive/CODE/ClassroomToolkit/AGENTS.md（项目级）
 evidence_link=docs/change-evidence/20260331-arrow-dashed-sync.md
 expires_at=2026-04-30
 

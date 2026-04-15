@@ -10,6 +10,6 @@
 
 platform_na:
 - reason=`codex status` 在当前非交互终端返回 `stdin is not a terminal`
-- alternative_verification=`codex --version` 返回 `codex-cli 0.118.0`，`codex --help` 返回命令帮助；活动规则来源为仓库根 `E:\CODE\ClassroomToolkit\AGENTS.md`
+- alternative_verification=`codex --version` 返回 `codex-cli 0.118.0`，`codex --help` 返回命令帮助；活动规则来源为仓库根 `D:\OneDrive\CODE\ClassroomToolkit\AGENTS.md`
 - evidence_link=`docs/change-evidence/20260403-photo-overlay-nameplate-visibility.md`
 - expires_at=`2026-04-10`

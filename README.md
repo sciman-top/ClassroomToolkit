@@ -1,120 +1,53 @@
-# sciman Classroom Toolkit
+# ClassroomToolkit
 
-中文说明 | [English](./README.en.md)
+> Windows classroom toolkit for roll call, timers, annotation, image/PDF presentation, and PowerPoint/WPS slideshow control.
 
-> 面向真实课堂的一组 Windows 本地教学工具，聚焦随机点名、计时、屏幕批注、图片/PDF 讲解，以及 PPT / WPS 放映控制。
+## Overview
+- Built for live classroom use on Windows desktop machines
+- Focuses on local reliability instead of cloud workflows
+- Keeps student roster, photos, and settings in local files
 
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://www.microsoft.com/windows)
-[![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
+## Main Capabilities
+- Roll call, student photo display, and voice announcement
+- Countdown, stopwatch, and classroom timing tools
+- Whiteboard and screen annotation with pen, touch, or stylus
+- Image and PDF presentation with paging, zooming, and panning
+- PowerPoint and WPS slideshow support with overlay annotation
+- Floating launcher for fast tool switching
 
-sciman Classroom Toolkit 不是教务平台，也不追求“大而全”。它优先解决老师在课堂上会立刻遇到的问题：减少窗口切换、减少临场配置、让点名、计时、批注和演示控制尽量在一套本地工具里完成。
+## Quick Start
+### For Teachers
+1. Download a release from GitHub Releases.
+2. Extract the package and run `sciman Classroom Toolkit.exe`.
+3. Confirm the launcher opens, then test roll call and presentation tools.
 
-## 适用场景
-
-- 随机点名、分组互动、课堂限时活动
-- 使用触控屏、手写板或翻页笔进行课堂讲解
-- 在 PPT / WPS 放映时直接批注、翻页
-- 用图片、试卷、讲义、PDF 做投屏讲评
-- 需要本地运行、弱联网或离线部署的教室环境
-
-## 核心能力
-
-| 模块 | 主要能力 | 典型用途 |
-|------|------|------|
-| 点名 / 计时 | 随机点名、学生照片展示、语音播报、倒计时 / 正计时、远程按键触发 | 课堂提问、限时活动、分组展示 |
-| 画笔 / 白板 | 屏幕批注、普通笔 / 毛笔 / 橡皮、颜色与粗细设置、笔迹保存与回放 | 讲题板书、随堂批改、重点圈画 |
-| 图片 / PDF | 全屏展示、翻页浏览、缩放平移、叠加批注、区域截图入白板 | 试卷讲解、图片赏析、PDF 讲义、临时截题讲评 |
-| PPT / WPS | 自动识别放映状态、翻页控制、滚轮映射、放映层批注 | 幻灯片讲解、演示授课 |
-| 启动器 | 悬浮入口、快速打开各窗口 | 上课中快速切换工具 |
-
-## 项目边界
-
-当前仓库明确不覆盖以下方向：
-
-- 不提供教务管理、成绩管理、作业分发等平台能力
-- 不依赖云端账号、服务器或联网同步才能使用
-- 不改变 `students.xlsx`、`student_photos/`、`settings.ini` 的既有语义
-- 不承诺跨平台，当前只面向 Windows 桌面环境
-
-这让项目保持在“课堂即时可用”的边界内，避免功能堆积带来的部署和维护负担。
-
-## 系统要求
-
-- Windows 10 或 Windows 11
-- 建议分辨率 1920x1080 及以上
-- 普通使用者建议直接使用发布包
-- 从源码运行建议安装 [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- 可选设备：触控屏、手写板、翻页笔、外接显示器 / 投影
-
-## Quick Start / 快速开始
-
-### 普通使用者
-
-推荐从 [GitHub Releases](https://github.com/sciman-top/ClassroomToolkit/releases) 下载发布包，解压后直接运行 `sciman Classroom Toolkit.exe`。
-
-首次启动建议按这个顺序确认：
-
-1. 悬浮启动器是否正常出现
-2. 点名窗口能否读取班级和学生
-3. 是否能打开一张图片或一个 PDF
-4. 是否能在 PPT / WPS 放映时正常批注和翻页
-
-### 开发者
-
-在仓库根目录执行：
-
+### For Developers
 ```powershell
 dotnet restore
 dotnet build ClassroomToolkit.sln -c Debug
 dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 ```
 
-## 发布形态
+## Local Data
+- `students.xlsx`: class roster workbook
+- `student_photos/`: photo directory grouped by class
+- `settings.ini`: local settings file
 
-- GitHub 版：源码与文档仓库，不直接面向教室安装
-- 标准版：不内置 `.NET Desktop Runtime 10 x64`，体积更小
-- 离线版：额外附带运行时安装包，适合离线分发或受限网络环境
+Supported photo formats:
+- `.jpg`
+- `.jpeg`
+- `.png`
+- `.bmp`
 
-## 课堂数据准备
+## Repository Map
+- `src/ClassroomToolkit.App`: WPF UI, startup, and window orchestration
+- `src/ClassroomToolkit.Application`: application use cases
+- `src/ClassroomToolkit.Domain`: core rules and models
+- `src/ClassroomToolkit.Services`: runtime bridges and orchestration
+- `src/ClassroomToolkit.Interop`: Win32 / COM / WPS boundaries
+- `tests/ClassroomToolkit.Tests`: automated tests
 
-程序会读取两类本地数据：
-
-- `students.xlsx`：学生名册
-- `student_photos/`：学生照片目录
-
-建议目录结构如下：
-
-```text
-student_photos/
-├── 1班/
-│   ├── 001.jpg
-│   └── 002.jpg
-└── 2班/
-    └── 101.png
-```
-
-数据约定：
-
-- `students.xlsx` 以工作表区分班级，工作表名就是班级名
-- 照片目录以班级分文件夹，文件名建议使用学号
-- 支持 `.jpg`、`.jpeg`、`.png`、`.bmp`
-- 首次启动找不到学生数据时，程序会自动生成模板
-
-更细的课堂操作说明见 [教师使用指南](./使用指南.md)。
-
-## 文档入口
-
-- [教师使用指南](./使用指南.md)
-- [English README](./README.en.md)
-- [架构文档](./docs/architecture/)
-- [发布前检查清单](./docs/runbooks/release-prevention-checklist.md)
-- [课堂试点验证 Runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
-
-## 开发与验证
-
-常用命令：
-
+## Verification
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
@@ -122,43 +55,59 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug 
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
 
-如果你要长期接管一个固定的浏览器，会话可以直接用仓库里的启动脚本：
+## Documentation
+- [English README](./README.en.md)
+- [Teacher Guide](./使用指南.md)
+- [Architecture docs](./docs/architecture/)
+- [Release prevention checklist](./docs/runbooks/release-prevention-checklist.md)
+- [Pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools/browser-session/start-browser-session.ps1 -Name github -Url https://github.com/sciman-top/ClassroomToolkit
-agent-browser --cdp 9222 open https://github.com/sciman-top/ClassroomToolkit
-```
-
-这个脚本会用独立 profile 拉起 Chrome/Edge，登录态会保留在本机的专用目录里，不会和日常浏览器混用。
-
-完整说明见 [tools/browser-session/README.md](/E:/CODE/ClassroomToolkit/tools/browser-session/README.md)。
-
-仓库结构：
-
-```text
-src/ClassroomToolkit.App          WPF 界面、启动入口、窗口与会话编排
-src/ClassroomToolkit.Application  应用层用例与跨模块流程协调
-src/ClassroomToolkit.Domain       业务规则与模型
-src/ClassroomToolkit.Services     应用服务桥接与运行时能力
-src/ClassroomToolkit.Infra        配置、持久化与文件系统细节
-src/ClassroomToolkit.Interop      Win32 / COM / WPS 等高风险边界封装
-tests/ClassroomToolkit.Tests      自动化测试
-```
-
-## 已知限制
-
-- 主要面向 Windows 教室电脑，其他平台不在当前支持范围内
-- 与演示软件、显示器缩放、多屏、高 DPI 相关的问题仍需现场验收
-- 如果学校电脑缺少运行时、权限或驱动支持，通常需要信息老师协助处理
-- 学生名册、照片和配置默认保留在本地，请自行做好备份和隐私管理
-
-## 反馈与贡献
-
-- 提交 Issue：<https://github.com/sciman-top/ClassroomToolkit/issues>
-- 提交 Pull Request 前请先确保构建和测试通过
-- 贡献前建议阅读仓库中的架构文档与治理说明
+## Notes
+- Target platform is Windows 10 / 11
+- The app is designed to degrade safely when external dependencies fail
+- Keep `students.xlsx`, `student_photos/`, and `settings.ini` format-compatible
 
 ## License
+MIT
 
-本项目采用 [MIT License](./LICENSE)。
+## Why this project
+- Pain: Repeated manual governance checks and inconsistent project setup across classroom repos.
+- Result: Consistent setup, safer changes, and faster validation loops.
+- Differentiator: Rule distribution and quality gates are executed as a repeatable workflow.
 
+## Who it is for
+- Repository maintainers and teaching operations engineers
+- Managing classroom templates, checks, and policy rollouts
+- Use this when manual setup or validation starts causing repeated drift
+
+## Quick Start (5 Minutes)
+### Prerequisites
+- PowerShell 7+
+- Git working copy with access to governance scripts
+
+### Run
+```bash
+powershell -File scripts/doctor.ps1
+```
+
+### Expected Output
+- HEALTH=GREEN in doctor output
+- verify/target checks report PASS
+
+## What you can try first
+- Run doctor to validate current governance state
+- Run install in plan mode before safe distribution
+- Use cycle/autopilot scripts for governed iteration
+
+## FAQ
+- Q: Doctor reports FAIL
+- A: Run scripts/verify.ps1 first, fix the first failing gate, then rerun doctor
+
+## Limitations
+- Designed for governance-managed repositories
+- Requires policy and target mappings to be maintained
+
+## Next steps
+- docs/
+- RELEASE_TEMPLATE.md
+- issues/

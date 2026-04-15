@@ -65,11 +65,19 @@ foreach ($item in @($rawItems)) {
     $split = ([string]$item.split).Trim().ToLowerInvariant()
     if (@("train", "validation") -notcontains $split) { $split = $DefaultSplit }
   }
+  $evalType = "standard"
+  if ($null -ne $item.PSObject.Properties['eval_type'] -and -not [string]::IsNullOrWhiteSpace([string]$item.eval_type)) {
+    $candidateType = ([string]$item.eval_type).Trim().ToLowerInvariant()
+    if (@("standard", "adversarial") -contains $candidateType) {
+      $evalType = $candidateType
+    }
+  }
 
-  $key = "{0}|{1}|{2}" -f $split, ($should.ToString().ToLowerInvariant()), $query.Trim()
+  $key = "{0}|{1}|{2}|{3}" -f $split, ($should.ToString().ToLowerInvariant()), $evalType, $query.Trim()
   if (-not $groupMap.ContainsKey($key)) {
     $groupMap[$key] = [pscustomobject]@{
       split = $split
+      eval_type = $evalType
       query = $query.Trim()
       should_trigger = $should
       run_count = 0
@@ -92,6 +100,7 @@ foreach ($k in @($groupMap.Keys | Sort-Object)) {
   $passed = (($b.should_trigger -and $predictedTrigger) -or ((-not $b.should_trigger) -and (-not $predictedTrigger)))
   $queryResults.Add([pscustomobject]@{
     split = [string]$b.split
+    eval_type = [string]$b.eval_type
     query = [string]$b.query
     should_trigger = [bool]$b.should_trigger
     run_count = [int]$b.run_count
@@ -104,6 +113,8 @@ foreach ($k in @($groupMap.Keys | Sort-Object)) {
 
 $validationItems = @($queryResults | Where-Object { ([string]$_.split) -eq "validation" })
 $trainItems = @($queryResults | Where-Object { ([string]$_.split) -eq "train" })
+$standardValidationItems = @($validationItems | Where-Object { ([string]$_.eval_type) -eq "standard" })
+$adversarialValidationItems = @($validationItems | Where-Object { ([string]$_.eval_type) -eq "adversarial" })
 
 function Get-PassRate([object[]]$Items) {
   if ($null -eq $Items -or $Items.Count -eq 0) { return $null }
@@ -123,6 +134,10 @@ $validationPassRate = Get-PassRate $validationItems
 $trainPassRate = Get-PassRate $trainItems
 $validationFalseTriggerRate = Get-FalseTriggerRate $validationItems
 $trainFalseTriggerRate = Get-FalseTriggerRate $trainItems
+$standardValidationPassRate = Get-PassRate $standardValidationItems
+$standardValidationFalseTriggerRate = Get-FalseTriggerRate $standardValidationItems
+$adversarialValidationPassRate = Get-PassRate $adversarialValidationItems
+$adversarialValidationFalseTriggerRate = Get-FalseTriggerRate $adversarialValidationItems
 
 $status = "ok"
 if ($queryResults.Count -eq 0) {
@@ -143,10 +158,16 @@ $result = [ordered]@{
   grouped_query_count = [int]$queryResults.Count
   train_query_count = [int]$trainItems.Count
   validation_query_count = [int]$validationItems.Count
+  standard_validation_query_count = [int]$standardValidationItems.Count
+  adversarial_validation_query_count = [int]$adversarialValidationItems.Count
   train_pass_rate = $trainPassRate
   validation_pass_rate = $validationPassRate
+  standard_validation_pass_rate = $standardValidationPassRate
+  adversarial_validation_pass_rate = $adversarialValidationPassRate
   train_false_trigger_rate = $trainFalseTriggerRate
   validation_false_trigger_rate = $validationFalseTriggerRate
+  standard_validation_false_trigger_rate = $standardValidationFalseTriggerRate
+  adversarial_validation_false_trigger_rate = $adversarialValidationFalseTriggerRate
   query_results = @($queryResults.ToArray())
 }
 
@@ -160,5 +181,7 @@ if ($AsJson) {
   Write-Host ("skill_trigger_eval.grouped_query_count={0}" -f [int]$queryResults.Count)
   Write-Host ("skill_trigger_eval.validation_pass_rate={0}" -f $validationPassRate)
   Write-Host ("skill_trigger_eval.validation_false_trigger_rate={0}" -f $validationFalseTriggerRate)
+  Write-Host ("skill_trigger_eval.adversarial_validation_pass_rate={0}" -f $adversarialValidationPassRate)
+  Write-Host ("skill_trigger_eval.adversarial_validation_false_trigger_rate={0}" -f $adversarialValidationFalseTriggerRate)
   Write-Host ("skill_trigger_eval.output={0}" -f ($outputPath -replace '\\', '/'))
 }

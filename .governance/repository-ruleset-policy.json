@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "status": "observe",
+  "owner": "repo-maintainers",
+  "require_ruleset_config_artifact": true,
+  "minimum_controls": {
+    "require_pr": true,
+    "require_status_checks": true,
+    "require_review": true,
+    "require_resolve_conversations": true
+  },
+  "evidence_any_of": [
+    ".github/rulesets/default.json",
+    ".governance/repository-ruleset-config.json",
+    "docs/governance/repository-ruleset-policy.md"
+  ]
+}
+

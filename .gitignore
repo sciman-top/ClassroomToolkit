@@ -84,3 +84,8 @@ docs/change-evidence/*backup*.log
 # OS files
 .DS_Store
 Thumbs.db
+
+# Git worktrees (local fallback)
+.worktrees/
+worktrees/
+

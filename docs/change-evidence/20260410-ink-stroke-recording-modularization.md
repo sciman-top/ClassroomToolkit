@@ -1,7 +1,7 @@
 规则ID=CTK-INK-STROKE-RECORDING-MODULARIZATION-20260410
 影响模块=PaintOverlayWindow.Ink runtime stroke recording flow
-当前落点=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs
-目标归宿=E:/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.StrokeRecording.cs
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.cs
+目标归宿=D:/OneDrive/CODE/ClassroomToolkit/src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.StrokeRecording.cs
 迁移批次=2026-04-10-ink-stroke-recording-batch
 风险等级=low
 执行命令=dotnet build ClassroomToolkit.sln -c Debug; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug; powershell -File scripts/quality/run-local-quality-gates.ps1

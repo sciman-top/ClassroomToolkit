@@ -1,6 +1,6 @@
-﻿rule_id=R2/R4/R6/R8 + C2/C4/C6/C8
+rule_id=R2/R4/R6/R8 + C2/C4/C6/C8
 risk_level=LOW-MEDIUM
-current_landing=E:/CODE/ClassroomToolkit + E:/CODE/governance-kit
+current_landing=D:/OneDrive/CODE/ClassroomToolkit + D:/OneDrive/CODE/repo-governance-hub
 target_destination=close CI skip gap and simplify local gate execution path
 
 basis=

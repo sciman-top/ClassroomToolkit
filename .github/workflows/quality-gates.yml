@@ -12,6 +12,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Run governance fast check (if exists)
+        shell: pwsh
+        run: |
+          if (Test-Path "scripts/governance/fast-check.ps1") {
+            powershell -File scripts/governance/fast-check.ps1
+          } else {
+            Write-Host "No governance fast-check script found, skip."
+          }
+
       - name: Run local quality gates (if exists)
         shell: pwsh
         run: |

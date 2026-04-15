@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "status": "observe",
+  "target_branch_patterns": [
+    "main",
+    "master"
+  ],
+  "require_pull_request": true,
+  "require_status_checks": true,
+  "required_status_checks": [
+    "quality-gates",
+    "scorecard",
+    "sbom"
+  ],
+  "require_review": true,
+  "required_approving_review_count": 1,
+  "require_resolve_conversations": true
+}
+

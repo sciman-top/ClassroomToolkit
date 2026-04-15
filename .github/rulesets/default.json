@@ -1,0 +1,28 @@
+{
+  "name": "default-protected-branches",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "pull_request"
+    },
+    {
+      "type": "required_status_checks"
+    },
+    {
+      "type": "required_approving_review_count",
+      "parameters": {
+        "required_approving_review_count": 1
+      }
+    }
+  ]
+}
+

@@ -1,15 +1,78 @@
 param(
-  [string]$GovernanceKitRoot = ".",
+  [string]$GovernanceRoot = ".",
   [switch]$Diagnostics,
   [switch]$AsJson
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$commonPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\lib\common.ps1"))
+if (Test-Path -LiteralPath $commonPath -PathType Leaf) {
+  . $commonPath
+}
 
 function Resolve-NormalizedPath([string]$PathText) {
-  $resolved = Resolve-Path -LiteralPath $PathText -ErrorAction Stop
-  return ([System.IO.Path]::GetFullPath($resolved.Path) -replace '\\', '/').TrimEnd('/')
+  if ([string]::IsNullOrWhiteSpace($PathText)) { return "" }
+  $raw = [string]$PathText
+  $hasTemplateToken = $raw -match '\$\{(WORKSPACE_ROOT|USERPROFILE)\}|\$WORKSPACE_ROOT|\$USERPROFILE|%WORKSPACE_ROOT%|%USERPROFILE%'
+  function Get-FallbackWorkspaceRoot {
+    $envRoots = @(
+      $env:WORKSPACE_ROOT,
+      $env:CODE_ROOT,
+      $env:REPO_WORKSPACE_ROOT
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+    foreach ($candidate in @($envRoots)) {
+      try {
+        return ([System.IO.Path]::GetFullPath(($candidate -replace '/', '\')) -replace '\\', '/').TrimEnd('/')
+      } catch {}
+    }
+    try {
+      $governanceResolved = [System.IO.Path]::GetFullPath(([string]$GovernanceRoot -replace '/', '\'))
+      $governanceParent = Split-Path -Parent $governanceResolved
+      if (-not [string]::IsNullOrWhiteSpace($governanceParent)) {
+        return ([System.IO.Path]::GetFullPath($governanceParent) -replace '\\', '/').TrimEnd('/')
+      }
+    } catch {}
+    try {
+      $kitRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
+      $kitParent = Split-Path -Parent $kitRoot
+      if (-not [string]::IsNullOrWhiteSpace($kitParent)) {
+        return ([System.IO.Path]::GetFullPath($kitParent) -replace '\\', '/').TrimEnd('/')
+      }
+    } catch {}
+    return ""
+  }
+  function Resolve-WithoutWorkspaceHelper([string]$InputPath) {
+    $expanded = [string]$InputPath
+    $workspaceRoot = Get-FallbackWorkspaceRoot
+    if (-not [string]::IsNullOrWhiteSpace($workspaceRoot)) {
+      $expanded = $expanded.Replace('${WORKSPACE_ROOT}', $workspaceRoot).Replace('$WORKSPACE_ROOT', $workspaceRoot).Replace('%WORKSPACE_ROOT%', $workspaceRoot)
+    }
+    $userProfileRoot = @(
+      $env:USERPROFILE,
+      [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::UserProfile)
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -First 1
+    if (-not [string]::IsNullOrWhiteSpace([string]$userProfileRoot)) {
+      $userProfileNorm = ([System.IO.Path]::GetFullPath(([string]$userProfileRoot -replace '/', '\')) -replace '\\', '/').TrimEnd('/')
+      $expanded = $expanded.Replace('${USERPROFILE}', $userProfileNorm).Replace('$USERPROFILE', $userProfileNorm).Replace('%USERPROFILE%', $userProfileNorm)
+    }
+    $candidate = $expanded -replace '/', '\'
+    if ([System.IO.Path]::IsPathRooted($candidate)) {
+      return ([System.IO.Path]::GetFullPath($candidate) -replace '\\', '/').TrimEnd('/')
+    }
+    return ([System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $candidate)) -replace '\\', '/').TrimEnd('/')
+  }
+  try {
+    if ($hasTemplateToken -and (Get-Command -Name Resolve-WorkspacePath -ErrorAction SilentlyContinue)) {
+      return (Resolve-WorkspacePath -PathText $raw) -replace '\\', '/'
+    }
+    return (Resolve-WithoutWorkspaceHelper -InputPath $raw)
+  } catch {
+    if (Get-Command -Name Resolve-WorkspacePath -ErrorAction SilentlyContinue) {
+      return (Resolve-WorkspacePath -PathText $raw) -replace '\\', '/'
+    }
+    return (Resolve-WithoutWorkspaceHelper -InputPath $raw)
+  }
 }
 
 function Ensure-ParentDirectory([string]$PathText) {
@@ -20,13 +83,37 @@ function Ensure-ParentDirectory([string]$PathText) {
   }
 }
 
-function ConvertTo-Slug([string]$Text) {
+function ConvertTo-Slug([string]$Text, [int]$MaxLength = 48) {
   if ([string]::IsNullOrWhiteSpace($Text)) { return "candidate" }
   $slug = ($Text.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
   if ([string]::IsNullOrWhiteSpace($slug)) { return "candidate" }
-  if ($slug.Length -gt 24) { $slug = $slug.Substring(0, 24).Trim('-') }
+  if ($slug.Length -gt $MaxLength) {
+    $parts = @($slug -split '-' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $builder = ""
+    foreach ($part in $parts) {
+      $candidate = if ([string]::IsNullOrWhiteSpace($builder)) { $part } else { "$builder-$part" }
+      if ($candidate.Length -le $MaxLength) {
+        $builder = $candidate
+      } else {
+        break
+      }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($builder)) {
+      $slug = $builder
+    } else {
+      $slug = $slug.Substring(0, $MaxLength).Trim('-')
+    }
+  }
   if ([string]::IsNullOrWhiteSpace($slug)) { return "candidate" }
   return $slug
+}
+
+function Get-SignatureSlugSeed([string]$Family) {
+  $seed = if ($null -eq $Family) { "" } else { $Family.Trim().ToLowerInvariant() }
+  if ([string]::IsNullOrWhiteSpace($seed)) { return "" }
+  $withoutDate = ($seed -replace '-\d{8}$', '').Trim('-')
+  if ([string]::IsNullOrWhiteSpace($withoutDate)) { return $seed }
+  return $withoutDate
 }
 
 function New-UnicodeString([int[]]$CodePoints) {
@@ -51,8 +138,7 @@ function Get-SignatureHash8([string]$Text) {
 function Get-CanonicalSkillName([string]$Signature) {
   $family = Get-SignatureFamily -Signature $Signature
   $slug = ConvertTo-Slug $family
-  $hash8 = Get-SignatureHash8 $family
-  return ("custom-auto-{0}-{1}" -f $slug, $hash8)
+  return ("custom-auto-{0}" -f $slug)
 }
 
 function Get-SignatureFamily([string]$Signature, [string]$CollapsePattern = "^(.*-\d{8})-[a-z]$") {
@@ -80,6 +166,48 @@ function Test-SignatureExcluded([string]$Signature, [object]$Patterns) {
   return $false
 }
 
+function Get-ManualOverrideBindings([psobject]$Policy) {
+  $items = New-Object System.Collections.Generic.List[object]
+  if ($null -eq $Policy) { return @($items.ToArray()) }
+  if ($null -eq $Policy.PSObject.Properties['manual_override_bindings']) { return @($items.ToArray()) }
+  foreach ($raw in @($Policy.manual_override_bindings)) {
+    if ($null -eq $raw) { continue }
+    $pattern = ""
+    $skillName = ""
+    if ($null -ne $raw.PSObject.Properties['signature_pattern']) {
+      $pattern = [string]$raw.signature_pattern
+    }
+    if ($null -ne $raw.PSObject.Properties['skill_name']) {
+      $skillName = [string]$raw.skill_name
+    }
+    if ([string]::IsNullOrWhiteSpace($pattern) -or [string]::IsNullOrWhiteSpace($skillName)) { continue }
+    $items.Add([pscustomobject]@{
+      signature_pattern = $pattern
+      skill_name = $skillName.Trim()
+    }) | Out-Null
+  }
+  return @($items.ToArray())
+}
+
+function Get-MatchedManualOverrideBinding([string]$Signature, [object]$Bindings) {
+  $value = if ($null -eq $Signature) { "" } else { $Signature.Trim().ToLowerInvariant() }
+  if ([string]::IsNullOrWhiteSpace($value)) { return $null }
+  foreach ($binding in @($Bindings)) {
+    if ($null -eq $binding) { continue }
+    $pattern = ""
+    try { $pattern = [string]$binding.signature_pattern } catch { $pattern = "" }
+    if ([string]::IsNullOrWhiteSpace($pattern)) { continue }
+    try {
+      if ($value -match $pattern) {
+        return $binding
+      }
+    } catch {
+      continue
+    }
+  }
+  return $null
+}
+
 function New-DefaultPolicy {
   return [pscustomobject]@{
     schema_version = "1.0"
@@ -90,13 +218,17 @@ function New-DefaultPolicy {
     max_promotions_per_run = 3
     event_relative_path = ".governance/skill-candidates/events.jsonl"
     registry_relative_path = ".governance/skill-candidates/promotion-registry.json"
-    skills_root = "E:/CODE/skills-manager"
+    skills_root = '${WORKSPACE_ROOT}/skills-manager'
+    skills_manager_root = ""
     overrides_relative_path = "overrides"
+    overrides_source_root = ""
+    overrides_source_relative_path = ""
     auto_run_skills_manager_gates = $true
     collapse_suffix_pattern = "^(.*-\d{8})-[a-z]$"
     exclude_signature_patterns = @(
       "(?i)^autopilot-utf8-smoke"
     )
+    manual_override_bindings = @()
     summary_relative_path = ".governance/skill-candidates/last-promotion-summary.json"
     write_summary_file = $true
     require_user_ack = $true
@@ -109,6 +241,10 @@ function New-DefaultPolicy {
     trigger_eval_summary_relative_path = ".governance/skill-candidates/trigger-eval-summary.json"
     trigger_eval_min_validation_pass_rate = 0.70
     trigger_eval_max_validation_false_trigger_rate = 0.20
+    require_adversarial_eval_for_create = $false
+    trigger_eval_min_adversarial_validation_pass_rate = 0.60
+    trigger_eval_max_adversarial_validation_false_trigger_rate = 0.35
+    block_create_when_adversarial_missing = $true
     block_create_when_eval_missing = $true
   }
 }
@@ -270,6 +406,29 @@ function Get-PromotedLookup([psobject]$Registry) {
   return $lookup
 }
 
+function Get-ExistingFamilyMapFromOverrides([string]$OverridesRoot, [string]$CollapsePattern, [object]$ExcludePatterns) {
+  $lookup = @{}
+  if (-not (Test-Path -LiteralPath $OverridesRoot -PathType Container)) { return $lookup }
+  foreach ($dir in @(Get-ChildItem -LiteralPath $OverridesRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "custom-auto-*" })) {
+    $skillFile = Join-Path $dir.FullName "SKILL.md"
+    $family = Get-SkillSignatureFromSkillFile -SkillFile $skillFile -CollapsePattern $CollapsePattern -ExcludePatterns $ExcludePatterns
+    if ([string]::IsNullOrWhiteSpace($family)) { continue }
+    $key = $family.Trim().ToLowerInvariant()
+    if (-not $lookup.ContainsKey($key)) {
+      $lookup[$key] = [pscustomobject]@{
+        issue_signature = $family
+        skill_name = [string]$dir.Name
+        promoted_at = ""
+        hit_count = 0
+        repos = @()
+        signature_variants = @($family)
+        source = "overrides"
+      }
+    }
+  }
+  return $lookup
+}
+
 function Build-SkillContent([string]$SkillName, [string]$Signature, [int]$Count, [string[]]$Repos, [string[]]$Variants = @()) {
   $repoText = if ($Repos.Count -gt 0) { ($Repos -join ", ") } else { "unknown-repo" }
   $variantLine = $null
@@ -293,6 +452,62 @@ function Build-SkillContent([string]$SkillName, [string]$Signature, [int]$Count,
   ) -join "`n"
 }
 
+function Try-RefreshTriggerEvalSummary {
+  param(
+    [Parameter(Mandatory = $true)][string]$KitRoot,
+    [Parameter(Mandatory = $true)][string]$TargetRepoRoot,
+    [Parameter(Mandatory = $true)][string]$OutputRelativePath
+  )
+
+  $state = [ordered]@{
+    attempted = $false
+    succeeded = $false
+    status = ""
+    exit_code = $null
+    generated_at = ""
+    error = ""
+    script_path = ""
+  }
+
+  $scriptPath = Join-Path ($KitRoot -replace '/', '\') "scripts\governance\check-skill-trigger-evals.ps1"
+  $state.script_path = ($scriptPath -replace '\\', '/')
+  if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+    $state.error = "check_skill_trigger_evals_script_missing"
+    return [pscustomobject]$state
+  }
+
+  $state.attempted = $true
+  $psExe = "powershell"
+  $pwshCmd = Get-Command -Name "pwsh" -ErrorAction SilentlyContinue
+  if ($null -ne $pwshCmd) { $psExe = $pwshCmd.Source }
+
+  try {
+    $rawOutput = & $psExe -NoProfile -ExecutionPolicy Bypass -File $scriptPath -RepoRoot $TargetRepoRoot -OutputRelativePath $OutputRelativePath -AsJson 2>&1
+    $state.exit_code = [int]$LASTEXITCODE
+    if ([int]$state.exit_code -ne 0) {
+      $state.error = "check_skill_trigger_evals_failed"
+      return [pscustomobject]$state
+    }
+    $jsonText = (@($rawOutput | ForEach-Object { [string]$_ }) -join "`n").Trim()
+    if ([string]::IsNullOrWhiteSpace($jsonText)) {
+      $state.error = "check_skill_trigger_evals_empty_output"
+      return [pscustomobject]$state
+    }
+    $parsed = $jsonText | ConvertFrom-Json
+    if ($null -ne $parsed -and $null -ne $parsed.PSObject.Properties['status']) {
+      $state.status = [string]$parsed.status
+    }
+    if ($null -ne $parsed -and $null -ne $parsed.PSObject.Properties['generated_at']) {
+      $state.generated_at = [string]$parsed.generated_at
+    }
+    $state.succeeded = $true
+  } catch {
+    $state.error = [string]$_.Exception.Message
+  }
+
+  return [pscustomobject]$state
+}
+
 function Get-TriggerEvalGateState {
   param(
     [Parameter(Mandatory = $true)][string]$KitRoot,
@@ -310,20 +525,43 @@ function Get-TriggerEvalGateState {
   $summaryPath = Join-Path ($KitRoot -replace '/', '\') ($summaryRel -replace '/', '\')
   $minPassRate = [double]$Policy.trigger_eval_min_validation_pass_rate
   $maxFalseRate = [double]$Policy.trigger_eval_max_validation_false_trigger_rate
+  $requireAdversarialEval = $false
+  if ($null -ne $Policy.PSObject.Properties['require_adversarial_eval_for_create']) {
+    $requireAdversarialEval = [bool]$Policy.require_adversarial_eval_for_create
+  }
+  $minAdversarialPassRate = 0.60
+  if ($null -ne $Policy.PSObject.Properties['trigger_eval_min_adversarial_validation_pass_rate']) {
+    $minAdversarialPassRate = [double]$Policy.trigger_eval_min_adversarial_validation_pass_rate
+  }
+  $maxAdversarialFalseRate = 0.35
+  if ($null -ne $Policy.PSObject.Properties['trigger_eval_max_adversarial_validation_false_trigger_rate']) {
+    $maxAdversarialFalseRate = [double]$Policy.trigger_eval_max_adversarial_validation_false_trigger_rate
+  }
   $blockWhenMissing = $true
   if ($null -ne $Policy.PSObject.Properties['block_create_when_eval_missing']) {
     $blockWhenMissing = [bool]$Policy.block_create_when_eval_missing
   }
+  $blockWhenAdversarialMissing = $true
+  if ($null -ne $Policy.PSObject.Properties['block_create_when_adversarial_missing']) {
+    $blockWhenAdversarialMissing = [bool]$Policy.block_create_when_adversarial_missing
+  }
 
   $state = [ordered]@{
     require_trigger_eval_for_create = [bool]$requireEval
+    require_adversarial_eval_for_create = [bool]$requireAdversarialEval
     trigger_eval_summary_path = ($summaryPath -replace '\\', '/')
     trigger_eval_summary_found = $false
+    trigger_eval_summary_status = ""
     trigger_eval_pass = $false
     trigger_eval_min_validation_pass_rate = $minPassRate
     trigger_eval_max_validation_false_trigger_rate = $maxFalseRate
+    trigger_eval_min_adversarial_validation_pass_rate = $minAdversarialPassRate
+    trigger_eval_max_adversarial_validation_false_trigger_rate = $maxAdversarialFalseRate
     trigger_eval_validation_pass_rate = $null
     trigger_eval_validation_false_trigger_rate = $null
+    trigger_eval_adversarial_validation_query_count = 0
+    trigger_eval_adversarial_validation_pass_rate = $null
+    trigger_eval_adversarial_validation_false_trigger_rate = $null
     trigger_eval_blocked_reason = ""
   }
 
@@ -342,16 +580,47 @@ function Get-TriggerEvalGateState {
   $summary = Load-JsonObject $summaryPath
   $vp = $null
   $vf = $null
+  $avc = 0
+  $avp = $null
+  $avf = $null
+  $summaryStatus = ""
   if ($null -ne $summary) {
+    if ($null -ne $summary.PSObject.Properties['status']) {
+      $summaryStatus = ([string]$summary.status).Trim().ToLowerInvariant()
+    }
     if ($null -ne $summary.PSObject.Properties['validation_pass_rate']) {
       try { $vp = [double]$summary.validation_pass_rate } catch { $vp = $null }
     }
     if ($null -ne $summary.PSObject.Properties['validation_false_trigger_rate']) {
       try { $vf = [double]$summary.validation_false_trigger_rate } catch { $vf = $null }
     }
+    if ($null -ne $summary.PSObject.Properties['adversarial_validation_query_count']) {
+      try { $avc = [int]$summary.adversarial_validation_query_count } catch { $avc = 0 }
+    }
+    if ($null -ne $summary.PSObject.Properties['adversarial_validation_pass_rate']) {
+      try { $avp = [double]$summary.adversarial_validation_pass_rate } catch { $avp = $null }
+    }
+    if ($null -ne $summary.PSObject.Properties['adversarial_validation_false_trigger_rate']) {
+      try { $avf = [double]$summary.adversarial_validation_false_trigger_rate } catch { $avf = $null }
+    }
   }
+  $state.trigger_eval_summary_status = $summaryStatus
   $state.trigger_eval_validation_pass_rate = $vp
   $state.trigger_eval_validation_false_trigger_rate = $vf
+  $state.trigger_eval_adversarial_validation_query_count = [int]$avc
+  $state.trigger_eval_adversarial_validation_pass_rate = $avp
+  $state.trigger_eval_adversarial_validation_false_trigger_rate = $avf
+
+  if ($summaryStatus -eq "no_data") {
+    $state.trigger_eval_blocked_reason = "eval_summary_no_data"
+    $state.trigger_eval_pass = $false
+    return [pscustomobject]$state
+  }
+  if ($summaryStatus -eq "no_validation_split") {
+    $state.trigger_eval_blocked_reason = "eval_summary_no_validation_split"
+    $state.trigger_eval_pass = $false
+    return [pscustomobject]$state
+  }
 
   if ($null -eq $vp -or $null -eq $vf) {
     $state.trigger_eval_blocked_reason = "eval_summary_missing_metrics"
@@ -368,6 +637,32 @@ function Get-TriggerEvalGateState {
     $state.trigger_eval_blocked_reason = "validation_false_trigger_rate_above_threshold"
     $state.trigger_eval_pass = $false
     return [pscustomobject]$state
+  }
+
+  if ($requireAdversarialEval) {
+    if ([int]$avc -le 0) {
+      if ($blockWhenAdversarialMissing) {
+        $state.trigger_eval_blocked_reason = "eval_summary_no_adversarial_validation_split"
+        $state.trigger_eval_pass = $false
+        return [pscustomobject]$state
+      }
+    } else {
+      if ($null -eq $avp -or $null -eq $avf) {
+        $state.trigger_eval_blocked_reason = "adversarial_eval_missing_metrics"
+        $state.trigger_eval_pass = $false
+        return [pscustomobject]$state
+      }
+      if ($avp -lt $minAdversarialPassRate) {
+        $state.trigger_eval_blocked_reason = "adversarial_validation_pass_rate_below_threshold"
+        $state.trigger_eval_pass = $false
+        return [pscustomobject]$state
+      }
+      if ($avf -gt $maxAdversarialFalseRate) {
+        $state.trigger_eval_blocked_reason = "adversarial_validation_false_trigger_rate_above_threshold"
+        $state.trigger_eval_pass = $false
+        return [pscustomobject]$state
+      }
+    }
   }
 
   $state.trigger_eval_pass = $true
@@ -399,7 +694,7 @@ function Invoke-SkillsManagerGates([string]$SkillsRoot) {
   }
 }
 
-$kitRoot = Resolve-NormalizedPath $GovernanceKitRoot
+$kitRoot = Resolve-NormalizedPath $GovernanceRoot
 $policyPath = Join-Path ($kitRoot -replace '/', '\') ".governance\skill-promotion-policy.json"
 $policyTemplatePath = Join-Path ($kitRoot -replace '/', '\') "source\project\_common\custom\.governance\skill-promotion-policy.json"
 
@@ -408,6 +703,7 @@ $policy = Merge-Policy -Base $policy -Candidate (Load-JsonObject $policyTemplate
 $policy = Merge-Policy -Base $policy -Candidate (Load-JsonObject $policyPath)
 $collapsePattern = [string]$policy.collapse_suffix_pattern
 $excludePatterns = @($policy.exclude_signature_patterns)
+$manualOverrideBindings = @(Get-ManualOverrideBindings -Policy $policy)
 
 if (-not [bool]$policy.enabled) {
   $disabled = [pscustomobject]@{
@@ -425,7 +721,11 @@ $reposPath = Join-Path ($kitRoot -replace '/', '\') "config\repositories.json"
 if (-not (Test-Path -LiteralPath $reposPath -PathType Leaf)) {
   throw "repositories.json not found: $reposPath"
 }
-$repos = Normalize-RepoList (Get-Content -LiteralPath $reposPath -Raw | ConvertFrom-Json)
+$repos = @(
+  (Normalize-RepoList (Get-Content -LiteralPath $reposPath -Raw | ConvertFrom-Json)) |
+  ForEach-Object { Resolve-NormalizedPath ([string]$_) } |
+  Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+)
 if ($Diagnostics) {
   Write-Host ("skill_promotion.repos_count={0}" -f $repos.Count)
   Write-Host ("skill_promotion.repos_type={0}" -f $repos.GetType().FullName)
@@ -456,8 +756,9 @@ $eventCount = 0
 foreach ($repoEntry in @($repos)) {
   $repoText = [string]$repoEntry
   if ([string]::IsNullOrWhiteSpace($repoText)) { continue }
-  if (-not (Test-Path -LiteralPath ($repoText -replace '/', '\') -PathType Container)) { continue }
-  $eventPath = Join-Path (($repoText -replace '/', '\')) (($policy.event_relative_path -replace '/', '\'))
+  $repoWin = $repoText -replace '/', '\'
+  if (-not (Test-Path -LiteralPath $repoWin -PathType Container)) { continue }
+  $eventPath = Join-Path $repoWin (($policy.event_relative_path -replace '/', '\'))
   if ($Diagnostics) {
     Write-Host ("skill_promotion.scan repo={0} event_path={1} exists={2}" -f ($repoText -replace '\\', '/'), ($eventPath -replace '\\', '/'), (Test-Path -LiteralPath $eventPath -PathType Leaf))
   }
@@ -503,7 +804,60 @@ if ($null -ne $policy.PSObject.Properties['optimize_existing_without_ack']) {
 }
 $createMinUniqueRepos = [Math]::Max(1, [int]$policy.create_min_unique_repos)
 $optimizeMinNewVariants = [Math]::Max(1, [int]$policy.optimize_min_new_variants)
-$triggerEvalState = Get-TriggerEvalGateState -KitRoot $kitRoot -Policy $policy
+$skillsRoot = Resolve-NormalizedPath $policy.skills_root
+$skillsManagerRoot = $skillsRoot
+if ($null -ne $policy.PSObject.Properties['skills_manager_root']) {
+  $candidateSkillsManagerRoot = [string]$policy.skills_manager_root
+  if (-not [string]::IsNullOrWhiteSpace($candidateSkillsManagerRoot)) {
+    $skillsManagerRoot = Resolve-NormalizedPath $candidateSkillsManagerRoot
+  }
+}
+$overridesSourceRoot = $skillsRoot
+if ($null -ne $policy.PSObject.Properties['overrides_source_root']) {
+  $candidateOverridesSourceRoot = [string]$policy.overrides_source_root
+  if (-not [string]::IsNullOrWhiteSpace($candidateOverridesSourceRoot)) {
+    $overridesSourceRoot = Resolve-NormalizedPath $candidateOverridesSourceRoot
+  }
+}
+$overridesRelativePath = [string]$policy.overrides_relative_path
+if ($null -ne $policy.PSObject.Properties['overrides_source_relative_path']) {
+  $candidateOverridesRelativePath = [string]$policy.overrides_source_relative_path
+  if (-not [string]::IsNullOrWhiteSpace($candidateOverridesRelativePath)) {
+    $overridesRelativePath = $candidateOverridesRelativePath
+  }
+}
+$triggerEvalSummaryRelativePath = [string]$policy.trigger_eval_summary_relative_path
+if ([string]::IsNullOrWhiteSpace($triggerEvalSummaryRelativePath)) {
+  $triggerEvalSummaryRelativePath = ".governance/skill-candidates/trigger-eval-summary.json"
+}
+$triggerEvalRefreshState = [pscustomobject]@{
+  attempted = $false
+  succeeded = $false
+  status = ""
+  exit_code = $null
+  generated_at = ""
+  error = ""
+  script_path = ""
+}
+$requireEvalForCreate = $false
+if ($null -ne $policy.PSObject.Properties['require_trigger_eval_for_create']) {
+  $requireEvalForCreate = [bool]$policy.require_trigger_eval_for_create
+}
+if ($requireEvalForCreate) {
+  $triggerEvalRefreshState = Try-RefreshTriggerEvalSummary -KitRoot $kitRoot -TargetRepoRoot $skillsManagerRoot -OutputRelativePath $triggerEvalSummaryRelativePath
+}
+$triggerEvalState = Get-TriggerEvalGateState -KitRoot $skillsManagerRoot -Policy $policy
+$overridesRoot = Join-Path ($overridesSourceRoot -replace '/', '\') (($overridesRelativePath -replace '/', '\'))
+$overridesFamilyLookup = Get-ExistingFamilyMapFromOverrides -OverridesRoot $overridesRoot -CollapsePattern $collapsePattern -ExcludePatterns $excludePatterns
+$knownExistingFamilies = @{}
+foreach ($k in @($promotedLookup.Keys)) {
+  $knownExistingFamilies[$k] = $promotedLookup[$k]
+}
+foreach ($k in @($overridesFamilyLookup.Keys)) {
+  if (-not $knownExistingFamilies.ContainsKey($k)) {
+    $knownExistingFamilies[$k] = $overridesFamilyLookup[$k]
+  }
+}
 
 $actionable = New-Object System.Collections.Generic.List[object]
 $decisionAudit = New-Object System.Collections.Generic.List[object]
@@ -513,8 +867,21 @@ foreach ($key in $groupMap.Keys) {
   $family = [string]$item.issue_signature
   $canonical = Get-CanonicalSkillName $family
   $repoCount = @($item.repos | Sort-Object).Count
+  $manualBinding = Get-MatchedManualOverrideBinding -Signature $family -Bindings $manualOverrideBindings
+  if ($null -ne $manualBinding) {
+    $boundSkill = [string]$manualBinding.skill_name
+    $decisionAudit.Add([pscustomobject]@{
+      action = "skip"
+      issue_signature = $family
+      skill_name = $boundSkill
+      hit_count = [int]$item.count
+      unique_repo_count = [int]$repoCount
+      reason_codes = @(("manual_override_binding:" + $boundSkill))
+    }) | Out-Null
+    continue
+  }
 
-  if (-not $promotedLookup.ContainsKey($key)) {
+  if (-not $knownExistingFamilies.ContainsKey($key)) {
     $blockedReasons = New-Object System.Collections.Generic.List[string]
     if ($repoCount -lt $createMinUniqueRepos) { $blockedReasons.Add("insufficient_repo_diversity") | Out-Null }
     if (-not [bool]$triggerEvalState.trigger_eval_pass) {
@@ -553,7 +920,11 @@ foreach ($key in $groupMap.Keys) {
     continue
   }
 
-  $existing = $promotedLookup[$key]
+  $existing = $knownExistingFamilies[$key]
+  $existingSource = "registry"
+  if ($null -ne $existing.PSObject.Properties['source'] -and -not [string]::IsNullOrWhiteSpace([string]$existing.source)) {
+    $existingSource = [string]$existing.source
+  }
   $lastPromoted = $null
   try { $lastPromoted = [datetime]$existing.promoted_at } catch { $lastPromoted = $null }
   if ($null -ne $lastPromoted -and $cooldownDays -gt 0 -and $lastPromoted -gt $now.AddDays(-1 * $cooldownDays)) {
@@ -581,6 +952,7 @@ foreach ($key in $groupMap.Keys) {
   $countIncreased = ([int]$item.count -gt $prevHit)
   if ($newVariants.Count -ge $optimizeMinNewVariants -or $countIncreased) {
     $reasons = New-Object System.Collections.Generic.List[string]
+    if ($existingSource -eq "overrides") { $reasons.Add("existing_family_detected_in_overrides") | Out-Null }
     if ($newVariants.Count -gt 0) { $reasons.Add("new_signature_variant") | Out-Null }
     if ($countIncreased) { $reasons.Add("hit_count_increased") | Out-Null }
     $actionable.Add([pscustomobject]@{
@@ -603,22 +975,22 @@ foreach ($key in $groupMap.Keys) {
       reason_codes = @($reasons)
     }) | Out-Null
   } else {
+    $skipReasons = New-Object System.Collections.Generic.List[string]
+    if ($existingSource -eq "overrides") { $skipReasons.Add("existing_family_detected_in_overrides") | Out-Null }
+    $skipReasons.Add("no_material_delta") | Out-Null
     $decisionAudit.Add([pscustomobject]@{
       action = "skip"
       issue_signature = $family
       skill_name = $canonical
       hit_count = [int]$item.count
       unique_repo_count = [int]$repoCount
-      reason_codes = @("no_material_delta")
+      reason_codes = @($skipReasons)
     }) | Out-Null
   }
 }
 
 $selected = @($actionable | Sort-Object -Property @{Expression="count";Descending=$true}, @{Expression="latest_event";Descending=$true} | Select-Object -First $maxPromotions)
-
-$skillsRoot = Resolve-NormalizedPath $policy.skills_root
-$overridesRoot = Join-Path ($skillsRoot -replace '/', '\') (($policy.overrides_relative_path -replace '/', '\'))
-$summaryPath = Join-Path ($skillsRoot -replace '/', '\') (($policy.summary_relative_path -replace '/', '\'))
+$summaryPath = Join-Path ($skillsManagerRoot -replace '/', '\') (($policy.summary_relative_path -replace '/', '\'))
 if (-not (Test-Path -LiteralPath $overridesRoot -PathType Container)) {
   New-Item -ItemType Directory -Force -Path $overridesRoot | Out-Null
 }
@@ -671,6 +1043,13 @@ if (-not $ackSatisfied -and $selectedCreates.Count -gt 0 -and $selectedToApply.C
     planned_promotions = $plannedPromotions
     blocked_create_count = [int]$selectedCreates.Count
     apply_without_ack_count = 0
+    trigger_eval_summary_refresh_attempted = [bool]$triggerEvalRefreshState.attempted
+    trigger_eval_summary_refresh_succeeded = [bool]$triggerEvalRefreshState.succeeded
+    trigger_eval_summary_refresh_status = [string]$triggerEvalRefreshState.status
+    trigger_eval_summary_refresh_exit_code = $triggerEvalRefreshState.exit_code
+    trigger_eval_summary_refresh_generated_at = [string]$triggerEvalRefreshState.generated_at
+    trigger_eval_summary_refresh_error = [string]$triggerEvalRefreshState.error
+    trigger_eval_summary_refresh_script_path = [string]$triggerEvalRefreshState.script_path
   }
   if ([bool]$policy.write_summary_file) {
     Ensure-ParentDirectory $summaryPath
@@ -691,17 +1070,38 @@ foreach ($item in @($selectedToApply)) {
   }
   $reposUsed = @($item.repos | Sort-Object)
   $signatureVariants = @($item.raw_signatures | Sort-Object)
+  $candidateId = "{0}-{1}" -f (ConvertTo-Slug $signature), (Get-Date -Format "yyyyMMdd")
+  $triggerEvalSummaryRef = if ($null -ne $triggerEvalState -and -not [string]::IsNullOrWhiteSpace([string]$triggerEvalState.trigger_eval_summary_path)) { [string]$triggerEvalState.trigger_eval_summary_path } else { ".governance/skill-candidates/trigger-eval-summary.json" }
+  $sourceMaterialRefs = @()
+  foreach ($variant in @($signatureVariants)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$variant)) {
+      $sourceMaterialRefs += ("issue_signature:{0}" -f [string]$variant)
+    }
+  }
+  if ($sourceMaterialRefs.Count -eq 0) {
+    $sourceMaterialRefs = @("issue_signature:" + $signature)
+  }
+  $correctionLayerRef = if ([string]$item.action -eq "optimize") { "pending://manual-correction" } else { "none://initial-version" }
+  $versionArchiveRef = ("overrides/{0}/SKILL.md" -f $skillName)
+  $rollbackRef = ("git restore {0}" -f ($skillFile -replace '\\','/'))
   $skillContent = Build-SkillContent -SkillName $skillName -Signature $signature -Count ([int]$item.count) -Repos $reposUsed -Variants $signatureVariants
   Set-Content -LiteralPath $skillFile -Encoding utf8 -Value $skillContent
 
   $registryRecord = [pscustomobject]@{
     action = [string]$item.action
+    candidate_id = $candidateId
     issue_signature = $signature
+    family_signature = $signature
     skill_name = $skillName
     promoted_at = $now.ToString("o")
     hit_count = [int]$item.count
     repos = $reposUsed
     signature_variants = $signatureVariants
+    source_material_refs = @($sourceMaterialRefs)
+    trigger_eval_summary = $triggerEvalSummaryRef
+    correction_layer_ref = $correctionLayerRef
+    version_archive_ref = $versionArchiveRef
+    rollback_ref = $rollbackRef
   }
 
   $existing = @($registry.promoted | Where-Object { ([string]$_.issue_signature).ToLowerInvariant() -eq $signature })
@@ -712,6 +1112,13 @@ foreach ($item in @($selectedToApply)) {
       $entry.hit_count = $registryRecord.hit_count
       $entry.repos = $registryRecord.repos
       $entry.signature_variants = $registryRecord.signature_variants
+      $entry.candidate_id = $registryRecord.candidate_id
+      $entry.family_signature = $registryRecord.family_signature
+      $entry.source_material_refs = $registryRecord.source_material_refs
+      $entry.trigger_eval_summary = $registryRecord.trigger_eval_summary
+      $entry.correction_layer_ref = $registryRecord.correction_layer_ref
+      $entry.version_archive_ref = $registryRecord.version_archive_ref
+      $entry.rollback_ref = $registryRecord.rollback_ref
     }
   } else {
     $registry.promoted += $registryRecord
@@ -730,6 +1137,7 @@ foreach ($entry in @($registry.promoted)) {
 $registry = Merge-RegistryByFamily -Registry $registry -CollapsePattern $collapsePattern -ExcludePatterns $excludePatterns
 
 $cleanupRemoved = New-Object System.Collections.Generic.List[string]
+$cleanupRenamed = New-Object System.Collections.Generic.List[string]
 $registryFamilies = @{}
 foreach ($entry in @($registry.promoted)) {
   $registryFamilies[[string]$entry.issue_signature] = [string]$entry.skill_name
@@ -743,7 +1151,18 @@ foreach ($dir in @(Get-ChildItem -LiteralPath $overridesRoot -Directory -ErrorAc
     if ($name -match "(?i)^custom-auto-autopilot-utf8-smoke") { $remove = $true }
   } else {
     $canonical = Get-CanonicalSkillName $skillFamily
-    if ($name -ne $canonical) { $remove = $true }
+    if ($name -ne $canonical) {
+      $canonicalPath = Join-Path $overridesRoot $canonical
+      if (-not (Test-Path -LiteralPath $canonicalPath -PathType Container)) {
+        Rename-Item -LiteralPath $dir.FullName -NewName $canonical -Force
+        $cleanupRenamed.Add((("{0} -> {1}") -f ($dir.FullName -replace '\\', '/'), ($canonicalPath -replace '\\', '/'))) | Out-Null
+        if ($registryFamilies.ContainsKey($skillFamily)) {
+          $registryFamilies[$skillFamily] = $canonical
+        }
+        continue
+      }
+      $remove = $true
+    }
     elseif ($registryFamilies.ContainsKey($skillFamily) -and $registryFamilies[$skillFamily] -ne $name) { $remove = $true }
   }
   if ($remove) {
@@ -756,7 +1175,7 @@ Save-Registry -PathText $registryPath -Registry $registry
 
 $gatesRan = $false
 if ($promotedItems.Count -gt 0 -and [bool]$policy.auto_run_skills_manager_gates) {
-  Invoke-SkillsManagerGates -SkillsRoot $skillsRoot
+  Invoke-SkillsManagerGates -SkillsRoot $skillsManagerRoot
   $gatesRan = $true
 }
 
@@ -792,6 +1211,7 @@ $result = [ordered]@{
   blocked_create_count = [int]$blockedCreateCount
   apply_without_ack_count = [int]$applyWithoutAckCount
   cleanup_removed_count = [int]$cleanupRemoved.Count
+  cleanup_renamed_count = [int]$cleanupRenamed.Count
   gates_ran = [bool]$gatesRan
   require_user_ack = [bool]$requireAck
   user_ack_satisfied = [bool]$ackSatisfied
@@ -799,19 +1219,37 @@ $result = [ordered]@{
   create_min_unique_repos = [int]$createMinUniqueRepos
   optimize_min_new_variants = [int]$optimizeMinNewVariants
   require_trigger_eval_for_create = [bool]$triggerEvalState.require_trigger_eval_for_create
+  require_adversarial_eval_for_create = [bool]$triggerEvalState.require_adversarial_eval_for_create
   trigger_eval_summary_path = [string]$triggerEvalState.trigger_eval_summary_path
   trigger_eval_summary_found = [bool]$triggerEvalState.trigger_eval_summary_found
+  trigger_eval_summary_status = [string]$triggerEvalState.trigger_eval_summary_status
   trigger_eval_pass = [bool]$triggerEvalState.trigger_eval_pass
   trigger_eval_min_validation_pass_rate = [double]$triggerEvalState.trigger_eval_min_validation_pass_rate
   trigger_eval_max_validation_false_trigger_rate = [double]$triggerEvalState.trigger_eval_max_validation_false_trigger_rate
+  trigger_eval_min_adversarial_validation_pass_rate = [double]$triggerEvalState.trigger_eval_min_adversarial_validation_pass_rate
+  trigger_eval_max_adversarial_validation_false_trigger_rate = [double]$triggerEvalState.trigger_eval_max_adversarial_validation_false_trigger_rate
   trigger_eval_validation_pass_rate = $triggerEvalState.trigger_eval_validation_pass_rate
   trigger_eval_validation_false_trigger_rate = $triggerEvalState.trigger_eval_validation_false_trigger_rate
+  trigger_eval_adversarial_validation_query_count = [int]$triggerEvalState.trigger_eval_adversarial_validation_query_count
+  trigger_eval_adversarial_validation_pass_rate = $triggerEvalState.trigger_eval_adversarial_validation_pass_rate
+  trigger_eval_adversarial_validation_false_trigger_rate = $triggerEvalState.trigger_eval_adversarial_validation_false_trigger_rate
   trigger_eval_blocked_reason = [string]$triggerEvalState.trigger_eval_blocked_reason
+  trigger_eval_summary_refresh_attempted = [bool]$triggerEvalRefreshState.attempted
+  trigger_eval_summary_refresh_succeeded = [bool]$triggerEvalRefreshState.succeeded
+  trigger_eval_summary_refresh_status = [string]$triggerEvalRefreshState.status
+  trigger_eval_summary_refresh_exit_code = $triggerEvalRefreshState.exit_code
+  trigger_eval_summary_refresh_generated_at = [string]$triggerEvalRefreshState.generated_at
+  trigger_eval_summary_refresh_error = [string]$triggerEvalRefreshState.error
+  trigger_eval_summary_refresh_script_path = [string]$triggerEvalRefreshState.script_path
   skills_root = [string]$skillsRoot
+  skills_manager_root = [string]$skillsManagerRoot
+  overrides_source_root = [string]$overridesSourceRoot
+  overrides_source_relative_path = [string]$overridesRelativePath
   overrides_root = ($overridesRoot -replace '\\', '/')
   decision_audit = @($decisionAudit.ToArray())
   planned_promotions = $plannedPromotions
   promoted = $promotedArray
+  cleanup_renamed = @($cleanupRenamed.ToArray())
   cleanup_removed = @($cleanupRemoved.ToArray())
 }
 
@@ -827,6 +1265,7 @@ if ($AsJson) {
   Write-Host ("skill_promotion.created_count={0}" -f $createAppliedCount)
   Write-Host ("skill_promotion.optimized_count={0}" -f $optimizeAppliedCount)
   Write-Host ("skill_promotion.blocked_create_count={0}" -f $blockedCreateCount)
+  Write-Host ("skill_promotion.cleanup_renamed_count={0}" -f $cleanupRenamed.Count)
   Write-Host ("skill_promotion.cleanup_removed_count={0}" -f $cleanupRemoved.Count)
   Write-Host ("skill_promotion.gates_ran={0}" -f $gatesRan)
   foreach ($p in @($promotedItems)) {
@@ -834,5 +1273,8 @@ if ($AsJson) {
   }
   foreach ($c in @($cleanupRemoved)) {
     Write-Host ("[CLEANUP] removed={0}" -f $c)
+  }
+  foreach ($r in @($cleanupRenamed)) {
+    Write-Host ("[CLEANUP] renamed={0}" -f $r)
   }
 }

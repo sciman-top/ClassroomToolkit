@@ -1,0 +1,5 @@
+# Replace owners with the correct GitHub users/teams for each target repo.
+# Keep at least one default owner to ensure CODEOWNERS-based review routing works.
+
+* @sciman
+

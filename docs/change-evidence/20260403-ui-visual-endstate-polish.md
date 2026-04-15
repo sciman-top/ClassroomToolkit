@@ -1,8 +1,8 @@
-﻿# 2026-04-03 UI visual endstate polish
+# 2026-04-03 UI visual endstate polish
 
 - rule_id: R1/R2/R4/R6/R8
 - risk_level: medium
-- active_rule_path: E:/CODE/ClassroomToolkit/AGENTS.md
+- active_rule_path: D:/OneDrive/CODE/ClassroomToolkit/AGENTS.md
 - current_landing: `src/ClassroomToolkit.App/Assets/Styles/*.xaml` + major window XAML
 - target_destination: shared theme tokens and shell styles first, window-level XAML second
 - migration_batch: UI visual endstate polish
@@ -51,7 +51,7 @@
 - alternative_verification:
   - `codex --version` => `codex-cli 0.118.0`
   - `codex --help` returned normal CLI command list
-  - active rule path recorded manually as `E:/CODE/ClassroomToolkit/AGENTS.md`
+  - active rule path recorded manually as `D:/OneDrive/CODE/ClassroomToolkit/AGENTS.md`
 - evidence_link: `docs/change-evidence/20260403-ui-visual-endstate-polish.md`
 - expires_at: `2026-04-10`
 
@@ -64,8 +64,8 @@
 # Backfill 2026-04-03
 规则ID=BACKFILL-LEGACY-EVIDENCE-2026-04-03
 影响模块=legacy-governance-evidence
-当前落点=E:/CODE/ClassroomToolkit/docs/change-evidence
-目标归宿=E:/CODE/governance-kit/source/project/ClassroomToolkit/*
+当前落点=D:/OneDrive/CODE/ClassroomToolkit/docs/change-evidence
+目标归宿=D:/OneDrive/CODE/repo-governance-hub/source/project/ClassroomToolkit/*
 迁移批次=2026-04-03-evidence-backfill
 风险等级=Low(documentation backfill only)
 执行命令=backfill-evidence-template-fields.ps1

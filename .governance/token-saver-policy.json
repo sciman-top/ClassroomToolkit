@@ -23,7 +23,7 @@
     "dedupe_enabled": true
   },
   "token_guard": {
-    "max_total_words_per_turn": 75,
+    "max_total_words_per_turn": 120,
     "fallback_mode_when_budget_tight": "lite"
   },
   "evidence": {

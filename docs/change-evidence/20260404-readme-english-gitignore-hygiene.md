@@ -1,4 +1,4 @@
-﻿规则ID=R1,R4,R6,R8
+规则ID=R1,R4,R6,R8
 影响模块=README.md, README.en.md, 使用指南.md, .gitignore, Git 跟踪清单, GitHub 仓库元信息
 当前落点=仓库根文档与 Git 发布治理
 目标归宿=中英文仓库入口文档、忽略规则、远端仓库展示信息
@@ -25,7 +25,7 @@
   - exit_code: 1
   - key_output: stdin is not a terminal
   - timestamp: 2026-04-04
-  - active_rule_path: E:\CODE\ClassroomToolkit\AGENTS.md
+  - active_rule_path: D:\OneDrive\CODE\ClassroomToolkit\AGENTS.md
 - codex_version:
   - cmd: codex --version
   - exit_code: 0

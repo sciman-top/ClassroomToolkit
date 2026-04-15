@@ -38,7 +38,8 @@ $practiceOrder = @(
   "ssdf",
   "slsa",
   "sbom",
-  "scorecard"
+  "scorecard",
+  "repository_rulesets"
 )
 
 function Test-PropertyExists {
