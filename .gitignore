@@ -1,1 +1,91 @@
-# Build outputsbin/obj/artifacts/**/artifacts/# Visual Studio.vs/*.user*.suo*.userosscache*.sln.docstates# Rider.idea/.idea/**/workspace.xml.idea/**/tasks.xml.idea/**/shelf/# VS Code / JetBrains Fleet / Cursor.vscode/.fleet/.cursor/# Logs and local dataclassroom_toolkit.logbuild_error_analysis.logtest_failure_debug.loglogs/**/build_log*.txt**/TestResults/*.trx*.bak*.tmp*.temp*.orig*.rej*.dmp*.stackdumpsettings.inisettings.jsonstudents.xlsxstudent_photos/logs/*.logmsbuild*.log*~# Local automation / temp state.tmp/**/.tmp/.cache/**/.cache/.temp/**/.temp/.codex/logs/.codex/tmp-*/.cache-loader/# Assistant and local tooling metadataAGENTS.mdCLAUDE.mdGEMINI.mdGlobalUser/.codex/.claude/.crossnote/.trae/.roo/.windsurf/.augment/.qodo/.continue/.opencode/.copilot/.github/copilot-instructions.md.geminiignore# Local debug / evidence backups*_backup.**.log.bakdocs/change-evidence/*backup*.txtdocs/change-evidence/*backup*.log# OS files.DS_StoreThumbs.db# Git worktrees (local fallback).worktrees/worktrees/
+# Build outputs
+bin/
+obj/
+artifacts/
+**/artifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/shelf/
+
+# VS Code / JetBrains Fleet / Cursor
+.vscode/
+.fleet/
+.cursor/
+
+# Logs and local data
+classroom_toolkit.log
+build_error_analysis.log
+test_failure_debug.log
+logs/
+**/build_log*.txt
+**/TestResults/
+*.trx
+*.bak
+*.tmp
+*.temp
+*.orig
+*.rej
+*.dmp
+*.stackdump
+settings.ini
+settings.json
+students.xlsx
+student_photos/
+logs/*.log
+msbuild*.log
+*~
+
+# Local automation / temp state
+.tmp/
+**/.tmp/
+.cache/
+**/.cache/
+.temp/
+**/.temp/
+.codex/logs/
+.codex/tmp-*/
+.cache-loader/
+
+# Assistant and local tooling metadata
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+GlobalUser/
+.codex/
+.claude/
+.crossnote/
+.trae/
+.roo/
+.windsurf/
+.augment/
+.qodo/
+.continue/
+.opencode/
+.copilot/
+.github/copilot-instructions.md
+.geminiignore
+
+# Local debug / evidence backups
+*_backup.*
+*.log.bak
+docs/change-evidence/*backup*.txt
+docs/change-evidence/*backup*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git worktrees (local fallback)
+.worktrees/
+worktrees/
+
