@@ -2,13 +2,14 @@
 **项目**: ClassroomToolkit  
 **类型**: Windows WPF (.NET 10)  
 **适用范围**: 项目级（仓库根）  
-**版本**: 3.85  
-**最后更新**: 2026-04-10
+**版本**: 3.86  
+**最后更新**: 2026-04-17
 
 ## 1. 阅读指引（必读）
 - 本文件承接 `GlobalUser/CLAUDE.md`，仅定义本仓落地动作（WHERE/HOW）。
 - 固定结构：`1 / A / B / C / D`。
 - 裁决链：`运行事实/代码 > 项目级文件 > 全局文件 > 临时上下文`。
+- 自包含约束：执行规则以本文件正文为准，不依赖外部子文档或治理脚本作为前置条件。
 
 ## A. 共性基线（仅本仓）
 ### A.1 项目不变约束
@@ -41,7 +42,7 @@
 - 去重规则：同一 `topic_signature` 在冷却窗口内默认不重复建议；仅在需求显著变化或用户追问时重触发。
 - 降级规则：用户明确“只执行不建议/不要扩展”时切 `silent`；仅执行主任务。
 - 执行边界：建议“可采纳可忽略”，不得改变用户主指令优先级，不得阻断当前任务。
-- 策略文件：`.governance/proactive-suggestion-policy.json`（缺失时回退模板内默认值）。
+- 策略内嵌：若无外部策略文件，以本节默认规则（`lite`、`1-2` 条、主题去重、用户可 `silent`）执行。
 - 建议留痕字段：`proactive_suggestion_mode(silent|lite|standard)`、`suggestion_count`、`suggestion_topics`、`topic_signature`、`dedupe_skipped`、`user_opt_out`。
 
 ## B. Claude 平台差异（项目内）
@@ -82,14 +83,14 @@
 - test：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
 - contract/invariant：
   `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`
-- hotspot：`powershell -File scripts/quality/check-hotspot-line-budgets.ps1`
+- hotspot：热点审查（对本次改动文件执行复杂度/体量/性能风险人工复核，并记录结论）。
 - fixed order：`build -> test -> contract/invariant -> hotspot`
 - quick gate（开发快速复验，不替代硬门禁）：
-  `powershell -File scripts/validation/run-stable-tests.ps1 -Configuration Debug -SkipBuild -Profile quick`
+  `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~Smoke|FullyQualifiedName~Contract|FullyQualifiedName~Lifecycle"`
 
 ### C.3 命令存在性与 N/A 回退验证
-- precheck：`Get-Command dotnet`、`Get-Command powershell`、`Test-Path tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`。
-- hotspot 缺失：标记 `gate_na`，执行 contract/invariant 子集，并补人工热点评审证据。
+- precheck：`Get-Command dotnet`、`Test-Path tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`。
+- hotspot 无法执行：标记 `gate_na`，执行 contract/invariant 子集，并补人工热点评审证据。
 - contract/invariant 子集不可执行：标记 `gate_na`，回退到全量 `dotnet test` 并记录契约缺口风险。
 - 任何 `platform_na/gate_na` 必须在 `docs/change-evidence/` 留存到期时间和恢复计划。
 
@@ -97,8 +98,8 @@
 - build 失败：阻断，先修编译错误和引用断裂。
 - test 失败：阻断，先修回归失败再重跑全链路。
 - contract/invariant 失败：高风险阻断，禁止合并或发布。
-- hotspot：脚本存在且执行失败/超预算时阻断；脚本不存在时按 C.3 执行 `gate_na` 回退与证据补齐。
-- 执行器边界：仓内治理脚本只负责门禁编排与失败上下文输出，禁止脚本内模型 CLI 套娃自动修复；修复与重试必须由外层 AI 代理会话执行。
+- hotspot：热点评审结论为高风险未收敛时阻断；无法执行时按 C.3 执行 `gate_na` 回退与证据补齐。
+- 执行器边界：自动化步骤仅负责验证编排与失败上下文输出，禁止模型 CLI 套娃自动修复；修复与重试必须由外层 AI 代理会话执行。
 
 ### C.5 证据与回滚
 - 证据目录：`docs/change-evidence/`。
@@ -109,7 +110,7 @@
 ### C.6 目标仓直改回灌策略
 - source of truth：`${WORKSPACE_ROOT}/repo-governance-hub/source/project/ClassroomToolkit/*`。
 - 允许在目标仓临时直改做试验，但同日必须回灌并留证据。
-- 回灌后必须执行：`powershell -File ${WORKSPACE_ROOT}/repo-governance-hub/scripts/install.ps1 -Mode safe` + `powershell -File ${WORKSPACE_ROOT}/repo-governance-hub/scripts/doctor.ps1`。
+- 回灌后必须执行：本仓 `build -> test -> contract/invariant -> hotspot` 全链路复验并在证据中记录结果。
 - 未完成“回灌 + 复验”前，禁止再次 `sync/install` 覆盖未沉淀改动。
 
 ### C.7 CI 入口差异
@@ -119,12 +120,10 @@
 - GitLab CI：`.gitlab-ci.yml`
 
 ### C.8 Hooks/模板/Git 校验
-- quick gate：`scripts/validation/run-stable-tests.ps1`
-- hotspot script：`scripts/quality/check-hotspot-line-budgets.ps1`
 - hooks 校验：`Test-Path .git/hooks/pre-commit`、`Test-Path .git/hooks/pre-push`
 - git config 校验：`git config --get commit.template`、`git config --get governance.root`
 - 里程碑自动提交：治理闭环在策略允许时可于 `after_backflow`、`after_redistribute_verify`、`cycle_complete` 执行 `git add -A + 中文提交说明`，并在提交后强校验工作区干净；执行前必须先识别并隔离非本次治理改动，避免误纳入提交。
-- 模板校验：`Test-Path docs/change-evidence/template.md`、`Test-Path docs/governance/waiver-template.md`、`Test-Path docs/governance/metrics-template.md`
+- 模板内嵌校验：证据至少包含 `规则ID/风险等级/执行命令/关键输出/回滚动作/expires_at(如N/A)`，不得依赖外部模板文件存在性。
 
 ### C.9 承接映射（Global -> Repo）
 - R1：A.2 + C.1 + C.6（归宿先行与回灌闭环）。
