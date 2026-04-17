@@ -46,8 +46,11 @@ public sealed partial class WpsSlideshowNavigationHook
             }
         }
 
-        LastError = Marshal.GetLastWin32Error();
+        var startLastError = Marshal.GetLastWin32Error();
+        LastError = startLastError;
+        Debug.WriteLine($"[WpsNavHook] Start failed with error={startLastError}");
         Stop();
+        LastError = startLastError;
         return false;
     }
 

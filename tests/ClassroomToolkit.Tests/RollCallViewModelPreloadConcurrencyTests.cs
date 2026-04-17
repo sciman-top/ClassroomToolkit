@@ -12,6 +12,8 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
     private static readonly FieldInfo PreloadTaskField = typeof(RollCallViewModel)
         .GetField("_preloadTask", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly FieldInfo PreloadedResultField = typeof(RollCallViewModel)
+        .GetField("_preloadedResult", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     [Fact]
     public void WarmupData_ShouldNotClearLatestPreloadTask_WhenOlderTaskCompletes()
@@ -59,6 +61,22 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
     private static Task? GetPreloadTask(RollCallViewModel viewModel)
     {
         return PreloadTaskField.GetValue(viewModel) as Task;
+    }
+
+    [Fact]
+    public void WarmupData_ShouldNotCacheFailedPreloadResult_AndShouldClearTaskReference()
+    {
+        var tempRoot = TestPathHelper.CreateDirectory("ctoolkit-preload-fail");
+        var path = Path.Combine(tempRoot, "students-fail.xlsx");
+        File.WriteAllText(path, "fail");
+
+        var useCase = new RollCallWorkbookUseCase(new ThrowingStore());
+        using var viewModel = new RollCallViewModel(path, useCase);
+
+        viewModel.WarmupData(path);
+
+        SpinWait.SpinUntil(() => GetPreloadTask(viewModel) is null, WaitTimeout).Should().BeTrue();
+        PreloadedResultField.GetValue(viewModel).Should().BeNull("failed preload results must not be cached");
     }
 
     private sealed class CoordinatedStore : IRollCallWorkbookStore
@@ -121,6 +139,18 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
                 },
                 className);
             return new RollCallWorkbookStoreLoadData(workbook, CreatedTemplate: false, RollStateJson: null);
+        }
+    }
+
+    private sealed class ThrowingStore : IRollCallWorkbookStore
+    {
+        public RollCallWorkbookStoreLoadData LoadOrCreate(string path)
+        {
+            throw new InvalidOperationException($"boom:{path}");
+        }
+
+        public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
+        {
         }
     }
 }

@@ -16,17 +16,34 @@ public partial class PaintOverlayWindow
 
     private void OnPresentationFocusMonitorTick(object? sender, EventArgs e)
     {
+        if (ShouldIgnoreLifecycleTick())
+        {
+            _presentationFocusMonitor.Stop();
+            return;
+        }
+
         MonitorPresentationFocus();
     }
 
     private void OnInkMonitorTick(object? sender, EventArgs e)
     {
+        if (ShouldIgnoreLifecycleTick())
+        {
+            _inkMonitor.Stop();
+            return;
+        }
+
         _refreshOrchestrator.RequestRefresh("poll");
     }
 
     private void OnInkSidecarAutoSaveTimerTick(object? sender, EventArgs e)
     {
         _inkSidecarAutoSaveTimer?.Stop();
+        if (ShouldIgnoreLifecycleTick())
+        {
+            return;
+        }
+
         if (IsInkOperationActive())
         {
             _inkDiagnostics?.OnAutoSaveDeferred("timer-active-operation");
@@ -121,5 +138,10 @@ public partial class PaintOverlayWindow
         _inkMonitor.Stop();
         ClosePdfDocument();
         _overlayLifecycleCancellation.Dispose();
+    }
+
+    private bool ShouldIgnoreLifecycleTick()
+    {
+        return Volatile.Read(ref _overlayClosed) != 0 || _overlayLifecycleCancellation.IsCancellationRequested;
     }
 }

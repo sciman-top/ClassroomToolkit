@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -102,10 +103,12 @@ public sealed class InkStorageService
         }
         catch (JsonException)
         {
+            Debug.WriteLine($"[InkStorage] failed to parse page json path={jsonPath}");
             return null;
         }
         catch (IOException)
         {
+            Debug.WriteLine($"[InkStorage] failed to read page json path={jsonPath}");
             return null;
         }
     }
@@ -290,6 +293,7 @@ public sealed class InkStorageService
             }
             catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
+                Debug.WriteLine($"[InkStorage] cleanup folder failed path={folder} ex={ex.GetType().Name} msg={ex.Message}");
                 // Ignore cleanup failures.
             }
         }

@@ -11,4 +11,14 @@ internal static class RollCallDataLoadDiagnosticsPolicy
     {
         return $"[RollCallDataLoad] preload-consume-failed path={path} ex={exceptionType} msg={message}";
     }
+
+    internal static string FormatPreloadTaskCanceled(string path)
+    {
+        return $"[RollCallDataLoad] preload-task-canceled path={path}";
+    }
+
+    internal static string FormatPreloadTaskFaulted(string path, string exceptionType, string message)
+    {
+        return $"[RollCallDataLoad] preload-task-faulted path={path} ex={exceptionType} msg={message}";
+    }
 }

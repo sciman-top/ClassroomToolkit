@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -333,10 +334,12 @@ public sealed class InkPersistenceService
         }
         catch (JsonException)
         {
+            Debug.WriteLine($"[InkPersistence] failed to parse sidecar json path={jsonPath}");
             return null;
         }
         catch (IOException)
         {
+            Debug.WriteLine($"[InkPersistence] failed to read sidecar json path={jsonPath}");
             return null;
         }
     }
@@ -448,6 +451,7 @@ public sealed class InkPersistenceService
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            Debug.WriteLine($"[InkPersistence] delete file failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
         }
     }

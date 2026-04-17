@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -172,6 +173,7 @@ public sealed class InkWriteAheadLogService
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            Debug.WriteLine($"[InkWAL] failed to load wal path={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             return new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -210,6 +212,7 @@ public sealed class InkWriteAheadLogService
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            Debug.WriteLine($"[InkWAL] save failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             // Ignore WAL persistence errors.
         }
         finally
@@ -222,6 +225,7 @@ public sealed class InkWriteAheadLogService
                 }
                 catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
+                    Debug.WriteLine($"[InkWAL] temp cleanup failed path={temp} ex={ex.GetType().Name} msg={ex.Message}");
                     // Best-effort cleanup for temp WAL files.
                 }
             }

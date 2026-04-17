@@ -91,7 +91,7 @@ public sealed class StudentPhotoResolver : IDisposable
 
     public string? ResolvePhotoPath(string className, string studentId)
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        if (IsDisposed())
         {
             return null;
         }
@@ -152,7 +152,7 @@ public sealed class StudentPhotoResolver : IDisposable
 
     public void InvalidateStudentCache(string className, string studentId)
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        if (IsDisposed())
         {
             return;
         }
@@ -218,7 +218,7 @@ public sealed class StudentPhotoResolver : IDisposable
 
     private Dictionary<string, string> GetIndex(string directory)
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        if (IsDisposed())
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -231,6 +231,11 @@ public sealed class StudentPhotoResolver : IDisposable
         }
         lock (GetIndexLock(directory))
         {
+            if (IsDisposed())
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
             now = DateTime.UtcNow;
             if (_cache.TryGetValue(directory, out cached)
                 && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
@@ -256,6 +261,11 @@ public sealed class StudentPhotoResolver : IDisposable
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
             var directoryWriteTimeUtc = GetDirectoryWriteTimeUtcOrDefault(directory);
+            if (IsDisposed())
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
             _cache[directory] = new DirectoryCache(now, directoryWriteTimeUtc, index);
             return index;
         }
@@ -322,7 +332,7 @@ public sealed class StudentPhotoResolver : IDisposable
     {
         lock (_warmupLock)
         {
-            if (Volatile.Read(ref _disposed) != 0)
+            if (IsDisposed())
             {
                 token = CancellationToken.None;
                 return false;
@@ -351,6 +361,11 @@ public sealed class StudentPhotoResolver : IDisposable
 
         _cache.Clear();
         _indexLocks.Clear();
+    }
+
+    private bool IsDisposed()
+    {
+        return Volatile.Read(ref _disposed) != 0;
     }
 
     private static string NormalizeClassName(string className)

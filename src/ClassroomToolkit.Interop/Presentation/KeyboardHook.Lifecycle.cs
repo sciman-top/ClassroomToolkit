@@ -45,6 +45,8 @@ public sealed partial class KeyboardHook
                 await Task.Delay(delayMs).ConfigureAwait(false);
             }
         }
+
+        Debug.WriteLine($"[KeyboardHook] Start failed with error={LastError}");
     }
 
     public void Stop()

@@ -15,17 +15,35 @@ public partial class MainWindow
 {
     private void OnAutoExitTimerTick(object? sender, EventArgs e)
     {
+        if (ShouldIgnoreShutdownTicks())
+        {
+            _autoExitTimer.Stop();
+            return;
+        }
+
         _autoExitTimer.Stop();
         RequestExit();
     }
 
     private void OnPresentationForegroundSuppressionTimerTick(object? sender, EventArgs e)
     {
+        if (ShouldIgnoreShutdownTicks())
+        {
+            _presentationForegroundSuppressionTimer.Stop();
+            return;
+        }
+
         ReleasePresentationForegroundSuppression();
     }
 
     private void OnFloatingTopmostWatchdogTick(object? sender, EventArgs e)
     {
+        if (ShouldIgnoreShutdownTicks())
+        {
+            _floatingTopmostWatchdogTimer.Stop();
+            return;
+        }
+
         if (FloatingTopmostDialogSuppressionState.IsSuppressed)
         {
             return;
@@ -171,6 +189,11 @@ public partial class MainWindow
 
         ExecuteLifecycleSafe(phase, "close-paint-window-orchestrator", _paintWindowOrchestrator.Close);
         ExecuteLifecycleSafe(phase, "shutdown-application", () => System.Windows.Application.Current.Shutdown());
+    }
+
+    private bool ShouldIgnoreShutdownTicks()
+    {
+        return _backgroundTasksCancellationDisposed || _backgroundTasksCancellation.IsCancellationRequested;
     }
 
     private void ExecuteLifecycleSafe(string phase, string operation, Action action)

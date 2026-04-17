@@ -50,35 +50,11 @@ public sealed partial class RollCallViewModel
             var expectedWriteTimeUtc = writeTimeUtc;
             var preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
             _preloadTask = preloadTask;
-            preloadTask.ContinueWith(task =>
-            {
-                lock (_preloadLock)
-                {
-                    if (_disposed || _disposeCancellation.IsCancellationRequested)
-                    {
-                        if (ReferenceEquals(_preloadTask, preloadTask))
-                        {
-                            _preloadTask = null;
-                        }
-                        return;
-                    }
-                    if (task.Status == TaskStatus.RanToCompletion)
-                    {
-                        var completedResult = task.GetAwaiter().GetResult();
-                        if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
-                        {
-                            if (string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
-                            {
-                                _preloadedResult = completedResult;
-                            }
-                        }
-                    }
-                    if (ReferenceEquals(_preloadTask, preloadTask))
-                    {
-                        _preloadTask = null;
-                    }
-                }
-            }, TaskScheduler.Default);
+            _ = preloadTask.ContinueWith(
+                task => CompletePreloadTask(task, expectedPath, expectedWriteTimeUtc),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 
@@ -255,6 +231,66 @@ public sealed partial class RollCallViewModel
     {
         var result = _workbookUseCase.Load(path);
         return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage);
+    }
+
+    private void CompletePreloadTask(
+        Task<RollCallLoadResult> preloadTask,
+        string expectedPath,
+        DateTime expectedWriteTimeUtc)
+    {
+        lock (_preloadLock)
+        {
+            try
+            {
+                if (preloadTask.IsCanceled)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        RollCallDataLoadDiagnosticsPolicy.FormatPreloadTaskCanceled(expectedPath));
+                    return;
+                }
+
+                if (preloadTask.IsFaulted)
+                {
+                    var failure = preloadTask.Exception?.GetBaseException();
+                    if (failure != null && AppGlobalExceptionHandlingPolicy.IsNonFatal(failure))
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            RollCallDataLoadDiagnosticsPolicy.FormatPreloadTaskFaulted(
+                                expectedPath,
+                                failure.GetType().Name,
+                                failure.Message));
+                        return;
+                    }
+
+                    _ = preloadTask.GetAwaiter().GetResult();
+                    return;
+                }
+
+                if (_disposed || _disposeCancellation.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var completedResult = preloadTask.GetAwaiter().GetResult();
+                if (!string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
+                {
+                    return;
+                }
+
+                if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase)
+                    && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
+                {
+                    _preloadedResult = completedResult;
+                }
+            }
+            finally
+            {
+                if (ReferenceEquals(_preloadTask, preloadTask))
+                {
+                    _preloadTask = null;
+                }
+            }
+        }
     }
 
     private static bool TryGetFileWriteTimeUtc(string path, out DateTime writeTimeUtc)

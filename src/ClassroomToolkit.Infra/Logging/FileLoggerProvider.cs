@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -95,7 +96,7 @@ public class FileLoggerProvider : ILoggerProvider
                 }
                 catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
-                    // Fallback or ignore
+                    Debug.WriteLine($"[FileLoggerProvider] Flush batch failed: {ex.GetType().Name} - {ex.Message}");
                 }
             }
         }
@@ -106,6 +107,10 @@ public class FileLoggerProvider : ILoggerProvider
         catch (ObjectDisposedException)
         {
             // Expected when queue resources are disposed during shutdown races.
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[FileLoggerProvider] Queue worker stopped unexpectedly: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -157,7 +162,7 @@ public class FileLoggerProvider : ILoggerProvider
             }
             catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
             {
-                // Isolate single-file IO failures so other batched log files still flush.
+                Debug.WriteLine($"[FileLoggerProvider] Append failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
     }
@@ -207,7 +212,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Ignore
+            Debug.WriteLine($"[FileLoggerProvider] CompleteAdding failed during dispose: {ex.GetType().Name} - {ex.Message}");
         }
 
         try
@@ -232,7 +237,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Ignore
+            Debug.WriteLine($"[FileLoggerProvider] Dispose shutdown wait failed: {ex.GetType().Name} - {ex.Message}");
         }
 
         DisposeQueueResourcesOnce();
@@ -248,6 +253,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
+            Debug.WriteLine($"[FileLoggerProvider] Queue wait failed: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -265,7 +271,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Ignore disposal races during shutdown.
+            Debug.WriteLine($"[FileLoggerProvider] CancellationTokenSource dispose failed: {ex.GetType().Name} - {ex.Message}");
         }
 
         try
@@ -274,7 +280,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Ignore disposal races during shutdown.
+            Debug.WriteLine($"[FileLoggerProvider] Message queue dispose failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 }

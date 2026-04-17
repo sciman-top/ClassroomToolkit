@@ -62,6 +62,14 @@ public sealed class InteropHookLifecycleContractTests
     }
 
     [Fact]
+    public void KeyboardHook_ShouldLogStartFailure()
+    {
+        var source = ReadInteropSources("KeyboardHook*.cs");
+
+        source.Should().Contain("[KeyboardHook] Start failed with error=");
+    }
+
+    [Fact]
     public void WpsHook_Stop_ShouldRecordUnhookFailures_ForKeyboardAndMouse()
     {
         var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
@@ -71,6 +79,24 @@ public sealed class InteropHookLifecycleContractTests
         source.Should().Contain("[WpsNavHook] Keyboard unhook failed with error=");
         source.Should().Contain("[WpsNavHook] Mouse unhook failed with error=");
         source.Should().Contain("LastError = unhookFailed ? lastUnhookError : 0;");
+    }
+
+    [Fact]
+    public void WpsHook_ShouldLogStartFailure()
+    {
+        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+
+        source.Should().Contain("[WpsNavHook] Start failed with error=");
+    }
+
+    [Fact]
+    public void WpsHook_StartFailure_ShouldPreserveStartLastError_AfterCleanup()
+    {
+        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+
+        source.Should().Contain("var startLastError = Marshal.GetLastWin32Error();");
+        source.Should().Contain("LastError = startLastError;");
+        source.Should().Contain("Stop();");
     }
 
     private static string ReadInteropSources(string pattern)
