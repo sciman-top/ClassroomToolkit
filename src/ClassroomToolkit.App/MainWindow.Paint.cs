@@ -604,7 +604,21 @@ public partial class MainWindow
 
         if (!captureResult.Succeeded || string.IsNullOrWhiteSpace(captureResult.FilePath))
         {
-            if (captureResult.CancelReason == RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled)
+            var shouldReplayToolbarClick = ToolbarPassthroughActivationPolicy.ShouldReplayToolbarClick(
+                captureResult.CancelReason,
+                captureResult.PassthroughInputKind,
+                _toolbarWindow?.IsVisible == true);
+            var toolbarClickReplayed = false;
+            if (shouldReplayToolbarClick)
+            {
+                var cursorPosition = System.Windows.Forms.Cursor.Position;
+                toolbarClickReplayed = _toolbarWindow?.TryActivateButtonAtScreenPoint(cursorPosition.X, cursorPosition.Y) == true;
+            }
+
+            if (ToolbarPassthroughActivationPolicy.ShouldArmDirectWhiteboardEntry(
+                    captureResult.CancelReason,
+                    captureResult.PassthroughInputKind,
+                    toolbarClickReplayed))
             {
                 _toolbarWindow?.ArmDirectWhiteboardEntry();
             }
@@ -634,6 +648,7 @@ public partial class MainWindow
             allowInkOutsidePhoto: true,
             preserveImageOriginalScale: true,
             logAction: path => PhotoNavigationDiagnostics.Log("MainWindow.RegionCapture", $"enter path={path}"));
+        _toolbarWindow?.SetBoardActive(false);
         overlay.EnsurePhotoWindowedMode();
         FloatingZOrderApplyExecutor.Apply(
             requestZOrderApply: true,
@@ -648,11 +663,16 @@ public partial class MainWindow
             return Array.Empty<Rectangle>();
         }
 
-        var width = Math.Max((int)Math.Ceiling(_toolbarWindow.ActualWidth), 1);
-        var height = Math.Max((int)Math.Ceiling(_toolbarWindow.ActualHeight), 1);
-        var x = (int)Math.Floor(_toolbarWindow.Left);
-        var y = (int)Math.Floor(_toolbarWindow.Top);
-        return new[] { new Rectangle(x, y, width, height) };
+        if (!WindowScreenBoundsResolver.TryResolve(
+                _toolbarWindow,
+                out var bounds,
+                out _,
+                out _))
+        {
+            return Array.Empty<Rectangle>();
+        }
+
+        return new[] { bounds };
     }
 
     private string ResolveSessionCaptureExportDirectory()

@@ -6,6 +6,7 @@ using Xunit;
 
 namespace ClassroomToolkit.Tests;
 
+[Collection(SharedWindowDragStateCollection.Name)]
 public sealed class PresentationFocusRestorePolicyTests
 {
     [Fact]

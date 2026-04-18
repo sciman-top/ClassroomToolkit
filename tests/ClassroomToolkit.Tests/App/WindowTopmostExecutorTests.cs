@@ -5,6 +5,7 @@ using Xunit;
 
 namespace ClassroomToolkit.Tests.App;
 
+[Collection(SharedWindowDragStateCollection.Name)]
 public sealed class WindowTopmostExecutorTests
 {
     [Fact]

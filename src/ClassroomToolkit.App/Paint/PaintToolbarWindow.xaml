@@ -99,7 +99,7 @@
 
             <Rectangle Width="6" Fill="Transparent"/>
 
-            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="15" Padding="4,2" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="10" Padding="4,3" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
                                   Style="{StaticResource Style_ColorBubbleToggle}"
@@ -121,7 +121,7 @@
 
             <Rectangle Width="6" Fill="Transparent"/>
 
-            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="15" Padding="4,2" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="10" Padding="4,3" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_IconButton_Active}" Click="OnModeButtonClick" ToolTip="橡皮擦" Foreground="{StaticResource Brush_Warning}">
                         <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
@@ -141,14 +141,15 @@
                 <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
 
-            <Button x:Name="ShapeButton"
-                    Style="{StaticResource Style_IconButton}"
+            <ToggleButton x:Name="ShapeButton"
+                    Style="{StaticResource Style_IconButton_Active}"
                     Click="OnShapeButtonClick"
                     ToolTip="图形（长按菜单）"
                     ContextMenu="{StaticResource ShapeMenu}"
+                    Foreground="{StaticResource Brush_ShapeTool_Icon}"
                     behaviors:LongPressBehavior.Command="{Binding OpenShapeMenuCommand}">
-                <Path x:Name="ShapeButtonIconPath" Data="{StaticResource Icon_ShapeLineSolid}" Fill="{StaticResource Brush_ShapeTool_Icon}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
-            </Button>
+                <Path x:Name="ShapeButtonIconPath" Data="{StaticResource Icon_ShapeLineSolid}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+            </ToggleButton>
 
             <Button x:Name="PhotoOpenButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoOpenClick" ToolTip="打开图片/PDF">
                 <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_ResourceTool_Icon}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>

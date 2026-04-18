@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
-using ClassroomToolkit.App.Helpers;
+using System.Windows.Threading;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -15,16 +15,26 @@ internal enum RegionScreenCaptureCancelReason
     ToolbarPassthroughCanceled = 2
 }
 
+internal enum RegionScreenCapturePassthroughInputKind
+{
+    None = 0,
+    PointerMove = 1,
+    PointerPress = 2,
+    ToolbarHandledPress = 3
+}
+
 internal readonly record struct RegionScreenCaptureResult(
     bool Succeeded,
     string? FilePath,
-    RegionScreenCaptureCancelReason CancelReason);
+    RegionScreenCaptureCancelReason CancelReason,
+    RegionScreenCapturePassthroughInputKind PassthroughInputKind = RegionScreenCapturePassthroughInputKind.None);
 
 internal static class RegionScreenCaptureWorkflow
 {
     private const string CaptureDirectoryName = "Captures";
     private const string SessionCaptureDirectoryName = "SessionCaptures";
     private const string CaptureFilePrefix = "capture-";
+    private static RegionSelectionOverlayWindow? _activeSelector;
 
     internal static RegionScreenCaptureResult TryCaptureToPng(IReadOnlyCollection<Rectangle>? passthroughRegions = null)
     {
@@ -34,17 +44,69 @@ internal static class RegionScreenCaptureWorkflow
             return new RegionScreenCaptureResult(false, null, RegionScreenCaptureCancelReason.UserCanceled);
         }
 
+        var cursorPosition = Cursor.Position;
+        var initialPassthroughDecision = RegionCaptureInitialPassthroughPolicy.Resolve(
+            cursorPosition.X,
+            cursorPosition.Y,
+            passthroughRegions);
+        if (initialPassthroughDecision.ShouldCancel)
+        {
+            return new RegionScreenCaptureResult(
+                false,
+                null,
+                RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled,
+                initialPassthroughDecision.InputKind);
+        }
+
         var selector = new RegionSelectionOverlayWindow(virtualBounds, passthroughRegions);
-        var accepted = selector.SafeShowDialog() == true;
+        var accepted = ShowSelectionOverlay(selector);
         if (!accepted || !selector.TryGetSelection(out var selection))
         {
             var cancelReason = selector.CanceledByPassthrough
                 ? RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled
                 : RegionScreenCaptureCancelReason.UserCanceled;
-            return new RegionScreenCaptureResult(false, null, cancelReason);
+            return new RegionScreenCaptureResult(false, null, cancelReason, selector.PassthroughInputKind);
         }
 
         return TryCaptureSelection(virtualBounds, selection);
+    }
+
+    private static bool ShowSelectionOverlay(RegionSelectionOverlayWindow selector)
+    {
+        var frame = new DispatcherFrame();
+        void OnClosed(object? sender, EventArgs e) => frame.Continue = false;
+
+        selector.Closed += OnClosed;
+        _activeSelector = selector;
+        try
+        {
+            selector.Show();
+            Dispatcher.PushFrame(frame);
+            return selector.SelectionAccepted;
+        }
+        finally
+        {
+            selector.Closed -= OnClosed;
+            if (selector.IsVisible)
+            {
+                selector.Close();
+            }
+
+            if (ReferenceEquals(_activeSelector, selector))
+            {
+                _activeSelector = null;
+            }
+        }
+    }
+
+    internal static bool CancelActiveSelectionFromToolbarHandledPress()
+    {
+        return _activeSelector?.CancelFromToolbarHandledPress() == true;
+    }
+
+    internal static bool CancelActiveSelectionFromToolbarPointerMove()
+    {
+        return _activeSelector?.CancelFromToolbarPointerMove() == true;
     }
 
     private static RegionScreenCaptureResult TryCaptureSelection(Rectangle virtualBounds, Rectangle selection)

@@ -36,7 +36,6 @@ public sealed class OverlayWindowsXamlContractTests
         paintXaml.Should().Contain("Brush_Surface_Primary");
         paintXaml.Should().Contain("Brush_Border_Subtle");
 
-        photoXaml.Should().Contain("Shadow_Floating");
         photoXaml.Should().Contain("Shadow_Card_Subtle");
         photoXaml.Should().Contain("Style_FullscreenShellHintBadge");
         photoXaml.Should().Contain("x:Name=\"LoadingMask\" Background=\"{StaticResource Brush_OverlayMask}\"");

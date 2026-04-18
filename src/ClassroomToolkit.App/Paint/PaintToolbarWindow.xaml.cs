@@ -36,6 +36,7 @@ public partial class PaintToolbarWindow : Window
     private bool _directWhiteboardEntryArmed;
     private readonly DispatcherTimer _regionCaptureResumeTimer;
     private bool _resumeRegionCaptureArmed;
+    private bool _regionCapturePending;
     private bool _toolbarDragging;
     private System.Windows.Point _toolbarDragOffset;
     private IDisposable? _toolbarDragScope;
@@ -85,7 +86,9 @@ public partial class PaintToolbarWindow : Window
         SetQuickColorSlot(2, ColorFromHex("#1E90FF", Colors.DodgerBlue));
         UpdateShapeButtonIcon();
         PreviewKeyDown += OnPreviewKeyDown;
+        PreviewMouseDown += OnPreviewMouseDown;
         PreviewMouseWheel += OnPreviewMouseWheel;
+        MouseEnter += OnToolbarMouseEnter;
         MouseMove += OnToolbarDragMove;
         MouseLeftButtonUp += OnToolbarDragEnd;
         Loaded += OnToolbarLoaded;
@@ -117,7 +120,9 @@ public partial class PaintToolbarWindow : Window
         _regionCaptureResumeTimer.Tick -= OnRegionCaptureResumeTimerTick;
         EndToolbarDragCore();
         PreviewKeyDown -= OnPreviewKeyDown;
+        PreviewMouseDown -= OnPreviewMouseDown;
         PreviewMouseWheel -= OnPreviewMouseWheel;
+        MouseEnter -= OnToolbarMouseEnter;
         MouseMove -= OnToolbarDragMove;
         MouseLeftButtonUp -= OnToolbarDragEnd;
         Loaded -= OnToolbarLoaded;
@@ -320,11 +325,18 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
+        if (_regionCapturePending || _directWhiteboardEntryArmed || _resumeRegionCaptureArmed)
+        {
+            RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
+        }
+
         if (IsSessionCaptureWhiteboardActive())
         {
             ClearDirectWhiteboardEntryArm();
+            _regionCapturePending = false;
             SetBoardActive(false);
             _overlay?.ExitPhotoMode();
+            RefreshBoardButtonVisualState();
             ShowBoardHint("已退出白板");
             return;
         }
@@ -333,13 +345,16 @@ public partial class PaintToolbarWindow : Window
         if (whiteboardActive)
         {
             ClearDirectWhiteboardEntryArm();
+            _regionCapturePending = false;
             SetBoardActive(false);
             ShowBoardHint("已退出白板");
             return;
         }
 
-        if (_directWhiteboardEntryArmed && _overlay?.IsPhotoModeActive != true)
+        if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)
+            && _overlay?.IsPhotoModeActive != true)
         {
+            ClearNonBoardSelectionVisualState();
             ClearDirectWhiteboardEntryArm();
             SetBoardActive(true);
             ShowBoardHint("已进入白板");
@@ -348,12 +363,17 @@ public partial class PaintToolbarWindow : Window
 
         if (_overlay?.IsPhotoModeActive == true)
         {
+            ClearNonBoardSelectionVisualState();
+            _regionCapturePending = false;
             SetBoardActive(true);
             ShowBoardHint("已进入白板");
             return;
         }
 
+        ClearNonBoardSelectionVisualState();
+        _regionCapturePending = true;
         ShowBoardHint("请框选截图区域");
+        RefreshBoardButtonVisualState();
         SafeActionExecutionExecutor.TryExecute(
             () => RegionCaptureRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture callback failed: {ex.Message}"));
@@ -419,7 +439,8 @@ public partial class PaintToolbarWindow : Window
             CursorButton.IsChecked = false;
             EraserButton.IsChecked = false;
             RegionEraseButton.IsChecked = false;
-            
+            ShapeButton.IsChecked = false;
+
             // 然后设置当前模式的按钮状态
             switch (mode)
             {
@@ -432,14 +453,15 @@ public partial class PaintToolbarWindow : Window
                 case PaintToolMode.RegionErase:
                     RegionEraseButton.IsChecked = true;
                     break;
-                case PaintToolMode.Brush:
                 case PaintToolMode.Shape:
-                    // 画笔和形状模式不选中任何工具按钮，但保持颜色按钮状态
+                    ShapeButton.IsChecked = true;
+                    break;
+                case PaintToolMode.Brush:
                     break;
             }
             
-            // 只有在非画笔/形状模式时才清除颜色按钮选择
-            if (mode != PaintToolMode.Brush && mode != PaintToolMode.Shape)
+            // 仅画笔模式保留颜色按钮高亮
+            if (mode != PaintToolMode.Brush)
             {
                 QuickColor1Button.IsChecked = false;
                 QuickColor2Button.IsChecked = false;
@@ -494,11 +516,9 @@ public partial class PaintToolbarWindow : Window
         var overlayWhiteboardActive = IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
         if (_boardActive == active && overlayWhiteboardActive == active)
         {
+            RefreshBoardButtonVisualState();
             return;
         }
-        _initializing = true;
-        BoardButton.IsChecked = active;
-        _initializing = false;
         _boardActive = active;
         ApplyBoardState();
     }
@@ -519,27 +539,30 @@ public partial class PaintToolbarWindow : Window
         if (overlaySceneAfterApply != _boardActive)
         {
             _boardActive = overlaySceneAfterApply;
-            _initializing = true;
-            BoardButton.IsChecked = _boardActive;
-            _initializing = false;
         }
+
+        RefreshBoardButtonVisualState();
     }
 
     public void ArmDirectWhiteboardEntry()
     {
+        _regionCapturePending = false;
         _directWhiteboardEntryArmed = true;
         _resumeRegionCaptureArmed = true;
         if (!_regionCaptureResumeTimer.IsEnabled)
         {
             _regionCaptureResumeTimer.Start();
         }
+        RefreshBoardButtonVisualState();
     }
 
     public void ClearDirectWhiteboardEntryArm()
     {
+        _regionCapturePending = false;
         _directWhiteboardEntryArmed = false;
         _resumeRegionCaptureArmed = false;
         _regionCaptureResumeTimer.Stop();
+        RefreshBoardButtonVisualState();
     }
 
     private void OnRegionCaptureResumeTimerTick(object? sender, EventArgs e)
@@ -571,14 +594,114 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture resume callback failed: {ex.Message}"));
     }
 
+    private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        var button = FindButtonBase(e.OriginalSource as DependencyObject);
+        if (button == null)
+        {
+            return;
+        }
+
+        var captureInteractionActive = _resumeRegionCaptureArmed || _directWhiteboardEntryArmed || _regionCapturePending;
+        if (!captureInteractionActive)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(button, BoardButton))
+        {
+            RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
+            return;
+        }
+
+        if (!ToolbarResumeCancellationPolicy.ShouldCancelPendingResumeOnToolbarPress(
+                captureInteractionActive,
+                pressedToolbarButton: true,
+                pressedBoardButton: ReferenceEquals(button, BoardButton)))
+        {
+            return;
+        }
+
+        RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
+        ClearDirectWhiteboardEntryArm();
+    }
+
+    private void OnToolbarMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove();
+    }
+
     private bool IsPointInsideToolbar(double screenX, double screenY)
     {
-        var width = Math.Max(ActualWidth, 1);
-        var height = Math.Max(ActualHeight, 1);
-        return screenX >= Left
-            && screenX <= Left + width
-            && screenY >= Top
-            && screenY <= Top + height;
+        if (!TryResolveScreenBounds(out var bounds))
+        {
+            return false;
+        }
+
+        return screenX >= bounds.Left
+            && screenX <= bounds.Right
+            && screenY >= bounds.Top
+            && screenY <= bounds.Bottom;
+    }
+
+    public bool TryActivateButtonAtScreenPoint(double screenX, double screenY)
+    {
+        if (!IsVisible || !IsLoaded)
+        {
+            return false;
+        }
+
+        if (!TryResolveScreenBounds(out var bounds))
+        {
+            return false;
+        }
+
+        if (screenX < bounds.Left
+            || screenX > bounds.Right
+            || screenY < bounds.Top
+            || screenY > bounds.Bottom)
+        {
+            return false;
+        }
+
+        var localPoint = PointFromScreen(new System.Windows.Point(screenX, screenY));
+        var hit = InputHitTest(localPoint) as DependencyObject;
+        if (hit == null)
+        {
+            hit = VisualTreeHelper.HitTest(this, localPoint)?.VisualHit;
+        }
+
+        var button = FindButtonBase(hit);
+        if (button == null || !button.IsEnabled)
+        {
+            return false;
+        }
+
+        Activate();
+        button.Focus();
+        button.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, button));
+        return true;
+    }
+
+    private bool TryResolveScreenBounds(out System.Drawing.Rectangle bounds)
+    {
+        return WindowScreenBoundsResolver.TryResolve(this, out bounds, out _, out _);
+    }
+
+    private static System.Windows.Controls.Primitives.ButtonBase? FindButtonBase(DependencyObject? source)
+    {
+        var current = source;
+        while (current != null)
+        {
+            if (current is System.Windows.Controls.Primitives.ButtonBase button)
+            {
+                return button;
+            }
+
+            current = GetParent(current);
+        }
+
+        return null;
     }
 
     private bool IsOverlayWhiteboardSceneActive()
@@ -601,6 +724,29 @@ public partial class PaintToolbarWindow : Window
         }
 
         return RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath(overlay.CurrentDocumentPath);
+    }
+
+    private void RefreshBoardButtonVisualState()
+    {
+        SetBoardButtonChecked(ToolbarBoardSelectionVisualPolicy.Resolve(
+            _boardActive,
+            IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true,
+            IsSessionCaptureWhiteboardActive(),
+            _directWhiteboardEntryArmed,
+            _regionCapturePending));
+    }
+
+    private void SetBoardButtonChecked(bool isChecked)
+    {
+        _initializing = true;
+        try
+        {
+            BoardButton.IsChecked = isChecked;
+        }
+        finally
+        {
+            _initializing = false;
+        }
     }
 
     private void OpenQuickColorDialog(int index)
@@ -739,6 +885,25 @@ public partial class PaintToolbarWindow : Window
         if (exitWhiteboard)
         {
             ExitWhiteboardForToolSwitchIfNeeded();
+        }
+    }
+
+    private void ClearNonBoardSelectionVisualState()
+    {
+        _initializing = true;
+        try
+        {
+            CursorButton.IsChecked = false;
+            EraserButton.IsChecked = false;
+            RegionEraseButton.IsChecked = false;
+            ShapeButton.IsChecked = false;
+            QuickColor1Button.IsChecked = false;
+            QuickColor2Button.IsChecked = false;
+            QuickColor3Button.IsChecked = false;
+        }
+        finally
+        {
+            _initializing = false;
         }
     }
 
@@ -881,6 +1046,8 @@ public partial class PaintToolbarWindow : Window
 
     private void OnToolbarDragMove(object? sender, System.Windows.Input.MouseEventArgs e)
     {
+        RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove();
+
         if (!_toolbarDragging)
         {
             return;

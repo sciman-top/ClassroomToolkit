@@ -727,7 +727,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1" SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>

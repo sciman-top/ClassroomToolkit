@@ -16,6 +16,8 @@ public partial class RegionSelectionOverlayWindow : Window
     private System.Windows.Point _startPoint;
     private Rect _selectionRect;
     public bool CanceledByPassthrough { get; private set; }
+    internal bool SelectionAccepted { get; private set; }
+    internal RegionScreenCapturePassthroughInputKind PassthroughInputKind { get; private set; }
 
     public RegionSelectionOverlayWindow(
         DrawingRectangle virtualBounds,
@@ -67,8 +69,7 @@ public partial class RegionSelectionOverlayWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            DialogResult = false;
-            Close();
+            CompleteSelection(accepted: false);
             e.Handled = true;
             return;
         }
@@ -80,20 +81,19 @@ public partial class RegionSelectionOverlayWindow : Window
 
         if (_selectionRect.Width < 4 || _selectionRect.Height < 4)
         {
-            DialogResult = false;
+            CompleteSelection(accepted: false);
         }
         else
         {
-            DialogResult = true;
+            CompleteSelection(accepted: true);
         }
-        Close();
         e.Handled = true;
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var point = e.GetPosition(this);
-        if (TryCancelForPassthrough(point))
+        if (TryCancelForPassthrough(point, RegionScreenCapturePassthroughInputKind.PointerPress))
         {
             return;
         }
@@ -109,7 +109,7 @@ public partial class RegionSelectionOverlayWindow : Window
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
         var currentPoint = e.GetPosition(this);
-        if (TryCancelForPassthrough(currentPoint))
+        if (TryCancelForPassthrough(currentPoint, RegionScreenCapturePassthroughInputKind.PointerMove))
         {
             return;
         }
@@ -134,22 +134,22 @@ public partial class RegionSelectionOverlayWindow : Window
         ReleaseMouseCapture();
         var endPoint = e.GetPosition(this);
         UpdateSelectionRect(_startPoint, endPoint);
-        if (_selectionRect.Width < 4 || _selectionRect.Height < 4)
+        if (RegionSelectionCompletionPolicy.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
+            == RegionSelectionCompletionDecision.KeepWaiting)
         {
-            DialogResult = false;
+            ResetSelectionAndContinue();
         }
         else
         {
-            DialogResult = true;
+            CompleteSelection(accepted: true);
         }
-        Close();
         e.Handled = true;
     }
 
     private void OnTouchDown(object sender, TouchEventArgs e)
     {
         var point = e.GetTouchPoint(this).Position;
-        if (TryCancelForPassthrough(point))
+        if (TryCancelForPassthrough(point, RegionScreenCapturePassthroughInputKind.PointerPress))
         {
             e.Handled = true;
             return;
@@ -166,7 +166,7 @@ public partial class RegionSelectionOverlayWindow : Window
     private void OnTouchMove(object sender, TouchEventArgs e)
     {
         var point = e.GetTouchPoint(this).Position;
-        if (TryCancelForPassthrough(point))
+        if (TryCancelForPassthrough(point, RegionScreenCapturePassthroughInputKind.PointerMove))
         {
             e.Handled = true;
             return;
@@ -192,27 +192,30 @@ public partial class RegionSelectionOverlayWindow : Window
         ReleaseTouchCapture(e.TouchDevice);
         var endPoint = e.GetTouchPoint(this).Position;
         UpdateSelectionRect(_startPoint, endPoint);
-        if (_selectionRect.Width < 4 || _selectionRect.Height < 4)
+        if (RegionSelectionCompletionPolicy.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
+            == RegionSelectionCompletionDecision.KeepWaiting)
         {
-            DialogResult = false;
+            ResetSelectionAndContinue();
         }
         else
         {
-            DialogResult = true;
+            CompleteSelection(accepted: true);
         }
-        Close();
         e.Handled = true;
     }
 
-    private bool TryCancelForPassthrough(System.Windows.Point localPoint)
+    private bool TryCancelForPassthrough(
+        System.Windows.Point _,
+        RegionScreenCapturePassthroughInputKind inputKind)
     {
         if (_isSelecting || _passthroughRegions.Length == 0)
         {
             return false;
         }
 
-        var x = (int)Math.Round(Left + localPoint.X);
-        var y = (int)Math.Round(Top + localPoint.Y);
+        var cursorPosition = System.Windows.Forms.Cursor.Position;
+        var x = cursorPosition.X;
+        var y = cursorPosition.Y;
         for (var i = 0; i < _passthroughRegions.Length; i++)
         {
             if (!_passthroughRegions[i].Contains(x, y))
@@ -221,13 +224,41 @@ public partial class RegionSelectionOverlayWindow : Window
             }
 
             CanceledByPassthrough = true;
+            PassthroughInputKind = inputKind;
             Cursor = System.Windows.Input.Cursors.Arrow;
-            DialogResult = false;
-            Close();
+            CompleteSelection(accepted: false);
             return true;
         }
 
         return false;
+    }
+
+    internal bool CancelFromToolbarHandledPress()
+    {
+        if (!IsVisible)
+        {
+            return false;
+        }
+
+        CanceledByPassthrough = true;
+        PassthroughInputKind = RegionScreenCapturePassthroughInputKind.ToolbarHandledPress;
+        Cursor = System.Windows.Input.Cursors.Arrow;
+        CompleteSelection(accepted: false);
+        return true;
+    }
+
+    internal bool CancelFromToolbarPointerMove()
+    {
+        if (!IsVisible)
+        {
+            return false;
+        }
+
+        CanceledByPassthrough = true;
+        PassthroughInputKind = RegionScreenCapturePassthroughInputKind.PointerMove;
+        Cursor = System.Windows.Input.Cursors.Arrow;
+        CompleteSelection(accepted: false);
+        return true;
     }
 
     private void UpdateSelectionRect(System.Windows.Point start, System.Windows.Point end)
@@ -241,5 +272,19 @@ public partial class RegionSelectionOverlayWindow : Window
         Canvas.SetTop(SelectionRect, y);
         SelectionRect.Width = width;
         SelectionRect.Height = height;
+    }
+
+    private void ResetSelectionAndContinue()
+    {
+        _selectionRect = Rect.Empty;
+        SelectionRect.Visibility = Visibility.Collapsed;
+        SelectionRect.Width = 0;
+        SelectionRect.Height = 0;
+    }
+
+    private void CompleteSelection(bool accepted)
+    {
+        SelectionAccepted = accepted;
+        Close();
     }
 }

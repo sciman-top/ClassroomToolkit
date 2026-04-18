@@ -31,6 +31,83 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     }
 
     [Fact]
+    public void ToolbarPassthroughCancel_ShouldReplayClickToToolbar()
+    {
+        var source = File.ReadAllText(GetMainWindowPaintSourcePath());
+        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
+        var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
+
+        source.Should().Contain("ToolbarPassthroughActivationPolicy.ShouldReplayToolbarClick(");
+        source.Should().Contain("_toolbarWindow?.TryActivateButtonAtScreenPoint(");
+        toolbarSource.Should().Contain("public bool TryActivateButtonAtScreenPoint(");
+        workflowSource.Should().NotContain("SafeShowDialog()");
+        workflowSource.Should().Contain("DispatcherFrame");
+        overlaySource.Should().NotContain("DialogResult");
+        overlaySource.Should().Contain("SelectionAccepted");
+    }
+
+    [Fact]
+    public void SessionCaptureWhiteboardExit_ShouldRefreshBoardVisualAfterPhotoModeExit()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("_overlay?.ExitPhotoMode();");
+        source.Should().Contain("RefreshBoardButtonVisualState();");
+    }
+
+    [Fact]
+    public void BoardClick_ShouldClearOtherSelectionVisuals_AndKeepBoardSelectedWhileCaptureIsPending()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("PreviewMouseDown += OnPreviewMouseDown;");
+        source.Should().Contain("ToolbarResumeCancellationPolicy.ShouldCancelPendingResumeOnToolbarPress(");
+        source.Should().Contain("ClearNonBoardSelectionVisualState();");
+        source.Should().Contain("_regionCapturePending = true;");
+        source.Should().Contain("QuickColor1Button.IsChecked = false;");
+        source.Should().Contain("QuickColor2Button.IsChecked = false;");
+        source.Should().Contain("QuickColor3Button.IsChecked = false;");
+    }
+
+    [Fact]
+    public void ToolbarNonBoardPress_ShouldCancelActiveRegionSelection_WhenToolbarIsAboveMask()
+    {
+        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
+
+        toolbarSource.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress()");
+        workflowSource.Should().Contain("ToolbarHandledPress");
+        workflowSource.Should().Contain("CancelActiveSelectionFromToolbarHandledPress");
+    }
+
+    [Fact]
+    public void ToolbarHoverDuringPendingCapture_ShouldCancelActiveRegionSelection_AsPointerMove()
+    {
+        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
+        var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
+
+        toolbarSource.Should().Contain("MouseEnter += OnToolbarMouseEnter;");
+        toolbarSource.Should().NotContain("if (!_regionCapturePending)");
+        toolbarSource.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove()");
+        toolbarSource.Should().Contain("_regionCapturePending");
+        workflowSource.Should().Contain("CancelActiveSelectionFromToolbarPointerMove");
+        overlaySource.Should().Contain("CancelFromToolbarPointerMove");
+        overlaySource.Should().Contain("RegionScreenCapturePassthroughInputKind.PointerMove");
+    }
+
+    [Fact]
+    public void RegionCaptureSuccess_ShouldRefreshToolbarVisualAfterSessionCaptureEntry()
+    {
+        var source = File.ReadAllText(GetMainWindowPaintSourcePath());
+
+        source.Should().Contain("ApplyPhotoOverlayEntry(");
+        source.Should().Contain("overlay.EnsurePhotoWindowedMode();");
+        source.Should().Contain("_toolbarWindow?.SetBoardActive(false);");
+    }
+
+    [Fact]
     public void RegionCaptureFlow_ShouldKeepScreenshotVisible_AndAvoidFullscreenEntry()
     {
         var source = File.ReadAllText(GetMainWindowPaintSourcePath());
@@ -79,6 +156,17 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     }
 
     [Fact]
+    public void BoardSecondClickDuringPendingCapture_ShouldCancelMaskAndEnterWhiteboardDirectly()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("if (_regionCapturePending || _directWhiteboardEntryArmed || _resumeRegionCaptureArmed)");
+        source.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();");
+        source.Should().Contain("if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)");
+        source.Should().Contain("ShowBoardHint(\"已进入白板\")");
+    }
+
+    [Fact]
     public void ToolbarXaml_ShouldMergeRegionCaptureIntoBoardButton()
     {
         var xaml = File.ReadAllText(GetToolbarXamlPath());
@@ -119,6 +207,24 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
             "src",
             "ClassroomToolkit.App",
             "MainWindow.Photo.cs");
+    }
+
+    private static string GetRegionScreenCaptureWorkflowSourcePath()
+    {
+        return TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "RegionScreenCaptureWorkflow.cs");
+    }
+
+    private static string GetRegionSelectionOverlaySourcePath()
+    {
+        return TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "RegionSelectionOverlayWindow.xaml.cs");
     }
 
 }
