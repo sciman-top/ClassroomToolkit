@@ -69,31 +69,39 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <UniformGrid Grid.Row="0" Columns="3" Margin="0,0,0,6">
-                            <Button Content="添加收藏"
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Content="添加收藏"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
                                     Margin="0,0,6,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnAddFavoriteClick"
                                     Style="{StaticResource Style_Button_Teal}"
-                                    FontSize="{StaticResource FontSize_Body_S}"/>
-                            <Button Content="取消收藏"
+                                    FontSize="{StaticResource FontSize_Body_S}"
+                                    HorizontalAlignment="Stretch"/>
+                            <Button Grid.Column="1"
+                                    Content="取消收藏"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
                                     Margin="0,0,6,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnRemoveFavoriteClick"
                                     Style="{StaticResource Style_DangerButton}"
-                                    FontSize="{StaticResource FontSize_Body_S}"/>
-                            <Button Content="清空最近"
+                                    FontSize="{StaticResource FontSize_Body_S}"
+                                    HorizontalAlignment="Stretch"/>
+                            <Button Grid.Column="2"
+                                    Content="清空最近"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
                                     VerticalContentAlignment="Center"
                                     Click="OnClearRecentsClick"
                                     Style="{StaticResource Style_SecondaryButton}"
-                                    FontSize="{StaticResource FontSize_Body_S}"/>
-                        </UniformGrid>
+                                    FontSize="{StaticResource FontSize_Body_S}"
+                                    HorizontalAlignment="Stretch"/>
+                        </Grid>
                         <TextBlock Grid.Row="1" Text="收藏" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,4"/>
                         <ListBox Grid.Row="2" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -251,6 +259,18 @@
                                       VerticalAlignment="Center"
                                       IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
                                       Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
+                            <Button x:Name="DeleteFilesButton" Content="删除" Margin="12,0,0,0"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="86"
+                                    Style="{StaticResource Style_DangerButton}" IsEnabled="False"
+                                    Click="OnDeleteSelectedFilesClick"/>
+                            <Button x:Name="SelectAllFilesButton" Content="全选" Margin="6,0,0,0"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="72"
+                                    Style="{StaticResource Style_SecondaryButton}" Visibility="Collapsed"
+                                    Click="OnSelectAllFilesClick"/>
+                            <Button x:Name="ExitSelectionModeButton" Content="取消多选" Margin="6,0,0,0"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="86"
+                                    Style="{StaticResource Style_SecondaryButton}" Visibility="Collapsed"
+                                    Click="OnExitSelectionModeClick"/>
                         </StackPanel>
                     </Grid>
                 </DockPanel>
@@ -259,7 +279,12 @@
                            Text="先选左侧文件夹"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
-                    <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
+                    <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged"
+                              SelectionMode="Single"
+                              PreviewMouseLeftButtonDown="OnImageListPointerDown"
+                              PreviewMouseMove="OnImageListPointerMove"
+                              PreviewMouseLeftButtonUp="OnImageListPointerUp"
+                              MouseLeave="OnImageListPointerLeave"
                               Background="Transparent" BorderThickness="0" 
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -306,12 +331,18 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
-                    <ListView x:Name="ImageListView" SelectionChanged="OnImageSelectionChanged" MouseDoubleClick="OnImageListDoubleClick"
+                    <ListView x:Name="ImageListView" SelectionChanged="OnImageSelectionChanged"
+                              SelectionMode="Single"
+                              PreviewMouseLeftButtonDown="OnImageListPointerDown"
+                              PreviewMouseMove="OnImageListPointerMove"
+                              PreviewMouseLeftButtonUp="OnImageListPointerUp"
+                              MouseLeave="OnImageListPointerLeave"
                               Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
                               ScrollViewer.CanContentScroll="True"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
-                              Foreground="{StaticResource Brush_Text_Primary}">
+                              Foreground="{StaticResource Brush_Text_Primary}"
+                              ItemContainerStyle="{StaticResource Style_ManagementFileListViewItem}">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="名称" Width="240">

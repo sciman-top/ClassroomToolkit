@@ -26,6 +26,12 @@ public partial class ImageManagerWindow : Window
             OnThumbnailRefreshDebounceTick,
             Dispatcher.CurrentDispatcher);
         _thumbnailRefreshDebounceTimer.Stop();
+        _multiSelectLongPressTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(MultiSelectLongPressMilliseconds),
+            DispatcherPriority.Background,
+            OnMultiSelectLongPressTick,
+            Dispatcher.CurrentDispatcher);
+        _multiSelectLongPressTimer.Stop();
         _thumbnailBackgroundQueueTimer = new DispatcherTimer(
             TimeSpan.FromMilliseconds(ThumbnailBackgroundQueueIntervalMilliseconds),
             DispatcherPriority.Background,

@@ -1165,22 +1165,103 @@
            BasedOn="{StaticResource Style_ListViewItem_SelectionUnified}">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListViewItem">
-                    <Border x:Name="bd"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="8"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <Border x:Name="SelectedBadge"
+                                Width="18"
+                                Height="18"
+                                CornerRadius="9"
+                                Background="{StaticResource Brush_Primary}"
+                                BorderBrush="{StaticResource Brush_Border_Focus}"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Margin="6"
+                                Visibility="Collapsed">
+                            <Path Data="M3,8 L6,11 L13,4"
+                                  Stroke="White"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stretch="Fill"
+                                  Margin="2"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
-                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="SelectedBadge" Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ManagementFileListViewItem"
+           TargetType="ListViewItem"
+           BasedOn="{StaticResource Style_ListViewItem_SelectionUnified}">
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Grid>
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <GridViewRowPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <Border x:Name="SelectedBadge"
+                                Width="16"
+                                Height="16"
+                                CornerRadius="8"
+                                Background="{StaticResource Brush_Primary}"
+                                BorderBrush="{StaticResource Brush_Border_Focus}"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Margin="6,0,0,0"
+                                Visibility="Collapsed">
+                            <Path Data="M3,8 L6,11 L13,4"
+                                  Stroke="White"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stretch="Fill"
+                                  Margin="2"/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="SelectedBadge" Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>

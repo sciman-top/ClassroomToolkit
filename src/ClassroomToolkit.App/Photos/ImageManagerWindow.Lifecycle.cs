@@ -131,6 +131,8 @@ public partial class ImageManagerWindow
         SourceInitialized -= OnWindowSourceInitialized;
         _thumbnailRefreshDebounceTimer.Stop();
         _thumbnailRefreshDebounceTimer.Tick -= OnThumbnailRefreshDebounceTick;
+        _multiSelectLongPressTimer.Stop();
+        _multiSelectLongPressTimer.Tick -= OnMultiSelectLongPressTick;
         _thumbnailBackgroundQueueTimer.Stop();
         _thumbnailBackgroundQueueTimer.Tick -= OnThumbnailBackgroundQueueTick;
         _thumbnailCts?.Cancel();

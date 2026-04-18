@@ -26,6 +26,8 @@ public partial class ImageManagerWindow : Window
     private const double MaxThumbnailSize = 420.0;
     private const double DefaultWindowWidth = 1100.0;
     private const double DefaultWindowHeight = 700.0;
+    private const int MultiSelectLongPressMilliseconds = 650;
+    private const double MultiSelectLongPressMoveTolerance = 16.0;
     private const int ThumbnailRefreshDebounceMilliseconds = 90;
     private const int ImageAppendBatchSize = 48;
     private const int FolderNodeRenderBatchSize = 64;
@@ -43,10 +45,17 @@ public partial class ImageManagerWindow : Window
     private bool _layoutApplying;
     private bool _closeCompleted;
     private readonly DispatcherTimer _thumbnailRefreshDebounceTimer;
+    private readonly DispatcherTimer _multiSelectLongPressTimer;
     private double _preferredLeftRatio = DefaultLeftRatio;
     private int _preferredLeftPanelWidth;
     private double _restoredWindowWidth = DefaultWindowWidth;
     private double _restoredWindowHeight = DefaultWindowHeight;
+    private bool _isMultiSelectMode;
+    private bool _suppressSelectionChanged;
+    private bool _longPressTriggered;
+    private System.Windows.Point _longPressStartPoint;
+    private ImageItem? _longPressCandidateItem;
+    private System.Windows.Controls.ListView? _longPressSourceList;
 
     public ImageManagerViewModel ViewModel { get; }
 
