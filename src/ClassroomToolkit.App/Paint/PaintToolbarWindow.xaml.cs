@@ -36,6 +36,9 @@ public partial class PaintToolbarWindow : Window
     private bool _directWhiteboardEntryArmed;
     private readonly DispatcherTimer _regionCaptureResumeTimer;
     private bool _resumeRegionCaptureArmed;
+    private bool _toolbarDragging;
+    private System.Windows.Point _toolbarDragOffset;
+    private IDisposable? _toolbarDragScope;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -83,6 +86,8 @@ public partial class PaintToolbarWindow : Window
         UpdateShapeButtonIcon();
         PreviewKeyDown += OnPreviewKeyDown;
         PreviewMouseWheel += OnPreviewMouseWheel;
+        MouseMove += OnToolbarDragMove;
+        MouseLeftButtonUp += OnToolbarDragEnd;
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
         Closed += OnToolbarClosed;
@@ -110,8 +115,11 @@ public partial class PaintToolbarWindow : Window
     {
         _regionCaptureResumeTimer.Stop();
         _regionCaptureResumeTimer.Tick -= OnRegionCaptureResumeTimerTick;
+        EndToolbarDragCore();
         PreviewKeyDown -= OnPreviewKeyDown;
         PreviewMouseWheel -= OnPreviewMouseWheel;
+        MouseMove -= OnToolbarDragMove;
+        MouseLeftButtonUp -= OnToolbarDragEnd;
         Loaded -= OnToolbarLoaded;
         IsVisibleChanged -= OnToolbarVisibleChanged;
         Closed -= OnToolbarClosed;
@@ -852,12 +860,76 @@ public partial class PaintToolbarWindow : Window
         }
     }
 
-    private void OnToolbarDrag(object sender, MouseButtonEventArgs e)
+    private void OnToolbarDragStart(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left)
+        if (e.ChangedButton != MouseButton.Left)
         {
-            PaintActionInvoker.TryInvoke(DragMove);
+            return;
         }
+        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        _toolbarDragging = true;
+        _toolbarDragOffset = e.GetPosition(this);
+        _toolbarDragScope?.Dispose();
+        _toolbarDragScope = WindowDragOperationState.Begin();
+        CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void OnToolbarDragMove(object? sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_toolbarDragging)
+        {
+            return;
+        }
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            EndToolbarDragCore();
+            return;
+        }
+
+        var screen = PointToScreen(e.GetPosition(this));
+        var proposedLeft = screen.X - _toolbarDragOffset.X;
+        var proposedTop = screen.Y - _toolbarDragOffset.Y;
+        var clampedLeft = Math.Max(
+            SystemParameters.VirtualScreenLeft,
+            Math.Min(proposedLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width));
+        var clampedTop = Math.Max(
+            SystemParameters.VirtualScreenTop,
+            Math.Min(proposedTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height));
+
+        Left = clampedLeft;
+        Top = clampedTop;
+    }
+
+    private void OnToolbarDragEnd(object? sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        EndToolbarDragCore();
+    }
+
+    private void EndToolbarDragCore()
+    {
+        if (!_toolbarDragging)
+        {
+            return;
+        }
+
+        _toolbarDragging = false;
+        if (IsMouseCaptured)
+        {
+            ReleaseMouseCapture();
+        }
+
+        _toolbarDragScope?.Dispose();
+        _toolbarDragScope = null;
     }
 
     private static bool IsInteractiveElement(DependencyObject? source)

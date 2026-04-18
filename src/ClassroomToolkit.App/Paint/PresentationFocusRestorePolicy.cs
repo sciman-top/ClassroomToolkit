@@ -15,9 +15,10 @@ internal static class PresentationFocusRestorePolicy
         bool targetIsFullscreen,
         bool requireFullscreen,
         bool forceForeground,
-        bool foregroundOwnedByCurrentProcess)
+        bool foregroundOwnedByCurrentProcess,
+        bool dragOperationActive)
     {
-        if (!isVisible || photoModeActive || boardActive)
+        if (!isVisible || photoModeActive || boardActive || dragOperationActive)
         {
             return false;
         }

@@ -68,7 +68,7 @@
                 CornerRadius="22"
                 Height="46"
                 Padding="8,4"
-                MouseLeftButtonDown="OnToolbarDrag"
+                MouseLeftButtonDown="OnToolbarDragStart"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}">
             <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>

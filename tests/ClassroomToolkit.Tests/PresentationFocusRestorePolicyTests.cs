@@ -1,5 +1,6 @@
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
 using FluentAssertions;
 using Xunit;
 
@@ -25,7 +26,8 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: true,
             requireFullscreen: true,
             forceForeground: false,
-            foregroundOwnedByCurrentProcess: true);
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: false);
 
         result.Should().BeTrue();
     }
@@ -48,7 +50,8 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: true,
             requireFullscreen: true,
             forceForeground: false,
-            foregroundOwnedByCurrentProcess: true);
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: false);
 
         result.Should().BeFalse();
     }
@@ -71,7 +74,8 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: true,
             requireFullscreen: true,
             forceForeground: false,
-            foregroundOwnedByCurrentProcess: true);
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: false);
         var board = PresentationFocusRestorePolicy.CanRestore(
             state,
             photoModeActive: false,
@@ -83,7 +87,8 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: true,
             requireFullscreen: true,
             forceForeground: false,
-            foregroundOwnedByCurrentProcess: true);
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: false);
 
         photo.Should().BeFalse();
         board.Should().BeFalse();
@@ -107,7 +112,8 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: false,
             requireFullscreen: true,
             forceForeground: true,
-            foregroundOwnedByCurrentProcess: false);
+            foregroundOwnedByCurrentProcess: false,
+            dragOperationActive: false);
 
         result.Should().BeFalse();
     }
@@ -134,8 +140,58 @@ public sealed class PresentationFocusRestorePolicyTests
             targetIsFullscreen: true,
             requireFullscreen: true,
             forceForeground: true,
-            foregroundOwnedByCurrentProcess: false);
+            foregroundOwnedByCurrentProcess: false,
+            dragOperationActive: false);
 
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanRestore_ShouldReturnFalse_WhenWindowDragOperationIsActive()
+    {
+        var state = UiSessionReducer.Reduce(
+            UiSessionReducer.Reduce(UiSessionState.Default, new SwitchToolModeEvent(UiToolMode.Cursor)),
+            new EnterPresentationFullscreenEvent(PresentationSourceKind.PowerPoint));
+
+        var result = PresentationFocusRestorePolicy.CanRestore(
+            state,
+            photoModeActive: false,
+            boardActive: false,
+            isVisible: true,
+            presentationAllowed: true,
+            targetIsValid: true,
+            targetIsSlideshow: true,
+            targetIsFullscreen: true,
+            requireFullscreen: true,
+            forceForeground: false,
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: true);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanRestore_ShouldFollowWindowDragOperationState()
+    {
+        var state = UiSessionReducer.Reduce(
+            UiSessionReducer.Reduce(UiSessionState.Default, new SwitchToolModeEvent(UiToolMode.Cursor)),
+            new EnterPresentationFullscreenEvent(PresentationSourceKind.PowerPoint));
+
+        using var dragScope = WindowDragOperationState.Begin();
+        var result = PresentationFocusRestorePolicy.CanRestore(
+            state,
+            photoModeActive: false,
+            boardActive: false,
+            isVisible: true,
+            presentationAllowed: true,
+            targetIsValid: true,
+            targetIsSlideshow: true,
+            targetIsFullscreen: true,
+            requireFullscreen: true,
+            forceForeground: false,
+            foregroundOwnedByCurrentProcess: true,
+            dragOperationActive: WindowDragOperationState.IsActive);
+
+        result.Should().BeFalse();
     }
 }

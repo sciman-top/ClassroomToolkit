@@ -46,7 +46,8 @@ public partial class PaintOverlayWindow
                 targetIsFullscreen,
                 requireFullscreen,
                 force,
-                foregroundOwned))
+                foregroundOwned,
+                WindowDragOperationState.IsActive))
         {
             return false;
         }
