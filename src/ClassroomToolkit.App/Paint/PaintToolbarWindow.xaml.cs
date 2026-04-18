@@ -89,14 +89,15 @@ public partial class PaintToolbarWindow : Window
         PreviewMouseDown += OnPreviewMouseDown;
         PreviewMouseWheel += OnPreviewMouseWheel;
         MouseEnter += OnToolbarMouseEnter;
+        MouseLeave += OnToolbarMouseLeave;
         MouseMove += OnToolbarDragMove;
         MouseLeftButtonUp += OnToolbarDragEnd;
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
         Closed += OnToolbarClosed;
-        _regionCaptureResumeTimer = new DispatcherTimer(DispatcherPriority.Background)
+        _regionCaptureResumeTimer = new DispatcherTimer(DispatcherPriority.Input)
         {
-            Interval = TimeSpan.FromMilliseconds(60)
+            Interval = TimeSpan.FromMilliseconds(16)
         };
         _regionCaptureResumeTimer.Tick += OnRegionCaptureResumeTimerTick;
     }
@@ -123,6 +124,7 @@ public partial class PaintToolbarWindow : Window
         PreviewMouseDown -= OnPreviewMouseDown;
         PreviewMouseWheel -= OnPreviewMouseWheel;
         MouseEnter -= OnToolbarMouseEnter;
+        MouseLeave -= OnToolbarMouseLeave;
         MouseMove -= OnToolbarDragMove;
         MouseLeftButtonUp -= OnToolbarDragEnd;
         Loaded -= OnToolbarLoaded;
@@ -354,6 +356,7 @@ public partial class PaintToolbarWindow : Window
         if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)
             && _overlay?.IsPhotoModeActive != true)
         {
+            ResetToolSelectionBaselineForBoardInteraction();
             ClearNonBoardSelectionVisualState();
             ClearDirectWhiteboardEntryArm();
             SetBoardActive(true);
@@ -363,6 +366,7 @@ public partial class PaintToolbarWindow : Window
 
         if (_overlay?.IsPhotoModeActive == true)
         {
+            ResetToolSelectionBaselineForBoardInteraction();
             ClearNonBoardSelectionVisualState();
             _regionCapturePending = false;
             SetBoardActive(true);
@@ -370,6 +374,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
+        ResetToolSelectionBaselineForBoardInteraction();
         ClearNonBoardSelectionVisualState();
         _regionCapturePending = true;
         ShowBoardHint("请框选截图区域");
@@ -582,16 +587,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
-        var screenPoint = System.Windows.Forms.Cursor.Position;
-        if (IsPointInsideToolbar(screenPoint.X, screenPoint.Y))
-        {
-            return;
-        }
-
-        _resumeRegionCaptureArmed = false;
-        SafeActionExecutionExecutor.TryExecute(
-            () => RegionCaptureRequested?.Invoke(),
-            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture resume callback failed: {ex.Message}"));
+        TryResumeRegionCaptureIfPointerOutsideToolbar();
     }
 
     private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
@@ -629,6 +625,11 @@ public partial class PaintToolbarWindow : Window
     private void OnToolbarMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
         RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove();
+    }
+
+    private void OnToolbarMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        TryResumeRegionCaptureIfPointerOutsideToolbar();
     }
 
     private bool IsPointInsideToolbar(double screenX, double screenY)
@@ -957,6 +958,18 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: shape callback failed: {ex.Message}"));
     }
 
+    private void ResetToolSelectionBaselineForBoardInteraction()
+    {
+        _toolSelectionManager.Reset(PaintToolMode.Brush);
+        if (_currentMode != PaintToolMode.Brush)
+        {
+            ApplyToolMode(PaintToolMode.Brush);
+            return;
+        }
+
+        _overlay?.SetMode(PaintToolMode.Brush);
+    }
+
     private PaintShapeType ResolveEffectiveShapeType()
     {
         if (_shapeType != PaintShapeType.None)
@@ -1070,6 +1083,33 @@ public partial class PaintToolbarWindow : Window
 
         Left = clampedLeft;
         Top = clampedTop;
+    }
+
+    private void TryResumeRegionCaptureIfPointerOutsideToolbar()
+    {
+        var screenPoint = System.Windows.Forms.Cursor.Position;
+        var decision = RegionCaptureResumeTriggerPolicy.Resolve(
+            _resumeRegionCaptureArmed,
+            IsVisible,
+            IsLoaded,
+            BoardActive,
+            _overlay?.IsWhiteboardActive == true,
+            IsPointInsideToolbar(screenPoint.X, screenPoint.Y));
+        if (decision.ShouldClearDirectWhiteboardEntryArm)
+        {
+            ClearDirectWhiteboardEntryArm();
+            return;
+        }
+
+        if (!decision.ShouldResumeRegionCapture)
+        {
+            return;
+        }
+
+        _resumeRegionCaptureArmed = false;
+        SafeActionExecutionExecutor.TryExecute(
+            () => RegionCaptureRequested?.Invoke(),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture resume callback failed: {ex.Message}"));
     }
 
     private void OnToolbarDragEnd(object? sender, MouseButtonEventArgs e)

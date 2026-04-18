@@ -442,3 +442,116 @@
 - 回滚动作：
   1. 撤销以上文件至本次修改前版本
   2. 重新执行 `build -> test -> contract/invariant`
+
+## 2026-04-18 补充修复：首次恢复截图延迟与白板后图形误回画笔
+
+- 规则 ID: R1, R2, R3, R6, R8
+- 风险等级: Low
+- 边界: `PaintToolbarWindow` 截图恢复触发时机、白板交互后的工具选择历史基线
+- 当前落点:
+  - `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`
+  - `tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs`
+- 目标归宿:
+  - 程序启动后首次点白板，鼠标离开工具条时更快恢复十字与遮罩
+  - 点白板后再点图形，不再因历史 toggle 误回到画笔
+- 时间戳: 2026-04-18T23:58:00+08:00
+
+### 依据
+
+- 现象 1：首次点击白板后，从工具条移出到出现十字/遮罩存在可感知延迟。
+- 根因 1：恢复截图仅依赖 `DispatcherTimer(Background, 60ms)` 轮询，且没有 `MouseLeave` 立即触发路径。
+- 修复 1：改为 `DispatcherPriority.Input + 16ms`，并在 `MouseLeave` 直接调用同一恢复入口 `TryResumeRegionCaptureIfPointerOutsideToolbar()`（定时器保留兜底）。
+
+- 现象 2：`白板 -> 图形` 首次切换正确，但再执行 `白板 -> 图形` 时掉回画笔。
+- 根因 2：白板交互前后只清了按钮视觉状态，未重置 `_toolSelectionManager` 当前模式；第二次点图形被当作“重复点击当前图形模式”触发 fallback。
+- 修复 2：白板交互入口统一执行 `ResetToolSelectionBaselineForBoardInteraction()`，将选择管理器和 `_currentMode` 基线重置为 `Brush`，打断错误 toggle 链。
+
+### 命令
+
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~RegionCaptureWhiteboardIntegrationContractTests|FullyQualifiedName~ToolbarPassthroughActivationPolicyTests|FullyQualifiedName~ToolbarResumeCancellationPolicyTests|FullyQualifiedName~ToolbarBoardSelectionVisualPolicyTests"`
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`
+
+### 关键输出
+
+- 定向测试：37/37 通过。
+- build：0 warning, 0 error。
+- 全量测试：3268/3268 通过。
+- contract/invariant：28/28 通过。
+
+### Hotspot 复核
+
+- `PaintToolbarWindow.xaml.cs`
+  - `MouseLeave` 与 `TimerTick` 复用同一恢复函数，减少路径分叉。
+  - 白板相关分支进入前重置工具选择基线，避免形状按钮误判为重复 toggle。
+- `RegionCaptureWhiteboardIntegrationContractTests.cs`
+  - 新增对 `MouseLeave` 触发恢复、Input 优先级计时器和工具选择基线重置的契约约束，防止回归。
+
+### 回滚
+
+- 回滚文件：
+  - `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`
+  - `tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs`
+- 回滚动作：撤销上述修改后重新执行 `build -> test -> contract/invariant`。
+
+## 2026-04-19 补充硬化：模式单一事实源与恢复截图决策策略化
+
+- 规则 ID: R1, R2, R3, R6, R8
+- 风险等级: Low
+- 边界: 白板交互后的工具模式一致性；恢复截图触发条件的统一判定
+- 当前落点:
+  - `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`
+  - `src/ClassroomToolkit.App/Paint/RegionCaptureResumeTriggerPolicy.cs`
+  - `tests/ClassroomToolkit.Tests/RegionCaptureResumeTriggerPolicyTests.cs`
+  - `tests/ClassroomToolkit.Tests/PaintToolSelectionManagerTests.cs`
+  - `tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs`
+- 目标归宿:
+  - 白板交互重置工具基线时，`Toolbar` 与 `Overlay` 模式保持同源一致
+  - `MouseLeave` 与 `TimerTick` 共享同一恢复截图决策逻辑
+  - 对关键序列行为补足可执行测试，而不仅是字符串契约
+- 时间戳: 2026-04-19T00:10:00+08:00
+
+### 依据
+
+- 风险点 1：`ResetToolSelectionBaselineForBoardInteraction` 仅改本地字段会造成模式事实源分叉。
+- 修复点 1：改为 `Reset + ApplyToolMode(Brush)`，并在已是 Brush 时显式同步 `_overlay?.SetMode(Brush)`。
+
+- 风险点 2：恢复截图决策分散在多个事件入口（`MouseLeave`/`TimerTick`）。
+- 修复点 2：抽出 `RegionCaptureResumeTriggerPolicy.Resolve(...)`，统一判定“继续等待 / 清除 arm / 恢复截图”。
+
+### 命令
+
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~RegionCaptureResumeTriggerPolicyTests|FullyQualifiedName~PaintToolSelectionManagerTests|FullyQualifiedName~RegionCaptureWhiteboardIntegrationContractTests"`
+- `dotnet build ClassroomToolkit.sln -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`
+
+### 关键输出
+
+- 定向测试：24/24 通过。
+- build：0 warning, 0 error。
+- 全量测试：3273/3273 通过。
+- contract/invariant：28/28 通过。
+
+### Hotspot 复核
+
+- `PaintToolbarWindow.xaml.cs`
+  - 工具基线重置不再只改字段，改为通过统一模式入口完成同步。
+  - 恢复截图入口改为策略判定，`MouseLeave` 和 `TimerTick` 行为一致。
+- `RegionCaptureResumeTriggerPolicy.cs`
+  - 将恢复截图条件外提为纯函数，便于单元测试覆盖边界。
+- `RegionCaptureResumeTriggerPolicyTests.cs`
+  - 覆盖 no-op / clear-arm / resume / keep-waiting 四类关键决策。
+- `PaintToolSelectionManagerTests.cs`
+  - 补充“白板后图形不误回画笔”的基线行为测试。
+
+### 回滚
+
+- 回滚文件：
+  - `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`
+  - `src/ClassroomToolkit.App/Paint/RegionCaptureResumeTriggerPolicy.cs`
+  - `tests/ClassroomToolkit.Tests/RegionCaptureResumeTriggerPolicyTests.cs`
+  - `tests/ClassroomToolkit.Tests/PaintToolSelectionManagerTests.cs`
+  - `tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs`
+- 回滚动作：撤销上述文件并重跑 `build -> test -> contract/invariant`。

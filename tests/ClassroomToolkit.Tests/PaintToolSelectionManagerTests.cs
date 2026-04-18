@@ -62,4 +62,17 @@ public sealed class PaintToolSelectionManagerTests
 
         mode.Should().Be(PaintToolMode.Brush);
     }
+
+    [Fact]
+    public void ResetToBrushBaseline_ShouldPreventShapeClickFromFallingBackToBrush()
+    {
+        var manager = new PaintToolSelectionManager(PaintToolMode.Brush);
+        manager.Select(PaintToolMode.Shape, allowToggleOffCurrent: true);
+        manager.Reset(PaintToolMode.Brush);
+
+        var mode = manager.Select(PaintToolMode.Shape, allowToggleOffCurrent: true);
+
+        mode.Should().Be(PaintToolMode.Shape);
+        manager.CurrentMode.Should().Be(PaintToolMode.Shape);
+    }
 }

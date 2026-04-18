@@ -63,6 +63,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
 
         source.Should().Contain("PreviewMouseDown += OnPreviewMouseDown;");
         source.Should().Contain("ToolbarResumeCancellationPolicy.ShouldCancelPendingResumeOnToolbarPress(");
+        source.Should().Contain("ResetToolSelectionBaselineForBoardInteraction();");
         source.Should().Contain("ClearNonBoardSelectionVisualState();");
         source.Should().Contain("_regionCapturePending = true;");
         source.Should().Contain("QuickColor1Button.IsChecked = false;");
@@ -89,8 +90,10 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
 
         toolbarSource.Should().Contain("MouseEnter += OnToolbarMouseEnter;");
+        toolbarSource.Should().Contain("MouseLeave += OnToolbarMouseLeave;");
         toolbarSource.Should().NotContain("if (!_regionCapturePending)");
         toolbarSource.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove()");
+        toolbarSource.Should().Contain("TryResumeRegionCaptureIfPointerOutsideToolbar();");
         toolbarSource.Should().Contain("_regionCapturePending");
         workflowSource.Should().Contain("CancelActiveSelectionFromToolbarPointerMove");
         overlaySource.Should().Contain("CancelFromToolbarPointerMove");
@@ -164,6 +167,29 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         source.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();");
         source.Should().Contain("if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)");
         source.Should().Contain("ShowBoardHint(\"已进入白板\")");
+    }
+
+    [Fact]
+    public void BoardInteraction_ShouldResetToolSelectionBaseline_ToAvoidShapeToggleFallback()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("private void ResetToolSelectionBaselineForBoardInteraction()");
+        source.Should().Contain("_toolSelectionManager.Reset(PaintToolMode.Brush);");
+        source.Should().Contain("ApplyToolMode(PaintToolMode.Brush);");
+        source.Should().Contain("_overlay?.SetMode(PaintToolMode.Brush);");
+    }
+
+    [Fact]
+    public void RegionCaptureResume_ShouldUseInputPriorityAndMouseLeaveImmediateTrigger()
+    {
+        var source = File.ReadAllText(GetToolbarSourcePath());
+
+        source.Should().Contain("new DispatcherTimer(DispatcherPriority.Input)");
+        source.Should().Contain("Interval = TimeSpan.FromMilliseconds(16)");
+        source.Should().Contain("private void OnToolbarMouseLeave");
+        source.Should().Contain("TryResumeRegionCaptureIfPointerOutsideToolbar();");
+        source.Should().Contain("RegionCaptureResumeTriggerPolicy.Resolve(");
     }
 
     [Fact]
