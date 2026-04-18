@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using ClassroomToolkit.App.Windowing;
 using WpfListViewItem = System.Windows.Controls.ListViewItem;
@@ -36,10 +37,25 @@ public partial class ImageManagerWindow
             UseDescriptionForTitle = true,
             ShowNewFolderButton = false
         };
+
+        var ownerHandle = _hwnd != IntPtr.Zero ? _hwnd : new WindowInteropHelper(this).Handle;
+        var owner = ownerHandle != IntPtr.Zero ? new Win32DialogOwner(ownerHandle) : null;
+        var restoreOwnerTopmost = Topmost;
+        var loweredOwnerTopmost = false;
         System.Windows.Forms.DialogResult result;
+
+        using var _ = FloatingTopmostDialogSuppressionState.Enter();
         try
         {
-            result = dialog.ShowDialog();
+            if (restoreOwnerTopmost)
+            {
+                Topmost = false;
+                loweredOwnerTopmost = true;
+            }
+
+            result = owner == null
+                ? dialog.ShowDialog()
+                : dialog.ShowDialog(owner);
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -48,11 +64,36 @@ public partial class ImageManagerWindow
                     ex.Message));
             return;
         }
+        finally
+        {
+            if (loweredOwnerTopmost)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () =>
+                    {
+                        Topmost = restoreOwnerTopmost;
+                        WindowTopmostExecutor.ApplyNoActivate(this, enabled: restoreOwnerTopmost, enforceZOrder: true);
+                    },
+                    ex => Debug.WriteLine(
+                        ImageManagerDiagnosticsPolicy.FormatFavoriteFolderDialogFailureMessage(
+                            $"restore-topmost-failed: {ex.Message}")));
+            }
+        }
         if (result != System.Windows.Forms.DialogResult.OK)
         {
             return;
         }
         AddFavorite(dialog.SelectedPath);
+    }
+
+    private sealed class Win32DialogOwner : System.Windows.Forms.IWin32Window
+    {
+        internal Win32DialogOwner(IntPtr handle)
+        {
+            Handle = handle;
+        }
+
+        public IntPtr Handle { get; }
     }
 
     private void OnRemoveFavoriteClick(object sender, RoutedEventArgs e)
