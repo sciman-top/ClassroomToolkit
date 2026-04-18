@@ -659,12 +659,25 @@ public partial class PaintOverlayWindow
 
     private PresentationType ResolveFullscreenPresentationType()
     {
+        var foreground = _presentationResolver.ResolveForeground();
+        var foregroundHasInfo = foreground.IsValid && foreground.Info != null;
+        var foregroundType = foregroundHasInfo
+            ? _presentationClassifier.Classify(foreground.Info!)
+            : PresentationType.None;
+        var foregroundIsFullscreen = foregroundHasInfo && IsFullscreenWindow(foreground.Handle);
+        var foregroundOwnedByCurrentProcess = foregroundHasInfo && foreground.Info!.ProcessId == _currentProcessId;
+
         bool wpsFullscreen = false;
         bool officeFullscreen = false;
         if (_presentationOptions.AllowWps)
         {
             var wpsTarget = ResolveWpsTarget();
-            wpsFullscreen = IsFullscreenPresentationWindow(wpsTarget);
+            var hasFullscreenCandidate = IsFullscreenPresentationWindow(wpsTarget);
+            wpsFullscreen = WpsFullscreenExitPolicy.ShouldTreatAsActiveFullscreen(
+                hasFullscreenCandidate,
+                foregroundType,
+                foregroundIsFullscreen,
+                foregroundOwnedByCurrentProcess);
         }
         if (_presentationOptions.AllowOffice)
         {
@@ -946,12 +959,16 @@ public partial class PaintOverlayWindow
         var fullscreen = IsFullscreenWindow(target.Handle);
         var slideshowClassMatch = _presentationClassifier.IsSlideshowWindow(target.Info);
         var classifiedType = _presentationClassifier.Classify(target.Info);
+        var dedicatedWpsRuntime = classifiedType == PresentationType.Wps
+                                  && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(
+                                      target.Info.ProcessName);
         return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
             target.IsValid,
             targetHasInfo: true,
             fullscreen,
             slideshowClassMatch,
-            classifiesAsOffice: classifiedType == PresentationType.Office);
+            classifiesAsOffice: classifiedType == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: dedicatedWpsRuntime);
     }
 
     private bool IsFullscreenWindow(IntPtr hwnd)

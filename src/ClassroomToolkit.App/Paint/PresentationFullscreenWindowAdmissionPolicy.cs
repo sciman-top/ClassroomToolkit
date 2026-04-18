@@ -7,7 +7,8 @@ internal static class PresentationFullscreenWindowAdmissionPolicy
         bool targetHasInfo,
         bool isFullscreen,
         bool classifiesAsSlideshow,
-        bool classifiesAsOffice)
+        bool classifiesAsOffice,
+        bool classifiesAsDedicatedWpsRuntime)
     {
         if (!targetIsValid || !targetHasInfo || !isFullscreen)
         {
@@ -20,7 +21,13 @@ internal static class PresentationFullscreenWindowAdmissionPolicy
         }
 
         // Office slideshow may switch runtime classes in pen/annotation mode.
-        // Keep WPS strict to avoid matching unrelated fullscreen windows.
-        return classifiesAsOffice;
+        if (classifiesAsOffice)
+        {
+            return true;
+        }
+
+        // Newer WPS builds host slideshow in a dedicated wpp/wppt runtime whose
+        // top-level window may expose only generic Qt classes.
+        return classifiesAsDedicatedWpsRuntime;
     }
 }
