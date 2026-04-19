@@ -178,18 +178,20 @@ public sealed class PhotoInputAlignmentPolicyTests
     }
 
     [Theory]
-    [InlineData(false, false, PaintToolMode.Cursor, false, false, 0)]
-    [InlineData(true, true, PaintToolMode.Cursor, false, false, 1)]
-    [InlineData(true, false, PaintToolMode.Brush, false, false, 1)]
-    [InlineData(true, false, PaintToolMode.Cursor, true, false, 1)]
-    [InlineData(true, false, PaintToolMode.Cursor, false, true, 1)]
-    [InlineData(true, false, PaintToolMode.Cursor, false, false, 2)]
-    public void PhotoManipulationRoutingPolicy_ShouldMatchExpected(
+    [InlineData(true, false, PaintToolMode.Cursor, false, false, 1, 1)]
+    [InlineData(true, false, PaintToolMode.Cursor, false, false, 2, 2)]
+    [InlineData(false, false, PaintToolMode.Cursor, false, false, 1, 0)]
+    [InlineData(true, true, PaintToolMode.Cursor, false, false, 2, 1)]
+    [InlineData(true, false, PaintToolMode.Brush, false, false, 2, 1)]
+    [InlineData(true, false, PaintToolMode.Cursor, true, false, 2, 1)]
+    [InlineData(true, false, PaintToolMode.Cursor, false, true, 2, 1)]
+    public void PhotoManipulationRoutingPolicy_ShouldHonorActiveTouchCount(
         bool photoModeActive,
         bool boardActive,
         PaintToolMode mode,
         bool inkOperationActive,
         bool photoPanning,
+        int activeTouchCount,
         int expected)
     {
         var decision = PhotoManipulationRoutingPolicy.Resolve(
@@ -197,7 +199,8 @@ public sealed class PhotoInputAlignmentPolicyTests
             boardActive,
             mode,
             inkOperationActive,
-            photoPanning);
+            photoPanning,
+            activeTouchCount);
 
         ((int)decision).Should().Be(expected);
     }

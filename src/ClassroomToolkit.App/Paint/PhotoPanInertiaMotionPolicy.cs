@@ -31,6 +31,21 @@ internal static class PhotoPanInertiaMotionPolicy
         PhotoPanInertiaTuning tuning,
         out Vector velocityDipPerMs)
     {
+        return TryResolveReleaseVelocity(
+            samples,
+            releaseTimestampTicks,
+            stopwatchFrequency,
+            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning),
+            out velocityDipPerMs);
+    }
+
+    internal static bool TryResolveReleaseVelocity(
+        IReadOnlyList<PhotoPanVelocitySample> samples,
+        long releaseTimestampTicks,
+        long stopwatchFrequency,
+        PhotoPanReleaseTuning tuning,
+        out Vector velocityDipPerMs)
+    {
         velocityDipPerMs = default;
         if (samples == null
             || samples.Count < 2
@@ -100,14 +115,14 @@ internal static class PhotoPanInertiaMotionPolicy
 
         var rawVelocity = weightedVelocity / totalWeight;
         var speed = rawVelocity.Length;
-        if (speed < tuning.MouseMinReleaseSpeedDipPerMs)
+        if (speed < tuning.MinReleaseSpeedDipPerMs)
         {
             return false;
         }
 
-        if (speed > tuning.MouseMaxReleaseSpeedDipPerMs)
+        if (speed > tuning.MaxReleaseSpeedDipPerMs)
         {
-            rawVelocity *= tuning.MouseMaxReleaseSpeedDipPerMs / speed;
+            rawVelocity *= tuning.MaxReleaseSpeedDipPerMs / speed;
         }
 
         velocityDipPerMs = rawVelocity;
@@ -145,6 +160,27 @@ internal static class PhotoPanInertiaMotionPolicy
         out Vector velocityDipPerMs)
     {
         return TryResolveReleaseVelocity(
+            previousPosition,
+            previousTimestampTicks,
+            lastPosition,
+            lastTimestampTicks,
+            releaseTimestampTicks,
+            stopwatchFrequency,
+            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning),
+            out velocityDipPerMs);
+    }
+
+    internal static bool TryResolveReleaseVelocity(
+        System.Windows.Point previousPosition,
+        long previousTimestampTicks,
+        System.Windows.Point lastPosition,
+        long lastTimestampTicks,
+        long releaseTimestampTicks,
+        long stopwatchFrequency,
+        PhotoPanReleaseTuning tuning,
+        out Vector velocityDipPerMs)
+    {
+        return TryResolveReleaseVelocity(
             new[]
             {
                 new PhotoPanVelocitySample(previousPosition, previousTimestampTicks),
@@ -163,6 +199,17 @@ internal static class PhotoPanInertiaMotionPolicy
 
     internal static Vector ResolveTranslation(Vector velocityDipPerMs, double elapsedMs, PhotoPanInertiaTuning tuning)
     {
+        return ResolveTranslation(
+            velocityDipPerMs,
+            elapsedMs,
+            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+    }
+
+    internal static Vector ResolveTranslation(
+        Vector velocityDipPerMs,
+        double elapsedMs,
+        PhotoPanReleaseTuning tuning)
+    {
         if (elapsedMs <= 0 || velocityDipPerMs.LengthSquared <= 0)
         {
             return default;
@@ -176,9 +223,9 @@ internal static class PhotoPanInertiaMotionPolicy
         {
             return default;
         }
-        if (distance > tuning.MouseMaxTranslationPerFrameDip)
+        if (distance > tuning.MaxTranslationPerFrameDip)
         {
-            var scale = tuning.MouseMaxTranslationPerFrameDip / distance;
+            var scale = tuning.MaxTranslationPerFrameDip / distance;
             translation *= scale;
         }
 
@@ -205,12 +252,19 @@ internal static class PhotoPanInertiaMotionPolicy
 
     internal static bool ShouldStopByDuration(double durationMs, PhotoPanInertiaTuning tuning)
     {
+        return ShouldStopByDuration(
+            durationMs,
+            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+    }
+
+    internal static bool ShouldStopByDuration(double durationMs, PhotoPanReleaseTuning tuning)
+    {
         if (double.IsNaN(durationMs) || double.IsInfinity(durationMs))
         {
             return true;
         }
 
-        return durationMs >= tuning.MouseMaxDurationMs;
+        return durationMs >= tuning.MaxDurationMs;
     }
 
     internal static Vector ResolveVelocityAfterDeceleration(Vector velocityDipPerMs, double elapsedMs)
@@ -223,14 +277,25 @@ internal static class PhotoPanInertiaMotionPolicy
         double elapsedMs,
         PhotoPanInertiaTuning tuning)
     {
+        return ResolveVelocityAfterDeceleration(
+            velocityDipPerMs,
+            elapsedMs,
+            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+    }
+
+    internal static Vector ResolveVelocityAfterDeceleration(
+        Vector velocityDipPerMs,
+        double elapsedMs,
+        PhotoPanReleaseTuning tuning)
+    {
         if (elapsedMs <= 0 || velocityDipPerMs.LengthSquared <= 0)
         {
             return velocityDipPerMs;
         }
 
         var speed = velocityDipPerMs.Length;
-        var nextSpeed = speed - (tuning.MouseDecelerationDipPerMs2 * elapsedMs);
-        if (nextSpeed <= tuning.MouseStopSpeedDipPerMs)
+        var nextSpeed = speed - (tuning.DecelerationDipPerMs2 * elapsedMs);
+        if (nextSpeed <= tuning.StopSpeedDipPerMs)
         {
             return default;
         }

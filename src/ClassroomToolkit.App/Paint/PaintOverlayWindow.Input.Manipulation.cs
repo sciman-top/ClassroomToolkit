@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Linq;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -129,12 +130,31 @@ public partial class PaintOverlayWindow
             interactionState.BoardActive,
             _mode,
             IsInkOperationActive(),
-            _photoPanning);
+            _photoPanning,
+            ResolveManipulationTouchCount(e));
         if (handlingPlan.ShouldMarkHandled)
         {
             e.Handled = true;
         }
 
         return handlingPlan.ShouldHandle;
+    }
+
+    private static int ResolveManipulationTouchCount(InputEventArgs e)
+    {
+        return e switch
+        {
+            ManipulationStartingEventArgs starting => CountManipulators(starting.Manipulators),
+            ManipulationDeltaEventArgs delta => CountManipulators(delta.Manipulators),
+            // Inertia/completion may have zero live manipulators after the gesture is admitted.
+            ManipulationInertiaStartingEventArgs inertia => Math.Max(2, CountManipulators(inertia.Manipulators)),
+            ManipulationCompletedEventArgs completed => Math.Max(2, CountManipulators(completed.Manipulators)),
+            _ => 0
+        };
+    }
+
+    private static int CountManipulators(IEnumerable<IManipulator>? manipulators)
+    {
+        return manipulators?.Count() ?? 0;
     }
 }

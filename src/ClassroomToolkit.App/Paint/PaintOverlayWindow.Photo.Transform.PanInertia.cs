@@ -21,14 +21,15 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        BeginPhotoPan(e.GetPosition(OverlayRoot), captureStylus: false);
+        BeginPhotoPan(e.GetPosition(OverlayRoot), PhotoPanPointerKind.Mouse, captureStylus: false);
         e.Handled = true;
         return true;
     }
 
-    private void BeginPhotoPan(WpfPoint position, bool captureStylus)
+    private void BeginPhotoPan(WpfPoint position, PhotoPanPointerKind pointerKind, bool captureStylus)
     {
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
+        _photoPanActivePointerKind = pointerKind;
         _photoPanning = true;
         _photoPanHadEffectiveMovement = false;
         _photoPanStart = position;
@@ -37,12 +38,12 @@ public partial class PaintOverlayWindow
         MarkPhotoInteractionForRenderQuality();
         ResetPhotoPanVelocitySamples(position);
         SyncPhotoInteractiveRefreshAnchor();
-        LogPhotoInputTelemetry("pan-start", $"stylus={captureStylus}");
+        LogPhotoInputTelemetry("pan-start", $"pointer={pointerKind}; stylus={captureStylus}");
         if (captureStylus)
         {
             Stylus.Capture(OverlayRoot);
         }
-        else
+        else if (pointerKind != PhotoPanPointerKind.Touch)
         {
             OverlayRoot.CaptureMouse();
         }
@@ -122,6 +123,11 @@ public partial class PaintOverlayWindow
         {
             Stylus.Capture(null);
         }
+        if (_photoTouchPanDeviceId.HasValue)
+        {
+            OverlayRoot.ReleaseAllTouchCaptures();
+            _photoTouchPanDeviceId = null;
+        }
         ApplyPhotoPanBounds(allowResistance: false);
         if (_crossPageDragging && IsCrossPageDisplayActive())
         {
@@ -193,11 +199,12 @@ public partial class PaintOverlayWindow
     private bool TryStartPhotoPanInertiaFromRelease()
     {
         var nowTicks = Stopwatch.GetTimestamp();
+        var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
         if (!PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
                 _photoPanVelocitySamples,
                 nowTicks,
                 Stopwatch.Frequency,
-                _photoPanInertiaTuning,
+                releaseTuning,
                 out var velocityDipPerMs))
         {
             return false;
@@ -231,7 +238,8 @@ public partial class PaintOverlayWindow
         if (_photoPanInertiaStartUtc != PhotoInputConflictDefaults.UnsetTimestampUtc)
         {
             var durationMs = (nowUtc - _photoPanInertiaStartUtc).TotalMilliseconds;
-            if (PhotoPanInertiaMotionPolicy.ShouldStopByDuration(durationMs, _photoPanInertiaTuning))
+            var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
+            if (PhotoPanInertiaMotionPolicy.ShouldStopByDuration(durationMs, releaseTuning))
             {
                 StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
                 return;
@@ -260,7 +268,7 @@ public partial class PaintOverlayWindow
         var translation = PhotoPanInertiaMotionPolicy.ResolveTranslation(
             _photoPanInertiaVelocityDipPerMs,
             elapsedMs,
-            _photoPanInertiaTuning);
+            PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning));
         if (translation.LengthSquared <= 0)
         {
             StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
@@ -311,7 +319,7 @@ public partial class PaintOverlayWindow
         _photoPanInertiaVelocityDipPerMs = PhotoPanInertiaMotionPolicy.ResolveVelocityAfterDeceleration(
             _photoPanInertiaVelocityDipPerMs,
             elapsedMs,
-            _photoPanInertiaTuning);
+            PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning));
         if (_photoPanInertiaVelocityDipPerMs.LengthSquared <= 0)
         {
             StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);

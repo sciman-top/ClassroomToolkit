@@ -78,6 +78,29 @@ public sealed class PhotoPanInertiaMotionPolicyTests
     }
 
     [Fact]
+    public void TryResolveReleaseVelocity_ShouldRespectTouchThreshold()
+    {
+        var tuning = PhotoPanReleaseTuningPolicy.Resolve(
+            PhotoPanPointerKind.Touch,
+            PhotoPanInertiaTuning.Default);
+
+        var resolved = PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
+            new[]
+            {
+                new PhotoPanVelocitySample(new Point(0, 0), 1000),
+                new PhotoPanVelocitySample(new Point(1.5, 0), 1030),
+                new PhotoPanVelocitySample(new Point(4.5, 0), 1060)
+            },
+            releaseTimestampTicks: 1060,
+            stopwatchFrequency: 1000,
+            tuning,
+            out var velocityDipPerMs);
+
+        resolved.Should().BeTrue();
+        velocityDipPerMs.X.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public void TryResolveReleaseVelocity_ShouldFallbackToMinInterval_WhenSampleIntervalTooSmall()
     {
         var resolved = PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
@@ -165,6 +188,21 @@ public sealed class PhotoPanInertiaMotionPolicyTests
             tuning);
 
         translation.Length.Should().BeApproximately(60, 0.001);
+    }
+
+    [Fact]
+    public void ResolveTranslation_ShouldHonorTouchReleaseTuningFrameClamp()
+    {
+        var tuning = PhotoPanReleaseTuningPolicy.Resolve(
+            PhotoPanPointerKind.Touch,
+            PhotoPanInertiaTuning.Default);
+
+        var translation = PhotoPanInertiaMotionPolicy.ResolveTranslation(
+            new Vector(6.0, 0),
+            elapsedMs: 80,
+            tuning);
+
+        translation.Length.Should().BeLessThanOrEqualTo(tuning.MaxTranslationPerFrameDip);
     }
 
     [Fact]

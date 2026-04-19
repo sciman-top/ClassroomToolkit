@@ -184,7 +184,8 @@ internal static class PhotoManipulationRoutingPolicy
         bool boardActive,
         PaintToolMode mode,
         bool inkOperationActive,
-        bool photoPanning)
+        bool photoPanning,
+        int activeTouchCount)
     {
         if (boardActive)
         {
@@ -198,7 +199,9 @@ internal static class PhotoManipulationRoutingPolicy
         {
             return PhotoManipulationRoutingDecision.Consume;
         }
-        return PhotoManipulationRoutingDecision.Handle;
+        return PhotoTouchInteractionPolicy.ShouldUseManipulationZoom(activeTouchCount)
+            ? PhotoManipulationRoutingDecision.Handle
+            : PhotoManipulationRoutingDecision.Consume;
     }
 }
 

@@ -107,6 +107,10 @@ public partial class PaintOverlayWindow
         OverlayRoot.ManipulationInertiaStarting -= OnManipulationInertiaStarting;
         OverlayRoot.ManipulationDelta -= OnManipulationDelta;
         OverlayRoot.ManipulationCompleted -= OnManipulationCompleted;
+        OverlayRoot.TouchDown -= OnTouchDown;
+        OverlayRoot.TouchMove -= OnTouchMove;
+        OverlayRoot.TouchUp -= OnTouchUp;
+        OverlayRoot.LostTouchCapture -= OnOverlayLostTouchCapture;
         if (_photoPanInertiaRenderingAttached)
         {
             CompositionTarget.Rendering -= OnPhotoPanInertiaRendering;
@@ -115,6 +119,8 @@ public partial class PaintOverlayWindow
         OverlayRoot.StylusDown -= OnStylusDown;
         OverlayRoot.StylusMove -= OnStylusMove;
         OverlayRoot.StylusUp -= OnStylusUp;
+        _photoActiveTouchIds.Clear();
+        _photoTouchPanDeviceId = null;
         SaveCurrentPageIfNeeded();
         _photoTransformSaveTimer?.Stop();
         _photoTransformSaveTimer?.Tick -= OnPhotoTransformSaveTimerTick;

@@ -117,6 +117,10 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.ManipulationInertiaStarting += OnManipulationInertiaStarting;
         OverlayRoot.ManipulationDelta += OnManipulationDelta;
         OverlayRoot.ManipulationCompleted += OnManipulationCompleted;
+        OverlayRoot.TouchDown += OnTouchDown;
+        OverlayRoot.TouchMove += OnTouchMove;
+        OverlayRoot.TouchUp += OnTouchUp;
+        OverlayRoot.LostTouchCapture += OnOverlayLostTouchCapture;
         OverlayRoot.StylusDown += OnStylusDown;
         OverlayRoot.StylusMove += OnStylusMove;
         OverlayRoot.StylusUp += OnStylusUp;

@@ -12,6 +12,11 @@ public partial class PaintOverlayWindow
 {
     private void OnStylusDown(object sender, StylusDownEventArgs e)
     {
+        if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
+        {
+            return;
+        }
+
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Down);
         var shouldIgnoreFromPhotoControls = ShouldIgnoreInputFromPhotoControls(e.OriginalSource as DependencyObject);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
@@ -53,6 +58,11 @@ public partial class PaintOverlayWindow
 
     private void OnStylusMove(object sender, StylusEventArgs e)
     {
+        if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
+        {
+            return;
+        }
+
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Move);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
         var interactionState = CaptureInputInteractionState();
@@ -141,6 +151,11 @@ public partial class PaintOverlayWindow
 
     private void OnStylusUp(object sender, StylusEventArgs e)
     {
+        if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
+        {
+            return;
+        }
+
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Up);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
         var executionPlan = StylusUpExecutionPolicy.Resolve(
@@ -204,7 +219,7 @@ public partial class PaintOverlayWindow
             case StylusPhotoPanExecutionAction.ReturnWithoutPan:
                 return true;
             case StylusPhotoPanExecutionAction.BeginPan:
-                BeginPhotoPan(e.GetPosition(OverlayRoot), captureStylus: true);
+                BeginPhotoPan(e.GetPosition(OverlayRoot), PhotoPanPointerKind.Stylus, captureStylus: true);
                 return true;
             case StylusPhotoPanExecutionAction.UpdatePan:
                 UpdatePhotoPan(e.GetPosition(OverlayRoot));
@@ -343,5 +358,11 @@ public partial class PaintOverlayWindow
         double from = a ?? b ?? 0.0;
         double to = b ?? a ?? 0.0;
         return from + ((to - from) * t);
+    }
+
+    private static bool ShouldIgnorePromotedTouchStylus(StylusDevice? stylusDevice)
+    {
+        return stylusDevice != null
+            && PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus(stylusDevice.TabletDevice.Type);
     }
 }

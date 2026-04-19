@@ -142,6 +142,9 @@ public partial class PaintOverlayWindow : Window
     private double _lastPhotoInteractiveRefreshTranslateY;
     private bool _photoPanning;
     private bool _photoManipulating;
+    private readonly HashSet<int> _photoActiveTouchIds = new();
+    private int? _photoTouchPanDeviceId;
+    private PhotoPanPointerKind _photoPanActivePointerKind = PhotoPanPointerKind.Mouse;
     private bool _photoPanHadEffectiveMovement;
     private bool _photoRightClickPending;
     private WpfPoint _photoRightClickStart;

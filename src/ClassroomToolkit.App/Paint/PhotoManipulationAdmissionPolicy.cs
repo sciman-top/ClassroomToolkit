@@ -7,14 +7,16 @@ internal static class PhotoManipulationAdmissionPolicy
         bool boardActive,
         PaintToolMode mode,
         bool inkOperationActive,
-        bool photoPanning)
+        bool photoPanning,
+        int activeTouchCount)
     {
         var decision = PhotoManipulationRoutingPolicy.Resolve(
             photoModeActive,
             boardActive,
             mode,
             inkOperationActive,
-            photoPanning);
+            photoPanning,
+            activeTouchCount);
         return PhotoManipulationEventHandlingPolicy.Resolve(decision);
     }
 }
