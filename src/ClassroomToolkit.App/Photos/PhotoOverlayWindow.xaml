@@ -44,5 +44,36 @@
                        TextTrimming="CharacterEllipsis"/>
         </Border>
 
+        <Button x:Name="CloseButtonLeft"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Click="OnCloseClick"
+                Opacity="0.64"
+                ToolTip="关闭">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
+        <Button x:Name="CloseButtonRight"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Click="OnCloseClick"
+                Opacity="0.64"
+                ToolTip="关闭">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
+        <Button x:Name="CloseButtonCenter"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Click="OnCloseClick"
+                Opacity="0.64"
+                ToolTip="关闭">
+            <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
+                  Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
+        </Button>
+
+        <Border x:Name="CloseHintText" Style="{StaticResource Style_FullscreenShellHintBadge}" Padding="{StaticResource Spacing_Control_OverlayHintBadge}" Panel.ZIndex="10">
+            <Border.Effect>
+                <StaticResource ResourceKey="Shadow_Floating"/>
+            </Border.Effect>
+            <TextBlock Text="点击空白处关闭" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Primary}" Opacity="0.9"/>
+        </Border>
     </Canvas>
 </Window>

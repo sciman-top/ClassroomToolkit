@@ -5,67 +5,109 @@ namespace ClassroomToolkit.Tests.App;
 
 public sealed class WidgetTypographyContractTests
 {
-    private static readonly XNamespace PresentationNs = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
-    private static readonly XNamespace XamlNs = "http://schemas.microsoft.com/winfx/2006/xaml";
-
     [Fact]
     public void WidgetStyles_ShouldExposeTypographyTokens()
     {
-        var xaml = LoadWidgetStylesDocument();
+        var document = LoadWidgetStyles();
 
-        AssertResourceValue(xaml, "FontSize_Body_S", "12");
-        AssertResourceValue(xaml, "FontSize_Body_M", "13");
-        AssertResourceValue(xaml, "FontSize_Title_Dialog", "14");
-        AssertResourceValue(xaml, "FontSize_Title_Management", "15");
+        AssertResourceValue(document, "FontSize_Body_S", "12");
+        AssertResourceValue(document, "FontSize_Body_M", "13");
+        AssertResourceValue(document, "FontSize_Title_Dialog", "14");
+        AssertResourceValue(document, "FontSize_Title_Management", "15");
+        HasResourceKey(document, "FontSize_Control_Label").Should().BeTrue();
+        HasResourceKey(document, "FontSize_Control_Helper").Should().BeTrue();
     }
 
     [Fact]
     public void ShellTypographyStyles_ShouldConsumeTypographyTokens()
     {
-        var xaml = LoadWidgetStylesDocument();
+        var document = LoadWidgetStyles();
 
-        AssertStyleSetterResourceReference(xaml, "Style_ButtonFamilyBase", "FontSize", "FontSize_Body_M");
-        AssertStyleSetterResourceReference(xaml, "Style_DialogShellTitleText", "FontSize", "FontSize_Title_Dialog");
-        AssertStyleSetterResourceReference(xaml, "Style_ManagementShellTitleText", "FontSize", "FontSize_Title_Management");
-        AssertStyleSetterResourceReference(xaml, "Style_ManagementShellSubtitleText", "FontSize", "FontSize_Body_S");
-        AssertStyleSetterResourceReference(xaml, "Style_ManagementShellFooterText", "FontSize", "FontSize_Body_S");
+        StyleUsesStaticResource(document, "Style_ButtonFamilyBase", "FontSize", "FontSize_Body_M").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ToggleButton", "FontSize", "FontSize_Control_Label").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_DialogShellTitleText", "FontSize", "FontSize_Title_Dialog").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ManagementShellTitleText", "FontSize", "FontSize_Title_Management").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ManagementShellSubtitleText", "FontSize", "FontSize_Body_S").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ManagementShellFooterText", "FontSize", "FontSize_Body_S").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ListViewItem_SelectionUnified", "FontSize", "FontSize_Control_Label").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ListBoxItem_SelectionUnified", "FontSize", "FontSize_Control_Label").Should().BeTrue();
     }
 
-    private static void AssertResourceValue(XDocument xaml, string key, string expectedValue)
+    [Fact]
+    public void ControlHelperTypography_ShouldBeUsedByHelperTextStyles()
     {
-        var element = GetKeyedElement(xaml, key);
-        element.Value.Trim().Should().Be(expectedValue);
+        var document = LoadWidgetStyles();
+
+        StyleUsesStaticResource(document, "Style_ManagementShellSubtitleText", "FontSize", "FontSize_Body_S").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ManagementShellFooterText", "FontSize", "FontSize_Body_S").Should().BeTrue();
     }
 
-    private static void AssertStyleSetterResourceReference(XDocument xaml, string styleKey, string property, string expectedResourceKey)
+    private static XDocument LoadWidgetStyles()
     {
-        var style = GetKeyedElement(xaml, styleKey);
-        style.Name.LocalName.Should().Be("Style");
-
-        var setter = style.Elements(PresentationNs + "Setter")
-            .Single(element => (string?)element.Attribute("Property") == property);
-
-        setter.Attribute("Value")!.Value.Should().Be($"{{StaticResource {expectedResourceKey}}}");
-    }
-
-    private static XElement GetKeyedElement(XDocument xaml, string key)
-    {
-        return xaml.Root!.Elements()
-            .Single(element => (string?)element.Attribute(XamlNs + "Key") == key);
-    }
-
-    private static XDocument LoadWidgetStylesDocument()
-    {
-        return XDocument.Load(GetWidgetStylesPath());
-    }
-
-    private static string GetWidgetStylesPath()
-    {
-        return TestPathHelper.ResolveRepoPath(
+        return XDocument.Load(TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Assets",
             "Styles",
-            "WidgetStyles.xaml");
+            "WidgetStyles.xaml"));
     }
+
+    private static void AssertResourceValue(XDocument document, string key, string expectedValue)
+    {
+        GetKeyedElement(document, key).Value.Trim().Should().Be(expectedValue);
+    }
+
+    private static XElement GetKeyedElement(XDocument document, string key)
+    {
+        return document.Root!.Elements()
+            .Single(element => string.Equals((string?)element.Attribute(XamlKeyName), key, StringComparison.Ordinal));
+    }
+
+    private static bool HasResourceKey(XDocument document, string key)
+    {
+        return document
+            .Descendants()
+            .Any(node => string.Equals((string?)node.Attribute(XamlKeyName), key, StringComparison.Ordinal));
+    }
+
+    private static bool StyleUsesStaticResource(XDocument document, string styleKey, string propertyName, string resourceKey)
+    {
+        var style = document
+            .Descendants()
+            .Where(node => string.Equals(node.Name.LocalName, "Style", StringComparison.Ordinal))
+            .FirstOrDefault(node => string.Equals((string?)node.Attribute(XamlKeyName), styleKey, StringComparison.Ordinal));
+        if (style is null)
+        {
+            return false;
+        }
+
+        return style
+            .Elements()
+            .Where(node => string.Equals(node.Name.LocalName, "Setter", StringComparison.Ordinal))
+            .Any(setter =>
+                string.Equals((string?)setter.Attribute("Property"), propertyName, StringComparison.Ordinal) &&
+                string.Equals(GetStaticResourceKey(setter), resourceKey, StringComparison.Ordinal));
+    }
+
+    private static string? GetStaticResourceKey(XElement setter)
+    {
+        var inlineValue = (string?)setter.Attribute("Value");
+        if (!string.IsNullOrWhiteSpace(inlineValue))
+        {
+            var trimmed = inlineValue.Trim();
+            const string prefix = "{StaticResource ";
+            if (trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
+            {
+                return trimmed.Substring(prefix.Length, trimmed.Length - prefix.Length - 1).Trim();
+            }
+        }
+
+        var nestedStaticResource = setter
+            .Descendants()
+            .FirstOrDefault(node => string.Equals(node.Name.LocalName, "StaticResource", StringComparison.Ordinal));
+
+        return (string?)nestedStaticResource?.Attribute("ResourceKey");
+    }
+
+    private static readonly XName XamlKeyName = XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml");
 }
