@@ -88,15 +88,12 @@ public sealed class WidgetStylesContractTests
         TargetTypeStyleUsesStaticResource(document, "TabItem", "Padding", "Spacing_Control_TabItem").Should().BeTrue();
     }
 
-    private static XDocument LoadWidgetStyles()
-    {
-        return XDocument.Load(TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Assets",
-            "Styles",
-            "WidgetStyles.xaml"));
-    }
+    private static XDocument LoadWidgetStyles() => XDocument.Load(TestPathHelper.ResolveRepoPath(
+        "src",
+        "ClassroomToolkit.App",
+        "Assets",
+        "Styles",
+        "WidgetStyles.xaml"));
 
     private static XElement GetKeyedElement(XDocument document, string key)
     {

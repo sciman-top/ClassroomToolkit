@@ -42,15 +42,12 @@ public sealed class WidgetTypographyContractTests
         StyleUsesStaticResource(document, "Style_ManagementShellFooterText", "FontSize", "FontSize_Body_S").Should().BeTrue();
     }
 
-    private static XDocument LoadWidgetStyles()
-    {
-        return XDocument.Load(TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Assets",
-            "Styles",
-            "WidgetStyles.xaml"));
-    }
+    private static XDocument LoadWidgetStyles() => XDocument.Load(TestPathHelper.ResolveRepoPath(
+        "src",
+        "ClassroomToolkit.App",
+        "Assets",
+        "Styles",
+        "WidgetStyles.xaml"));
 
     private static void AssertResourceValue(XDocument document, string key, string expectedValue)
     {

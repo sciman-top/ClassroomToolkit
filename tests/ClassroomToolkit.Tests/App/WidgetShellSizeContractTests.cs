@@ -54,15 +54,12 @@ public sealed class WidgetShellSizeContractTests
         GetDoubleResource(document, "Size_Button_Icon_Large").Should().BeGreaterThanOrEqualTo(40d);
     }
 
-    private static XDocument LoadWidgetStyles()
-    {
-        return XDocument.Load(TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Assets",
-            "Styles",
-            "WidgetStyles.xaml"));
-    }
+    private static XDocument LoadWidgetStyles() => XDocument.Load(TestPathHelper.ResolveRepoPath(
+        "src",
+        "ClassroomToolkit.App",
+        "Assets",
+        "Styles",
+        "WidgetStyles.xaml"));
 
     private static void AssertResourceValue(XDocument document, string key, string expectedValue)
     {
