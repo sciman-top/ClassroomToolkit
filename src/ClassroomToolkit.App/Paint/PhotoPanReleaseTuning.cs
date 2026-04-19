@@ -13,4 +13,8 @@ internal readonly record struct PhotoPanReleaseTuning(
     double MinReleaseSpeedDipPerMs,
     double MaxReleaseSpeedDipPerMs,
     double MaxDurationMs,
-    double MaxTranslationPerFrameDip);
+    double MaxTranslationPerFrameDip,
+    double VelocitySampleWindowMs,
+    double MaxVelocitySampleAgeMs,
+    double MinVelocitySampleDistanceDip,
+    double VelocityRecentWeightGain);

@@ -101,6 +101,40 @@ public sealed class PhotoPanInertiaMotionPolicyTests
     }
 
     [Fact]
+    public void TryResolveReleaseVelocity_ShouldAllowTouchRelease_WhenLastSampleIsSlightlyOlder()
+    {
+        var mouseTuning = PhotoPanReleaseTuningPolicy.Resolve(
+            PhotoPanPointerKind.Mouse,
+            PhotoPanInertiaTuning.Default);
+        var touchTuning = PhotoPanReleaseTuningPolicy.Resolve(
+            PhotoPanPointerKind.Touch,
+            PhotoPanInertiaTuning.Default);
+        var samples = new[]
+        {
+            new PhotoPanVelocitySample(new Point(0, 0), 1000),
+            new PhotoPanVelocitySample(new Point(24, 0), 1040),
+            new PhotoPanVelocitySample(new Point(48, 0), 1080)
+        };
+
+        var mouseResolved = PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
+            samples,
+            releaseTimestampTicks: 1260,
+            stopwatchFrequency: 1000,
+            mouseTuning,
+            out _);
+        var touchResolved = PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
+            samples,
+            releaseTimestampTicks: 1260,
+            stopwatchFrequency: 1000,
+            touchTuning,
+            out var touchVelocityDipPerMs);
+
+        mouseResolved.Should().BeFalse();
+        touchResolved.Should().BeTrue();
+        touchVelocityDipPerMs.X.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public void TryResolveReleaseVelocity_ShouldFallbackToMinInterval_WhenSampleIntervalTooSmall()
     {
         var resolved = PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
@@ -139,6 +173,36 @@ public sealed class PhotoPanInertiaMotionPolicyTests
         translation.Length.Should().BeApproximately(
             PhotoPanInertiaDefaults.MouseMaxTranslationPerFrameDip,
             0.001);
+    }
+
+    [Fact]
+    public void TryResolveInertiaStep_ShouldBlendCurrentAndNextVelocity_ForSmootherTravel()
+    {
+        var tuning = PhotoPanReleaseTuningPolicy.Resolve(
+            PhotoPanPointerKind.Mouse,
+            PhotoPanInertiaTuning.Default);
+        var velocityDipPerMs = new Vector(1.2, 0);
+        var elapsedMs = 16.0;
+
+        var resolved = PhotoPanInertiaMotionPolicy.TryResolveInertiaStep(
+            velocityDipPerMs,
+            elapsedMs,
+            tuning,
+            out var translation,
+            out var nextVelocityDipPerMs);
+
+        var expectedNextVelocity = PhotoPanInertiaMotionPolicy.ResolveVelocityAfterDeceleration(
+            velocityDipPerMs,
+            elapsedMs,
+            tuning);
+        var expectedTranslation = PhotoPanInertiaMotionPolicy.ResolveTranslation(
+            (velocityDipPerMs + expectedNextVelocity) * 0.5,
+            elapsedMs,
+            tuning);
+
+        resolved.Should().BeTrue();
+        nextVelocityDipPerMs.X.Should().BeApproximately(expectedNextVelocity.X, 0.001);
+        translation.X.Should().BeApproximately(expectedTranslation.X, 0.001);
     }
 
     [Fact]

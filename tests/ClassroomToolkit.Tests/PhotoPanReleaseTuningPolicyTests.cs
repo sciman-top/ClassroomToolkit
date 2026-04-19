@@ -19,4 +19,18 @@ public sealed class PhotoPanReleaseTuningPolicyTests
         touch.MaxDurationMs.Should().BeGreaterThan(mouse.MaxDurationMs);
         touch.MaxTranslationPerFrameDip.Should().BeGreaterThan(mouse.MaxTranslationPerFrameDip);
     }
+
+    [Fact]
+    public void ResolveTouch_ShouldUseWiderSamplingTolerance_ForLowRateTouchHardware()
+    {
+        var baseTuning = PhotoPanInertiaTuning.Default;
+
+        var mouse = PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, baseTuning);
+        var touch = PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Touch, baseTuning);
+
+        touch.MaxVelocitySampleAgeMs.Should().BeGreaterThan(mouse.MaxVelocitySampleAgeMs);
+        touch.VelocitySampleWindowMs.Should().BeGreaterThan(mouse.VelocitySampleWindowMs);
+        touch.MinVelocitySampleDistanceDip.Should().BeLessThan(mouse.MinVelocitySampleDistanceDip);
+        touch.VelocityRecentWeightGain.Should().BeGreaterThan(mouse.VelocityRecentWeightGain);
+    }
 }

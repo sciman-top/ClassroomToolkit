@@ -235,10 +235,10 @@ public partial class PaintOverlayWindow
         }
 
         var nowUtc = GetCurrentUtcTimestamp();
+        var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
         if (_photoPanInertiaStartUtc != PhotoInputConflictDefaults.UnsetTimestampUtc)
         {
             var durationMs = (nowUtc - _photoPanInertiaStartUtc).TotalMilliseconds;
-            var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
             if (PhotoPanInertiaMotionPolicy.ShouldStopByDuration(durationMs, releaseTuning))
             {
                 StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
@@ -265,11 +265,12 @@ public partial class PaintOverlayWindow
         }
         _photoPanInertiaLastTickUtc = nowUtc;
 
-        var translation = PhotoPanInertiaMotionPolicy.ResolveTranslation(
+        if (!PhotoPanInertiaMotionPolicy.TryResolveInertiaStep(
             _photoPanInertiaVelocityDipPerMs,
             elapsedMs,
-            PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning));
-        if (translation.LengthSquared <= 0)
+            releaseTuning,
+            out var translation,
+            out var nextVelocityDipPerMs))
         {
             StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
             return;
@@ -316,10 +317,7 @@ public partial class PaintOverlayWindow
         }
         SchedulePhotoTransformSave(userAdjusted: true);
 
-        _photoPanInertiaVelocityDipPerMs = PhotoPanInertiaMotionPolicy.ResolveVelocityAfterDeceleration(
-            _photoPanInertiaVelocityDipPerMs,
-            elapsedMs,
-            PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning));
+        _photoPanInertiaVelocityDipPerMs = nextVelocityDipPerMs;
         if (_photoPanInertiaVelocityDipPerMs.LengthSquared <= 0)
         {
             StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);

@@ -18,6 +18,10 @@ internal static class PhotoPanInertiaDefaults
     internal const double MouseVelocitySampleHistoryMaxAgeMs = 220;
     internal const int MouseVelocitySampleCapacity = 12;
     internal const double MouseVelocityRecentWeightGain = 0.75;
+    internal const double TouchMinVelocitySampleDistanceDip = 0.55;
+    internal const double TouchMaxVelocitySampleAgeMs = 220;
+    internal const double TouchVelocitySampleWindowMs = 170;
+    internal const double TouchVelocityRecentWeightGain = 1.0;
     internal const double GestureTranslationDecelerationDipPerMs2 = 0.0034;
     internal const double GestureCrossPageTranslationDecelerationDipPerMs2 = 0.0029;
 }

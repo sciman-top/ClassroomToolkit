@@ -55,6 +55,9 @@ msbuild*.log
 .codex/logs/
 .codex/tmp-*/
 .cache-loader/
+.agent-build/
+.governed-ai/
+**/bin-agent/
 
 # Assistant and local tooling metadata
 AGENTS.md

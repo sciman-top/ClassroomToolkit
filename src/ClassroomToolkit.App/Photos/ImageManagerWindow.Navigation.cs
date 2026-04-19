@@ -279,15 +279,7 @@ public partial class ImageManagerWindow
             return;
         }
 
-        if (item.IsFolder && Directory.Exists(item.Path))
-        {
-            OpenFolder(item.Path);
-            e.Handled = true;
-            StopLongPressTracking(resetTriggered: true);
-            return;
-        }
-
-        if (!item.IsPdf && !item.IsImage)
+        if (!ImageManagerActivationPolicy.ShouldOpenOnSingleClick(item.IsFolder, item.IsPdf, item.IsImage))
         {
             StopLongPressTracking(resetTriggered: true);
             return;
@@ -296,6 +288,39 @@ public partial class ImageManagerWindow
         OpenPreviewItem(item);
         e.Handled = true;
         StopLongPressTracking(resetTriggered: true);
+    }
+
+    private void OnImageListMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isMultiSelectMode)
+        {
+            return;
+        }
+
+        if (!TryResolveImageItemFromPointer(sender, e.OriginalSource, out _, out var item))
+        {
+            return;
+        }
+
+        if (!ImageManagerActivationPolicy.ShouldOpenOnDoubleClick(item.IsFolder, item.IsPdf, item.IsImage))
+        {
+            return;
+        }
+
+        if (item.IsFolder)
+        {
+            if (!Directory.Exists(item.Path))
+            {
+                return;
+            }
+
+            OpenFolder(item.Path);
+            e.Handled = true;
+            return;
+        }
+
+        OpenPreviewItem(item);
+        e.Handled = true;
     }
 
     private void OnMultiSelectLongPressTick(object? sender, EventArgs e)

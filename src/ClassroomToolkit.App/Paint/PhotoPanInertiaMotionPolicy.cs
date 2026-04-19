@@ -62,13 +62,16 @@ internal static class PhotoPanInertiaMotionPolicy
         }
 
         var sampleAgeMs = (releaseTimestampTicks - lastSample.TimestampTicks) * 1000.0 / stopwatchFrequency;
-        if (sampleAgeMs > PhotoPanInertiaDefaults.MouseMaxVelocitySampleAgeMs)
+        if (sampleAgeMs > tuning.MaxVelocitySampleAgeMs)
         {
             return false;
         }
 
+        var velocitySampleWindowMs = Math.Max(
+            PhotoPanInertiaDefaults.MouseMinVelocitySampleIntervalMs,
+            tuning.VelocitySampleWindowMs);
         var velocityWindowTicks = (long)Math.Ceiling(
-            PhotoPanInertiaDefaults.MouseVelocitySampleWindowMs * stopwatchFrequency / 1000.0);
+            velocitySampleWindowMs * stopwatchFrequency / 1000.0);
         var minAllowedTimestampTicks = Math.Max(0, lastSample.TimestampTicks - velocityWindowTicks);
 
         var weightedVelocity = new Vector();
@@ -90,17 +93,17 @@ internal static class PhotoPanInertiaMotionPolicy
             var elapsedMs = (current.TimestampTicks - previous.TimestampTicks) * 1000.0 / stopwatchFrequency;
             var effectiveElapsedMs = Math.Max(elapsedMs, PhotoPanInertiaDefaults.MouseMinVelocitySampleIntervalMs);
             var delta = current.Position - previous.Position;
-            if (delta.Length < PhotoPanInertiaDefaults.MouseMinVelocitySampleDistanceDip)
+            if (delta.Length < tuning.MinVelocitySampleDistanceDip)
             {
                 continue;
             }
 
             var ageMs = (lastSample.TimestampTicks - current.TimestampTicks) * 1000.0 / stopwatchFrequency;
-            var clampedAgeMs = Math.Clamp(ageMs, 0, PhotoPanInertiaDefaults.MouseVelocitySampleWindowMs);
+            var clampedAgeMs = Math.Clamp(ageMs, 0, velocitySampleWindowMs);
             var recencyFactor = 1.0 + (
-                (PhotoPanInertiaDefaults.MouseVelocitySampleWindowMs - clampedAgeMs)
-                / PhotoPanInertiaDefaults.MouseVelocitySampleWindowMs
-                * PhotoPanInertiaDefaults.MouseVelocityRecentWeightGain);
+                (velocitySampleWindowMs - clampedAgeMs)
+                / velocitySampleWindowMs
+                * Math.Max(0, tuning.VelocityRecentWeightGain));
 
             var segmentVelocity = new Vector(delta.X / effectiveElapsedMs, delta.Y / effectiveElapsedMs);
             weightedVelocity += segmentVelocity * recencyFactor;
@@ -230,6 +233,34 @@ internal static class PhotoPanInertiaMotionPolicy
         }
 
         return translation;
+    }
+
+    internal static bool TryResolveInertiaStep(
+        Vector velocityDipPerMs,
+        double elapsedMs,
+        PhotoPanReleaseTuning tuning,
+        out Vector translation,
+        out Vector nextVelocityDipPerMs)
+    {
+        translation = default;
+        nextVelocityDipPerMs = velocityDipPerMs;
+        if (elapsedMs <= 0 || velocityDipPerMs.LengthSquared <= 0)
+        {
+            return false;
+        }
+
+        nextVelocityDipPerMs = ResolveVelocityAfterDeceleration(
+            velocityDipPerMs,
+            elapsedMs,
+            tuning);
+        var blendedVelocity = nextVelocityDipPerMs.LengthSquared > 0
+            ? (velocityDipPerMs + nextVelocityDipPerMs) * 0.5
+            : velocityDipPerMs * 0.5;
+        translation = ResolveTranslation(
+            blendedVelocity,
+            elapsedMs,
+            tuning);
+        return translation.LengthSquared > 0;
     }
 
     internal static double ResolveFrameElapsedMilliseconds(double elapsedMs)

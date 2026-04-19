@@ -24,8 +24,11 @@ public sealed class PhotoPanInertiaDefaultsTests
         PhotoPanInertiaDefaults.MouseVelocitySampleHistoryMaxAgeMs.Should().Be(220);
         PhotoPanInertiaDefaults.MouseVelocitySampleCapacity.Should().Be(12);
         PhotoPanInertiaDefaults.MouseVelocityRecentWeightGain.Should().Be(0.75);
+        PhotoPanInertiaDefaults.TouchMinVelocitySampleDistanceDip.Should().Be(0.55);
+        PhotoPanInertiaDefaults.TouchMaxVelocitySampleAgeMs.Should().Be(220);
+        PhotoPanInertiaDefaults.TouchVelocitySampleWindowMs.Should().Be(170);
+        PhotoPanInertiaDefaults.TouchVelocityRecentWeightGain.Should().Be(1.0);
         PhotoPanInertiaDefaults.GestureTranslationDecelerationDipPerMs2.Should().Be(0.0034);
         PhotoPanInertiaDefaults.GestureCrossPageTranslationDecelerationDipPerMs2.Should().Be(0.0029);
     }
 }
-
