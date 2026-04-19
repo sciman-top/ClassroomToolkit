@@ -70,7 +70,7 @@ public partial class AboutDialog : Window
             "公众号：sciman逸居",
             "初中物理教研群（323728546）",
             "知乎：https://www.zhihu.com/people/sciman/columns",
-            "GitHub：https://github.com/sciman-top/ClassroomTools"
+            "GitHub：https://github.com/sciman-top/ClassroomToolkit"
         });
 
         try

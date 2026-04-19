@@ -80,7 +80,7 @@
                             <WrapPanel Margin="0,4,0,0">
                                 <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 <TextBlock>
-                                    <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomTools" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomTools</Hyperlink>
+                                    <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomToolkit" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomToolkit</Hyperlink>
                                 </TextBlock>
                             </WrapPanel>
                         </StackPanel>

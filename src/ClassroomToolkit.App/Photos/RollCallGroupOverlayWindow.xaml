@@ -32,10 +32,11 @@
                 IsHitTestVisible="False"
                 MinWidth="80">
 
-            <TextBlock x:Name="GroupNameText" 
+            <TextBlock x:Name="GroupNameText"
                        Foreground="{StaticResource Brush_Text_Primary}"
                        FontSize="{StaticResource FontSize_Title_Management}"
-                       FontWeight="SemiBold" 
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Text="全部"/>
         </Border>
