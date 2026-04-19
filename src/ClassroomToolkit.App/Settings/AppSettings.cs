@@ -13,7 +13,7 @@ public sealed class AppSettings
 {
     public const int UnsetPosition = int.MinValue;
 
-    public bool RollCallShowId { get; set; } = true;
+    public bool RollCallShowId { get; set; } = false;
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; } = false;
     public bool RollCallRemoteGroupSwitchEnabled { get; set; } = false;

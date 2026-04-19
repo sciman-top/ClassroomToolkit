@@ -714,8 +714,8 @@ public partial class RollCallSettingsDialog : Window
     {
         return new[]
         {
-            new ComboOption("tab", "Tab键（切换超链接）"),
-            new ComboOption("enter", "Enter键（确认打开超链接）"),
+            new ComboOption("tab", "Tab键（推荐）"),
+            new ComboOption("enter", "Enter键（推荐切组）"),
             new ComboOption("f5", "F5/Shift+F5/Esc键（全屏/退出全屏）"),
             new ComboOption("b", "B/b键（黑屏）")
         };
@@ -951,7 +951,7 @@ public partial class RollCallSettingsDialog : Window
         var items = new[]
         {
             new ComboOption("bell", "上课铃"),
-            new ComboOption("gentle", "下课铃"),
+            new ComboOption("gentle", "下课铃（推荐）"),
             new ComboOption("digital", "闹钟"),
             new ComboOption("buzz", "门铃")
         };
@@ -967,7 +967,7 @@ public partial class RollCallSettingsDialog : Window
         {
             new ComboOption("short_bell", "轻柔铃声"),
             new ComboOption("chime", "提醒钟"),
-            new ComboOption("soft_beep", "短提示音")
+            new ComboOption("soft_beep", "短提示音（推荐）")
         };
         ReminderSoundCombo.ItemsSource = items;
         ReminderSoundCombo.DisplayMemberPath = nameof(ComboOption.Label);

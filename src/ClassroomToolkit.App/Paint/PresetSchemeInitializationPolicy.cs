@@ -84,7 +84,9 @@ internal static class PresetSchemeInitializationPolicy
             return false;
         }
 
-        if (!string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Message, StringComparison.OrdinalIgnoreCase))
+        bool usesCurrentWpsDefault = string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Auto, StringComparison.OrdinalIgnoreCase);
+        bool usesLegacyWpsDefault = string.Equals(settings.WpsInputMode, WpsInputModeDefaults.Message, StringComparison.OrdinalIgnoreCase);
+        if (!usesCurrentWpsDefault && !usesLegacyWpsDefault)
         {
             return false;
         }
@@ -122,9 +124,9 @@ internal static class PresetSchemeInitializationPolicy
             return false;
         }
 
-        // Allow legacy default (200ms) and current balanced default (120ms).
+        // Allow current default (120ms) and legacy default (200ms).
         if (settings.WpsDebounceMs != PaintPresetDefaults.WpsDebounceDefaultMs
-            && settings.WpsDebounceMs != PaintPresetDefaults.WpsDebounceBalancedMs)
+            && settings.WpsDebounceMs != PaintPresetDefaults.WpsDebounceLegacyDefaultMs)
         {
             return false;
         }

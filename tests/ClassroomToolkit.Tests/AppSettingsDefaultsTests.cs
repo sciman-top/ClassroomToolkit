@@ -10,8 +10,12 @@ public sealed class AppSettingsDefaultsTests
     {
         var settings = new AppSettings();
 
+        settings.RollCallShowId.Should().BeFalse();
+        settings.RollCallShowName.Should().BeTrue();
         settings.RollCallPhotoDurationSeconds.Should().Be(3);
         settings.RollCallTimerReminderIntervalMinutes.Should().Be(5);
+        settings.RollCallSpeechEnabled.Should().BeFalse();
+        settings.RollCallRemoteEnabled.Should().BeFalse();
         settings.RemoteGroupSwitchKey.Should().Be("enter");
     }
 

@@ -31,7 +31,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         {
             PresetScheme = PresetSchemeDefaults.Custom,
             PresetRecommendationInitialized = false,
-            WpsInputMode = WpsInputModeDefaults.Message,
+            WpsInputMode = WpsInputModeDefaults.Auto,
             WpsWheelForward = true,
             PresentationLockStrategyWhenDegraded = true,
             ClassroomWritingMode = ClassroomWritingMode.Balanced,
@@ -51,6 +51,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         result.RecommendationReason.Should().NotBeNullOrWhiteSpace();
         result.RecommendationHasAdaptiveSignal.Should().BeTrue();
         settings.PresetScheme.Should().Be(PresetSchemeDefaults.Stable);
+        settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
         settings.PresetRecommendationInitialized.Should().BeTrue();
         settings.PresentationAutoFallbackFailureThreshold.Should().Be(2);
         settings.PresentationAutoFallbackProbeIntervalCommands.Should().Be(12);
@@ -63,7 +64,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         {
             PresetScheme = PresetSchemeDefaults.Custom,
             PresetRecommendationInitialized = false,
-            WpsInputMode = WpsInputModeDefaults.Auto
+            WpsInputMode = WpsInputModeDefaults.Raw
         };
 
         var result = PresetSchemeInitializationPolicy.Resolve(settings);

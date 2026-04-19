@@ -9,7 +9,8 @@ public sealed class PaintPresetDefaultsTests
     [Fact]
     public void Defaults_ShouldMatchStabilizedValues()
     {
-        PaintPresetDefaults.WpsDebounceDefaultMs.Should().Be(200);
+        PaintPresetDefaults.WpsDebounceDefaultMs.Should().Be(120);
+        PaintPresetDefaults.WpsDebounceLegacyDefaultMs.Should().Be(200);
         PaintPresetDefaults.PostInputRefreshDefaultMs.Should().Be(120);
 
         PaintPresetDefaults.WpsDebounceBalancedMs.Should().Be(120);

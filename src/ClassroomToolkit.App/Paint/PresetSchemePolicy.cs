@@ -30,7 +30,7 @@ internal static class PresetSchemePolicy
         {
             case PresetSchemeDefaults.Balanced:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Message,
+                    WpsInputModeDefaults.Auto,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     AutoFallbackFailureThreshold: 2,
@@ -44,7 +44,7 @@ internal static class PresetSchemePolicy
                 return true;
             case PresetSchemeDefaults.Responsive:
                 parameters = new PresetSchemeManagedParameters(
-                    WpsInputModeDefaults.Message,
+                    WpsInputModeDefaults.Auto,
                     WpsWheelForward: true,
                     LockStrategyWhenDegraded: true,
                     AutoFallbackFailureThreshold: 3,

@@ -8,12 +8,13 @@ namespace ClassroomToolkit.Tests;
 public sealed class PresetSchemePolicyTests
 {
     [Theory]
-    [InlineData(PresetSchemeDefaults.Balanced, (int)ClassroomWritingMode.Balanced, 2, 8, 120, 120, 1.0008, 1.0, PhotoInertiaProfileDefaults.Standard)]
-    [InlineData(PresetSchemeDefaults.Responsive, (int)ClassroomWritingMode.Responsive, 3, 6, 80, 80, 1.0010, 1.2, PhotoInertiaProfileDefaults.Sensitive)]
-    [InlineData(PresetSchemeDefaults.Stable, (int)ClassroomWritingMode.Stable, 2, 12, 200, 140, 1.0006, 0.8, PhotoInertiaProfileDefaults.Heavy)]
-    [InlineData(PresetSchemeDefaults.DualScreen, (int)ClassroomWritingMode.Stable, 2, 12, 200, 140, 1.0006, 0.8, PhotoInertiaProfileDefaults.Heavy)]
+    [InlineData(PresetSchemeDefaults.Balanced, WpsInputModeDefaults.Auto, (int)ClassroomWritingMode.Balanced, 2, 8, 120, 120, 1.0008, 1.0, PhotoInertiaProfileDefaults.Standard)]
+    [InlineData(PresetSchemeDefaults.Responsive, WpsInputModeDefaults.Auto, (int)ClassroomWritingMode.Responsive, 3, 6, 80, 80, 1.0010, 1.2, PhotoInertiaProfileDefaults.Sensitive)]
+    [InlineData(PresetSchemeDefaults.Stable, WpsInputModeDefaults.Message, (int)ClassroomWritingMode.Stable, 2, 12, 200, 140, 1.0006, 0.8, PhotoInertiaProfileDefaults.Heavy)]
+    [InlineData(PresetSchemeDefaults.DualScreen, WpsInputModeDefaults.Message, (int)ClassroomWritingMode.Stable, 2, 12, 200, 140, 1.0006, 0.8, PhotoInertiaProfileDefaults.Heavy)]
     public void TryResolveManagedParameters_ShouldReturnExpectedValues(
         string scheme,
+        string wpsInputMode,
         int writingMode,
         int fallbackFailureThreshold,
         int fallbackProbeInterval,
@@ -26,7 +27,7 @@ public sealed class PresetSchemePolicyTests
         var resolved = PresetSchemePolicy.TryResolveManagedParameters(scheme, out var parameters);
 
         resolved.Should().BeTrue();
-        parameters.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
+        parameters.WpsInputMode.Should().Be(wpsInputMode);
         parameters.WpsWheelForward.Should().BeTrue();
         parameters.LockStrategyWhenDegraded.Should().BeTrue();
         parameters.AutoFallbackFailureThreshold.Should().Be(fallbackFailureThreshold);
@@ -53,7 +54,7 @@ public sealed class PresetSchemePolicyTests
         var settings = new AppSettings
         {
             PresetScheme = PresetSchemeDefaults.Responsive,
-            WpsInputMode = WpsInputModeDefaults.Message,
+            WpsInputMode = WpsInputModeDefaults.Auto,
             PresentationAutoFallbackFailureThreshold = 3,
             PresentationAutoFallbackProbeIntervalCommands = 6,
             ClassroomWritingMode = ClassroomWritingMode.Responsive,
@@ -67,6 +68,16 @@ public sealed class PresetSchemePolicyTests
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
 
         scheme.Should().Be(PresetSchemeDefaults.Responsive);
+    }
+
+    [Fact]
+    public void ResolveInitialScheme_ShouldUseBalancedForCurrentDefaults()
+    {
+        var settings = new AppSettings();
+
+        var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
+
+        scheme.Should().Be(PresetSchemeDefaults.Balanced);
     }
 
     [Fact]
@@ -147,7 +158,7 @@ public sealed class PresetSchemePolicyTests
             PhotoWheelZoomBase = PaintPresetDefaults.WheelZoomBalanced,
             PhotoGestureZoomSensitivity = PhotoZoomInputDefaults.GestureSensitivityDefault,
             PhotoInertiaProfile = PaintPresetDefaults.InertiaProfileBalanced,
-            WpsInputMode = WpsInputModeDefaults.Auto
+            WpsInputMode = WpsInputModeDefaults.Raw
         };
 
         var scheme = PresetSchemePolicy.ResolveInitialScheme(settings);
