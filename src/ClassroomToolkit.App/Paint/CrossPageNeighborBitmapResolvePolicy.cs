@@ -6,13 +6,13 @@ internal static class CrossPageNeighborBitmapResolvePolicy
         bool interactionActive,
         bool slotPageChanged)
     {
-        // During active pan/gesture with slot remap, synchronous decode/render can
-        // block input handling and cause visible lag. Prefer cache-only frames.
-        if (interactionActive && slotPageChanged)
+        if (!interactionActive)
         {
-            return false;
+            return true;
         }
 
-        return true;
+        // During active interaction, only allow sync resolve for unchanged slots.
+        // Slot remap should stay async to avoid decode/render spikes and ghost flashes.
+        return !slotPageChanged;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -6,7 +7,60 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    private void UpdateNeighborTransformsForPan()
+    private void SyncNeighborLayoutForZoom(double scaleFactor)
+    {
+        if (!IsCrossPageDisplayActive()
+            || !CrossPageZoomLayoutScalePolicy.ShouldSynchronize(scaleFactor))
+        {
+            return;
+        }
+
+        for (var i = 0; i < _neighborPageImages.Count; i++)
+        {
+            if (_neighborPageImages[i].Tag is double baseTop)
+            {
+                var scaledBaseTop = CrossPageZoomLayoutScalePolicy.Scale(baseTop, scaleFactor);
+                _neighborPageImages[i].Tag = scaledBaseTop;
+
+                if (i < _neighborInkImages.Count)
+                {
+                    var inkImg = _neighborInkImages[i];
+                    var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, scaledBaseTop);
+                    SetNeighborInkSlotTag(
+                        inkImg,
+                        CrossPageZoomLayoutScalePolicy.Scale(inkTag.BaseTop, scaleFactor),
+                        inkTag.HorizontalOffsetDip);
+                }
+            }
+            else if (i < _neighborInkImages.Count
+                     && _neighborInkImages[i].Tag is NeighborInkSlotTag inkTag)
+            {
+                SetNeighborInkSlotTag(
+                    _neighborInkImages[i],
+                    CrossPageZoomLayoutScalePolicy.Scale(inkTag.BaseTop, scaleFactor),
+                    inkTag.HorizontalOffsetDip);
+            }
+        }
+
+        if (_neighborPageHeightCache.Count > 0)
+        {
+            var cachedPageIndices = new List<int>(_neighborPageHeightCache.Keys);
+            foreach (var pageIndex in cachedPageIndices)
+            {
+                var cachedHeight = _neighborPageHeightCache[pageIndex];
+                if (cachedHeight > 0)
+                {
+                    _neighborPageHeightCache[pageIndex] = CrossPageZoomLayoutScalePolicy.Scale(
+                        cachedHeight,
+                        scaleFactor);
+                }
+            }
+        }
+
+        InvalidateCrossPageBoundsCache();
+    }
+
+    private void UpdateNeighborTransformsForPan(bool includeScale = false)
     {
         if (!IsCrossPageDisplayActive())
         {
@@ -15,6 +69,11 @@ public partial class PaintOverlayWindow
         if (_neighborPageImages.Count == 0 || _neighborInkImages.Count == 0)
         {
             return;
+        }
+        var normalizedWidthDip = 0.0;
+        if (includeScale && !_photoDocumentIsPdf && PhotoBackground.Source is BitmapSource currentBitmap)
+        {
+            normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
         }
         for (int i = 0; i < _neighborPageImages.Count; i++)
         {
@@ -28,6 +87,21 @@ public partial class PaintOverlayWindow
                 continue;
             }
             var pageTransform = EnsureNeighborTransform(img);
+            if (includeScale)
+            {
+                var pageScaleRatio = 1.0;
+                if (!_photoDocumentIsPdf && normalizedWidthDip > 0 && img.Source is BitmapSource pageBitmap)
+                {
+                    var pageWidthDip = GetBitmapDisplayWidthInDip(pageBitmap);
+                    if (pageWidthDip > 0)
+                    {
+                        pageScaleRatio = normalizedWidthDip / pageWidthDip;
+                    }
+                }
+
+                pageTransform.Scale.ScaleX = _photoScale.ScaleX * pageScaleRatio;
+                pageTransform.Scale.ScaleY = _photoScale.ScaleY * pageScaleRatio;
+            }
             pageTransform.Translate.X = _photoTranslate.X;
             pageTransform.Translate.Y = _photoTranslate.Y + baseTop;
             if (i < _neighborInkImages.Count)
@@ -39,6 +113,21 @@ public partial class PaintOverlayWindow
                 }
                 var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, baseTop);
                 var inkTransform = EnsureNeighborTransform(inkImg);
+                if (includeScale)
+                {
+                    var pageScaleRatio = 1.0;
+                    if (!_photoDocumentIsPdf && normalizedWidthDip > 0 && img.Source is BitmapSource pageBitmap)
+                    {
+                        var pageWidthDip = GetBitmapDisplayWidthInDip(pageBitmap);
+                        if (pageWidthDip > 0)
+                        {
+                            pageScaleRatio = normalizedWidthDip / pageWidthDip;
+                        }
+                    }
+
+                    inkTransform.Scale.ScaleX = _photoScale.ScaleX * pageScaleRatio;
+                    inkTransform.Scale.ScaleY = _photoScale.ScaleY * pageScaleRatio;
+                }
                 inkTransform.Translate.X = _photoTranslate.X - (inkTag.HorizontalOffsetDip * inkTransform.Scale.ScaleX);
                 inkTransform.Translate.Y = _photoTranslate.Y + inkTag.BaseTop;
             }

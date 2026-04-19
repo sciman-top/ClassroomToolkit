@@ -6,13 +6,13 @@ internal static class CrossPageNeighborHeightResolvePolicy
         bool interactionActive,
         bool photoDocumentIsPdf)
     {
-        // For image sequences, synchronous bitmap loads during active interaction
-        // can block UI input handling. Prefer cache/fallback heights.
-        if (interactionActive && !photoDocumentIsPdf)
+        if (!interactionActive)
         {
-            return false;
+            return true;
         }
 
-        return true;
+        // PDF page-size probing is cheap and keeps seam bounds stable during zoom/pan.
+        // Keep image sequence interaction on async path to avoid decode stalls.
+        return photoDocumentIsPdf;
     }
 }

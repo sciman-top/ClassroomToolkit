@@ -19,6 +19,19 @@ public partial class PaintOverlayWindow
         _lastPhotoGestureInputUtc = GetCurrentUtcTimestamp();
     }
 
+    private void MarkPhotoZoomInput()
+    {
+        _lastPhotoZoomInputUtc = GetCurrentUtcTimestamp();
+    }
+
+    private bool IsPhotoZoomInteractionActive()
+    {
+        return PhotoInputConflictGuard.ShouldSuppressWheelAfterGesture(
+            _lastPhotoZoomInputUtc,
+            PhotoZoomInteractionWindowMs,
+            GetCurrentUtcTimestamp());
+    }
+
     private bool ShouldSuppressPhotoWheelFromRecentGesture()
     {
         return PhotoInputConflictGuard.ShouldSuppressWheelAfterGesture(

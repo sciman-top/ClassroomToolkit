@@ -77,6 +77,11 @@ public partial class PaintOverlayWindow : Window
             Interval = TimeSpan.FromMilliseconds(PresentationFocusMonitorIntervalMs)
         };
         _presentationFocusMonitor.Tick += OnPresentationFocusMonitorTick;
+        _photoRenderQualityRestoreTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+        {
+            Interval = TimeSpan.FromMilliseconds(PhotoRenderQualityRestoreDelayMs)
+        };
+        _photoRenderQualityRestoreTimer.Tick += OnPhotoRenderQualityRestoreTimerTick;
         _inkMonitor = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(InkMonitorActiveIntervalMs)
@@ -119,6 +124,7 @@ public partial class PaintOverlayWindow : Window
         SizeChanged += OnWindowSizeChanged;
         StateChanged += OnWindowStateChanged;
         UpdateBoardBackground();
+        ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
 
         _presentationClassifier = new PresentationClassifier();
         var planner = new ClassroomToolkit.Services.Presentation.PresentationControlPlanner(_presentationClassifier);

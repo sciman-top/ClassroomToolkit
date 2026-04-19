@@ -121,6 +121,8 @@ public partial class PaintOverlayWindow
         _photoUnifiedTransformSaveTimer?.Stop();
         _photoUnifiedTransformSaveTimer?.Tick -= OnPhotoUnifiedTransformSaveTimerTick;
         _presentationFocusMonitor.Tick -= OnPresentationFocusMonitorTick;
+        _photoRenderQualityRestoreTimer.Tick -= OnPhotoRenderQualityRestoreTimerTick;
+        _photoRenderQualityRestoreTimer.Stop();
         _inkMonitor.Tick -= OnInkMonitorTick;
         _inkSidecarAutoSaveTimer?.Tick -= OnInkSidecarAutoSaveTimerTick;
         _inkSidecarAutoSaveTimer?.Stop();

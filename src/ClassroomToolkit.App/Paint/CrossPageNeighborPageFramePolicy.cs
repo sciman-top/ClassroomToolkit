@@ -10,7 +10,8 @@ internal static class CrossPageNeighborPageFramePolicy
         bool slotPageChanged,
         bool hasCurrentFrame,
         bool hasResolvedTargetFrame,
-        bool interactionActive = false)
+        bool interactionActive = false,
+        bool preferHoldCurrentFrameOnSlotRemap = false)
     {
         if (hasResolvedTargetFrame)
         {
@@ -19,13 +20,18 @@ internal static class CrossPageNeighborPageFramePolicy
                 CollapseSlot: false);
         }
 
-        if (hasCurrentFrame && interactionActive && !slotPageChanged)
+        if (hasCurrentFrame && interactionActive)
         {
             // Keep same-page slot stable during active interaction to avoid transient flicker.
-            // For slot remap (different page), never keep old page frame on the new slot.
-            return new CrossPageNeighborPageFrameDecision(
-                HoldCurrentFrame: true,
-                CollapseSlot: false);
+            // During zoom-out seam expansion, temporarily holding the current slot frame also
+            // avoids blank flashes when the remapped target page bitmap is still prefetching.
+            // Callers must opt-in for slot remap continuity explicitly.
+            if (!slotPageChanged || preferHoldCurrentFrameOnSlotRemap)
+            {
+                return new CrossPageNeighborPageFrameDecision(
+                    HoldCurrentFrame: true,
+                    CollapseSlot: false);
+            }
         }
 
         return new CrossPageNeighborPageFrameDecision(

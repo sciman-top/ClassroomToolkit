@@ -155,6 +155,8 @@ public partial class PaintOverlayWindow
     {
         var nowUtc = GetCurrentUtcTimestamp();
         var interactionActive = IsCrossPageInteractionActive();
+        var zoomInteractionActive = IsPhotoZoomInteractionActive();
+        var inkOperationActive = IsInkOperationActive();
         if (CrossPageInteractivePinLifetimePolicy.ShouldReleasePin(
                 _interactiveSwitchPinnedNeighborInkHoldUntilUtc,
                 nowUtc,
@@ -221,6 +223,7 @@ public partial class PaintOverlayWindow
             _neighborInkImages.Add(inkImg);
             _neighborPagesCanvas.Children.Add(inkImg);
         }
+        ReapplyPhotoRenderQualityModeForDynamicSurfaces();
 
         // Preserve currently visible frames by page uid so slot reordering does not
         // temporarily blank a page's bitmap/ink for one frame.
@@ -292,11 +295,24 @@ public partial class PaintOverlayWindow
             {
                 bitmap = preservedPageBitmap;
             }
+            if (bitmap == null
+                && zoomInteractionActive
+                && !inkOperationActive
+                && !hasCurrentFrame
+                && TryResolveNearestPreservedPageFrame(
+                    pageIndex,
+                    preservedPageFrames,
+                    out var continuityPlaceholder))
+            {
+                TryAssignFrameSource(img, continuityPlaceholder);
+                hasCurrentFrame = true;
+            }
             var pageFrameDecision = CrossPageNeighborPageFramePolicy.Resolve(
                 slotPageChanged,
                 hasCurrentFrame,
                 hasResolvedTargetFrame: bitmap != null,
-                interactionActive: interactionActive);
+                interactionActive: interactionActive,
+                preferHoldCurrentFrameOnSlotRemap: zoomInteractionActive && !inkOperationActive);
             var heldCurrentSlotFrame = false;
             var shouldReplacePageFrame = CrossPageInteractivePageReplacementPolicy.ShouldReplace(
                 hasResolvedTargetFrame: bitmap != null,
@@ -349,7 +365,27 @@ public partial class PaintOverlayWindow
             }
             if (heldCurrentSlotFrame)
             {
-                // Keep existing page/ink transforms and uid until target page frame arrives.
+                // Keep the placeholder frame visible at the target slot until the target page
+                // bitmap arrives, but do not claim the slot identity yet.
+                var placeholderBaseTop = top - _photoTranslate.Y;
+                var placeholderScaleRatio = 1.0;
+                if (!_photoDocumentIsPdf
+                    && normalizedWidthDip > 0
+                    && img.Source is BitmapSource placeholderBitmap)
+                {
+                    var placeholderWidthDip = GetBitmapDisplayWidthInDip(placeholderBitmap);
+                    if (placeholderWidthDip > 0)
+                    {
+                        placeholderScaleRatio = normalizedWidthDip / placeholderWidthDip;
+                    }
+                }
+
+                img.Tag = placeholderBaseTop;
+                ApplyNeighborPageTransform(img, placeholderScaleRatio, placeholderBaseTop);
+                if (i < _neighborInkImages.Count)
+                {
+                    _neighborInkImages[i].Visibility = Visibility.Collapsed;
+                }
                 continue;
             }
             var inkImg = _neighborInkImages[i];
@@ -555,5 +591,36 @@ public partial class PaintOverlayWindow
         {
             ScheduleCrossPageDisplayUpdateForMissingNeighborPages(missingPageBitmapCount);
         }
+    }
+
+    private static bool TryResolveNearestPreservedPageFrame(
+        int pageIndex,
+        IReadOnlyDictionary<string, BitmapSource> preservedPageFrames,
+        out BitmapSource bitmap)
+    {
+        bitmap = null!;
+        var bestDistance = int.MaxValue;
+        foreach (var pair in preservedPageFrames)
+        {
+            if (!int.TryParse(
+                    pair.Key,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var preservedPageIndex))
+            {
+                continue;
+            }
+
+            var distance = Math.Abs(preservedPageIndex - pageIndex);
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            bitmap = pair.Value;
+        }
+
+        return bestDistance != int.MaxValue;
     }
 }

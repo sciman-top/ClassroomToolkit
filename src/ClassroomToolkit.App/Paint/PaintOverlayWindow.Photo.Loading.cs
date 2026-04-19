@@ -20,7 +20,10 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    private BitmapSource? TryLoadBitmapSource(string path, bool downsampleToMonitor = true)
+    private BitmapSource? TryLoadBitmapSource(
+        string path,
+        bool downsampleToMonitor = true,
+        int targetDecodeWidth = 0)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
@@ -38,17 +41,16 @@ public partial class PaintOverlayWindow
             // Important: decode width must only downsample large sources, never upscale.
             if (downsampleToMonitor)
             {
-                // Use 1.5x of monitor width as a safe buffer for zooming.
-                var monitorRect = GetCurrentMonitorRect();
-                if (monitorRect.Width > 0)
+                var effectiveDecodeWidth = targetDecodeWidth > 0
+                    ? targetDecodeWidth
+                    : ResolvePhotoDownsampleDecodeWidth();
+                if (effectiveDecodeWidth > 0)
                 {
-                    var targetDecodeWidth = (int)Math.Round(monitorRect.Width * 1.5, MidpointRounding.AwayFromZero);
                     var sourcePixelWidth = TryReadImagePixelWidth(path);
-                    if (targetDecodeWidth > 0
-                        && sourcePixelWidth > 0
-                        && sourcePixelWidth > targetDecodeWidth)
+                    if (sourcePixelWidth > 0
+                        && sourcePixelWidth > effectiveDecodeWidth)
                     {
-                        bitmap.DecodePixelWidth = targetDecodeWidth;
+                        bitmap.DecodePixelWidth = effectiveDecodeWidth;
                     }
                 }
             }
@@ -67,6 +69,15 @@ public partial class PaintOverlayWindow
             }
             return bitmap;
         }, fallback: null);
+    }
+
+    private int ResolvePhotoDownsampleDecodeWidth()
+    {
+        // Use 1.5x of monitor width as a safe buffer for zooming.
+        var monitorRect = GetCurrentMonitorRect();
+        return monitorRect.Width > 0
+            ? (int)Math.Round(monitorRect.Width * 1.5, MidpointRounding.AwayFromZero)
+            : 0;
     }
 
     private static bool RequiresPixelFormatNormalization(PixelFormat format)
@@ -153,4 +164,3 @@ public partial class PaintOverlayWindow
         UpdateOverlayHitTestVisibility();
     }
 }
-

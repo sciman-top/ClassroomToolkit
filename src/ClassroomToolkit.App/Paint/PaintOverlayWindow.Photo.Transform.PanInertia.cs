@@ -34,6 +34,7 @@ public partial class PaintOverlayWindow
         _photoPanStart = position;
         _photoPanOriginX = _photoTranslate.X;
         _photoPanOriginY = _photoTranslate.Y;
+        MarkPhotoInteractionForRenderQuality();
         ResetPhotoPanVelocitySamples(position);
         SyncPhotoInteractiveRefreshAnchor();
         LogPhotoInputTelemetry("pan-start", $"stylus={captureStylus}");
@@ -66,6 +67,7 @@ public partial class PaintOverlayWindow
         if (movedSincePanStart)
         {
             _photoPanHadEffectiveMovement = true;
+            MarkPhotoInteractionForRenderQuality();
         }
         UpdatePhotoInkPanCompensation();
         var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
@@ -280,6 +282,7 @@ public partial class PaintOverlayWindow
         }
 
         UpdatePhotoInkPanCompensation();
+        MarkPhotoInteractionForRenderQuality();
         var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
             _lastPhotoInteractiveRefreshTranslateX,
             _lastPhotoInteractiveRefreshTranslateY,

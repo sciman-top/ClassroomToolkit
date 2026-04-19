@@ -28,7 +28,8 @@ public partial class PaintOverlayWindow
         return CrossPageInteractionActivityPolicy.IsActive(
             _photoPanning || _photoManipulating,
             _crossPageDragging,
-            IsInkOperationActive());
+            IsInkOperationActive())
+            || IsPhotoZoomInteractionActive();
     }
 
     private bool IsCrossPagePanOrDragActive()
@@ -271,54 +272,95 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var scheduled = TryBeginInvoke(() =>
+        var path = _photoSequencePaths[pageIndex - 1];
+        var targetDecodeWidth = ResolvePhotoDownsampleDecodeWidth();
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.ScheduleNeighborImagePrefetch",
+            cancellationToken =>
         {
-            try
+            cancellationToken.ThrowIfCancellationRequested();
+            var bitmap = TryLoadBitmapSource(
+                path,
+                downsampleToMonitor: true,
+                targetDecodeWidth);
+            if (bitmap == null)
             {
-                if (!CrossPageNeighborPrefetchGatePolicy.ShouldRunPrefetch(
-                        _photoModeActive,
-                        _photoDocumentIsPdf,
-                        IsCrossPageDisplaySettingEnabled(),
-                        IsCrossPagePanOrDragActive()))
+                RemovePendingNeighborImagePrefetch(pageIndex);
+                return;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            var scheduledApply = TryBeginInvoke(() =>
+            {
+                try
                 {
-                    return;
-                }
-                if (_neighborImageCache.ContainsKey(pageIndex))
-                {
-                    return;
-                }
-                if (_photoSequencePaths.Count == 0 || pageIndex < 1 || pageIndex > _photoSequencePaths.Count)
-                {
-                    return;
-                }
-                var path = _photoSequencePaths[pageIndex - 1];
-                var bitmap = TryLoadBitmapSource(path, downsampleToMonitor: true);
-                if (bitmap == null)
-                {
-                    return;
-                }
-                _neighborImageCache[pageIndex] = bitmap;
-                if (_neighborImageCache.Count > NeighborPageCacheLimit + 2)
-                {
-                    var keysToRemove = _neighborImageCache.Keys
-                        .OrderBy(k => Math.Abs(k - pageIndex))
-                        .Skip(NeighborPageCacheLimit)
-                        .ToList();
-                    foreach (var k in keysToRemove)
+                    if (!CrossPageNeighborPrefetchGatePolicy.ShouldRunPrefetch(
+                            _photoModeActive,
+                            _photoDocumentIsPdf,
+                            IsCrossPageDisplaySettingEnabled(),
+                            IsCrossPagePanOrDragActive()))
                     {
-                        _neighborImageCache.Remove(k);
+                        return;
+                    }
+
+                    if (_neighborImageCache.ContainsKey(pageIndex))
+                    {
+                        return;
+                    }
+
+                    if (_photoSequencePaths.Count == 0
+                        || pageIndex < 1
+                        || pageIndex > _photoSequencePaths.Count
+                        || !string.Equals(_photoSequencePaths[pageIndex - 1], path, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return;
+                    }
+
+                    _neighborImageCache[pageIndex] = bitmap;
+                    if (_neighborImageCache.Count > NeighborPageCacheLimit + 2)
+                    {
+                        var keysToRemove = _neighborImageCache.Keys
+                            .OrderBy(k => Math.Abs(k - pageIndex))
+                            .Skip(NeighborPageCacheLimit)
+                            .ToList();
+                        foreach (var k in keysToRemove)
+                        {
+                            _neighborImageCache.Remove(k);
+                        }
+                    }
+
+                    // Neighbor bitmap became available; request a prompt refresh so boundary
+                    // pages can be filled without waiting for the next user input tick.
+                    if (IsCrossPageDisplayActive())
+                    {
+                        RequestCrossPageDisplayUpdate(
+                            CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.NeighborRender));
                     }
                 }
-            }
-            finally
+                finally
+                {
+                    _neighborImagePrefetchPending.Remove(pageIndex);
+                }
+            }, DispatcherPriority.Background);
+            if (!scheduledApply)
             {
-                _neighborImagePrefetchPending.Remove(pageIndex);
+                RemovePendingNeighborImagePrefetch(pageIndex);
+                _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", "neighbor-prefetch", "dispatch-failed");
             }
-        }, DispatcherPriority.Background);
-        if (!scheduled)
+        },
+            lifecycleToken,
+            onError: _ => RemovePendingNeighborImagePrefetch(pageIndex));
+    }
+
+    private void RemovePendingNeighborImagePrefetch(int pageIndex)
+    {
+        var scheduled = TryBeginInvoke(
+            () => _neighborImagePrefetchPending.Remove(pageIndex),
+            DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess())
         {
             _neighborImagePrefetchPending.Remove(pageIndex);
-            _inkDiagnostics?.OnCrossPageUpdateEvent("defer-abort", "neighbor-prefetch", "dispatch-failed");
         }
     }
 
@@ -524,6 +566,18 @@ public partial class PaintOverlayWindow
         inkTransform.Scale.ScaleY = scaleY;
         inkTransform.Translate.X = _photoTranslate.X - (inkTag.HorizontalOffsetDip * scaleX);
         inkTransform.Translate.Y = _photoTranslate.Y + inkTag.BaseTop;
+    }
+
+    private void ApplyNeighborPageTransform(
+        WpfImage pageImage,
+        double pageScaleRatio,
+        double baseTop)
+    {
+        var pageTransform = EnsureNeighborTransform(pageImage);
+        pageTransform.Scale.ScaleX = _photoScale.ScaleX * pageScaleRatio;
+        pageTransform.Scale.ScaleY = _photoScale.ScaleY * pageScaleRatio;
+        pageTransform.Translate.X = _photoTranslate.X;
+        pageTransform.Translate.Y = _photoTranslate.Y + baseTop;
     }
 
     private static (TransformGroup Group, ScaleTransform Scale, TranslateTransform Translate) EnsureNeighborTransform(WpfImage image)

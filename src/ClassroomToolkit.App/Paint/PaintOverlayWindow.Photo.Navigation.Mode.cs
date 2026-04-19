@@ -124,6 +124,8 @@ public partial class PaintOverlayWindow
             ApplyIdentityPhotoTransform();
         }
         _photoModeActive = true;
+        _photoRenderQualityRestoreTimer.Stop();
+        ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
         UpdatePhotoContentTransforms(enabled: true);
         _photoFullscreen = wasFullscreen;
         _photoRestoreFullscreenPending = false;
@@ -207,6 +209,8 @@ public partial class PaintOverlayWindow
             _photoUserTransformDirty = false;
         }
         _photoModeActive = false;
+        _photoRenderQualityRestoreTimer.Stop();
+        ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
         _photoUnboundedInkCanvasEnabled = false;
         _boardSuspendedPhotoCache = false;
         UpdatePhotoContentTransforms(enabled: false);

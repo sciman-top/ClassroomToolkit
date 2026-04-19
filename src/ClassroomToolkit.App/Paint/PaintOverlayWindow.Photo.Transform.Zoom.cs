@@ -31,6 +31,8 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        MarkPhotoZoomInput();
+        MarkPhotoInteractionForRenderQuality();
         LogPhotoInputTelemetry("zoom", $"source={source}; raw={rawValue:0.####}; factor={scaleFactor:0.####}");
         ApplyPhotoScale(scaleFactor, center);
     }
@@ -58,8 +60,9 @@ public partial class PaintOverlayWindow
     {
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         EnsurePhotoTransformsWritable();
+        var currentScale = _photoScale.ScaleX;
         var newScale = Math.Clamp(
-            _photoScale.ScaleX * scaleFactor,
+            currentScale * scaleFactor,
             PhotoTransformViewportDefaults.MinScale,
             PhotoTransformViewportDefaults.MaxScale);
         if (Math.Abs(newScale - _photoScale.ScaleX) < PhotoZoomInputDefaults.ScaleApplyEpsilon)
@@ -74,15 +77,21 @@ public partial class PaintOverlayWindow
         _photoTranslate.Y = center.Y - before.Y * newScale;
         if (IsCrossPageDisplayActive())
         {
-            ApplyCrossPageBoundaryLimits();
+            var layoutScaleFactor = currentScale > 0 ? newScale / currentScale : 1.0;
+            SyncNeighborLayoutForZoom(layoutScaleFactor);
+            if (!IsPhotoZoomInteractionActive())
+            {
+                ApplyCrossPageBoundaryLimits();
+            }
+            // Keep visible neighbor pages visually locked to the current page during zoom.
+            UpdateNeighborTransformsForPan(includeScale: true);
+            // Recompute neighbor visibility/layout during zoom so seam pages don't lag until
+            // post-interaction refresh.
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.ApplyScale);
         }
 
         ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
         SchedulePhotoTransformSave(userAdjusted: true);
-        if (IsCrossPageDisplayActive())
-        {
-            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.ApplyScale);
-        }
 
         SyncPhotoInteractiveRefreshAnchor();
         RequestPhotoTransformInkRedraw();

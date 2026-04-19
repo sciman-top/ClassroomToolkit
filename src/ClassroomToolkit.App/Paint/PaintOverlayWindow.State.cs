@@ -46,6 +46,8 @@ public partial class PaintOverlayWindow : Window
     private const double PhotoZoomMinEventFactor = PhotoZoomInputDefaults.ZoomMinEventFactor;
     private const double PhotoZoomMaxEventFactor = PhotoZoomInputDefaults.ZoomMaxEventFactor;
     private const int PhotoWheelSuppressAfterGestureMs = PhotoTransformTimingDefaults.WheelSuppressAfterGestureMs;
+    private const int PhotoZoomInteractionWindowMs = PhotoTransformTimingDefaults.ZoomInteractionWindowMs;
+    private const int PhotoRenderQualityRestoreDelayMs = PhotoTransformTimingDefaults.RenderQualityRestoreDelayMs;
     private const int WpsNavDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs;
     private const double PdfDefaultDpi = PhotoDocumentRuntimeDefaults.PdfDefaultDpi;
     private const int PdfCacheLimit = PhotoDocumentRuntimeDefaults.PdfCacheLimit;
@@ -59,6 +61,7 @@ public partial class PaintOverlayWindow : Window
     private bool _forcePresentationForegroundOnFullscreen;
     private bool _presentationClassifierAutoLearnEnabled;
     private readonly DispatcherTimer _presentationFocusMonitor;
+    private readonly DispatcherTimer _photoRenderQualityRestoreTimer;
     private DateTime _nextPresentationFocusAttempt = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
 
@@ -98,6 +101,7 @@ public partial class PaintOverlayWindow : Window
 
     private WpfPoint? _lastPointerPosition;
     private DateTime _lastPhotoGestureInputUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
+    private DateTime _lastPhotoZoomInputUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
     private bool _presentationFocusRestoreEnabled = true;
     private readonly RefreshOrchestrator _refreshOrchestrator;
     private readonly PerfStats _perfMonitor;
@@ -119,6 +123,7 @@ public partial class PaintOverlayWindow : Window
     private bool _photoModeActive;
     private bool _photoUnboundedInkCanvasEnabled;
     private bool _photoInputTelemetryEnabled;
+    private bool _photoUseLowQualityScaling;
     private bool _photoFullscreen;
     private bool _photoLoading;
     private CrossPageDisplayUpdateRuntimeState _crossPageDisplayUpdateState = CrossPageDisplayUpdateRuntimeState.Default;

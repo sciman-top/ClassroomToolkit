@@ -97,6 +97,7 @@ public partial class PaintOverlayWindow
             _neighborInkImages.Add(inkImg);
             _neighborPagesCanvas.Children.Add(inkImg);
         }
+        ReapplyPhotoRenderQualityModeForDynamicSurfaces();
 
         var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
         var baseTop = CrossPageInputNavigation.ComputePageOffset(

@@ -33,6 +33,20 @@ public sealed class CrossPageNeighborPageFramePolicyTests
     }
 
     [Fact]
+    public void Resolve_ShouldCollapse_WhenInteractionActiveButSlotChangedAndNoContinuityPreference()
+    {
+        var decision = CrossPageNeighborPageFramePolicy.Resolve(
+            slotPageChanged: true,
+            hasCurrentFrame: true,
+            hasResolvedTargetFrame: false,
+            interactionActive: true,
+            preferHoldCurrentFrameOnSlotRemap: false);
+
+        decision.HoldCurrentFrame.Should().BeFalse();
+        decision.CollapseSlot.Should().BeTrue();
+    }
+
+    [Fact]
     public void Resolve_ShouldHoldCurrent_WhenInteractionActiveAndCurrentFrameExists()
     {
         var decision = CrossPageNeighborPageFramePolicy.Resolve(
@@ -56,5 +70,19 @@ public sealed class CrossPageNeighborPageFramePolicyTests
 
         decision.HoldCurrentFrame.Should().BeFalse();
         decision.CollapseSlot.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ShouldHoldCurrent_WhenZoomPrefersContinuityOnSlotRemap()
+    {
+        var decision = CrossPageNeighborPageFramePolicy.Resolve(
+            slotPageChanged: true,
+            hasCurrentFrame: true,
+            hasResolvedTargetFrame: false,
+            interactionActive: true,
+            preferHoldCurrentFrameOnSlotRemap: true);
+
+        decision.HoldCurrentFrame.Should().BeTrue();
+        decision.CollapseSlot.Should().BeFalse();
     }
 }

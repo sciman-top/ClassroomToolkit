@@ -41,6 +41,7 @@ public partial class PaintOverlayWindow
             return;
         }
         _photoManipulating = true;
+        MarkPhotoInteractionForRenderQuality();
         // Re-check at delta time to prevent gesture pan from racing with active ink operations.
         if (IsInkOperationActive())
         {
@@ -89,7 +90,8 @@ public partial class PaintOverlayWindow
                 LogPhotoInputTelemetry("gesture-pan", $"dx={translation.X:0.##},dy={translation.Y:0.##}");
             }
         }
-        if (deltaExecutionPlan.ShouldRequestCrossPageUpdate)
+        if (deltaExecutionPlan.ShouldRequestCrossPageUpdate
+            && !IsPhotoZoomInteractionActive())
         {
             RequestCrossPageDisplayUpdate(CrossPageUpdateSources.ManipulationDelta);
         }
@@ -106,7 +108,14 @@ public partial class PaintOverlayWindow
         ApplyPhotoPanBounds(allowResistance: false);
         if (IsCrossPageDisplayActive())
         {
-            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.ManipulationDelta));
+            if (IsPhotoZoomInteractionActive())
+            {
+                MarkPhotoInteractionForRenderQuality();
+            }
+            else
+            {
+                RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.ManipulationDelta));
+            }
         }
         SchedulePhotoTransformSave(userAdjusted: true);
     }
