@@ -105,7 +105,7 @@ public sealed class UiCopyContractTests
         imageManagerXaml.Should().Contain("ToolTip=\"缩略图\"");
         imageManagerXaml.Should().NotContain("Text=\"当前没有可显示内容，请先在左侧选择文件夹。\"");
 
-        photoOverlayXaml.Should().Contain("Text=\"点击空白处关闭\"");
+        photoOverlayXaml.Should().NotContain("Text=\"点击空白处关闭\"");
         photoOverlayXaml.Should().NotContain("Text=\"单击背景或关闭按钮即可退出\"");
     }
 
