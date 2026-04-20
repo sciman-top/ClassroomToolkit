@@ -83,6 +83,7 @@ GlobalUser/
 *.log.bak
 docs/change-evidence/*backup*.txt
 docs/change-evidence/*backup*.log
+docs/runtime-*.txt
 
 # OS files
 .DS_Store
