@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Domain.Utilities;
 
@@ -10,7 +11,10 @@ namespace ClassroomToolkit.Infra.Settings;
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private readonly string _path;
+    private int _hasValidatedExistingFileState;
     private int _overwriteBlockedAfterCorruptLoad;
+    private long _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
+    private string? _lastValidatedContentHash;
 
     public JsonSettingsDocumentStoreAdapter(string path)
     {
@@ -24,7 +28,10 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         {
             if (!File.Exists(_path))
             {
+                Interlocked.Exchange(ref _hasValidatedExistingFileState, 0);
                 Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+                Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, DateTime.MinValue.Ticks);
+                _lastValidatedContentHash = null;
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -32,7 +39,10 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             using var document = JsonDocument.Parse(json);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
+                Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
                 Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+                Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
+                _lastValidatedContentHash = GetCurrentContentHash();
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -61,16 +71,15 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 result[sectionNode.Name] = section;
             }
 
+            Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
             Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+            Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
+            _lastValidatedContentHash = GetCurrentContentHash();
             return result;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Interlocked.Exchange(
-                ref _overwriteBlockedAfterCorruptLoad,
-                ShouldBlockOverwriteAfterLoadFailure(ex) ? 1 : 0);
-            Debug.WriteLine(
-                $"[JsonSettingsDocumentStoreAdapter] load failed path={_path} ex={ex.GetType().Name} msg={ex.Message}");
+            RecordLoadFailure(ex, "load");
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -78,6 +87,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
         ArgumentNullException.ThrowIfNull(data);
+        EnsureExistingFileStateValidated();
         if (File.Exists(_path) && Volatile.Read(ref _overwriteBlockedAfterCorruptLoad) == 1)
         {
             throw new InvalidOperationException(
@@ -126,7 +136,10 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 File.Move(tempPath, _path);
             }
 
+            Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
             Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+            Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
+            _lastValidatedContentHash = GetCurrentContentHash();
         }
         finally
         {
@@ -149,6 +162,83 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     {
         ArgumentNullException.ThrowIfNull(ex);
         return ex is JsonException;
+    }
+
+    private void EnsureExistingFileStateValidated()
+    {
+        if (!File.Exists(_path))
+        {
+            Interlocked.Exchange(ref _hasValidatedExistingFileState, 0);
+            Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, DateTime.MinValue.Ticks);
+            _lastValidatedContentHash = null;
+            return;
+        }
+
+        var currentWriteTimeUtcTicks = GetCurrentWriteTimeUtcTicks();
+        var currentContentHash = TryGetCurrentContentHash();
+        if (Interlocked.CompareExchange(ref _hasValidatedExistingFileState, 1, 1) == 1
+            && Interlocked.Read(ref _lastValidatedWriteTimeUtcTicks) == currentWriteTimeUtcTicks
+            && string.Equals(_lastValidatedContentHash, currentContentHash, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(_path);
+            using var document = JsonDocument.Parse(stream);
+            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+            Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, currentWriteTimeUtcTicks);
+            _lastValidatedContentHash = currentContentHash ?? GetCurrentContentHash();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            RecordLoadFailure(ex, "save-preflight");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
+        }
+    }
+
+    private void RecordLoadFailure(Exception ex, string operation)
+    {
+        Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
+        Interlocked.Exchange(
+            ref _overwriteBlockedAfterCorruptLoad,
+            ShouldBlockOverwriteAfterLoadFailure(ex) ? 1 : 0);
+        Debug.WriteLine(
+            $"[JsonSettingsDocumentStoreAdapter] {operation} failed path={_path} ex={ex.GetType().Name} msg={ex.Message}");
+    }
+
+    private long GetCurrentWriteTimeUtcTicks()
+    {
+        return File.Exists(_path)
+            ? File.GetLastWriteTimeUtc(_path).Ticks
+            : DateTime.MinValue.Ticks;
+    }
+
+    private string? TryGetCurrentContentHash()
+    {
+        try
+        {
+            return GetCurrentContentHash();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return null;
+        }
+    }
+
+    private string? GetCurrentContentHash()
+    {
+        if (!File.Exists(_path))
+        {
+            return null;
+        }
+
+        using var stream = File.OpenRead(_path);
+        return Convert.ToHexString(SHA256.HashData(stream));
     }
 
 }

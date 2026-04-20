@@ -123,6 +123,105 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldThrow_WhenExistingJsonIsCorrupt_WithoutPriorLoad()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{invalid-json");
+            var original = File.ReadAllText(path);
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "15"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be(original);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldThrow_WhenValidatedJsonBecomesCorrupt_BeforeSave()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{\"Paint\":{\"brush_base_size\":\"12\"}}");
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+
+            var loaded = adapter.Load();
+            loaded["Paint"]["brush_base_size"].Should().Be("12");
+
+            File.WriteAllText(path, "{invalid-json");
+            var original = File.ReadAllText(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "21"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be(original);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldThrow_WhenValidatedJsonChangesWithoutTimestampDrift()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{\"Paint\":{\"brush_base_size\":\"12\"}}");
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+
+            var loaded = adapter.Load();
+            loaded["Paint"]["brush_base_size"].Should().Be("12");
+
+            var validatedWriteTimeUtc = File.GetLastWriteTimeUtc(path);
+            File.WriteAllText(path, "{invalid-json");
+            File.SetLastWriteTimeUtc(path, validatedWriteTimeUtc);
+            var original = File.ReadAllText(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "22"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be(original);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldNotThrow_WhenPreviousLoadFailedDueToTransientIoError()
     {
         var tempDir = CreateTempDirectory();
