@@ -99,6 +99,32 @@ public sealed class ConfigurationServiceTests
     }
 
     [Fact]
+    public void Constructor_ShouldFallbackToDefault_WhenAppSettingsIsUnreadable()
+    {
+        var baseDirectory = CreateTempDirectory();
+        var appSettingsPath = Path.Combine(baseDirectory, "appsettings.json");
+        try
+        {
+            File.WriteAllText(appSettingsPath, "{ \"SettingsDocumentFormat\": \"ini\" }");
+            using var lockStream = new FileStream(
+                appSettingsPath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None);
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.json"));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldUseSolutionRootSettingsIni_WhenRunningFromBuildOutput()
     {
         var solutionRoot = CreateTempDirectory();

@@ -169,15 +169,15 @@ public sealed class ConfigurationService : IConfigurationService
         }
         catch (JsonException)
         {
-            // Fall back to default INI when appsettings.json is malformed.
+            // Fall back to default JSON document path when appsettings.json is malformed.
         }
         catch (IOException)
         {
-            // Fall back to default INI when appsettings.json cannot be read.
+            // Fall back to default JSON document path when appsettings.json cannot be read.
         }
         catch (UnauthorizedAccessException)
         {
-            // Fall back to default INI when appsettings.json cannot be accessed.
+            // Fall back to default JSON document path when appsettings.json cannot be accessed.
         }
 
         return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
