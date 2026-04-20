@@ -176,7 +176,11 @@ public partial class App : WpfApplication
         // Logging
         services.AddLogging(builder =>
         {
+            #if DEBUG
             builder.SetMinimumLevel(LogLevel.Debug);
+            #else
+            builder.SetMinimumLevel(LogLevel.Information);
+            #endif
             // Console logger for development
             builder.AddConsole();
             
@@ -184,7 +188,7 @@ public partial class App : WpfApplication
             var logPath = Path.Combine(AppDataDirectory, "logs");
             builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(
                 logPath,
-                resetExistingLogsOnStartup: true));
+                resetExistingLogsOnStartup: false));
         });
 
         _services = services.BuildServiceProvider();

@@ -45,4 +45,17 @@ public sealed class InkStorageDiagnosticsContractTests
         source.Should().Contain("[InkWAL] save failed");
         source.Should().Contain("[InkWAL] temp cleanup failed");
     }
+
+    [Fact]
+    public void InkWriteAheadLogService_ShouldUsePerWalPathLocking()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Ink",
+            "InkWriteAheadLogService.cs"));
+
+        source.Should().Contain("ConcurrentDictionary<string, object> WalFileLocks");
+        source.Should().Contain("lock (GetWalFileLock(walPath))");
+    }
 }

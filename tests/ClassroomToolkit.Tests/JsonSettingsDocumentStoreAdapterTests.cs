@@ -123,6 +123,76 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldNotThrow_WhenPreviousLoadFailedDueToTransientIoError()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{\"Paint\":{\"brush_base_size\":\"12\"}}");
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            using var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var loaded = adapter.Load();
+            loaded.Should().BeEmpty();
+
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "18"
+                }
+            };
+
+            lockStream.Dispose();
+            Action act = () => adapter.Save(data);
+
+            act.Should().NotThrow();
+            var saved = adapter.Load();
+            saved["Paint"]["brush_base_size"].Should().Be("18");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldRecoverAfterNonObjectJsonLoad()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            File.WriteAllText(path, "{invalid-json");
+            _ = adapter.Load();
+
+            File.WriteAllText(path, "[]");
+            var loaded = adapter.Load();
+            loaded.Should().BeEmpty();
+
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "20"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+
+            act.Should().NotThrow();
+            var saved = adapter.Load();
+            saved["Paint"]["brush_base_size"].Should().Be("20");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldTreatNullSectionDictionary_AsEmptySection()
     {
         var tempDir = CreateTempDirectory();

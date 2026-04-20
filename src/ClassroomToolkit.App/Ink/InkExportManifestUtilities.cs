@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using ClassroomToolkit.App;
+using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -75,7 +76,34 @@ internal static class InkExportManifestUtilities
                 {
                     WriteIndented = true
                 });
-                File.WriteAllText(path, json);
+                var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+                try
+                {
+                    File.WriteAllText(tempPath, json);
+                    if (File.Exists(path))
+                    {
+                        AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
+                    }
+                    else
+                    {
+                        File.Move(tempPath, path);
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(tempPath))
+                    {
+                        try
+                        {
+                            File.Delete(tempPath);
+                        }
+                        catch (Exception cleanupEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(cleanupEx))
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[InkExportManifestUtilities] temp cleanup failed path={tempPath} ex={cleanupEx.GetType().Name} msg={cleanupEx.Message}");
+                        }
+                    }
+                }
             }
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))

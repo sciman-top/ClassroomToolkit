@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Diagnostics;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Domain.Utilities;
 
@@ -9,7 +10,7 @@ namespace ClassroomToolkit.Infra.Settings;
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private readonly string _path;
-    private int _lastLoadSucceeded = 1;
+    private int _overwriteBlockedAfterCorruptLoad;
 
     public JsonSettingsDocumentStoreAdapter(string path)
     {
@@ -23,7 +24,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         {
             if (!File.Exists(_path))
             {
-                Interlocked.Exchange(ref _lastLoadSucceeded, 1);
+                Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -31,6 +32,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             using var document = JsonDocument.Parse(json);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
+                Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
@@ -59,12 +61,16 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 result[sectionNode.Name] = section;
             }
 
-            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
+            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
             return result;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Interlocked.Exchange(ref _lastLoadSucceeded, 0);
+            Interlocked.Exchange(
+                ref _overwriteBlockedAfterCorruptLoad,
+                ShouldBlockOverwriteAfterLoadFailure(ex) ? 1 : 0);
+            Debug.WriteLine(
+                $"[JsonSettingsDocumentStoreAdapter] load failed path={_path} ex={ex.GetType().Name} msg={ex.Message}");
             return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -72,10 +78,10 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
         ArgumentNullException.ThrowIfNull(data);
-        if (File.Exists(_path) && Volatile.Read(ref _lastLoadSucceeded) == 0)
+        if (File.Exists(_path) && Volatile.Read(ref _overwriteBlockedAfterCorruptLoad) == 1)
         {
             throw new InvalidOperationException(
-                "Settings load previously failed; refusing to overwrite existing JSON settings file.");
+                "Settings load detected JSON corruption; refusing to overwrite existing JSON settings file.");
         }
 
         var parent = Path.GetDirectoryName(_path);
@@ -113,14 +119,14 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
             if (File.Exists(_path))
             {
-                TryReplaceOrOverwrite(tempPath, _path);
+                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, _path);
             }
             else
             {
                 File.Move(tempPath, _path);
             }
 
-            Interlocked.Exchange(ref _lastLoadSucceeded, 1);
+            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
         }
         finally
         {
@@ -132,21 +138,17 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 }
                 catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
-                    // Best-effort cleanup; keep the primary save exception.
+                    Debug.WriteLine(
+                        $"[JsonSettingsDocumentStoreAdapter] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
                 }
             }
         }
     }
 
-    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
+    private static bool ShouldBlockOverwriteAfterLoadFailure(Exception ex)
     {
-        try
-        {
-            File.Replace(tempPath, targetPath, null);
-        }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
-        {
-            File.Copy(tempPath, targetPath, overwrite: true);
-        }
+        ArgumentNullException.ThrowIfNull(ex);
+        return ex is JsonException;
     }
+
 }

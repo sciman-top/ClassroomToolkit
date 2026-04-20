@@ -10,6 +10,7 @@ namespace ClassroomToolkit.Infra.Logging;
 public class FileLoggerProvider : ILoggerProvider
 {
     private readonly record struct LogQueueItem(DateTime Timestamp, string Message);
+    private const int LogQueueCapacity = 8192;
     private const int QueueBatchSize = 64;
     private const int QueueDrainTimeoutMs = 3000;
     private const int QueueCancelGraceTimeoutMs = 1000;
@@ -18,11 +19,12 @@ public class FileLoggerProvider : ILoggerProvider
     private readonly Func<DateTime> _nowProvider;
     private readonly bool _resetExistingLogsOnStartup;
     private readonly ConcurrentDictionary<string, FileLogger> _loggers = new();
-    private readonly BlockingCollection<LogQueueItem> _messageQueue = new();
+    private readonly BlockingCollection<LogQueueItem> _messageQueue = new(LogQueueCapacity);
     private readonly Task _processQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _disposeState;
     private int _queueResourcesDisposed;
+    private long _droppedMessageCount;
 
     public FileLoggerProvider(
         string logDirectory,
@@ -75,7 +77,14 @@ public class FileLoggerProvider : ILoggerProvider
 
         try
         {
-            _messageQueue.Add(new LogQueueItem(timestamp, message));
+            if (!_messageQueue.TryAdd(new LogQueueItem(timestamp, message)))
+            {
+                var dropped = Interlocked.Increment(ref _droppedMessageCount);
+                if ((dropped & 0x3F) == 1)
+                {
+                    Debug.WriteLine($"[FileLoggerProvider] Queue full. Dropped log messages={dropped}.");
+                }
+            }
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {

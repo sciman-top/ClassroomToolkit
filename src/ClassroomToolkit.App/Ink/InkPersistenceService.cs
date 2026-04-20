@@ -390,7 +390,7 @@ public sealed class InkPersistenceService
             File.WriteAllText(tempPath, content);
             if (File.Exists(path))
             {
-                TryReplaceOrOverwrite(tempPath, path);
+                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
             }
             else
             {
@@ -403,18 +403,6 @@ public sealed class InkPersistenceService
             {
                 _ = TryDeleteFileSafe(tempPath);
             }
-        }
-    }
-
-    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
-    {
-        try
-        {
-            File.Replace(tempPath, targetPath, null);
-        }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
-        {
-            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 

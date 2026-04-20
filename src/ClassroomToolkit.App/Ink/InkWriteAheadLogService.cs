@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,7 +18,7 @@ public sealed class InkWriteAheadLogService
 {
     private const string InkFolderName = ".ctk-ink";
     private const string WalFileName = ".ink-wal.json";
-    private static readonly object FileLock = new();
+    private static readonly ConcurrentDictionary<string, object> WalFileLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly JsonSerializerOptions _options;
 
@@ -39,7 +40,7 @@ public sealed class InkWriteAheadLogService
         }
 
         var walPath = GetWalPath(sourcePath);
-        lock (FileLock)
+        lock (GetWalFileLock(walPath))
         {
             var map = LoadMap(walPath);
             map[BuildKey(sourcePath, pageIndex)] = new InkWalEntry
@@ -62,7 +63,7 @@ public sealed class InkWriteAheadLogService
         }
 
         var walPath = GetWalPath(sourcePath);
-        lock (FileLock)
+        lock (GetWalFileLock(walPath))
         {
             var map = LoadMap(walPath);
             if (!map.Remove(BuildKey(sourcePath, pageIndex)))
@@ -81,7 +82,7 @@ public sealed class InkWriteAheadLogService
         }
 
         var walPath = GetWalPathInDirectory(directoryPath);
-        lock (FileLock)
+        lock (GetWalFileLock(walPath))
         {
             var map = LoadMap(walPath);
             if (map.Count == 0)
@@ -156,6 +157,11 @@ public sealed class InkWriteAheadLogService
         return Path.Combine(directory, InkFolderName, WalFileName);
     }
 
+    private static object GetWalFileLock(string walPath)
+    {
+        return WalFileLocks.GetOrAdd(walPath, static _ => new object());
+    }
+
     private Dictionary<string, InkWalEntry> LoadMap(string walPath)
     {
         if (!File.Exists(walPath))
@@ -203,7 +209,7 @@ public sealed class InkWriteAheadLogService
             File.WriteAllText(temp, json);
             if (File.Exists(walPath))
             {
-                TryReplaceOrOverwrite(temp, walPath);
+                AtomicFileReplaceUtility.ReplaceOrOverwrite(temp, walPath);
             }
             else
             {
@@ -229,18 +235,6 @@ public sealed class InkWriteAheadLogService
                     // Best-effort cleanup for temp WAL files.
                 }
             }
-        }
-    }
-
-    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
-    {
-        try
-        {
-            File.Replace(tempPath, targetPath, null);
-        }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
-        {
-            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 

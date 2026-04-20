@@ -1,4 +1,5 @@
 using System.Text;
+using System.Diagnostics;
 using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.Infra.Settings;
@@ -30,10 +31,12 @@ public sealed class IniSettingsStore
         }
         if (!TryReadAllLinesWithFallback(_path, out var lines))
         {
+            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=read-all-lines-fallback-failed");
             return false;
         }
         if (ContainsNullCharacter(lines))
         {
+            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=null-character-detected");
             return false;
         }
 
@@ -151,7 +154,7 @@ public sealed class IniSettingsStore
             File.WriteAllText(tempPath, builder.ToString(), Encoding.UTF8);
             if (File.Exists(_path))
             {
-                TryReplaceOrOverwrite(tempPath, _path);
+                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, _path);
             }
             else
             {
@@ -169,20 +172,10 @@ public sealed class IniSettingsStore
             }
             catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
             {
-                // temp cleanup best-effort; never mask primary write exception
+                Debug.WriteLine(
+                    $"[IniSettingsStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             }
         }
     }
 
-    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
-    {
-        try
-        {
-            File.Replace(tempPath, targetPath, null);
-        }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
-        {
-            File.Copy(tempPath, targetPath, overwrite: true);
-        }
-    }
 }

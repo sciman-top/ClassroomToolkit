@@ -112,12 +112,13 @@ public static class StartupCompatibilityProbe
         EvaluateSettingsPath(settingsPath, issues);
         EvaluateVcppRuntime(issues);
         EvaluateNativeDependencies(issues);
+        var presentationProcessTokens = BuildPresentationProcessTokens(presentationClassifierOverridesJson);
         EvaluatePresentationPrivilegeConsistency(
             issues,
-            BuildPresentationProcessTokens(presentationClassifierOverridesJson));
+            presentationProcessTokens);
         EvaluatePresentationArchitectureConsistency(
             issues,
-            BuildPresentationProcessTokens(presentationClassifierOverridesJson));
+            presentationProcessTokens);
 
         return new StartupCompatibilityReport(issues);
     }

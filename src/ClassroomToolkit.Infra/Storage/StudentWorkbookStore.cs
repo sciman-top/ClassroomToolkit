@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
+using System.Diagnostics;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -71,7 +72,7 @@ public sealed class StudentWorkbookStore
 
             return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
         }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex) && ShouldFallbackToTemplateOnReadFailure(ex))
         {
             var template = CreateTemplateWorkbook();
             TrySaveWorkbook(template.Workbook, path, template.RollStateJson);
@@ -115,7 +116,7 @@ public sealed class StudentWorkbookStore
             }
             if (File.Exists(path))
             {
-                TryReplaceOrOverwrite(tempPath, path);
+                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
             }
             else
             {
@@ -133,20 +134,10 @@ public sealed class StudentWorkbookStore
                 catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
                     // Best-effort cleanup for temp workbook files.
+                    Debug.WriteLine(
+                        $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
                 }
             }
-        }
-    }
-
-    private static void TryReplaceOrOverwrite(string tempPath, string targetPath)
-    {
-        try
-        {
-            File.Replace(tempPath, targetPath, null);
-        }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
-        {
-            File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
 
@@ -158,8 +149,22 @@ public sealed class StudentWorkbookStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Best-effort self-heal write. Keep runtime available even when workbook file is locked.
+            Debug.WriteLine(
+                $"[StudentWorkbookStore] self-heal save failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
         }
+    }
+
+    private static bool ShouldFallbackToTemplateOnReadFailure(Exception ex)
+    {
+        ArgumentNullException.ThrowIfNull(ex);
+
+        // Access/IO failures are operational issues and must surface to caller.
+        // Only parsing/format-style failures should trigger self-heal fallback.
+        return ex is not (
+            IOException
+            or UnauthorizedAccessException
+            or PathTooLongException
+            or NotSupportedException);
     }
 
     private static StudentWorkbookLoadResult CreateTemplateWorkbook()
