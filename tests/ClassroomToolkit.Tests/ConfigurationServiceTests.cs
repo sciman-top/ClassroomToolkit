@@ -125,6 +125,36 @@ public sealed class ConfigurationServiceTests
     }
 
     [Fact]
+    public void Constructor_ShouldDefaultToIniDocument_WhenAppSettingsExistsWithoutSettingsKeys()
+    {
+        var baseDirectory = CreateTempDirectory();
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(baseDirectory, "appsettings.json"),
+                """
+                {
+                  "Logging": {
+                    "LogLevel": {
+                      "Default": "Information"
+                    }
+                  }
+                }
+                """);
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Ini);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldUseSolutionRootSettingsIni_WhenRunningFromBuildOutput()
     {
         var solutionRoot = CreateTempDirectory();

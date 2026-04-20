@@ -155,6 +155,8 @@ public sealed class ConfigurationService : IConfigurationService
                     : SettingsDocumentFormat.Ini;
             }
 
+            // Compatibility default: when appsettings.json exists but does not configure
+            // settings document keys, keep legacy INI document mode.
             var format = configuredFormat ?? SettingsDocumentFormat.Ini;
             if (string.IsNullOrWhiteSpace(configuredPath))
             {
