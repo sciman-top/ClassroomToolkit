@@ -27,6 +27,18 @@ public sealed class StudentPhotoResolverTests
         result.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("_1001")]
+    [InlineData("1001_")]
+    [InlineData("_1001_")]
+    [InlineData("__ClassA__")]
+    public void SanitizeSegment_ShouldPreserveValidUnderscores(string segment)
+    {
+        var result = StudentPhotoResolver.SanitizeSegment(segment);
+
+        result.Should().Be(segment);
+    }
+
     [Fact]
     public void ResolvePhotoPath_ShouldNotTraverseOutsideRoot_WhenClassNameIsParentDirectory()
     {
@@ -95,6 +107,34 @@ public sealed class StudentPhotoResolverTests
         var classDirectory = Path.Combine(rootPath, className);
         Directory.CreateDirectory(classDirectory);
         var studentId = "1001";
+        var target = Path.Combine(classDirectory, $"{studentId}.jpg");
+        File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            var result = resolver.ResolvePhotoPath(className, studentId);
+
+            result.Should().Be(target);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ResolvePhotoPath_ShouldResolve_WhenClassNameAndStudentIdUseValidEdgeUnderscores()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_edge_underscore");
+        var className = "__ClassA__";
+        var studentId = "_1001_";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
         var target = Path.Combine(classDirectory, $"{studentId}.jpg");
         File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
 

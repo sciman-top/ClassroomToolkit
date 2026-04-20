@@ -1,4 +1,4 @@
-using ClassroomToolkit.Interop.Presentation;
+namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class KeyboardHook : IDisposable
 {

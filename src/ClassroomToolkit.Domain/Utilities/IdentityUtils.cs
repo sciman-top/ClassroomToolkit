@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -51,6 +52,10 @@ public static class IdentityUtils
         return string.IsNullOrEmpty(normalized) ? string.Empty : normalized.ToUpper(CultureInfo.InvariantCulture);
     }
 
+    [SuppressMessage(
+        "Security",
+        "CA5350:Do Not Use Weak Cryptographic Algorithms",
+        Justification = "SHA1 row-key hashing is a compatibility identifier, not a security boundary.")]
     public static string BuildRowKey(string? studentId, string? name, string? className, string? groupName)
     {
         var parts = string.Join("|",
@@ -62,9 +67,8 @@ public static class IdentityUtils
         {
             return string.Empty;
         }
-        using var sha1 = SHA1.Create();
         var bytes = Encoding.UTF8.GetBytes(parts);
-        var hash = sha1.ComputeHash(bytes);
+        var hash = SHA1.HashData(bytes);
         var builder = new StringBuilder(hash.Length * 2);
         foreach (var b in hash)
         {

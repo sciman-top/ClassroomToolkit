@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
+namespace ClassroomToolkit.Interop.Presentation;
+
 public sealed partial class KeyboardHook
 {
     public void Start()

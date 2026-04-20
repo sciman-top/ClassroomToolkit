@@ -46,10 +46,8 @@ public sealed class ClassRoster
             }
             list.Add(i);
         }
-        if (!map.ContainsKey(IdentityUtils.AllGroupName))
-        {
-            map[IdentityUtils.AllGroupName] = Enumerable.Range(0, students.Count).ToList();
-        }
+        // "全部" is a reserved aggregate group and must always represent all students.
+        map[IdentityUtils.AllGroupName] = Enumerable.Range(0, students.Count).ToList();
         return map;
     }
 

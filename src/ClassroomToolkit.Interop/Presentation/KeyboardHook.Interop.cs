@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 
+namespace ClassroomToolkit.Interop.Presentation;
+
 public sealed partial class KeyboardHook
 {
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
@@ -26,6 +28,6 @@ public sealed partial class KeyboardHook
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern short GetKeyState(int nVirtKey);
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 }

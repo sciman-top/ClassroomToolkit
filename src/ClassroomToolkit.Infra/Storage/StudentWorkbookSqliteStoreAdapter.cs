@@ -346,9 +346,9 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             var students = classSnapshot.Students.Select(student => new StudentRecord(
                     student.StudentId ?? string.Empty,
                     student.Name ?? string.Empty,
-                    student.ClassName ?? classSnapshot.ClassName,
+                    string.IsNullOrWhiteSpace(student.ClassName) ? classSnapshot.ClassName : student.ClassName,
                     student.GroupName ?? string.Empty,
-                    student.RowId ?? Guid.NewGuid().ToString("N"),
+                    string.IsNullOrWhiteSpace(student.RowId) ? Guid.NewGuid().ToString("N") : student.RowId,
                     student.RowKey ?? string.Empty,
                     student.ExtraFields ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))
                 .ToList();

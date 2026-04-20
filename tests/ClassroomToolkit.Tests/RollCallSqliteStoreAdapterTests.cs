@@ -257,6 +257,23 @@ public sealed class RollCallSqliteStoreAdapterTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldRecoverMalformedSnapshotStudentClassAndRowId_WhenBridgeThrows()
+    {
+        var dbPath = CreateTempDbPath();
+        SeedRollCallSnapshotWorkbook(dbPath,
+            """
+            {"activeClass":"高一1班","classes":[{"className":"高一1班","columnOrder":["学号","姓名","班级","分组","__row_id__"],"students":[{"studentId":"001","name":"张三","className":"","groupName":"一组","rowId":" ","rowKey":"rk:x","extraFields":{}}]}]}
+            """);
+        var adapter = new RollCallSqliteStoreAdapter(new ThrowingRollCallStore(), _ => dbPath);
+
+        var loaded = adapter.LoadOrCreate("students.xlsx");
+        var student = loaded.Workbook.GetActiveRoster().Students.Single();
+
+        student.ClassName.Should().Be("高一1班");
+        student.RowId.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public void Save_ShouldFallbackToDefaultPath_WhenResolverReturnsBlank()
     {
         var workbook = CreateWorkbook();
@@ -363,6 +380,39 @@ public sealed class RollCallSqliteStoreAdapterTests
         command.CommandText = "SELECT roll_state_json FROM roll_call_state WHERE id = 1 LIMIT 1;";
         var scalar = command.ExecuteScalar();
         return scalar as string;
+    }
+
+    private static void SeedRollCallSnapshotWorkbook(string dbPath, string workbookJson)
+    {
+        using var connection = new SqliteConnection($"Data Source={dbPath}");
+        connection.Open();
+
+        using (var create = connection.CreateCommand())
+        {
+            create.CommandText =
+                """
+                CREATE TABLE IF NOT EXISTS roll_call_workbook_snapshot
+                (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    workbook_json TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                );
+                """;
+            create.ExecuteNonQuery();
+        }
+
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            INSERT INTO roll_call_workbook_snapshot(id, workbook_json, updated_at_utc)
+            VALUES(1, $workbook, $updated)
+            ON CONFLICT(id) DO UPDATE SET
+                workbook_json = excluded.workbook_json,
+                updated_at_utc = excluded.updated_at_utc;
+            """;
+        command.Parameters.AddWithValue("$workbook", workbookJson);
+        command.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
+        command.ExecuteNonQuery();
     }
 
     private static string CreateVersionedRollStateJson(long revision, DateTime updatedAtUtc, string currentStudent)

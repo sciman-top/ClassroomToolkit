@@ -1,4 +1,4 @@
-using ClassroomToolkit.Interop.Presentation;
+namespace ClassroomToolkit.Interop.Presentation;
 
 public readonly record struct KeyboardHookSuppressionDecision(
     bool ShouldSuppress,

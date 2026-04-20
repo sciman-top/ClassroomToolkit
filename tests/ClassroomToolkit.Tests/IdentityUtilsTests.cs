@@ -53,4 +53,17 @@ public sealed class IdentityUtilsTests
         key1.Should().NotBeEmpty();
         key1.Should().Be(key2);
     }
+
+    [Fact]
+    public void BuildRowKey_ShouldDocumentSha1CompatibilitySuppression()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.Domain",
+            "Utilities",
+            "IdentityUtils.cs"));
+
+        source.Should().Contain("CA5350:Do Not Use Weak Cryptographic Algorithms");
+        source.Should().Contain("compatibility identifier");
+    }
 }

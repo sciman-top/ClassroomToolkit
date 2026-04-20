@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Interop.Utilities;
+
+namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class KeyboardHook
 {
@@ -179,6 +180,6 @@ public sealed partial class KeyboardHook
             return null;
         }
 
-        return Enum.IsDefined(typeof(VirtualKey), key) ? key : null;
+        return Enum.IsDefined(key) ? key : null;
     }
 }

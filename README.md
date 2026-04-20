@@ -59,7 +59,7 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 - [English README](./README.en.md)
 - [Teacher Guide](./使用指南.md)
 - [Architecture docs](./docs/architecture/)
-- [Release prevention checklist](./docs/runbooks/release-prevention-checklist.md)
+- [Release checklist](./docs/runbooks/release-checklist.md)
 - [Pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 
 ## Notes
@@ -69,45 +69,3 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 
 ## License
 MIT
-
-## Why this project
-- Pain: Repeated manual governance checks and inconsistent project setup across classroom repos.
-- Result: Consistent setup, safer changes, and faster validation loops.
-- Differentiator: Rule distribution and quality gates are executed as a repeatable workflow.
-
-## Who it is for
-- Repository maintainers and teaching operations engineers
-- Managing classroom templates, checks, and policy rollouts
-- Use this when manual setup or validation starts causing repeated drift
-
-## Quick Start (5 Minutes)
-### Prerequisites
-- PowerShell 7+
-- Git working copy with access to governance scripts
-
-### Run
-```bash
-powershell -File scripts/doctor.ps1
-```
-
-### Expected Output
-- HEALTH=GREEN in doctor output
-- verify/target checks report PASS
-
-## What you can try first
-- Run doctor to validate current governance state
-- Run install in plan mode before safe distribution
-- Use cycle/autopilot scripts for governed iteration
-
-## FAQ
-- Q: Doctor reports FAIL
-- A: Run scripts/verify.ps1 first, fix the first failing gate, then rerun doctor
-
-## Limitations
-- Designed for governance-managed repositories
-- Requires policy and target mappings to be maintained
-
-## Next steps
-- docs/
-- RELEASE_TEMPLATE.md
-- issues/

@@ -96,21 +96,12 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug 
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
 
-If you want a persistent browser session for future automation, use the helper script in this repo:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools/browser-session/start-browser-session.ps1 -Name github -Url https://github.com/sciman-top/ClassroomToolkit
-agent-browser --cdp 9222 open https://github.com/sciman-top/ClassroomToolkit
-```
-
-The script launches Chrome or Edge with a dedicated profile so login state stays separate from your daily browser.
-
 ## Documentation
 
 - [Chinese README](./README.md)
 - [Teacher Guide](./使用指南.md)
 - [Architecture docs](./docs/architecture/)
-- [Release prevention checklist](./docs/runbooks/release-prevention-checklist.md)
+- [Release checklist](./docs/runbooks/release-checklist.md)
 - [Classroom pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 
 ## Known Limitations

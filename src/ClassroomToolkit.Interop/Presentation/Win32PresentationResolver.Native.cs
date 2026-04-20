@@ -84,8 +84,8 @@ public sealed partial class Win32PresentationResolver
 
     private static uint GetProcessId(IntPtr hwnd)
     {
-        NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
-        return pid;
+        var threadId = NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
+        return threadId == 0 ? 0u : pid;
     }
 
     private static string GetProcessName(uint processId)
