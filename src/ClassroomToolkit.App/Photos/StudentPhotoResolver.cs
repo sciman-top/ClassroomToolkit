@@ -20,7 +20,7 @@ public sealed class StudentPhotoResolver : IDisposable
     private static readonly HashSet<string> Extensions = new(PreferredExtensions, StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToHashSet();
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);  // 延长缓存时间，减少重复索引
-    private static readonly TimeSpan FreshCacheDirectProbeWindow = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MissProbeInterval = TimeSpan.FromSeconds(2);
     private static readonly Dictionary<string, string> EmptyIndex = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _rootPath;
     private readonly ConcurrentDictionary<string, DirectoryCache> _cache = new(StringComparer.OrdinalIgnoreCase);
@@ -120,14 +120,20 @@ public sealed class StudentPhotoResolver : IDisposable
         {
             if (freshCache.Index.TryGetValue(key, out var cachedPath))
             {
-                return cachedPath;
+                if (File.Exists(cachedPath))
+                {
+                    return cachedPath;
+                }
+
+                _cache.TryRemove(directory, out _);
             }
 
-            // Only probe filesystem when directory timestamp changed; this avoids repeated misses
-            // paying 4x File.Exists checks while cache is still fresh.
+            var now = DateTime.UtcNow;
+            // Skip direct probes only for a short interval. This avoids repeated misses
+            // paying 4x File.Exists checks while still detecting new files promptly.
             if (TryGetDirectoryWriteTimeUtc(directory, out var writeTimeUtc)
                 && writeTimeUtc <= freshCache.DirectoryWriteTimeUtc
-                && DateTime.UtcNow - freshCache.Timestamp > FreshCacheDirectProbeWindow)
+                && StudentPhotoCachePolicy.ShouldSkipMissProbe(now, freshCache.LastMissProbeUtc, MissProbeInterval))
             {
                 return null;
             }
@@ -136,8 +142,11 @@ public sealed class StudentPhotoResolver : IDisposable
             if (!string.IsNullOrWhiteSpace(changedDirectPath))
             {
                 _cache.TryRemove(directory, out _);
+                return changedDirectPath;
             }
-            return changedDirectPath;
+
+            TryMarkMissProbe(directory, freshCache, now);
+            return null;
         }
 
         var direct = ResolveByPreferredExtensions(directory, normalizedStudentId);
@@ -266,7 +275,7 @@ public sealed class StudentPhotoResolver : IDisposable
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
-            _cache[directory] = new DirectoryCache(now, directoryWriteTimeUtc, index);
+            _cache[directory] = new DirectoryCache(now, directoryWriteTimeUtc, DateTime.MinValue, index);
             return index;
         }
     }
@@ -281,8 +290,14 @@ public sealed class StudentPhotoResolver : IDisposable
             return true;
         }
 
-        cache = new DirectoryCache(DateTime.MinValue, DateTime.MinValue, EmptyIndex);
+        cache = new DirectoryCache(DateTime.MinValue, DateTime.MinValue, DateTime.MinValue, EmptyIndex);
         return false;
+    }
+
+    private void TryMarkMissProbe(string directory, DirectoryCache cached, DateTime nowUtc)
+    {
+        var updated = cached with { LastMissProbeUtc = nowUtc };
+        _cache.TryUpdate(directory, updated, cached);
     }
 
     private static DateTime GetDirectoryWriteTimeUtcOrDefault(string directory)
@@ -378,5 +393,9 @@ public sealed class StudentPhotoResolver : IDisposable
         return string.IsNullOrWhiteSpace(normalizedClass) ? "default" : normalizedClass;
     }
 
-    private sealed record DirectoryCache(DateTime Timestamp, DateTime DirectoryWriteTimeUtc, Dictionary<string, string> Index);
+    private sealed record DirectoryCache(
+        DateTime Timestamp,
+        DateTime DirectoryWriteTimeUtc,
+        DateTime LastMissProbeUtc,
+        Dictionary<string, string> Index);
 }
