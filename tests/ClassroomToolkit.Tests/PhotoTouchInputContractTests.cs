@@ -18,6 +18,7 @@ public sealed class PhotoTouchInputContractTests
         source.Should().Contain("OverlayRoot.TouchUp += OnTouchUp;");
         source.Should().Contain("OverlayRoot.LostTouchCapture += OnOverlayLostTouchCapture;");
         source.Should().Contain("PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus");
+        source.Should().Contain("PhotoTouchInteractionPolicy.ShouldUseSingleTouchPan(");
         source.Should().Contain("BeginPhotoPan(");
         source.Should().Contain("PhotoPanPointerKind.Touch");
     }

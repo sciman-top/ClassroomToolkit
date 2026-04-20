@@ -8,10 +8,12 @@ public sealed class PhotoTouchInteractionPolicyTests
 {
     [Theory]
     [InlineData(true, false, PaintToolMode.Cursor, false, 1, true)]
-    [InlineData(true, false, PaintToolMode.Cursor, false, 2, false)]
-    [InlineData(true, false, PaintToolMode.Brush, false, 1, false)]
+    [InlineData(true, false, PaintToolMode.Brush, false, 1, true)]
+    [InlineData(true, false, PaintToolMode.Shape, false, 1, true)]
     [InlineData(true, false, PaintToolMode.Cursor, true, 1, false)]
-    [InlineData(false, false, PaintToolMode.Cursor, false, 1, false)]
+    [InlineData(true, true, PaintToolMode.Brush, false, 1, false)]
+    [InlineData(false, false, PaintToolMode.Brush, false, 1, false)]
+    [InlineData(true, false, PaintToolMode.Cursor, false, 2, false)]
     public void ShouldUseSingleTouchPan_ShouldMatchExpected(
         bool photoModeActive,
         bool boardActive,

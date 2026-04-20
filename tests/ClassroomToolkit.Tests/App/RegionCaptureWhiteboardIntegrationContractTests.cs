@@ -5,23 +5,27 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class RegionCaptureWhiteboardIntegrationContractTests
 {
     [Fact]
-    public void ToolbarBoardButton_ShouldUseSingleClickCapture_AndSecondClickEnterWhiteboard()
+    public void ToolbarBoardButton_ShouldExposeExplicitBoardActions_InsteadOfDoubleClickOnlyCopy()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var xaml = File.ReadAllText(GetToolbarXamlPath());
+        var source = ReadToolbarSource();
 
-        source.Should().NotContain("private readonly DispatcherTimer _boardClickTimer;");
-        source.Should().NotContain("private const int BoardClickDecisionDelayMs = 280;");
-        source.Should().Contain("if (_boardActive)");
-        source.Should().Contain("SetBoardActive(false);");
-        source.Should().Contain("if (_overlay?.IsPhotoModeActive == true)");
-        source.Should().Contain("SetBoardActive(true);");
-        source.Should().Contain("RegionCaptureRequested?.Invoke()");
+        xaml.Should().Contain("x:Name=\"BoardActionsPopup\"");
+        xaml.Should().Contain("x:Name=\"BoardCaptureActionButton\"");
+        xaml.Should().Contain("x:Name=\"BoardWhiteboardActionButton\"");
+        xaml.Should().Contain("x:Name=\"BoardColorActionButton\"");
+        xaml.Should().Contain("ToolTip=\"截图 / 白板 / 底色\"");
+        xaml.Should().NotContain("ToolTip=\"单击截图，双击白板，长按改色\"");
+        source.Should().Contain("private BoardPrimaryAction _lastBoardPrimaryAction");
+        source.Should().Contain("OnBoardCaptureActionClick");
+        source.Should().Contain("OnBoardWhiteboardActionClick");
+        source.Should().Contain("OnBoardColorActionClick");
     }
 
     [Fact]
     public void ToolbarNonBoardActions_ShouldClearRegionCaptureResumeArm_AndExitWhiteboardForToolSwitch()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: true);");
         source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: false);");
@@ -34,7 +38,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     public void ToolbarPassthroughCancel_ShouldReplayClickToToolbar()
     {
         var source = File.ReadAllText(GetMainWindowPaintSourcePath());
-        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var toolbarSource = ReadToolbarSource();
         var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
         var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
 
@@ -50,7 +54,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void SessionCaptureWhiteboardExit_ShouldRefreshBoardVisualAfterPhotoModeExit()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("_overlay?.ExitPhotoMode();");
         source.Should().Contain("RefreshBoardButtonVisualState();");
@@ -59,7 +63,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void BoardClick_ShouldClearOtherSelectionVisuals_AndKeepBoardSelectedWhileCaptureIsPending()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("PreviewMouseDown += OnPreviewMouseDown;");
         source.Should().Contain("ToolbarResumeCancellationPolicy.ShouldCancelPendingResumeOnToolbarPress(");
@@ -74,7 +78,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void ToolbarNonBoardPress_ShouldCancelActiveRegionSelection_WhenToolbarIsAboveMask()
     {
-        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var toolbarSource = ReadToolbarSource();
         var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
 
         toolbarSource.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress()");
@@ -85,7 +89,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void ToolbarHoverDuringPendingCapture_ShouldCancelActiveRegionSelection_AsPointerMove()
     {
-        var toolbarSource = File.ReadAllText(GetToolbarSourcePath());
+        var toolbarSource = ReadToolbarSource();
         var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
         var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
 
@@ -161,7 +165,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void BoardSecondClickDuringPendingCapture_ShouldCancelMaskAndEnterWhiteboardDirectly()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("if (_regionCapturePending || _directWhiteboardEntryArmed || _resumeRegionCaptureArmed)");
         source.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();");
@@ -172,7 +176,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void BoardInteraction_ShouldResetToolSelectionBaseline_ToAvoidShapeToggleFallback()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("private void ResetToolSelectionBaselineForBoardInteraction()");
         source.Should().Contain("_toolSelectionManager.Reset(PaintToolMode.Brush);");
@@ -183,7 +187,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     [Fact]
     public void RegionCaptureResume_ShouldUseInputPriorityAndMouseLeaveImmediateTrigger()
     {
-        var source = File.ReadAllText(GetToolbarSourcePath());
+        var source = ReadToolbarSource();
 
         source.Should().Contain("new DispatcherTimer(DispatcherPriority.Input)");
         source.Should().Contain("Interval = TimeSpan.FromMilliseconds(16)");
@@ -198,16 +202,16 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         var xaml = File.ReadAllText(GetToolbarXamlPath());
 
         xaml.Should().NotContain("x:Name=\"RegionCaptureButton\"");
-        xaml.Should().Contain("ToolTip=\"单击截图，双击白板，长按改色\"");
+        xaml.Should().Contain("ToolTip=\"截图 / 白板 / 底色\"");
     }
 
-    private static string GetToolbarSourcePath()
+    private static string ReadToolbarSource()
     {
-        return TestPathHelper.ResolveRepoPath(
+        return ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
             "Paint",
-            "PaintToolbarWindow.xaml.cs");
+            "PaintToolbarWindow*.cs");
     }
 
     private static string GetMainWindowPaintSourcePath()
@@ -254,3 +258,4 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     }
 
 }
+

@@ -15,6 +15,41 @@
     <Window.Resources>
         <SolidColorBrush x:Key="Brush_ShapeTool_Icon" Color="{StaticResource Color_Accent_Primary_Hover}"/>
         <SolidColorBrush x:Key="Brush_ResourceTool_Icon" Color="{StaticResource Color_Accent_Teaching}"/>
+        <!-- Toolbar-local compact styles: keep visual size consistent and avoid clipping in low-occlusion mode. -->
+        <Style x:Key="Style_ToolbarIconButton" TargetType="Button" BasedOn="{StaticResource Style_IconButton}">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="ToolTipService.IsEnabled" Value="True"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="ToolTipService.Placement" Value="Top"/>
+        </Style>
+        <Style x:Key="Style_ToolbarIconToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource Style_IconButton_Active}">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="ToolTipService.IsEnabled" Value="True"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="ToolTipService.Placement" Value="Top"/>
+        </Style>
+        <Style x:Key="Style_ToolbarColorBubbleToggle" TargetType="ToggleButton" BasedOn="{StaticResource Style_ColorBubbleToggle}">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="ToolTipService.IsEnabled" Value="True"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="ToolTipService.Placement" Value="Top"/>
+        </Style>
 
         <ContextMenu x:Key="ShapeMenu" Placement="Bottom">
             <MenuItem Header="直线" Tag="Line" Click="OnShapeMenuItemClick">
@@ -66,7 +101,7 @@
                 BorderBrush="{StaticResource Brush_Border_Subtle}"
                 BorderThickness="1"
                 CornerRadius="22"
-                Height="46"
+                MinHeight="46"
                 Padding="8,4"
                 MouseLeftButtonDown="OnToolbarDragStart"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}">
@@ -88,7 +123,7 @@
             </Grid>
 
             <ToggleButton x:Name="CursorButton"
-                          Style="{StaticResource Style_IconButton_Active}"
+                          Style="{StaticResource Style_ToolbarIconToggleButton}"
                           Click="OnModeButtonClick"
                           ToolTip="指针"
                           Foreground="{StaticResource Brush_Text_Primary}">
@@ -102,18 +137,24 @@
             <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="10" Padding="4,3" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
-                                  Style="{StaticResource Style_ColorBubbleToggle}"
-                                  ToolTip="颜色 1（长按改）"
+                                  Style="{StaticResource Style_ToolbarColorBubbleToggle}"
+                                  ToolTip="颜色 1：黑色。点按使用，再点/长按换色"
+                                  PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
+                                  PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}"/>
                     <ToggleButton x:Name="QuickColor2Button" Background="{StaticResource Brush_Pen_Red}" Tag="1"
-                                  Style="{StaticResource Style_ColorBubbleToggle}"
-                                  ToolTip="颜色 2（长按改）"
+                                  Style="{StaticResource Style_ToolbarColorBubbleToggle}"
+                                  ToolTip="颜色 2：红色。点按使用，再点/长按换色"
+                                  PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
+                                  PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}"/>
                     <ToggleButton x:Name="QuickColor3Button" Background="{StaticResource Brush_Pen_Blue}" Tag="2"
-                                  Style="{StaticResource Style_ColorBubbleToggle}"
-                                  ToolTip="颜色 3（长按改）"
+                                  Style="{StaticResource Style_ToolbarColorBubbleToggle}"
+                                  ToolTip="颜色 3：蓝色。点按使用，再点/长按换色"
+                                  PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
+                                  PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor3Command}"/>
                 </StackPanel>
@@ -121,15 +162,15 @@
 
             <Rectangle Width="6" Fill="Transparent"/>
 
-            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="10" Padding="4,1" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+            <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="10" Padding="4,2" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_IconButton_Active}" Click="OnModeButtonClick" ToolTip="橡皮擦" Foreground="{StaticResource Brush_Warning}">
+                    <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_ToolbarIconToggleButton}" Click="OnModeButtonClick" ToolTip="橡皮擦" Foreground="{StaticResource Brush_Warning}">
                         <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                     </ToggleButton>
-                    <ToggleButton x:Name="RegionEraseButton" Style="{StaticResource Style_IconButton_Active}" Click="OnModeButtonClick" ToolTip="区域擦除" Foreground="{StaticResource Brush_Warning}">
+                    <ToggleButton x:Name="RegionEraseButton" Style="{StaticResource Style_ToolbarIconToggleButton}" Click="OnModeButtonClick" ToolTip="区域擦除" Foreground="{StaticResource Brush_Warning}">
                         <Path Data="{StaticResource Icon_RegionErase}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                     </ToggleButton>
-                    <Button x:Name="ClearButton" Style="{StaticResource Style_IconButton}" Click="OnClearClick" ToolTip="清空本页">
+                    <Button x:Name="ClearButton" Style="{StaticResource Style_ToolbarIconButton}" Click="OnClearClick" ToolTip="清空本页">
                         <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource Brush_Danger}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
                     </Button>
                 </StackPanel>
@@ -137,33 +178,73 @@
 
             <Rectangle Width="1" Height="20" Fill="{StaticResource Brush_Border_Strong}" Margin="8,0" Opacity="0.45"/>
 
-            <Button x:Name="UndoButton" Style="{StaticResource Style_IconButton}" Click="OnUndoClick" ToolTip="撤销">
+            <Button x:Name="UndoButton" Style="{StaticResource Style_ToolbarIconButton}" Click="OnUndoClick" ToolTip="撤销">
                 <Path Data="{StaticResource Icon_Undo}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
 
             <ToggleButton x:Name="ShapeButton"
-                    Style="{StaticResource Style_IconButton_Active}"
+                    Style="{StaticResource Style_ToolbarIconToggleButton}"
+                    PreviewMouseLeftButtonDown="OnShapePointerDown"
+                    PreviewTouchDown="OnShapeTouchDown"
                     Click="OnShapeButtonClick"
-                    ToolTip="图形（长按菜单）"
+                    ToolTip="图形：当前直线。点按使用，再点/长按选择"
                     ContextMenu="{StaticResource ShapeMenu}"
                     Foreground="{StaticResource Brush_ShapeTool_Icon}"
                     behaviors:LongPressBehavior.Command="{Binding OpenShapeMenuCommand}">
                 <Path x:Name="ShapeButtonIconPath" Data="{StaticResource Icon_ShapeLineSolid}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </ToggleButton>
 
-            <Button x:Name="PhotoOpenButton" Style="{StaticResource Style_IconButton}" Click="OnPhotoOpenClick" ToolTip="打开图片/PDF">
+            <Button x:Name="PhotoOpenButton" Style="{StaticResource Style_ToolbarIconButton}" Click="OnPhotoOpenClick" ToolTip="打开图片/PDF">
                 <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_ResourceTool_Icon}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
 
-            <ToggleButton x:Name="BoardButton" Style="{StaticResource Style_IconButton_Active}" Click="OnBoardClick" ToolTip="单击截图，双击白板，长按改色" behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}" Foreground="{StaticResource Brush_Accent_Violet}">
+            <ToggleButton x:Name="BoardButton"
+                          Style="{StaticResource Style_ToolbarIconToggleButton}"
+                          PreviewMouseLeftButtonDown="OnBoardPointerDown"
+                          PreviewTouchDown="OnBoardTouchDown"
+                          Click="OnBoardClick"
+                          ToolTip="截图 / 白板 / 底色"
+                          behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}"
+                          Foreground="{StaticResource Brush_Accent_Violet}">
                  <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </ToggleButton>
 
-            <Button x:Name="SettingsButton" Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="画笔设置">
+            <Button x:Name="SettingsButton" Style="{StaticResource Style_ToolbarIconButton}" Click="OnSettingsClick" ToolTip="画笔设置">
                 <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Accent_Violet}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
             </Button>
             </StackPanel>
         </Border>
+
+        <Popup x:Name="BoardActionsPopup"
+               Placement="Top"
+               PlacementTarget="{Binding ElementName=BoardButton}"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border Style="{StaticResource Style_BubbleShellRoot}" Padding="8">
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="BoardCaptureActionButton"
+                            Content="截图"
+                            MinWidth="64"
+                            MinHeight="{StaticResource Size_Touch_Target_Min}"
+                            Margin="0,0,6,0"
+                            Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnBoardCaptureActionClick"/>
+                    <Button x:Name="BoardWhiteboardActionButton"
+                            Content="白板"
+                            MinWidth="64"
+                            MinHeight="{StaticResource Size_Touch_Target_Min}"
+                            Margin="0,0,6,0"
+                            Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnBoardWhiteboardActionClick"/>
+                    <Button x:Name="BoardColorActionButton"
+                            Content="底色"
+                            MinWidth="64"
+                            MinHeight="{StaticResource Size_Touch_Target_Min}"
+                            Style="{StaticResource Style_SecondaryButton}"
+                            Click="OnBoardColorActionClick"/>
+                </StackPanel>
+            </Border>
+        </Popup>
 
         <Border x:Name="BoardHintBubble"
                 Visibility="Collapsed"

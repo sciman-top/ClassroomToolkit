@@ -40,6 +40,9 @@ public partial class PaintToolbarWindow : Window
     private bool _toolbarDragging;
     private System.Windows.Point _toolbarDragOffset;
     private IDisposable? _toolbarDragScope;
+    private ToolbarSecondTapTarget _pendingSecondTapTarget;
+    private int? _pendingQuickColorIndex;
+    private BoardPrimaryAction _lastBoardPrimaryAction = BoardPrimaryAction.CaptureRegion;
     public event Action<PaintToolMode>? ModeChanged;
     public event Action<MediaColor>? BrushColorChanged;
     public event Action<MediaColor>? BoardColorChanged;
@@ -202,6 +205,7 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
+        ResetPendingSecondTapState();
         PrepareForNonBoardToolbarAction(exitWhiteboard: true);
         if (ReferenceEquals(sender, CursorButton))
         {
@@ -220,48 +224,10 @@ public partial class PaintToolbarWindow : Window
         }
     }
 
-    private void OnColorClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleButton button)
-        {
-            return;
-        }
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
-        
-        var index = ResolveQuickColorIndex(button.Tag);
-        if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
-        {
-            return;
-        }
-        
-        var shouldResetShape = _shapeType != PaintShapeType.None;
-        var selectedColor = _quickColors[index.Value];
-        
-        // 更新颜色选择状态
-        UpdateQuickColorSelection(selectedColor);
-        
-        // 始终同步回画笔模式，避免工具高亮状态残留
-        SelectToolMode(PaintToolMode.Brush, allowToggleOffCurrent: false);
-        
-        // 重置形状类型（如果需要）
-        if (shouldResetShape)
-        {
-            ResetShapeType();
-        }
-        
-        // 应用画笔设置
-        if (_overlay != null)
-        {
-            _overlay.SetBrush(selectedColor, _brushSize, _brushOpacity);
-        }
-        
-        SafeActionExecutionExecutor.TryExecute(
-            () => BrushColorChanged?.Invoke(selectedColor),
-            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: brush color callback failed: {ex.Message}"));
-    }
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
+        ResetPendingSecondTapState();
         PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         if (_overlay != null)
         {
@@ -275,6 +241,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
     {
+        ResetPendingSecondTapState();
         PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         if (_overlay != null)
         {
@@ -286,26 +253,10 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: undo callback failed: {ex.Message}"));
     }
 
-    private void OnShapeButtonClick(object sender, RoutedEventArgs e)
-    {
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
-        var shapeType = ResolveEffectiveShapeType();
-        ApplyShapeType(shapeType);
-        SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: true);
-    }
-
-    private void OpenShapeMenu()
-    {
-        if (ShapeButton.ContextMenu == null)
-        {
-            return;
-        }
-        ShapeButton.ContextMenu.PlacementTarget = ShapeButton;
-        ShapeButton.ContextMenu.IsOpen = true;
-    }
 
     private void OnShapeMenuItemClick(object sender, RoutedEventArgs e)
     {
+        ResetPendingSecondTapState();
         if (sender is not System.Windows.Controls.MenuItem menuItem || menuItem.Tag is not string tag)
         {
             return;
@@ -320,69 +271,6 @@ public partial class PaintToolbarWindow : Window
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
     }
 
-    private void OnBoardClick(object sender, RoutedEventArgs e)
-    {
-        if (_initializing)
-        {
-            return;
-        }
-
-        if (_regionCapturePending || _directWhiteboardEntryArmed || _resumeRegionCaptureArmed)
-        {
-            RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
-        }
-
-        if (IsSessionCaptureWhiteboardActive())
-        {
-            ClearDirectWhiteboardEntryArm();
-            _regionCapturePending = false;
-            SetBoardActive(false);
-            _overlay?.ExitPhotoMode();
-            RefreshBoardButtonVisualState();
-            ShowBoardHint("已退出白板");
-            return;
-        }
-
-        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
-        if (whiteboardActive)
-        {
-            ClearDirectWhiteboardEntryArm();
-            _regionCapturePending = false;
-            SetBoardActive(false);
-            ShowBoardHint("已退出白板");
-            return;
-        }
-
-        if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)
-            && _overlay?.IsPhotoModeActive != true)
-        {
-            ResetToolSelectionBaselineForBoardInteraction();
-            ClearNonBoardSelectionVisualState();
-            ClearDirectWhiteboardEntryArm();
-            SetBoardActive(true);
-            ShowBoardHint("已进入白板");
-            return;
-        }
-
-        if (_overlay?.IsPhotoModeActive == true)
-        {
-            ResetToolSelectionBaselineForBoardInteraction();
-            ClearNonBoardSelectionVisualState();
-            _regionCapturePending = false;
-            SetBoardActive(true);
-            ShowBoardHint("已进入白板");
-            return;
-        }
-
-        ResetToolSelectionBaselineForBoardInteraction();
-        ClearNonBoardSelectionVisualState();
-        _regionCapturePending = true;
-        ShowBoardHint("请框选截图区域");
-        RefreshBoardButtonVisualState();
-        SafeActionExecutionExecutor.TryExecute(
-            () => RegionCaptureRequested?.Invoke(),
-            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: region capture callback failed: {ex.Message}"));
-    }
 
     private void ShowBoardHint(string message)
     {
@@ -832,6 +720,7 @@ public partial class PaintToolbarWindow : Window
         }
         button.Background = new SolidColorBrush(color);
         button.Foreground = GetContrastingBrush(color);
+        button.ToolTip = $"颜色 {index + 1}：{GetQuickColorDisplayName(color)}。点按使用，再点/长按换色";
     }
 
     private ToggleButton? GetQuickColorButton(int index)
@@ -849,6 +738,44 @@ public partial class PaintToolbarWindow : Window
     {
         var luminance = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
         return luminance > 0.6 ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
+    }
+
+    private static string GetQuickColorDisplayName(MediaColor color)
+    {
+        if (color.R == Colors.Black.R && color.G == Colors.Black.G && color.B == Colors.Black.B)
+        {
+            return "黑色";
+        }
+        if (color.R == Colors.Red.R && color.G == Colors.Red.G && color.B == Colors.Red.B)
+        {
+            return "红色";
+        }
+        if (color.R == 0x1E && color.G == 0x90 && color.B == 0xFF)
+        {
+            return "蓝色";
+        }
+        if (color.R == 0x24 && color.G == 0xB4 && color.B == 0x7E)
+        {
+            return "绿色";
+        }
+        if (color.R == Colors.Yellow.R && color.G == Colors.Yellow.G && color.B == Colors.Yellow.B)
+        {
+            return "黄色";
+        }
+        if (color.R == Colors.Orange.R && color.G == Colors.Orange.G && color.B == Colors.Orange.B)
+        {
+            return "橙色";
+        }
+        if (color.R == 0x80 && color.G == 0x00 && color.B == 0x80)
+        {
+            return "紫色";
+        }
+        if (color.R == Colors.White.R && color.G == Colors.White.G && color.B == Colors.White.B)
+        {
+            return "白色";
+        }
+
+        return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
     private static int? ResolveQuickColorIndex(object? tag)
@@ -874,11 +801,13 @@ public partial class PaintToolbarWindow : Window
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
+        ResetPendingSecondTapState();
         PrepareForNonBoardToolbarAction(exitWhiteboard: false);
         SafeActionExecutionExecutor.TryExecute(
             () => SettingsRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: settings callback failed: {ex.Message}"));
     }
+
 
     private void PrepareForNonBoardToolbarAction(bool exitWhiteboard)
     {
@@ -1036,6 +965,22 @@ public partial class PaintToolbarWindow : Window
         {
             ShapeButtonIconPath.Data = geometry;
         }
+        ShapeButton.ToolTip = $"图形：当前{GetShapeDisplayName(type)}。点按使用，再点/长按选择";
+    }
+
+    private static string GetShapeDisplayName(PaintShapeType type)
+    {
+        return type switch
+        {
+            PaintShapeType.DashedLine => "虚线",
+            PaintShapeType.Arrow => "箭头",
+            PaintShapeType.DashedArrow => "虚线箭头",
+            PaintShapeType.Rectangle => "空心矩形",
+            PaintShapeType.RectangleFill => "实心矩形",
+            PaintShapeType.Ellipse => "椭圆",
+            PaintShapeType.Triangle => "三角形",
+            _ => "直线"
+        };
     }
 
     private void OnToolbarDragStart(object sender, MouseButtonEventArgs e)

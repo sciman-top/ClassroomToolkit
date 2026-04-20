@@ -4,7 +4,7 @@ internal static class ImageManagerActivationPolicy
 {
     internal static bool ShouldOpenOnSingleClick(bool isFolder, bool isPdf, bool isImage)
     {
-        return false;
+        return isFolder || isPdf || isImage;
     }
 
     internal static bool ShouldOpenOnDoubleClick(bool isFolder, bool isPdf, bool isImage)

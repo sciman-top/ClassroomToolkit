@@ -11,7 +11,6 @@ public partial class AutoExitDialog : Window
         InitializeComponent();
         MinutesBox.Text = Math.Max(0, minutes).ToString();
         MinutesBox.SelectAll();
-        WindowActivationExecutor.TryKeyboardFocus(MinutesBox, shouldFocus: true);
         Loaded += OnDialogLoaded;
         Closed += OnDialogClosed;
     }

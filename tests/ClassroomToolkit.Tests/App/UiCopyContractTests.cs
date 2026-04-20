@@ -11,12 +11,15 @@ public sealed class UiCopyContractTests
 
         xaml.Should().Contain("Title=\"课堂工具箱\"");
         xaml.Should().Contain("Text=\"课堂工具箱\"");
-        xaml.Should().Contain("ToolTip=\"画笔（长按设置）\"");
-        xaml.Should().Contain("ToolTip=\"点名与计时（长按设置）\"");
+        xaml.Should().Contain("ToolTip=\"画笔\"");
+        xaml.Should().Contain("ToolTip=\"点名与计时\"");
+        xaml.Should().Contain("ToolTip=\"更多\"");
         xaml.Should().Contain("ToolTip=\"兼容诊断\"");
         xaml.Should().NotContain("Title=\"sciman课堂工具箱\"");
         xaml.Should().NotContain("ToolTip=\"打开画笔，长按可设置\"");
         xaml.Should().NotContain("ToolTip=\"点名与计时，长按可设置\"");
+        xaml.Should().NotContain("ToolTip=\"画笔（长按设置）\"");
+        xaml.Should().NotContain("ToolTip=\"点名与计时（长按设置）\"");
         xaml.Should().NotContain("ToolTip=\"兼容性诊断\"");
         xaml.Should().Contain("Content=\"点名与计时\"");
         xaml.Should().NotContain("Content=\"点名 / 计时\"");

@@ -195,7 +195,7 @@ internal static class PhotoManipulationRoutingPolicy
         {
             return PhotoManipulationRoutingDecision.Ignore;
         }
-        if (mode != PaintToolMode.Cursor || inkOperationActive || photoPanning)
+        if (inkOperationActive || photoPanning)
         {
             return PhotoManipulationRoutingDecision.Consume;
         }

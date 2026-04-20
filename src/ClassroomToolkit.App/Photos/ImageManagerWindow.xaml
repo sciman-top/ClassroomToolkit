@@ -262,9 +262,13 @@
                                       VerticalAlignment="Center"
                                       IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
                                       Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
+                            <Button x:Name="EnterSelectionModeButton" Content="多选" Margin="12,0,0,0"
+                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="72"
+                                    Style="{StaticResource Style_SecondaryButton}"
+                                    Click="OnEnterSelectionModeClick"/>
                             <Button x:Name="DeleteFilesButton" Content="删除" Margin="12,0,0,0"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="86"
-                                    Style="{StaticResource Style_DangerButton}" IsEnabled="False"
+                                    Style="{StaticResource Style_DangerButton}" IsEnabled="False" Visibility="Collapsed"
                                     Click="OnDeleteSelectedFilesClick"/>
                             <Button x:Name="SelectAllFilesButton" Content="全选" Margin="6,0,0,0"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="72"

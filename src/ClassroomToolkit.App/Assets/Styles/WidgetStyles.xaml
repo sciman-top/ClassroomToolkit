@@ -11,6 +11,10 @@
     <sys:Double x:Key="Size_Button_Icon_Compact">32</sys:Double>
     <sys:Double x:Key="Size_Button_Icon_Regular">36</sys:Double>
     <sys:Double x:Key="Size_Button_Icon_Large">40</sys:Double>
+    <sys:Double x:Key="Size_Touch_Target_Min">44</sys:Double>
+    <sys:Double x:Key="Size_Touch_Target_Primary">48</sys:Double>
+    <sys:Double x:Key="Size_Touch_Target_Bubble_Hit">56</sys:Double>
+    <sys:Double x:Key="Size_Touch_ScrollBar">16</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Regular">96</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Height_Compact">30</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Dialog">44</sys:Double>
@@ -680,6 +684,8 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Min}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Min}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -688,9 +694,19 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid Background="Transparent">
+                        <Border x:Name="border"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                BorderBrush="Transparent"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
@@ -719,6 +735,8 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Primary}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Primary}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -727,9 +745,20 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1" SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid Background="Transparent">
+                        <Border x:Name="border"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                              <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
@@ -1273,6 +1302,8 @@
     <Style x:Key="Style_ColorBubbleToggle" TargetType="ToggleButton">
         <Setter Property="Width" Value="28"/>
         <Setter Property="Height" Value="28"/>
+        <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Bubble_Hit}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Bubble_Hit}"/>
         <Setter Property="Margin" Value="2,0"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -1281,7 +1312,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Grid>
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Ellipse x:Name="Ring"
                                  Width="28"
                                  Height="28"
@@ -1321,20 +1352,26 @@
     <Style x:Key="Style_ColorPaletteButton" TargetType="Button">
         <Setter Property="Width" Value="22"/>
         <Setter Property="Height" Value="22"/>
+        <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Min}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Min}"/>
         <Setter Property="Margin" Value="2,0"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="7">
-                        <Border.Effect>
-                            <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-                        </Border.Effect>
-                    </Border>
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7">
+                            <Border.Effect>
+                                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
+                            </Border.Effect>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="RenderTransform">
@@ -1861,14 +1898,14 @@
     <!-- Vertical ScrollBar -->
     <Style TargetType="ScrollBar">
         <Setter Property="OverridesDefaultStyle" Value="True"/>
-        <Setter Property="Width" Value="6"/>
-        <Setter Property="MinWidth" Value="6"/>
+        <Setter Property="Width" Value="{StaticResource Size_Touch_ScrollBar}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Size_Touch_ScrollBar}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Cursor" Value="Arrow"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
-                    <Grid x:Name="GridRoot" Width="6" Background="Transparent">
+                    <Grid x:Name="GridRoot" Width="{StaticResource Size_Touch_ScrollBar}" Background="Transparent">
                         <Track x:Name="PART_Track" IsDirectionReversed="True">
                             <Track.DecreaseRepeatButton>
                                 <RepeatButton Command="ScrollBar.PageUpCommand"
@@ -1887,8 +1924,8 @@
                         <!-- Horizontal orientation: swap width/height -->
                         <Trigger Property="Orientation" Value="Horizontal">
                             <Setter TargetName="GridRoot" Property="Width" Value="Auto"/>
-                            <Setter TargetName="GridRoot" Property="Height" Value="6"/>
-                            <Setter TargetName="GridRoot" Property="MinHeight" Value="6"/>
+                            <Setter TargetName="GridRoot" Property="Height" Value="{StaticResource Size_Touch_ScrollBar}"/>
+                            <Setter TargetName="GridRoot" Property="MinHeight" Value="{StaticResource Size_Touch_ScrollBar}"/>
                             <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -1899,8 +1936,8 @@
         <Style.Triggers>
             <Trigger Property="Orientation" Value="Horizontal">
                 <Setter Property="Width" Value="Auto"/>
-                <Setter Property="Height" Value="6"/>
-                <Setter Property="MinHeight" Value="6"/>
+                <Setter Property="Height" Value="{StaticResource Size_Touch_ScrollBar}"/>
+                <Setter Property="MinHeight" Value="{StaticResource Size_Touch_ScrollBar}"/>
             </Trigger>
         </Style.Triggers>
     </Style>

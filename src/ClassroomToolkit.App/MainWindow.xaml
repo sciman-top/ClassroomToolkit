@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:behaviors="clr-namespace:ClassroomToolkit.App.Behaviors"
         mc:Ignorable="d"
         Title="课堂工具箱"
         Height="316" Width="332"
@@ -52,8 +51,7 @@
                         Content="画笔"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
-                        ToolTip="画笔（长按设置）"
-                        behaviors:LongPressBehavior.Command="{Binding OpenPaintSettingsCommand}"/>
+                        ToolTip="画笔"/>
 
                 <Button Grid.Column="1"
                         x:Name="RollCallButton"
@@ -61,8 +59,7 @@
                         Content="点名与计时"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
-                        ToolTip="点名与计时（长按设置）"
-                        behaviors:LongPressBehavior.Command="{Binding OpenRollCallSettingsCommand}"/>
+                        ToolTip="点名与计时"/>
             </Grid>
 
             <Border Grid.Row="2"
@@ -100,8 +97,16 @@
                         <Button x:Name="SettingsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
-                                Click="OnLauncherSettingsClick"
-                                ToolTip="设置"/>
+                                Click="OnLauncherMoreClick"
+                                ToolTip="更多">
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="LauncherMoreMenu" Placement="Top">
+                                    <MenuItem Header="自动关闭" Click="OnLauncherAutoExitMenuClick"/>
+                                    <MenuItem Header="画笔设置" Click="OnLauncherPaintSettingsMenuClick"/>
+                                    <MenuItem Header="点名设置" Click="OnLauncherRollCallSettingsMenuClick"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 

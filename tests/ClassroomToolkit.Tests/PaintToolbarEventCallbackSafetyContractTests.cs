@@ -8,7 +8,7 @@ public sealed class PaintToolbarEventCallbackSafetyContractTests
     [Fact]
     public void ToolbarCallbacks_ShouldBeGuardedBySafeActionExecutor()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = GetSource();
 
         source.Should().Contain("SafeActionExecutionExecutor.TryExecute(");
         source.Should().Contain("ModeChanged?.Invoke(mode)");
@@ -24,12 +24,12 @@ public sealed class PaintToolbarEventCallbackSafetyContractTests
         source.Should().Contain("WhiteboardToggled?.Invoke(_boardActive)");
     }
 
-    private static string GetSourcePath()
+    private static string GetSource()
     {
-        return TestPathHelper.ResolveRepoPath(
+        return ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
             "Paint",
-            "PaintToolbarWindow.xaml.cs");
+            "PaintToolbarWindow*.cs");
     }
 }

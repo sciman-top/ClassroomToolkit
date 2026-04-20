@@ -11,14 +11,14 @@ public partial class QuickColorPaletteWindow : Window
 
     private static readonly ColorOption[] Options =
     {
-        new("黑", Colors.Black),
-        new("红", Colors.Red),
-        new("蓝", MediaColor.FromRgb(0x1E, 0x90, 0xFF)),
-        new("绿", MediaColor.FromRgb(0x24, 0xB4, 0x7E)),
-        new("黄", Colors.Yellow),
-        new("橙", Colors.Orange),
-        new("紫", MediaColor.FromRgb(0x80, 0x00, 0x80)),
-        new("白", Colors.White)
+        new("黑色", Colors.Black),
+        new("红色", Colors.Red),
+        new("蓝色", MediaColor.FromRgb(0x1E, 0x90, 0xFF)),
+        new("绿色", MediaColor.FromRgb(0x24, 0xB4, 0x7E)),
+        new("黄色", Colors.Yellow),
+        new("橙色", Colors.Orange),
+        new("紫色", MediaColor.FromRgb(0x80, 0x00, 0x80)),
+        new("白色", Colors.White)
     };
 
     public MediaColor? SelectedColor { get; private set; }
@@ -37,13 +37,13 @@ public partial class QuickColorPaletteWindow : Window
         {
             var button = new System.Windows.Controls.Button
             {
-                Width = 22,
-                Height = 22,
-                Margin = new Thickness(2, 0, 2, 0),
+                Width = 36,
+                Height = 36,
+                Margin = new Thickness(4, 0, 4, 0),
                 Background = new SolidColorBrush(option.Color),
                 BorderBrush = new SolidColorBrush(GetContrastBorderColor(option.Color)),
                 BorderThickness = new Thickness(IsDarkColor(option.Color) ? 2 : 1),
-                ToolTip = option.Name,
+                ToolTip = $"选择{option.Name}",
                 Tag = option.Color,
                 Style = (Style)FindResource("Style_ColorPaletteButton")
             };

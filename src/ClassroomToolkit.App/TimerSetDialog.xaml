@@ -45,7 +45,8 @@
                                     Style="{StaticResource Style_SecondaryButton}"
                                     Padding="0"
                                     Cursor="Hand" Click="OnMinutesDownClick"
-                                    PreviewMouseLeftButtonDown="OnMinutesDownMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave"/>
+                                    PreviewMouseLeftButtonDown="OnMinutesDownMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave"
+                                    PreviewTouchDown="OnMinutesDownTouchDown" PreviewTouchUp="OnMinutesTouchUpOrLostCapture" LostTouchCapture="OnMinutesTouchUpOrLostCapture"/>
                             <TextBox x:Name="MinutesBox" Width="68" Height="{StaticResource Size_Button_Action_Height_Compact}" TextAlignment="Center" FontWeight="Bold" FontSize="16"
                                      Foreground="{StaticResource Brush_Primary}" TextChanged="OnMinutesTextChanged"
                                      VerticalContentAlignment="Center"/>
@@ -54,7 +55,8 @@
                                     Style="{StaticResource Style_SecondaryButton}"
                                     Padding="0"
                                     Cursor="Hand" Click="OnMinutesUpClick"
-                                    PreviewMouseLeftButtonDown="OnMinutesUpMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave"/>
+                                    PreviewMouseLeftButtonDown="OnMinutesUpMouseDown" PreviewMouseLeftButtonUp="OnMinutesMouseUp" MouseLeave="OnMinutesMouseLeave"
+                                    PreviewTouchDown="OnMinutesUpTouchDown" PreviewTouchUp="OnMinutesTouchUpOrLostCapture" LostTouchCapture="OnMinutesTouchUpOrLostCapture"/>
                         </StackPanel>
                     </Grid>
 

@@ -25,6 +25,7 @@ public partial class LauncherBubbleWindow : Window
     private bool _hasDragScreenArea;
     private IntPtr _hwnd;
     private IDisposable? _dragScope;
+    private int? _activeTouchId;
     
     // 拖动阈值：移动超过此距离才算拖动，否则算点击
     private const double DragThreshold = 5.0;
@@ -43,6 +44,10 @@ public partial class LauncherBubbleWindow : Window
         MouseLeftButtonDown += OnMouseDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseUp;
+        TouchDown += OnTouchDown;
+        TouchMove += OnTouchMove;
+        TouchUp += OnTouchUp;
+        LostTouchCapture += OnLostTouchCapture;
         Loaded += OnWindowLoaded;
         IsVisibleChanged += OnWindowVisibleChanged;
         Closed += OnWindowClosed;
@@ -69,6 +74,10 @@ public partial class LauncherBubbleWindow : Window
         MouseLeftButtonDown -= OnMouseDown;
         MouseMove -= OnMouseMove;
         MouseLeftButtonUp -= OnMouseUp;
+        TouchDown -= OnTouchDown;
+        TouchMove -= OnTouchMove;
+        TouchUp -= OnTouchUp;
+        LostTouchCapture -= OnLostTouchCapture;
         Loaded -= OnWindowLoaded;
         IsVisibleChanged -= OnWindowVisibleChanged;
         Closed -= OnWindowClosed;
@@ -144,12 +153,7 @@ public partial class LauncherBubbleWindow : Window
         {
             return;
         }
-        _dragging = true;
-        _moved = false;
-        _dragOffset = e.GetPosition(this);
-        _dragStartPosition = new System.Windows.Point(Left, Top);
-        TryUpdateDragScreenArea(PointToScreen(_dragOffset));
-        BeginDragScope();
+        BeginDrag(e.GetPosition(this));
         
         // 捕获鼠标，防止拖动时失去鼠标事件
         CaptureMouse();
@@ -162,9 +166,87 @@ public partial class LauncherBubbleWindow : Window
             return;
         }
 
+        UpdateDrag(e.GetPosition(this));
+    }
+
+    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+        
+        // 释放鼠标捕获
+        ReleaseMouseCapture();
+        EndDrag(shouldRestoreWhenTap: true);
+    }
+
+    private void OnTouchDown(object? sender, TouchEventArgs e)
+    {
+        _activeTouchId = e.TouchDevice.Id;
+        BeginDrag(e.GetTouchPoint(this).Position);
+        CaptureTouch(e.TouchDevice);
+        e.Handled = true;
+    }
+
+    private void OnTouchMove(object? sender, TouchEventArgs e)
+    {
+        if (_activeTouchId != e.TouchDevice.Id)
+        {
+            return;
+        }
+
+        UpdateDrag(e.GetTouchPoint(this).Position);
+        e.Handled = true;
+    }
+
+    private void OnTouchUp(object? sender, TouchEventArgs e)
+    {
+        if (_activeTouchId != e.TouchDevice.Id)
+        {
+            return;
+        }
+
+        ReleaseTouchCapture(e.TouchDevice);
+        EndDrag(shouldRestoreWhenTap: true);
+        _activeTouchId = null;
+        e.Handled = true;
+    }
+
+    private void OnLostTouchCapture(object? sender, TouchEventArgs e)
+    {
+        if (_activeTouchId != e.TouchDevice.Id)
+        {
+            return;
+        }
+
+        _dragging = false;
+        _hasDragScreenArea = false;
+        EndDragScope();
+        _activeTouchId = null;
+        e.Handled = true;
+    }
+
+    private void BeginDrag(System.Windows.Point position)
+    {
+        _dragging = true;
+        _moved = false;
+        _dragOffset = position;
+        _dragStartPosition = new System.Windows.Point(Left, Top);
+        TryUpdateDragScreenArea(PointToScreen(position));
+        BeginDragScope();
+    }
+
+    private void UpdateDrag(System.Windows.Point position)
+    {
+        if (!_dragging)
+        {
+            return;
+        }
+
         try
         {
-            var screen = PointToScreen(e.GetPosition(this));
+            var screen = PointToScreen(position);
             var newX = screen.X - _dragOffset.X;
             var newY = screen.Y - _dragOffset.Y;
             
@@ -184,8 +266,7 @@ public partial class LauncherBubbleWindow : Window
             // 计算移动距离，超过阈值才算拖动
             var deltaX = newX - _dragStartPosition.X;
             var deltaY = newY - _dragStartPosition.Y;
-            var distanceSquared = deltaX * deltaX + deltaY * deltaY;
-            if (distanceSquared > DragThresholdSquared)
+            if (deltaX * deltaX + deltaY * deltaY > DragThresholdSquared)
             {
                 _moved = true;
             }
@@ -199,24 +280,19 @@ public partial class LauncherBubbleWindow : Window
         }
     }
 
-    private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void EndDrag(bool shouldRestoreWhenTap)
     {
-        if (e.ChangedButton != MouseButton.Left)
-        {
-            return;
-        }
-        
         _dragging = false;
         _hasDragScreenArea = false;
         EndDragScope();
-        
-        // 释放鼠标捕获
-        ReleaseMouseCapture();
-        
+
         if (!_moved)
         {
-            // 点击事件：恢复主窗口
-            TryExecuteNonFatal(() => RestoreRequested?.Invoke());
+            if (shouldRestoreWhenTap)
+            {
+                // 点击事件：恢复主窗口
+                TryExecuteNonFatal(() => RestoreRequested?.Invoke());
+            }
         }
         else
         {

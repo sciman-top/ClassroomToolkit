@@ -34,6 +34,20 @@ public static class LongPressBehavior
             typeof(LongPressBehavior),
             new PropertyMetadata(false));
 
+    private static readonly DependencyProperty TouchPressActiveProperty =
+        DependencyProperty.RegisterAttached(
+            "TouchPressActive",
+            typeof(bool),
+            typeof(LongPressBehavior),
+            new PropertyMetadata(false));
+
+    private static readonly DependencyProperty SuppressMousePromotionUntilTicksProperty =
+        DependencyProperty.RegisterAttached(
+            "SuppressMousePromotionUntilTicks",
+            typeof(long),
+            typeof(LongPressBehavior),
+            new PropertyMetadata(0L));
+
     public static void SetCommand(DependencyObject element, ICommand? value)
         => element.SetValue(CommandProperty, value);
 
@@ -53,11 +67,17 @@ public static class LongPressBehavior
             element.PreviewMouseLeftButtonDown -= OnMouseDown;
             element.PreviewMouseLeftButtonUp -= OnMouseUp;
             element.MouseLeave -= OnMouseLeave;
+            element.PreviewTouchDown -= OnTouchDown;
+            element.PreviewTouchUp -= OnTouchUp;
+            element.LostTouchCapture -= OnTouchLostCapture;
             if (e.NewValue is ICommand)
             {
                 element.PreviewMouseLeftButtonDown += OnMouseDown;
                 element.PreviewMouseLeftButtonUp += OnMouseUp;
                 element.MouseLeave += OnMouseLeave;
+                element.PreviewTouchDown += OnTouchDown;
+                element.PreviewTouchUp += OnTouchUp;
+                element.LostTouchCapture += OnTouchLostCapture;
             }
         }
     }
@@ -68,7 +88,89 @@ public static class LongPressBehavior
         {
             return;
         }
-        StopTimer(element);
+
+        if (ShouldIgnoreMousePromotion(element))
+        {
+            return;
+        }
+
+        StartPressTimer(element);
+    }
+
+    private static void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        if (ShouldIgnoreMousePromotion(element))
+        {
+            return;
+        }
+
+        if (CompletePress(element))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private static void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        if (ShouldIgnoreMousePromotion(element))
+        {
+            return;
+        }
+
+        StopPressTimer(element, resetTriggered: true);
+    }
+
+    private static void OnTouchDown(object? sender, TouchEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        SetTouchPressActive(element, isActive: true);
+        StartPressTimer(element);
+        element.CaptureTouch(e.TouchDevice);
+    }
+
+    private static void OnTouchUp(object? sender, TouchEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        var handled = CompletePress(element);
+        element.ReleaseTouchCapture(e.TouchDevice);
+        SetTouchPressActive(element, isActive: false);
+        MarkMousePromotionSuppressed(element);
+        e.Handled = handled;
+    }
+
+    private static void OnTouchLostCapture(object? sender, TouchEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        StopPressTimer(element, resetTriggered: true);
+        SetTouchPressActive(element, isActive: false);
+        MarkMousePromotionSuppressed(element);
+    }
+
+    private static void StartPressTimer(UIElement element)
+    {
+        StopPressTimer(element);
         element.SetValue(TriggeredProperty, false);
         var duration = Math.Max(100, GetDuration(element));
         var timer = new DispatcherTimer
@@ -78,7 +180,7 @@ public static class LongPressBehavior
         EventHandler? tickHandler = null;
         tickHandler = (_, _) =>
         {
-            StopTimer(element);
+            StopPressTimer(element);
             element.SetValue(TriggeredProperty, true);
             ExecuteCommand(element);
         };
@@ -87,45 +189,63 @@ public static class LongPressBehavior
         timer.Start();
     }
 
-    private static void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private static bool CompletePress(UIElement? element)
     {
-        var element = sender as UIElement;
-        var triggered = element != null && (bool)element.GetValue(TriggeredProperty);
-        StopTimer(element);
-        if (element != null)
+        if (element == null)
         {
-            element.SetValue(TriggeredProperty, false);
+            return false;
         }
-        if (triggered)
-        {
-            e.Handled = true;
-        }
+
+        var triggered = (bool)element.GetValue(TriggeredProperty);
+        StopPressTimer(element);
+        element.SetValue(TriggeredProperty, false);
+        return triggered;
     }
 
-    private static void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        var element = sender as UIElement;
-        StopTimer(element);
-        if (element != null)
-        {
-            element.SetValue(TriggeredProperty, false);
-        }
-    }
-
-    private static void StopTimer(UIElement? element)
+    private static void StopPressTimer(UIElement? element, bool resetTriggered = false)
     {
         if (element == null)
         {
             return;
         }
-        if (element.GetValue(TimerProperty) is not LongPressTimerContext context)
+
+        if (element.GetValue(TimerProperty) is LongPressTimerContext context)
         {
-            return;
+            context.Timer.Tick -= context.TickHandler;
+            context.Timer.Stop();
+            element.ClearValue(TimerProperty);
         }
 
-        context.Timer.Tick -= context.TickHandler;
-        context.Timer.Stop();
-        element.ClearValue(TimerProperty);
+        if (resetTriggered)
+        {
+            element.SetValue(TriggeredProperty, false);
+        }
+    }
+
+    private static bool ShouldIgnoreMousePromotion(UIElement element)
+    {
+        if ((bool)element.GetValue(TouchPressActiveProperty))
+        {
+            return true;
+        }
+
+        return DateTime.UtcNow.Ticks <= (long)element.GetValue(SuppressMousePromotionUntilTicksProperty);
+    }
+
+    private static void SetTouchPressActive(UIElement element, bool isActive)
+    {
+        element.SetValue(TouchPressActiveProperty, isActive);
+        if (isActive)
+        {
+            element.SetValue(SuppressMousePromotionUntilTicksProperty, 0L);
+        }
+    }
+
+    private static void MarkMousePromotionSuppressed(UIElement element)
+    {
+        element.SetValue(
+            SuppressMousePromotionUntilTicksProperty,
+            DateTime.UtcNow.AddMilliseconds(250).Ticks);
     }
 
     private static void ExecuteCommand(UIElement element)

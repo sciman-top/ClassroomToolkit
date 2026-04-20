@@ -90,6 +90,48 @@ public partial class TimerSetDialog : Window
         e.Handled = true;
     }
 
+    private void OnMinutesUpTouchDown(object? sender, TouchEventArgs e)
+    {
+        if (_updating)
+        {
+            return;
+        }
+
+        IncrementMinutes();
+        StartRepeatTimer(isIncrement: true);
+        if (sender is UIElement element)
+        {
+            element.CaptureTouch(e.TouchDevice);
+        }
+        e.Handled = true;
+    }
+
+    private void OnMinutesDownTouchDown(object? sender, TouchEventArgs e)
+    {
+        if (_updating)
+        {
+            return;
+        }
+
+        DecrementMinutes();
+        StartRepeatTimer(isIncrement: false);
+        if (sender is UIElement element)
+        {
+            element.CaptureTouch(e.TouchDevice);
+        }
+        e.Handled = true;
+    }
+
+    private void OnMinutesTouchUpOrLostCapture(object? sender, TouchEventArgs e)
+    {
+        StopRepeatTimer();
+        if (sender is UIElement element)
+        {
+            element.ReleaseTouchCapture(e.TouchDevice);
+        }
+        e.Handled = true;
+    }
+
     private void OnMinutesMouseUp(object sender, MouseButtonEventArgs e)
     {
         StopRepeatTimer();

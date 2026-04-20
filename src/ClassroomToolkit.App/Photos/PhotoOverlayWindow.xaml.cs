@@ -327,8 +327,9 @@ public partial class PhotoOverlayWindow : Window
         CloseOverlay();
     }
 
-    private void OnCloseClick(object sender, RoutedEventArgs e)
+    private void OnPhotoImageMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         CloseOverlay();
     }
 

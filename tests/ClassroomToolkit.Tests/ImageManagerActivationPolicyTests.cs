@@ -6,11 +6,11 @@ namespace ClassroomToolkit.Tests;
 public sealed class ImageManagerActivationPolicyTests
 {
     [Theory]
-    [InlineData(true, false, false, false)]
-    [InlineData(false, true, false, false)]
-    [InlineData(false, false, true, false)]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, false, true, true)]
     [InlineData(false, false, false, false)]
-    public void ShouldOpenOnSingleClick_ShouldNeverOpenVisibleItems(
+    public void ShouldOpenOnSingleClick_ShouldOpenFolders_AndPreviewableFiles(
         bool isFolder,
         bool isPdf,
         bool isImage,

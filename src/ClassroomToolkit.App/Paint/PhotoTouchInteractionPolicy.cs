@@ -13,7 +13,6 @@ internal static class PhotoTouchInteractionPolicy
     {
         return photoModeActive
             && !boardActive
-            && mode == PaintToolMode.Cursor
             && !inkOperationActive
             && activeTouchCount == 1;
     }

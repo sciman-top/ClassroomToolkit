@@ -9,7 +9,7 @@ public sealed class PhotoManipulationAdmissionPolicyTests
     [Theory]
     [InlineData(false, false, PaintToolMode.Cursor, false, false, 1, false, false)]
     [InlineData(true, true, PaintToolMode.Cursor, false, false, 2, false, true)]
-    [InlineData(true, false, PaintToolMode.Brush, false, false, 2, false, true)]
+    [InlineData(true, false, PaintToolMode.Brush, false, false, 2, true, true)]
     [InlineData(true, false, PaintToolMode.Cursor, true, false, 2, false, true)]
     [InlineData(true, false, PaintToolMode.Cursor, false, true, 2, false, true)]
     [InlineData(true, false, PaintToolMode.Cursor, false, false, 1, false, true)]

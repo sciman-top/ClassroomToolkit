@@ -285,7 +285,14 @@ public partial class ImageManagerWindow
             return;
         }
 
-        OpenPreviewItem(item);
+        if (item.IsFolder)
+        {
+            OpenFolder(item.Path);
+        }
+        else
+        {
+            OpenPreviewItem(item);
+        }
         e.Handled = true;
         StopLongPressTracking(resetTriggered: true);
     }
@@ -414,6 +421,20 @@ public partial class ImageManagerWindow
     private void OnExitSelectionModeClick(object sender, RoutedEventArgs e)
     {
         ExitMultiSelectMode();
+    }
+
+    private void OnEnterSelectionModeClick(object sender, RoutedEventArgs e)
+    {
+        var sourceList = GetActiveImageList();
+        var anchorItem = sourceList.SelectedItem as ImageItem
+            ?? ViewModel.Images.FirstOrDefault(item => !item.IsFolder)
+            ?? ViewModel.Images.FirstOrDefault();
+        if (anchorItem == null)
+        {
+            return;
+        }
+
+        EnterMultiSelectMode(anchorItem, sourceList);
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -830,10 +851,12 @@ public partial class ImageManagerWindow
     private void EnterMultiSelectMode(ImageItem anchorItem, System.Windows.Controls.ListView? sourceList)
     {
         _isMultiSelectMode = true;
-        ImageList.SelectionMode = System.Windows.Controls.SelectionMode.Multiple;
-        ImageListView.SelectionMode = System.Windows.Controls.SelectionMode.Multiple;
+        EnterSelectionModeButton.Visibility = Visibility.Collapsed;
+        DeleteFilesButton.Visibility = Visibility.Visible;
         SelectAllFilesButton.Visibility = Visibility.Visible;
         ExitSelectionModeButton.Visibility = Visibility.Visible;
+        ImageList.SelectionMode = System.Windows.Controls.SelectionMode.Multiple;
+        ImageListView.SelectionMode = System.Windows.Controls.SelectionMode.Multiple;
 
         var selectionList = sourceList ?? GetActiveImageList();
         _suppressSelectionChanged = true;
@@ -854,6 +877,8 @@ public partial class ImageManagerWindow
     private void ExitMultiSelectMode()
     {
         _isMultiSelectMode = false;
+        EnterSelectionModeButton.Visibility = Visibility.Visible;
+        DeleteFilesButton.Visibility = Visibility.Collapsed;
         SelectAllFilesButton.Visibility = Visibility.Collapsed;
         ExitSelectionModeButton.Visibility = Visibility.Collapsed;
 

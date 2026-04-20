@@ -52,7 +52,33 @@ public partial class MainWindow
         _ = TryShowDialogWithDiagnostics(dialog, nameof(DiagnosticsDialog));
     }
 
-    private void OnLauncherSettingsClick(object sender, RoutedEventArgs e)
+    private void OnLauncherMoreClick(object sender, RoutedEventArgs e)
+    {
+        OpenLauncherMoreMenu();
+    }
+
+    private void OpenLauncherMoreMenu()
+    {
+        LauncherMoreMenu.PlacementTarget = SettingsButton;
+        LauncherMoreMenu.IsOpen = true;
+    }
+
+    private void OnLauncherAutoExitMenuClick(object sender, RoutedEventArgs e)
+    {
+        OpenAutoExitDialog();
+    }
+
+    private void OnLauncherPaintSettingsMenuClick(object sender, RoutedEventArgs e)
+    {
+        OnOpenPaintSettings();
+    }
+
+    private void OnLauncherRollCallSettingsMenuClick(object sender, RoutedEventArgs e)
+    {
+        OnOpenRollCallSettings();
+    }
+
+    private void OpenAutoExitDialog()
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / MainWindowRuntimeDefaults.LauncherMinutesToSeconds);
         var dialog = new AutoExitDialog(currentMinutes)

@@ -10,14 +10,13 @@
         WindowStartupLocation="Manual">
     
     <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
-        <Rectangle x:Name="BackgroundRect" Fill="Transparent" MouseLeftButtonDown="OnCloseClick"/>
+        <Rectangle x:Name="BackgroundRect" Fill="Transparent"/>
 
         <Image x:Name="PhotoImage"
                Stretch="Uniform"
                StretchDirection="DownOnly"
-               MouseLeftButtonDown="OnCloseClick"
-               Cursor="Hand"
-               SizeChanged="OnPhotoSizeChanged">
+               SizeChanged="OnPhotoSizeChanged"
+               MouseLeftButtonDown="OnPhotoImageMouseLeftButtonDown">
             <Image.Effect>
                 <StaticResource ResourceKey="Shadow_Card_Subtle"/>
             </Image.Effect>
