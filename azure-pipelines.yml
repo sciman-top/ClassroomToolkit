@@ -11,9 +11,8 @@ steps:
 - checkout: self
 
 - powershell: |
-    if (Test-Path "scripts/quality/run-local-quality-gates.ps1") {
-      powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile quick
-    } else {
-      Write-Host "No project quality script found, skip."
+    if (-not (Test-Path "scripts/quality/run-local-quality-gates.ps1")) {
+      throw "Missing required script: scripts/quality/run-local-quality-gates.ps1"
     }
+    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick
   displayName: Run local quality gates
