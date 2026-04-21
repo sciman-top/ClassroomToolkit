@@ -61,7 +61,7 @@ public class FloatingWindowCoordinatorTests
         nextState.LastTopmostPlan.Should().NotBeNull();
         executedPlan.Should().NotBeNull();
         executedPlan!.Value.TopmostExecutionPlan.EnforceZOrder.Should().BeTrue();
-        executedPlan.Value.ActivationPlan.ActivateOverlay.Should().BeTrue();
+        executedPlan.Value.ActivationPlan.ActivateOverlay.Should().BeFalse();
         executedPlan.Value.ActivationPlan.ActivateImageManager.Should().BeFalse();
         executedPlan.Value.OwnerPlan.ToolbarAction.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
         executedPlan.Value.OwnerPlan.RollCallAction.Should().Be(FloatingOwnerBindingAction.None);

@@ -21,13 +21,41 @@ public sealed class FloatingTopmostPlanPolicyTests
         plan.OverlayShouldActivate.Should().BeFalse();
     }
 
-    [Theory]
-    [InlineData(ZOrderSurface.PhotoFullscreen)]
-    [InlineData(ZOrderSurface.Whiteboard)]
-    public void Resolve_ShouldRequestOverlayActivation_WhenOverlaySceneIsFront(ZOrderSurface surface)
+    [Fact]
+    public void Resolve_ShouldRequestOverlayActivation_WhenPhotoSurfaceHasNoVisibleFloatingUtility()
     {
         var plan = FloatingTopmostPlanPolicy.Resolve(
-            frontSurface: surface,
+            frontSurface: ZOrderSurface.PhotoFullscreen,
+            toolbarVisible: false,
+            rollCallVisible: false,
+            launcherVisible: false,
+            imageManagerVisible: false,
+            overlayVisible: true);
+
+        plan.OverlayShouldActivate.Should().BeTrue();
+        plan.ImageManagerTopmost.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Resolve_ShouldNotRequestOverlayActivation_WhenPhotoSurfaceHasVisibleFloatingUtility()
+    {
+        var plan = FloatingTopmostPlanPolicy.Resolve(
+            frontSurface: ZOrderSurface.PhotoFullscreen,
+            toolbarVisible: true,
+            rollCallVisible: false,
+            launcherVisible: true,
+            imageManagerVisible: false,
+            overlayVisible: true);
+
+        plan.OverlayShouldActivate.Should().BeFalse();
+        plan.ImageManagerTopmost.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Resolve_ShouldRequestOverlayActivation_WhenWhiteboardIsFront()
+    {
+        var plan = FloatingTopmostPlanPolicy.Resolve(
+            frontSurface: ZOrderSurface.Whiteboard,
             toolbarVisible: true,
             rollCallVisible: false,
             launcherVisible: true,

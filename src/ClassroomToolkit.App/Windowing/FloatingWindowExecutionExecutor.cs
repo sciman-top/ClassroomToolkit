@@ -24,7 +24,8 @@ internal static class FloatingWindowExecutionExecutor
                 FloatingOwnerExecutionExecutor.Apply(ownerPlan, overlay, toolbar, rollCall, imageManager),
             (target, shouldActivate) => WindowActivationExecutor.TryActivate(target, shouldActivate),
             (topmostPlan, toolbar, rollCall, launcher, imageManager) =>
-                FloatingTopmostExecutionExecutor.Apply(topmostPlan, toolbar, rollCall, launcher, imageManager));
+                FloatingTopmostExecutionExecutor.Apply(topmostPlan, toolbar, rollCall, launcher, imageManager),
+            WindowTopmostExecutor.ApplyNoActivate);
     }
 
     internal static void Apply<TWindow>(
@@ -36,7 +37,8 @@ internal static class FloatingWindowExecutionExecutor
         TWindow? imageManagerWindow,
         Action<FloatingOwnerExecutionPlan, TWindow?, TWindow?, TWindow?, TWindow?> applyOwnerPlan,
         Func<TWindow?, bool, bool> tryActivate,
-        Action<FloatingTopmostExecutionPlan, TWindow?, TWindow?, TWindow?, TWindow?> applyTopmostPlan)
+        Action<FloatingTopmostExecutionPlan, TWindow?, TWindow?, TWindow?, TWindow?> applyTopmostPlan,
+        Action<TWindow?, bool, bool>? applyOverlayTopmostNoActivate = null)
         where TWindow : class
     {
         ArgumentNullException.ThrowIfNull(applyOwnerPlan);
@@ -63,6 +65,12 @@ internal static class FloatingWindowExecutionExecutor
             overlayActivationDecision,
             "Overlay",
             tryActivate);
+
+        if (plan.ReplayOverlayBelowFloatingUtilities && applyOverlayTopmostNoActivate != null)
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                () => applyOverlayTopmostNoActivate(overlayWindow, true, false));
+        }
 
         SafeActionExecutionExecutor.TryExecute(
             () => applyTopmostPlan(

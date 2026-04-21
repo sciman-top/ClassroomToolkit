@@ -47,6 +47,7 @@ public class FloatingWindowExecutionPlanPolicyTests
         plan.ActivationPlan.ActivateImageManager.Should().BeTrue();
         plan.OwnerPlan.ToolbarAction.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
         plan.OwnerPlan.RollCallAction.Should().Be(FloatingOwnerBindingAction.None);
+        plan.ReplayOverlayBelowFloatingUtilities.Should().BeTrue();
     }
 
     [Fact]
@@ -86,5 +87,6 @@ public class FloatingWindowExecutionPlanPolicyTests
             suppressOverlayActivation: true);
 
         plan.ActivationPlan.ActivateOverlay.Should().BeFalse();
+        plan.ReplayOverlayBelowFloatingUtilities.Should().BeFalse();
     }
 }

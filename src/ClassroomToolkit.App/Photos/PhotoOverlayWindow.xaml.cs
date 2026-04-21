@@ -36,7 +36,7 @@ public partial class PhotoOverlayWindow : Window
     public PhotoOverlayWindow()
     {
         InitializeComponent();
-        ShowActivated = true;
+        ShowActivated = false;
         Focusable = false;
         _autoCloseTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
         {
@@ -492,12 +492,26 @@ public partial class PhotoOverlayWindow : Window
     private void EnsureOverlayVisible()
     {
         ApplyWindowedBounds();
+        var becameVisible = false;
         if (!IsVisible)
         {
             Show();
+            becameVisible = true;
         }
 
-        WindowTopmostExecutor.ApplyNoActivate(this, enabled: true, enforceZOrder: true);
+        WindowTopmostExecutor.ApplyNoActivate(this, enabled: false, enforceZOrder: false);
+        if (becameVisible)
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
+                    {
+                        mainWindow.RequestImmediateFloatingZOrderRetouch();
+                    }
+                },
+                ex => Debug.WriteLine($"[PhotoOverlayWindow] immediate z-order retouch failed: {ex.Message}"));
+        }
     }
 
     private void UpdateStudentName(string? studentName, bool visible)

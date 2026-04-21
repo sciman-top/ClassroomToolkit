@@ -11,6 +11,7 @@ public class FloatingWindowExecutionExecutorTests
     {
         var ownerCalled = false;
         var overlayActivated = false;
+        var overlayTopmostReplayed = false;
         var imageManagerActivated = false;
         var topmostCalled = false;
         var plan = new FloatingWindowExecutionPlan(
@@ -26,7 +27,8 @@ public class FloatingWindowExecutionExecutorTests
             OwnerPlan: new FloatingOwnerExecutionPlan(
                 ToolbarAction: FloatingOwnerBindingAction.AttachOverlay,
                 RollCallAction: FloatingOwnerBindingAction.None,
-                ImageManagerAction: FloatingOwnerBindingAction.AttachOverlay));
+                ImageManagerAction: FloatingOwnerBindingAction.AttachOverlay),
+            ReplayOverlayBelowFloatingUtilities: true);
 
         FloatingWindowExecutionExecutor.Apply(
             plan,
@@ -64,10 +66,18 @@ public class FloatingWindowExecutionExecutorTests
                 topmostPlan.EnforceZOrder.Should().BeTrue();
                 launcher.Should().Be("launcher");
                 imageManager.Should().Be("image");
+            },
+            applyOverlayTopmostNoActivate: (target, enabled, enforceZOrder) =>
+            {
+                target.Should().Be("overlay");
+                enabled.Should().BeTrue();
+                enforceZOrder.Should().BeFalse();
+                overlayTopmostReplayed = true;
             });
 
         ownerCalled.Should().BeTrue();
         overlayActivated.Should().BeTrue();
+        overlayTopmostReplayed.Should().BeTrue();
         imageManagerActivated.Should().BeTrue();
         topmostCalled.Should().BeTrue();
     }
@@ -96,7 +106,8 @@ public class FloatingWindowExecutionExecutorTests
                 activationCalls++;
                 return true;
             },
-            applyTopmostPlan: (_, _, _, _, _) => { });
+            applyTopmostPlan: (_, _, _, _, _) => { },
+            applyOverlayTopmostNoActivate: (_, _, _) => throw new InvalidOperationException("should-not-run"));
 
         activationCalls.Should().Be(0);
     }
@@ -126,7 +137,8 @@ public class FloatingWindowExecutionExecutorTests
                 activationCalls++;
                 return false;
             },
-            applyTopmostPlan: (_, _, _, _, _) => topmostCalled = true);
+            applyTopmostPlan: (_, _, _, _, _) => topmostCalled = true,
+            applyOverlayTopmostNoActivate: (_, _, _) => { });
 
         activationCalls.Should().Be(2);
         topmostCalled.Should().BeTrue();
@@ -156,7 +168,8 @@ public class FloatingWindowExecutionExecutorTests
                 activationCalls++;
                 return true;
             },
-            applyTopmostPlan: (_, _, _, _, _) => throw new InvalidOperationException("topmost-failed"));
+            applyTopmostPlan: (_, _, _, _, _) => throw new InvalidOperationException("topmost-failed"),
+            applyOverlayTopmostNoActivate: (_, _, _) => { });
 
         act.Should().NotThrow();
         activationCalls.Should().Be(2);
@@ -182,7 +195,8 @@ public class FloatingWindowExecutionExecutorTests
             imageManagerWindow: "image",
             applyOwnerPlan: (_, _, _, _, _) => { },
             tryActivate: (_, _) => throw new InvalidOperationException("activate-failed"),
-            applyTopmostPlan: (_, _, _, _, _) => topmostCalled = true);
+            applyTopmostPlan: (_, _, _, _, _) => topmostCalled = true,
+            applyOverlayTopmostNoActivate: (_, _, _) => { });
 
         act.Should().NotThrow();
         topmostCalled.Should().BeTrue();

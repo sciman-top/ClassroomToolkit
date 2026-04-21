@@ -300,9 +300,19 @@ public partial class RollCallWindow
     {
         var photoVisible = _photoOverlay?.IsVisible == true;
         var groupVisible = _groupOverlay?.IsVisible == true;
+        var plan = RollCallAuxOverlayTopmostPolicy.Resolve(
+            photoVisible,
+            groupVisible,
+            enforceZOrder);
 
-        WindowTopmostExecutor.ApplyNoActivate(_photoOverlay, photoVisible, enforceZOrder);
-        WindowTopmostExecutor.ApplyNoActivate(_groupOverlay, groupVisible, enforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(
+            _photoOverlay,
+            plan.PhotoOverlayTopmost,
+            plan.PhotoOverlayEnforceZOrder);
+        WindowTopmostExecutor.ApplyNoActivate(
+            _groupOverlay,
+            plan.GroupOverlayTopmost,
+            plan.GroupOverlayEnforceZOrder);
     }
 
     internal bool HasVisibleAuxOverlay()

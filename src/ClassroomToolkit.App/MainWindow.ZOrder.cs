@@ -9,6 +9,31 @@ public partial class MainWindow
 {
     // ── Z-order policy ──
 
+    internal void RequestImmediateFloatingZOrderRetouch()
+    {
+        if (FloatingTopmostDialogSuppressionState.IsSuppressed)
+        {
+            return;
+        }
+
+        if (!Dispatcher.CheckAccess())
+        {
+            RequestApplyZOrderPolicy(forceEnforceZOrder: true);
+            return;
+        }
+
+        try
+        {
+            ApplyZOrderPolicy(forceEnforceZOrder: true);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"RequestImmediateFloatingZOrderRetouch failed: {ex.GetType().Name} - {ex.Message}");
+            RequestApplyZOrderPolicy(forceEnforceZOrder: true);
+        }
+    }
+
     private void TouchSurface(ZOrderSurface surface, bool applyPolicy = true)
     {
         var changed = _windowOrchestrator.TouchSurface(_surfaceStack, surface);

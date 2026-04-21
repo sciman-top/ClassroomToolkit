@@ -5,7 +5,7 @@
         AllowsTransparency="True"
         Background="{x:Null}"
         ShowInTaskbar="False"
-        Topmost="True"
+        Topmost="False"
         ResizeMode="NoResize"
         WindowStartupLocation="Manual">
     

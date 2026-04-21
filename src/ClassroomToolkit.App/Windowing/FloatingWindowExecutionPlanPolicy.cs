@@ -3,7 +3,8 @@ namespace ClassroomToolkit.App.Windowing;
 internal readonly record struct FloatingWindowExecutionPlan(
     FloatingTopmostExecutionPlan TopmostExecutionPlan,
     FloatingWindowActivationPlan ActivationPlan,
-    FloatingOwnerExecutionPlan OwnerPlan);
+    FloatingOwnerExecutionPlan OwnerPlan,
+    bool ReplayOverlayBelowFloatingUtilities = false);
 
 internal static class FloatingWindowExecutionPlanPolicy
 {
@@ -28,6 +29,26 @@ internal static class FloatingWindowExecutionPlanPolicy
         return new FloatingWindowExecutionPlan(
             TopmostExecutionPlan: topmostExecutionPlan,
             ActivationPlan: finalActivationPlan,
-            OwnerPlan: FloatingOwnerExecutionPlanPolicy.Resolve(ownerSnapshot));
+            OwnerPlan: FloatingOwnerExecutionPlanPolicy.Resolve(ownerSnapshot),
+            ReplayOverlayBelowFloatingUtilities: ShouldReplayOverlayBelowFloatingUtilities(
+                runtimeSnapshot,
+                topmostPlan,
+                enforceZOrder));
+    }
+
+    private static bool ShouldReplayOverlayBelowFloatingUtilities(
+        FloatingWindowRuntimeSnapshot runtimeSnapshot,
+        FloatingTopmostPlan topmostPlan,
+        bool enforceZOrder)
+    {
+        if (!runtimeSnapshot.PhotoActive || !runtimeSnapshot.OverlayVisible || !enforceZOrder)
+        {
+            return false;
+        }
+
+        return topmostPlan.ToolbarTopmost
+            || topmostPlan.RollCallTopmost
+            || topmostPlan.LauncherTopmost
+            || topmostPlan.ImageManagerTopmost;
     }
 }

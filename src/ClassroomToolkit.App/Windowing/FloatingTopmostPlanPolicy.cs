@@ -32,12 +32,32 @@ internal static class FloatingTopmostPlanPolicy
     {
         var imageManagerTopmostDecision = ImageManagerTopmostPolicy.Resolve(imageManagerVisible, frontSurface);
         var overlayActivationSurfaceDecision = OverlayActivationSurfacePolicy.Resolve(overlayVisible, frontSurface);
+        var overlayShouldActivate = overlayActivationSurfaceDecision.ShouldActivate
+            && !ShouldSuppressOverlayActivationOnPhotoSurface(
+                frontSurface,
+                toolbarVisible,
+                rollCallVisible,
+                launcherVisible);
 
         return new FloatingTopmostPlan(
             ToolbarTopmost: toolbarVisible,
             RollCallTopmost: rollCallVisible,
             LauncherTopmost: launcherVisible,
             ImageManagerTopmost: imageManagerTopmostDecision.ShouldApply,
-            OverlayShouldActivate: overlayActivationSurfaceDecision.ShouldActivate);
+            OverlayShouldActivate: overlayShouldActivate);
+    }
+
+    private static bool ShouldSuppressOverlayActivationOnPhotoSurface(
+        ZOrderSurface frontSurface,
+        bool toolbarVisible,
+        bool rollCallVisible,
+        bool launcherVisible)
+    {
+        if (frontSurface != ZOrderSurface.PhotoFullscreen)
+        {
+            return false;
+        }
+
+        return toolbarVisible || rollCallVisible || launcherVisible;
     }
 }
