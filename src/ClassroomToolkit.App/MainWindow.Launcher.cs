@@ -54,28 +54,7 @@ public partial class MainWindow
 
     private void OnLauncherMoreClick(object sender, RoutedEventArgs e)
     {
-        OpenLauncherMoreMenu();
-    }
-
-    private void OpenLauncherMoreMenu()
-    {
-        LauncherMoreMenu.PlacementTarget = SettingsButton;
-        LauncherMoreMenu.IsOpen = true;
-    }
-
-    private void OnLauncherAutoExitMenuClick(object sender, RoutedEventArgs e)
-    {
         OpenAutoExitDialog();
-    }
-
-    private void OnLauncherPaintSettingsMenuClick(object sender, RoutedEventArgs e)
-    {
-        OnOpenPaintSettings();
-    }
-
-    private void OnLauncherRollCallSettingsMenuClick(object sender, RoutedEventArgs e)
-    {
-        OnOpenRollCallSettings();
     }
 
     private void OpenAutoExitDialog()

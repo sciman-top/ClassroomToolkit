@@ -98,15 +98,7 @@
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
                                 Click="OnLauncherMoreClick"
-                                ToolTip="更多">
-                            <Button.ContextMenu>
-                                <ContextMenu x:Name="LauncherMoreMenu" Placement="Top">
-                                    <MenuItem Header="自动关闭" Click="OnLauncherAutoExitMenuClick"/>
-                                    <MenuItem Header="画笔设置" Click="OnLauncherPaintSettingsMenuClick"/>
-                                    <MenuItem Header="点名设置" Click="OnLauncherRollCallSettingsMenuClick"/>
-                                </ContextMenu>
-                            </Button.ContextMenu>
-                        </Button>
+                                ToolTip="更多"/>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 
