@@ -1,0 +1,147 @@
+[
+  {
+    "Target": "C:\\Users\\sciman\\.codex\\memories\\v2ray-agent-fix.git",
+    "RepositoryRoot": "D:\\CODE\\vps-ssh-launcher\\sciman-v2ray-agent",
+    "SourceKind": "git_file",
+    "CheckedAtUtc": "2026-04-21T12:50:58.6679649Z",
+    "Operator": "sciman-home\\sciman",
+    "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+    "RequestedFixMode": "none",
+    "RepairStrategy": "none",
+    "BeforeDenyCount": 0,
+    "BeforeDenySids": [],
+    "BeforeDenySidCounts": {},
+    "Fixed": false,
+    "BackupPath": null,
+    "AfterDenyCount": 0,
+    "AfterDenySids": [],
+    "AfterDenySidCounts": {},
+    "LockProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "index.lock create/remove probe succeeded."
+    },
+    "GitStatusProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "git status probe succeeded."
+    },
+    "Success": true
+  },
+  {
+    "Target": "D:\\CODE\\ClassroomToolkit\\.git",
+    "RepositoryRoot": "D:\\CODE\\ClassroomToolkit",
+    "SourceKind": "git_dir",
+    "CheckedAtUtc": "2026-04-21T12:51:03.8580202Z",
+    "Operator": "sciman-home\\sciman",
+    "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+    "RequestedFixMode": "none",
+    "RepairStrategy": "none",
+    "BeforeDenyCount": 0,
+    "BeforeDenySids": [],
+    "BeforeDenySidCounts": {},
+    "Fixed": false,
+    "BackupPath": null,
+    "AfterDenyCount": 0,
+    "AfterDenySids": [],
+    "AfterDenySidCounts": {},
+    "LockProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "index.lock create/remove probe succeeded."
+    },
+    "GitStatusProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "git status probe succeeded."
+    },
+    "Success": true
+  },
+  {
+    "Target": "D:\\CODE\\github-toolkit\\.git",
+    "RepositoryRoot": "D:\\CODE\\github-toolkit",
+    "SourceKind": "git_dir",
+    "CheckedAtUtc": "2026-04-21T12:51:04.0431632Z",
+    "Operator": "sciman-home\\sciman",
+    "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+    "RequestedFixMode": "none",
+    "RepairStrategy": "none",
+    "BeforeDenyCount": 0,
+    "BeforeDenySids": [],
+    "BeforeDenySidCounts": {},
+    "Fixed": false,
+    "BackupPath": null,
+    "AfterDenyCount": 0,
+    "AfterDenySids": [],
+    "AfterDenySidCounts": {},
+    "LockProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "index.lock create/remove probe succeeded."
+    },
+    "GitStatusProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "git status probe succeeded."
+    },
+    "Success": true
+  },
+  {
+    "Target": "D:\\CODE\\governed-ai-coding-runtime\\.git",
+    "RepositoryRoot": "D:\\CODE\\governed-ai-coding-runtime",
+    "SourceKind": "git_dir",
+    "CheckedAtUtc": "2026-04-21T12:51:06.0247379Z",
+    "Operator": "sciman-home\\sciman",
+    "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+    "RequestedFixMode": "none",
+    "RepairStrategy": "none",
+    "BeforeDenyCount": 0,
+    "BeforeDenySids": [],
+    "BeforeDenySidCounts": {},
+    "Fixed": false,
+    "BackupPath": null,
+    "AfterDenyCount": 0,
+    "AfterDenySids": [],
+    "AfterDenySidCounts": {},
+    "LockProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "index.lock create/remove probe succeeded."
+    },
+    "GitStatusProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "git status probe succeeded."
+    },
+    "Success": true
+  },
+  {
+    "Target": "D:\\CODE\\skills-manager\\.git",
+    "RepositoryRoot": "D:\\CODE\\skills-manager",
+    "SourceKind": "git_dir",
+    "CheckedAtUtc": "2026-04-21T12:51:06.8988381Z",
+    "Operator": "sciman-home\\sciman",
+    "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+    "RequestedFixMode": "none",
+    "RepairStrategy": "none",
+    "BeforeDenyCount": 0,
+    "BeforeDenySids": [],
+    "BeforeDenySidCounts": {},
+    "Fixed": false,
+    "BackupPath": null,
+    "AfterDenyCount": 0,
+    "AfterDenySids": [],
+    "AfterDenySidCounts": {},
+    "LockProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "index.lock create/remove probe succeeded."
+    },
+    "GitStatusProbe": {
+      "requested": true,
+      "ok": true,
+      "message": "git status probe succeeded."
+    },
+    "Success": true
+  }
+]

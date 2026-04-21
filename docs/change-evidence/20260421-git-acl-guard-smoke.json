@@ -1,0 +1,29 @@
+{
+  "Target": "D:\\CODE\\ClassroomToolkit\\.git",
+  "RepositoryRoot": "D:\\CODE\\ClassroomToolkit",
+  "SourceKind": "git_dir",
+  "CheckedAtUtc": "2026-04-21T12:44:18.0928554Z",
+  "Operator": "sciman-home\\sciman",
+  "OperatorSid": "S-1-5-21-1508733098-2535872322-1644405499-1002",
+  "RequestedFixMode": "none",
+  "RepairStrategy": "none",
+  "BeforeDenyCount": 0,
+  "BeforeDenySids": [],
+  "BeforeDenySidCounts": {},
+  "Fixed": false,
+  "BackupPath": null,
+  "AfterDenyCount": 0,
+  "AfterDenySids": [],
+  "AfterDenySidCounts": {},
+  "LockProbe": {
+    "requested": true,
+    "ok": true,
+    "message": "index.lock create/remove probe succeeded."
+  },
+  "GitStatusProbe": {
+    "requested": true,
+    "ok": true,
+    "message": "git status probe succeeded."
+  },
+  "Success": true
+}
