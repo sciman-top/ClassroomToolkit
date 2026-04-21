@@ -11,8 +11,14 @@ internal static class FloatingTopmostWatchdogPolicy
         bool rollCallVisible,
         bool launcherVisible,
         bool imageManagerVisible,
-        bool rollCallAuxOverlayVisible)
+        bool rollCallAuxOverlayVisible,
+        bool photoModeActive)
     {
+        if (photoModeActive)
+        {
+            return false;
+        }
+
         return toolbarVisible
             || rollCallVisible
             || launcherVisible

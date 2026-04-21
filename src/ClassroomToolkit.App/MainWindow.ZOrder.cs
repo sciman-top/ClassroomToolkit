@@ -326,7 +326,8 @@ public partial class MainWindow
             rollCallVisible,
             launcherVisible,
             imageManagerVisible,
-            rollCallAuxOverlayVisible);
+            rollCallAuxOverlayVisible,
+            photoModeActive: _overlayWindow?.IsPhotoModeActive == true);
 
         WindowTopmostExecutor.ApplyNoActivate(_toolbarWindow, toolbarVisible, strictEnforceZOrder);
         WindowTopmostExecutor.ApplyNoActivate(_rollCallWindow, rollCallVisible, strictEnforceZOrder);

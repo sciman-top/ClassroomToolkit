@@ -103,8 +103,10 @@ internal static class FloatingTopmostApplyPolicy
             return false;
         }
 
+        // Photo mode already has dedicated foreground/watchdog retouch gating; forcing
+        // launcher retouch on every photo z-order request can cause visible flicker
+        // when floating utility windows overlap the photo content.
         return frontSurface is ZOrderSurface.PresentationFullscreen
-            or ZOrderSurface.PhotoFullscreen
             or ZOrderSurface.Whiteboard;
     }
 }

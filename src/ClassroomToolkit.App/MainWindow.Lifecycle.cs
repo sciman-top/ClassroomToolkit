@@ -60,7 +60,8 @@ public partial class MainWindow
             rollCallVisible: _rollCallWindow?.IsVisible == true,
             launcherVisible: launcherVisible,
             imageManagerVisible: _imageManagerWindow?.IsVisible == true,
-            rollCallAuxOverlayVisible: _rollCallWindow?.HasVisibleAuxOverlay() == true);
+            rollCallAuxOverlayVisible: _rollCallWindow?.HasVisibleAuxOverlay() == true,
+            photoModeActive: _overlayWindow?.IsPhotoModeActive == true);
         if (!shouldRetouch)
         {
             return;

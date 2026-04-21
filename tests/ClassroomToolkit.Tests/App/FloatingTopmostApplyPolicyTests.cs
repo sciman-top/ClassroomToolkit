@@ -68,10 +68,9 @@ public class FloatingTopmostApplyPolicyTests
     }
 
     [Theory]
-    [InlineData(ZOrderSurface.PhotoFullscreen)]
     [InlineData(ZOrderSurface.PresentationFullscreen)]
     [InlineData(ZOrderSurface.Whiteboard)]
-    public void Resolve_ShouldEnforce_WhenLauncherVisibleOnInteractiveSurfaceAndPlanUnchanged(ZOrderSurface surface)
+    public void Resolve_ShouldEnforce_WhenLauncherVisibleOnRetouchSurfaceAndPlanUnchanged(ZOrderSurface surface)
     {
         var plan = new FloatingTopmostPlan(true, true, true, false, true);
 
@@ -83,6 +82,21 @@ public class FloatingTopmostApplyPolicyTests
 
         decision.ShouldEnforceZOrder.Should().BeTrue();
         decision.Reason.Should().Be(FloatingTopmostApplyPolicy.FloatingTopmostApplyReason.LauncherInteractiveRetouch);
+    }
+
+    [Fact]
+    public void Resolve_ShouldNotEnforce_WhenLauncherVisibleOnPhotoSurfaceAndPlanUnchanged()
+    {
+        var plan = new FloatingTopmostPlan(true, true, true, false, true);
+
+        var decision = FloatingTopmostApplyPolicy.Resolve(
+            lastFrontSurface: ZOrderSurface.PhotoFullscreen,
+            currentFrontSurface: ZOrderSurface.PhotoFullscreen,
+            lastPlan: plan,
+            currentPlan: plan);
+
+        decision.ShouldEnforceZOrder.Should().BeFalse();
+        decision.Reason.Should().Be(FloatingTopmostApplyPolicy.FloatingTopmostApplyReason.Unchanged);
     }
 
     [Fact]
