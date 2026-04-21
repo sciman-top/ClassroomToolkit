@@ -33,7 +33,7 @@
 ## 4. 发布产物基线（必须满足）
 
 1. 生成标准版（FDD）+ 离线版（SCD）：
-   - `powershell -File scripts/release/prepare-distribution.ps1 -Version <版本号> -EnsureLatestRuntime`
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
 2. 标准版必须包含：
    - `启动.bat`
    - `bootstrap-runtime.ps1`
@@ -48,14 +48,14 @@
 对发布目录做最小文件检查：
 
 1. 标准版（FDD）至少存在：
-   - `ClassroomToolkit.App.runtimeconfig.json`（引用 `Microsoft.WindowsDesktop.App 10.x`）
-   - `x64/pdfium.dll`
-   - `e_sqlite3.dll`
+   - `app/*.runtimeconfig.json`（引用 `Microsoft.WindowsDesktop.App 10.x`）
+   - `app/` 子目录内存在 `pdfium.dll`
+   - `app/` 子目录内存在 `e_sqlite3.dll`
 2. 离线版（SCD）至少存在：
-   - `hostfxr.dll`
-   - `coreclr.dll`
-   - `vcruntime140_cor3.dll`
-   - `e_sqlite3.dll`
+   - `app/hostfxr.dll`
+   - `app/coreclr.dll`
+   - `app/vcruntime140_cor3.dll`
+   - `app/` 子目录内存在 `e_sqlite3.dll`
 
 ## 6. 演示控制兼容基线（无现场版）
 

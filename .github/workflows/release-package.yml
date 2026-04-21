@@ -1,0 +1,102 @@
+name: release-package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 2026.04.21)"
+        required: true
+        type: string
+      package_mode:
+        description: "Package mode"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - standard
+          - offline
+      run_preflight:
+        description: "Run release preflight quality gates"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Resolve release variables
+        id: release_vars
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            $refName = "${{ github.ref_name }}"
+            if ($refName.StartsWith("v")) {
+              $version = $refName.Substring(1)
+            } else {
+              $version = $refName
+            }
+            $packageMode = "all"
+            $runPreflight = "true"
+          } else {
+            $version = "${{ inputs.version }}"
+            $packageMode = "${{ inputs.package_mode }}"
+            $runPreflight = "${{ inputs.run_preflight }}"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Version is empty."
+          }
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "package_mode=$packageMode" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "run_preflight=$runPreflight" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Release preflight
+        if: ${{ steps.release_vars.outputs.run_preflight == 'true' }}
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
+
+      - name: Build distribution packages
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 `
+            -Version "${{ steps.release_vars.outputs.version }}" `
+            -PackageMode "${{ steps.release_vars.outputs.package_mode }}" `
+            -Configuration Release `
+            -EnsureLatestRuntime `
+            -AllowOverwriteVersion
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClassroomToolkit-${{ steps.release_vars.outputs.version }}
+          path: artifacts/release/${{ steps.release_vars.outputs.version }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: ${{ github.event_name == 'push' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/release/${{ steps.release_vars.outputs.version }}/*.zip
+            artifacts/release/${{ steps.release_vars.outputs.version }}/release-manifest.json
+          fail_on_unmatched_files: true

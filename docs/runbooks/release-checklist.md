@@ -2,8 +2,8 @@
 
 适用范围：
 - GitHub 版本发布
-- 标准版打包
-- 离线版打包
+- 标准版打包（FDD）
+- 离线版打包（SCD）
 
 ## 1. 工作区
 
@@ -14,61 +14,53 @@
 ## 2. 必留内容
 
 - `tests/ClassroomToolkit.Tests/` 下的长期自动化测试代码
-- `tests/Baselines/` 下的基线数据
-- `scripts/release/` 下的发布脚本和模板
+- `scripts/release/` 下的发布脚本、配置和 `prereq/`
 - `docs/` 下的设计、验证、运行手册
 
-## 3. 应清理内容
+## 3. 免费项目低误报策略
 
-- `logs/`
-- `artifacts/`
-- `tests/.tmp/`
-- `bin/`
-- `obj/`
-- 测试输出目录
-- 一次性调试文件
-- 临时缓存目录
+- 不使用付费签名/EV 证书
+- 默认发布目录式多文件（`PublishSingleFile=false`）
+- 不启用裁剪（`PublishTrimmed=false`）
+- 生成 `SHA256SUMS.txt` 和 `release-manifest.json`
+- 产物中保留 `bootstrap-runtime.ps1` / `启动.bat`，减少课堂现场手工配置成本
 
-## 4. 忽略规则
+## 4. 发布入口（推荐）
 
-确认 `.gitignore` 已覆盖：
+1. 预检：
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard`
+2. 打包：
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
 
-- `bin/`
-- `obj/`
-- `artifacts/`
-- `logs/`
-- `**/TestResults/`
-- `**/.tmp/`
-- `**/.cache/`
-- `**/.temp/`
+## 5. 产物要求
 
-## 5. 文档检查
+- 标准版目录：`artifacts/release/<version>/standard`
+  - `app/`
+  - `prereq/windowsdesktop-runtime-10.x-win-x64.exe`
+  - `bootstrap-runtime.ps1`
+  - `启动.bat`
+  - `SHA256SUMS.txt`
+- 离线版目录：`artifacts/release/<version>/offline`
+  - `app/`
+  - `启动.bat`
+  - `SHA256SUMS.txt`
+- 根目录：
+  - `release-manifest.json`
+  - 可选 zip：`ClassroomToolkit-<version>-standard.zip` / `ClassroomToolkit-<version>-offline.zip`
 
-- `README.md` 已说明三种发布形态
-- `使用指南.md` 可直接给教师使用
-- 离线版说明已写清 runtime 捆绑方式
-- 标准版说明已写清 runtime 不随包分发
+## 6. GitHub 发布
 
-## 6. 发布脚本检查
+- 手动触发：`.github/workflows/release-package.yml`
+- 或推送 tag：`v<version>`
+- 工作流会执行：
+  - `preflight-check.ps1`
+  - `prepare-distribution.ps1`
+  - 上传产物并在 tag 事件创建 Release 附件
 
-- 标准版和离线版输出目录分开
-- 标准版不包含 `.NET Desktop Runtime 10 x64`
-- 离线版包含 `prereq/`
-- 离线版运行时安装包可自动下载或复制
-
-## 7. GitHub 检查
-
-- 默认分支是 `main`
-- `About` 描述已设置
-- topics 已设置
-- 不需要发版时不创建 Release
-
-## 8. 推荐顺序
+## 7. 推荐顺序
 
 1. 清理工作区
-2. 跑测试
-3. 跑发布脚本
-4. 检查产物目录
-5. 检查文档和仓库元数据
-6. 再决定是否提交和推送
-
+2. 跑 `preflight-check.ps1`
+3. 跑 `prepare-distribution.ps1`
+4. 核查 `SHA256SUMS.txt` 与 `release-manifest.json`
+5. 触发 `release-package.yml` 或创建 tag 发布
