@@ -162,7 +162,7 @@ public sealed class FileLoggerProviderTests
         var currentFile = Path.Combine(directory, $"app_{fixedNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
         File.WriteAllText(currentFile, "legacy-line" + Environment.NewLine);
 
-        var provider = new FileLoggerProvider(directory, () => fixedNow, resetExistingLogsOnStartup: false);
+        var provider = new FileLoggerProvider(directory, () => fixedNow, resetExistingLogsOnStartup: false, retentionNow: fixedNow);
         var logger = provider.CreateLogger("preserve-history");
         logger.Log(
             LogLevel.Information,
@@ -257,6 +257,61 @@ public sealed class FileLoggerProviderTests
         var content = File.ReadAllText(expectedFile);
         content.Should().Contain(expectedDateToken);
         content.Should().Contain("time-source-message");
+    }
+
+    [Fact]
+    public void Constructor_ShouldPruneExpiredAppLogs_WhenRetentionApplies()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_retention_expired");
+        var now = new DateTime(2026, 04, 22, 10, 00, 00);
+        var expiredFile = Path.Combine(directory, "app_20260407.log");
+        var retainedFile = Path.Combine(directory, "app_20260409.log");
+        var todayFile = Path.Combine(directory, "app_20260422.log");
+        File.WriteAllText(expiredFile, "expired");
+        File.WriteAllText(retainedFile, "retained");
+        File.WriteAllText(todayFile, "today");
+
+        using var provider = new FileLoggerProvider(directory, () => now, retentionNow: now);
+
+        File.Exists(expiredFile).Should().BeFalse();
+        File.Exists(retainedFile).Should().BeTrue();
+        File.Exists(todayFile).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_ShouldPruneOversizedHistoricalAppLog_ButPreserveToday()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_retention_oversized");
+        var now = new DateTime(2026, 04, 22, 10, 00, 00);
+        var options = new LogRetentionOptions(RetentionDays: 14, MaxHistoricalFileBytes: 8);
+        var oversizedHistoricalFile = Path.Combine(directory, "app_20260421.log");
+        var oversizedTodayFile = Path.Combine(directory, "app_20260422.log");
+        File.WriteAllText(oversizedHistoricalFile, "0123456789");
+        File.WriteAllText(oversizedTodayFile, "0123456789");
+
+        using var provider = new FileLoggerProvider(directory, () => now, retentionOptions: options, retentionNow: now);
+
+        File.Exists(oversizedHistoricalFile).Should().BeFalse();
+        File.Exists(oversizedTodayFile).Should().BeTrue();
+    }
+
+    [Fact]
+    public void LogRetentionPolicy_ShouldApplySameRetentionToErrorLogs()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_error_logger_retention");
+        var now = new DateTime(2026, 04, 22, 10, 00, 00);
+        var expiredErrorFile = Path.Combine(directory, "error_20260401.log");
+        var retainedErrorFile = Path.Combine(directory, "error_20260422.log");
+        var unrelatedFile = Path.Combine(directory, "notes_20260401.log");
+        File.WriteAllText(expiredErrorFile, "expired");
+        File.WriteAllText(retainedErrorFile, "retained");
+        File.WriteAllText(unrelatedFile, "unrelated");
+
+        LogRetentionPolicy.TryApply(directory, "error_", now);
+
+        File.Exists(expiredErrorFile).Should().BeFalse();
+        File.Exists(retainedErrorFile).Should().BeTrue();
+        File.Exists(unrelatedFile).Should().BeTrue();
     }
 
     [Fact]

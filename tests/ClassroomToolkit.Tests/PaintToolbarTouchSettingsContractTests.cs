@@ -15,10 +15,15 @@ public sealed class PaintToolbarTouchSettingsContractTests
         xaml.Should().Contain("PreviewTouchDown=\"OnQuickColorTouchDown\"");
         xaml.Should().Contain("PreviewMouseLeftButtonDown=\"OnShapePointerDown\"");
         xaml.Should().Contain("PreviewTouchDown=\"OnShapeTouchDown\"");
+        xaml.Should().Contain("PreviewTouchDown=\"OnToolbarTouchDragStart\"");
+        xaml.Should().NotContain("<Setter Property=\"MinWidth\" Value=\"30\"/>");
+        xaml.Should().NotContain("<Setter Property=\"MinHeight\" Value=\"30\"/>");
         xaml.Should().Contain("ToolTip=\"颜色 1：黑色。点按使用，再点/长按换色\"");
         xaml.Should().Contain("ToolTip=\"图形：当前直线。点按使用，再点/长按选择\"");
         xaml.Should().Contain("ToolTipService.Placement\" Value=\"Top\"");
         source.Should().Contain("ToolbarSecondTapIntentPolicy.Resolve(");
+        source.Should().Contain("ApplyToolbarTouchMetrics();");
+        source.Should().Contain("Math.Ceiling(44.0 / scale)");
         source.Should().Contain("OpenQuickColorDialog(index.Value);");
         source.Should().Contain("OpenShapeMenu();");
         source.Should().Contain("GetQuickColorDisplayName");

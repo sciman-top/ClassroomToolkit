@@ -19,6 +19,27 @@
         <local:FolderVisibilityConverter x:Key="FolderVisibilityConverter"/>
         <local:FileVisibilityConverter x:Key="FileVisibilityConverter"/>
         <local:PdfBackgroundConverter x:Key="PdfBackgroundConverter"/>
+
+        <Style x:Key="Style_ImageManagerToolbarButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+            <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
+            <Setter Property="MinWidth" Value="72"/>
+        </Style>
+
+        <Style x:Key="Style_ImageManagerToolbarDangerButton" TargetType="Button" BasedOn="{StaticResource Style_DangerButton}">
+            <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
+            <Setter Property="MinWidth" Value="72"/>
+        </Style>
+
+        <Style x:Key="Style_ImageManagerToolbarToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource Style_ToggleButton}">
+            <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
+            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+
+        <Style x:Key="Style_ImageManagerToolbarIconButton" TargetType="Button" BasedOn="{StaticResource Style_IconButton}">
+            <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Regular}"/>
+            <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Regular}"/>
+        </Style>
     </Window.Resources>
 
     <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="10">
@@ -37,10 +58,10 @@
                     <TextBlock Text="文件夹、PDF、图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,8,0"
-                            Style="{StaticResource Style_SecondaryButton}" Click="OnRestoreWindowClick"/>
-                    <Button Content="关闭" Width="56" Height="{StaticResource Size_Button_Action_Height_Compact}"
-                            Style="{StaticResource Style_DangerButton}" Click="OnCloseWindowClick"/>
+                    <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Margin="0,0,8,0"
+                            Style="{StaticResource Style_ImageManagerToolbarButton}" Click="OnRestoreWindowClick"/>
+                    <Button Content="关闭" Width="72"
+                            Style="{StaticResource Style_ImageManagerToolbarDangerButton}" Click="OnCloseWindowClick"/>
                 </StackPanel>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_ManagementShellDivider}"/>
@@ -69,45 +90,38 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0"
+                        <UniformGrid Grid.Row="0" Margin="0,0,0,6" Columns="3">
+                            <Button
                                     Content="添加收藏"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
-                                    Margin="0,0,6,0"
+                                    Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnAddFavoriteClick"
-                                    Style="{StaticResource Style_Button_Teal}"
+                                    Style="{StaticResource Style_ImageManagerToolbarButton}"
+                                    Background="{StaticResource Gradient_Success}"
+                                    BorderBrush="{StaticResource Brush_Teaching}"
+                                    Foreground="White"
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
-                            <Button Grid.Column="1"
+                            <Button
                                     Content="取消收藏"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
-                                    Margin="0,0,6,0"
+                                    Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnRemoveFavoriteClick"
-                                    Style="{StaticResource Style_DangerButton}"
+                                    Style="{StaticResource Style_ImageManagerToolbarDangerButton}"
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
-                            <Button Grid.Column="2"
+                            <Button
                                     Content="清空最近"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}"
-                                    MinWidth="86"
                                     VerticalContentAlignment="Center"
                                     Click="OnClearRecentsClick"
-                                    Style="{StaticResource Style_SecondaryButton}"
+                                    Style="{StaticResource Style_ImageManagerToolbarButton}"
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
-                        </Grid>
+                        </UniformGrid>
                         <TextBlock Grid.Row="1" Text="收藏" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,4"/>
                         <ListBox Grid.Row="2" x:Name="FavoritesList" SelectionChanged="OnFavoritesSelectionChanged"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.PanningMode="VerticalFirst"
                                  ScrollViewer.CanContentScroll="True"
                                  VirtualizingPanel.IsVirtualizing="True"
                                  VirtualizingPanel.VirtualizationMode="Recycling"
@@ -119,11 +133,13 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0" Content="★" Width="22" Height="22" Margin="0,0,6,0"
+                                        <Button Grid.Column="0" Content="★" Width="20" Height="20" Margin="0,0,6,0"
                                                 Padding="0" ToolTip="取消收藏（保留最近）"
+                                                FontSize="{StaticResource FontSize_Body_S}"
+                                                Foreground="{StaticResource Brush_Text_Primary}"
                                                 Click="OnFavoriteStarToggleClick"
                                                 Tag="{Binding Path}"
-                                                Style="{StaticResource Style_SecondaryButton}"/>
+                                                Style="{StaticResource Style_IconButton}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Path}"
                                                    TextTrimming="CharacterEllipsis"
                                                    VerticalAlignment="Center"
@@ -137,6 +153,7 @@
                             <ListBox x:Name="RecentsList" SelectionChanged="OnRecentsSelectionChanged"
                                      Margin="0,8,0,0"
                                      ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.PanningMode="VerticalFirst"
                                      ScrollViewer.CanContentScroll="True"
                                      VirtualizingPanel.IsVirtualizing="True"
                                      VirtualizingPanel.VirtualizationMode="Recycling"
@@ -148,11 +165,13 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <Button Grid.Column="0" Content="☆" Width="22" Height="22" Margin="0,0,6,0"
+                                            <Button Grid.Column="0" Content="☆" Width="20" Height="20" Margin="0,0,6,0"
                                                     Padding="0" ToolTip="加入收藏"
+                                                    FontSize="{StaticResource FontSize_Body_S}"
+                                                    Foreground="{StaticResource Brush_Text_Primary}"
                                                     Click="OnRecentStarToggleClick"
                                                     Tag="{Binding Path}"
-                                                    Style="{StaticResource Style_SecondaryButton}"/>
+                                                    Style="{StaticResource Style_IconButton}"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Path}"
                                                        TextTrimming="CharacterEllipsis"
                                                        VerticalAlignment="Center"
@@ -173,6 +192,7 @@
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               Margin="0,8,0,0"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.PanningMode="VerticalFirst"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               Background="Transparent" BorderThickness="0" Foreground="{StaticResource Brush_Text_Primary}">
@@ -221,32 +241,32 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <Button x:Name="BackButton" ToolTip="后退" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
-                                    Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                            <Button x:Name="BackButton" ToolTip="后退" Margin="0,0,6,0"
+                                    Click="OnBackClick" IsEnabled="{Binding IsBackButtonEnabled}" Style="{StaticResource Style_ImageManagerToolbarIconButton}">
                                 <Path Data="{StaticResource Icon_Back}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="ForwardButton" ToolTip="前进" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
-                                    Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                            <Button x:Name="ForwardButton" ToolTip="前进" Margin="0,0,6,0"
+                                    Click="OnForwardClick" IsEnabled="{Binding IsForwardButtonEnabled}" Style="{StaticResource Style_ImageManagerToolbarIconButton}">
                                 <Path Data="{StaticResource Icon_Forward}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform" Width="14" Height="14"/>
                             </Button>
-                            <Button x:Name="UpButton" ToolTip="上一级" Width="{StaticResource Size_Button_Icon_Regular}" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,10,0"
-                                    Click="OnUpClick" Style="{StaticResource Style_SecondaryButton}" Padding="0">
+                            <Button x:Name="UpButton" ToolTip="上一级" Margin="0,0,10,0"
+                                    Click="OnUpClick" Style="{StaticResource Style_ImageManagerToolbarIconButton}">
                                 <Path Data="{StaticResource Icon_ArrowUp}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                             </Button>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="68" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,6,0"
-                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="72" Margin="0,0,6,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ImageManagerToolbarToggleButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
                                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                                     <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="80" Height="{StaticResource Size_Button_Action_Height_Compact}" Margin="0,0,10,0"
-                                          Click="OnViewModeClick" Style="{StaticResource Style_ToggleButton}" Padding="0">
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="84" Margin="0,0,10,0"
+                                          Click="OnViewModeClick" Style="{StaticResource Style_ImageManagerToolbarToggleButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
                                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -263,20 +283,18 @@
                                       IsChecked="{Binding ShowInkOverlay, Mode=TwoWay}"
                                       Checked="OnShowInkChanged" Unchecked="OnShowInkChanged"/>
                             <Button x:Name="EnterSelectionModeButton" Content="多选" Margin="12,0,0,0"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="72"
-                                    Style="{StaticResource Style_SecondaryButton}"
+                                    Style="{StaticResource Style_ImageManagerToolbarButton}"
                                     Click="OnEnterSelectionModeClick"/>
                             <Button x:Name="DeleteFilesButton" Content="删除" Margin="12,0,0,0"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="86"
-                                    Style="{StaticResource Style_DangerButton}" IsEnabled="False" Visibility="Collapsed"
+                                    MinWidth="86"
+                                    Style="{StaticResource Style_ImageManagerToolbarDangerButton}" IsEnabled="False" Visibility="Collapsed"
                                     Click="OnDeleteSelectedFilesClick"/>
                             <Button x:Name="SelectAllFilesButton" Content="全选" Margin="6,0,0,0"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="72"
-                                    Style="{StaticResource Style_SecondaryButton}" Visibility="Collapsed"
+                                    Style="{StaticResource Style_ImageManagerToolbarButton}" Visibility="Collapsed"
                                     Click="OnSelectAllFilesClick"/>
                             <Button x:Name="ExitSelectionModeButton" Content="取消多选" Margin="6,0,0,0"
-                                    Height="{StaticResource Size_Button_Action_Height_Compact}" MinWidth="86"
-                                    Style="{StaticResource Style_SecondaryButton}" Visibility="Collapsed"
+                                    MinWidth="86"
+                                    Style="{StaticResource Style_ImageManagerToolbarButton}" Visibility="Collapsed"
                                     Click="OnExitSelectionModeClick"/>
                         </StackPanel>
                     </Grid>
@@ -296,15 +314,16 @@
                               Background="Transparent" BorderThickness="0" 
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.CanContentScroll="False"
+                              ScrollViewer.PanningMode="VerticalFirst"
+                              ScrollViewer.CanContentScroll="True"
                               ScrollViewer.ScrollChanged="OnImageListScrollChanged"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Standard"
                               Foreground="{StaticResource Brush_Text_Primary}"
                               ItemContainerStyle="{StaticResource Style_ManagementThumbnailListViewItem}">
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel IsItemsHost="True"
-                                           Orientation="Horizontal"
-                                           Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollContentPresenter}}"/>
+                                <local:VirtualizingWrapPanel/>
                             </ItemsPanelTemplate>
                         </ListView.ItemsPanel>
                         <ListView.ItemTemplate>
@@ -347,6 +366,7 @@
                               MouseDoubleClick="OnImageListMouseDoubleClick"
                               MouseLeave="OnImageListPointerLeave"
                               Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
+                              ScrollViewer.PanningMode="VerticalFirst"
                               ScrollViewer.CanContentScroll="True"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"

@@ -4,7 +4,8 @@ namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct RegionCaptureInitialPassthroughDecision(
     bool ShouldCancel,
-    RegionScreenCapturePassthroughInputKind InputKind);
+    RegionScreenCapturePassthroughInputKind InputKind,
+    Point? ScreenPoint);
 
 internal static class RegionCaptureInitialPassthroughPolicy
 {
@@ -15,9 +16,10 @@ internal static class RegionCaptureInitialPassthroughPolicy
     {
         if (passthroughRegions == null)
         {
-            return new RegionCaptureInitialPassthroughDecision(
-                ShouldCancel: false,
-                InputKind: RegionScreenCapturePassthroughInputKind.None);
+                return new RegionCaptureInitialPassthroughDecision(
+                    ShouldCancel: false,
+                    InputKind: RegionScreenCapturePassthroughInputKind.None,
+                    ScreenPoint: null);
         }
 
         foreach (var region in passthroughRegions)
@@ -31,12 +33,14 @@ internal static class RegionCaptureInitialPassthroughPolicy
             {
                 return new RegionCaptureInitialPassthroughDecision(
                     ShouldCancel: true,
-                    InputKind: RegionScreenCapturePassthroughInputKind.PointerMove);
+                    InputKind: RegionScreenCapturePassthroughInputKind.PointerMove,
+                    ScreenPoint: new Point(pointerScreenX, pointerScreenY));
             }
         }
 
         return new RegionCaptureInitialPassthroughDecision(
             ShouldCancel: false,
-            InputKind: RegionScreenCapturePassthroughInputKind.None);
+            InputKind: RegionScreenCapturePassthroughInputKind.None,
+            ScreenPoint: null);
     }
 }

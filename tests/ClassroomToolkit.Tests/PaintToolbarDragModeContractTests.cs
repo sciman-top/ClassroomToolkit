@@ -16,6 +16,10 @@ public sealed class PaintToolbarDragModeContractTests
         source.Should().Contain("private void OnToolbarDragStart(");
         source.Should().Contain("private void OnToolbarDragMove(");
         source.Should().Contain("private void OnToolbarDragEnd(");
+        source.Should().Contain("private void OnToolbarTouchDragStart(");
+        source.Should().Contain("private void OnToolbarTouchDragMove(");
+        source.Should().Contain("private void OnToolbarTouchDragEnd(");
+        source.Should().Contain("private void MoveToolbarWithinVirtualScreen(");
     }
 
     private static string GetSourcePath()

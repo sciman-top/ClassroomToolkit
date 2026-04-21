@@ -15,6 +15,7 @@ using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Infra.Settings;
 using ClassroomToolkit.Infra.Storage;
+using ClassroomToolkit.Infra.Logging;
 using Microsoft.Extensions.Logging;
 using ClassroomToolkit.Services.Compatibility;
 
@@ -27,7 +28,9 @@ public partial class App : WpfApplication
     private static readonly ConfigurationService AppConfiguration = new();
     private static readonly string AppRootDirectory = AppConfiguration.BaseDirectory;
     private static readonly string AppDataDirectory = ResolveAppDataDirectory(AppConfiguration);
+    private static readonly LogRetentionOptions DefaultLogRetentionOptions = new();
     private int _criticalDialogShowing;
+    private int _errorLogRetentionApplied;
     private int _globalExceptionHandlersRegistered;
     private IServiceProvider? _services;
 
@@ -35,6 +38,7 @@ public partial class App : WpfApplication
     {
         // 注册全局异常处理
         RegisterGlobalExceptionHandlers();
+        TryApplyErrorLogRetention();
         PhotoOverlayDiagnostics.InitializeSession(Path.Combine(AppDataDirectory, "logs"));
         ConfigureServices();
 
@@ -338,6 +342,7 @@ public partial class App : WpfApplication
         {
             var logPath = Path.Combine(AppDataDirectory, "logs");
             if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
+            TryApplyErrorLogRetention(logPath);
 
             var logFile = Path.Combine(logPath, $"error_{DateTime.Now:yyyyMMdd}.log");
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
@@ -354,6 +359,33 @@ public partial class App : WpfApplication
         {
             // 如果写日志也失败了，最后退路只有 Debug
             System.Diagnostics.Debug.WriteLine($"致命错误记录失败: {ex.Message}");
+        }
+    }
+
+    private void TryApplyErrorLogRetention(string? logPath = null)
+    {
+        if (Interlocked.Exchange(ref _errorLogRetentionApplied, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            var resolvedLogPath = logPath ?? Path.Combine(AppDataDirectory, "logs");
+            if (!Directory.Exists(resolvedLogPath))
+            {
+                Directory.CreateDirectory(resolvedLogPath);
+            }
+
+            LogRetentionPolicy.TryApply(
+                resolvedLogPath,
+                "error_",
+                DateTime.Now,
+                DefaultLogRetentionOptions);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine($"日志保留清理失败: {ex.Message}");
         }
     }
 

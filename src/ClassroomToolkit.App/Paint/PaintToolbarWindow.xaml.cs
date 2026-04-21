@@ -40,6 +40,10 @@ public partial class PaintToolbarWindow : Window
     private bool _toolbarDragging;
     private System.Windows.Point _toolbarDragOffset;
     private IDisposable? _toolbarDragScope;
+    private bool _toolbarTouchDragging;
+    private TouchDevice? _activeToolbarTouchDevice;
+    private System.Windows.Point _toolbarTouchDragOffset;
+    private System.Drawing.Point? _lastInteractionScreenPoint;
     private ToolbarSecondTapTarget _pendingSecondTapTarget;
     private int? _pendingQuickColorIndex;
     private BoardPrimaryAction _lastBoardPrimaryAction = BoardPrimaryAction.CaptureRegion;
@@ -90,11 +94,15 @@ public partial class PaintToolbarWindow : Window
         UpdateShapeButtonIcon();
         PreviewKeyDown += OnPreviewKeyDown;
         PreviewMouseDown += OnPreviewMouseDown;
+        PreviewTouchDown += OnPreviewTouchDown;
         PreviewMouseWheel += OnPreviewMouseWheel;
         MouseEnter += OnToolbarMouseEnter;
         MouseLeave += OnToolbarMouseLeave;
         MouseMove += OnToolbarDragMove;
         MouseLeftButtonUp += OnToolbarDragEnd;
+        TouchMove += OnToolbarTouchDragMove;
+        PreviewTouchUp += OnToolbarTouchDragEnd;
+        LostTouchCapture += OnToolbarTouchLostCapture;
         Loaded += OnToolbarLoaded;
         IsVisibleChanged += OnToolbarVisibleChanged;
         Closed += OnToolbarClosed;
@@ -123,13 +131,18 @@ public partial class PaintToolbarWindow : Window
         _regionCaptureResumeTimer.Stop();
         _regionCaptureResumeTimer.Tick -= OnRegionCaptureResumeTimerTick;
         EndToolbarDragCore();
+        EndToolbarTouchDragCore();
         PreviewKeyDown -= OnPreviewKeyDown;
         PreviewMouseDown -= OnPreviewMouseDown;
+        PreviewTouchDown -= OnPreviewTouchDown;
         PreviewMouseWheel -= OnPreviewMouseWheel;
         MouseEnter -= OnToolbarMouseEnter;
         MouseLeave -= OnToolbarMouseLeave;
         MouseMove -= OnToolbarDragMove;
         MouseLeftButtonUp -= OnToolbarDragEnd;
+        TouchMove -= OnToolbarTouchDragMove;
+        PreviewTouchUp -= OnToolbarTouchDragEnd;
+        LostTouchCapture -= OnToolbarTouchLostCapture;
         Loaded -= OnToolbarLoaded;
         IsVisibleChanged -= OnToolbarVisibleChanged;
         Closed -= OnToolbarClosed;
@@ -194,7 +207,47 @@ public partial class PaintToolbarWindow : Window
         {
             ToolbarContainer.LayoutTransform = new ScaleTransform(_uiScale, _uiScale);
         }
+        ApplyToolbarTouchMetrics();
         WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    private void ApplyToolbarTouchMetrics()
+    {
+        var scale = Math.Max(_uiScale, ToolbarScaleDefaults.Min);
+        var minimumHitTarget = Math.Ceiling(44.0 / scale);
+        var minimumColorHitTarget = Math.Ceiling(44.0 / scale);
+        var dragHandleHitWidth = Math.Ceiling(36.0 / scale);
+
+        ApplyToolbarButtonMetrics(CursorButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(EraserButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(RegionEraseButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(ClearButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(UndoButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(ShapeButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(PhotoOpenButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(BoardButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(SettingsButton, visualSize: 30, minimumHitTarget);
+        ApplyToolbarButtonMetrics(QuickColor1Button, visualSize: 24, minimumColorHitTarget);
+        ApplyToolbarButtonMetrics(QuickColor2Button, visualSize: 24, minimumColorHitTarget);
+        ApplyToolbarButtonMetrics(QuickColor3Button, visualSize: 24, minimumColorHitTarget);
+
+        if (ToolbarDragHandle != null)
+        {
+            ToolbarDragHandle.MinWidth = dragHandleHitWidth;
+        }
+    }
+
+    private static void ApplyToolbarButtonMetrics(System.Windows.Controls.Control? control, double visualSize, double minimumHitTarget)
+    {
+        if (control == null)
+        {
+            return;
+        }
+
+        control.Width = visualSize;
+        control.Height = visualSize;
+        control.MinWidth = Math.Max(visualSize, minimumHitTarget);
+        control.MinHeight = Math.Max(visualSize, minimumHitTarget);
     }
 
 
@@ -480,6 +533,8 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
+        RecordInteractionScreenPoint(e.GetPosition(this));
+
         var button = FindButtonBase(e.OriginalSource as DependencyObject);
         if (button == null)
         {
@@ -508,6 +563,16 @@ public partial class PaintToolbarWindow : Window
 
         RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
         ClearDirectWhiteboardEntryArm();
+    }
+
+    private void OnPreviewTouchDown(object? sender, TouchEventArgs e)
+    {
+        RecordInteractionScreenPoint(e.GetTouchPoint(this).Position);
+    }
+
+    public System.Drawing.Point? TryGetLastInteractionScreenPoint()
+    {
+        return _lastInteractionScreenPoint;
     }
 
     private void OnToolbarMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -811,6 +876,10 @@ public partial class PaintToolbarWindow : Window
 
     private void PrepareForNonBoardToolbarAction(bool exitWhiteboard)
     {
+        if (BoardActionsPopup != null)
+        {
+            BoardActionsPopup.IsOpen = false;
+        }
         ClearDirectWhiteboardEntryArm();
         if (exitWhiteboard)
         {
@@ -1002,6 +1071,26 @@ public partial class PaintToolbarWindow : Window
         e.Handled = true;
     }
 
+    private void OnToolbarTouchDragStart(object sender, TouchEventArgs e)
+    {
+        if (_toolbarTouchDragging)
+        {
+            return;
+        }
+        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        _toolbarTouchDragging = true;
+        _activeToolbarTouchDevice = e.TouchDevice;
+        _toolbarTouchDragOffset = e.GetTouchPoint(this).Position;
+        _toolbarDragScope?.Dispose();
+        _toolbarDragScope = WindowDragOperationState.Begin();
+        CaptureTouch(_activeToolbarTouchDevice);
+        e.Handled = true;
+    }
+
     private void OnToolbarDragMove(object? sender, System.Windows.Input.MouseEventArgs e)
     {
         RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove();
@@ -1017,17 +1106,7 @@ public partial class PaintToolbarWindow : Window
         }
 
         var screen = PointToScreen(e.GetPosition(this));
-        var proposedLeft = screen.X - _toolbarDragOffset.X;
-        var proposedTop = screen.Y - _toolbarDragOffset.Y;
-        var clampedLeft = Math.Max(
-            SystemParameters.VirtualScreenLeft,
-            Math.Min(proposedLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width));
-        var clampedTop = Math.Max(
-            SystemParameters.VirtualScreenTop,
-            Math.Min(proposedTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height));
-
-        Left = clampedLeft;
-        Top = clampedTop;
+        MoveToolbarWithinVirtualScreen(screen.X - _toolbarDragOffset.X, screen.Y - _toolbarDragOffset.Y);
     }
 
     private void TryResumeRegionCaptureIfPointerOutsideToolbar()
@@ -1084,6 +1163,70 @@ public partial class PaintToolbarWindow : Window
         _toolbarDragScope = null;
     }
 
+    private void OnToolbarTouchDragMove(object? sender, TouchEventArgs e)
+    {
+        RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarPointerMove();
+
+        if (!_toolbarTouchDragging || !ReferenceEquals(_activeToolbarTouchDevice, e.TouchDevice))
+        {
+            return;
+        }
+
+        var screen = PointToScreen(e.GetTouchPoint(this).Position);
+        MoveToolbarWithinVirtualScreen(screen.X - _toolbarTouchDragOffset.X, screen.Y - _toolbarTouchDragOffset.Y);
+        e.Handled = true;
+    }
+
+    private void OnToolbarTouchDragEnd(object? sender, TouchEventArgs e)
+    {
+        if (!_toolbarTouchDragging || !ReferenceEquals(_activeToolbarTouchDevice, e.TouchDevice))
+        {
+            return;
+        }
+
+        EndToolbarTouchDragCore();
+        e.Handled = true;
+    }
+
+    private void OnToolbarTouchLostCapture(object? sender, TouchEventArgs e)
+    {
+        if (_toolbarTouchDragging && ReferenceEquals(_activeToolbarTouchDevice, e.TouchDevice))
+        {
+            EndToolbarTouchDragCore();
+        }
+    }
+
+    private void EndToolbarTouchDragCore()
+    {
+        if (!_toolbarTouchDragging)
+        {
+            return;
+        }
+
+        _toolbarTouchDragging = false;
+        if (_activeToolbarTouchDevice != null)
+        {
+            ReleaseTouchCapture(_activeToolbarTouchDevice);
+            _activeToolbarTouchDevice = null;
+        }
+
+        _toolbarDragScope?.Dispose();
+        _toolbarDragScope = null;
+    }
+
+    private void MoveToolbarWithinVirtualScreen(double proposedLeft, double proposedTop)
+    {
+        var clampedLeft = Math.Max(
+            SystemParameters.VirtualScreenLeft,
+            Math.Min(proposedLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width));
+        var clampedTop = Math.Max(
+            SystemParameters.VirtualScreenTop,
+            Math.Min(proposedTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height));
+
+        Left = clampedLeft;
+        Top = clampedTop;
+    }
+
     private static bool IsInteractiveElement(DependencyObject? source)
     {
         var current = source;
@@ -1114,6 +1257,14 @@ public partial class PaintToolbarWindow : Window
             parent = element.Parent as DependencyObject;
         }
         return parent ?? LogicalTreeHelper.GetParent(obj);
+    }
+
+    private void RecordInteractionScreenPoint(System.Windows.Point point)
+    {
+        var screenPoint = PointToScreen(point);
+        _lastInteractionScreenPoint = new System.Drawing.Point(
+            (int)Math.Round(screenPoint.X),
+            (int)Math.Round(screenPoint.Y));
     }
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

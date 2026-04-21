@@ -219,11 +219,7 @@ public partial class PaintToolbarWindow
             return;
         }
 
-        if (_lastBoardPrimaryAction != BoardPrimaryAction.CaptureRegion)
-        {
-            _lastBoardPrimaryAction = BoardPrimaryAction.CaptureRegion;
-        }
-        BeginRegionCaptureAction();
+        OpenBoardActionsPopup();
     }
 
     private void BeginRegionCaptureAction()
@@ -277,6 +273,23 @@ public partial class PaintToolbarWindow
     {
         _pendingSecondTapTarget = ToolbarSecondTapTarget.None;
         _pendingQuickColorIndex = null;
+    }
+
+    private void OpenBoardActionsPopup()
+    {
+        if (BoardActionsPopup == null)
+        {
+            return;
+        }
+
+        BoardActionsPopup.IsOpen = !BoardActionsPopup.IsOpen;
+        if (BoardActionsPopup.IsOpen)
+        {
+            var defaultActionButton = _lastBoardPrimaryAction == BoardPrimaryAction.EnterWhiteboard
+                ? BoardWhiteboardActionButton
+                : BoardCaptureActionButton;
+            defaultActionButton.Focus();
+        }
     }
 
 }

@@ -36,6 +36,7 @@
                                TextWrapping="Wrap"/>
                     <ListBox x:Name="ClassList"
                              MaxHeight="240" MinHeight="120"
+                             ScrollViewer.PanningMode="VerticalFirst"
                              Style="{StaticResource Style_CleanListBox}"/>
                 </StackPanel>
             </Border>

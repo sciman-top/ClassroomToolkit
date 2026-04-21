@@ -27,7 +27,8 @@ internal readonly record struct RegionScreenCaptureResult(
     bool Succeeded,
     string? FilePath,
     RegionScreenCaptureCancelReason CancelReason,
-    RegionScreenCapturePassthroughInputKind PassthroughInputKind = RegionScreenCapturePassthroughInputKind.None);
+    RegionScreenCapturePassthroughInputKind PassthroughInputKind = RegionScreenCapturePassthroughInputKind.None,
+    Point? PassthroughScreenPoint = null);
 
 internal static class RegionScreenCaptureWorkflow
 {
@@ -36,7 +37,9 @@ internal static class RegionScreenCaptureWorkflow
     private const string CaptureFilePrefix = "capture-";
     private static RegionSelectionOverlayWindow? _activeSelector;
 
-    internal static RegionScreenCaptureResult TryCaptureToPng(IReadOnlyCollection<Rectangle>? passthroughRegions = null)
+    internal static RegionScreenCaptureResult TryCaptureToPng(
+        IReadOnlyCollection<Rectangle>? passthroughRegions = null,
+        Point? initialPointerScreenPoint = null)
     {
         var virtualBounds = SystemInformation.VirtualScreen;
         if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
@@ -44,7 +47,7 @@ internal static class RegionScreenCaptureWorkflow
             return new RegionScreenCaptureResult(false, null, RegionScreenCaptureCancelReason.UserCanceled);
         }
 
-        var cursorPosition = Cursor.Position;
+        var cursorPosition = initialPointerScreenPoint ?? Cursor.Position;
         var initialPassthroughDecision = RegionCaptureInitialPassthroughPolicy.Resolve(
             cursorPosition.X,
             cursorPosition.Y,
@@ -55,7 +58,8 @@ internal static class RegionScreenCaptureWorkflow
                 false,
                 null,
                 RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled,
-                initialPassthroughDecision.InputKind);
+                initialPassthroughDecision.InputKind,
+                initialPassthroughDecision.ScreenPoint);
         }
 
         var selector = new RegionSelectionOverlayWindow(virtualBounds, passthroughRegions);
@@ -65,7 +69,12 @@ internal static class RegionScreenCaptureWorkflow
             var cancelReason = selector.CanceledByPassthrough
                 ? RegionScreenCaptureCancelReason.ToolbarPassthroughCanceled
                 : RegionScreenCaptureCancelReason.UserCanceled;
-            return new RegionScreenCaptureResult(false, null, cancelReason, selector.PassthroughInputKind);
+            return new RegionScreenCaptureResult(
+                false,
+                null,
+                cancelReason,
+                selector.PassthroughInputKind,
+                selector.PassthroughScreenPoint);
         }
 
         return TryCaptureSelection(virtualBounds, selection);

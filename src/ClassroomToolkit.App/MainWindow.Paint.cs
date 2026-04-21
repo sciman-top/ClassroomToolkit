@@ -591,7 +591,9 @@ public partial class MainWindow
             ExecuteLifecycleSafe("region-capture", "hide-overlay-only", overlay.Hide);
         }
 
-        var captureResult = RegionScreenCaptureWorkflow.TryCaptureToPng(ResolveCapturePassthroughRegions());
+        var captureResult = RegionScreenCaptureWorkflow.TryCaptureToPng(
+            ResolveCapturePassthroughRegions(),
+            _toolbarWindow?.TryGetLastInteractionScreenPoint());
 
         if (wasOverlayVisible)
         {
@@ -611,8 +613,13 @@ public partial class MainWindow
             var toolbarClickReplayed = false;
             if (shouldReplayToolbarClick)
             {
-                var cursorPosition = System.Windows.Forms.Cursor.Position;
-                toolbarClickReplayed = _toolbarWindow?.TryActivateButtonAtScreenPoint(cursorPosition.X, cursorPosition.Y) == true;
+                var replayPoint = captureResult.PassthroughScreenPoint ?? _toolbarWindow?.TryGetLastInteractionScreenPoint();
+                if (replayPoint.HasValue)
+                {
+                    toolbarClickReplayed = _toolbarWindow?.TryActivateButtonAtScreenPoint(
+                        replayPoint.Value.X,
+                        replayPoint.Value.Y) == true;
+                }
             }
 
             if (ToolbarPassthroughActivationPolicy.ShouldArmDirectWhiteboardEntry(

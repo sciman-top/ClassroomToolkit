@@ -20,6 +20,8 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         source.Should().Contain("OnBoardCaptureActionClick");
         source.Should().Contain("OnBoardWhiteboardActionClick");
         source.Should().Contain("OnBoardColorActionClick");
+        source.Should().Contain("OpenBoardActionsPopup();");
+        source.Should().Contain("BoardActionsPopup.IsOpen = !BoardActionsPopup.IsOpen;");
     }
 
     [Fact]
@@ -44,11 +46,15 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
 
         source.Should().Contain("ToolbarPassthroughActivationPolicy.ShouldReplayToolbarClick(");
         source.Should().Contain("_toolbarWindow?.TryActivateButtonAtScreenPoint(");
+        source.Should().Contain("captureResult.PassthroughScreenPoint ?? _toolbarWindow?.TryGetLastInteractionScreenPoint()");
         toolbarSource.Should().Contain("public bool TryActivateButtonAtScreenPoint(");
+        toolbarSource.Should().Contain("public System.Drawing.Point? TryGetLastInteractionScreenPoint()");
         workflowSource.Should().NotContain("SafeShowDialog()");
         workflowSource.Should().Contain("DispatcherFrame");
+        workflowSource.Should().Contain("Point? PassthroughScreenPoint = null");
         overlaySource.Should().NotContain("DialogResult");
         overlaySource.Should().Contain("SelectionAccepted");
+        overlaySource.Should().Contain("PassthroughScreenPoint = new DrawingPoint(screenX, screenY);");
     }
 
     [Fact]

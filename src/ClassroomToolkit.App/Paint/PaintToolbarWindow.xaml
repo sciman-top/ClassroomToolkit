@@ -19,8 +19,6 @@
         <Style x:Key="Style_ToolbarIconButton" TargetType="Button" BasedOn="{StaticResource Style_IconButton}">
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="30"/>
-            <Setter Property="MinWidth" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="ToolTipService.IsEnabled" Value="True"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
             <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
@@ -30,8 +28,6 @@
         <Style x:Key="Style_ToolbarIconToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource Style_IconButton_Active}">
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="30"/>
-            <Setter Property="MinWidth" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="ToolTipService.IsEnabled" Value="True"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
             <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
@@ -41,8 +37,6 @@
         <Style x:Key="Style_ToolbarColorBubbleToggle" TargetType="ToggleButton" BasedOn="{StaticResource Style_ColorBubbleToggle}">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="MinWidth" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="ToolTipService.IsEnabled" Value="True"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
@@ -104,13 +98,14 @@
                 MinHeight="46"
                 Padding="8,4"
                 MouseLeftButtonDown="OnToolbarDragStart"
+                PreviewTouchDown="OnToolbarTouchDragStart"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}">
             <Border.Effect>
                 <StaticResource ResourceKey="Shadow_Floating"/>
             </Border.Effect>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <Grid Width="16" Background="Transparent" Cursor="SizeAll" Margin="0,0,4,0" ToolTip="拖动"
+            <Grid x:Name="ToolbarDragHandle" Width="16" MinWidth="16" Background="Transparent" Cursor="SizeAll" Margin="0,0,4,0" ToolTip="拖动"
                   VerticalAlignment="Stretch">
                 <WrapPanel Width="10" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.48">
                     <Ellipse Width="3" Height="3" Fill="{StaticResource Brush_Text_Secondary}" Margin="1,2"/>

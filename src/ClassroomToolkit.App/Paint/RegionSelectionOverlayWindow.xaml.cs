@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using DrawingPoint = System.Drawing.Point;
 using DrawingRectangle = System.Drawing.Rectangle;
 
 namespace ClassroomToolkit.App.Paint;
@@ -18,6 +19,7 @@ public partial class RegionSelectionOverlayWindow : Window
     public bool CanceledByPassthrough { get; private set; }
     internal bool SelectionAccepted { get; private set; }
     internal RegionScreenCapturePassthroughInputKind PassthroughInputKind { get; private set; }
+    internal DrawingPoint? PassthroughScreenPoint { get; private set; }
 
     public RegionSelectionOverlayWindow(
         DrawingRectangle virtualBounds,
@@ -205,7 +207,7 @@ public partial class RegionSelectionOverlayWindow : Window
     }
 
     private bool TryCancelForPassthrough(
-        System.Windows.Point _,
+        System.Windows.Point point,
         RegionScreenCapturePassthroughInputKind inputKind)
     {
         if (_isSelecting || _passthroughRegions.Length == 0)
@@ -213,18 +215,18 @@ public partial class RegionSelectionOverlayWindow : Window
             return false;
         }
 
-        var cursorPosition = System.Windows.Forms.Cursor.Position;
-        var x = cursorPosition.X;
-        var y = cursorPosition.Y;
+        var screenX = (int)Math.Round(Left + point.X);
+        var screenY = (int)Math.Round(Top + point.Y);
         for (var i = 0; i < _passthroughRegions.Length; i++)
         {
-            if (!_passthroughRegions[i].Contains(x, y))
+            if (!_passthroughRegions[i].Contains(screenX, screenY))
             {
                 continue;
             }
 
             CanceledByPassthrough = true;
             PassthroughInputKind = inputKind;
+            PassthroughScreenPoint = new DrawingPoint(screenX, screenY);
             Cursor = System.Windows.Input.Cursors.Arrow;
             CompleteSelection(accepted: false);
             return true;
@@ -242,6 +244,7 @@ public partial class RegionSelectionOverlayWindow : Window
 
         CanceledByPassthrough = true;
         PassthroughInputKind = RegionScreenCapturePassthroughInputKind.ToolbarHandledPress;
+        PassthroughScreenPoint = null;
         Cursor = System.Windows.Input.Cursors.Arrow;
         CompleteSelection(accepted: false);
         return true;
@@ -256,6 +259,7 @@ public partial class RegionSelectionOverlayWindow : Window
 
         CanceledByPassthrough = true;
         PassthroughInputKind = RegionScreenCapturePassthroughInputKind.PointerMove;
+        PassthroughScreenPoint = null;
         Cursor = System.Windows.Input.Cursors.Arrow;
         CompleteSelection(accepted: false);
         return true;

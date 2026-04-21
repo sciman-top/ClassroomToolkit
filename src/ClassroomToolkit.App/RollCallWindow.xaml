@@ -16,6 +16,26 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+
+        <Style x:Key="Style_RollCallBottomBarTextButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="60"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+
+        <Style x:Key="Style_RollCallBottomBarAccentButton" TargetType="Button" BasedOn="{StaticResource Style_Button_Amber}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="60"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+
+        <Style x:Key="Style_RollCallGroupButton" TargetType="Button" BasedOn="{StaticResource Style_RollCallBottomBarTextButton}">
+            <Setter Property="MinWidth" Value="48"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Padding" Value="8,5"/>
+        </Style>
     </Window.Resources>
 
     <!-- 1. 主容器：圆角+深邃阴影 -->
@@ -242,10 +262,9 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding Label}"
-                                            Margin="3,0" MinWidth="44" Height="{StaticResource Size_Button_Action_Height_Compact}"
                                             Click="OnGroupEntryClick">
                                         <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+                                            <Style TargetType="Button" BasedOn="{StaticResource Style_RollCallGroupButton}">
                                                 <Setter Property="BorderThickness" Value="1"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsReset}" Value="True">
@@ -267,14 +286,14 @@
 
                         <Rectangle Width="1" Height="16" Fill="{StaticResource Brush_Border_Strong}" Margin="10,0" Opacity="1"/>
 
-                        <Button Style="{StaticResource Style_Button_Amber}" Click="OnResetClick" Margin="3,0" Padding="10,5" Height="32">
+                        <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnResetClick">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
                                 <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource Style_SecondaryButton}" Click="OnListClick" Margin="3,0" Padding="10,5" Height="32">
+                        <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnListClick">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
@@ -285,7 +304,7 @@
 
                     <!-- 计时操作 -->
                     <StackPanel x:Name="TimerActionsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
-                        <Button Style="{StaticResource Style_SecondaryButton}" Margin="3,0" Click="OnTimerModeClick" Padding="10,5" MinWidth="64" Height="32">
+                        <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnTimerModeClick" MinWidth="64">
                              <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                         </Button>
 
@@ -305,14 +324,14 @@
                             </Path>
                         </Button>
 
-                        <Button Style="{StaticResource Style_Button_Amber}" Margin="3,0" Click="OnTimerResetClick" Padding="10,5" MinWidth="64" Height="32">
+                        <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnTimerResetClick" MinWidth="64">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
                                 <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource Style_SecondaryButton}" Margin="3,0" Click="OnTimerSetClick" Padding="10,5" MinWidth="64" Height="32"
+                        <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnTimerSetClick" MinWidth="64"
                                 Background="{StaticResource Brush_Surface_Secondary}">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}"

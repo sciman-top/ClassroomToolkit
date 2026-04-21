@@ -18,6 +18,8 @@ public class FileLoggerProvider : ILoggerProvider
     private readonly string _logDirectory;
     private readonly Func<DateTime> _nowProvider;
     private readonly bool _resetExistingLogsOnStartup;
+    private readonly LogRetentionOptions _retentionOptions;
+    private readonly DateTime? _retentionNow;
     private readonly ConcurrentDictionary<string, FileLogger> _loggers = new();
     private readonly BlockingCollection<LogQueueItem> _messageQueue = new(LogQueueCapacity);
     private readonly Task _processQueueTask;
@@ -29,17 +31,22 @@ public class FileLoggerProvider : ILoggerProvider
     public FileLoggerProvider(
         string logDirectory,
         Func<DateTime>? nowProvider = null,
-        bool resetExistingLogsOnStartup = false)
+        bool resetExistingLogsOnStartup = false,
+        LogRetentionOptions? retentionOptions = null,
+        DateTime? retentionNow = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
         _logDirectory = logDirectory;
         _nowProvider = nowProvider ?? (() => DateTime.Now);
         _resetExistingLogsOnStartup = resetExistingLogsOnStartup;
+        _retentionOptions = retentionOptions ?? new LogRetentionOptions();
+        _retentionNow = retentionNow;
         if (!Directory.Exists(_logDirectory))
         {
             Directory.CreateDirectory(_logDirectory);
         }
         TryResetSessionLogs();
+        TryApplyRetention();
 
         _processQueueTask = Task.Factory.StartNew(
             ProcessQueue,
@@ -194,6 +201,15 @@ public class FileLoggerProvider : ILoggerProvider
         {
             // Best effort cleanup; continue with current session logging.
         }
+    }
+
+    private void TryApplyRetention()
+    {
+        LogRetentionPolicy.TryApply(
+            _logDirectory,
+            "app_",
+            _retentionNow ?? DateTime.Now,
+            _retentionOptions);
     }
 
     private static void TryDeleteLogFileBestEffort(string filePath)

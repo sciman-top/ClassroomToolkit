@@ -48,6 +48,7 @@
 
             <Border Grid.Row="1" Style="{StaticResource Style_ManagementShellContentBorder}">
                 <ScrollViewer x:Name="ListScrollViewer" Margin="6"
+                              PanningMode="VerticalFirst"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="StudentItems">
