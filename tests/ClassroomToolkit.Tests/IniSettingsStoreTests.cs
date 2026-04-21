@@ -72,4 +72,32 @@ public sealed class IniSettingsStoreTests
 
         act.Should().Throw<ArgumentNullException>();
     }
+
+    [Fact]
+    public void Save_ShouldTreatNullSectionDictionary_AsEmptySection()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_null_section", ".ini");
+        try
+        {
+            var store = new IniSettingsStore(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = null!
+            };
+
+            var act = () => store.Save(data);
+
+            act.Should().NotThrow();
+            var loaded = store.Load();
+            loaded.Should().ContainKey("Paint");
+            loaded["Paint"].Should().BeEmpty();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
 }

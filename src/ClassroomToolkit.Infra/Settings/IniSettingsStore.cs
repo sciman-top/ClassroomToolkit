@@ -137,7 +137,8 @@ public sealed class IniSettingsStore
         foreach (var section in data)
         {
             builder.Append('[').Append(section.Key).Append(']').AppendLine();
-            foreach (var pair in section.Value)
+            var sectionData = section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in sectionData)
             {
                 builder.Append(pair.Key).Append('=').Append(pair.Value).AppendLine();
             }

@@ -103,7 +103,14 @@ internal sealed class StartupOrchestrator
                     StartupCompatibilitySuppressionPolicy.MergeSuppressedWarningCodes(
                         settings.StartupCompatibilitySuppressedIssueCodes,
                         visibleWarningReport);
-                _services.GetService<AppSettingsService>()?.Save(settings);
+                try
+                {
+                    _services.GetService<AppSettingsService>()?.Save(settings);
+                }
+                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    _logException(ex, "StartupCompatibilitySuppressionPersist");
+                }
             }
         }
 
