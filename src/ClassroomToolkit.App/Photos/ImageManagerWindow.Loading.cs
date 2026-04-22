@@ -167,12 +167,16 @@ public partial class ImageManagerWindow
                 }
                 finally { TryReleaseThumbnailSemaphore(); }
 
+                if (thumbnail != null && !_isClosing)
+                {
+                    PutThumbnailCache(item.Path, isPdf, decodeWidth, item.Modified, thumbnail, pageCount);
+                }
+
                 if (thumbnail == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
                 {
                     return;
                 }
 
-                PutThumbnailCache(item.Path, isPdf, decodeWidth, item.Modified, thumbnail, pageCount);
                 await TryDispatchThumbnailUpdateAsync(item, thumbnail, pageCount, token, requestId);
             },
             token,

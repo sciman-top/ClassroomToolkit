@@ -134,9 +134,9 @@ public sealed class InkReplayBaselineIntegrityTests
             var requestedCount = actions.Count(a => a.Type == InkReplayActionType.DeferredRefreshRequested);
             var immediateCount = actions.Count(a => a.Type == InkReplayActionType.FastRefreshImmediate);
 
-            scheduledCount.Should().BeLessOrEqualTo(1, $"{fileName}: deferred scheduled action should be unique");
-            requestedCount.Should().BeLessOrEqualTo(1, $"{fileName}: deferred request action should be unique");
-            immediateCount.Should().BeLessOrEqualTo(1, $"{fileName}: immediate action should be unique");
+            scheduledCount.Should().BeLessThanOrEqualTo(1, $"{fileName}: deferred scheduled action should be unique");
+            requestedCount.Should().BeLessThanOrEqualTo(1, $"{fileName}: deferred request action should be unique");
+            immediateCount.Should().BeLessThanOrEqualTo(1, $"{fileName}: immediate action should be unique");
 
             if (requestedCount > 0)
             {

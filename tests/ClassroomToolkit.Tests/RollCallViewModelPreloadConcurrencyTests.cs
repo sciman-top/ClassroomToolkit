@@ -18,6 +18,7 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
     [Fact]
     public void WarmupData_ShouldNotClearLatestPreloadTask_WhenOlderTaskCompletes()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var tempRoot = Path.Combine(Path.GetTempPath(), $"ctoolkit-preload-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempRoot);
         var path1 = Path.Combine(tempRoot, "students-a.xlsx");
@@ -34,11 +35,11 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
             viewModel.WarmupData(path1);
             viewModel.WarmupData(path2);
 
-            store.Path1Started.Wait(WaitTimeout).Should().BeTrue();
-            store.Path2Started.Wait(WaitTimeout).Should().BeTrue();
+            store.Path1Started.Wait(WaitTimeout, cancellationToken).Should().BeTrue();
+            store.Path2Started.Wait(WaitTimeout, cancellationToken).Should().BeTrue();
 
             store.Path1Release.Set();
-            store.Path1Completed.Wait(WaitTimeout).Should().BeTrue();
+            store.Path1Completed.Wait(WaitTimeout, cancellationToken).Should().BeTrue();
 
             var staleOverwriteObserved = SpinWait.SpinUntil(
                 () => GetPreloadTask(viewModel) is null,
@@ -98,10 +99,11 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
 
         public RollCallWorkbookStoreLoadData LoadOrCreate(string path)
         {
+            var cancellationToken = TestContext.Current.CancellationToken;
             if (string.Equals(path, _path1, StringComparison.OrdinalIgnoreCase))
             {
                 Path1Started.Set();
-                if (!Path1Release.Wait(WaitTimeout))
+                if (!Path1Release.Wait(WaitTimeout, cancellationToken))
                 {
                     throw new TimeoutException("path1 preload release timed out.");
                 }
@@ -113,7 +115,7 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
             if (string.Equals(path, _path2, StringComparison.OrdinalIgnoreCase))
             {
                 Path2Started.Set();
-                if (!Path2Release.Wait(WaitTimeout))
+                if (!Path2Release.Wait(WaitTimeout, cancellationToken))
                 {
                     throw new TimeoutException("path2 preload release timed out.");
                 }

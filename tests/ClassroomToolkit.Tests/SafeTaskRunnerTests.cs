@@ -10,11 +10,12 @@ public sealed class SafeTaskRunnerTests
     public async Task Run_ShouldExecuteAction()
     {
         var invoked = false;
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         await SafeTaskRunner.Run("test.run.execute", _ =>
         {
             invoked = true;
-        });
+        }, cancellationToken);
 
         invoked.Should().BeTrue();
     }
@@ -23,10 +24,12 @@ public sealed class SafeTaskRunnerTests
     public async Task Run_ShouldInvokeOnError_WhenActionThrows()
     {
         Exception? captured = null;
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         await SafeTaskRunner.Run(
             "test.run.error",
             _ => throw new InvalidOperationException("boom"),
+            cancellationToken,
             onError: ex => captured = ex);
 
         captured.Should().NotBeNull();
@@ -36,7 +39,7 @@ public sealed class SafeTaskRunnerTests
     [Fact]
     public async Task Run_ShouldSkipAction_WhenCancellationAlreadyRequested()
     {
-        using var cancellation = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancellation.Cancel();
         var invoked = false;
 
@@ -51,7 +54,7 @@ public sealed class SafeTaskRunnerTests
     [Fact]
     public void Run_ShouldReturnCompletedTaskImmediately_WhenCancellationAlreadyRequested()
     {
-        using var cancellation = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancellation.Cancel();
 
         var task = SafeTaskRunner.Run(
@@ -65,7 +68,7 @@ public sealed class SafeTaskRunnerTests
     [Fact]
     public async Task Run_ShouldNotInvokeOnError_WhenOperationCanceled()
     {
-        using var cancellation = new CancellationTokenSource();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancellation.Cancel();
         var onErrorCalled = false;
 
@@ -83,9 +86,11 @@ public sealed class SafeTaskRunnerTests
     {
         Func<Task> act = async () =>
         {
+            var cancellationToken = TestContext.Current.CancellationToken;
             await SafeTaskRunner.Run(
                 "test.run.onerror.recoverable",
                 _ => throw new InvalidOperationException("boom"),
+                cancellationToken,
                 onError: _ => throw new ApplicationException("callback-failed"));
         };
 
@@ -95,9 +100,11 @@ public sealed class SafeTaskRunnerTests
     [Fact]
     public async Task Run_ShouldRethrowFatalException_WhenActionThrowsFatal()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var task = SafeTaskRunner.Run(
             "test.run.fatal",
-            _ => throw new BadImageFormatException("fatal"));
+            _ => throw new BadImageFormatException("fatal"),
+            cancellationToken);
 
         await task.Awaiting(t => t).Should().ThrowAsync<BadImageFormatException>();
     }
@@ -105,9 +112,11 @@ public sealed class SafeTaskRunnerTests
     [Fact]
     public async Task Run_ShouldRethrowFatalException_WhenOnErrorThrowsFatal()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var task = SafeTaskRunner.Run(
             "test.run.onerror.fatal",
             _ => throw new InvalidOperationException("boom"),
+            cancellationToken,
             onError: _ => throw new BadImageFormatException("fatal-callback"));
 
         await task.Awaiting(t => t).Should().ThrowAsync<BadImageFormatException>();

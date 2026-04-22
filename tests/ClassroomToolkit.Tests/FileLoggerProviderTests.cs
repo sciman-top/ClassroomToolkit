@@ -123,7 +123,7 @@ public sealed class FileLoggerProviderTests
             }
         }
 
-        using var provider = new FileLoggerProvider(directory, NextNow);
+        using var provider = new FileLoggerProvider(directory, NextNow, retentionNow: day1);
         var logger = provider.CreateLogger("rotate-category");
 
         logger.Log(
@@ -276,6 +276,22 @@ public sealed class FileLoggerProviderTests
         File.Exists(expiredFile).Should().BeFalse();
         File.Exists(retainedFile).Should().BeTrue();
         File.Exists(todayFile).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_ShouldUseProviderTime_ForRetention_WhenRetentionNowIsOmitted()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_retention_provider_time");
+        var fixedNow = new DateTime(2026, 04, 22, 10, 00, 00);
+        var expiredFile = Path.Combine(directory, "app_20260407.log");
+        var retainedFile = Path.Combine(directory, "app_20260422.log");
+        File.WriteAllText(expiredFile, "expired");
+        File.WriteAllText(retainedFile, "retained");
+
+        using var provider = new FileLoggerProvider(directory, () => fixedNow);
+
+        File.Exists(expiredFile).Should().BeFalse();
+        File.Exists(retainedFile).Should().BeTrue();
     }
 
     [Fact]

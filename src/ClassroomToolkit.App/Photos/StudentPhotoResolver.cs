@@ -141,7 +141,7 @@ public sealed class StudentPhotoResolver : IDisposable
             var changedDirectPath = ResolveByPreferredExtensions(directory, normalizedStudentId);
             if (!string.IsNullOrWhiteSpace(changedDirectPath))
             {
-                _cache.TryRemove(directory, out _);
+                TryPromoteDirectHitCacheEntry(directory, key, changedDirectPath, freshCache, now);
                 return changedDirectPath;
             }
 
@@ -297,6 +297,34 @@ public sealed class StudentPhotoResolver : IDisposable
     private void TryMarkMissProbe(string directory, DirectoryCache cached, DateTime nowUtc)
     {
         var updated = cached with { LastMissProbeUtc = nowUtc };
+        _cache.TryUpdate(directory, updated, cached);
+    }
+
+    private void TryPromoteDirectHitCacheEntry(
+        string directory,
+        string key,
+        string path,
+        DirectoryCache cached,
+        DateTime nowUtc)
+    {
+        if (IsDisposed())
+        {
+            return;
+        }
+
+        var updatedIndex = new Dictionary<string, string>(cached.Index, StringComparer.OrdinalIgnoreCase)
+        {
+            [key] = path
+        };
+        var updatedWriteTimeUtc = GetDirectoryWriteTimeUtcOrDefault(directory);
+        var updated = cached with
+        {
+            Timestamp = nowUtc,
+            DirectoryWriteTimeUtc = updatedWriteTimeUtc == DateTime.MinValue ? cached.DirectoryWriteTimeUtc : updatedWriteTimeUtc,
+            LastMissProbeUtc = DateTime.MinValue,
+            Index = updatedIndex
+        };
+
         _cache.TryUpdate(directory, updated, cached);
     }
 

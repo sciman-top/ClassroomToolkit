@@ -10,9 +10,11 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void Execute_ShouldReturnFalse_WhenAttemptActionThrowsRecoverableException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var result = WindowInteropRetryExecutor.Execute(
             _ => throw new InvalidOperationException("recoverable"),
-            (_, _) => true);
+            (_, _) => true,
+            cancellationToken);
 
         result.Should().BeFalse();
     }
@@ -20,9 +22,11 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void Execute_ShouldReturnFalse_WhenShouldRetryThrowsRecoverableException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var result = WindowInteropRetryExecutor.Execute(
             _ => (false, 5),
-            (_, _) => throw new InvalidOperationException("recoverable"));
+            (_, _) => throw new InvalidOperationException("recoverable"),
+            cancellationToken);
 
         result.Should().BeFalse();
     }
@@ -40,10 +44,12 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void ExecuteWithValue_ShouldReturnFalse_WhenAttemptActionThrowsRecoverableException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var result = WindowInteropRetryExecutor.ExecuteWithValue<int>(
             _ => throw new InvalidOperationException("recoverable"),
             (_, _) => true,
-            out var value);
+            out var value,
+            cancellationToken);
 
         result.Should().BeFalse();
         value.Should().Be(default);
@@ -52,10 +58,12 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void ExecuteWithValue_ShouldReturnFalse_WhenShouldRetryThrowsRecoverableException()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var result = WindowInteropRetryExecutor.ExecuteWithValue(
             _ => (false, 0, 5),
             (_, _) => throw new InvalidOperationException("recoverable"),
-            out var value);
+            out var value,
+            cancellationToken);
 
         result.Should().BeFalse();
         value.Should().Be(default);
@@ -64,6 +72,7 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void Execute_ShouldReturnTrue_WhenSecondAttemptSucceeds()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var callCount = 0;
 
         var result = WindowInteropRetryExecutor.Execute(
@@ -72,7 +81,8 @@ public sealed class WindowInteropRetryExecutorTests
                 callCount++;
                 return callCount == 2 ? (true, 0) : (false, 5);
             },
-            (_, errorCode) => errorCode == 5);
+            (_, errorCode) => errorCode == 5,
+            cancellationToken);
 
         result.Should().BeTrue();
         callCount.Should().Be(2);
@@ -81,6 +91,7 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void Execute_ShouldReturnFalse_WhenRetryPolicyRejects()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var callCount = 0;
 
         var result = WindowInteropRetryExecutor.Execute(
@@ -89,7 +100,8 @@ public sealed class WindowInteropRetryExecutorTests
                 callCount++;
                 return (false, 1400);
             },
-            (_, errorCode) => errorCode == 5);
+            (_, errorCode) => errorCode == 5,
+            cancellationToken);
 
         result.Should().BeFalse();
         callCount.Should().Be(1);
@@ -98,6 +110,7 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void ExecuteWithValue_ShouldReturnResolvedValue_WhenRetrySucceeds()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var callCount = 0;
 
         var result = WindowInteropRetryExecutor.ExecuteWithValue(
@@ -109,7 +122,8 @@ public sealed class WindowInteropRetryExecutorTests
                     : (false, 0, 5);
             },
             (_, errorCode) => errorCode == 5,
-            out var value);
+            out var value,
+            cancellationToken);
 
         result.Should().BeTrue();
         value.Should().Be(42);
@@ -119,7 +133,7 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void Execute_ShouldStopRetry_WhenCancellationRequested()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         var callCount = 0;
 
         var result = WindowInteropRetryExecutor.Execute(
@@ -142,7 +156,7 @@ public sealed class WindowInteropRetryExecutorTests
     [Fact]
     public void ExecuteWithValue_ShouldStopRetry_WhenTokenAlreadyCanceled()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.Cancel();
 
         var result = WindowInteropRetryExecutor.ExecuteWithValue<int>(

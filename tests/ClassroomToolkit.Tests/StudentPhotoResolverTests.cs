@@ -216,8 +216,56 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void ResolvePhotoPath_ShouldMergeDirectHitIntoWarmCache_InsteadOfDroppingDirectoryIndex()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_cache_promote");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var existingStudentId = "1001";
+        var newStudentId = "1002";
+        var existingPhoto = Path.Combine(classDirectory, $"{existingStudentId}.jpg");
+        var newPhoto = Path.Combine(classDirectory, $"{newStudentId}.jpg");
+        File.WriteAllBytes(existingPhoto, new byte[] { 0x01, 0x02, 0x03 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+
+            File.WriteAllBytes(newPhoto, new byte[] { 0x04, 0x05, 0x06 });
+            Directory.SetLastWriteTimeUtc(classDirectory, DateTime.UtcNow.AddSeconds(1));
+
+            resolver.ResolvePhotoPath(className, newStudentId).Should().Be(newPhoto);
+
+            var cache = (System.Collections.IDictionary?)CacheField.GetValue(resolver);
+            cache.Should().NotBeNull();
+            cache!.Count.Should().Be(1);
+
+            var cacheEntry = cache[classDirectory];
+            cacheEntry.Should().NotBeNull();
+
+            var indexProperty = cacheEntry!.GetType().GetProperty("Index", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            indexProperty.Should().NotBeNull();
+            var index = indexProperty!.GetValue(cacheEntry) as IReadOnlyDictionary<string, string>;
+            index.Should().NotBeNull();
+            index![existingStudentId].Should().Be(existingPhoto);
+            index[newStudentId].Should().Be(newPhoto);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolvePhotoPath_ShouldDetectNewFile_WhenDirectoryWriteTimeDoesNotAdvance()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_cache_write_time");
         var className = "ClassA";
         var classDirectory = Path.Combine(rootPath, className);
@@ -231,7 +279,7 @@ public sealed class StudentPhotoResolverTests
 
             resolver.ResolvePhotoPath(className, studentId).Should().BeNull();
 
-            await Task.Delay(TimeSpan.FromMilliseconds(2200));
+            await Task.Delay(TimeSpan.FromMilliseconds(2200), cancellationToken);
             File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
             Directory.SetLastWriteTimeUtc(classDirectory, DateTime.UtcNow.AddMinutes(-1));
 
@@ -271,6 +319,7 @@ public sealed class StudentPhotoResolverTests
     [Fact]
     public async Task Dispose_ShouldBeSafe_DuringConcurrentWarmup()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_concurrent");
         try
         {
@@ -283,7 +332,7 @@ public sealed class StudentPhotoResolverTests
 
             var resolver = new StudentPhotoResolver(rootPath);
             var warmupTasks = Enumerable.Range(0, 16)
-                .Select(_ => Task.Run(() => resolver.WarmupCache()))
+                .Select(_ => Task.Run(() => resolver.WarmupCache(), cancellationToken))
                 .ToArray();
 
             var act = async () =>
@@ -307,6 +356,7 @@ public sealed class StudentPhotoResolverTests
     [Fact]
     public async Task Dispose_ShouldNotRepopulateCache_WhenIndexBuildResumesAfterDispose()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_dispose_race");
         var classDirectory = Path.Combine(rootPath, "ClassA");
         Directory.CreateDirectory(classDirectory);
@@ -326,8 +376,8 @@ public sealed class StudentPhotoResolverTests
                 {
                     started.Set();
                     return GetIndexMethod.Invoke(resolver, new object[] { classDirectory });
-                });
-                started.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+                }, cancellationToken);
+                started.Wait(TimeSpan.FromSeconds(5), cancellationToken).Should().BeTrue();
                 resolver.Dispose();
             }
 

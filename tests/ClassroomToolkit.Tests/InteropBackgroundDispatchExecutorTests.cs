@@ -11,18 +11,20 @@ public sealed class InteropBackgroundDispatchExecutorTests
     public void Queue_ShouldExecuteAction()
     {
         using var completed = new ManualResetEventSlim(false);
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         InteropBackgroundDispatchExecutor.Queue(
             "test-execute",
             () => completed.Set());
 
-        completed.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
+        completed.Wait(TimeSpan.FromSeconds(2), cancellationToken).Should().BeTrue();
     }
 
     [Fact]
     public void Queue_WhenActionThrows_ShouldInvokeErrorCallback()
     {
         using var completed = new ManualResetEventSlim(false);
+        var cancellationToken = TestContext.Current.CancellationToken;
         Exception? captured = null;
 
         InteropBackgroundDispatchExecutor.Queue(
@@ -34,7 +36,7 @@ public sealed class InteropBackgroundDispatchExecutorTests
                 completed.Set();
             });
 
-        completed.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
+        completed.Wait(TimeSpan.FromSeconds(2), cancellationToken).Should().BeTrue();
         captured.Should().BeOfType<InvalidOperationException>();
     }
 
@@ -43,6 +45,7 @@ public sealed class InteropBackgroundDispatchExecutorTests
     {
         using var callbackCompleted = new ManualResetEventSlim(false);
         using var subsequentCompleted = new ManualResetEventSlim(false);
+        var cancellationToken = TestContext.Current.CancellationToken;
         var errorCallbackCount = 0;
 
         InteropBackgroundDispatchExecutor.Queue(
@@ -59,8 +62,8 @@ public sealed class InteropBackgroundDispatchExecutorTests
             "test-subsequent",
             () => subsequentCompleted.Set());
 
-        callbackCompleted.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
-        subsequentCompleted.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
+        callbackCompleted.Wait(TimeSpan.FromSeconds(2), cancellationToken).Should().BeTrue();
+        subsequentCompleted.Wait(TimeSpan.FromSeconds(2), cancellationToken).Should().BeTrue();
         errorCallbackCount.Should().Be(1);
     }
 }

@@ -208,8 +208,18 @@ public class FileLoggerProvider : ILoggerProvider
         LogRetentionPolicy.TryApply(
             _logDirectory,
             "app_",
-            _retentionNow ?? DateTime.Now,
+            ResolveRetentionReferenceTime(),
             _retentionOptions);
+    }
+
+    private DateTime ResolveRetentionReferenceTime()
+    {
+        if (_retentionNow.HasValue)
+        {
+            return _retentionNow.Value;
+        }
+
+        return GetCurrentTime();
     }
 
     private static void TryDeleteLogFileBestEffort(string filePath)

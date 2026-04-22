@@ -563,6 +563,7 @@ public sealed class InkExportServiceTests : IDisposable
     [Fact]
     public async Task SaveExportManifest_ShouldMergeConcurrentWrites_ForSameExportDirectory()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var exportDir = Path.Combine(_tempDir, "笔迹合成图片");
         Directory.CreateDirectory(exportDir);
 
@@ -587,20 +588,20 @@ public sealed class InkExportServiceTests : IDisposable
 
         var t1 = Task.Run(() =>
         {
-            startGate.Wait();
+            startGate.Wait(cancellationToken);
             for (var i = 0; i < 120; i++)
             {
                 method!.Invoke(null, new object?[] { exportDir, BuildManifest("a+笔迹.png", "hash-a") });
             }
-        });
+        }, cancellationToken);
         var t2 = Task.Run(() =>
         {
-            startGate.Wait();
+            startGate.Wait(cancellationToken);
             for (var i = 0; i < 120; i++)
             {
                 method!.Invoke(null, new object?[] { exportDir, BuildManifest("b+笔迹.png", "hash-b") });
             }
-        });
+        }, cancellationToken);
 
         startGate.Set();
         await Task.WhenAll(t1, t2);
