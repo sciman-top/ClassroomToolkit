@@ -15,6 +15,8 @@ public sealed record DiagnosticsBundleExportResult(
 
 public static class DiagnosticsBundleExportService
 {
+    internal const long MaxOptionalSourceFileBytes = 8L * 1024 * 1024;
+
     public static DiagnosticsBundleExportResult Export(DiagnosticsResult result)
     {
         return Export(result, new ConfigurationService(), () => DateTime.Now);
@@ -172,6 +174,25 @@ public static class DiagnosticsBundleExportService
             return;
         }
 
+        if (!IsAllowedBundleEntryName(entryName))
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] Skip unexpected entry '{entryName}' from '{sourcePath}'.");
+            return;
+        }
+
+        if (!TryGetFileLength(sourcePath, out var fileLength))
+        {
+            return;
+        }
+
+        if (fileLength > MaxOptionalSourceFileBytes)
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] Skip oversized file '{sourcePath}' ({fileLength} bytes) for entry '{entryName}'.");
+            return;
+        }
+
         try
         {
             archive.CreateEntryFromFile(sourcePath!, entryName, CompressionLevel.Optimal);
@@ -203,6 +224,46 @@ public static class DiagnosticsBundleExportService
         {
             Debug.WriteLine(
                 $"[DiagnosticsBundleExport] Skip log timestamp read. path='{path}', reason={ex.GetType().Name}:{ex.Message}");
+            return false;
+        }
+    }
+
+    internal static bool IsAllowedBundleEntryName(string entryName)
+    {
+        if (string.IsNullOrWhiteSpace(entryName))
+        {
+            return false;
+        }
+
+        var normalized = entryName.Replace('\\', '/');
+        if (normalized.Equals("settings/settings.json", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("settings/settings.ini", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("logs/startup-compatibility-latest.json", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("diagnostics/diagnostics-summary.txt", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!normalized.StartsWith("logs/error_", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return normalized.EndsWith(".log", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetFileLength(string path, out long length)
+    {
+        length = 0;
+        try
+        {
+            length = new FileInfo(path).Length;
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] Skip file length read. path='{path}', reason={ex.GetType().Name}:{ex.Message}");
             return false;
         }
     }

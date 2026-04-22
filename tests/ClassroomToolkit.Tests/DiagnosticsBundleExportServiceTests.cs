@@ -129,6 +129,62 @@ public sealed class DiagnosticsBundleExportServiceTests
         }
     }
 
+    [Fact]
+    public void Export_ShouldSkipOversizedOptionalFile_AndRemainSuccessful()
+    {
+        var tempDir = TestPathHelper.CreateDirectory("ctool_diag_bundle_oversized");
+        try
+        {
+            var logsDir = Path.Combine(tempDir, "logs");
+            Directory.CreateDirectory(logsDir);
+            var settingsJsonPath = Path.Combine(tempDir, "settings.json");
+            var settingsIniPath = Path.Combine(tempDir, "settings.ini");
+            var startupCompatibilityPath = Path.Combine(logsDir, "startup-compatibility-latest.json");
+            File.WriteAllText(settingsJsonPath, "{\"ok\":true}");
+            File.WriteAllText(settingsIniPath, "[settings]");
+            File.WriteAllBytes(
+                startupCompatibilityPath,
+                new byte[DiagnosticsBundleExportService.MaxOptionalSourceFileBytes + 1024]);
+            var configuration = new FakeConfigurationService(tempDir, settingsIniPath, settingsJsonPath);
+
+            var export = DiagnosticsBundleExportService.Export(
+                CreateDiagnosticsResult(),
+                configuration,
+                () => new DateTime(2026, 4, 22, 14, 0, 0));
+
+            export.Success.Should().BeTrue(export.Error);
+            using var archive = ZipFile.OpenRead(export.BundlePath);
+            archive.Entries.Should().Contain(entry => entry.FullName == "settings/settings.json");
+            archive.Entries.Should().Contain(entry => entry.FullName == "settings/settings.ini");
+            archive.Entries.Should().Contain(entry => entry.FullName == "diagnostics/diagnostics-summary.txt");
+            archive.Entries.Should().NotContain(entry => entry.FullName == "logs/startup-compatibility-latest.json");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup in test environment.
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("settings/settings.json", true)]
+    [InlineData("settings/settings.ini", true)]
+    [InlineData("logs/startup-compatibility-latest.json", true)]
+    [InlineData("diagnostics/diagnostics-summary.txt", true)]
+    [InlineData("logs/error_20260422.log", true)]
+    [InlineData("logs/app_20260422.log", false)]
+    [InlineData("tmp/anything.txt", false)]
+    public void IsAllowedBundleEntryName_ShouldMatchPolicy(string entryName, bool expected)
+    {
+        DiagnosticsBundleExportService.IsAllowedBundleEntryName(entryName).Should().Be(expected);
+    }
+
     private static DiagnosticsResult CreateDiagnosticsResult()
     {
         return new DiagnosticsResult(
