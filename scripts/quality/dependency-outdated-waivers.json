@@ -1,0 +1,34 @@
+{
+  "waivers": [
+    {
+      "package": "Microsoft.ApplicationInsights",
+      "owner": "engineering",
+      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
+      "expires_at": "2026-06-30"
+    },
+    {
+      "package": "Microsoft.Testing.Extensions.Telemetry",
+      "owner": "engineering",
+      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
+      "expires_at": "2026-06-30"
+    },
+    {
+      "package": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+      "owner": "engineering",
+      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
+      "expires_at": "2026-06-30"
+    },
+    {
+      "package": "Microsoft.Testing.Platform",
+      "owner": "engineering",
+      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
+      "expires_at": "2026-06-30"
+    },
+    {
+      "package": "Microsoft.Testing.Platform.MSBuild",
+      "owner": "engineering",
+      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
+      "expires_at": "2026-06-30"
+    }
+  ]
+}
