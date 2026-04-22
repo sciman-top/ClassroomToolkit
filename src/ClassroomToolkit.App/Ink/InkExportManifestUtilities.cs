@@ -76,34 +76,19 @@ internal static class InkExportManifestUtilities
                 {
                     WriteIndented = true
                 });
-                var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-                try
-                {
-                    File.WriteAllText(tempPath, json);
-                    if (File.Exists(path))
+                AtomicFileReplaceUtility.WriteAtomically(
+                    path,
+                    tempPath => File.WriteAllText(tempPath, json),
+                    onTempCleanupFailure: static (tempPath, cleanupEx) =>
                     {
-                        AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
-                    }
-                    else
-                    {
-                        File.Move(tempPath, path);
-                    }
-                }
-                finally
-                {
-                    if (File.Exists(tempPath))
-                    {
-                        try
+                        if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(cleanupEx))
                         {
-                            File.Delete(tempPath);
+                            return;
                         }
-                        catch (Exception cleanupEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(cleanupEx))
-                        {
-                            System.Diagnostics.Debug.WriteLine(
-                                $"[InkExportManifestUtilities] temp cleanup failed path={tempPath} ex={cleanupEx.GetType().Name} msg={cleanupEx.Message}");
-                        }
-                    }
-                }
+
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[InkExportManifestUtilities] temp cleanup failed path={tempPath} ex={cleanupEx.GetType().Name} msg={cleanupEx.Message}");
+                    });
             }
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))

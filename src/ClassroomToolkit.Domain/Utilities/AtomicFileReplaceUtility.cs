@@ -16,4 +16,47 @@ public static class AtomicFileReplaceUtility
             File.Copy(tempPath, targetPath, overwrite: true);
         }
     }
+
+    public static void WriteAtomically(
+        string targetPath,
+        Action<string> writeTempFile,
+        Action<string, Exception>? onTempCleanupFailure = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
+        ArgumentNullException.ThrowIfNull(writeTempFile);
+
+        var directory = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{targetPath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            writeTempFile(tempPath);
+            if (File.Exists(targetPath))
+            {
+                ReplaceOrOverwrite(tempPath, targetPath);
+            }
+            else
+            {
+                File.Move(tempPath, targetPath);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
+                {
+                    onTempCleanupFailure?.Invoke(tempPath, ex);
+                }
+            }
+        }
+    }
 }

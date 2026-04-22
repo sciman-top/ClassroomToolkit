@@ -149,34 +149,19 @@ public sealed class IniSettingsStore
         {
             Directory.CreateDirectory(directory);
         }
-        var tempPath = $"{_path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            File.WriteAllText(tempPath, builder.ToString(), Encoding.UTF8);
-            if (File.Exists(_path))
+        AtomicFileReplaceUtility.WriteAtomically(
+            _path,
+            tempPath => File.WriteAllText(tempPath, builder.ToString(), Encoding.UTF8),
+            onTempCleanupFailure: static (tempPath, ex) =>
             {
-                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, _path);
-            }
-            else
-            {
-                File.Move(tempPath, _path);
-            }
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(tempPath))
+                if (!InfraExceptionFilterPolicy.IsNonFatal(ex))
                 {
-                    File.Delete(tempPath);
+                    return;
                 }
-            }
-            catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-            {
+
                 Debug.WriteLine(
                     $"[IniSettingsStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
-            }
-        }
+            });
     }
 
 }

@@ -312,39 +312,18 @@ public sealed class InkStorageService
 
     private static void WriteAllTextAtomically(string path, string content)
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        AtomicFileReplaceUtility.WriteAtomically(
+            path,
+            tempPath => File.WriteAllText(tempPath, content),
+            onTempCleanupFailure: static (_, ex) =>
+            {
+                if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    return;
+                }
 
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            File.WriteAllText(tempPath, content);
-            if (File.Exists(path))
-            {
-                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
-            }
-            else
-            {
-                File.Move(tempPath, path);
-            }
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                try
-                {
-                    File.Delete(tempPath);
-                }
-                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    // Best-effort cleanup; keep the primary write/replace exception.
-                }
-            }
-        }
+                // Best-effort cleanup; keep the primary write/replace exception.
+            });
     }
 
     private static string ResolveDefaultRootPath()

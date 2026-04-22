@@ -263,6 +263,81 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void InvalidateStudentCache_ShouldRemoveOnlyTargetStudent_FromWarmCache()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_invalidate_target_only");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var studentA = "1001";
+        var studentB = "1002";
+        var photoA = Path.Combine(classDirectory, $"{studentA}.jpg");
+        var photoB = Path.Combine(classDirectory, $"{studentB}.jpg");
+        File.WriteAllBytes(photoA, new byte[] { 0x01, 0x02, 0x03 });
+        File.WriteAllBytes(photoB, new byte[] { 0x04, 0x05, 0x06 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+
+            var beforeInvalidate = GetCachedIndex(resolver, classDirectory);
+            beforeInvalidate.Should().ContainKey(studentA);
+            beforeInvalidate.Should().ContainKey(studentB);
+
+            resolver.InvalidateStudentCache(className, studentA);
+
+            var afterInvalidate = GetCachedIndex(resolver, classDirectory);
+            afterInvalidate.Should().NotContainKey(studentA);
+            afterInvalidate.Should().ContainKey(studentB);
+            resolver.ResolvePhotoPath(className, studentB).Should().Be(photoB);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void InvalidateStudentCache_ShouldIgnoreInvalidStudentId_WithoutDroppingClassCache()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_invalidate_invalid_id");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var studentA = "1001";
+        var studentB = "1002";
+        var photoA = Path.Combine(classDirectory, $"{studentA}.jpg");
+        var photoB = Path.Combine(classDirectory, $"{studentB}.jpg");
+        File.WriteAllBytes(photoA, new byte[] { 0x01, 0x02, 0x03 });
+        File.WriteAllBytes(photoB, new byte[] { 0x04, 0x05, 0x06 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+
+            var beforeInvalidate = GetCachedIndex(resolver, classDirectory);
+            resolver.InvalidateStudentCache(className, "..");
+            var afterInvalidate = GetCachedIndex(resolver, classDirectory);
+
+            afterInvalidate.Should().ContainKey(studentA);
+            afterInvalidate.Should().ContainKey(studentB);
+            afterInvalidate.Count.Should().Be(beforeInvalidate.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolvePhotoPath_ShouldDetectNewFile_WhenDirectoryWriteTimeDoesNotAdvance()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -467,5 +542,23 @@ public sealed class StudentPhotoResolverTests
             "ClassroomToolkit.App",
             "Photos",
             "StudentPhotoResolver.cs");
+    }
+
+    private static IReadOnlyDictionary<string, string> GetCachedIndex(StudentPhotoResolver resolver, string directory)
+    {
+        var cache = (System.Collections.IDictionary?)CacheField.GetValue(resolver);
+        cache.Should().NotBeNull();
+        cache!.Count.Should().Be(1);
+        cache.Contains(directory).Should().BeTrue();
+
+        var cacheEntry = cache[directory];
+        cacheEntry.Should().NotBeNull();
+
+        var indexProperty = cacheEntry!.GetType().GetProperty("Index", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        indexProperty.Should().NotBeNull();
+
+        var index = indexProperty!.GetValue(cacheEntry) as IReadOnlyDictionary<string, string>;
+        index.Should().NotBeNull();
+        return index!;
     }
 }

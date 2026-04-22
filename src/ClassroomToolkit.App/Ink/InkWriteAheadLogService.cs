@@ -186,7 +186,6 @@ public sealed class InkWriteAheadLogService
 
     private void SaveMap(string walPath, Dictionary<string, InkWalEntry> map)
     {
-        string? temp = null;
         try
         {
             if (map.Count == 0)
@@ -198,43 +197,25 @@ public sealed class InkWriteAheadLogService
                 return;
             }
 
-            var directory = Path.GetDirectoryName(walPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
             var json = JsonSerializer.Serialize(map, _options);
-            temp = $"{walPath}.{Guid.NewGuid():N}.tmp";
-            File.WriteAllText(temp, json);
-            if (File.Exists(walPath))
-            {
-                AtomicFileReplaceUtility.ReplaceOrOverwrite(temp, walPath);
-            }
-            else
-            {
-                File.Move(temp, walPath);
-            }
+            AtomicFileReplaceUtility.WriteAtomically(
+                walPath,
+                tempPath => File.WriteAllText(tempPath, json),
+                onTempCleanupFailure: static (tempPath, ex) =>
+                {
+                    if (!ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                    {
+                        return;
+                    }
+
+                    Debug.WriteLine($"[InkWAL] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
+                    // Best-effort cleanup for temp WAL files.
+                });
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] save failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             // Ignore WAL persistence errors.
-        }
-        finally
-        {
-            if (!string.IsNullOrWhiteSpace(temp) && File.Exists(temp))
-            {
-                try
-                {
-                    File.Delete(temp);
-                }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    Debug.WriteLine($"[InkWAL] temp cleanup failed path={temp} ex={ex.GetType().Name} msg={ex.Message}");
-                    // Best-effort cleanup for temp WAL files.
-                }
-            }
         }
     }
 

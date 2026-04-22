@@ -105,12 +105,12 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             Indented = true
         };
 
-        var tempPath = $"{_path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            using (var stream = File.Open(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-            using (var writer = new Utf8JsonWriter(stream, options))
+        AtomicFileReplaceUtility.WriteAtomically(
+            _path,
+            tempPath =>
             {
+                using var stream = File.Open(tempPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                using var writer = new Utf8JsonWriter(stream, options);
                 writer.WriteStartObject();
                 foreach (var section in data.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
                 {
@@ -125,37 +125,17 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 }
                 writer.WriteEndObject();
                 writer.Flush();
-            }
+            },
+            onTempCleanupFailure: static (tempPath, ex) =>
+            {
+                Debug.WriteLine(
+                    $"[JsonSettingsDocumentStoreAdapter] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
+            });
 
-            if (File.Exists(_path))
-            {
-                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, _path);
-            }
-            else
-            {
-                File.Move(tempPath, _path);
-            }
-
-            Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
-            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
-            Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
-            _lastValidatedContentHash = GetCurrentContentHash();
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                try
-                {
-                    File.Delete(tempPath);
-                }
-                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-                {
-                    Debug.WriteLine(
-                        $"[JsonSettingsDocumentStoreAdapter] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
-                }
-            }
-        }
+        Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
+        Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+        Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
+        _lastValidatedContentHash = GetCurrentContentHash();
     }
 
     private static bool ShouldBlockOverwriteAfterLoadFailure(Exception ex)

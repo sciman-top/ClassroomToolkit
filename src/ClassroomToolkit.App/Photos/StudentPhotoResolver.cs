@@ -170,10 +170,56 @@ public sealed class StudentPhotoResolver : IDisposable
         {
             return;
         }
+
+        var normalizedStudentId = SanitizeSegment(studentId);
+        if (string.IsNullOrWhiteSpace(normalizedStudentId))
+        {
+            return;
+        }
+
         var normalizedClass = NormalizeClassName(className);
         var directory = Path.Combine(_rootPath, normalizedClass);
-        _cache.TryRemove(directory, out _);
-        _indexLocks.TryRemove(directory, out _);
+        if (!_cache.TryGetValue(directory, out var cached))
+        {
+            _indexLocks.TryRemove(directory, out _);
+            return;
+        }
+
+        while (true)
+        {
+            if (IsDisposed())
+            {
+                return;
+            }
+
+            if (!cached.Index.ContainsKey(normalizedStudentId))
+            {
+                return;
+            }
+
+            var updatedIndex = new Dictionary<string, string>(cached.Index, StringComparer.OrdinalIgnoreCase);
+            if (!updatedIndex.Remove(normalizedStudentId))
+            {
+                return;
+            }
+
+            var updated = cached with
+            {
+                Timestamp = DateTime.UtcNow,
+                LastMissProbeUtc = DateTime.MinValue,
+                Index = updatedIndex
+            };
+            if (_cache.TryUpdate(directory, updated, cached))
+            {
+                return;
+            }
+
+            if (!_cache.TryGetValue(directory, out cached))
+            {
+                _indexLocks.TryRemove(directory, out _);
+                return;
+            }
+        }
     }
 
     public static string SanitizeSegment(string value)
