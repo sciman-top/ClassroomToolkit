@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ClassroomToolkit.Application.Abstractions;
 
 namespace ClassroomToolkit.App.Ink;
 
-public sealed class InkHistoryPersistenceBridge : ClassroomToolkit.Infra.Storage.IInkHistoryStoreBridge
+public sealed class InkHistoryPersistenceBridge : IInkHistoryStoreBridge
 {
     private static readonly JsonSerializerOptions JsonOptions = BuildJsonOptions();
     private readonly InkPersistenceService _persistence;
@@ -15,14 +16,14 @@ public sealed class InkHistoryPersistenceBridge : ClassroomToolkit.Infra.Storage
         _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
     }
 
-    public ClassroomToolkit.Infra.Storage.InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex)
+    public InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex)
     {
         var strokes = _persistence.LoadInkPageForFile(sourcePath, pageIndex);
         var strokesJson = (strokes == null || strokes.Count == 0)
             ? null
             : JsonSerializer.Serialize(strokes, JsonOptions);
         var createdTemplate = string.IsNullOrWhiteSpace(strokesJson);
-        return new ClassroomToolkit.Infra.Storage.InkHistoryLoadResult(sourcePath, pageIndex, strokesJson, createdTemplate);
+        return new InkHistoryLoadResult(sourcePath, pageIndex, strokesJson, createdTemplate);
     }
 
     public void Save(string sourcePath, int pageIndex, string? strokesJson)

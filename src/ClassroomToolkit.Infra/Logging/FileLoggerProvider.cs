@@ -240,6 +240,7 @@ public class FileLoggerProvider : ILoggerProvider
         {
             return;
         }
+        GC.SuppressFinalize(this);
 
         try
         {
@@ -282,10 +283,7 @@ public class FileLoggerProvider : ILoggerProvider
     private static bool WaitTaskSafely(Task task, int timeoutMs)
     {
         ArgumentNullException.ThrowIfNull(task);
-        if (timeoutMs < Timeout.Infinite)
-        {
-            throw new ArgumentOutOfRangeException(nameof(timeoutMs));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMs, Timeout.Infinite);
 
         if (timeoutMs == 0)
         {

@@ -48,11 +48,11 @@ public sealed class IniSettingsStore
             {
                 continue;
             }
-            if (line.StartsWith("#", StringComparison.Ordinal) || line.StartsWith(";", StringComparison.Ordinal))
+            if (line.StartsWith('#') || line.StartsWith(';'))
             {
                 continue;
             }
-            if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
+            if (line.StartsWith('[') && line.EndsWith(']'))
             {
                 currentSection = line.Substring(1, line.Length - 2).Trim();
                 if (!data.ContainsKey(currentSection))
@@ -89,7 +89,7 @@ public sealed class IniSettingsStore
     {
         foreach (var line in lines)
         {
-            if (line.IndexOf('\0') >= 0)
+            if (line.Contains('\0'))
             {
                 return true;
             }

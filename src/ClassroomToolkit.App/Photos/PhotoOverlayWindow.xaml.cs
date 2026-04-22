@@ -218,11 +218,15 @@ public partial class PhotoOverlayWindow : Window
                 var dispatchQueuedUtc = DateTime.UtcNow;
                 try
                 {
-                    await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Normal);
+                    await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Normal, cancellationToken);
                     scheduled = true;
                     PhotoOverlayDiagnostics.Log(
                         "apply-dispatch",
                         $"req={requestId} path={IOPath.GetFileName(path)} inline=false queueMs={(DateTime.UtcNow - dispatchQueuedUtc).TotalMilliseconds:F0} priority=Normal");
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
                 catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {

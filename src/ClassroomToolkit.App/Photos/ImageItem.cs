@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.Diagnostics;
 using System.Windows.Media;
 using ClassroomToolkit.App.Windowing;
@@ -75,7 +76,9 @@ public sealed class ImageItem : INotifyPropertyChanged
 
     public string PageLabel => IsPdf ? $"{PageCount} 页" : "-";
 
-    public string ModifiedLabel => Modified == DateTime.MinValue ? "-" : Modified.ToString("yyyy/MM/dd HH:mm");
+    public string ModifiedLabel => Modified == DateTime.MinValue
+        ? "-"
+        : Modified.ToString("yyyy/MM/dd HH:mm", CultureInfo.InvariantCulture);
 
     private void OnPropertyChanged(string propertyName)
     {

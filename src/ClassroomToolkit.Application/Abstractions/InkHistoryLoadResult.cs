@@ -1,4 +1,4 @@
-namespace ClassroomToolkit.Infra.Storage;
+namespace ClassroomToolkit.Application.Abstractions;
 
 public sealed record InkHistoryLoadResult(
     string SourcePath,

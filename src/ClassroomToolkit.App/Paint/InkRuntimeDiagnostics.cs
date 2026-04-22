@@ -22,38 +22,74 @@ internal sealed class InkRuntimeDiagnostics
 
     internal void OnInkInput()
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnRedrawRequested(bool throttled)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnRedrawCompleted(double elapsedMs)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnAutoSaveDeferred(string reason)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnAutoSavePersistResult(bool persisted)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnAutoSaveFailure()
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnSyncPersist()
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnCrossPageFirstInputEvent(long traceId, string stage, double elapsedMs, string? details = null)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnCrossPageUpdateEvent(string stage, string source, string? details = null)
     {
+        if (!_inkRedrawTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     internal void OnInkRedrawTelemetry(

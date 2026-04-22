@@ -118,7 +118,7 @@ public partial class PaintOverlayWindow
 
         var updated = WindowStyleExecutor.TryUpdateStyleBits(
             _hwnd,
-            NativeMethods.GwlExstyle,
+            WindowStyleIndexPolicy.ExStyle,
             styleMask.SetMask,
             styleMask.ClearMask,
             out _);

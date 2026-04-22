@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using ClassroomToolkit.App.Photos;
@@ -32,6 +33,7 @@ public sealed partial class InkExportService
     /// Export a single page as a composite image (background + ink).
     /// Returns the output file path, or null if export failed.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public string? ExportSinglePage(
         string sourcePath,
         int pageIndex,
@@ -70,6 +72,7 @@ public sealed partial class InkExportService
     /// For PDF, exports only pages that contain ink.
     /// Returns a list of output file paths.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public List<string> ExportAllPagesForFile(
         string sourcePath,
         InkDocumentData? inkDoc,
@@ -78,6 +81,7 @@ public sealed partial class InkExportService
         return ExportAllPagesForFileDetailed(sourcePath, inkDoc, options).OutputPaths;
     }
 
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public InkExportRunResult ExportAllPagesForFileDetailed(
         string sourcePath,
         InkDocumentData? inkDoc,

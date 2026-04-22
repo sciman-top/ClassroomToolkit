@@ -9,6 +9,7 @@ public partial class PaintOverlayWindow
 {
     private void HideEraserPreview()
     {
+        _ = _isErasing;
         // Eraser live preview is currently disabled.
     }
 
@@ -60,4 +61,3 @@ public partial class PaintOverlayWindow
         _isRegionSelecting = false;
     }
 }
-

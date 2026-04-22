@@ -1,6 +1,4 @@
-using System;
-
-namespace ClassroomToolkit.Infra.Storage;
+namespace ClassroomToolkit.Application.Abstractions;
 
 public interface IInkHistoryStoreBridge
 {

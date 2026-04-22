@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
@@ -17,7 +18,7 @@ public partial class InkSettingsDialog : Window
         InitializeComponent();
         InkRecordCheck.IsChecked = settings.InkRecordEnabled;
         InkReplayPreviousCheck.IsChecked = settings.InkReplayPreviousEnabled;
-        InkRetentionDaysBox.Text = settings.InkRetentionDays.ToString();
+        InkRetentionDaysBox.Text = settings.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
         InkPhotoPathBox.Text = settings.InkPhotoRootPath;
         InkRecordCheck.Checked += OnInkRecordToggleChanged;
         InkRecordCheck.Unchecked += OnInkRecordToggleChanged;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
@@ -214,7 +215,7 @@ public static class SystemDiagnostics
         try
         {
             using var synth = new SpeechSynthesizer();
-            return synth.GetInstalledVoices().Count;
+            return synth.GetInstalledVoices(CultureInfo.CurrentUICulture).Count;
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

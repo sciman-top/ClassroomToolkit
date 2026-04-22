@@ -345,7 +345,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     }
 
     private string _remoteGroupSwitchKey = "enter";
-    private bool _remoteGroupSwitchEnabled = false;
+    private bool _remoteGroupSwitchEnabled;
 
     public string RemoteGroupSwitchKey
     {

@@ -8,6 +8,10 @@ namespace ClassroomToolkit.Services.Presentation;
 public static class PresentationClassifierOverridesPackagePolicy
 {
     public const string Schema = "ctoolkit.presentation-overrides-package/v1";
+    private static readonly JsonSerializerOptions IndentedJsonSerializerOptions = new()
+    {
+        WriteIndented = true
+    };
 
     public static bool TryExport(
         string? overridesJson,
@@ -32,12 +36,7 @@ public static class PresentationClassifierOverridesPackagePolicy
             Signature = signature
         };
 
-        packageJson = JsonSerializer.Serialize(
-            package,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+        packageJson = JsonSerializer.Serialize(package, IndentedJsonSerializerOptions);
         return true;
     }
 

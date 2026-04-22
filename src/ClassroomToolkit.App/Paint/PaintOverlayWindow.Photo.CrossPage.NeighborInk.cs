@@ -39,7 +39,7 @@ public partial class PaintOverlayWindow
         return new InkBitmapCacheEntry(page.PageIndex, strokes, bitmap, renderPlan.HorizontalOffsetDip);
     }
 
-    private CrossPageNeighborInkRenderSurfacePlan ResolveNeighborInkRenderSurfacePlan(
+    private static CrossPageNeighborInkRenderSurfacePlan ResolveNeighborInkRenderSurfacePlan(
         BitmapSource pageBitmap,
         IReadOnlyList<InkStrokeData> strokes)
     {

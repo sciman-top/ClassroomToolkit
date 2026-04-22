@@ -171,7 +171,7 @@ public partial class RollCallWindow : Window
         ExecuteRollCallSafe("request-close", Close);
     }
 
-    private void ExecuteRollCallSafe(string operation, Action action)
+    private static void ExecuteRollCallSafe(string operation, Action action)
     {
         SafeActionExecutionExecutor.TryExecute(
             action,

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -10,6 +11,7 @@ internal readonly record struct WpsHookRuntimeState(
 
 internal sealed class WpsHookOrchestrator
 {
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance API kept for compatibility with existing tests and call sites.")]
     public WpsHookRuntimeState ApplyEnabled(
         IWpsNavHookClient? hookClient,
         WpsHookInterceptDecision decision,
@@ -37,6 +39,7 @@ internal sealed class WpsHookOrchestrator
             InterceptWheel: decision.InterceptWheel);
     }
 
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance API kept for compatibility with existing tests and call sites.")]
     public WpsHookRuntimeState ApplyDisabled(IWpsNavHookClient? hookClient)
     {
         if (hookClient == null)
@@ -62,6 +65,7 @@ internal sealed class WpsHookOrchestrator
             InterceptWheel: true);
     }
 
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance API kept for compatibility with existing tests and call sites.")]
     public async Task<bool> TryStartSafeAsync(IWpsNavHookClient? hookClient)
     {
         if (hookClient == null || !hookClient.Available)

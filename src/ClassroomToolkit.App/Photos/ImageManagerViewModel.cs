@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using ClassroomToolkit.App.ViewModels;
 
 namespace ClassroomToolkit.App.Photos;
@@ -76,6 +77,7 @@ public sealed class ImageManagerViewModel : ViewModelBase
         IsForwardButtonEnabled = ForwardStack.Count > 0;
     }
 
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for binding/test compatibility.")]
     public void LoadFolderList(ObservableCollection<FolderItem> target, IReadOnlyList<string> source)
     {
         target.Clear();

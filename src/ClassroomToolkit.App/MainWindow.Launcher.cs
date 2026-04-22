@@ -106,7 +106,7 @@ public partial class MainWindow
         SaveLauncherSettings();
     }
 
-    private bool IsDragBlocked(object? source)
+    private static bool IsDragBlocked(object? source)
     {
         return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source as DependencyObject) != null;
     }

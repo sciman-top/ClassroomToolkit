@@ -297,7 +297,7 @@ public partial class PaintOverlayWindow
         _photoInputTelemetryEnabled = enabled;
     }
 
-    private bool TryBuildImageScreenRect(BitmapSource bitmap, Transform? transform, out Rect rect)
+    private static bool TryBuildImageScreenRect(BitmapSource bitmap, Transform? transform, out Rect rect)
     {
         rect = Rect.Empty;
         if (bitmap == null || transform == null)

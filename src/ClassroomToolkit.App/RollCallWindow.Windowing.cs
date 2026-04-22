@@ -370,7 +370,7 @@ public partial class RollCallWindow
         }
     }
 
-    private void ExecuteGroupOverlaySafe(string operation, Action action)
+    private static void ExecuteGroupOverlaySafe(string operation, Action action)
     {
         SafeActionExecutionExecutor.TryExecute(
             action,

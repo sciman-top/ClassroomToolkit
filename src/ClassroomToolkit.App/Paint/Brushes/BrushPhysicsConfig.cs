@@ -12,7 +12,7 @@ public class BrushPhysicsConfig
 {
     public string PresetName { get; set; } = "CalligraphyBalanced";
     public string RenderModeTag { get; set; } = "Clarity";
-    public bool EnableDebugMoveTelemetry { get; set; } = false;
+    public bool EnableDebugMoveTelemetry { get; set; }
     public double MinWidthFactor { get; set; } = 0.22;
     public double MaxWidthFactor { get; set; } = 1.8;
     public double MinStrokeWidthPx { get; set; } = 2.2;

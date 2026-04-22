@@ -51,7 +51,7 @@ public sealed class ClassRoster
         return map;
     }
 
-    private static IReadOnlyList<string> BuildGroupList(IEnumerable<string> groups)
+    private static List<string> BuildGroupList(IEnumerable<string> groups)
     {
         var list = new List<string> { IdentityUtils.AllGroupName };
         var unique = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -76,7 +76,7 @@ public sealed class ClassRoster
         return list;
     }
 
-    private static IReadOnlyList<string> BuildColumnOrder(IReadOnlyList<string>? columnOrder)
+    private static List<string> BuildColumnOrder(IReadOnlyList<string>? columnOrder)
     {
         var normalized = new List<string>();
         if (columnOrder != null)

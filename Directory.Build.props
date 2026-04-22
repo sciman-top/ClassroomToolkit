@@ -1,5 +1,11 @@
 <Project>
   <PropertyGroup>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ClassroomToolkit.Domain' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Application' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Infra' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Interop' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Services'">
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 </Project>

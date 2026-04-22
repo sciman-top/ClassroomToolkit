@@ -1,5 +1,8 @@
 # 2026-04-10 Full Governance v2 - Phase 5 Observability Security Release DataEvolution
 
+> Historical snapshot note (2026-04-22): this document records point-in-time checks from 2026-04-10 and is not the active governance truth source.
+> Current active entrypoints are documented in `docs/governance/truth-source.md`.
+
 ## 1) Objective
 
 - 补齐长期治理最小闭环：供应链安全、发布入口、回滚入口、指标采集入口。
@@ -37,4 +40,3 @@
 1. 将 `dotnet list ... --vulnerable --include-transitive` 纳入固定门禁或 nightly。
 2. 将 `collect-brush-telemetry-report.ps1` 与 `collect-pilot-metrics.ps1` 绑定到性能回归周期。
 3. 对 `students.xlsx/settings.ini` 增补迁移演练记录模板（一次前滚+回滚演练）。
-

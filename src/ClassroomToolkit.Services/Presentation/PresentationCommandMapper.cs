@@ -1,9 +1,14 @@
 using ClassroomToolkit.Interop.Presentation;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Services.Presentation;
 
 public sealed class PresentationCommandMapper
 {
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Kept as instance API for DI/testing compatibility across current call sites.")]
     public KeyBinding Map(PresentationType _, PresentationCommand command)
     {
         return command switch

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -52,7 +51,7 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        return PresentationWindowFocus.EnsureForeground(target.Handle);
+        return PresentationForegroundSuppressionInteropAdapter.EnsureForeground(target.Handle);
     }
 
     public bool ForwardKeyboardToPresentation(Key key)
@@ -178,8 +177,8 @@ public partial class PaintOverlayWindow
             _foregroundPhotoActive = false;
             return;
         }
-        var foreground = Interop.NativeMethods.GetForegroundWindow();
-        if (foreground != _hwnd)
+        var foreground = _presentationResolver.ResolveForeground();
+        if (!foreground.IsValid || foreground.Handle != _hwnd)
         {
             _foregroundPhotoActive = false;
             return;
@@ -867,13 +866,13 @@ public partial class PaintOverlayWindow
         return IsTargetForeground(target);
     }
 
-    private bool IsTargetForeground(PresentationTarget target)
+    private static bool IsTargetForeground(PresentationTarget target)
     {
         if (!target.IsValid)
         {
             return false;
         }
-        return PresentationWindowFocus.IsForeground(target.Handle);
+        return PresentationForegroundSuppressionInteropAdapter.IsForeground(target.Handle);
     }
 
     private bool ShouldSuppressWpsNav(int direction, IntPtr target)
@@ -925,18 +924,12 @@ public partial class PaintOverlayWindow
 
     private bool IsForegroundOwnedByCurrentProcess()
     {
-        var foreground = Interop.NativeMethods.GetForegroundWindow();
-        if (foreground == IntPtr.Zero)
+        var foreground = _presentationResolver.ResolveForeground();
+        if (!foreground.IsValid || foreground.Info == null)
         {
             return false;
         }
-        var threadId = Interop.NativeMethods.GetWindowThreadProcessId(foreground, out var processId);
-        if (threadId == 0 || processId == 0)
-        {
-            return false;
-        }
-
-        return processId == (uint)Environment.ProcessId;
+        return foreground.Info.ProcessId == _currentProcessId;
     }
 
     private bool ShouldForcePresentationForeground(PresentationTarget target)
@@ -977,22 +970,8 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        var monitor = Interop.NativeMethods.MonitorFromWindow(hwnd, Interop.NativeMethods.MonitorDefaultToNearest);
-        var info = new Interop.NativeMethods.MonitorInfo { Size = Marshal.SizeOf<Interop.NativeMethods.MonitorInfo>() };
-        if (!Interop.NativeMethods.GetMonitorInfo(monitor, ref info))
-        {
-            return false;
-        }
-        var rect = new Interop.NativeMethods.NativeRect();
-        if (!Interop.NativeMethods.GetWindowRect(hwnd, out rect))
-        {
-            return false;
-        }
-        const int tolerance = PresentationFullscreenWindowDefaults.BoundsTolerancePixels;
-        return Math.Abs(rect.Left - info.Monitor.Left) <= tolerance
-               && Math.Abs(rect.Top - info.Monitor.Top) <= tolerance
-               && Math.Abs(rect.Right - info.Monitor.Right) <= tolerance
-               && Math.Abs(rect.Bottom - info.Monitor.Bottom) <= tolerance;
+        var check = _presentationResolver.CheckWindow(hwnd, _presentationClassifier);
+        return check?.IsFullscreen == true;
     }
 
     private void LogPresentationState(string reason)

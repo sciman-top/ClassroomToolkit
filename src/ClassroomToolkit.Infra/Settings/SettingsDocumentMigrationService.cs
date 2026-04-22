@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Infra.Settings;
 
@@ -12,6 +13,10 @@ public sealed record SettingsDocumentMigrationResult(
 
 public sealed class SettingsDocumentMigrationService
 {
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Kept as instance API to avoid breaking existing composition-root construction code.")]
     public SettingsDocumentMigrationResult MigrateIniToJson(
         string iniPath,
         string jsonPath,

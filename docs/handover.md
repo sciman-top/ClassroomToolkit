@@ -19,7 +19,9 @@
 
 - 已落地全量审查执行手册与 CI 质量闸门：
   - `docs/validation/2026-03-18-full-code-audit-playbook.md`
-  - `.github/workflows/quality-gate.yml`
+  - `scripts/quality/run-local-quality-gates.ps1`
+  - `azure-pipelines.yml`
+  - `.gitlab-ci.yml`
 - 已完成 Chunk 1 证据归档：
   - `docs/validation/evidence/2026-03-18-full-audit/01-risk-inventory.md`
   - `docs/validation/evidence/2026-03-18-full-audit/02-static-and-test-gates.md`

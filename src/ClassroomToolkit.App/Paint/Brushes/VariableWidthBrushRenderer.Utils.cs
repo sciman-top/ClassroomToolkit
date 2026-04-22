@@ -212,7 +212,7 @@ public partial class VariableWidthBrushRenderer
     /// <summary>
     /// 简单的去倒刺逻辑：移除距离过近的点
     /// </summary>
-    private void FilterLoops(List<WpfPoint> edge)
+    private static void FilterLoops(List<WpfPoint> edge)
     {
         if (edge.Count < 3) return;
 

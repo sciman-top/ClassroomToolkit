@@ -53,18 +53,34 @@ public partial class PaintOverlayWindow
 
     private bool IsCrossPageFirstInputTraceActive()
     {
+        if (!_photoInputTelemetryEnabled)
+        {
+            return false;
+        }
         return false;
     }
 
     private void BeginCrossPageFirstInputTrace(int fromPage, int toPage)
     {
+        if (!_photoInputTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     private void MarkCrossPageFirstInputStage(string stage, string? details = null)
     {
+        if (!_photoInputTelemetryEnabled)
+        {
+            return;
+        }
     }
 
     private void EndCrossPageFirstInputTrace(string outcome)
     {
+        if (!_photoInputTelemetryEnabled)
+        {
+            return;
+        }
     }
 }

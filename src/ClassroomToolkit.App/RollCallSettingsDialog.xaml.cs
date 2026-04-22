@@ -733,10 +733,10 @@ public partial class RollCallSettingsDialog : Window
         SpeechEngineCombo.SelectedValue = "sapi";
     }
 
-    private void BuildSapiVoices(List<ComboOption> voices)
+    private static void BuildSapiVoices(List<ComboOption> voices)
     {
         using var synth = new SpeechSynthesizer();
-        var allVoices = synth.GetInstalledVoices().ToList();
+        var allVoices = synth.GetInstalledVoices(CultureInfo.CurrentUICulture).ToList();
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var voice in allVoices)

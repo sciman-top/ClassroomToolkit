@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Storage;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;

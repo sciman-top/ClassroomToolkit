@@ -54,7 +54,7 @@ public partial class ImageManagerWindow
                 foreach (var dir in Directory.EnumerateDirectories(folderPath, "*", TopLevelIgnoreInaccessibleOptions))
                 {
                     var name = Path.GetFileName(dir);
-                    if (string.IsNullOrWhiteSpace(name) || name.StartsWith(".", StringComparison.Ordinal))
+                    if (string.IsNullOrWhiteSpace(name) || name.StartsWith('.'))
                     {
                         continue;
                     }
@@ -113,8 +113,8 @@ public partial class ImageManagerWindow
 
     private async Task AppendScanResultsAsync(
         IReadOnlyList<ImageItem> result,
-        CancellationToken token,
-        int requestId)
+        int requestId,
+        CancellationToken token)
     {
         for (var i = 0; i < result.Count; i += ImageAppendBatchSize)
         {
@@ -144,9 +144,9 @@ public partial class ImageManagerWindow
                 }
                 try
                 {
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background, token);
                 }
-                catch (OperationCanceledException) when (_isClosing)
+                catch (OperationCanceledException) when (_isClosing || token.IsCancellationRequested)
                 {
                     return;
                 }

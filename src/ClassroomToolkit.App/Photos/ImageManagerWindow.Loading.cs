@@ -73,7 +73,7 @@ public partial class ImageManagerWindow
                     $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={loadResult.cleanupSummary.SidecarsDeleted} composites={loadResult.cleanupSummary.CompositesDeleted}");
             }
 
-            await AppendScanResultsAsync(result, token, requestId);
+            await AppendScanResultsAsync(result, requestId, token);
             if (token.IsCancellationRequested
                 || requestId != Volatile.Read(ref _loadImagesRequestId)
                 || _isClosing)
@@ -115,7 +115,7 @@ public partial class ImageManagerWindow
         ViewModel.UpdateNavigationStates();
     }
 
-    private void QueueThumbnailLoad(ImageItem item, bool isPdf, CancellationToken token, int requestId)
+    private void QueueThumbnailLoad(ImageItem item, bool isPdf, int requestId, CancellationToken token)
     {
         if (token.IsCancellationRequested || _isClosing || requestId != Volatile.Read(ref _loadImagesRequestId))
         {
@@ -132,7 +132,7 @@ public partial class ImageManagerWindow
                 out var cachedPageCount)
             && cachedThumbnail != null)
         {
-            _ = TryDispatchThumbnailUpdateAsync(item, cachedThumbnail, cachedPageCount, token, requestId);
+            _ = TryDispatchThumbnailUpdateAsync(item, cachedThumbnail, cachedPageCount, requestId, token);
             return;
         }
 
@@ -177,7 +177,7 @@ public partial class ImageManagerWindow
                     return;
                 }
 
-                await TryDispatchThumbnailUpdateAsync(item, thumbnail, pageCount, token, requestId);
+                await TryDispatchThumbnailUpdateAsync(item, thumbnail, pageCount, requestId, token);
             },
             token,
             ex => Debug.WriteLine(
@@ -190,8 +190,8 @@ public partial class ImageManagerWindow
         ImageItem item,
         ImageSource thumbnail,
         int pageCount,
-        CancellationToken token,
-        int requestId)
+        int requestId,
+        CancellationToken token)
     {
         try
         {
@@ -222,7 +222,11 @@ public partial class ImageManagerWindow
                         item.PageCount = pageCount;
                     }
                 }
-            }, DispatcherPriority.Background);
+            }, DispatcherPriority.Background, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

@@ -181,7 +181,7 @@ public partial class ImageManagerWindow
         var visibleRanges = ResolveVisibleItemRange();
         if (visibleRanges.EndExclusive <= visibleRanges.StartInclusive)
         {
-            QueuePendingThumbnailBatch(token, requestId, ThumbnailVisiblePriorityBatchSize);
+            QueuePendingThumbnailBatch(requestId, ThumbnailVisiblePriorityBatchSize, token);
             EnsureThumbnailBackgroundQueueRunning();
             return;
         }
@@ -210,13 +210,13 @@ public partial class ImageManagerWindow
                 continue;
             }
 
-            QueueThumbnailLoad(pendingItem, pendingItem.IsPdf, token, requestId);
+            QueueThumbnailLoad(pendingItem, pendingItem.IsPdf, requestId, token);
             queued++;
         }
 
         if (queued < ThumbnailVisiblePriorityBatchSize)
         {
-            QueuePendingThumbnailBatch(token, requestId, ThumbnailVisiblePriorityBatchSize - queued);
+            QueuePendingThumbnailBatch(requestId, ThumbnailVisiblePriorityBatchSize - queued, token);
         }
 
         EnsureThumbnailBackgroundQueueRunning();
@@ -251,12 +251,12 @@ public partial class ImageManagerWindow
         return (Math.Max(0, start), Math.Max(0, end));
     }
 
-    private void QueuePendingThumbnailBatch(CancellationToken token, int requestId, int maxCount)
+    private void QueuePendingThumbnailBatch(int requestId, int maxCount, CancellationToken token)
     {
         var queued = 0;
         while (queued < maxCount && TryDequeuePendingThumbnail(out var pending))
         {
-            QueueThumbnailLoad(pending, pending.IsPdf, token, requestId);
+            QueueThumbnailLoad(pending, pending.IsPdf, requestId, token);
             queued++;
         }
     }
@@ -285,7 +285,7 @@ public partial class ImageManagerWindow
             return;
         }
 
-        QueuePendingThumbnailBatch(token, requestId, ThumbnailBackgroundBatchSize);
+        QueuePendingThumbnailBatch(requestId, ThumbnailBackgroundBatchSize, token);
         lock (_thumbnailPendingLock)
         {
             if (_thumbnailPendingQueue.Count == 0)

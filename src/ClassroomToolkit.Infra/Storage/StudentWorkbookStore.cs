@@ -3,6 +3,7 @@ using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -80,6 +81,10 @@ public sealed class StudentWorkbookStore
         }
     }
 
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Public instance API is intentionally preserved for compatibility with existing consumers.")]
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
         ArgumentNullException.ThrowIfNull(workbook);
@@ -531,7 +536,7 @@ public sealed class StudentWorkbookStore
 
     private static bool SequenceEqualIgnoreCase(
         IReadOnlyList<string> source,
-        IReadOnlyList<string> target)
+        List<string> target)
     {
         if (source.Count != target.Count)
         {
@@ -564,7 +569,7 @@ public sealed class StudentWorkbookStore
             new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase));
     }
 
-    private static void ApplyColumnWidths(IXLWorksheet sheet, IReadOnlyList<string> columns)
+    private static void ApplyColumnWidths(IXLWorksheet sheet, List<string> columns)
     {
         for (var i = 0; i < columns.Count; i++)
         {

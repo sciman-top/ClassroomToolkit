@@ -145,7 +145,7 @@ public class GlobalHookService : IDisposable
         StopHooks(hooks, "unregister-all");
     }
 
-    private void CleanupHooks(List<KeyboardHook> hooks, Action<KeyBinding> callback)
+    private static void CleanupHooks(List<KeyboardHook> hooks, Action<KeyBinding> callback)
     {
         foreach (var hook in hooks)
         {

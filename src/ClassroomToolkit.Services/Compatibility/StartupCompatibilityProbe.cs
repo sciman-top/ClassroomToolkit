@@ -15,6 +15,11 @@ public sealed record StartupCompatibilityIssue(
 
 public sealed class StartupCompatibilityReport
 {
+    private static readonly JsonSerializerOptions IndentedJsonSerializerOptions = new()
+    {
+        WriteIndented = true
+    };
+
     public StartupCompatibilityReport(IReadOnlyList<StartupCompatibilityIssue> issues)
     {
         Issues = issues ?? throw new ArgumentNullException(nameof(issues));
@@ -50,12 +55,9 @@ public sealed class StartupCompatibilityReport
             })
         };
 
-        return JsonSerializer.Serialize(
-            payload,
-            new JsonSerializerOptions
-            {
-                WriteIndented = indented
-            });
+        return indented
+            ? JsonSerializer.Serialize(payload, IndentedJsonSerializerOptions)
+            : JsonSerializer.Serialize(payload);
     }
 
     public string BuildMessage(bool includeWarnings)
@@ -123,7 +125,7 @@ public static class StartupCompatibilityProbe
         return new StartupCompatibilityReport(issues);
     }
 
-    private static void EvaluatePlatform(ICollection<StartupCompatibilityIssue> issues)
+    private static void EvaluatePlatform(List<StartupCompatibilityIssue> issues)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -167,7 +169,7 @@ public static class StartupCompatibilityProbe
 
     private static void EvaluateSettingsPath(
         string settingsPath,
-        ICollection<StartupCompatibilityIssue> issues)
+        List<StartupCompatibilityIssue> issues)
     {
         if (string.IsNullOrWhiteSpace(settingsPath))
         {
@@ -191,7 +193,7 @@ public static class StartupCompatibilityProbe
         }
     }
 
-    private static void EvaluateNativeDependencies(ICollection<StartupCompatibilityIssue> issues)
+    private static void EvaluateNativeDependencies(List<StartupCompatibilityIssue> issues)
     {
         var baseDirectory = AppContext.BaseDirectory;
         if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory))
@@ -280,7 +282,7 @@ public static class StartupCompatibilityProbe
         }
     }
 
-    private static IReadOnlyList<string> BuildPreferredWindowsRuntimeIds(Architecture processArchitecture)
+    private static List<string> BuildPreferredWindowsRuntimeIds(Architecture processArchitecture)
     {
         var runtimeIds = new List<string>();
         void Add(string runtimeId)
@@ -318,7 +320,7 @@ public static class StartupCompatibilityProbe
         return runtimeIds;
     }
 
-    private static void EvaluateVcppRuntime(ICollection<StartupCompatibilityIssue> issues)
+    private static void EvaluateVcppRuntime(List<StartupCompatibilityIssue> issues)
     {
         if (!TryGetVcppRuntimeVersion(out var version, out var error))
         {
@@ -375,7 +377,7 @@ public static class StartupCompatibilityProbe
     }
 
     private static void EvaluatePresentationPrivilegeConsistency(
-        ICollection<StartupCompatibilityIssue> issues,
+        List<StartupCompatibilityIssue> issues,
         IReadOnlyList<string> processTokens)
     {
         if (!TryGetCurrentProcessElevation(out var currentElevated, out var currentError))
@@ -434,7 +436,7 @@ public static class StartupCompatibilityProbe
     }
 
     private static void EvaluatePresentationArchitectureConsistency(
-        ICollection<StartupCompatibilityIssue> issues,
+        List<StartupCompatibilityIssue> issues,
         IReadOnlyList<string> processTokens)
     {
         var appArch = RuntimeInformation.ProcessArchitecture;
@@ -587,7 +589,7 @@ public static class StartupCompatibilityProbe
         return false;
     }
 
-    private static void AddProcessTokens(ISet<string> target, IReadOnlyList<string> source)
+    private static void AddProcessTokens(HashSet<string> target, IReadOnlyList<string> source)
     {
         if (source == null || source.Count == 0)
         {

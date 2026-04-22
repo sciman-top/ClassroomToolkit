@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ public sealed partial class InkExportService
     /// <summary>
     /// List source files in the given directory that already have Method B composite outputs.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public IReadOnlyList<string> ListFilesWithCompositeExports(string directoryPath)
     {
         return ListCompositeSourceFilesInDirectory(directoryPath);
@@ -21,6 +23,7 @@ public sealed partial class InkExportService
     /// Remove orphan composite outputs whose source files no longer exist.
     /// Returns deleted output count.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public int CleanupOrphanCompositeOutputsInDirectory(string directoryPath)
     {
         if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
@@ -74,6 +77,7 @@ public sealed partial class InkExportService
     /// Check whether the export output files already exist for a given source file.
     /// Returns a list of paths that would be overwritten.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public List<string> GetExistingOutputPaths(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -123,6 +127,7 @@ public sealed partial class InkExportService
     /// For images, pageIndex is treated as page 1.
     /// Returns number of deleted files.
     /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
     public int RemoveCompositeOutputsForPage(string sourcePath, int pageIndex)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))

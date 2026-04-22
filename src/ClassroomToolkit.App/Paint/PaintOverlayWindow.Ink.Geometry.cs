@@ -185,7 +185,7 @@ public partial class PaintOverlayWindow
         return true;
     }
 
-    private Shape? CreateShape(PaintShapeType type)
+    private static Shape? CreateShape(PaintShapeType type)
     {
         return type switch
         {

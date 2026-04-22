@@ -753,7 +753,7 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: brush color callback failed: {ex.Message}"));
     }
 
-    private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
+    private static bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
     {
         var result = false;
         using var _ = FloatingTopmostDialogSuppressionState.Enter();

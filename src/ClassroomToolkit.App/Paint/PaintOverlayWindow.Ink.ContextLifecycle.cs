@@ -9,6 +9,7 @@ public partial class PaintOverlayWindow
 {
     private void CaptureStrokeContext()
     {
+        _ = _pendingInkContextCheck;
     }
 
     private void CommitStroke(InkStrokeData stroke)
@@ -209,4 +210,3 @@ public partial class PaintOverlayWindow
         _inkMonitor.Interval = TimeSpan.FromMilliseconds(targetMs);
     }
 }
-

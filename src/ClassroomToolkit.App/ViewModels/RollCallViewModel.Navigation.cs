@@ -86,7 +86,7 @@ public sealed partial class RollCallViewModel
         if (_engine.GroupAll.ContainsKey(normalized)) return normalized;
 
         var trimmed = normalized.Trim();
-        if (trimmed.EndsWith("组", StringComparison.Ordinal))
+        if (trimmed.EndsWith('组'))
         {
             var stripped = trimmed[..^1];
             if (_engine.GroupAll.ContainsKey(stripped)) return stripped;
@@ -107,7 +107,7 @@ public sealed partial class RollCallViewModel
     private static string NormalizeGroupKey(string group)
     {
         var normalized = IdentityUtils.NormalizeGroupName(group);
-        if (normalized.EndsWith("组", StringComparison.Ordinal)) normalized = normalized[..^1];
+        if (normalized.EndsWith('组')) normalized = normalized[..^1];
         return normalized;
     }
 
@@ -260,7 +260,7 @@ public sealed partial class RollCallViewModel
         }
     }
 
-    private StudentSortKey BuildStudentSortKey(string studentId, string name)
+    private static StudentSortKey BuildStudentSortKey(string studentId, string name)
     {
         return new StudentSortKey(studentId, name);
     }

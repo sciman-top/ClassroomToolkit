@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using ClassroomToolkit.Application.Abstractions;
 using Microsoft.Data.Sqlite;
 
 namespace ClassroomToolkit.Infra.Storage;

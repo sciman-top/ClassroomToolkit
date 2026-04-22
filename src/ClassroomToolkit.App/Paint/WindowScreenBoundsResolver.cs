@@ -3,11 +3,14 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
 internal static class WindowScreenBoundsResolver
 {
+    private static readonly ICursorWindowGeometryInteropAdapter WindowGeometryAdapter = new NativeCursorWindowGeometryInteropAdapter();
+
     internal static bool TryResolve(Window? window, out Rectangle bounds, out double dpiScaleX, out double dpiScaleY)
     {
         bounds = Rectangle.Empty;
@@ -23,13 +26,14 @@ internal static class WindowScreenBoundsResolver
         dpiScaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1.0;
 
         var handle = new WindowInteropHelper(window).Handle;
-        if (handle != IntPtr.Zero && NativeMethods.GetWindowRect(handle, out var rect))
+        if (handle != IntPtr.Zero
+            && WindowGeometryAdapter.TryGetWindowRect(handle, out var left, out var top, out var right, out var bottom))
         {
             bounds = WindowDipToScreenRectPolicy.ResolveFromScreenRect(
-                rect.Left,
-                rect.Top,
-                rect.Right,
-                rect.Bottom);
+                left,
+                top,
+                right,
+                bottom);
             return true;
         }
 

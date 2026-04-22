@@ -8,4 +8,14 @@ internal static class PresentationForegroundSuppressionInteropAdapter
     {
         return PresentationWindowFocus.SuppressForeground();
     }
+
+    internal static bool EnsureForeground(IntPtr hwnd)
+    {
+        return PresentationWindowFocus.EnsureForeground(hwnd);
+    }
+
+    internal static bool IsForeground(IntPtr hwnd)
+    {
+        return PresentationWindowFocus.IsForeground(hwnd);
+    }
 }

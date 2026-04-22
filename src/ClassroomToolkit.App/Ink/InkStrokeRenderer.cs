@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -17,12 +18,13 @@ public sealed class InkStrokeRenderer
 {
     private const int InkNoiseTileCacheLimit = 96;
     private static readonly bool CalligraphySinglePassCompositeEnabled = true;
-    private static readonly bool CalligraphySinglePassTextureMaskEnabled = false;
-    private static readonly bool CalligraphySinglePassSealEnabled = false;
+    private const bool CalligraphySinglePassTextureMaskEnabled = false;
+    private const bool CalligraphySinglePassSealEnabled = false;
     private static readonly object InkNoiseTileCacheLock = new();
     private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
     private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
 
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing render-call sites.")]
     public RenderTargetBitmap RenderPage(
         InkPageData page,
         int pixelWidth,
@@ -54,7 +56,7 @@ public sealed class InkStrokeRenderer
         return bitmap;
     }
 
-    private void RenderStroke(DrawingContext dc, InkStrokeData stroke)
+    private static void RenderStroke(DrawingContext dc, InkStrokeData stroke)
     {
         var geometry = stroke.CachedGeometry;
         if (geometry == null)

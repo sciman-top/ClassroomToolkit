@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Globalization;
 using System.IO;
 using System.Diagnostics;
 using ClassroomToolkit.App.Helpers;
@@ -345,7 +346,7 @@ public partial class App : WpfApplication
             TryApplyErrorLogRetention(logPath);
 
             var logFile = Path.Combine(logPath, $"error_{DateTime.Now:yyyyMMdd}.log");
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
             var logContent = $"[{timestamp}] [{source}] {ex}\n" +
                              $"--------------------------------------------------------------------------------\n";
 

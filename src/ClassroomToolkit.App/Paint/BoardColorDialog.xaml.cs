@@ -62,7 +62,7 @@ public partial class BoardColorDialog : Window
         }
     }
 
-    private ControlTemplate CreateButtonTemplate(MediaColor color)
+    private static ControlTemplate CreateButtonTemplate(MediaColor color)
     {
         var template = new ControlTemplate(typeof(WpfButton));
         var border = new FrameworkElementFactory(typeof(Border));
@@ -129,4 +129,3 @@ public partial class BoardColorDialog : Window
         return luminance < 70;
     }
 }
-

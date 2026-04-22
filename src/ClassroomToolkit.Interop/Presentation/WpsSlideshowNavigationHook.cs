@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class WpsSlideshowNavigationHook : IDisposable
@@ -44,6 +46,10 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
 
     public event Action<int, string>? NavigationRequested;
 
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Kept as instance member for compatibility with existing IWpsNavHookClient adapter contract.")]
     public bool Available => OperatingSystem.IsWindows();
 
     public void SetInterceptEnabled(bool enabled) => _interceptEnabled = enabled;

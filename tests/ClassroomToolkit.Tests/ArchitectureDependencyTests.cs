@@ -34,57 +34,110 @@ public sealed class ArchitectureDependencyTests
     }
 
     [Fact]
-    public void AppLayer_ShouldAvoidInfraNamespace_OutsideCompositionRoot()
+    public void AppLayer_ShouldRestrictInfraUsage_ToCompositionRoot()
     {
-        var violations = FindNamespaceUsageViolations(
-            namespaceToken: "using ClassroomToolkit.Infra",
-            excludedFileNames: new[] { "App.xaml.cs" });
-
-        var baselineAllowList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            @"src\ClassroomToolkit.App\Settings\AppSettingsService.cs"
+            @"src\ClassroomToolkit.App\App.xaml.cs"
         };
-
-        var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();
-        newViolations.Should().BeEmpty("当前守卫允许历史遗留依赖，但不允许新增 Infra 直连");
+        var violations = FindTokenUsagesOutsideAllowedFiles("ClassroomToolkit.Infra", allowedFiles);
+        violations.Should().BeEmpty("App 层只能在组合根处理 Infra 依赖，其他目录不得直连 Infra 命名空间");
     }
 
     [Fact]
-    public void AppLayer_ShouldNotAdd_NewInteropNamespaceUsage()
+    public void AppLayer_ShouldRestrictInteropUsage_ToWindowingDirectory()
     {
-        var violations = FindNamespaceUsageViolations(
-            namespaceToken: "ClassroomToolkit.Interop",
-            excludedFileNames: Array.Empty<string>());
+        var violations = FindTokenUsagesOutsideAllowedDirectories(
+            tokens:
+            [
+                "ClassroomToolkit.Interop",
+                "Interop.NativeMethods",
+                "NativeMethods."
+            ],
+            allowedDirectoryPrefixes:
+            [
+                @"src\ClassroomToolkit.App\Windowing\"
+            ]);
 
-        var baselineAllowList = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            @"src\ClassroomToolkit.App\Windowing\NativeWindowStyleInteropAdapter.cs"
-        };
-
-        var newViolations = violations.Where(v => !baselineAllowList.Contains(v)).ToArray();
-        newViolations.Should().BeEmpty("当前守卫允许历史遗留 Interop 直连，但不允许继续新增");
+        violations.Should().BeEmpty("App 层仅允许 Windowing 边界直连 Interop/NativeMethods");
     }
 
-    private static IReadOnlyList<string> FindNamespaceUsageViolations(
-        string namespaceToken,
-        IEnumerable<string> excludedFileNames)
+    private static IReadOnlyList<string> FindTokenUsagesOutsideAllowedFiles(
+        string token,
+        ISet<string> allowedRelativeFiles)
     {
-        var excludedSet = new HashSet<string>(excludedFileNames, StringComparer.OrdinalIgnoreCase);
-        var appFiles = Directory.GetFiles(TestPathHelper.ResolveAppPath(), "*.cs", SearchOption.AllDirectories)
-            .Where(path => !excludedSet.Contains(Path.GetFileName(path)))
-            .ToArray();
-
         var violations = new List<string>();
-        foreach (var file in appFiles)
+        foreach (var file in EnumerateAppSourceFiles())
         {
             var content = File.ReadAllText(file);
-            if (content.Contains(namespaceToken, StringComparison.Ordinal))
+            if (!content.Contains(token, StringComparison.Ordinal))
             {
-                violations.Add(TestPathHelper.GetRelativeRepoPath(file));
+                continue;
             }
+
+            var relativePath = NormalizePath(TestPathHelper.GetRelativeRepoPath(file));
+            if (allowedRelativeFiles.Contains(relativePath))
+            {
+                continue;
+            }
+
+            violations.Add(relativePath);
         }
 
         return violations;
+    }
+
+    private static IReadOnlyList<string> FindTokenUsagesOutsideAllowedDirectories(
+        IReadOnlyList<string> tokens,
+        IReadOnlyList<string> allowedDirectoryPrefixes)
+    {
+        var normalizedAllowedPrefixes = allowedDirectoryPrefixes
+            .Select(NormalizePath)
+            .Select(path => path.EndsWith("\\", StringComparison.Ordinal) ? path : $"{path}\\")
+            .ToArray();
+
+        var violations = new List<string>();
+        foreach (var file in EnumerateAppSourceFiles())
+        {
+            var content = File.ReadAllText(file);
+            if (!tokens.Any(token => content.Contains(token, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            var relativePath = NormalizePath(TestPathHelper.GetRelativeRepoPath(file));
+            var insideAllowedDirectory = normalizedAllowedPrefixes.Any(prefix =>
+                relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            if (!insideAllowedDirectory)
+            {
+                violations.Add(relativePath);
+            }
+        }
+
+        return violations.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path).ToArray();
+    }
+
+    private static IEnumerable<string> EnumerateAppSourceFiles()
+    {
+        var appRoot = TestPathHelper.ResolveAppPath();
+        return Directory.GetFiles(appRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildArtifactPath(path))
+            .ToArray();
+    }
+
+    private static bool IsBuildArtifactPath(string fullPath)
+    {
+        var parts = fullPath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        return parts.Any(part =>
+            part.Equals("obj", StringComparison.OrdinalIgnoreCase)
+            || part.Equals("bin", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.Replace('/', '\\');
     }
 
     private static IReadOnlyList<string> ReadProjectReferences(string relativeProjectPath)

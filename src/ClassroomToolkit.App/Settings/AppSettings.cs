@@ -13,25 +13,25 @@ public sealed class AppSettings
 {
     public const int UnsetPosition = int.MinValue;
 
-    public bool RollCallShowId { get; set; } = false;
+    public bool RollCallShowId { get; set; }
     public bool RollCallShowName { get; set; } = true;
-    public bool RollCallRemoteEnabled { get; set; } = false;
-    public bool RollCallRemoteGroupSwitchEnabled { get; set; } = false;
-    public bool RollCallShowPhoto { get; set; } = false;
+    public bool RollCallRemoteEnabled { get; set; }
+    public bool RollCallRemoteGroupSwitchEnabled { get; set; }
+    public bool RollCallShowPhoto { get; set; }
     public int RollCallPhotoDurationSeconds { get; set; } = 3;
     public string RollCallPhotoSharedClass { get; set; } = string.Empty;
     public bool RollCallTimerSoundEnabled { get; set; } = true;
     public string RollCallTimerSoundVariant { get; set; } = "gentle";
-    public bool RollCallTimerReminderEnabled { get; set; } = false;
+    public bool RollCallTimerReminderEnabled { get; set; }
     public int RollCallTimerReminderIntervalMinutes { get; set; } = 5;
     public string RollCallTimerReminderSoundVariant { get; set; } = "soft_beep";
     public string RollCallMode { get; set; } = "roll_call";
     public string RollCallTimerMode { get; set; } = "countdown";
     public int RollCallTimerMinutes { get; set; } = 5;
-    public int RollCallTimerSeconds { get; set; } = 0;
+    public int RollCallTimerSeconds { get; set; }
     public int RollCallTimerSecondsLeft { get; set; } = 300;
-    public int RollCallStopwatchSeconds { get; set; } = 0;
-    public bool RollCallTimerRunning { get; set; } = false;
+    public int RollCallStopwatchSeconds { get; set; }
+    public bool RollCallTimerRunning { get; set; }
     public int RollCallWindowX { get; set; } = UnsetPosition;
     public int RollCallWindowY { get; set; } = UnsetPosition;
     public int RollCallWindowWidth { get; set; }
@@ -39,7 +39,7 @@ public sealed class AppSettings
     public int RollCallIdFontSize { get; set; } = 48;
     public int RollCallNameFontSize { get; set; } = 60;
     public int RollCallTimerFontSize { get; set; } = 56;
-    public bool RollCallSpeechEnabled { get; set; } = false;
+    public bool RollCallSpeechEnabled { get; set; }
     public string RollCallSpeechEngine { get; set; } = "sapi";
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
     public string RollCallSpeechOutputId { get; set; } = string.Empty;
@@ -52,60 +52,60 @@ public sealed class AppSettings
     public string OfficeInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public string WpsInputMode { get; set; } = WpsInputModeDefaults.Auto;
     public bool WpsWheelForward { get; set; } = true;
-    public bool ForcePresentationForegroundOnFullscreen { get; set; } = false;
+    public bool ForcePresentationForegroundOnFullscreen { get; set; }
     public int WpsDebounceMs { get; set; } = PaintPresetDefaults.WpsDebounceBalancedMs;
     public bool PresentationLockStrategyWhenDegraded { get; set; } = true;
     public int PresentationAutoFallbackFailureThreshold { get; set; } =
         ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault;
     public int PresentationAutoFallbackProbeIntervalCommands { get; set; } =
         ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault;
-    public bool PresentationClassifierAutoLearnEnabled { get; set; } = false;
+    public bool PresentationClassifierAutoLearnEnabled { get; set; }
     public string PresentationClassifierOverridesJson { get; set; } = string.Empty;
     public string PresentationClassifierLastLearnUtc { get; set; } = string.Empty;
     public string PresentationClassifierLastLearnDetail { get; set; } = string.Empty;
     public string PresentationClassifierRecentLearnRecordsJson { get; set; } = string.Empty;
-    public bool PresetRecommendationInitialized { get; set; } = false;
-    public bool UiDefaultsOptimized { get; set; } = false;
+    public bool PresetRecommendationInitialized { get; set; }
+    public bool UiDefaultsOptimized { get; set; }
     public List<string> StartupCompatibilitySuppressedIssueCodes { get; set; } = new();
     public int LauncherX { get; set; } = UnsetPosition;
     public int LauncherY { get; set; } = UnsetPosition;
     public int LauncherBubbleX { get; set; } = UnsetPosition;
     public int LauncherBubbleY { get; set; } = UnsetPosition;
-    public bool LauncherMinimized { get; set; } = false;
+    public bool LauncherMinimized { get; set; }
     public int LauncherAutoExitSeconds { get; set; } = 2400;
     public int PaintToolbarX { get; set; } = UnsetPosition;
     public int PaintToolbarY { get; set; } = UnsetPosition;
     public double PaintToolbarScale { get; set; } = 1.0;
     public bool InkCacheEnabled { get; set; } = true;
-    public bool InkSaveEnabled { get; set; } = false;
+    public bool InkSaveEnabled { get; set; }
     public InkExportScope InkExportScope { get; set; } = InkExportScope.AllPersistedAndSession;
     public int InkExportMaxParallelFiles { get; set; } = 2;
-    public bool InkRecordEnabled { get; set; } = false;
-    public bool InkReplayPreviousEnabled { get; set; } = false;
+    public bool InkRecordEnabled { get; set; }
+    public bool InkReplayPreviousEnabled { get; set; }
     public int InkRetentionDays { get; set; } = 30;
     public string InkPhotoRootPath { get; set; } = ResolveDefaultInkPhotoRootPath();
     public List<string> PhotoFavoriteFolders { get; set; } = new();
     public List<string> PhotoRecentFolders { get; set; } = new();
     public bool PhotoRememberTransform { get; set; } = true;
     public bool PhotoCrossPageDisplay { get; set; } = true;
-    public bool PhotoInputTelemetryEnabled { get; set; } = false;
+    public bool PhotoInputTelemetryEnabled { get; set; }
     public int PhotoNeighborPrefetchRadiusMax { get; set; } = 4;
     public int PhotoPostInputRefreshDelayMs { get; set; } = 120;
     public double PhotoWheelZoomBase { get; set; } = 1.0008;
     public double PhotoGestureZoomSensitivity { get; set; } = 1.0;
     public string PhotoInertiaProfile { get; set; } = PhotoInertiaProfileDefaults.Standard;
     public bool PhotoShowInkOverlay { get; set; } = true;
-    public int PhotoManagerWindowWidth { get; set; } = 0;
-    public int PhotoManagerWindowHeight { get; set; } = 0;
+    public int PhotoManagerWindowWidth { get; set; }
+    public int PhotoManagerWindowHeight { get; set; }
     public double PhotoManagerLeftPanelRatio { get; set; } = 2.0 / 7.0;
-    public int PhotoManagerLeftPanelWidth { get; set; } = 0;
+    public int PhotoManagerLeftPanelWidth { get; set; }
     public double PhotoManagerThumbnailSize { get; set; } = 120.0;
-    public bool PhotoManagerListMode { get; set; } = false;
-    public bool PhotoUnifiedTransformEnabled { get; set; } = false;
+    public bool PhotoManagerListMode { get; set; }
+    public bool PhotoUnifiedTransformEnabled { get; set; }
     public double PhotoUnifiedScaleX { get; set; } = 1.0;
     public double PhotoUnifiedScaleY { get; set; } = 1.0;
-    public double PhotoUnifiedTranslateX { get; set; } = 0.0;
-    public double PhotoUnifiedTranslateY { get; set; } = 0.0;
+    public double PhotoUnifiedTranslateX { get; set; }
+    public double PhotoUnifiedTranslateY { get; set; }
 
     public double BrushSize { get; set; } = 12;
     public double EraserSize { get; set; } = 24;
@@ -116,10 +116,10 @@ public sealed class AppSettings
     public CalligraphyBrushPreset CalligraphyPreset { get; set; } = CalligraphyBrushPreset.Sharp;
     public string PresetScheme { get; set; } = PresetSchemeDefaults.Balanced;
     public ClassroomWritingMode ClassroomWritingMode { get; set; } = ClassroomWritingMode.Balanced;
-    public int StylusAdaptivePressureProfile { get; set; } = 0;
-    public int StylusAdaptiveSampleRateTier { get; set; } = 0;
+    public int StylusAdaptivePressureProfile { get; set; }
+    public int StylusAdaptiveSampleRateTier { get; set; }
     public int StylusAdaptivePredictionHorizonMs { get; set; } = 8;
-    public double StylusPressureCalibratedLow { get; set; } = 0.0;
+    public double StylusPressureCalibratedLow { get; set; }
     public double StylusPressureCalibratedHigh { get; set; } = 1.0;
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;

@@ -8,9 +8,9 @@ internal sealed class StylusPressureCurveCalibrator
     private readonly int[] _hist = new int[BinCount];
     private int _samples;
     private double _emaMin = 1.0;
-    private double _emaMax = 0.0;
+    private double _emaMax;
     private bool _hasSeedRange;
-    private double _seedLow = 0.0;
+    private double _seedLow;
     private double _seedHigh = 1.0;
 
     public void Reset()

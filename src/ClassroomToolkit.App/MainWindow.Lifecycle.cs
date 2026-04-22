@@ -197,7 +197,7 @@ public partial class MainWindow
         return _backgroundTasksCancellationDisposed || _backgroundTasksCancellation.IsCancellationRequested;
     }
 
-    private void ExecuteLifecycleSafe(string phase, string operation, Action action)
+    private static void ExecuteLifecycleSafe(string phase, string operation, Action action)
     {
         SafeActionExecutionExecutor.TryExecute(
             action,
@@ -209,7 +209,7 @@ public partial class MainWindow
                     ex.Message)));
     }
 
-    private void TryFixWindowBorders(Window window, string phase, string target)
+    private static void TryFixWindowBorders(Window window, string phase, string target)
     {
         ExecuteLifecycleSafe(
             phase,
@@ -232,7 +232,7 @@ public partial class MainWindow
             });
     }
 
-    private bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
+    private static bool TryShowDialogWithDiagnostics(Window dialog, string dialogName)
     {
         var result = false;
         using var _ = FloatingTopmostDialogSuppressionState.Enter();

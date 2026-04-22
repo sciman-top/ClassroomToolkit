@@ -5,12 +5,13 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class PaintOverlayForegroundProcessContractTests
 {
     [Fact]
-    public void PaintOverlayPresentation_ShouldValidateGetWindowThreadProcessIdResult()
+    public void PaintOverlayPresentation_ShouldResolveForegroundOwnership_WithoutDirectNativeCall()
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        source.Should().Contain("var threadId = Interop.NativeMethods.GetWindowThreadProcessId(foreground, out var processId);");
-        source.Should().Contain("if (threadId == 0 || processId == 0)");
+        source.Should().Contain("var foreground = _presentationResolver.ResolveForeground();");
+        source.Should().Contain("return foreground.Info.ProcessId == _currentProcessId;");
+        source.Should().NotContain("GetWindowThreadProcessId(");
     }
 
     private static string GetSourcePath()

@@ -181,8 +181,8 @@ public partial class PaintOverlayWindow
     private const int CalligraphyAdaptiveAreaThresholdStep = CalligraphyRenderingDefaults.AdaptiveAreaThresholdStep;
     private const int CalligraphyAdaptiveLayerThresholdStep = CalligraphyRenderingDefaults.AdaptiveLayerThresholdStep;
     private static readonly bool CalligraphySinglePassCompositeEnabled = true;
-    private static readonly bool CalligraphySinglePassTextureMaskEnabled = false;
-    private static readonly bool CalligraphySinglePassSealEnabled = false;
+    private const bool CalligraphySinglePassTextureMaskEnabled = false;
+    private const bool CalligraphySinglePassSealEnabled = false;
 
     private double _calligraphyBatchCostEmaMs = 4.0;
     private int _calligraphyAdaptiveLevel;
@@ -258,7 +258,7 @@ public partial class PaintOverlayWindow
         _perfClearSurface.Add(clearSw.Elapsed.TotalMilliseconds, Dispatcher.CheckAccess());
     }
 
-    private void CopyBitmapToSurface(BitmapSource source, WriteableBitmap target)
+    private static void CopyBitmapToSurface(BitmapSource source, WriteableBitmap target)
     {
         var stride = target.PixelWidth * 4;
         if (source.PixelWidth == target.PixelWidth && source.PixelHeight == target.PixelHeight)

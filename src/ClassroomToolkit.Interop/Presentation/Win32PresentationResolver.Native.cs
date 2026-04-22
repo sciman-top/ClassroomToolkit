@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class Win32PresentationResolver
 {
-    private static IReadOnlyList<string> BuildClassNames(IntPtr hwnd)
+    private static List<string> BuildClassNames(IntPtr hwnd)
     {
         var names = new List<string>();
         AddClassName(names, hwnd);
@@ -67,15 +66,15 @@ public sealed partial class Win32PresentationResolver
                && Math.Abs(rect.Bottom - info.Monitor.Bottom) <= tolerance;
     }
 
-    private static void AddClassName(ICollection<string> list, IntPtr hwnd)
+    private static void AddClassName(List<string> list, IntPtr hwnd)
     {
-        var builder = new StringBuilder(NativeMethods.MaxClassName);
-        var length = NativeMethods.GetClassName(hwnd, builder, builder.Capacity);
+        var buffer = new char[NativeMethods.MaxClassName];
+        var length = NativeMethods.GetClassName(hwnd, buffer, buffer.Length);
         if (length <= 0)
         {
             return;
         }
-        var name = builder.ToString();
+        var name = new string(buffer, 0, length);
         if (!string.IsNullOrWhiteSpace(name))
         {
             list.Add(name);

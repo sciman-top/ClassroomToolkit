@@ -1,3 +1,4 @@
+using System.Globalization;
 using ClassroomToolkit.Domain.Timers;
 
 namespace ClassroomToolkit.App.ViewModels;
@@ -84,12 +85,12 @@ public sealed partial class RollCallViewModel
         TimeDisplay = _timerEngine.Mode switch
         {
             TimerMode.Stopwatch => FormatTime(_timerEngine.StopwatchSeconds),
-            TimerMode.Clock => DateTime.Now.ToString("HH:mm:ss"),
+            TimerMode.Clock => DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             _ => FormatTime(_timerEngine.SecondsLeft)
         };
     }
 
-    private string FormatTime(int totalSeconds)
+    private static string FormatTime(int totalSeconds)
     {
         int h = totalSeconds / 3600;
         int m = (totalSeconds % 3600) / 60;

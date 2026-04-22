@@ -146,7 +146,7 @@ public static class PresentationClassifierAutoLearnPolicy
         return normalized;
     }
 
-    private static bool AddDistinct(ICollection<string> list, string token)
+    private static bool AddDistinct(List<string> list, string token)
     {
         if (list.Any(existing => string.Equals(existing, token, StringComparison.OrdinalIgnoreCase)))
         {

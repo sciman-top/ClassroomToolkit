@@ -95,7 +95,7 @@ public static class PresentationClassifierOverridesParser
         }
     }
 
-    private static IReadOnlyList<string> NormalizeTokens(IReadOnlyList<string>? values)
+    private static string[] NormalizeTokens(List<string>? values)
     {
         if (values == null || values.Count == 0)
         {

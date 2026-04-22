@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ClassroomToolkit.Interop;
 
@@ -100,6 +99,7 @@ public static class NativeMethods
 
     public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
+#pragma warning disable CA1401
     [DllImport("user32.dll", SetLastError = true)]
     public static extern int GetWindowLong(IntPtr hwnd, int index);
 
@@ -141,10 +141,10 @@ public static class NativeMethods
     public static extern bool IsWindow(IntPtr hwnd);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    public static extern int GetClassName(IntPtr hwnd, StringBuilder className, int maxCount);
+    public static extern int GetClassName(IntPtr hwnd, [Out] char[] className, int maxCount);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int maxCount);
+    public static extern int GetWindowText(IntPtr hwnd, [Out] char[] text, int maxCount);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -157,4 +157,5 @@ public static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint inputs, [MarshalAs(UnmanagedType.LPArray), In] Input[] input, int size);
+#pragma warning restore CA1401
 }

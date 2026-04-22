@@ -8,7 +8,7 @@ namespace ClassroomToolkit.App.Ink;
 
 public sealed partial class InkExportService
 {
-    private void ExportPdfFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
+    private static void ExportPdfFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
     {
         var exportDir = GetExportDirectory(sourcePath);
         var manifest = LoadExportManifest(exportDir);
@@ -118,7 +118,7 @@ public sealed partial class InkExportService
         }
     }
 
-    private void ExportImageFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
+    private static void ExportImageFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
     {
         var background = LoadImage(sourcePath);
         if (background == null)

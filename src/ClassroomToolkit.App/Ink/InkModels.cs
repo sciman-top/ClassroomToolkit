@@ -22,7 +22,7 @@ public sealed class InkRibbonData
 {
     public string GeometryPath { get; set; } = string.Empty;
     public double Opacity { get; set; } = 0.28;
-    public double RibbonT { get; set; } = 0.0;
+    public double RibbonT { get; set; }
 }
 
 public sealed class InkStrokeData
@@ -33,10 +33,10 @@ public sealed class InkStrokeData
     public string ColorHex { get; set; } = "#FF0000";
     public byte Opacity { get; set; } = 255;
     public double BrushSize { get; set; } = 12.0;
-    public int MaskSeed { get; set; } = 0;
+    public int MaskSeed { get; set; }
     public double InkFlow { get; set; } = 1.0;
     public double StrokeDirectionX { get; set; } = 1.0;
-    public double StrokeDirectionY { get; set; } = 0.0;
+    public double StrokeDirectionY { get; set; }
     public bool CalligraphyInkBloomEnabled { get; set; } = true;
     public bool CalligraphySealEnabled { get; set; } = true;
     public byte CalligraphyOverlayOpacityThreshold { get; set; } = 230;

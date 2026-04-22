@@ -382,7 +382,7 @@ public partial class PaintOverlayWindow
         return imageHeight * _photoScale.ScaleY;
     }
 
-    private double GetBitmapDisplayWidthInDip(BitmapSource bitmap)
+    private static double GetBitmapDisplayWidthInDip(BitmapSource bitmap)
     {
         var width = bitmap.Width;
         var height = bitmap.Height;
@@ -404,7 +404,7 @@ public partial class PaintOverlayWindow
         return fallbackWidth;
     }
 
-    private double GetBitmapDisplayHeightInDip(BitmapSource bitmap)
+    private static double GetBitmapDisplayHeightInDip(BitmapSource bitmap)
     {
         var width = bitmap.Width;
         var height = bitmap.Height;

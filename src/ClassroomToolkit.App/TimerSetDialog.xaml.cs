@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -209,7 +210,7 @@ public partial class TimerSetDialog : Window
         minutes = Math.Clamp(minutes, 0, MaxMinutes);
         _updating = true;
         Minutes = minutes;
-        MinutesBox.Text = minutes.ToString();
+        MinutesBox.Text = minutes.ToString(CultureInfo.InvariantCulture);
         if (updateSlider)
         {
             MinutesSlider.Value = Math.Min(minutes, MaxSliderMinutes);
@@ -251,7 +252,7 @@ public partial class TimerSetDialog : Window
     private void SetSeconds(int seconds)
     {
         _updating = true;
-        SecondsBox.Text = seconds.ToString();
+        SecondsBox.Text = seconds.ToString(CultureInfo.InvariantCulture);
         SecondsSlider.Value = seconds;
         _updating = false;
     }

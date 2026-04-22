@@ -162,7 +162,7 @@ public partial class ImageManagerWindow
         }
     }
 
-    private List<ImageItem>? ScanDirectory(string folder, System.Threading.CancellationToken token)
+    private static List<ImageItem>? ScanDirectory(string folder, System.Threading.CancellationToken token)
     {
         var list = new List<ImageItem>();
         if (token.IsCancellationRequested)
@@ -191,7 +191,7 @@ public partial class ImageManagerWindow
                 }
 
                 var name = Path.GetFileName(directory);
-                if (name.StartsWith(".", StringComparison.Ordinal) || IsHiddenFile(directory))
+                if (name.StartsWith('.') || IsHiddenFile(directory))
                 {
                     continue;
                 }

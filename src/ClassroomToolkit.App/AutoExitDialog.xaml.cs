@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
@@ -9,7 +10,7 @@ public partial class AutoExitDialog : Window
     public AutoExitDialog(int minutes)
     {
         InitializeComponent();
-        MinutesBox.Text = Math.Max(0, minutes).ToString();
+        MinutesBox.Text = Math.Max(0, minutes).ToString(CultureInfo.InvariantCulture);
         MinutesBox.SelectAll();
         Loaded += OnDialogLoaded;
         Closed += OnDialogClosed;

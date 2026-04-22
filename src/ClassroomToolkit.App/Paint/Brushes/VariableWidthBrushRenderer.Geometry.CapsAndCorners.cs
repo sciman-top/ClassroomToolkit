@@ -90,7 +90,7 @@ public partial class VariableWidthBrushRenderer
         return Math.Clamp(desired, minLen, maxLen);
     }
 
-    private double ComputePressureDropRate(List<StrokePoint> samples, bool isEnd)
+    private static double ComputePressureDropRate(List<StrokePoint> samples, bool isEnd)
     {
         int count = samples.Count;
         if (count < 3) return 0;

@@ -206,7 +206,7 @@ public sealed partial class RollCallEngine
         return values == null ? new List<int>() : NormalizeIndices(values);
     }
 
-    private static bool SequenceEquals(IReadOnlyList<int> left, IReadOnlyList<int> right)
+    private static bool SequenceEquals(List<int> left, List<int> right)
     {
         if (left.Count != right.Count)
         {

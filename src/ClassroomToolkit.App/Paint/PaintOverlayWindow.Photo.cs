@@ -338,7 +338,7 @@ public partial class PaintOverlayWindow
             fallback: $"img|{sourcePath}");
     }
 
-    private string BuildPhotoModeCacheKey(string sourcePath, int pageIndex, bool isPdf)
+    private static string BuildPhotoModeCacheKey(string sourcePath, int pageIndex, bool isPdf)
     {
         if (!isPdf)
         {

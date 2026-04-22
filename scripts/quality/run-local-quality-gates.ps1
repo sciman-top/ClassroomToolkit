@@ -95,12 +95,30 @@ Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
     "scripts/quality/check-hotspot-line-budgets.ps1"
 )
 
+Invoke-NativeStep -Name "governance-truth-source" -FilePath $powerShellExe -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "scripts/quality/check-governance-truth-source.ps1"
+)
+
 Invoke-NativeStep -Name "dependency-governance" -FilePath $powerShellExe -Arguments @(
     "-NoProfile",
     "-ExecutionPolicy",
     "Bypass",
     "-File",
     "scripts/quality/check-dependency-upgrade-feasibility.ps1"
+)
+
+Invoke-NativeStep -Name "analyzer-backlog-baseline" -FilePath $powerShellExe -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "scripts/quality/check-analyzer-backlog-baseline.ps1",
+    "-Configuration",
+    $Configuration
 )
 
 Write-Host "[quality] ALL PASS"
