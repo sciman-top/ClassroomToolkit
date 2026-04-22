@@ -111,6 +111,22 @@ Invoke-NativeStep -Name "dependency-governance" -FilePath $powerShellExe -Argume
     "scripts/quality/check-dependency-upgrade-feasibility.ps1"
 )
 
+Invoke-NativeStep -Name "dependency-vulnerability" -FilePath $powerShellExe -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "scripts/quality/check-dependency-vulnerabilities.ps1"
+)
+
+Invoke-NativeStep -Name "logging-alert-threshold" -FilePath $powerShellExe -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "scripts/quality/check-logging-alert-threshold.ps1"
+)
+
 Invoke-NativeStep -Name "analyzer-backlog-baseline" -FilePath $powerShellExe -Arguments @(
     "-NoProfile",
     "-ExecutionPolicy",

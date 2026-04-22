@@ -1,6 +1,6 @@
 # Governance Truth Source
 
-Last updated: 2026-04-22  
+Last updated: 2026-04-23  
 Status: active
 
 ## 1. Canonical Entrypoints
@@ -8,6 +8,8 @@ Status: active
 - Local gate chain: `scripts/quality/run-local-quality-gates.ps1`
 - Local truth-source guard: `scripts/quality/check-governance-truth-source.ps1`
 - Analyzer backlog guard: `scripts/quality/check-analyzer-backlog-baseline.ps1`
+- Dependency vulnerability guard: `scripts/quality/check-dependency-vulnerabilities.ps1`
+- Runtime logging alert guard: `scripts/quality/check-logging-alert-threshold.ps1`
 - Analyzer backlog baseline: `scripts/quality/analyzer-backlog-baseline.json`
 - CI wrappers:
   - `azure-pipelines.yml`
@@ -26,7 +28,9 @@ Additional governance checks run after hotspot:
 
 5. `governance-truth-source`
 6. `dependency-governance`
-7. `analyzer-backlog-baseline` (latest-all backlog must not regress)
+7. `dependency-vulnerability`
+8. `logging-alert-threshold`
+9. `analyzer-backlog-baseline` (latest-all backlog must not regress)
 
 ## 3. Retired Paths (Do Not Reuse)
 

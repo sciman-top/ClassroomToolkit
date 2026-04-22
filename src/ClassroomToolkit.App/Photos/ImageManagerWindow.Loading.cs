@@ -73,7 +73,7 @@ public partial class ImageManagerWindow
                     $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={loadResult.cleanupSummary.SidecarsDeleted} composites={loadResult.cleanupSummary.CompositesDeleted}");
             }
 
-            await AppendScanResultsAsync(result, requestId, token);
+            await AppendScanResultsAsync(result, token, requestId);
             if (token.IsCancellationRequested
                 || requestId != Volatile.Read(ref _loadImagesRequestId)
                 || _isClosing)

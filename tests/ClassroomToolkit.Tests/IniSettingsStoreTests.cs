@@ -63,6 +63,32 @@ public sealed class IniSettingsStoreTests
     }
 
     [Fact]
+    public void TryLoad_ShouldFailForOversizedIniFile()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_oversized", ".ini");
+        try
+        {
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                stream.SetLength(4L * 1024 * 1024 + 1);
+            }
+            var store = new IniSettingsStore(path);
+
+            var loaded = store.TryLoad(out var data);
+
+            loaded.Should().BeFalse();
+            data.Should().BeEmpty();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Save_ShouldThrowArgumentNullException_WhenDataIsNull()
     {
         var path = TestPathHelper.CreateFilePath("ctool_ini_save_null", ".ini");

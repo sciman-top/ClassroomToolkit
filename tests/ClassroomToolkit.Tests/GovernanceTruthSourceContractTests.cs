@@ -10,6 +10,8 @@ public sealed class GovernanceTruthSourceContractTests
         File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "run-local-quality-gates.ps1")).Should().BeTrue();
         File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "check-governance-truth-source.ps1")).Should().BeTrue();
         File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "check-analyzer-backlog-baseline.ps1")).Should().BeTrue();
+        File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "check-dependency-vulnerabilities.ps1")).Should().BeTrue();
+        File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "check-logging-alert-threshold.ps1")).Should().BeTrue();
         File.Exists(TestPathHelper.ResolveRepoPath("scripts", "quality", "analyzer-backlog-baseline.json")).Should().BeTrue();
         File.Exists(TestPathHelper.ResolveRepoPath("azure-pipelines.yml")).Should().BeTrue();
         File.Exists(TestPathHelper.ResolveRepoPath(".gitlab-ci.yml")).Should().BeTrue();
@@ -65,6 +67,8 @@ public sealed class GovernanceTruthSourceContractTests
 
         var content = File.ReadAllText(scriptPath);
         content.Should().Contain("check-governance-truth-source.ps1");
+        content.Should().Contain("check-dependency-vulnerabilities.ps1");
+        content.Should().Contain("check-logging-alert-threshold.ps1");
         content.Should().Contain("check-analyzer-backlog-baseline.ps1");
     }
 }

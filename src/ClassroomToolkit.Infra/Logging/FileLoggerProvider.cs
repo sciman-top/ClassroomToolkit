@@ -264,7 +264,11 @@ public class FileLoggerProvider : ILoggerProvider
                 // Avoid disposing shared queue objects while worker thread is still unwinding.
                 _loggers.Clear();
                 _ = _processQueueTask.ContinueWith(
-                    _ => DisposeQueueResourcesOnce(),
+                    _ =>
+                    {
+                        TryWriteDroppedMessageSummary();
+                        DisposeQueueResourcesOnce();
+                    },
                     CancellationToken.None,
                     TaskContinuationOptions.None,
                     TaskScheduler.Default);
@@ -276,6 +280,7 @@ public class FileLoggerProvider : ILoggerProvider
             Debug.WriteLine($"[FileLoggerProvider] Dispose shutdown wait failed: {ex.GetType().Name} - {ex.Message}");
         }
 
+        TryWriteDroppedMessageSummary();
         DisposeQueueResourcesOnce();
         _loggers.Clear();
     }
@@ -290,16 +295,25 @@ public class FileLoggerProvider : ILoggerProvider
             return EvaluateTaskCompletion(task);
         }
 
-        var spinner = new SpinWait();
-        var stopwatch = timeoutMs == Timeout.Infinite ? null : Stopwatch.StartNew();
-        while (!task.IsCompleted)
+        try
         {
-            if (stopwatch != null && stopwatch.ElapsedMilliseconds >= timeoutMs)
+            var asyncResult = (IAsyncResult)task;
+            var waitHandle = asyncResult.AsyncWaitHandle;
+            if (timeoutMs == Timeout.Infinite)
+            {
+                waitHandle.WaitOne();
+                return EvaluateTaskCompletion(task);
+            }
+
+            if (!waitHandle.WaitOne(timeoutMs))
             {
                 return false;
             }
-
-            spinner.SpinOnce();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[FileLoggerProvider] Queue wait error: {ex.GetType().Name} - {ex.Message}");
+            return false;
         }
 
         return EvaluateTaskCompletion(task);
@@ -325,6 +339,27 @@ public class FileLoggerProvider : ILoggerProvider
         }
 
         return false;
+    }
+
+    private void TryWriteDroppedMessageSummary()
+    {
+        var dropped = Interlocked.Read(ref _droppedMessageCount);
+        if (dropped <= 0)
+        {
+            return;
+        }
+
+        var now = GetCurrentTime();
+        var logPath = Path.Combine(_logDirectory, $"app_{now:yyyyMMdd}.log");
+        var summaryLine = $"[{now:yyyy-MM-dd HH:mm:ss.fff}] [Warning] [FileLoggerProvider] dropped-log-messages={dropped}";
+        try
+        {
+            File.AppendAllText(logPath, summaryLine + Environment.NewLine, Encoding.UTF8);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[FileLoggerProvider] Drop summary append failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void DisposeQueueResourcesOnce()
@@ -356,6 +391,7 @@ public class FileLoggerProvider : ILoggerProvider
 
 public class FileLogger : ILogger
 {
+    private static readonly char[] UnsafeLogCharacters = ['\r', '\n', '\0'];
     private readonly string _categoryName;
     private readonly FileLoggerProvider _provider;
 
@@ -396,7 +432,9 @@ public class FileLogger : ILogger
         }
 
         var now = _provider.GetCurrentTime();
-        var logRecord = $"[{now:yyyy-MM-dd HH:mm:ss.fff}] [{logLevel}] [{_categoryName}] {message}";
+        var safeCategory = SanitizeSingleLine(_categoryName);
+        var safeMessage = SanitizeSingleLine(message);
+        var logRecord = $"[{now:yyyy-MM-dd HH:mm:ss.fff}] [{logLevel}] [{safeCategory}] {safeMessage}";
 
         if (exception != null)
         {
@@ -404,5 +442,27 @@ public class FileLogger : ILogger
         }
 
         _provider.EnqueueMessage(now, logRecord);
+    }
+
+    private static string SanitizeSingleLine(string value)
+    {
+        if (string.IsNullOrEmpty(value) || value.IndexOfAny(UnsafeLogCharacters) < 0)
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder(value.Length + 8);
+        foreach (var ch in value)
+        {
+            _ = ch switch
+            {
+                '\r' => builder.Append("\\r"),
+                '\n' => builder.Append("\\n"),
+                '\0' => builder.Append("\\0"),
+                _ => builder.Append(ch)
+            };
+        }
+
+        return builder.ToString();
     }
 }

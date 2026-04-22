@@ -11,6 +11,8 @@ $requiredPaths = @(
     "scripts/quality/run-local-quality-gates.ps1",
     "scripts/quality/check-governance-truth-source.ps1",
     "scripts/quality/check-analyzer-backlog-baseline.ps1",
+    "scripts/quality/check-dependency-vulnerabilities.ps1",
+    "scripts/quality/check-logging-alert-threshold.ps1",
     "scripts/quality/analyzer-backlog-baseline.json",
     "azure-pipelines.yml",
     ".gitlab-ci.yml"

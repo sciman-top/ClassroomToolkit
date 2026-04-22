@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using ClassroomToolkit.Infra.Logging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -362,5 +363,46 @@ public sealed class FileLoggerProviderTests
             static (_, _) => throw new InvalidOperationException("formatter-failed"));
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Log_ShouldEscapeControlCharacters_InCategoryAndMessage()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_sanitize");
+        var now = new DateTime(2026, 04, 23, 10, 00, 00);
+        var file = Path.Combine(directory, $"app_{now.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+
+        var provider = new FileLoggerProvider(directory, () => now, retentionNow: now);
+        var logger = provider.CreateLogger("audit\r\ncategory");
+        logger.Log(
+            LogLevel.Information,
+            new EventId(1, "sanitize"),
+            "line-1\r\nline-2\0tail",
+            null,
+            static (state, _) => state);
+        provider.Dispose();
+
+        var content = File.ReadAllText(file);
+        content.Should().Contain("[audit\\r\\ncategory] line-1\\r\\nline-2\\0tail");
+        content.Should().NotContain("[audit\r\ncategory]");
+    }
+
+    [Fact]
+    public void Dispose_ShouldWriteDroppedMessageSummary_WhenQueueDropCountIsNonZero()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_file_logger_drop_summary");
+        var now = new DateTime(2026, 04, 23, 10, 30, 00);
+        var file = Path.Combine(directory, $"app_{now.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.log");
+
+        var provider = new FileLoggerProvider(directory, () => now, retentionNow: now);
+        var droppedField = typeof(FileLoggerProvider)
+            .GetField("_droppedMessageCount", BindingFlags.Instance | BindingFlags.NonPublic);
+        droppedField.Should().NotBeNull();
+        droppedField!.SetValue(provider, 42L);
+
+        provider.Dispose();
+
+        var content = File.ReadAllText(file);
+        content.Should().Contain("dropped-log-messages=42");
     }
 }

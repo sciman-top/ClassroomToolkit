@@ -218,7 +218,9 @@ public partial class PhotoOverlayWindow : Window
                 var dispatchQueuedUtc = DateTime.UtcNow;
                 try
                 {
-                    await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Normal, cancellationToken);
+#pragma warning disable CA2016 // Intentionally avoid token forwarding to keep UI fallback contract stable.
+                    await Dispatcher.InvokeAsync(ApplyLoadedBitmapOnUi, DispatcherPriority.Normal);
+#pragma warning restore CA2016
                     scheduled = true;
                     PhotoOverlayDiagnostics.Log(
                         "apply-dispatch",

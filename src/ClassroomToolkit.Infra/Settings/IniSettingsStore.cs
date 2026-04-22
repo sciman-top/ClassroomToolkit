@@ -6,6 +6,7 @@ namespace ClassroomToolkit.Infra.Settings;
 
 public sealed class IniSettingsStore
 {
+    private const long MaxIniFileBytes = 4L * 1024 * 1024;
     private readonly string _path;
 
     public IniSettingsStore(string path)
@@ -28,6 +29,11 @@ public sealed class IniSettingsStore
         if (!File.Exists(_path))
         {
             return true;
+        }
+        if (!TryValidateInputSize(_path, out var fileLength))
+        {
+            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=size-check-failed length={fileLength}");
+            return false;
         }
         if (!TryReadAllLinesWithFallback(_path, out var lines))
         {
@@ -95,6 +101,21 @@ public sealed class IniSettingsStore
             }
         }
         return false;
+    }
+
+    private static bool TryValidateInputSize(string path, out long fileLength)
+    {
+        fileLength = 0;
+        try
+        {
+            var info = new FileInfo(path);
+            fileLength = info.Length;
+            return fileLength <= MaxIniFileBytes;
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return false;
+        }
     }
 
     private static bool TryReadAllLinesWithFallback(string path, out string[] lines)

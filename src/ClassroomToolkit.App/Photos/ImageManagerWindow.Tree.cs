@@ -111,10 +111,11 @@ public partial class ImageManagerWindow
         }
     }
 
+#pragma warning disable CA1068 // Signature order is contract-bound across split partials/tests.
     private async Task AppendScanResultsAsync(
         IReadOnlyList<ImageItem> result,
-        int requestId,
-        CancellationToken token)
+        CancellationToken token,
+        int requestId)
     {
         for (var i = 0; i < result.Count; i += ImageAppendBatchSize)
         {
@@ -144,9 +145,13 @@ public partial class ImageManagerWindow
                 }
                 try
                 {
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background, token);
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
                 }
-                catch (OperationCanceledException) when (_isClosing || token.IsCancellationRequested)
+                catch (OperationCanceledException) when (_isClosing)
+                {
+                    return;
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
                     return;
                 }
@@ -159,6 +164,7 @@ public partial class ImageManagerWindow
 
         QueueVisibleRegionThumbnails();
     }
+#pragma warning restore CA1068
 
     private static TreeViewItem CreateStatusNode(string text)
     {

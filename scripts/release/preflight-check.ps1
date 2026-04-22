@@ -6,6 +6,7 @@ param(
     [string]$Profile = "standard",
     [switch]$SkipTests,
     [switch]$SkipCompatibilityReport,
+    [switch]$SkipUiPerformanceSampling,
     [string]$OutputRoot = "artifacts/release"
 )
 
@@ -86,6 +87,18 @@ if (-not $SkipCompatibilityReport) {
         $reportMd,
         "-OutputJsonPath",
         $reportJson
+    )
+}
+
+if (-not $SkipUiPerformanceSampling) {
+    Invoke-Step -Name "ui-performance-sampling" -FilePath $powerShellExe -Arguments @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/validation/collect-ui-performance-samples.ps1",
+        "-OutputRoot",
+        (Join-Path $outputRootPath "validation")
     )
 }
 
