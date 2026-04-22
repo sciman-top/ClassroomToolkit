@@ -2,6 +2,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
+using System.Globalization;
 using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Diagnostics;
@@ -15,19 +17,26 @@ public static class DiagnosticsBundleExportService
 {
     public static DiagnosticsBundleExportResult Export(DiagnosticsResult result)
     {
+        return Export(result, new ConfigurationService(), () => DateTime.Now);
+    }
+
+    internal static DiagnosticsBundleExportResult Export(
+        DiagnosticsResult result,
+        IConfigurationService configuration,
+        Func<DateTime> nowProvider)
+    {
         ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(nowProvider);
 
         try
         {
-            IConfigurationService configuration = new ConfigurationService();
             var appDataDirectory = ResolveAppDataDirectory(configuration);
             var logsDirectory = Path.Combine(appDataDirectory, "logs");
             var bundlesDirectory = Path.Combine(logsDirectory, "diagnostics-bundles");
             Directory.CreateDirectory(bundlesDirectory);
 
-            var bundlePath = Path.Combine(
-                bundlesDirectory,
-                $"diagnostics-bundle-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
+            var bundlePath = ResolveUniqueBundlePath(bundlesDirectory, nowProvider);
 
             using var archive = ZipFile.Open(bundlePath, ZipArchiveMode.Create);
             AddFileIfExists(archive, configuration.SettingsDocumentPath, "settings/settings.json");
@@ -51,6 +60,31 @@ public static class DiagnosticsBundleExportService
         {
             return new DiagnosticsBundleExportResult(false, string.Empty, ex.Message);
         }
+    }
+
+    internal static string ResolveUniqueBundlePath(string bundlesDirectory, Func<DateTime> nowProvider)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bundlesDirectory);
+        ArgumentNullException.ThrowIfNull(nowProvider);
+
+        var timestampToken = nowProvider().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        var stem = $"diagnostics-bundle-{timestampToken}";
+        var candidate = Path.Combine(bundlesDirectory, $"{stem}.zip");
+        if (!File.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        for (var index = 1; index <= 999; index++)
+        {
+            candidate = Path.Combine(bundlesDirectory, $"{stem}-{index:D3}.zip");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.Combine(bundlesDirectory, $"{stem}-{Guid.NewGuid():N}.zip");
     }
 
     internal static string ResolveAppDataDirectory(IConfigurationService configuration)
@@ -85,10 +119,35 @@ public static class DiagnosticsBundleExportService
             return Array.Empty<string>();
         }
 
-        return Directory.GetFiles(logsDirectory, "error_*.log", SearchOption.TopDirectoryOnly)
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .Take(Math.Max(0, maxCount))
-            .ToArray();
+        var take = Math.Max(0, maxCount);
+        if (take == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        try
+        {
+            var candidates = new List<(string Path, DateTime LastWriteTimeUtc)>();
+            foreach (var path in Directory.EnumerateFiles(logsDirectory, "error_*.log", SearchOption.TopDirectoryOnly))
+            {
+                if (TryGetLastWriteTimeUtc(path, out var lastWriteTimeUtc))
+                {
+                    candidates.Add((path, lastWriteTimeUtc));
+                }
+            }
+
+            return candidates
+                .OrderByDescending(candidate => candidate.LastWriteTimeUtc)
+                .Take(take)
+                .Select(candidate => candidate.Path)
+                .ToArray();
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] SelectRecentErrorLogs failed. directory='{logsDirectory}', reason={ex.GetType().Name}:{ex.Message}");
+            return Array.Empty<string>();
+        }
     }
 
     private static string BuildSummaryText(DiagnosticsResult result)
@@ -113,7 +172,15 @@ public static class DiagnosticsBundleExportService
             return;
         }
 
-        archive.CreateEntryFromFile(sourcePath!, entryName, CompressionLevel.Optimal);
+        try
+        {
+            archive.CreateEntryFromFile(sourcePath!, entryName, CompressionLevel.Optimal);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] Skip file '{sourcePath}' while creating entry '{entryName}': {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private static void AddTextEntry(ZipArchive archive, string entryName, string content)
@@ -122,5 +189,21 @@ public static class DiagnosticsBundleExportService
         using var stream = entry.Open();
         using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         writer.Write(content ?? string.Empty);
+    }
+
+    private static bool TryGetLastWriteTimeUtc(string path, out DateTime writeTimeUtc)
+    {
+        writeTimeUtc = default;
+        try
+        {
+            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[DiagnosticsBundleExport] Skip log timestamp read. path='{path}', reason={ex.GetType().Name}:{ex.Message}");
+            return false;
+        }
     }
 }

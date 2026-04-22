@@ -1,6 +1,7 @@
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
 using FluentAssertions;
+using System.IO.Compression;
 
 namespace ClassroomToolkit.Tests;
 
@@ -52,6 +53,90 @@ public sealed class DiagnosticsBundleExportServiceTests
                 // Best-effort cleanup in test environment.
             }
         }
+    }
+
+    [Fact]
+    public void Export_ShouldUseUniqueBundlePath_WhenTimestampCollides()
+    {
+        var tempDir = TestPathHelper.CreateDirectory("ctool_diag_bundle_unique");
+        try
+        {
+            var settingsJsonPath = Path.Combine(tempDir, "settings.json");
+            var settingsIniPath = Path.Combine(tempDir, "settings.ini");
+            File.WriteAllText(settingsJsonPath, "{}");
+            File.WriteAllText(settingsIniPath, "[settings]");
+            var configuration = new FakeConfigurationService(tempDir, settingsIniPath, settingsJsonPath);
+            var fixedNow = new DateTime(2026, 4, 22, 12, 34, 56);
+            var diagnostics = CreateDiagnosticsResult();
+
+            var first = DiagnosticsBundleExportService.Export(diagnostics, configuration, () => fixedNow);
+            var second = DiagnosticsBundleExportService.Export(diagnostics, configuration, () => fixedNow);
+
+            first.Success.Should().BeTrue(first.Error);
+            second.Success.Should().BeTrue(second.Error);
+            first.BundlePath.Should().NotBe(second.BundlePath);
+            File.Exists(first.BundlePath).Should().BeTrue();
+            File.Exists(second.BundlePath).Should().BeTrue();
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup in test environment.
+            }
+        }
+    }
+
+    [Fact]
+    public void Export_ShouldSucceed_WhenOneOptionalFileIsLocked()
+    {
+        var tempDir = TestPathHelper.CreateDirectory("ctool_diag_bundle_locked");
+        try
+        {
+            var settingsJsonPath = Path.Combine(tempDir, "settings.json");
+            var settingsIniPath = Path.Combine(tempDir, "settings.ini");
+            File.WriteAllText(settingsJsonPath, "{\"ok\":true}");
+            File.WriteAllText(settingsIniPath, "[settings]");
+            var configuration = new FakeConfigurationService(tempDir, settingsIniPath, settingsJsonPath);
+            var diagnostics = CreateDiagnosticsResult();
+
+            using var heldLock = new FileStream(settingsJsonPath, FileMode.Open, FileAccess.Read, FileShare.None);
+            var export = DiagnosticsBundleExportService.Export(
+                diagnostics,
+                configuration,
+                () => new DateTime(2026, 4, 22, 13, 15, 0));
+
+            export.Success.Should().BeTrue(export.Error);
+            File.Exists(export.BundlePath).Should().BeTrue();
+            using var archive = ZipFile.OpenRead(export.BundlePath);
+            archive.Entries.Should().Contain(entry => entry.FullName == "settings/settings.ini");
+            archive.Entries.Should().Contain(entry => entry.FullName == "diagnostics/diagnostics-summary.txt");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup in test environment.
+            }
+        }
+    }
+
+    private static DiagnosticsResult CreateDiagnosticsResult()
+    {
+        return new DiagnosticsResult(
+            HasIssues: true,
+            Title: "诊断标题",
+            Detail: "诊断详情",
+            Suggestion: "诊断建议",
+            HealthBadge: "WARN");
     }
 
     private sealed class FakeConfigurationService : IConfigurationService
