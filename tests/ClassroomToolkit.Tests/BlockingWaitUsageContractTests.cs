@@ -4,14 +4,7 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class BlockingWaitUsageContractTests
 {
-    private static readonly HashSet<string> AllowedBlockingUsage = new(StringComparer.Ordinal)
-    {
-        "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.Lifecycle.cs|StartCore().GetAwaiter().GetResult();",
-        "src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs|var result = preloadTask.GetAwaiter().GetResult();",
-        "src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs|_ = preloadTask.GetAwaiter().GetResult();",
-        "src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs|var completedResult = preloadTask.GetAwaiter().GetResult();",
-        "src/ClassroomToolkit.Infra/Logging/FileLoggerProvider.cs|return task.Wait(timeoutMs);"
-    };
+    private static readonly HashSet<string> AllowedBlockingUsage = new(StringComparer.Ordinal);
 
     [Fact]
     public void Source_ShouldNotIntroduceNewBlockingWaitPatterns()

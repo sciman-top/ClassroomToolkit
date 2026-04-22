@@ -7,15 +7,15 @@ public sealed partial class KeyboardHook
 {
     public void Start()
     {
-        StartCore().GetAwaiter().GetResult();
+        StartCoreSync();
     }
 
     public Task StartAsync()
     {
-        return StartCore();
+        return StartCoreAsync();
     }
 
-    private async Task StartCore()
+    private async Task StartCoreAsync()
     {
         if (_disposed || !OperatingSystem.IsWindows() || _hookId != IntPtr.Zero)
         {
@@ -45,6 +45,42 @@ public sealed partial class KeyboardHook
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200 ms.
                 await Task.Delay(delayMs).ConfigureAwait(false);
+            }
+        }
+
+        Debug.WriteLine($"[KeyboardHook] Start failed with error={LastError}");
+    }
+
+    private void StartCoreSync()
+    {
+        if (_disposed || !OperatingSystem.IsWindows() || _hookId != IntPtr.Zero)
+        {
+            return;
+        }
+
+        const int maxRetries = 3;
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            if (_disposed)
+            {
+                Stop();
+                return;
+            }
+
+            _hookId = SetHook(_hookProc);
+            if (_hookId != IntPtr.Zero)
+            {
+                LastError = 0;
+                _acceptEvents = true;
+                RefreshModifierState();
+                return;
+            }
+
+            LastError = Marshal.GetLastWin32Error();
+            if (attempt < maxRetries - 1)
+            {
+                var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200 ms.
+                _ = SpinWait.SpinUntil(static () => false, delayMs);
             }
         }
 

@@ -33,9 +33,19 @@
    - `AtomicFileReplaceUtilityTests` 新增覆盖正常替换与失败时临时文件清理。
 5. 延续上一切片：
    - `StudentPhotoResolver` 学生粒度缓存失效 + 对应回归测试保持生效。
+6. 阻塞等待专项增量收敛：
+   - `RollCallViewModel.Data.cs` 移除 `GetAwaiter().GetResult()`，改为在已完成任务路径下读取 `Task.Result`。
+   - faulted 路径改为 `ExceptionDispatchInfo.Capture(failure).Throw()` 保持原异常语义。
+   - `BlockingWaitUsageContractTests` allow-list 同步收紧，移除已清理条目。
+7. 阻塞等待专项收敛完成：
+   - `KeyboardHook.Start()` 改为同步重试路径，不再通过 async `.GetResult()` 阻塞。
+   - `FileLoggerProvider.WaitTaskSafely` 改为轮询超时等待，不再调用 `Task.Wait(timeoutMs)`。
+   - `BlockingWaitUsageContractTests` allow-list 清空，`src` 不再存在阻塞等待模式。
 
 ## 执行命令与证据
 - `dotnet test ... --filter "BlockingWaitUsageContractTests|AtomicFileReplaceUtilityTests|IniSettingsStoreSaveTests|JsonSettingsDocumentStoreAdapterTests|InkStorageDiagnosticsContractTests|InkStorageServiceTests|InkPersistenceServiceTests|InkWriteAheadLogServiceTests|StudentPhotoResolverTests"` -> `exit_code=0`
+- `dotnet test ... --filter "RollCallViewModelPreloadConcurrencyTests|BlockingWaitUsageContractTests"` -> `exit_code=0`
+- `dotnet test ... --filter "BlockingWaitUsageContractTests|InteropHookLifecycleContractTests|FileLoggerProviderTests|FileLoggerProviderShutdownSafetyContractTests"` -> `exit_code=0`
 - `dotnet build ClassroomToolkit.sln -c Debug` -> `exit_code=0`
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> `exit_code=0`，`3421 passed`
 - `dotnet test ... --filter "ArchitectureDependencyTests|InteropHookLifecycleContractTests|InteropHookEventDispatchContractTests|GlobalHookServiceLifecycleContractTests|CrossPageDisplayLifecycleContractTests"` -> `exit_code=0`，`28 passed`
@@ -65,6 +75,7 @@
 ## 风险与待办
 - `InvalidateStudentCache` 业务调用点接入：当前仓内未发现直接“学生照片写入/替换”的稳定入口，暂未做盲目注入，避免误触非学生照片链路。
 - 历史阻塞等待点仍保留在 allow-list（KeyboardHook/RollCallViewModel/FileLoggerProvider），需后续专项改造而非本次批量改线程语义。
+- 阻塞等待点已全部从 `src` 清理，后续需关注的是行为层面回归（尤其 hook 启动时序与日志后台关闭时序）。
 
 ## 回滚方案
 1. 回滚目标文件：

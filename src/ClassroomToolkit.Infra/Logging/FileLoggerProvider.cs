@@ -282,15 +282,51 @@ public class FileLoggerProvider : ILoggerProvider
     private static bool WaitTaskSafely(Task task, int timeoutMs)
     {
         ArgumentNullException.ThrowIfNull(task);
-        try
+        if (timeoutMs < Timeout.Infinite)
         {
-            return task.Wait(timeoutMs);
+            throw new ArgumentOutOfRangeException(nameof(timeoutMs));
         }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+
+        if (timeoutMs == 0)
         {
-            Debug.WriteLine($"[FileLoggerProvider] Queue wait failed: {ex.GetType().Name} - {ex.Message}");
+            return EvaluateTaskCompletion(task);
+        }
+
+        var spinner = new SpinWait();
+        var stopwatch = timeoutMs == Timeout.Infinite ? null : Stopwatch.StartNew();
+        while (!task.IsCompleted)
+        {
+            if (stopwatch != null && stopwatch.ElapsedMilliseconds >= timeoutMs)
+            {
+                return false;
+            }
+
+            spinner.SpinOnce();
+        }
+
+        return EvaluateTaskCompletion(task);
+    }
+
+    private static bool EvaluateTaskCompletion(Task task)
+    {
+        if (task.IsCompletedSuccessfully)
+        {
+            return true;
+        }
+
+        if (task.IsCanceled)
+        {
+            Debug.WriteLine("[FileLoggerProvider] Queue wait canceled.");
             return false;
         }
+
+        var failure = task.Exception?.GetBaseException();
+        if (failure != null && InfraExceptionFilterPolicy.IsNonFatal(failure))
+        {
+            Debug.WriteLine($"[FileLoggerProvider] Queue wait failed: {failure.GetType().Name} - {failure.Message}");
+        }
+
+        return false;
     }
 
     private void DisposeQueueResourcesOnce()

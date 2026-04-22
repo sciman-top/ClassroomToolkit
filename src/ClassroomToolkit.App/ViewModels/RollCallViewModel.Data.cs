@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using ClassroomToolkit.App;
@@ -209,7 +210,7 @@ public sealed partial class RollCallViewModel
             try
             {
                 if (!preloadTask.IsCompletedSuccessfully) return null;
-                var result = preloadTask.GetAwaiter().GetResult();
+                var result = preloadTask.Result;
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
@@ -262,7 +263,10 @@ public sealed partial class RollCallViewModel
                         return;
                     }
 
-                    _ = preloadTask.GetAwaiter().GetResult();
+                    if (failure != null)
+                    {
+                        ExceptionDispatchInfo.Capture(failure).Throw();
+                    }
                     return;
                 }
 
@@ -271,7 +275,7 @@ public sealed partial class RollCallViewModel
                     return;
                 }
 
-                var completedResult = preloadTask.GetAwaiter().GetResult();
+                var completedResult = preloadTask.Result;
                 if (!string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
                 {
                     return;
