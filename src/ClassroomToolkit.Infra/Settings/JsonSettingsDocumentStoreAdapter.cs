@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Diagnostics;
@@ -10,6 +9,7 @@ namespace ClassroomToolkit.Infra.Settings;
 
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
+    private const long MaxSettingsFileBytes = 4L * 1024 * 1024;
     private readonly string _path;
     private int _hasValidatedExistingFileState;
     private int _overwriteBlockedAfterCorruptLoad;
@@ -35,8 +35,13 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
-            var json = File.ReadAllText(_path, Encoding.UTF8);
-            using var document = JsonDocument.Parse(json);
+            if (!TryValidateInputSize(_path, out var fileLength))
+            {
+                throw CreateSettingsFileTooLargeException("load", fileLength);
+            }
+
+            using var stream = File.OpenRead(_path);
+            using var document = JsonDocument.Parse(stream);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
                 Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
@@ -141,7 +146,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     private static bool ShouldBlockOverwriteAfterLoadFailure(Exception ex)
     {
         ArgumentNullException.ThrowIfNull(ex);
-        return ex is JsonException;
+        return ex is JsonException or InvalidDataException;
     }
 
     private void EnsureExistingFileStateValidated()
@@ -165,6 +170,11 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
         try
         {
+            if (!TryValidateInputSize(_path, out var fileLength))
+            {
+                throw CreateSettingsFileTooLargeException("save-preflight", fileLength);
+            }
+
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
             Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
@@ -217,8 +227,34 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             return null;
         }
 
+        if (!TryValidateInputSize(_path, out var fileLength))
+        {
+            throw CreateSettingsFileTooLargeException("hash", fileLength);
+        }
+
         using var stream = File.OpenRead(_path);
         return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
+    private static bool TryValidateInputSize(string path, out long fileLength)
+    {
+        fileLength = 0;
+        try
+        {
+            var info = new FileInfo(path);
+            fileLength = info.Length;
+            return fileLength <= MaxSettingsFileBytes;
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return false;
+        }
+    }
+
+    private InvalidDataException CreateSettingsFileTooLargeException(string operation, long fileLength)
+    {
+        return new InvalidDataException(
+            $"Settings JSON exceeds size limit during {operation}. path={_path} length={fileLength} max={MaxSettingsFileBytes}.");
     }
 
 }

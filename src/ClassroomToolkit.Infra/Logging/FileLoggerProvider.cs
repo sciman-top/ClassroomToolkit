@@ -298,7 +298,7 @@ public class FileLoggerProvider : ILoggerProvider
         try
         {
             var asyncResult = (IAsyncResult)task;
-            var waitHandle = asyncResult.AsyncWaitHandle;
+            using var waitHandle = asyncResult.AsyncWaitHandle;
             if (timeoutMs == Timeout.Infinite)
             {
                 waitHandle.WaitOne();

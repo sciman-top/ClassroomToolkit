@@ -1,10 +1,13 @@
 using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
+using System.Text;
 
 namespace ClassroomToolkit.Tests;
 
 public sealed class JsonSettingsDocumentStoreAdapterTests
 {
+    private const long MaxSettingsFileBytes = 4L * 1024 * 1024;
+
     [Fact]
     public void Constructor_ShouldThrow_WhenPathIsBlank()
     {
@@ -292,6 +295,66 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     }
 
     [Fact]
+    public void Load_ShouldReturnEmpty_AndBlockOverwrite_WhenJsonExceedsSizeLimit()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            WriteOversizedJson(path);
+            new FileInfo(path).Length.Should().BeGreaterThan(MaxSettingsFileBytes);
+
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var loaded = adapter.Load();
+            loaded.Should().BeEmpty();
+
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "20"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+            act.Should().Throw<InvalidOperationException>();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldThrow_WhenExistingJsonExceedsSizeLimit_WithoutPriorLoad()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            WriteOversizedJson(path);
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var originalLength = new FileInfo(path).Length;
+
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "21"
+                }
+            };
+
+            Action act = () => adapter.Save(data);
+            act.Should().Throw<InvalidOperationException>();
+            new FileInfo(path).Length.Should().Be(originalLength);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldTreatNullSectionDictionary_AsEmptySection()
     {
         var tempDir = CreateTempDirectory();
@@ -331,5 +394,27 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     private static string CreateTempDirectory()
     {
         return TestPathHelper.CreateDirectory("ctool_json_store");
+    }
+
+    private static void WriteOversizedJson(string path)
+    {
+        const int targetPayloadChars = 4 * 1024 * 1024 + 1024;
+        const string prefix = "{\"Paint\":{\"payload\":\"";
+        const string suffix = "\"}}";
+
+        using var stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        writer.Write(prefix);
+
+        var chunk = new string('a', 8192);
+        var remaining = targetPayloadChars;
+        while (remaining > 0)
+        {
+            var take = Math.Min(remaining, chunk.Length);
+            writer.Write(chunk.AsSpan(0, take));
+            remaining -= take;
+        }
+
+        writer.Write(suffix);
     }
 }
