@@ -10,6 +10,7 @@ namespace ClassroomToolkit.Infra.Settings;
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private const long MaxSettingsFileBytes = 4L * 1024 * 1024;
+    private static long _oversizedSettingsRejectCount;
     private readonly string _path;
     private int _hasValidatedExistingFileState;
     private int _overwriteBlockedAfterCorruptLoad;
@@ -35,10 +36,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             }
 
-            if (!TryValidateInputSize(_path, out var fileLength))
-            {
-                throw CreateSettingsFileTooLargeException("load", fileLength);
-            }
+            EnsureInputSizeWithinLimit(operation: "load");
 
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
@@ -143,6 +141,8 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         _lastValidatedContentHash = GetCurrentContentHash();
     }
 
+    public static long OversizedSettingsRejectCount => Interlocked.Read(ref _oversizedSettingsRejectCount);
+
     private static bool ShouldBlockOverwriteAfterLoadFailure(Exception ex)
     {
         ArgumentNullException.ThrowIfNull(ex);
@@ -170,10 +170,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
         try
         {
-            if (!TryValidateInputSize(_path, out var fileLength))
-            {
-                throw CreateSettingsFileTooLargeException("save-preflight", fileLength);
-            }
+            EnsureInputSizeWithinLimit(operation: "save-preflight");
 
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
@@ -227,28 +224,46 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             return null;
         }
 
-        if (!TryValidateInputSize(_path, out var fileLength))
-        {
-            throw CreateSettingsFileTooLargeException("hash", fileLength);
-        }
+        EnsureInputSizeWithinLimit(operation: "hash");
 
         using var stream = File.OpenRead(_path);
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 
-    private static bool TryValidateInputSize(string path, out long fileLength)
+    private static bool TryValidateInputSize(string path, out long fileLength, out bool exceedsLimit)
     {
         fileLength = 0;
+        exceedsLimit = false;
         try
         {
             var info = new FileInfo(path);
             fileLength = info.Length;
-            return fileLength <= MaxSettingsFileBytes;
+            exceedsLimit = fileLength > MaxSettingsFileBytes;
+            return true;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             return false;
         }
+    }
+
+    private void EnsureInputSizeWithinLimit(string operation)
+    {
+        if (!TryValidateInputSize(_path, out var fileLength, out var exceedsLimit))
+        {
+            throw new IOException(
+                $"Settings JSON size validation failed during {operation}. path={_path}.");
+        }
+
+        if (!exceedsLimit)
+        {
+            return;
+        }
+
+        var currentRejectCount = Interlocked.Increment(ref _oversizedSettingsRejectCount);
+        Debug.WriteLine(
+            $"[JsonSettingsDocumentStoreAdapter] oversized-settings-rejected operation={operation} path={_path} length={fileLength} max={MaxSettingsFileBytes} rejectCount={currentRejectCount}");
+        throw CreateSettingsFileTooLargeException(operation, fileLength);
     }
 
     private InvalidDataException CreateSettingsFileTooLargeException(string operation, long fileLength)

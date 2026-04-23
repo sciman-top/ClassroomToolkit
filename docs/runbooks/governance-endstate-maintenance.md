@@ -40,6 +40,12 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/validation/collect-ui-performance-samples.ps1 -LogRoot logs -WindowHours 24
 ```
 
+5. Collect settings-load performance sampling report (recommended before release sign-off):
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/validation/collect-settings-load-performance-samples.ps1 -Configuration Debug
+```
+
 ## 3. Failure Triage
 
 - `build/test/contract/hotspot` failure: treat as blocking, fix code or tests first.

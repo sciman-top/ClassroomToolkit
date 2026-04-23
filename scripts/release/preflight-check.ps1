@@ -7,6 +7,7 @@ param(
     [switch]$SkipTests,
     [switch]$SkipCompatibilityReport,
     [switch]$SkipUiPerformanceSampling,
+    [switch]$SkipSettingsLoadPerformanceSampling,
     [string]$OutputRoot = "artifacts/release"
 )
 
@@ -97,6 +98,20 @@ if (-not $SkipUiPerformanceSampling) {
         "Bypass",
         "-File",
         "scripts/validation/collect-ui-performance-samples.ps1",
+        "-OutputRoot",
+        (Join-Path $outputRootPath "validation")
+    )
+}
+
+if (-not $SkipSettingsLoadPerformanceSampling) {
+    Invoke-Step -Name "settings-load-performance-sampling" -FilePath $powerShellExe -Arguments @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/validation/collect-settings-load-performance-samples.ps1",
+        "-Configuration",
+        $Configuration,
         "-OutputRoot",
         (Join-Path $outputRootPath "validation")
     )

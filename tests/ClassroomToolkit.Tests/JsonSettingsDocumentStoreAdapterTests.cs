@@ -301,12 +301,15 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
         var path = Path.Combine(tempDir, "settings.json");
         try
         {
+            var oversizedRejectCountBefore = JsonSettingsDocumentStoreAdapter.OversizedSettingsRejectCount;
             WriteOversizedJson(path);
             new FileInfo(path).Length.Should().BeGreaterThan(MaxSettingsFileBytes);
 
             var adapter = new JsonSettingsDocumentStoreAdapter(path);
             var loaded = adapter.Load();
             loaded.Should().BeEmpty();
+            JsonSettingsDocumentStoreAdapter.OversizedSettingsRejectCount
+                .Should().BeGreaterThan(oversizedRejectCountBefore);
 
             var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
             {
