@@ -14,6 +14,7 @@ public static class AtomicFileReplaceUtility
         catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
         {
             File.Copy(tempPath, targetPath, overwrite: true);
+            File.Delete(tempPath);
         }
     }
 
