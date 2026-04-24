@@ -42,7 +42,13 @@ function Invoke-Step {
 }
 
 $powerShellExe = Resolve-PowerShellExecutable
-$outputRootPath = Resolve-Path "." | ForEach-Object { Join-Path $_.Path $OutputRoot }
+$repoRoot = (Resolve-Path -LiteralPath ".").Path
+$outputRootPath = if ([System.IO.Path]::IsPathRooted($OutputRoot)) {
+    $OutputRoot
+}
+else {
+    Join-Path $repoRoot $OutputRoot
+}
 New-Item -ItemType Directory -Path $outputRootPath -Force | Out-Null
 
 if ($SkipTests) {
