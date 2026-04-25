@@ -32,6 +32,38 @@ function Resolve-AbsolutePath {
     return Join-Path (Get-Location) $Path
 }
 
+function Assert-SafeReleaseVersionSegment {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "Invalid release version: value is required."
+    }
+
+    if ($Value.Trim() -ne $Value) {
+        throw "Invalid release version '$Value': leading or trailing whitespace is not allowed."
+    }
+
+    if ($Value -eq "." -or $Value -eq "..") {
+        throw "Invalid release version '$Value': path traversal segments are not allowed."
+    }
+
+    if ($Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or
+        $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
+        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+        throw "Invalid release version '$Value': version must be a single safe directory name."
+    }
+}
+
+function Assert-HttpsDownloadUrl {
+    param([Parameter(Mandatory = $true)][string]$DownloadUrl)
+
+    $uri = $null
+    if (-not [System.Uri]::TryCreate($DownloadUrl, [System.UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -ne [System.Uri]::UriSchemeHttps) {
+        throw "Invalid runtime installer download URL: expected an absolute HTTPS URL."
+    }
+}
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -86,6 +118,7 @@ function Ensure-RuntimeInstaller {
         $DownloadTargetPath
     }
 
+    Assert-HttpsDownloadUrl -DownloadUrl $DownloadUrl
     $installerDir = Split-Path -Parent $targetPath
     New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
     Invoke-Step -Name "download-runtime-installer" -Action {
@@ -271,6 +304,7 @@ $runtimeInstallerFileName = [string]$releaseConfig.runtimeInstaller.fileName
 $runtimeRequiredMajor = [string]$releaseConfig.runtimeInstaller.requiredMajor
 $runtimeDownloadUrl = [string]$releaseConfig.runtimeInstaller.downloadUrl
 
+Assert-SafeReleaseVersionSegment -Value $Version
 Assert-FileExists -Path $resolvedProjectPath -Label "project"
 
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version

@@ -140,3 +140,44 @@
 - Revert `scripts/quality/check-dependency-upgrade-feasibility.ps1` and `scripts/quality/check-dependency-vulnerabilities.ps1` package-source/failure-output changes.
 - Revert the `RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath` try/catch block and remove the new contract tests.
 - Rerun `build -> test -> contract/invariant -> hotspot`.
+
+## Current Review Increment - Region Capture Hot Path And Release Script Safety
+- Date: 2026-04-25.
+- Boundary: region-capture bitmap allocation and release package script input validation only.
+- Current location: `src/ClassroomToolkit.App/Paint/RegionScreenCaptureWorkflow.cs`, `scripts/release/prepare-distribution.ps1`.
+- Target home: preserve region-capture behavior and release package outputs while reducing screenshot memory pressure and blocking unsafe release output/download inputs.
+
+### Baseline
+- Direct `dotnet build ClassroomToolkit.sln -c Debug` in the incomplete Codex process environment failed during NuGet restore with `Value cannot be null. (Parameter 'path1')`.
+- Alternative environment-bootstrapped baseline passed: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet build ClassroomToolkit.sln -c Debug`, `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`, contract subset, and hotspot.
+
+### Problem
+- Region capture allocated a bitmap for the entire virtual screen and then cloned the selected rectangle. On high-DPI or multi-monitor classrooms this increased memory use and UI stall risk for small captures.
+- `prepare-distribution.ps1` accepted `-Version` as a raw path segment and later joined it under `OutputRoot`, so path separators or traversal-like values could escape the intended release version folder before overwrite cleanup.
+- Runtime installer download accepted the configured URL without checking that it was an absolute HTTPS URL.
+
+### Change
+- Region capture now creates a bitmap sized to the intersected target rectangle and calls `CopyFromScreen` from `target.Left` / `target.Top` directly.
+- Added release-version segment validation: non-empty, no leading/trailing whitespace, no `.` / `..`, no path separators, and no invalid file-name characters.
+- Added runtime installer URL validation requiring an absolute HTTPS URL before `Invoke-WebRequest`.
+- Added source contract tests for the region-capture hot path and release packaging safety checks.
+
+### Verification
+- Targeted region tests: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter FullyQualifiedName~RegionCaptureInitialPassthroughPolicyTests`: passed, `5` tests.
+- Targeted release script tests: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter FullyQualifiedName~ReleasePrepareDistributionContractTests`: passed, `2` tests.
+- Unsafe version probe: `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version '..\escape' -PackageMode offline -Configuration Debug -SkipPublish -SkipZip -AllowOverwriteVersion`: failed as expected with `Invalid release version '..\escape'`.
+- Fixed-order gate: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet build ClassroomToolkit.sln -c Debug`: passed, `0 warning / 0 error`.
+- Fixed-order gate: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`: passed, `3457` tests.
+- Fixed-order gate: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`: passed, `28` tests.
+- Fixed-order gate: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1; powershell -File scripts/quality/check-hotspot-line-budgets.ps1`: passed.
+- Quality gate: `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug`: passed, `[quality] ALL PASS`.
+- `git diff --check`: passed; only CRLF normalization warnings were printed.
+
+### Risk
+- Low. Region capture still saves the same PNG output for the same selected screen rectangle; only the intermediate bitmap allocation changed.
+- Low. Valid release versions and HTTPS runtime installer URLs keep working; unsafe inputs now fail before any release directory deletion or download.
+
+### Rollback
+- Revert the target-sized bitmap capture in `RegionScreenCaptureWorkflow.cs` and the related contract assertion.
+- Remove `Assert-SafeReleaseVersionSegment` / `Assert-HttpsDownloadUrl` from `prepare-distribution.ps1` and delete `ReleasePrepareDistributionContractTests.cs`.
+- Rerun `build -> test -> contract/invariant -> hotspot`.
