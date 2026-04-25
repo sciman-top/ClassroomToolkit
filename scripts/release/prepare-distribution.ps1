@@ -18,6 +18,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([System.IO.Path]::IsPathRooted($Path)) {
@@ -187,7 +192,7 @@ Start-Process -FilePath `$appExe
     $bat = @"
 @echo off
 setlocal
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0bootstrap-runtime.ps1"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0bootstrap-runtime.ps1"
 exit /b %errorlevel%
 "@
 

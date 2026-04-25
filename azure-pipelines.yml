@@ -10,7 +10,7 @@ pool:
 steps:
 - checkout: self
 
-- powershell: |
+- pwsh: |
     if (-not (Test-Path "scripts/quality/run-local-quality-gates.ps1")) {
       throw "Missing required script: scripts/quality/run-local-quality-gates.ps1"
     }

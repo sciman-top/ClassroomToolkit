@@ -12,6 +12,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Resolve-StableFilter {
     param([Parameter(Mandatory = $true)][string]$StableProfile)
 

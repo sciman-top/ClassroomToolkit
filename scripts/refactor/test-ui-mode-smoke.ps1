@@ -107,12 +107,12 @@ function Test-DefaultScenario {
         throw "ui-window-system mode missing from registry."
     }
 
-    $resolvedFamily = & powershell -File $resolverPath -RepoRoot $repoPath -Mode ui-overhaul -AsJson | ConvertFrom-Json
+    $resolvedFamily = & pwsh -NoProfile -ExecutionPolicy Bypass -File $resolverPath -RepoRoot $repoPath -Mode ui-overhaul -AsJson | ConvertFrom-Json
     if ([string]$resolvedFamily.mode_id -ne "ui-window-system") {
         throw "family mapping failed"
     }
 
-    $resolvedConcrete = & powershell -File $resolverPath -RepoRoot $repoPath -Mode ui-window-system -AsJson | ConvertFrom-Json
+    $resolvedConcrete = & pwsh -NoProfile -ExecutionPolicy Bypass -File $resolverPath -RepoRoot $repoPath -Mode ui-window-system -AsJson | ConvertFrom-Json
     if ([string]$resolvedConcrete.mode_family -ne "ui-overhaul") {
         throw "concrete mode mapping failed"
     }
@@ -131,7 +131,7 @@ function Test-DefaultScenario {
     }
 
     $taskDoc = Read-JsonFile -Path $uiTaskPath
-    $selection = & powershell -File $selectorPath -TaskFile $uiTaskPath -StateFile $uiStatePath -AsJson | ConvertFrom-Json
+    $selection = & pwsh -NoProfile -ExecutionPolicy Bypass -File $selectorPath -TaskFile $uiTaskPath -StateFile $uiStatePath -AsJson | ConvertFrom-Json
     $expectedSelectionId = Get-ExpectedReadyTaskId -TaskDoc $taskDoc -State $state
     if ([string]::IsNullOrWhiteSpace($expectedSelectionId)) {
         if ([string]$selection.status -ne "done") {
@@ -169,7 +169,7 @@ function Test-DefaultScenario {
         }
     }
 
-    $recon = & powershell -File $reconPath -TaskFile $uiTaskPath -ConfigFile $uiConfigPath -AsJson | ConvertFrom-Json
+    $recon = & pwsh -NoProfile -ExecutionPolicy Bypass -File $reconPath -TaskFile $uiTaskPath -ConfigFile $uiConfigPath -AsJson | ConvertFrom-Json
     if ([string]$recon.status -notin @("ok", "needs_reconciliation")) {
         throw "unexpected reconciliation status"
     }
@@ -183,8 +183,8 @@ function Test-DefaultScenario {
 function Test-GateResumeScenario {
     $backup = Get-Content -LiteralPath $uiStatePath -Raw
     try {
-        & powershell -File $stateUpdaterPath -Action block -StateFile $uiStatePath -TaskId ui-foundation-bootstrap -Summary "waiting for theme freeze" -Reason "visual_gate:theme-freeze" | Out-Null
-        & powershell -File $gateResumePath -RepoRoot $repoPath -Mode ui-window-system -GateId theme-freeze -TaskId ui-foundation-bootstrap -EvidenceDoc $acceptanceDoc | Out-Null
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $uiStatePath -TaskId ui-foundation-bootstrap -Summary "waiting for theme freeze" -Reason "visual_gate:theme-freeze" | Out-Null
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $gateResumePath -RepoRoot $repoPath -Mode ui-window-system -GateId theme-freeze -TaskId ui-foundation-bootstrap -EvidenceDoc $acceptanceDoc | Out-Null
         $state = Read-JsonFile -Path $uiStatePath
         if ([string]$state.tasks.'ui-foundation-bootstrap'.status -ne "pending") {
             throw "task not resumed to pending"
@@ -207,7 +207,7 @@ function Test-StaleReconciliationScenario {
         $doc = Read-JsonFile -Path $uiTaskPath
         $doc.governing_reconciliation.last_reconciled_at = "2000-01-01T00:00:00Z"
         $doc | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $uiTaskPath -Encoding UTF8
-        $recon = & powershell -File $reconPath -TaskFile $uiTaskPath -ConfigFile $uiConfigPath -AsJson | ConvertFrom-Json
+        $recon = & pwsh -NoProfile -ExecutionPolicy Bypass -File $reconPath -TaskFile $uiTaskPath -ConfigFile $uiConfigPath -AsJson | ConvertFrom-Json
         if ([string]$recon.status -ne "needs_reconciliation") {
             throw "stale reconciliation should require refresh"
         }
@@ -278,7 +278,7 @@ function Test-InstallerExporterScenario {
 function Test-SkipManualGateStateScenario {
     $backup = Get-Content -LiteralPath $uiStatePath -Raw
     try {
-        & powershell -File $stateUpdaterPath `
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath `
             -Action gate-skip `
             -StateFile $uiStatePath `
             -TaskId theme-freeze-gate `

@@ -8,6 +8,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Resolve-PowerShellExecutable {
     if (Get-Command "pwsh" -ErrorAction SilentlyContinue) {
         return "pwsh"

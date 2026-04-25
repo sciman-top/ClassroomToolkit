@@ -73,12 +73,12 @@ jobs:
         if: ${{ steps.release_vars.outputs.run_preflight == 'true' }}
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
 
       - name: Build distribution packages
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 `
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 `
             -Version "${{ steps.release_vars.outputs.version }}" `
             -PackageMode "${{ steps.release_vars.outputs.package_mode }}" `
             -Configuration Release `

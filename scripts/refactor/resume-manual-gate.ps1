@@ -26,7 +26,7 @@ function Read-JsonFile {
 
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 $resolverPath = Join-Path $repoPath "scripts/refactor/resolve-refactor-mode.ps1"
-$modeInfo = & powershell -File $resolverPath -RepoRoot $repoPath -Mode $Mode -AsJson | ConvertFrom-Json
+$modeInfo = & pwsh -NoProfile -ExecutionPolicy Bypass -File $resolverPath -RepoRoot $repoPath -Mode $Mode -AsJson | ConvertFrom-Json
 $statePath = $modeInfo.state_file_resolved
 $taskPath = $modeInfo.tasks_file_resolved
 

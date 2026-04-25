@@ -14,6 +14,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([System.IO.Path]::IsPathRooted($Path)) {
@@ -77,7 +82,7 @@ else {
 Invoke-Step -Name "build" -Command @("dotnet", "build", $Solution, "-c", $Configuration)
 Invoke-Step -Name "test" -Command @("dotnet", "test", $TestProject, "-c", $Configuration)
 Invoke-Step -Name "contract_invariant" -Command @("dotnet", "test", $TestProject, "-c", $Configuration, "--filter", $ContractFilter)
-Invoke-Step -Name "hotspot" -Command @("powershell", "-File", $HotspotScript)
+Invoke-Step -Name "hotspot" -Command @("pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $HotspotScript)
 
 if ($IncludeRelease) {
     Invoke-Step -Name "release_test" -Command @("dotnet", "test", $TestProject, "-c", "Release")
@@ -142,5 +147,3 @@ for ($i = 0; $i -lt $script:StepResults.Count; $i++) {
 
 [System.IO.File]::WriteAllText($resolvedOutputPath, $builder.ToString(), [System.Text.Encoding]::UTF8)
 Write-Host "[final-acceptance] Evidence written: $resolvedOutputPath"
-
-

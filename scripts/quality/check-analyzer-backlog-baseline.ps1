@@ -8,6 +8,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..\..")).Path
 $resolvedBaselinePath = Join-Path $repoRoot $BaselinePath
 $resolvedReportPath = Join-Path $repoRoot $ReportPath

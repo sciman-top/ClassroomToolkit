@@ -53,7 +53,7 @@ if (-not (Test-Path -LiteralPath $outputPath)) {
 }
 
 $installerPath = Resolve-AbsolutePath -Path "scripts/refactor/install-refactor-adapter.ps1" -BasePath $sourceRoot
-$installResultRaw = & powershell -ExecutionPolicy Bypass -File $installerPath `
+$installResultRaw = & pwsh -NoProfile -ExecutionPolicy Bypass -File $installerPath `
     -SourceRepoRoot $sourceRoot `
     -TargetRepoRoot $outputPath `
     -ManifestPath $ManifestPath `

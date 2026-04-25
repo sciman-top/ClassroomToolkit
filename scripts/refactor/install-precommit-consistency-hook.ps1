@@ -25,7 +25,7 @@ $hookBody = @(
     "  exit 0"
     "fi"
     ""
-    "PS_BIN=""powershell.exe"""
+    "PS_BIN=""pwsh"""
     "if command -v pwsh >/dev/null 2>&1; then"
     "  PS_BIN=""pwsh"""
     "fi"
@@ -34,7 +34,7 @@ $hookBody = @(
     "status=`$?"
     "if [ `$status -ne 0 ]; then"
     "  echo ""[pre-commit] Refactor doc consistency check failed.""" 
-    "  echo ""[pre-commit] Run: powershell -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -Fix"""
+    "  echo ""[pre-commit] Run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -Fix"""
     "  exit `$status"
     "fi"
     ""
@@ -60,4 +60,3 @@ if (Test-Path -LiteralPath $targetHookPath) {
 
 Set-Content -LiteralPath $targetHookPath -Value $hookBody -Encoding ASCII -NoNewline
 Write-Host "Installed pre-commit hook: $targetHookPath"
-

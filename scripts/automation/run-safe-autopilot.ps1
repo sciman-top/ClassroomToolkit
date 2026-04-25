@@ -21,6 +21,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 $kitCandidate = $GovernanceKitRoot
 if ([string]::IsNullOrWhiteSpace($kitCandidate)) {
@@ -257,23 +262,23 @@ Safety constraints:
 
 function Invoke-GovernanceCycle {
     return Invoke-LoggedCommand -Name "governance-cycle" -WorkDir $kitPath -Action {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $kitPath "scripts/run-project-governance-cycle.ps1") -RepoPath $repoPath -RepoName (Split-Path -Leaf $repoPath) -Mode safe -ShowScope
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $kitPath "scripts/run-project-governance-cycle.ps1") -RepoPath $repoPath -RepoName (Split-Path -Leaf $repoPath) -Mode safe -ShowScope
     }
 }
 
 function Invoke-QualityGates {
     return Invoke-LoggedCommand -Name "quality-gates" -WorkDir $repoPath -Action {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "scripts/quality/run-local-quality-gates.ps1") -Profile $QualityProfile -Configuration $Configuration
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "scripts/quality/run-local-quality-gates.ps1") -Profile $QualityProfile -Configuration $Configuration
     }
 }
 
 function Invoke-TaskLoop {
     return Invoke-LoggedCommand -Name "task-loop" -WorkDir $repoPath -Action {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "scripts/run-refactor-loop.ps1") -RepoRoot $repoPath -Mode $RefactorMode -CodexCommand $CodexCommand -MaxIterations $LoopIterationsPerCycle -MaxNoProgress 6 -MaxNonCodeProgress 4 -MaxExecFailuresPerTask 3 -MaxNoProgressPerTask 3 -MaxAutoRecoverPerTask 2 -IterationTimeoutSeconds 900 -IdleTimeoutSeconds 120 -LockStaleAfterMinutes 30 -PromptProfile compact -SkipManualGates
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "scripts/run-refactor-loop.ps1") -RepoRoot $repoPath -Mode $RefactorMode -CodexCommand $CodexCommand -MaxIterations $LoopIterationsPerCycle -MaxNoProgress 6 -MaxNonCodeProgress 4 -MaxExecFailuresPerTask 3 -MaxNoProgressPerTask 3 -MaxAutoRecoverPerTask 2 -IterationTimeoutSeconds 900 -IdleTimeoutSeconds 120 -LockStaleAfterMinutes 30 -PromptProfile compact -SkipManualGates
     }
 }
 
-Assert-Command -Name powershell
+Assert-Command -Name pwsh
 Assert-Command -Name $CodexCommand
 Assert-Command -Name dotnet
 

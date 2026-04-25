@@ -1,11 +1,17 @@
 [CmdletBinding()]
 param(
     [string]$Solution = "ClassroomToolkit.sln",
+    [string]$PackageSource = "https://api.nuget.org/v3/index.json",
     [switch]$FailOnVulnerability = $true
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
 
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -57,6 +63,17 @@ function Get-VulnerabilityRowsFromDotnetOutput {
     return $rows
 }
 
+function Format-DotnetListFailureOutput {
+    param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)
+
+    $detail = (@($Lines) | Out-String).Trim()
+    if ($detail.Length -gt 2000) {
+        return $detail.Substring(0, 2000) + "`n...[truncated]"
+    }
+
+    return $detail
+}
+
 $resolvedSolution = Resolve-AbsolutePath -Path $Solution
 if (-not (Test-Path -LiteralPath $resolvedSolution)) {
     throw "[dependency-vulnerability] Missing solution: $resolvedSolution"
@@ -66,9 +83,22 @@ Write-Host "[dependency-vulnerability] START scan"
 $previousLanguage = $env:DOTNET_CLI_UI_LANGUAGE
 $env:DOTNET_CLI_UI_LANGUAGE = "en"
 try {
-    $scanOutput = & dotnet list $resolvedSolution package --vulnerable --include-transitive 2>&1
+    $scanArgs = @(
+        "list",
+        $resolvedSolution,
+        "package",
+        "--vulnerable",
+        "--include-transitive"
+    )
+    if (-not [string]::IsNullOrWhiteSpace($PackageSource)) {
+        $scanArgs += "--source"
+        $scanArgs += $PackageSource
+    }
+
+    $scanOutput = & dotnet @scanArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "[dependency-vulnerability] dotnet list vulnerable scan failed (exit=$LASTEXITCODE)."
+        $detail = Format-DotnetListFailureOutput -Lines @($scanOutput)
+        throw "[dependency-vulnerability] dotnet list vulnerable scan failed (exit=$LASTEXITCODE). Output: $detail"
     }
 }
 finally {

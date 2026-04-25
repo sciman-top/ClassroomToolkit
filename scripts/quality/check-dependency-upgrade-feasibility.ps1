@@ -2,11 +2,17 @@
 param(
     [string]$Solution = "ClassroomToolkit.sln",
     [string]$WaiverPath = "scripts/quality/dependency-outdated-waivers.json",
+    [string]$PackageSource = "https://api.nuget.org/v3/index.json",
     [switch]$FailOnStableOutdated = $true
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
 
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -44,6 +50,32 @@ function Get-PackageRowsFromDotnetOutput {
     }
 
     return $rows
+}
+
+function Format-DotnetListFailureOutput {
+    param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)
+
+    $detail = (@($Lines) | Out-String).Trim()
+    if ($detail.Length -gt 2000) {
+        return $detail.Substring(0, 2000) + "`n...[truncated]"
+    }
+
+    return $detail
+}
+
+function Invoke-DotnetPackageList {
+    param(
+        [Parameter(Mandatory = $true)][string]$Label,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    $output = & dotnet @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        $detail = Format-DotnetListFailureOutput -Lines @($output)
+        throw "[dependency] dotnet list ($Label) failed (exit=$LASTEXITCODE). Output: $detail"
+    }
+
+    return @($output)
 }
 
 function Read-Waivers {
@@ -118,15 +150,30 @@ Write-Host "[dependency] START scan"
 $previousLanguage = $env:DOTNET_CLI_UI_LANGUAGE
 $env:DOTNET_CLI_UI_LANGUAGE = "en"
 try {
-    $stableOutput = & dotnet list $resolvedSolution package --outdated --include-transitive 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "[dependency] dotnet list (stable) failed (exit=$LASTEXITCODE)."
+    $stableArgs = @(
+        "list",
+        $resolvedSolution,
+        "package",
+        "--outdated",
+        "--include-transitive"
+    )
+    $preArgs = @(
+        "list",
+        $resolvedSolution,
+        "package",
+        "--outdated",
+        "--include-transitive",
+        "--include-prerelease"
+    )
+    if (-not [string]::IsNullOrWhiteSpace($PackageSource)) {
+        $stableArgs += "--source"
+        $stableArgs += $PackageSource
+        $preArgs += "--source"
+        $preArgs += $PackageSource
     }
 
-    $preOutput = & dotnet list $resolvedSolution package --outdated --include-transitive --include-prerelease 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "[dependency] dotnet list (prerelease) failed (exit=$LASTEXITCODE)."
-    }
+    $stableOutput = Invoke-DotnetPackageList -Label "stable" -Arguments $stableArgs
+    $preOutput = Invoke-DotnetPackageList -Label "prerelease" -Arguments $preArgs
 }
 finally {
     $env:DOTNET_CLI_UI_LANGUAGE = $previousLanguage

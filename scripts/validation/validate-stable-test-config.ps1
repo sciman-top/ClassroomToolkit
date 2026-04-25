@@ -7,6 +7,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([System.IO.Path]::IsPathRooted($Path)) {
@@ -41,7 +46,7 @@ if ($scriptSource -notmatch 'Resolve-StableFilter') {
 
 $profiles = @("quick", "standard", "full")
 foreach ($profile in $profiles) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $resolvedScriptPath `
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $resolvedScriptPath `
         -Profile $profile `
         -Configuration "Debug" `
         -TestProject $resolvedProjectPath `

@@ -35,8 +35,34 @@ $modeResolverPath = Join-Path $repoPath "scripts/refactor/resolve-refactor-mode.
 $lockFilePath = Join-Path $repoPath ".codex/refactor-loop.lock.json"
 $loopRunId = [guid]::NewGuid().ToString("n")
 
+function Resolve-PowerShellExecutable {
+    if (-not [string]::IsNullOrWhiteSpace($env:CODEX_ALLOW_WINDOWS_POWERSHELL)) {
+        $legacy = Get-Command powershell -ErrorAction SilentlyContinue
+        if ($legacy) { return [string]$legacy.Source }
+    }
+
+    $programFilesPwsh = if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
+    } else {
+        $null
+    }
+    if (-not [string]::IsNullOrWhiteSpace($programFilesPwsh) -and (Test-Path -LiteralPath $programFilesPwsh)) {
+        return $programFilesPwsh
+    }
+
+    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($pwsh) { return [string]$pwsh.Source }
+
+    $legacyFallback = Get-Command powershell -ErrorAction SilentlyContinue
+    if ($legacyFallback) { return [string]$legacyFallback.Source }
+
+    throw "PowerShell 7 (pwsh) is required unless CODEX_ALLOW_WINDOWS_POWERSHELL=1 is set."
+}
+
+$powerShellExe = Resolve-PowerShellExecutable
+
 function Get-Selection {
-    & powershell -File $selectorPath -TaskFile $TaskFile -StateFile $StateFile -AsJson | ConvertFrom-Json
+    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $selectorPath -TaskFile $TaskFile -StateFile $StateFile -AsJson | ConvertFrom-Json
 }
 
 function Read-JsonFile {
@@ -71,7 +97,7 @@ function Resolve-ModeContext {
         [string]$RequestedConfigFile
     )
 
-    $rawModeInfo = & powershell -File $modeResolverPath -RepoRoot $RepoPath -Mode $RequestedMode -AsJson 2>&1
+    $rawModeInfo = & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $modeResolverPath -RepoRoot $RepoPath -Mode $RequestedMode -AsJson 2>&1
     $resolverExitCode = $LASTEXITCODE
     $jsonText = [string]::Join([Environment]::NewLine, @($rawModeInfo | Where-Object { $_ -is [string] }))
     if ($resolverExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($jsonText)) {
@@ -143,7 +169,7 @@ function Invoke-DocConsistencyCheck {
         $arguments += "-Fix"
     }
 
-    $raw = & powershell @arguments
+    $raw = & pwsh @arguments
     $exitCode = $LASTEXITCODE
     $json = [string]::Join([Environment]::NewLine, @($raw))
 
@@ -296,7 +322,7 @@ function Resolve-CodexLauncher {
             }
 
             return [pscustomobject]@{
-                FilePath = "powershell.exe"
+                FilePath = $powerShellExe
                 PrefixArguments = @(
                     "-NoLogo"
                     "-NoProfile"
@@ -708,7 +734,7 @@ function Handle-ManualGateSkip {
         $evidenceDocRelative = "docs/validation/ui-window-system-acceptance.md"
     }
 
-    & powershell -File $stateUpdaterPath `
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath `
         -Action gate-skip `
         -StateFile $StateFile `
         -TaskId $TaskId `
@@ -1024,9 +1050,9 @@ function Write-TerminalStatusFromSelection {
             return $true
         }
 
-        $reconciliation = & powershell -File $reconciliationCheckPath -TaskFile $TaskFile -AsJson | ConvertFrom-Json
+        $reconciliation = & pwsh -NoProfile -ExecutionPolicy Bypass -File $reconciliationCheckPath -TaskFile $TaskFile -AsJson | ConvertFrom-Json
         if (-not [string]::IsNullOrWhiteSpace($ConfigFile)) {
-            $reconciliation = & powershell -File $reconciliationCheckPath -TaskFile $TaskFile -ConfigFile $ConfigFile -AsJson | ConvertFrom-Json
+            $reconciliation = & pwsh -NoProfile -ExecutionPolicy Bypass -File $reconciliationCheckPath -TaskFile $TaskFile -ConfigFile $ConfigFile -AsJson | ConvertFrom-Json
         }
         if ([string]$reconciliation.status -eq "ok") {
             Write-Host "STATUS: ALL_AUTOMATABLE_TASKS_DONE"
@@ -1081,7 +1107,7 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
             if ($recoverCount -lt $MaxAutoRecoverPerTask) {
                 $autoRecoverAttempts[$recoverableTaskId] = $recoverCount + 1
                 $recoverSummary = "Auto-recover queued from blocked preflight selection (attempt $($autoRecoverAttempts[$recoverableTaskId])/$MaxAutoRecoverPerTask)."
-                & powershell -File $stateUpdaterPath -Action unblock -StateFile $StateFile -TaskId $recoverableTaskId -Summary $recoverSummary -Reason "auto-recover-preflight-pre-existing-failure" | Out-Null
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action unblock -StateFile $StateFile -TaskId $recoverableTaskId -Summary $recoverSummary -Reason "auto-recover-preflight-pre-existing-failure" | Out-Null
                 Write-Host "AUTO_RECOVERY"
                 Write-Host "task_id: $recoverableTaskId"
                 Write-Host "reason: blocked pre-existing failure"
@@ -1130,7 +1156,7 @@ for ($iteration = 1; $iteration -le $MaxIterations; $iteration++) {
 
     if ($taskExecFailures -ge $MaxExecFailuresPerTask -or $taskNoProgressCount -ge $MaxNoProgressPerTask) {
         $budgetSummary = "Task execution budget exhausted (exec_failures=$taskExecFailures/$MaxExecFailuresPerTask, no_progress=$taskNoProgressCount/$MaxNoProgressPerTask)."
-        & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" | Out-Null
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary $budgetSummary -Reason "task-budget-threshold" | Out-Null
         Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
         Write-Host $budgetSummary
         break
@@ -1198,18 +1224,18 @@ Auto-recovery note for this task:
         $noProgressByTask[$taskId] = $taskNoProgressCount
         $timeoutLabel = if ($invokeResult.TimedOutReason -eq "idle-timeout") { "Iteration stopped after $IdleTimeoutSeconds seconds of no output/log activity." } else { "Iteration timed out after $IterationTimeoutSeconds seconds." }
         $timeoutSummary = "$timeoutLabel stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)"
-        & powershell -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $timeoutSummary -Reason "timeout" | Out-Null
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $timeoutSummary -Reason "timeout" | Out-Null
         Write-Host $timeoutSummary
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task timeout/no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-per-task-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task timeout/no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-per-task-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task timeout/no-progress threshold reached. Task marked blocked."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated timeouts. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated timeouts. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "timeout-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Timeout threshold reached. Task marked blocked."
             break
@@ -1301,7 +1327,7 @@ Auto-recovery note for this task:
             $autoRecoverAttempts[$taskId] = $currentRecoverCount + 1
             $autoRecoverHints[$taskId] = [string]$resultSummaryFields["next_action"]
             $recoverSummary = "Auto-recover queued for pre_existing_failure (attempt $($autoRecoverAttempts[$taskId])/$MaxAutoRecoverPerTask)."
-            & powershell -File $stateUpdaterPath -Action unblock -StateFile $StateFile -TaskId $taskId -Summary $recoverSummary -Reason "auto-recover-pre-existing-failure" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action unblock -StateFile $StateFile -TaskId $taskId -Summary $recoverSummary -Reason "auto-recover-pre-existing-failure" | Out-Null
             Write-Host "AUTO_RECOVERY"
             Write-Host "task_id: $taskId"
             Write-Host "reason: pre_existing_failure"
@@ -1331,27 +1357,27 @@ Auto-recovery note for this task:
         $execFailuresByTask[$taskId] = $taskExecFailures
         $nonCodeProgressCount = 0
         $failureSummary = "Iteration failed with exit code $($invokeResult.ExitCode). stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)"
-        & powershell -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $failureSummary -Reason "exec-failed" | Out-Null
+        & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action note -StateFile $StateFile -TaskId $taskId -Summary $failureSummary -Reason "exec-failed" | Out-Null
         Write-Host $failureSummary
         Write-Host "Task exec-failure count: $taskExecFailures / $MaxExecFailuresPerTask"
         $countedNoProgress = $true
 
         if ($taskExecFailures -ge $MaxExecFailuresPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task execution failure threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-per-task-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task execution failure threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-per-task-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task execution failure threshold reached. Task marked blocked."
             break
         }
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold after execution failure. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold after execution failure. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task no-progress threshold reached. Task marked blocked."
             break
         }
 
         if ($noProgressCount -ge $MaxNoProgress) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated execution failures. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked after repeated execution failures. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "exec-failure-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Execution failure threshold reached. Task marked blocked."
             break
@@ -1369,7 +1395,7 @@ Auto-recovery note for this task:
         Write-Host "Task no-progress count: $taskNoProgressCount / $MaxNoProgressPerTask"
 
         if ($taskNoProgressCount -ge $MaxNoProgressPerTask) {
-            & powershell -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File $stateUpdaterPath -Action block -StateFile $StateFile -TaskId $taskId -Summary "Task blocked by per-task no-progress threshold. Last logs: stdout=$($invokeResult.StdoutPath); stderr=$($invokeResult.StderrPath)" -Reason "no-progress-per-task-threshold" | Out-Null
             Write-Host "STATUS: BLOCKED_NEEDS_HUMAN"
             Write-Host "Per-task no-progress threshold reached. Task marked blocked."
             Write-IterationProgress -StatusBeforeMap $statusBeforeMap -StatusAfterMap $statusAfterMap -TaskTitleMap $taskTitleMap -HadStateProgress $hadStateProgress -HadTaskGraphProgress $hadTaskGraphProgress -NoProgressCount $noProgressCount -MaxNoProgressValue $MaxNoProgress -NextTaskId $nextTaskId -ChildStatus $childStatus

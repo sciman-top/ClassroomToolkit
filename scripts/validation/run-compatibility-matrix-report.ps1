@@ -19,6 +19,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Get-VcppRuntimeVersion {
     try {
         $key = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction Stop
@@ -58,7 +63,7 @@ $preflightResult = "NotRun"
 $preflightDetail = "Skipped"
 if ($RunPreflight) {
     try {
-        powershell -File scripts/validation/run-compatibility-preflight.ps1 -Configuration $Configuration | Out-Host
+        pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run-compatibility-preflight.ps1 -Configuration $Configuration | Out-Host
         $preflightResult = "Pass"
         $preflightDetail = "scripts/validation/run-compatibility-preflight.ps1"
     }

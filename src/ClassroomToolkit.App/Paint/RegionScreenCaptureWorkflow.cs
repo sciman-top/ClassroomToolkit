@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -130,26 +132,19 @@ internal static class RegionScreenCaptureWorkflow
         Directory.CreateDirectory(outputDir);
         var outputPath = Path.Combine(outputDir, $"{CaptureFilePrefix}{DateTime.Now:yyyyMMdd-HHmmss-fff}.png");
 
-        using var full = new Bitmap(virtualBounds.Width, virtualBounds.Height, PixelFormat.Format32bppArgb);
-        using (var graphics = Graphics.FromImage(full))
+        using var captured = new Bitmap(target.Width, target.Height, PixelFormat.Format32bppArgb);
+        using (var graphics = Graphics.FromImage(captured))
         {
             graphics.CopyFromScreen(
-                virtualBounds.Left,
-                virtualBounds.Top,
+                target.Left,
+                target.Top,
                 0,
                 0,
-                full.Size,
+                target.Size,
                 CopyPixelOperation.SourceCopy);
         }
 
-        var localRect = new Rectangle(
-            target.Left - virtualBounds.Left,
-            target.Top - virtualBounds.Top,
-            target.Width,
-            target.Height);
-
-        using var cropped = full.Clone(localRect, PixelFormat.Format32bppArgb);
-        cropped.Save(outputPath, ImageFormat.Png);
+        captured.Save(outputPath, ImageFormat.Png);
         return new RegionScreenCaptureResult(true, outputPath, RegionScreenCaptureCancelReason.None);
     }
 
@@ -182,19 +177,28 @@ internal static class RegionScreenCaptureWorkflow
             return false;
         }
 
-        var fullPath = Path.GetFullPath(path);
-        var fileName = Path.GetFileName(fullPath);
-        if (!fileName.StartsWith(CaptureFilePrefix, StringComparison.OrdinalIgnoreCase))
+        try
         {
+            var fullPath = Path.GetFullPath(path);
+            var fileName = Path.GetFileName(fullPath);
+            if (!fileName.StartsWith(CaptureFilePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var captureRoot = Path.GetFullPath(GetSessionCaptureRootDirectory());
+            if (!captureRoot.EndsWith(Path.DirectorySeparatorChar))
+            {
+                captureRoot += Path.DirectorySeparatorChar;
+            }
+
+            return fullPath.StartsWith(captureRoot, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"RegionScreenCaptureWorkflow: invalid session capture path ignored. reason={ex.GetType().Name}:{ex.Message}");
             return false;
         }
-
-        var captureRoot = Path.GetFullPath(GetSessionCaptureRootDirectory());
-        if (!captureRoot.EndsWith(Path.DirectorySeparatorChar))
-        {
-            captureRoot += Path.DirectorySeparatorChar;
-        }
-
-        return fullPath.StartsWith(captureRoot, StringComparison.OrdinalIgnoreCase);
     }
 }

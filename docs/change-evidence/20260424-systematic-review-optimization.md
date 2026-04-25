@@ -97,3 +97,46 @@
 
 ### Rollback
 - Revert `scripts/release/preflight-check.ps1` and remove `tests/ClassroomToolkit.Tests/ReleasePreflightOutputRootContractTests.cs`, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## Current Review Increment - Process Environment, Dependency Gates, And Capture Path Robustness
+- Date: 2026-04-25.
+- Boundary: repo engineering entrypoints, dependency governance scripts, and region-capture path classification only.
+- Current location: `scripts/env/Initialize-WindowsProcessEnvironment.ps1`, `scripts/quality/*`, `scripts/release/*`, `scripts/validation/*`, `src/ClassroomToolkit.App/Paint/RegionScreenCaptureWorkflow.cs`.
+- Target home: preserve app behavior while making gates resilient in incomplete Windows process environments, keeping dependency checks on a trusted package source, and preventing invalid capture paths from bubbling exceptions into UI flows.
+
+### Baseline
+- `codex --version`, `codex --help`, and `codex status` failed with native Node `ncrypto::CSPRNG` assertions before process environment bootstrap.
+- `dotnet build ClassroomToolkit.sln -c Debug` failed in NuGet restore with `Value cannot be null. (Parameter 'path1')` when the process only exposed a minimal set of Windows environment variables.
+- After manually restoring missing process variables in-command, `dotnet build -> dotnet test -> contract/invariant -> hotspot` passed.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` initially reached dependency governance and failed because `dotnet list ... --outdated` used the machine default local SDK package source and returned `Value cannot be null. (Parameter 'path1')`.
+- The same outdated-package scan passed when constrained to `--source https://api.nuget.org/v3/index.json`.
+
+### Change
+- Added `scripts/env/Initialize-WindowsProcessEnvironment.ps1`, which only fills missing process-level defaults for `USERPROFILE/HOME`, Windows root variables, `APPDATA/LOCALAPPDATA`, `ProgramFiles` family variables, `ComSpec`, `ProgramData`, and `NUGET_PACKAGES`.
+- Dot-sourced the bootstrap from local quality, release, validation, dependency, and one-click scripts that invoke `dotnet` or spawn those gates.
+- Updated dependency governance and vulnerability scripts with a `PackageSource` parameter defaulting to NuGet.org, and included bounded `dotnet list` output in failure messages.
+- Hardened `RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath` so malformed path input returns `false` with debug diagnostics instead of throwing.
+- Added contract tests for the environment bootstrap, dependency package source/failure-output behavior, and invalid region-capture path handling.
+
+### Verification
+- `. scripts/env/Initialize-WindowsProcessEnvironment.ps1; codex --version`: passed, `codex-cli 0.125.0`.
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 -v:minimal /p:UseSharedCompilation=false --filter "FullyQualifiedName~RegionCaptureInitialPassthroughPolicyTests|FullyQualifiedName~WindowsProcessEnvironmentBootstrapContractTests|FullyQualifiedName~DependencyGovernancePackageSourceContractTests"`: passed, `25` tests.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1`: passed; stable outdated packages are covered by active waivers.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-vulnerabilities.ps1`: passed; no vulnerable packages detected.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug`: passed; build passed, quick stable tests `105` passed, contract tests `28` passed, hotspot passed, dependency governance passed, vulnerability scan passed, analyzer backlog baseline passed.
+- Final fixed-order gate: `. scripts/env/Initialize-WindowsProcessEnvironment.ps1; dotnet build ClassroomToolkit.sln -c Debug`: passed, `0 warning / 0 error`.
+- Final fixed-order gate: `. scripts/env/Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`: passed, `3454` tests.
+- Final fixed-order gate: `. scripts/env/Initialize-WindowsProcessEnvironment.ps1; dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"`: passed, `28` tests.
+- Final fixed-order gate: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`: passed.
+- `git diff --check`: passed; only CRLF normalization warnings were printed.
+
+### Risk
+- Low. The bootstrap only sets variables that are missing or blank in the current process and does not overwrite user-provided values.
+- Low. Dependency scripts still allow callers to override `-PackageSource`; defaulting to NuGet.org avoids broken local SDK package-source state for this public dependency graph.
+- Low. The capture path change only changes malformed input from exception to `false`; valid session capture paths keep the existing behavior.
+
+### Rollback
+- Remove `scripts/env/Initialize-WindowsProcessEnvironment.ps1` and the dot-source blocks added to scripts.
+- Revert `scripts/quality/check-dependency-upgrade-feasibility.ps1` and `scripts/quality/check-dependency-vulnerabilities.ps1` package-source/failure-output changes.
+- Revert the `RegionScreenCaptureWorkflow.IsSessionRegionCaptureFilePath` try/catch block and remove the new contract tests.
+- Rerun `build -> test -> contract/invariant -> hotspot`.

@@ -16,6 +16,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$environmentBootstrap = Join-Path $PSScriptRoot "env\Initialize-WindowsProcessEnvironment.ps1"
+if (Test-Path -LiteralPath $environmentBootstrap) {
+    . $environmentBootstrap
+}
+
 function Assert-Command {
     param(
         [string]$Name,
@@ -24,6 +29,30 @@ function Assert-Command {
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "缺少命令: $Name。$Hint"
     }
+}
+
+function Resolve-PowerShellExecutable {
+    if (-not [string]::IsNullOrWhiteSpace($env:CODEX_ALLOW_WINDOWS_POWERSHELL)) {
+        $legacy = Get-Command powershell -ErrorAction SilentlyContinue
+        if ($legacy) { return [string]$legacy.Source }
+    }
+
+    $programFilesPwsh = if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
+    } else {
+        $null
+    }
+    if (-not [string]::IsNullOrWhiteSpace($programFilesPwsh) -and (Test-Path -LiteralPath $programFilesPwsh)) {
+        return $programFilesPwsh
+    }
+
+    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($pwsh) { return [string]$pwsh.Source }
+
+    $legacyFallback = Get-Command powershell -ErrorAction SilentlyContinue
+    if ($legacyFallback) { return [string]$legacyFallback.Source }
+
+    throw "缺少命令: pwsh。请安装 PowerShell 7，或显式设置 CODEX_ALLOW_WINDOWS_POWERSHELL=1 后回退到 Windows PowerShell。"
 }
 
 function Invoke-DotnetWithRetry {
@@ -52,7 +81,7 @@ function Invoke-DotnetWithRetry {
 Write-Host "==> 环境检测" -ForegroundColor Cyan
 Assert-Command -Name dotnet -Hint "请安装 .NET SDK。"
 Assert-Command -Name git -Hint "请安装 Git。"
-Assert-Command -Name powershell -Hint "请确保可调用 PowerShell。"
+$powerShellExe = Resolve-PowerShellExecutable
 
 $hasSupportedSdk = $false
 $sdks = & dotnet --list-sdks 2>$null
@@ -89,12 +118,12 @@ if (-not $SkipTests) {
         $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
         $stableConfigValidator = Join-Path $PSScriptRoot "validation/validate-stable-test-config.ps1"
         if ((Test-Path -LiteralPath $stableTestsScript) -and (Test-Path -LiteralPath $stableConfigValidator)) {
-            & powershell -ExecutionPolicy Bypass -File $stableConfigValidator
+            & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableConfigValidator
             if ($LASTEXITCODE -ne 0) {
                 throw "稳定测试配置校验失败，退出码: $LASTEXITCODE"
             }
 
-            & powershell -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
+            & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
             if ($LASTEXITCODE -ne 0) {
                 throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"
             }
@@ -120,7 +149,7 @@ if ($CheckRefactorConsistency) {
         throw "未找到一致性脚本: $consistencyScript"
     }
 
-    & powershell -ExecutionPolicy Bypass -File $consistencyScript -Fix
+    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $consistencyScript -Fix
     if ($LASTEXITCODE -ne 0) {
         throw "文档口径一致性检查存在未自动修复问题，退出码: $LASTEXITCODE"
     }
@@ -133,7 +162,7 @@ if ($InstallPreCommitHook) {
         throw "未找到 hook 安装脚本: $installHookScript"
     }
 
-    & powershell -ExecutionPolicy Bypass -File $installHookScript
+    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $installHookScript
     if ($LASTEXITCODE -ne 0) {
         throw "安装 pre-commit hook 失败，退出码: $LASTEXITCODE"
     }
@@ -146,7 +175,7 @@ if ($BrushBaseline) {
         throw "未找到基线脚本: $baselineScript"
     }
 
-    & powershell -ExecutionPolicy Bypass -File $baselineScript -Configuration Debug -SkipRestore -SkipBuild
+    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $baselineScript -Configuration Debug -SkipRestore -SkipBuild
     if ($LASTEXITCODE -ne 0) {
         throw "画笔质量基线采集失败，退出码: $LASTEXITCODE"
     }
@@ -170,7 +199,7 @@ if ($SmokeZOrder) {
         $smokeArgs += "-NonInteractive"
     }
 
-    & powershell @smokeArgs
+    & $powerShellExe @smokeArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Z-Order 冒烟脚本执行失败，退出码: $LASTEXITCODE"
     }
@@ -190,7 +219,7 @@ if ($SmokeZOrderAuto) {
         "-SkipTests"
     )
 
-    & powershell @smokeArgs
+    & $powerShellExe @smokeArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Z-Order 自动冒烟脚本执行失败，退出码: $LASTEXITCODE"
     }
