@@ -91,24 +91,26 @@ public sealed class InkStorageService
 
     public InkPageData? LoadPage(DateTime date, string documentName, int pageIndex)
     {
-        var jsonPath = GetPageJsonPath(date, documentName, pageIndex);
-        if (!File.Exists(jsonPath))
-        {
-            return null;
-        }
+        string? jsonPath = null;
         try
         {
+            jsonPath = GetPageJsonPath(date, documentName, pageIndex);
+            if (!File.Exists(jsonPath))
+            {
+                return null;
+            }
+
             var json = File.ReadAllText(jsonPath);
             return JsonSerializer.Deserialize<InkPageData>(json, _options);
         }
         catch (JsonException)
         {
-            Debug.WriteLine($"[InkStorage] failed to parse page json path={jsonPath}");
+            Debug.WriteLine($"[InkStorage] failed to parse page json path={jsonPath ?? "(unresolved)"} document={documentName} page={pageIndex}");
             return null;
         }
-        catch (IOException)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkStorage] failed to read page json path={jsonPath}");
+            Debug.WriteLine($"[InkStorage] failed to read page json path={jsonPath ?? "(unresolved)"} document={documentName} page={pageIndex} ex={ex.GetType().Name} msg={ex.Message}");
             return null;
         }
     }
@@ -195,8 +197,9 @@ public sealed class InkStorageService
             {
                 // Ignore malformed page files and keep loading other pages.
             }
-            catch (IOException)
+            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
+                Debug.WriteLine($"[InkStorage] failed to read list page json path={file} ex={ex.GetType().Name} msg={ex.Message}");
                 // Ignore transient IO failures on individual files.
             }
         }
@@ -276,7 +279,7 @@ public sealed class InkStorageService
         {
             return;
         }
-        foreach (var folder in Directory.GetDirectories(rootPath))
+        foreach (var folder in Directory.EnumerateDirectories(rootPath, "*", TopLevelIgnoreInaccessibleOptions))
         {
             var name = Path.GetFileName(folder);
             if (!DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
@@ -307,6 +310,11 @@ public sealed class InkStorageService
         }
         var invalid = Path.GetInvalidFileNameChars();
         var safe = new string(name.Where(ch => !invalid.Contains(ch)).ToArray());
+        if (safe is "." or "..")
+        {
+            return "unknown";
+        }
+
         return string.IsNullOrWhiteSpace(safe) ? "unknown" : safe;
     }
 

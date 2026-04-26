@@ -226,6 +226,39 @@ public sealed class InkPersistenceServiceTests : IDisposable
     }
 
     [Fact]
+    public void ListFilesWithInk_ShouldPreserveSourceNamesContainingSidecarSuffix()
+    {
+        var filePath = CreateTempFile("lesson.ink.json.png");
+
+        _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        });
+
+        var result = _service.ListFilesWithInk(_tempDir);
+
+        result.Should().ContainSingle();
+        result[0].Should().Be(filePath);
+    }
+
+    [Fact]
+    public void CleanupOrphanSidecarsInDirectory_ShouldPreserveSourceNamesContainingSidecarSuffix()
+    {
+        var filePath = CreateTempFile("lesson.ink.json.png");
+
+        _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        });
+
+        var jsonPath = InkPersistenceService.GetJsonPath(filePath);
+        var deleted = _service.CleanupOrphanSidecarsInDirectory(_tempDir);
+
+        deleted.Should().Be(0);
+        File.Exists(jsonPath).Should().BeTrue();
+    }
+
+    [Fact]
     public void HasInk_ShouldReturnFalse_WhenSidecarHasNoStrokes()
     {
         var filePath = CreateTempFile("empty.png");
@@ -371,6 +404,40 @@ public sealed class InkPersistenceServiceTests : IDisposable
 
         service.ListFilesWithInk(invalidPath).Should().BeEmpty();
         service.CleanupOrphanSidecarsInDirectory(invalidPath).Should().Be(0);
+    }
+
+    [Fact]
+    public void PublicApis_ShouldIgnoreInvalidSourcePath()
+    {
+        var service = new InkPersistenceService();
+        var invalidPath = "\0invalid-source";
+
+        var saveAct = () => service.SaveInkForFile(invalidPath, 1, new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        });
+        var saveDocumentAct = () => service.SaveDocument(invalidPath, new InkDocumentData
+        {
+            Pages =
+            {
+                new InkPageData
+                {
+                    PageIndex = 1,
+                    Strokes =
+                    {
+                        new InkStrokeData { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+                    }
+                }
+            }
+        });
+        var deleteAct = () => service.DeleteInkForFile(invalidPath);
+
+        saveAct.Should().NotThrow();
+        saveDocumentAct.Should().NotThrow();
+        deleteAct.Should().NotThrow();
+        service.LoadInkForFile(invalidPath).Should().BeNull();
+        service.LoadInkPageForFile(invalidPath, 1).Should().BeNull();
+        service.HasInkForFile(invalidPath).Should().BeFalse();
     }
 
     [Fact]

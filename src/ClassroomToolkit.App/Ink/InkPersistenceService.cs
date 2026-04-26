@@ -17,6 +17,7 @@ namespace ClassroomToolkit.App.Ink;
 public sealed class InkPersistenceService
 {
     private const string InkFolderName = ".ctk-ink";
+    private const string SidecarSuffix = ".ink.json";
     private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()
     {
         RecurseSubdirectories = false,
@@ -54,7 +55,11 @@ public sealed class InkPersistenceService
             return;
         }
 
-        var jsonPath = GetJsonPath(sourceFilePath);
+        if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
+        {
+            return;
+        }
+
         var doc = LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
         {
             SourcePath = sourceFilePath
@@ -87,7 +92,11 @@ public sealed class InkPersistenceService
             return;
         }
 
-        EnsureInkFolder(sourceFilePath);
+        if (!TryEnsureInkFolder(sourceFilePath, out _))
+        {
+            return;
+        }
+
         var json = JsonSerializer.Serialize(doc, _options);
         WriteAllTextAtomically(jsonPath, json);
         RefreshCacheFromDisk(jsonPath, doc);
@@ -107,14 +116,22 @@ public sealed class InkPersistenceService
 
         if (doc.Pages.Count == 0)
         {
-            var jsonPath = GetJsonPath(sourceFilePath);
+            if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
+            {
+                return;
+            }
+
             DeleteJsonFile(jsonPath);
             InvalidateCache(jsonPath);
             return;
         }
 
-        EnsureInkFolder(sourceFilePath);
-        var path = GetJsonPath(sourceFilePath);
+        if (!TryEnsureInkFolder(sourceFilePath, out _)
+            || !TryGetJsonPath(sourceFilePath, out var path))
+        {
+            return;
+        }
+
         var json = JsonSerializer.Serialize(doc, _options);
         WriteAllTextAtomically(path, json);
         RefreshCacheFromDisk(path, doc);
@@ -129,7 +146,11 @@ public sealed class InkPersistenceService
         {
             return null;
         }
-        var jsonPath = GetJsonPath(sourceFilePath);
+        if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
+        {
+            return null;
+        }
+
         return LoadDocumentWithCache(jsonPath);
     }
 
@@ -168,7 +189,8 @@ public sealed class InkPersistenceService
         {
             return false;
         }
-        return HasValidInkInSidecar(GetJsonPath(sourceFilePath));
+        return TryGetJsonPath(sourceFilePath, out var jsonPath)
+            && HasValidInkInSidecar(jsonPath);
     }
 
     /// <summary>
@@ -180,7 +202,11 @@ public sealed class InkPersistenceService
         {
             return;
         }
-        var jsonPath = GetJsonPath(sourceFilePath);
+        if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
+        {
+            return;
+        }
+
         DeleteJsonFile(jsonPath);
         InvalidateCache(jsonPath);
     }
@@ -202,9 +228,9 @@ public sealed class InkPersistenceService
         var result = new List<string>();
         foreach (var jsonFile in EnumerateInkSidecarFilesSafe(inkFolder))
         {
-            // filename is e.g. "lecture.pdf.ink.json" → source file is "lecture.pdf"
+            // filename is e.g. "lecture.pdf.ink.json" -> source file is "lecture.pdf"
             var jsonName = Path.GetFileName(jsonFile);
-            var sourceName = jsonName.Replace(".ink.json", string.Empty);
+            var sourceName = GetSourceNameFromSidecarName(jsonName);
             if (!string.IsNullOrWhiteSpace(sourceName))
             {
                 var sourcePath = Path.Combine(directoryPath, sourceName);
@@ -238,7 +264,7 @@ public sealed class InkPersistenceService
         foreach (var jsonFile in EnumerateInkSidecarFilesSafe(inkFolder))
         {
             var jsonName = Path.GetFileName(jsonFile);
-            var sourceName = jsonName.Replace(".ink.json", string.Empty);
+            var sourceName = GetSourceNameFromSidecarName(jsonName);
             if (string.IsNullOrWhiteSpace(sourceName))
             {
                 continue;
@@ -269,19 +295,45 @@ public sealed class InkPersistenceService
     {
         var directory = Path.GetDirectoryName(sourceFilePath) ?? string.Empty;
         var fileName = Path.GetFileName(sourceFilePath);
-        return Path.Combine(directory, InkFolderName, $"{fileName}.ink.json");
+        return Path.Combine(directory, InkFolderName, $"{fileName}{SidecarSuffix}");
     }
 
-    private static string EnsureInkFolder(string sourceFilePath)
+    private static bool TryGetJsonPath(string sourceFilePath, out string jsonPath)
     {
-        var directory = Path.GetDirectoryName(sourceFilePath) ?? string.Empty;
-        var inkFolder = Path.Combine(directory, InkFolderName);
-        if (!Directory.Exists(inkFolder))
+        jsonPath = string.Empty;
+        try
         {
-            var info = Directory.CreateDirectory(inkFolder);
-            info.Attributes |= FileAttributes.Hidden;
+            jsonPath = GetJsonPath(sourceFilePath);
+            _ = Path.GetFullPath(jsonPath);
+            return !string.IsNullOrWhiteSpace(jsonPath);
         }
-        return inkFolder;
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkPersistence] invalid source path path={sourceFilePath} ex={ex.GetType().Name} msg={ex.Message}");
+            return false;
+        }
+    }
+
+    private static bool TryEnsureInkFolder(string sourceFilePath, out string inkFolder)
+    {
+        inkFolder = string.Empty;
+        try
+        {
+            var directory = Path.GetDirectoryName(sourceFilePath) ?? string.Empty;
+            inkFolder = Path.Combine(directory, InkFolderName);
+            if (!Directory.Exists(inkFolder))
+            {
+                var info = Directory.CreateDirectory(inkFolder);
+                info.Attributes |= FileAttributes.Hidden;
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkPersistence] ensure ink folder failed path={sourceFilePath} ex={ex.GetType().Name} msg={ex.Message}");
+            return false;
+        }
     }
 
     private InkDocumentData? LoadDocumentWithCache(string jsonPath)
@@ -337,9 +389,9 @@ public sealed class InkPersistenceService
             Debug.WriteLine($"[InkPersistence] failed to parse sidecar json path={jsonPath}");
             return null;
         }
-        catch (IOException)
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkPersistence] failed to read sidecar json path={jsonPath}");
+            Debug.WriteLine($"[InkPersistence] failed to read sidecar json path={jsonPath} ex={ex.GetType().Name} msg={ex.Message}");
             return null;
         }
     }
@@ -414,6 +466,18 @@ public sealed class InkPersistenceService
         {
             return Array.Empty<string>();
         }
+    }
+
+    private static string? GetSourceNameFromSidecarName(string? sidecarName)
+    {
+        if (string.IsNullOrWhiteSpace(sidecarName)
+            || !sidecarName.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var sourceName = sidecarName[..^SidecarSuffix.Length];
+        return string.IsNullOrWhiteSpace(sourceName) ? null : sourceName;
     }
 
     private static bool TryDeleteFileSafe(string path)

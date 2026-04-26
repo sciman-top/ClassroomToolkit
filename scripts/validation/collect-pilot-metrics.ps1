@@ -9,10 +9,10 @@ $now = Get-Date
 $windowStart = $now.AddMinutes(-$WindowMinutes)
 
 # 1) Error count from app/error logs
-$errorFiles = Get-ChildItem -Path $LogRoot -Recurse -File -Include "error_*.log","app_*.log" -ErrorAction SilentlyContinue
+$errorFiles = Get-ChildItem -LiteralPath $LogRoot -Recurse -File -Include "error_*.log","app_*.log" -ErrorAction SilentlyContinue
 $errorEvents = @()
 foreach ($f in $errorFiles) {
-    $lines = Get-Content -Path $f.FullName -ErrorAction SilentlyContinue
+    $lines = Get-Content -LiteralPath $f.FullName -ErrorAction SilentlyContinue
     foreach ($line in $lines) {
         if ($line -match "^\[(?<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\]") {
             try {
@@ -34,15 +34,15 @@ $dotnetProc = Get-Process | Where-Object {
 $gcInfo = $null
 if ($dotnetProc) {
     try {
-        $gcInfo = Get-Counter "\ .NET CLR Memory($($dotnetProc.ProcessName))\% Time in GC" -ErrorAction SilentlyContinue
+        $gcInfo = Get-Counter "\.NET CLR Memory($($dotnetProc.ProcessName))\% Time in GC" -ErrorAction SilentlyContinue
     } catch {}
 }
 
 # 3) Input latency placeholder from telemetry logs
 $latencySamples = @()
-$telemetryFiles = Get-ChildItem -Path $LogRoot -Recurse -File -Include "*.log" -ErrorAction SilentlyContinue
+$telemetryFiles = Get-ChildItem -LiteralPath $LogRoot -Recurse -File -Include "*.log" -ErrorAction SilentlyContinue
 foreach ($f in $telemetryFiles) {
-    $lines = Get-Content -Path $f.FullName -ErrorAction SilentlyContinue
+    $lines = Get-Content -LiteralPath $f.FullName -ErrorAction SilentlyContinue
     foreach ($line in $lines) {
         if ($line -match "PhotoInputTelemetry|BrushMoveTelemetry") {
             $latencySamples += $line
@@ -72,6 +72,6 @@ $errorSampleText
 
 ## Telemetry Samples (top 20)
 $telemetrySampleText
-"@ | Set-Content -Path $report -Encoding UTF8
+"@ | Set-Content -LiteralPath $report -Encoding UTF8
 
 Write-Host "Metrics report generated: $report"

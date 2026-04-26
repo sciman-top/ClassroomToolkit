@@ -1,5 +1,6 @@
 using ClassroomToolkit.App.Ink;
 using FluentAssertions;
+using System.Globalization;
 
 namespace ClassroomToolkit.Tests;
 
@@ -133,6 +134,43 @@ public sealed class InkStorageServiceTests
     }
 
     [Fact]
+    public void LoadPage_ShouldReturnNull_WhenRootPathIsInvalid()
+    {
+        var service = new InkStorageService("\0invalid-root");
+
+        service.LoadPage(DateTime.Today, "doc", 1).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(".")]
+    [InlineData("..")]
+    public void GetPageJsonPath_ShouldFallback_WhenDocumentNameIsDotSegment(string documentName)
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_dotsegment");
+        try
+        {
+            var service = new InkStorageService(rootPath);
+            var date = new DateTime(2026, 4, 26);
+            var path = service.GetPageJsonPath(date, documentName, 1);
+
+            var relativePath = Path.GetRelativePath(rootPath, Path.GetFullPath(path));
+
+            relativePath.Should().Be(Path.Combine(
+                date.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
+                "unknown",
+                "pages",
+                "slide_001.json"));
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ListApis_ShouldUseIgnoreInaccessibleEnumerationOptions()
     {
         var source = File.ReadAllText(GetSourcePath());
@@ -141,6 +179,7 @@ public sealed class InkStorageServiceTests
         source.Should().Contain("Directory.EnumerateDirectories(_rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
         source.Should().Contain("Directory.EnumerateDirectories(dateFolder, \"*\", TopLevelIgnoreInaccessibleOptions)");
         source.Should().Contain("Directory.EnumerateFiles(pagesFolder, \"slide_*.json\", TopLevelIgnoreInaccessibleOptions)");
+        source.Should().Contain("Directory.EnumerateDirectories(rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
     }
 
     private static string GetSourcePath()
