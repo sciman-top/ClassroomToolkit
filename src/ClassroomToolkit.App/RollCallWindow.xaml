@@ -225,7 +225,7 @@
                         </Border.Effect>
                         <Grid>
                             <!-- 装饰线条 -->
-                            <Border BorderBrush="{StaticResource Brush_Border_Strong}" BorderThickness="1" Margin="10" CornerRadius="14" Opacity="0.18"/>
+                            <Border BorderBrush="{StaticResource Brush_Border_Strong}" BorderThickness="1" Margin="10" CornerRadius="8" Opacity="0.18"/>
                             
                             <Viewbox Margin="20" Stretch="Uniform">
                                 <TextBlock Text="{Binding TimeDisplay}"
@@ -248,7 +248,7 @@
                     <StaticResource ResourceKey="Shadow_Floating"/>
                 </Border.Effect>
                 <Grid>
-                    <Border BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="16" Margin="-1"/>
+                    <Border BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" Margin="-1"/>
 
                     <Grid>
                     <!-- 点名操作 -->
@@ -272,7 +272,7 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                         <Setter Property="Background" Value="{StaticResource Brush_Primary}"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Black}"/>
                                                         <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                                     </DataTrigger>
@@ -336,7 +336,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="设置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
+                                <TextBlock Text="时长" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

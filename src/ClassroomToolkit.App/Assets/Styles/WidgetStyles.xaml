@@ -72,9 +72,9 @@
     <CornerRadius x:Key="Radius_Shell_WorkBottomBar">14</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlaySideRail">20</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlayHintBadge">10</CornerRadius>
-    <CornerRadius x:Key="Radius_Control_Panel">12</CornerRadius>
-    <CornerRadius x:Key="Radius_Control_BubbleShellRoot">12</CornerRadius>
-    <CornerRadius x:Key="Radius_Control_BubbleShellItem">8</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_Panel">8</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_BubbleShellRoot">10</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_BubbleShellItem">7</CornerRadius>
     <sys:Double x:Key="FontSize_Control_Label">13</sys:Double>
     <sys:Double x:Key="FontSize_Control_Helper">12</sys:Double>
 
@@ -101,7 +101,7 @@
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8"
+                            CornerRadius="7"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
                         <Border.Effect>
@@ -145,7 +145,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
@@ -461,7 +461,7 @@
     <!-- [Style_PrimaryButton] - Radiant Gradient & Glass -->
     <Style x:Key="Style_PrimaryButton" TargetType="Button" BasedOn="{StaticResource Style_ButtonFamilyBase}">
         <Setter Property="Background" Value="{StaticResource Gradient_Primary_Subtle}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Black}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
         <Setter Property="Template">
@@ -471,10 +471,10 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8">
+                            CornerRadius="7">
                         <Grid>
                             <!-- Inner Shine -->
-                            <Border BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="7" Opacity="{StaticResource Opacity_Effect_InnerShine}"/>
+                            <Border BorderBrush="#24FFFFFF" BorderThickness="1" CornerRadius="6" Opacity="{StaticResource Opacity_Effect_InnerShine}"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Grid>
                     </Border>
@@ -482,10 +482,10 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Gradient_Primary_Hover}"/>
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
-                            <Setter Property="Effect" Value="{StaticResource Shadow_Glow_Primary}"/>
+                            <Setter Property="Effect" Value="{x:Null}"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -519,7 +519,7 @@
     <Style x:Key="Style_Button_Violet" TargetType="Button" BasedOn="{StaticResource Style_PrimaryButton}">
         <Setter Property="Background" Value="{StaticResource Gradient_Teaching_Subtle}"/>
          <Setter Property="BorderBrush" Value="{StaticResource Brush_Teaching}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Black}"/>
         <Style.Triggers>
              <Trigger Property="IsMouseOver" Value="True">
                  <Setter Property="Opacity" Value="{StaticResource Opacity_State_Hover_Subtle}"/>
@@ -550,10 +550,10 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8">
+                            CornerRadius="7">
                         <Grid>
                             <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
-                                    Background="#18FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                                    Background="#14FFFFFF" CornerRadius="7,7,0,0" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Grid>
                     </Border>
@@ -564,7 +564,7 @@
                             <Setter TargetName="topShine" Property="Opacity" Value="1"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -598,10 +598,10 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8">
+                                CornerRadius="7">
                         <Grid>
                             <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
-                                    Background="#14FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                                    Background="#12FFFFFF" CornerRadius="7,7,0,0" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Grid>
                     </Border>
@@ -612,7 +612,7 @@
                             <Setter TargetName="topShine" Property="Opacity" Value="1"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -650,10 +650,10 @@
                             Background="{TemplateBinding Background}" 
                             BorderBrush="{TemplateBinding BorderBrush}" 
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8">
+                            CornerRadius="7">
                         <Grid>
                             <Border x:Name="topShine" Height="1" VerticalAlignment="Top" Margin="1,1,1,0"
-                                    Background="#10FFFFFF" CornerRadius="8,8,0,0" Opacity="0"/>
+                                    Background="#10FFFFFF" CornerRadius="7,7,0,0" Opacity="0"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Grid>
                     </Border>
@@ -661,11 +661,11 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Gradient_Danger}"/>
                             <Setter Property="Foreground" Value="White"/>
-                            <Setter Property="Effect" Value="{StaticResource Shadow_Danger_Glow}"/>
+                            <Setter Property="Effect" Value="{x:Null}"/>
                             <Setter TargetName="topShine" Property="Opacity" Value="1"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -701,7 +701,7 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="8"
+                                CornerRadius="7"
                                 BorderBrush="Transparent"
                                 BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -713,7 +713,7 @@
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                    <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -752,7 +752,7 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="8"
+                                CornerRadius="7"
                                 BorderBrush="Transparent"
                                 BorderThickness="1"
                                 SnapsToDevicePixels="True">
@@ -765,7 +765,7 @@
                              <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
                              <Setter Property="RenderTransform">
                                  <Setter.Value>
-                                     <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                     <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
                                  </Setter.Value>
                              </Setter>
                         </Trigger>
@@ -872,7 +872,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_ManagementContent}"/>
-        <Setter Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
+        <Setter Property="Effect" Value="{x:Null}"/>
     </Style>
 
     <Style x:Key="Style_ManagementShellFooterBorder" TargetType="Border">
@@ -926,9 +926,9 @@
     </Style>
 
     <Style x:Key="Style_WorkShellHeroTileButton" TargetType="Button">
-        <Setter Property="Width" Value="112"/>
-        <Setter Property="Height" Value="96"/>
-        <Setter Property="Margin" Value="5"/>
+        <Setter Property="Width" Value="106"/>
+        <Setter Property="Height" Value="88"/>
+        <Setter Property="Margin" Value="4"/>
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
@@ -939,16 +939,16 @@
                     <Grid>
                         <Border x:Name="glow"
                                 Margin="10"
-                                CornerRadius="16"
+                                CornerRadius="10"
                                 Background="{StaticResource Brush_Primary}"
                                 Opacity="0"
-                                Effect="{StaticResource Shadow_Glow_Primary}"/>
+                                Effect="{x:Null}"/>
                         <Border x:Name="border"
                                 Margin="2"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="16">
+                                CornerRadius="10">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
@@ -958,17 +958,17 @@
 
                                 <Border x:Name="iconBg"
                                         Grid.Row="0"
-                                        Width="38"
-                                        Height="38"
+                                        Width="36"
+                                        Height="36"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        CornerRadius="12"
+                                        CornerRadius="8"
                                         Background="{StaticResource Brush_InputBackground}"
                                         BorderBrush="{StaticResource Brush_Border_Subtle}"
                                         BorderThickness="1">
                                     <Border Width="26"
                                             Height="26"
-                                            CornerRadius="9"
+                                            CornerRadius="7"
                                             Background="{StaticResource Brush_Surface_Secondary}">
                                         <Path x:Name="icon"
                                               Width="{StaticResource Size_Icon_Glyph_LG}"
@@ -1006,7 +1006,7 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
@@ -1103,10 +1103,10 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
-        <Setter Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
+        <Setter Property="Effect" Value="{x:Null}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
@@ -1132,7 +1132,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="12">
+                            CornerRadius="8">
                         <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -1142,7 +1142,7 @@
                             <Setter TargetName="bd" Property="Effect" Value="{StaticResource Shadow_Card_Subtle}"/>
                             <Setter TargetName="bd" Property="RenderTransform">
                                 <Setter.Value>
-                                    <TranslateTransform Y="-1"/>
+                                    <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -1376,7 +1376,7 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                    <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -1500,9 +1500,9 @@
                                     <!-- Selected: filled pill -->
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="FontWeight" Value="SemiBold"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Black}"/>
                                         <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Primary}"/>
-                                        <Setter TargetName="bd" Property="Effect" Value="{StaticResource Shadow_Glow_Primary}"/>
+                                        <Setter TargetName="bd" Property="Effect" Value="{x:Null}"/>
                                         <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassroomToolkit.App.Photos"
         xmlns:converters="clr-namespace:ClassroomToolkit.App.Converters"
-        Title="资源管理"
+        Title="PDF/图片管理"
         Width="1100"
         Height="700"
         MinWidth="960"
@@ -40,6 +40,7 @@
             <Setter Property="Width" Value="{StaticResource Size_Button_Icon_Regular}"/>
             <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Regular}"/>
         </Style>
+
     </Window.Resources>
 
     <Border Style="{StaticResource Style_ManagementShellWindowBorder}" Margin="10">
@@ -54,7 +55,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="资源管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
+                    <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="文件夹、PDF、图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -81,7 +82,7 @@
 
             <!-- 1. 常用目录（收藏 + 最近） -->
             <Border Grid.Row="0" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="10">
+                    BorderThickness="1" Padding="8,6" Margin="12,12,3,6" CornerRadius="8">
                 <Expander Header="常用目录" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <Grid Margin="0,8,0,0">
                         <Grid.RowDefinitions>
@@ -99,7 +100,7 @@
                                     Style="{StaticResource Style_ImageManagerToolbarButton}"
                                     Background="{StaticResource Gradient_Success}"
                                     BorderBrush="{StaticResource Brush_Teaching}"
-                                    Foreground="White"
+                                    Foreground="{StaticResource Brush_Text_Black}"
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
                             <Button
@@ -133,13 +134,19 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0" Content="★" Width="20" Height="20" Margin="0,0,6,0"
+                                        <Button Grid.Column="0" Width="28" Height="28" Margin="0,0,6,0"
                                                 Padding="0" ToolTip="取消收藏（保留最近）"
-                                                FontSize="{StaticResource FontSize_Body_S}"
+                                                MinWidth="32" MinHeight="32"
                                                 Foreground="{StaticResource Brush_Text_Primary}"
                                                 Click="OnFavoriteStarToggleClick"
                                                 Tag="{Binding Path}"
-                                                Style="{StaticResource Style_IconButton}"/>
+                                                Style="{StaticResource Style_IconButton}">
+                                            <Path Data="{StaticResource Icon_Star}"
+                                                  Fill="{StaticResource Brush_Warning}"
+                                                  Width="{StaticResource Size_Icon_Glyph_MD}"
+                                                  Height="{StaticResource Size_Icon_Glyph_MD}"
+                                                  Stretch="Uniform"/>
+                                        </Button>
                                         <TextBlock Grid.Column="1" Text="{Binding Path}"
                                                    TextTrimming="CharacterEllipsis"
                                                    VerticalAlignment="Center"
@@ -165,13 +172,19 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <Button Grid.Column="0" Content="☆" Width="20" Height="20" Margin="0,0,6,0"
+                                            <Button Grid.Column="0" Width="28" Height="28" Margin="0,0,6,0"
                                                     Padding="0" ToolTip="加入收藏"
-                                                    FontSize="{StaticResource FontSize_Body_S}"
+                                                    MinWidth="32" MinHeight="32"
                                                     Foreground="{StaticResource Brush_Text_Primary}"
                                                     Click="OnRecentStarToggleClick"
                                                     Tag="{Binding Path}"
-                                                    Style="{StaticResource Style_IconButton}"/>
+                                                    Style="{StaticResource Style_IconButton}">
+                                                <Path Data="{StaticResource Icon_StarOutline}"
+                                                      Fill="{StaticResource Brush_Text_Secondary}"
+                                                      Width="{StaticResource Size_Icon_Glyph_MD}"
+                                                      Height="{StaticResource Size_Icon_Glyph_MD}"
+                                                      Stretch="Uniform"/>
+                                            </Button>
                                             <TextBlock Grid.Column="1" Text="{Binding Path}"
                                                        TextTrimming="CharacterEllipsis"
                                                        VerticalAlignment="Center"
@@ -187,7 +200,7 @@
 
             <!-- 3. 此电脑 -->
             <Border Grid.Row="1" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" 
-                    BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="10">
+                    BorderThickness="1" Padding="8,6" Margin="12,6,3,12" CornerRadius="8">
                 <Expander Header="文件夹" IsExpanded="True" Foreground="{StaticResource Brush_Text_Primary}">
                     <TreeView x:Name="FolderTree" SelectedItemChanged="OnFolderTreeSelected"
                               Margin="0,8,0,0"
@@ -214,7 +227,7 @@
                               ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Cursor="SizeWE"
                               ShowsPreview="False" DragDelta="OnMainColumnSplitterDragDelta" DragCompleted="OnMainColumnSplitterDragCompleted"/>
 
-                <Border Grid.Column="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="10">
+                <Border Grid.Column="2" Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border}" BorderThickness="1" Padding="12,12,0,12" Margin="3,12,0,12" CornerRadius="8">
                     <DockPanel>
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -396,7 +409,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="管理文件、PDF、图片。"
+                    <TextBlock Text="管理 PDF、图片与笔迹。"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

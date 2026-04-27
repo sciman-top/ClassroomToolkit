@@ -112,10 +112,10 @@
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" Fill="{StaticResource Brush_Primary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
-                        <TextBlock Text="亮色：待点" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
+                        <TextBlock Text="亮色：待点名" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,16,0"/>
                         
                         <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" Fill="{StaticResource Brush_Text_Tertiary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
-                        <TextBlock Text="灰色：已点" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                        <TextBlock Text="灰色：已点名" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Secondary}"/>
                     </StackPanel>
                     
                     <Button Content="关闭"

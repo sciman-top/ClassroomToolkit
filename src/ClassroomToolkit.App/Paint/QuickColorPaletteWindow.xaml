@@ -10,7 +10,7 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="10" Padding="5,5"
+    <Border Background="{StaticResource Brush_Window_Atmosphere}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="8" Padding="5,5"
             TextElement.Foreground="{StaticResource Brush_Text_Primary}">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>

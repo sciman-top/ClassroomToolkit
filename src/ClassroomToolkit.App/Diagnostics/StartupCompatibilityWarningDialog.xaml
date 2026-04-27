@@ -38,7 +38,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Border Background="{StaticResource Brush_Danger_Surface}" BorderBrush="{StaticResource Brush_Danger}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+                    <Border Background="{StaticResource Brush_Danger_Surface}" BorderBrush="{StaticResource Brush_Danger}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
                         <TextBlock x:Name="SummaryText"
                                    FontWeight="SemiBold"
                                    FontSize="{StaticResource FontSize_Title_Dialog}"

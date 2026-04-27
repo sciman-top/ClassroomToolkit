@@ -27,11 +27,11 @@
                         <SolidColorBrush Color="{StaticResource Color_Bg_Overlay}"/>
                     </Border.Background>
                     <DockPanel Margin="10,0" VerticalAlignment="Top" Height="{StaticResource Size_Button_Icon_Regular}">
-                        <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="16" Padding="14,0" Height="32" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Border Background="{StaticResource Brush_Surface_Hover}" CornerRadius="12" Padding="14,0" Height="32" VerticalAlignment="Center" Margin="10,0,0,0">
                              <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                             </Border.Effect>
-                            <TextBlock x:Name="PhotoTitleText" Text="PDF/图片预览" VerticalAlignment="Center"
+                            <TextBlock x:Name="PhotoTitleText" Text="PDF/图片显示" VerticalAlignment="Center"
                                        Foreground="{StaticResource Brush_Text_Primary}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_M}"/>
                         </Border>
                     </DockPanel>
@@ -103,15 +103,15 @@
 
                 <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12"
                         Style="{StaticResource Style_FullscreenShellHintBadge}">
-                    <TextBlock Text="支持翻页、适宽、导出"
+                    <TextBlock Text="翻页 · 适宽 · 导出"
                                Foreground="{StaticResource Brush_Text_Secondary}"
                                FontSize="{StaticResource FontSize_Body_S}"/>
                 </Border>
             </Grid>
             <Grid x:Name="PhotoLoadingOverlay" Visibility="Collapsed" Background="{StaticResource Brush_OverlayMask}" Panel.ZIndex="20">
                 <Border Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
-                        CornerRadius="12" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock x:Name="PhotoLoadingText" Text="加载页面中..." Foreground="White" FontSize="{StaticResource FontSize_Title_Dialog}" FontWeight="SemiBold"/>
+                        CornerRadius="8" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="PhotoLoadingText" Text="正在加载..." Foreground="White" FontSize="{StaticResource FontSize_Title_Dialog}" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </Grid>

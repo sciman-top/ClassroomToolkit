@@ -18,7 +18,7 @@
         TouchUp="OnTouchUp">
     <Canvas x:Name="RootCanvas">
         <TextBlock x:Name="HintText"
-                   Text="拖拽选择，Enter 确认，Esc 取消"
+                   Text="拖选区域，Enter 确认，Esc 取消"
                    Foreground="White"
                    FontSize="{StaticResource FontSize_Title_Management}"
                    FontWeight="SemiBold"
