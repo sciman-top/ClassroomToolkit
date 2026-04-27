@@ -98,7 +98,7 @@
                 BorderThickness="1"
                 CornerRadius="20"
                 MinHeight="46"
-                Padding="8,4"
+                Padding="7,4"
                 MouseLeftButtonDown="OnToolbarDragStart"
                 PreviewTouchDown="OnToolbarTouchDragStart"
                 TextElement.Foreground="{StaticResource Brush_Text_Primary}">
@@ -135,21 +135,21 @@
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
-                                  ToolTip="颜色 1：黑色。点按使用，再点/长按换色"
+                                  ToolTip="颜色 1：点按使用，长按换色"
                                   PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
                                   PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor1Command}"/>
                     <ToggleButton x:Name="QuickColor2Button" Background="{StaticResource Brush_Pen_Red}" Tag="1"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
-                                  ToolTip="颜色 2：红色。点按使用，再点/长按换色"
+                                  ToolTip="颜色 2：点按使用，长按换色"
                                   PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
                                   PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
                                   behaviors:LongPressBehavior.Command="{Binding OpenQuickColor2Command}"/>
                     <ToggleButton x:Name="QuickColor3Button" Background="{StaticResource Brush_Pen_Blue}" Tag="2"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
-                                  ToolTip="颜色 3：蓝色。点按使用，再点/长按换色"
+                                  ToolTip="颜色 3：点按使用，长按换色"
                                   PreviewMouseLeftButtonDown="OnQuickColorPointerDown"
                                   PreviewTouchDown="OnQuickColorTouchDown"
                                   Click="OnColorClick"
@@ -184,7 +184,7 @@
                     PreviewMouseLeftButtonDown="OnShapePointerDown"
                     PreviewTouchDown="OnShapeTouchDown"
                     Click="OnShapeButtonClick"
-                    ToolTip="图形：当前直线。点按使用，再点/长按选择"
+                    ToolTip="图形：点按使用，长按选择"
                     ContextMenu="{StaticResource ShapeMenu}"
                     Foreground="{StaticResource Brush_ShapeTool_Icon}"
                     behaviors:LongPressBehavior.Command="{Binding OpenShapeMenuCommand}">
@@ -200,7 +200,7 @@
                           PreviewMouseLeftButtonDown="OnBoardPointerDown"
                           PreviewTouchDown="OnBoardTouchDown"
                           Click="OnBoardClick"
-                          ToolTip="截图 / 白板 / 底色"
+                          ToolTip="背景与截图"
                           behaviors:LongPressBehavior.Command="{Binding OpenBoardColorCommand}"
                           Foreground="{StaticResource Brush_Accent_Violet}">
                  <Path Data="{StaticResource Icon_Board}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>

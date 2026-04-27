@@ -11,9 +11,9 @@ public sealed class UiCopyContractTests
 
         xaml.Should().Contain("Title=\"课堂工具箱\"");
         xaml.Should().Contain("Text=\"课堂工具箱\"");
-        xaml.Should().Contain("ToolTip=\"画笔\"");
+        xaml.Should().Contain("ToolTip=\"画笔批注\"");
         xaml.Should().Contain("ToolTip=\"点名与计时\"");
-        xaml.Should().Contain("ToolTip=\"更多\"");
+        xaml.Should().Contain("ToolTip=\"更多设置\"");
         xaml.Should().Contain("ToolTip=\"兼容诊断\"");
         xaml.Should().NotContain("Title=\"sciman课堂工具箱\"");
         xaml.Should().NotContain("ToolTip=\"打开画笔，长按可设置\"");
@@ -21,7 +21,7 @@ public sealed class UiCopyContractTests
         xaml.Should().NotContain("ToolTip=\"画笔（长按设置）\"");
         xaml.Should().NotContain("ToolTip=\"点名与计时（长按设置）\"");
         xaml.Should().NotContain("ToolTip=\"兼容性诊断\"");
-        xaml.Should().Contain("Content=\"点名与计时\"");
+        xaml.Should().Contain("Content=\"点名计时\"");
         xaml.Should().NotContain("Content=\"点名 / 计时\"");
     }
 
@@ -34,7 +34,7 @@ public sealed class UiCopyContractTests
         xaml.Should().Contain("ToolTip=\"切换模式\"");
         xaml.Should().Contain("ToolTip=\"最小化并继续\"");
         xaml.Should().Contain("ToolTip=\"开始/暂停\"");
-        xaml.Should().Contain("Text=\"加载名单中...\"");
+        xaml.Should().Contain("Text=\"加载名单...\"");
         xaml.Should().NotContain("Title=\"Classroom Toolkit\"");
         xaml.Should().NotContain("ToolTip=\"切换点名/计时模式\"");
         xaml.Should().NotContain("ToolTip=\"最小化，功能继续运行\"");
@@ -75,18 +75,18 @@ public sealed class UiCopyContractTests
         rollCallXaml.Should().Contain("Header=\"语音\"");
         rollCallXaml.Should().Contain("Header=\"遥控\"");
         rollCallXaml.Should().Contain("Header=\"提醒\"");
-        rollCallXaml.Should().Contain("Text=\"调整姓名、学号、照片。\"");
-        rollCallXaml.Should().Contain("Text=\"控制朗读、发音人、提醒声。\"");
-        rollCallXaml.Should().Contain("Text=\"默认建议只显示姓名，其它按需开启。\"");
+        rollCallXaml.Should().Contain("Text=\"调整姓名、学号和照片。\"");
+        rollCallXaml.Should().Contain("Text=\"控制朗读、发音人和输出设备。\"");
+        rollCallXaml.Should().Contain("Text=\"建议默认只显示姓名，其它按需开启。\"");
         rollCallXaml.Should().Contain("Content=\"显示学生照片\"");
         rollCallXaml.Should().Contain("Content=\"点名读姓名（按需）\"");
         rollCallXaml.Should().Contain("Text=\"默认关闭；播报设备仍跟随系统。\"");
-        rollCallXaml.Should().Contain("Text=\"设置翻页笔和遥控。\"");
+        rollCallXaml.Should().Contain("Text=\"设置翻页笔遥控。\"");
         rollCallXaml.Should().Contain("Content=\"用翻页笔切组（按需）\"");
         rollCallXaml.Should().Contain("Text=\"默认关闭；启用时优先 Tab 点名、Enter 切组。\"");
         rollCallXaml.Should().Contain("Content=\"结束播放音效（推荐）\"");
         rollCallXaml.Should().Contain("Content=\"中途提醒（按需）\"");
-        rollCallXaml.Should().Contain("Text=\"设置结束和中途提醒。\"");
+        rollCallXaml.Should().Contain("Text=\"设置结束音和中途提醒。\"");
         rollCallXaml.Should().Contain("Text=\"默认保留结束提示，中途提醒按需开启。\"");
         rollCallXaml.Should().Contain("Content=\"重置本页\"");
         rollCallXaml.Should().Contain("Content=\"全部重置\"");
@@ -102,10 +102,10 @@ public sealed class UiCopyContractTests
         var imageManagerXaml = File.ReadAllText(GetXamlPath("Photos", "ImageManagerWindow.xaml"));
         var photoOverlayXaml = File.ReadAllText(GetXamlPath("Photos", "PhotoOverlayWindow.xaml"));
 
-        imageManagerXaml.Should().Contain("Text=\"先选左侧文件夹\"");
-        imageManagerXaml.Should().Contain("ToolTip=\"输入后回车\"");
-        imageManagerXaml.Should().Contain("ToolTip=\"列表\"");
-        imageManagerXaml.Should().Contain("ToolTip=\"缩略图\"");
+        imageManagerXaml.Should().Contain("Text=\"选择左侧文件夹\"");
+        imageManagerXaml.Should().Contain("ToolTip=\"输入路径后回车\"");
+        imageManagerXaml.Should().Contain("ToolTip=\"列表视图\"");
+        imageManagerXaml.Should().Contain("ToolTip=\"缩略图视图\"");
         imageManagerXaml.Should().NotContain("Text=\"当前没有可显示内容，请先在左侧选择文件夹。\"");
 
         photoOverlayXaml.Should().NotContain("Text=\"点击空白处关闭\"");
@@ -119,16 +119,16 @@ public sealed class UiCopyContractTests
         var autoExitXaml = File.ReadAllText(GetXamlPath("AutoExitDialog.xaml"));
         var classSelectXaml = File.ReadAllText(GetXamlPath("ClassSelectDialog.xaml"));
 
-        aboutXaml.Should().Contain("Text=\"课堂常用工具\"");
+        aboutXaml.Should().Contain("Text=\"课堂批注、点名与计时\"");
         aboutXaml.Should().Contain("ToolTip=\"关闭\"");
         aboutXaml.Should().NotContain("ToolTip=\"关闭产品信息窗口\"");
 
         autoExitXaml.Should().Contain("Title=\"自动关闭\"");
         autoExitXaml.Should().Contain("Text=\"自动关闭\"");
-        autoExitXaml.Should().Contain("Text=\"0 表示不自动关闭。\"");
+        autoExitXaml.Should().Contain("Text=\"0 = 不自动关闭\"");
         autoExitXaml.Should().NotContain("Title=\"启动器设置\"");
 
-        classSelectXaml.Should().Contain("Text=\"选择后应用到当前点名窗口。\"");
+        classSelectXaml.Should().Contain("Text=\"应用到当前点名窗口。\"");
     }
 
     [Fact]
@@ -151,8 +151,8 @@ public sealed class UiCopyContractTests
         startupWarningXaml.Should().Contain("Content=\"诊断报告\"");
         startupWarningXaml.Should().Contain("Content=\"复制诊断\"");
 
-        remoteKeyXaml.Should().Contain("Title=\"遥控键\"");
-        remoteKeyXaml.Should().Contain("Text=\"遥控键\"");
+        remoteKeyXaml.Should().Contain("Title=\"遥控键位\"");
+        remoteKeyXaml.Should().Contain("Text=\"遥控键位\"");
         remoteKeyXaml.Should().NotContain("Title=\"遥控键设置\"");
 
         inkSettingsXaml.Should().Contain("Title=\"笔迹记录\"");

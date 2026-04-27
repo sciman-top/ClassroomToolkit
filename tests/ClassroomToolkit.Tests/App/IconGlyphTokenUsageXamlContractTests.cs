@@ -14,7 +14,7 @@ public sealed class IconGlyphTokenUsageXamlContractTests
         var paintOverlayXaml = File.ReadAllText(GetXamlPath("Paint", "PaintOverlayWindow.xaml"));
 
         aboutXaml.Should().Contain("Size_Icon_Glyph_MD");
-        rollCallSettingsXaml.Should().Contain("Size_Icon_Glyph_SM");
+        rollCallSettingsXaml.Should().Contain("Style_TitleIconBadge");
         paintSettingsXaml.Should().Contain("Size_Icon_Glyph_MD");
         rollCallXaml.Should().Contain("Size_Icon_Glyph_MD");
         paintOverlayXaml.Should().Contain("Size_Icon_Glyph_MD");

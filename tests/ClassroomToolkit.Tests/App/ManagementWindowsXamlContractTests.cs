@@ -15,7 +15,7 @@ public sealed class ManagementWindowsXamlContractTests
         aboutXaml.Should().Contain("Brush_Surface_Secondary");
         aboutXaml.Should().Contain("Style_SettingCardBorder");
         studentListXaml.Should().Contain("Style_StudentCardButton");
-        studentListXaml.Should().Contain("Brush_InputBackground");
+        studentListXaml.Should().Contain("Style_TitleIconBadge");
         imageManagerXaml.Should().Contain("Brush_Surface_Secondary");
         imageManagerXaml.Should().Contain("Brush_InputBackground");
         imageManagerXaml.Should().Contain("Style_ManagementThumbnailListViewItem");

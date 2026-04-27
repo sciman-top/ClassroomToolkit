@@ -54,6 +54,9 @@ public sealed class ThemeResourceDictionaryTests
         AssertGradientStructure(dictionary, "Gradient_Teaching_Subtle", 2);
         AssertGradientStructure(dictionary, "Gradient_Timer_Display", 3);
         AssertGradientStructure(dictionary, "Gradient_Hero_Glow", 3);
+        AssertGradientStructure(dictionary, "Gradient_Shell_Surface", 3);
+        AssertGradientStructure(dictionary, "Gradient_Card_Surface", 2);
+        AssertGradientStructure(dictionary, "Gradient_Panel_Surface", 2);
 
         AssertShadowStructure(dictionary, "Shadow_Card");
         AssertShadowStructure(dictionary, "Shadow_Card_Subtle");
@@ -190,7 +193,10 @@ public sealed class ThemeResourceDictionaryTests
         "Gradient_Primary_Subtle",
         "Gradient_Teaching_Subtle",
         "Gradient_Timer_Display",
-        "Gradient_Hero_Glow"
+        "Gradient_Hero_Glow",
+        "Gradient_Shell_Surface",
+        "Gradient_Card_Surface",
+        "Gradient_Panel_Surface"
     };
 
     private static readonly string[] SemanticShadowKeys =

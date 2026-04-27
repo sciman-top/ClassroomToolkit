@@ -20,7 +20,12 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="自动关闭" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Clock}" Fill="{StaticResource Brush_Warning}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="自动关闭" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -31,7 +36,7 @@
             <Border Grid.Row="1" Margin="20,16,20,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
                     <TextBlock Text="自动关闭（分钟）" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                    <TextBlock Text="0 表示不自动关闭。" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,0,10"/>
+                    <TextBlock Text="0 = 不自动关闭" Style="{StaticResource Style_HelperText}" Margin="0,0,0,10"/>
                     <TextBox x:Name="MinutesBox" Padding="8,4"/>
                 </StackPanel>
             </Border>

@@ -22,17 +22,19 @@
 
         <Style x:Key="Style_ImageManagerToolbarButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
             <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
-            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="MinWidth" Value="68"/>
+            <Setter Property="Padding" Value="10,5"/>
         </Style>
 
         <Style x:Key="Style_ImageManagerToolbarDangerButton" TargetType="Button" BasedOn="{StaticResource Style_DangerButton}">
             <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
-            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="MinWidth" Value="68"/>
+            <Setter Property="Padding" Value="10,5"/>
         </Style>
 
         <Style x:Key="Style_ImageManagerToolbarToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource Style_ToggleButton}">
             <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
-            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="MinWidth" Value="68"/>
             <Setter Property="Padding" Value="0"/>
         </Style>
 
@@ -53,10 +55,11 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
-                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
                     <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="文件夹 / PDF / 图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="文件夹 / PDF / 图片 / 笔迹" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Margin="0,0,8,0"
@@ -93,7 +96,7 @@
                         </Grid.RowDefinitions>
                         <UniformGrid Grid.Row="0" Margin="0,0,0,6" Columns="3">
                             <Button
-                                    Content="加入收藏"
+                                    Content="收藏"
                                     Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnAddFavoriteClick"
@@ -104,7 +107,7 @@
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
                             <Button
-                                    Content="移除收藏"
+                                    Content="取消收藏"
                                     Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnRemoveFavoriteClick"
@@ -232,7 +235,7 @@
                 <!-- 地址栏（独立在最上方） -->
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Border Background="{StaticResource Brush_InputBackground}" BorderBrush="{StaticResource Brush_Border}"
-                            BorderThickness="1" CornerRadius="4" Padding="10,4" Height="40">
+                            BorderThickness="1" CornerRadius="7" Padding="10,4" Height="40">
                         <TextBox x:Name="CurrentFolderText"
                                  Background="Transparent"
                                  BorderThickness="0"
@@ -240,7 +243,7 @@
                                  FontSize="{StaticResource FontSize_Body_M}"
                                  VerticalContentAlignment="Center"
                                  KeyDown="OnCurrentFolderTextKeyDown"
-                                 ToolTip="输入后回车"/>
+                                 ToolTip="输入路径后回车"/>
                     </Border>
                 </DockPanel>
 
@@ -270,7 +273,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
-                            <ToggleButton x:Name="ListViewButton" ToolTip="列表" Width="72" Margin="0,0,6,0"
+                            <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="68" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ImageManagerToolbarToggleButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewList}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
@@ -278,12 +281,12 @@
                                     <TextBlock Text="列表" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图" Width="84" Margin="0,0,10,0"
+                            <ToggleButton x:Name="ThumbnailViewButton" ToolTip="缩略图视图" Width="78" Margin="0,0,10,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ImageManagerToolbarToggleButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
                                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
-                                    <TextBlock Text="缩图" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
+                                    <TextBlock Text="缩略" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 </StackPanel>
                             </ToggleButton>
                             <TextBlock Text="大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"
@@ -305,7 +308,7 @@
                             <Button x:Name="SelectAllFilesButton" Content="全选" Margin="6,0,0,0"
                                     Style="{StaticResource Style_ImageManagerToolbarButton}" Visibility="Collapsed"
                                     Click="OnSelectAllFilesClick"/>
-                            <Button x:Name="ExitSelectionModeButton" Content="取消多选" Margin="6,0,0,0"
+                            <Button x:Name="ExitSelectionModeButton" Content="退出多选" Margin="6,0,0,0"
                                     MinWidth="86"
                                     Style="{StaticResource Style_ImageManagerToolbarButton}" Visibility="Collapsed"
                                     Click="OnExitSelectionModeClick"/>
@@ -314,7 +317,7 @@
                 </DockPanel>
 
                     <TextBlock x:Name="EmptyHintText" DockPanel.Dock="Top"
-                           Text="先选左侧文件夹"
+                           Text="选择左侧文件夹"
                            Foreground="{StaticResource Brush_Text_Tertiary}" Margin="0,0,12,8"/>
                 <Grid HorizontalAlignment="Stretch">
                     <ListView x:Name="ImageList" SelectionChanged="OnImageSelectionChanged"
@@ -409,7 +412,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="管理 PDF、图片和笔迹。"
+                    <TextBlock Text="PDF / 图片 / 笔迹"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

@@ -20,7 +20,12 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="选择班级" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="选择班级" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
@@ -29,11 +34,9 @@
 
             <Border Grid.Row="1" Margin="16,14,16,6" Style="{StaticResource Style_SettingCardBorder}" Padding="8">
                 <StackPanel>
-                    <TextBlock Text="选择后应用到当前点名窗口。"
+                    <TextBlock Text="应用到当前点名窗口。"
                                Margin="4,0,4,8"
-                               Foreground="{StaticResource Brush_Text_Tertiary}"
-                               FontSize="{StaticResource FontSize_Body_S}"
-                               TextWrapping="Wrap"/>
+                               Style="{StaticResource Style_HelperText}"/>
                     <ListBox x:Name="ClassList"
                              MaxHeight="240" MinHeight="120"
                              ScrollViewer.PanningMode="VerticalFirst"

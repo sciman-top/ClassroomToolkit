@@ -24,9 +24,10 @@
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
-                          Width="{StaticResource Size_Icon_Glyph_SM}" Height="{StaticResource Size_Icon_Glyph_SM}" Margin="0,0,8,0"/>
-                    <TextBlock Text="点名设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="点名设置" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
@@ -48,7 +49,7 @@
                 <!-- 标签页 1: 显示/照片 -->
                 <TabItem Header="显示">
                     <StackPanel Margin="4,12,4,8">
-                        <TextBlock Text="调整姓名、学号、照片。"
+                        <TextBlock Text="调整姓名、学号和照片。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
@@ -88,7 +89,7 @@
                                 <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}"/>
                             </Grid>
                         </Border>
-                        <TextBlock Text="默认建议只显示姓名，其它按需开启。"
+                        <TextBlock Text="建议默认只显示姓名，其它按需开启。"
                                    Margin="4,8,4,0"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
@@ -99,7 +100,7 @@
                 <!-- 标签页 2: 语音播报 -->
                 <TabItem Header="语音">
                     <StackPanel Margin="4,12,4,8">
-                        <TextBlock Text="控制朗读、发音人、提醒声。"
+                        <TextBlock Text="控制朗读、发音人和输出设备。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
@@ -143,7 +144,7 @@
                 <!-- 标签页 3: 遥控控制 -->
                 <TabItem Header="遥控">
                     <StackPanel Margin="4,12,4,8">
-                        <TextBlock Text="设置翻页笔和遥控。"
+                        <TextBlock Text="设置翻页笔遥控。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
@@ -189,7 +190,7 @@
                 <!-- 标签页 4: 倒计时提示 -->
                 <TabItem Header="提醒">
                     <StackPanel Margin="4,12,4,8">
-                        <TextBlock Text="设置结束和中途提醒。"
+                        <TextBlock Text="设置结束音和中途提醒。"
                                    Margin="0,0,0,10"
                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"

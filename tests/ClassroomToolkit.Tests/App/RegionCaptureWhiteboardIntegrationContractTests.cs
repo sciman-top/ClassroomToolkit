@@ -14,7 +14,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         xaml.Should().Contain("x:Name=\"BoardCaptureActionButton\"");
         xaml.Should().Contain("x:Name=\"BoardWhiteboardActionButton\"");
         xaml.Should().Contain("x:Name=\"BoardColorActionButton\"");
-        xaml.Should().Contain("ToolTip=\"截图 / 白板 / 底色\"");
+        xaml.Should().Contain("ToolTip=\"背景与截图\"");
         xaml.Should().NotContain("ToolTip=\"单击截图，双击白板，长按改色\"");
         source.Should().Contain("private BoardPrimaryAction _lastBoardPrimaryAction");
         source.Should().Contain("OnBoardCaptureActionClick");
@@ -208,7 +208,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         var xaml = File.ReadAllText(GetToolbarXamlPath());
 
         xaml.Should().NotContain("x:Name=\"RegionCaptureButton\"");
-        xaml.Should().Contain("ToolTip=\"截图 / 白板 / 底色\"");
+        xaml.Should().Contain("ToolTip=\"背景与截图\"");
     }
 
     private static string ReadToolbarSource()

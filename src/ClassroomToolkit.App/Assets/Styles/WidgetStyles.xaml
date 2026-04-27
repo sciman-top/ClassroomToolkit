@@ -16,9 +16,9 @@
     <sys:Double x:Key="Size_Touch_Target_Bubble_Hit">56</sys:Double>
     <sys:Double x:Key="Size_Touch_ScrollBar">16</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Regular">96</sys:Double>
-    <sys:Double x:Key="Size_Button_Action_Height_Compact">30</sys:Double>
-    <sys:Double x:Key="Size_Shell_TitleBar_Dialog">44</sys:Double>
-    <sys:Double x:Key="Size_Shell_TitleBar_Management">48</sys:Double>
+    <sys:Double x:Key="Size_Button_Action_Height_Compact">32</sys:Double>
+    <sys:Double x:Key="Size_Shell_TitleBar_Dialog">42</sys:Double>
+    <sys:Double x:Key="Size_Shell_TitleBar_Management">46</sys:Double>
     <sys:Double x:Key="Size_Shell_TitleBar_Work">40</sys:Double>
     <sys:Double x:Key="Size_Icon_Glyph_XS">10</sys:Double>
     <sys:Double x:Key="Size_Icon_Glyph_SM">12</sys:Double>
@@ -42,7 +42,7 @@
     <Duration x:Key="Motion_Duration_Fast">0:0:0.2</Duration>
     <Thickness x:Key="Spacing_Shell_DialogMargin">10</Thickness>
     <Thickness x:Key="Spacing_Shell_TitleInset">18,0,0,0</Thickness>
-    <Thickness x:Key="Spacing_Shell_ActionBar">20,0,20,20</Thickness>
+    <Thickness x:Key="Spacing_Shell_ActionBar">18,0,18,18</Thickness>
     <Thickness x:Key="Spacing_Shell_ActionGap">0,0,8,0</Thickness>
     <Thickness x:Key="Spacing_Shell_CloseButton_Dialog">0,0,10,0</Thickness>
     <Thickness x:Key="Spacing_Shell_CloseButton_Management">0,0,12,0</Thickness>
@@ -59,20 +59,20 @@
     <Thickness x:Key="Spacing_Control_ListItem">8,6</Thickness>
     <Thickness x:Key="Spacing_Control_TreeItem">4,2</Thickness>
     <Thickness x:Key="Spacing_Control_Header">8,6</Thickness>
-    <Thickness x:Key="Spacing_Control_TabItem">12,5</Thickness>
+    <Thickness x:Key="Spacing_Control_TabItem">12,4</Thickness>
     <Thickness x:Key="Spacing_Control_WorkShellBottomBar">8,4</Thickness>
-    <Thickness x:Key="Spacing_Control_ManagementFooter">16,0</Thickness>
+    <Thickness x:Key="Spacing_Control_ManagementFooter">14,0</Thickness>
     <Thickness x:Key="Spacing_Control_BubbleShellRoot">5,4</Thickness>
     <Thickness x:Key="Spacing_Control_BubbleShellItem">4</Thickness>
     <Thickness x:Key="Spacing_Control_OverlayHintBadge">10,4</Thickness>
     <Thickness x:Key="Size_DialogMargin_Standard">20</Thickness>
-    <CornerRadius x:Key="Radius_Shell_Dialog">15</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_Management">14</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_Work">18</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_WorkBottomBar">14</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_Dialog">12</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_Management">12</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_Work">14</CornerRadius>
+    <CornerRadius x:Key="Radius_Shell_WorkBottomBar">10</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlaySideRail">20</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlayHintBadge">10</CornerRadius>
-    <CornerRadius x:Key="Radius_Control_Panel">8</CornerRadius>
+    <CornerRadius x:Key="Radius_Control_Panel">7</CornerRadius>
     <CornerRadius x:Key="Radius_Control_BubbleShellRoot">10</CornerRadius>
     <CornerRadius x:Key="Radius_Control_BubbleShellItem">7</CornerRadius>
     <sys:Double x:Key="FontSize_Control_Label">13</sys:Double>
@@ -100,6 +100,35 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="TextWrapping" Value="NoWrap"/>
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+    </Style>
+
+    <Style x:Key="Style_FieldLabelText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="Style_HelperText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Tertiary}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Body_S}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="Style_SectionHeaderText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Secondary}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="Style_TitleIconBadge" TargetType="Border">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Background" Value="{StaticResource Brush_InputBackground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="5"/>
     </Style>
 
     <!-- ToolTip Style -->
@@ -468,6 +497,9 @@
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
+        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        <Setter Property="MinHeight" Value="{StaticResource Size_Button_Action_Height_Compact}"/>
+        <Setter Property="MinWidth" Value="64"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -600,6 +632,10 @@
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="{StaticResource Opacity_State_Disabled_Soft}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -705,6 +741,9 @@
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Opacity" Value="{StaticResource Opacity_State_Pressed}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="{StaticResource Opacity_State_Disabled_Soft}"/>
                         </Trigger>
                      </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -827,7 +866,7 @@
 
     <!-- [DialogShell] -->
     <Style x:Key="Style_DialogShellWindowBorder" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Brush_AppBackground}"/>
+        <Setter Property="Background" Value="{StaticResource Gradient_Shell_Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_Dialog}"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_DialogMargin}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
@@ -849,6 +888,7 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="{StaticResource Spacing_Shell_TitleInset}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
 
     <Style x:Key="Style_DialogShellDivider" TargetType="Border">
@@ -911,7 +951,7 @@
     <Style x:Key="Style_ManagementShellDivider" TargetType="Border" BasedOn="{StaticResource Style_DialogShellDivider}"/>
 
     <Style x:Key="Style_ManagementShellContentBorder" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
+        <Setter Property="Background" Value="{StaticResource Gradient_Card_Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
@@ -960,7 +1000,7 @@
     </Style>
 
     <Style x:Key="Style_WorkShellBottomBar" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
+        <Setter Property="Background" Value="{StaticResource Gradient_Panel_Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Shell_WorkBottomBar}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
@@ -970,8 +1010,8 @@
     </Style>
 
     <Style x:Key="Style_WorkShellHeroTileButton" TargetType="Button">
-        <Setter Property="Width" Value="106"/>
-        <Setter Property="Height" Value="88"/>
+        <Setter Property="Width" Value="104"/>
+        <Setter Property="Height" Value="84"/>
         <Setter Property="Margin" Value="4"/>
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
@@ -1003,16 +1043,16 @@
 
                                 <Border x:Name="iconBg"
                                         Grid.Row="0"
-                                        Width="36"
-                                        Height="36"
+                                        Width="34"
+                                        Height="34"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         CornerRadius="8"
                                         Background="{StaticResource Brush_InputBackground}"
                                         BorderBrush="{StaticResource Brush_Border_Subtle}"
                                         BorderThickness="1">
-                                    <Border Width="26"
-                                            Height="26"
+                                    <Border Width="24"
+                                            Height="24"
                                             CornerRadius="7"
                                             Background="{StaticResource Brush_Surface_Secondary}">
                                         <Path x:Name="icon"
@@ -1034,7 +1074,7 @@
                                            Foreground="{StaticResource Brush_Text_Secondary}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           MaxWidth="72"/>
+                                           MaxWidth="78"/>
 
                                 <Border x:Name="AccentLine"
                                         Grid.RowSpan="3"
@@ -1086,6 +1126,8 @@
     <Style x:Key="Style_WorkShellMiniButton" TargetType="Button">
         <Setter Property="Width" Value="30"/>
         <Setter Property="Height" Value="30"/>
+        <Setter Property="MinWidth" Value="32"/>
+        <Setter Property="MinHeight" Value="32"/>
         <Setter Property="Margin" Value="1.5"/>
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
@@ -1163,7 +1205,7 @@
     </Style>
 
     <Style x:Key="Style_SettingCardBorder" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
+        <Setter Property="Background" Value="{StaticResource Gradient_Card_Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
@@ -1508,7 +1550,7 @@
     <Style x:Key="Style_FullscreenShellSideRail" TargetType="Border" BasedOn="{StaticResource Style_OverlayShellSideRail}"/>
     <Style x:Key="Style_FullscreenShellHintBadge" TargetType="Border" BasedOn="{StaticResource Style_OverlayShellHintBadge}"/>
 
-    <!-- TabControl Style - Pill Capsule (终态) -->
+    <!-- TabControl Style - compact segmented control -->
     <Style TargetType="TabControl">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -1522,10 +1564,12 @@
                         </Grid.RowDefinitions>
                         <!-- Tab row background capsule track -->
                         <Border Grid.Row="0" Background="{StaticResource Brush_InputBackground}"
-                                CornerRadius="8" Padding="4,3" Margin="0,0,0,0">
+                                BorderBrush="{StaticResource Brush_Border_Subtle}"
+                                BorderThickness="1"
+                                CornerRadius="8" Padding="3" Margin="0,0,0,0">
                             <UniformGrid Rows="1" IsItemsHost="True" Background="Transparent"/>
                         </Border>
-                        <ContentPresenter Grid.Row="1" ContentSource="SelectedContent" Margin="0,8,0,0"/>
+                        <ContentPresenter Grid.Row="1" ContentSource="SelectedContent" Margin="0,6,0,0"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1552,8 +1596,8 @@
                                                    FontWeight="{TemplateBinding FontWeight}"
                                                    Foreground="{TemplateBinding Foreground}"/>
                                     </Border>
-                                    <Border x:Name="ActiveIndicator" Height="2" Background="{StaticResource Brush_Primary}" 
-                                            VerticalAlignment="Bottom" Visibility="Collapsed" Margin="14,0" CornerRadius="1"/>
+                                    <Border x:Name="ActiveIndicator" Height="2" Background="{StaticResource Brush_Text_Black}"
+                                            VerticalAlignment="Bottom" Visibility="Collapsed" Margin="16,0,16,1" CornerRadius="1"/>
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <!-- Hover (non-selected) -->
@@ -1582,17 +1626,17 @@
         </Setter>
     </Style>
 
-    <!-- Expander Style - Fix Black on Black -->
+    <!-- Expander Style -->
     <Style TargetType="Expander">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Glass}"/>
-        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="Padding" Value="8,0"/>
         <Setter Property="Template">
              <Setter.Value>
                  <ControlTemplate TargetType="Expander">
-                     <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="4">
+                     <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="7">
                          <DockPanel>
                              <ToggleButton x:Name="HeaderSite"
                                            DockPanel.Dock="Top"
@@ -1604,13 +1648,13 @@
                                            Padding="{TemplateBinding Padding}">
                                  <ToggleButton.Template>
                                      <ControlTemplate TargetType="ToggleButton">
-                                         <Border Background="Transparent" Padding="10">
+                                         <Border x:Name="HeaderBorder" Background="Transparent" Padding="8,7">
                                              <Grid>
                                                  <Grid.ColumnDefinitions>
                                                      <ColumnDefinition Width="Auto"/>
                                                      <ColumnDefinition Width="*"/>
                                                  </Grid.ColumnDefinitions>
-                                                 <Path x:Name="arrow" Data="M0,0 L5,5 L10,0" Stroke="{StaticResource Brush_Text_Secondary}" StrokeThickness="2" VerticalAlignment="Center"
+                                                 <Path x:Name="arrow" Data="M0,0 L5,5 L10,0" Stroke="{StaticResource Brush_Text_Secondary}" StrokeThickness="1.8" VerticalAlignment="Center"
                                                        RenderTransformOrigin="0.5,0.5">
                                                      <Path.RenderTransform>
                                                          <RotateTransform Angle="-90"/>
@@ -1630,6 +1674,7 @@
                                              </Trigger>
                                              <Trigger Property="IsMouseOver" Value="True">
                                                  <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource Brush_Text_Primary}"/>
+                                                 <Setter TargetName="HeaderBorder" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                                              </Trigger>
                                          </ControlTemplate.Triggers>
                                      </ControlTemplate>
@@ -1639,7 +1684,7 @@
                                                ContentSource="Content"
                                                DockPanel.Dock="Bottom"
                                                Visibility="Collapsed"
-                                               Margin="10,0,10,10"/>
+                                               Margin="8,0,8,8"/>
                          </DockPanel>
                      </Border>
                      <ControlTemplate.Triggers>
@@ -1683,7 +1728,7 @@
         <Setter Property="Foreground" Value="{StaticResource Brush_Text_Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_ListItem}"/>
-        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="Margin" Value="0,2"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="Template">
@@ -1691,7 +1736,7 @@
                 <ControlTemplate TargetType="ListBoxItem">
                     <Border x:Name="bd"
                             Background="{TemplateBinding Background}"
-                            CornerRadius="4"
+                            CornerRadius="6"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center"
                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
@@ -1704,6 +1749,8 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                             <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="1"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>

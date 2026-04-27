@@ -12,16 +12,16 @@ public sealed class WidgetShellSpacingRadiusContractTests
 
         AssertResourceValue(document, "Spacing_Shell_DialogMargin", "10");
         AssertResourceValue(document, "Spacing_Shell_TitleInset", "18,0,0,0");
-        AssertResourceValue(document, "Spacing_Shell_ActionBar", "20,0,20,20");
+        AssertResourceValue(document, "Spacing_Shell_ActionBar", "18,0,18,18");
         AssertResourceValue(document, "Spacing_Shell_ActionGap", "0,0,8,0");
         AssertResourceValue(document, "Spacing_Shell_WorkTitleBar", "18,0,14,0");
         AssertResourceValue(document, "Spacing_Shell_WorkContent", "18,2,18,8");
         AssertResourceValue(document, "Spacing_Shell_WorkBottomBar", "18,0,18,14");
         AssertResourceValue(document, "Spacing_Shell_ManagementContent", "12,8,12,8");
-        AssertResourceValue(document, "Radius_Shell_Dialog", "15");
-        AssertResourceValue(document, "Radius_Shell_Management", "14");
-        AssertResourceValue(document, "Radius_Shell_Work", "18");
-        AssertResourceValue(document, "Radius_Shell_WorkBottomBar", "14");
+        AssertResourceValue(document, "Radius_Shell_Dialog", "12");
+        AssertResourceValue(document, "Radius_Shell_Management", "12");
+        AssertResourceValue(document, "Radius_Shell_Work", "14");
+        AssertResourceValue(document, "Radius_Shell_WorkBottomBar", "10");
         AssertResourceValue(document, "Radius_Shell_OverlaySideRail", "20");
         AssertResourceValue(document, "Radius_Shell_OverlayHintBadge", "10");
 

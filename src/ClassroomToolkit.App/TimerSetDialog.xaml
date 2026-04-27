@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.TimerSetDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="倒计时设置"
+        Title="倒计时"
         Height="Auto" Width="396"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
@@ -43,7 +43,12 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="倒计时设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Clock}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="倒计时" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -59,7 +64,7 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="分钟" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"
+                        <TextBlock Text="分钟" Style="{StaticResource Style_FieldLabelText}"
                                    ToolTip="输入 0-150；滑杆 0-25。"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button x:Name="MinutesDownButton" Content="−" Margin="0,0,2,0"
@@ -85,14 +90,14 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_SettingCardBorder}" Margin="20,0,20,8" Padding="14,12">
                 <StackPanel>
-                    <TextBlock Text="常用时长" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,8"/>
+                    <TextBlock Text="常用时长" Style="{StaticResource Style_SectionHeaderText}" Margin="0,0,0,8"/>
                     <UniformGrid Columns="3">
-                        <Button Content="3 分钟" Tag="3" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="5 分钟" Tag="5" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="10 分钟" Tag="10" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="20 分钟" Tag="20" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="30 分钟" Tag="30" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
-                        <Button Content="40 分钟" Tag="40" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="3 分" Tag="3" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="5 分" Tag="5" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="10 分" Tag="10" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="20 分" Tag="20" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="30 分" Tag="30" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
+                        <Button Content="40 分" Tag="40" Style="{StaticResource Style_TimerPresetButton}" Click="OnPresetMinutesClick"/>
                     </UniformGrid>
                 </StackPanel>
             </Border>
@@ -105,7 +110,7 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="秒" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="秒" Style="{StaticResource Style_FieldLabelText}"/>
                         <TextBox x:Name="SecondsBox" Width="60" HorizontalAlignment="Right" TextAlignment="Center"
                                  Style="{StaticResource Style_TimerValueTextBox}" TextChanged="OnSecondsTextChanged"/>
                     </Grid>

@@ -21,6 +21,9 @@
 
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Apps}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
                     <TextBlock Text="兼容诊断" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="环境检查" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
@@ -86,7 +89,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="仅供本机排查。"
+                    <TextBlock Text="本机排查结果。"
                                Grid.Column="0"
                                Style="{StaticResource Style_ManagementShellFooterText}"
                                Margin="0,0,12,0"

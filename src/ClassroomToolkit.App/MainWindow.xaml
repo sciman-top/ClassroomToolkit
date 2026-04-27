@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="课堂工具箱"
-        Height="316" Width="332"
+        Height="304" Width="318"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="{x:Null}"
@@ -29,17 +29,23 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Height="46" Style="{StaticResource Style_WorkShellTitleBar}">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Grid Grid.Row="0" Height="42" Style="{StaticResource Style_WorkShellTitleBar}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Apps}"
+                              Fill="{StaticResource Brush_Primary}"
+                              Stretch="Uniform"/>
+                    </Border>
                     <TextBlock Text="课堂工具箱"
                                FontSize="{StaticResource FontSize_Title_Management}"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource Brush_Primary_Hover}"
-                               TextAlignment="Center"/>
+                               TextAlignment="Center"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="0,6,0,12">
+            <Grid Grid.Row="1" Margin="0,4,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -48,15 +54,15 @@
                 <Button Grid.Column="0"
                         x:Name="PaintButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="画笔批注"
+                        Content="批注"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
-                        ToolTip="画笔"/>
+                        ToolTip="画笔批注"/>
 
                 <Button Grid.Column="1"
                         x:Name="RollCallButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="点名与计时"
+                        Content="点名计时"
                         Tag="{StaticResource Icon_RollCall}"
                         Click="OnRollCallClick"
                         ToolTip="点名与计时"/>
@@ -92,13 +98,13 @@
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Info}"
                                 Click="OnAboutClick"
-                                ToolTip="关于"/>
+                                ToolTip="关于软件"/>
 
                         <Button x:Name="SettingsButton"
                                 Style="{StaticResource Style_WorkShellMiniButton}"
                                 Tag="{StaticResource Icon_Settings}"
                                 Click="OnLauncherMoreClick"
-                                ToolTip="更多"/>
+                                ToolTip="更多设置"/>
 
                         <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 

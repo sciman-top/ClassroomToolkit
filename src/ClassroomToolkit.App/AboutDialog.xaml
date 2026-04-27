@@ -1,7 +1,7 @@
 <Window x:Class="ClassroomToolkit.App.AboutDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="关于软件"
+        Title="关于"
         Height="Auto" Width="360"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
@@ -21,7 +21,12 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="关于软件" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="关于" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -41,7 +46,7 @@
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="{StaticResource FontSize_Title_Management}" FontWeight="Bold"/>
                             <TextBlock x:Name="VersionText" Text="版本 -" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{StaticResource Brush_Primary}" FontWeight="SemiBold"/>
-                            <TextBlock Text="课堂常用工具" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{StaticResource Brush_Text_Tertiary}"/>
+                            <TextBlock Text="课堂批注、点名与计时" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{StaticResource Brush_Text_Tertiary}"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -89,7 +94,7 @@
             </Border>
 
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
-                <Button Content="复制"
+                <Button Content="复制信息"
                         Style="{StaticResource Style_DialogShellSecondaryActionButton}"
                         Height="{StaticResource Size_Button_Action_Height_Compact}"
                         ToolTip="复制"

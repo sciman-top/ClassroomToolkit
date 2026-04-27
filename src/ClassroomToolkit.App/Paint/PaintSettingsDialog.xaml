@@ -36,7 +36,12 @@
 
             <!-- 1. 标题栏 -->
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
-                <TextBlock Text="画笔设置" Style="{StaticResource Style_DialogShellTitleText}"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Pen}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="画笔设置" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
@@ -57,12 +62,12 @@
                     <TabControl x:Name="SettingsTabControl" Background="Transparent" BorderThickness="0">
                         <TabItem Header="基础">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="先选预设，再调参数。"
+                <TextBlock Text="先选预设，再微调。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="{StaticResource FontSize_Body_S}"
                            TextWrapping="Wrap"/>
-                <TextBlock Text="笔触与预设"
+                <TextBlock Text="笔触预设"
                            Margin="0,0,0,8"
                            Foreground="{StaticResource Brush_Text_Secondary}"
                            FontWeight="SemiBold"/>
@@ -112,7 +117,7 @@
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12">
                     <StackPanel>
                         <TextBlock Text="整套预设" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                        <TextBlock Text="统一管理预设、手感和场景。"
+                        <TextBlock Text="统一管理手感和场景。"
                                    Margin="0,0,0,8"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
@@ -200,8 +205,8 @@
                             <StackPanel Margin="0,12,0,0">
                                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                                     <StackPanel>
-                                        <TextBlock Text="界面与工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
-                                        <TextBlock Text="只调显示和切换。"
+                                        <TextBlock Text="界面工具" Foreground="{StaticResource Brush_Text_Secondary}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="调整显示和切换。"
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="{StaticResource FontSize_Body_S}"
                                                    Margin="0,0,0,12"/>
@@ -230,14 +235,14 @@
 
                         <TabItem Header="兼容">
                             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="常用项优先，高级项按需开。"
+                <TextBlock Text="常用项优先，高级按需开。"
                            Margin="0,0,0,12"
                            Foreground="{StaticResource Brush_Text_Tertiary}"
                            FontSize="{StaticResource FontSize_Body_S}"
                            TextWrapping="Wrap"/>
                 <Border Style="{StaticResource Style_SettingCardBorder}" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="高级项默认收起。"
+                        <TextBlock Text="高级项默认收起"
                                    Foreground="{StaticResource Brush_Text_Secondary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"
@@ -310,7 +315,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="抬笔后延迟刷新" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <TextBlock Text="抬笔刷新延迟" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                             <ComboBox Grid.Column="1" x:Name="PostInputRefreshDelayCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <Grid Margin="0,0,0,10">
@@ -334,7 +339,7 @@
                                                 <ColumnDefinition Width="110"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="拖拽惯性预设" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
+                                            <TextBlock Text="拖动惯性" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                             <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
                                         <CheckBox x:Name="PhotoInputTelemetryCheck" Content="输入日志" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}"/>

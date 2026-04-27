@@ -14,8 +14,8 @@ public sealed class WidgetShellSizeContractTests
         AssertResourceValue(document, "Size_Button_Icon_Compact", "32");
         AssertResourceValue(document, "Size_Button_Icon_Regular", "36");
         AssertResourceValue(document, "Size_Button_Icon_Large", "40");
-        AssertResourceValue(document, "Size_Shell_TitleBar_Dialog", "44");
-        AssertResourceValue(document, "Size_Shell_TitleBar_Management", "48");
+        AssertResourceValue(document, "Size_Shell_TitleBar_Dialog", "42");
+        AssertResourceValue(document, "Size_Shell_TitleBar_Management", "46");
         AssertResourceValue(document, "Size_Shell_TitleBar_Work", "40");
         AssertResourceValue(document, "Spacing_Shell_CloseButton_Dialog", "0,0,10,0");
         AssertResourceValue(document, "Spacing_Shell_CloseButton_Management", "0,0,12,0");

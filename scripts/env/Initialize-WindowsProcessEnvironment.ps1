@@ -120,6 +120,9 @@ $initializeWindowsProcessEnvironment = {
         "CommonProgramFiles" = (Join-Path $programFiles "Common Files")
         "CommonProgramFiles(x86)" = (Join-Path $programFilesX86 "Common Files")
         "NUGET_PACKAGES" = $(if (-not [string]::IsNullOrWhiteSpace($userProfile)) { Join-Path $userProfile ".nuget\packages" } else { $null })
+        "NUGET_HTTP_CACHE_PATH" = $(if (-not [string]::IsNullOrWhiteSpace($userProfile)) { Join-Path $userProfile "AppData\Local\NuGet\v3-cache" } else { $null })
+        "NUGET_PLUGINS_CACHE_PATH" = $(if (-not [string]::IsNullOrWhiteSpace($userProfile)) { Join-Path $userProfile "AppData\Local\NuGet\plugins-cache" } else { $null })
+        "NUGET_SCRATCH" = $(if (-not [string]::IsNullOrWhiteSpace($userProfile)) { Join-Path $userProfile "AppData\Local\Temp\NuGetScratch" } else { $null })
     }
 
     $applied = New-Object System.Collections.Generic.List[object]

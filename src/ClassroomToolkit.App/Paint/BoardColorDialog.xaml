@@ -11,7 +11,7 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="{StaticResource Brush_Window_Atmosphere}" CornerRadius="10" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
+    <Border Background="{StaticResource Gradient_Shell_Surface}" CornerRadius="10" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
             MouseLeftButtonDown="OnTitleBarDrag">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
@@ -19,7 +19,12 @@
 
         <StackPanel Margin="14">
             <Grid Margin="0,0,0,10">
-                <TextBlock Text="白板底色" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Width="24" Height="24" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Board}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="白板底色" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                </StackPanel>
                 <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" ToolTip="关闭">
                     <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>

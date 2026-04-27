@@ -46,7 +46,11 @@ public sealed class WidgetStylesContractTests
             "Style_FullscreenShellHintBadge",
             "Style_ListViewItem_SelectionUnified",
             "Style_ListBoxItem_SelectionUnified",
-            "Style_CleanListBox"
+            "Style_CleanListBox",
+            "Style_FieldLabelText",
+            "Style_HelperText",
+            "Style_SectionHeaderText",
+            "Style_TitleIconBadge"
         };
 
         foreach (var key in requiredKeys)
@@ -65,8 +69,10 @@ public sealed class WidgetStylesContractTests
         StyleUsesStaticResource(document, "Style_ManagementShellTitleText", "FontSize", "FontSize_Title_Management").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_ManagementShellSubtitleText", "FontSize", "FontSize_Body_S").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_ManagementShellFooterText", "FontSize", "FontSize_Body_S").Should().BeTrue();
-        StyleUsesStaticResource(document, "Style_DialogShellWindowBorder", "Background", "Brush_AppBackground").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_DialogShellWindowBorder", "Background", "Gradient_Shell_Surface").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_DialogShellWindowBorder", "BorderBrush", "Brush_Border_Subtle").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ManagementShellContentBorder", "Background", "Gradient_Card_Surface").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_WorkShellBottomBar", "Background", "Gradient_Panel_Surface").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_OverlayShellSideRail", "Background", "Brush_OverlayMask").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "Background", "Brush_OverlayMask").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "BorderBrush", "Brush_Border_Strong").Should().BeTrue();
