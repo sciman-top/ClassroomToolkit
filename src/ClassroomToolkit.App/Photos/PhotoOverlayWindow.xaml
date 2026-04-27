@@ -36,7 +36,7 @@
                        MaxWidth="720"
                        Foreground="{StaticResource Brush_Text_Primary}"
                        FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                       FontSize="42"
+                       FontSize="40"
                        FontWeight="Bold"
                        TextAlignment="Center"
                        TextWrapping="Wrap"

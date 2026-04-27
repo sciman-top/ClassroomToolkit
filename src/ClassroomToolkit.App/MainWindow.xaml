@@ -48,7 +48,7 @@
                 <Button Grid.Column="0"
                         x:Name="PaintButton"
                         Style="{StaticResource Style_WorkShellHeroTileButton}"
-                        Content="画笔"
+                        Content="画笔批注"
                         Tag="{StaticResource Icon_Pen}"
                         Click="OnPaintClick"
                         ToolTip="画笔"/>

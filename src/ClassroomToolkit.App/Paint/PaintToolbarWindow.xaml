@@ -37,6 +37,8 @@
         <Style x:Key="Style_ToolbarColorBubbleToggle" TargetType="ToggleButton" BasedOn="{StaticResource Style_ColorBubbleToggle}">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="24"/>
+            <Setter Property="MinHeight" Value="24"/>
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="ToolTipService.IsEnabled" Value="True"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
@@ -245,8 +247,8 @@
                 Visibility="Collapsed"
                 Opacity="0"
                 IsHitTestVisible="False"
-                Background="#D0202020"
-                BorderBrush="#66FFFFFF"
+                Background="{StaticResource Brush_OverlayMask}"
+                BorderBrush="{StaticResource Brush_Border_Strong}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="10,4"
@@ -254,7 +256,7 @@
                 VerticalAlignment="Top"
                 Margin="0,-30,0,0">
             <TextBlock x:Name="BoardHintText"
-                       Foreground="White"
+                       Foreground="{StaticResource Brush_Text_Primary}"
                        FontSize="{StaticResource FontSize_Body_S}"
                        FontWeight="SemiBold"/>
         </Border>

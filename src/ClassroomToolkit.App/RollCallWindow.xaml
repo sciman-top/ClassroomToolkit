@@ -308,7 +308,7 @@
                              <TextBlock Text="{Binding TimerModeLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                         </Button>
 
-                        <!-- 播放/暂停按钮：使用 Teal 色调 -->
+                        <!-- 播放/暂停按钮 -->
                         <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="{StaticResource Size_Button_Icon_Regular}" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
                             <Path Fill="{StaticResource Brush_Text_Black}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
                                 <Path.Style>

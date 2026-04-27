@@ -2,35 +2,35 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
 
-    <!-- Terminal polish theme: neutral graphite + classroom accents. -->
+    <!-- Classroom focus theme: graphite surfaces with restrained teaching accents. -->
 
     <!-- 1. Semantic color tokens -->
-    <Color x:Key="Color_Bg_App">#101211</Color>
-    <Color x:Key="Color_Bg_Surface_1">#171A18</Color>
-    <Color x:Key="Color_Bg_Surface_2">#20241F</Color>
-    <Color x:Key="Color_Bg_Input">#252A26</Color>
+    <Color x:Key="Color_Bg_App">#0F1412</Color>
+    <Color x:Key="Color_Bg_Surface_1">#171F1B</Color>
+    <Color x:Key="Color_Bg_Surface_2">#202A24</Color>
+    <Color x:Key="Color_Bg_Input">#26322C</Color>
     <Color x:Key="Color_Bg_Overlay">#CC0A0C0B</Color>
     <Color x:Key="Color_Bg_Glass">#E0161917</Color>
 
-    <Color x:Key="Color_Text_Primary">#F4F4EF</Color>
-    <Color x:Key="Color_Text_Secondary">#B9C0B8</Color>
-    <Color x:Key="Color_Text_Tertiary">#858D84</Color>
+    <Color x:Key="Color_Text_Primary">#F6F4ED</Color>
+    <Color x:Key="Color_Text_Secondary">#BEC8BE</Color>
+    <Color x:Key="Color_Text_Tertiary">#879489</Color>
     <Color x:Key="Color_Text_Black">#111412</Color>
 
-    <Color x:Key="Color_Accent_Primary">#2EB4A2</Color>
-    <Color x:Key="Color_Accent_Primary_Hover">#47C8B7</Color>
-    <Color x:Key="Color_Accent_Primary_Deep">#168779</Color>
-    <Color x:Key="Color_Accent_Teaching">#D19A4A</Color>
-    <Color x:Key="Color_Accent_Teaching_Deep">#A66D28</Color>
+    <Color x:Key="Color_Accent_Primary">#36BFAE</Color>
+    <Color x:Key="Color_Accent_Primary_Hover">#53D2C0</Color>
+    <Color x:Key="Color_Accent_Primary_Deep">#178C7D</Color>
+    <Color x:Key="Color_Accent_Teaching">#D9A14F</Color>
+    <Color x:Key="Color_Accent_Teaching_Deep">#A86E29</Color>
     <Color x:Key="Color_Accent_Success">#63B876</Color>
     <Color x:Key="Color_Accent_Warning">#D8A13B</Color>
     <Color x:Key="Color_Accent_Danger">#C9655F</Color>
     <Color x:Key="Color_Accent_Violet_Muted">#9C8EC4</Color>
 
-    <Color x:Key="Color_Border_Subtle">#303832</Color>
-    <Color x:Key="Color_Border_Strong">#465047</Color>
-    <Color x:Key="Color_Border_Focus">#51CFC0</Color>
-    <Color x:Key="Color_Border_Active">#2EB4A2</Color>
+    <Color x:Key="Color_Border_Subtle">#334039</Color>
+    <Color x:Key="Color_Border_Strong">#4B5A50</Color>
+    <Color x:Key="Color_Border_Focus">#5AD7C8</Color>
+    <Color x:Key="Color_Border_Active">#36BFAE</Color>
     <Color x:Key="Color_Border_Glass">#2EFFFFFF</Color>
 
     <Color x:Key="Color_Timer_Display">#66D6C2</Color>
@@ -38,19 +38,19 @@
     <Color x:Key="Color_Pen_Blue">#49A8D4</Color>
 
     <!-- 2. Legacy color aliases kept for Stage A compatibility -->
-    <Color x:Key="Color_Bg_Deep">#0C0E0D</Color>
-    <Color x:Key="Color_Bg_Surface">#171A18</Color>
-    <Color x:Key="Color_Primary">#2EB4A2</Color>
-    <Color x:Key="Color_Primary_GradientStart">#2EB4A2</Color>
-    <Color x:Key="Color_Primary_GradientEnd">#23897C</Color>
-    <Color x:Key="Color_Secondary">#B9C0B8</Color>
+    <Color x:Key="Color_Bg_Deep">#0B0F0D</Color>
+    <Color x:Key="Color_Bg_Surface">#171F1B</Color>
+    <Color x:Key="Color_Primary">#36BFAE</Color>
+    <Color x:Key="Color_Primary_GradientStart">#36BFAE</Color>
+    <Color x:Key="Color_Primary_GradientEnd">#247F74</Color>
+    <Color x:Key="Color_Secondary">#BEC8BE</Color>
     <Color x:Key="Color_Danger">#C9655F</Color>
     <Color x:Key="Color_Danger_GradientEnd">#9D4D4A</Color>
     <Color x:Key="Color_Success">#55B68E</Color>
     <Color x:Key="Color_Success_GradientStart">#5DC7A0</Color>
     <Color x:Key="Color_Warning">#D9A441</Color>
     <Color x:Key="Color_Warning_GradientEnd">#B97A2F</Color>
-    <Color x:Key="Color_Accent_Teal">#47C8B7</Color>
+    <Color x:Key="Color_Accent_Teal">#53D2C0</Color>
     <Color x:Key="Color_Accent_Violet">#8D81B9</Color>
     <Color x:Key="Color_Accent_Amber">#E2B154</Color>
     <Color x:Key="Color_Timer_Neon">#66D6C2</Color>
@@ -102,9 +102,9 @@
     <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Bg_Input}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Glass_Surface" Color="{StaticResource Color_Bg_Glass}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Glass_Border" Color="#24FFFFFF" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#262C27" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#2C352F" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#1E2925" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#2A362F" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#314139" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#1F302A" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Light" Color="{StaticResource Color_Border_Strong}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#321C1A" PresentationOptions:Freeze="true"/>
@@ -113,24 +113,24 @@
 
     <!-- 5. Gradients -->
     <LinearGradientBrush x:Key="Gradient_Primary_Subtle" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#43C8B7" Offset="0"/>
-        <GradientStop Color="#1D7E72" Offset="1"/>
+        <GradientStop Color="#53D2C0" Offset="0"/>
+        <GradientStop Color="#23887B" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Teaching_Subtle" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#D4A04E" Offset="0"/>
-        <GradientStop Color="#8F652A" Offset="1"/>
+        <GradientStop Color="#DDAA58" Offset="0"/>
+        <GradientStop Color="#93662C" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Timer_Display" StartPoint="0,0" EndPoint="1,0" PresentationOptions:Freeze="true">
-        <GradientStop Color="#78DFCA" Offset="0"/>
-        <GradientStop Color="#E0B451" Offset="0.55"/>
+        <GradientStop Color="#7FE3D1" Offset="0"/>
+        <GradientStop Color="#E1B85A" Offset="0.55"/>
         <GradientStop Color="#8D81B9" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Hero_Glow" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#18352F" Offset="0"/>
-        <GradientStop Color="#1E241C" Offset="0.58"/>
+        <GradientStop Color="#183A33" Offset="0"/>
+        <GradientStop Color="#20291F" Offset="0.58"/>
         <GradientStop Color="#111412" Offset="1"/>
     </LinearGradientBrush>
 
@@ -161,9 +161,9 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#20352F" Offset="0"/>
-        <GradientStop Color="#1A241E" Offset="0.5"/>
-        <GradientStop Color="#101412" Offset="1"/>
+        <GradientStop Color="#203C34" Offset="0"/>
+        <GradientStop Color="#1C2A22" Offset="0.5"/>
+        <GradientStop Color="#0F1512" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
@@ -172,19 +172,19 @@
     </LinearGradientBrush>
 
     <!-- 6. Shadow tokens -->
-    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.14" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Card" Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.12" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Card_Subtle" Color="#000000" BlurRadius="2" ShadowDepth="1" Opacity="0.04" RenderingBias="Performance"/>
-    <DropShadowEffect x:Key="Shadow_Dialog" Color="#000000" BlurRadius="14" ShadowDepth="4" Opacity="0.22" RenderingBias="Performance"/>
-    <DropShadowEffect x:Key="Shadow_Dialog_Heavy" Color="#000000" BlurRadius="18" ShadowDepth="5" Opacity="0.24" RenderingBias="Performance"/>
-    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.18" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Dialog" Color="#000000" BlurRadius="14" ShadowDepth="4" Opacity="0.20" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Dialog_Heavy" Color="#000000" BlurRadius="18" ShadowDepth="5" Opacity="0.23" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Floating" Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.16" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Popup_Light" Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.16" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Popup_Medium" Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.22" RenderingBias="Performance"/>
-    <DropShadowEffect x:Key="Shadow_Glow_Primary" Color="#2EB4A2" BlurRadius="8" ShadowDepth="0" Opacity="0.12" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Glow_Primary" Color="#36BFAE" BlurRadius="8" ShadowDepth="0" Opacity="0.12" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Glow_Teaching" Color="#D19A4A" BlurRadius="8" ShadowDepth="0" Opacity="0.11" RenderingBias="Performance"/>
-    <DropShadowEffect x:Key="Shadow_Glow_Hero" Color="#2EB4A2" BlurRadius="10" ShadowDepth="0" Opacity="0.08" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Glow_Hero" Color="#36BFAE" BlurRadius="10" ShadowDepth="0" Opacity="0.08" RenderingBias="Performance"/>
 
     <!-- Legacy shadow aliases -->
-    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#2EB4A2" BlurRadius="9" ShadowDepth="0" Opacity="0.14" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Shadow_Primary_Glow" Color="#36BFAE" BlurRadius="9" ShadowDepth="0" Opacity="0.14" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Danger_Glow" Color="#C9655F" BlurRadius="9" ShadowDepth="0" Opacity="0.14" RenderingBias="Performance"/>
     <DropShadowEffect x:Key="Shadow_Glass_Glow" Color="#FFFFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.06" RenderingBias="Performance"/>
 

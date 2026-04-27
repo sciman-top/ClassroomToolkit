@@ -56,7 +56,7 @@
                     <Path Data="{StaticResource Icon_Photo}" Fill="{StaticResource Brush_Text_Primary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="PDF/图片管理" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
-                    <TextBlock Text="文件夹、PDF、图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
+                    <TextBlock Text="文件夹 / PDF / 图片" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Margin="0,0,8,0"
@@ -93,7 +93,7 @@
                         </Grid.RowDefinitions>
                         <UniformGrid Grid.Row="0" Margin="0,0,0,6" Columns="3">
                             <Button
-                                    Content="添加收藏"
+                                    Content="加入收藏"
                                     Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnAddFavoriteClick"
@@ -104,7 +104,7 @@
                                     FontSize="{StaticResource FontSize_Body_S}"
                                     HorizontalAlignment="Stretch"/>
                             <Button
-                                    Content="取消收藏"
+                                    Content="移除收藏"
                                     Margin="0,0,4,0"
                                     VerticalContentAlignment="Center"
                                     Click="OnRemoveFavoriteClick"
@@ -283,10 +283,10 @@
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Path Data="{StaticResource Icon_ViewGrid}" Fill="{x:Null}" Stroke="{StaticResource Brush_Text_Primary}" StrokeThickness="1.5" Stretch="Uniform"
                                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
-                                    <TextBlock Text="缩略图" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
+                                    <TextBlock Text="缩图" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 </StackPanel>
                             </ToggleButton>
-                            <TextBlock Text="缩略图" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"
+                            <TextBlock Text="大小" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <Slider x:Name="ThumbnailSizeSlider" Width="120" Minimum="90" Maximum="420" Value="120"
                                     ValueChanged="OnThumbnailSizeChanged" IsEnabled="{Binding IsThumbnailSizeSliderEnabled}"/>
@@ -358,7 +358,7 @@
                                             
                                             <Border Background="{StaticResource Brush_OverlayMask}" CornerRadius="4" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                                     Margin="0,0,2,2" Visibility="{Binding PageBadgeVisibility}">
-                                                <TextBlock Text="{Binding PageBadge}" Foreground="White" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding PageBadge}" Foreground="{StaticResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold"/>
                                             </Border>
                                         </Grid>
                                     </Border>
@@ -409,7 +409,7 @@
 
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
-                    <TextBlock Text="管理 PDF、图片与笔迹。"
+                    <TextBlock Text="管理 PDF、图片和笔迹。"
                                Style="{StaticResource Style_ManagementShellFooterText}"/>
                 </Grid>
             </Border>

@@ -60,7 +60,7 @@
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
                         <TextBlock Text="分钟" FontSize="{StaticResource FontSize_Body_M}" Foreground="{StaticResource Brush_Text_Secondary}" VerticalAlignment="Center"
-                                   ToolTip="可输入 0-150，滑杆到 25。"/>
+                                   ToolTip="输入 0-150；滑杆 0-25。"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button x:Name="MinutesDownButton" Content="−" Margin="0,0,2,0"
                                     Style="{StaticResource Style_TimerCompactStepperButton}"

@@ -3,8 +3,8 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- ========================================
-         Theme: Modern Slate Widget Styles
-         Concept: Professional, Clean, Compact
+         Theme: Classroom Focus Widget Styles
+         Concept: Professional, compact, touch-aware
          ======================================== -->
 
     <!-- ========== Density Tokens ========== -->
@@ -77,6 +77,21 @@
     <CornerRadius x:Key="Radius_Control_BubbleShellItem">7</CornerRadius>
     <sys:Double x:Key="FontSize_Control_Label">13</sys:Double>
     <sys:Double x:Key="FontSize_Control_Helper">12</sys:Double>
+
+    <Style x:Key="Style_FocusRing" TargetType="{x:Type Control}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Control}">
+                    <Border Margin="-2"
+                            BorderBrush="{StaticResource Brush_Border_Focus}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource Radius_Control_Panel}"
+                            Opacity="0.88"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <!-- ========== 0. 全局默认样式 (Global Defaults) - 修复文字可见性 ========== -->
     
@@ -453,6 +468,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Body_M}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
@@ -488,6 +504,9 @@
                                     <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                              <Setter Property="Effect" Value="{x:Null}"/>
@@ -568,6 +587,11 @@
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                             <Setter Property="RenderTransform">
@@ -590,6 +614,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_ButtonFamily_Compact}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -615,6 +640,11 @@
                                     <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
@@ -669,6 +699,10 @@
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
+                            <Setter TargetName="topShine" Property="Opacity" Value="1"/>
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Opacity" Value="{StaticResource Opacity_State_Pressed}"/>
                         </Trigger>
@@ -686,6 +720,7 @@
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Min}"/>
         <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Min}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -717,6 +752,10 @@
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                         </Trigger>
@@ -737,6 +776,7 @@
         <Setter Property="Height" Value="{StaticResource Size_Button_Icon_Compact}"/>
         <Setter Property="MinWidth" Value="{StaticResource Size_Touch_Target_Primary}"/>
         <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Primary}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
@@ -768,6 +808,10 @@
                                      <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
                                  </Setter.Value>
                              </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                             <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                             <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                              <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
@@ -932,6 +976,7 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -1017,6 +1062,13 @@
                             <Setter TargetName="iconBg" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
                             <Setter TargetName="icon" Property="Fill" Value="{StaticResource Brush_Text_Primary}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="glow" Property="Opacity" Value="0.18"/>
+                            <Setter TargetName="AccentLine" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="iconBg" Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="RenderTransform">
                                 <Setter.Value>
@@ -1036,6 +1088,7 @@
         <Setter Property="Height" Value="30"/>
         <Setter Property="Margin" Value="1.5"/>
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -1058,6 +1111,11 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
                             <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Strong}"/>
+                            <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                             <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Primary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -1093,6 +1151,11 @@
                             <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
                             <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Danger}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Danger_Surface}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
+                            <Setter TargetName="ico" Property="Fill" Value="{StaticResource Brush_Danger}"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -1103,7 +1166,7 @@
         <Setter Property="Background" Value="{StaticResource Brush_Surface_Primary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
-        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
         <Setter Property="Padding" Value="14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
         <Setter Property="Effect" Value="{x:Null}"/>
@@ -1123,6 +1186,7 @@
         <Setter Property="Height" Value="56"/>
         <Setter Property="MinHeight" Value="56"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Template">
@@ -1145,6 +1209,10 @@
                                     <TranslateTransform Y="-0.5"/>
                                 </Setter.Value>
                             </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Hover}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
@@ -1616,6 +1684,7 @@
         <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_ListItem}"/>
         <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -1635,6 +1704,10 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                             <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1704,6 +1777,7 @@
         <Setter Property="FontSize" Value="{StaticResource FontSize_Control_Label}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Style_FocusRing}"/>
         <Setter Property="IsExpanded" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -1772,6 +1846,10 @@
                              <Setter TargetName="Bd" Property="Background" Value="{StaticResource Brush_Surface_Active}"/>
                              <Setter Property="Foreground" Value="{StaticResource Brush_Primary_Light}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
+                             <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -1825,9 +1903,9 @@
                                         <ControlTemplate TargetType="Thumb">
                                             <Grid>
                                                 <!-- Gradient Thumb -->
-                                                <Border x:Name="b1" Width="16" Height="16" CornerRadius="8" Background="{StaticResource Gradient_Primary}" BorderThickness="2" BorderBrush="#FAFAFA">
+                                                <Border x:Name="b1" Width="16" Height="16" CornerRadius="8" Background="{StaticResource Gradient_Primary}" BorderThickness="2" BorderBrush="{StaticResource Brush_Text_Primary}">
                                                     <Border.Effect>
-                                                        <DropShadowEffect Color="{StaticResource Color_Primary}" BlurRadius="8" ShadowDepth="1" Opacity="0.4"/>
+                                                        <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                                                     </Border.Effect>
                                                 </Border>
                                             </Grid>

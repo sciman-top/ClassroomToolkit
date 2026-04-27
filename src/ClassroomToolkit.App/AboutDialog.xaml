@@ -89,7 +89,7 @@
             </Border>
 
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
-                <Button Content="复制信息"
+                <Button Content="复制"
                         Style="{StaticResource Style_DialogShellSecondaryActionButton}"
                         Height="{StaticResource Size_Button_Action_Height_Compact}"
                         ToolTip="复制"

@@ -13,6 +13,7 @@ public sealed class WidgetStylesContractTests
         var requiredKeys = new[]
         {
             "Style_ButtonFamilyBase",
+            "Style_FocusRing",
             "Style_PrimaryButton",
             "Style_SecondaryButton",
             "Style_DangerButton",
@@ -70,8 +71,26 @@ public sealed class WidgetStylesContractTests
         StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "Background", "Brush_OverlayMask").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_OverlayShellHintBadge", "BorderBrush", "Brush_Border_Strong").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_ButtonFamilyBase", "Padding", "Spacing_Control_ButtonFamily").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_ButtonFamilyBase", "FocusVisualStyle", "Style_FocusRing").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_WorkShellHeroTileButton", "FocusVisualStyle", "Style_FocusRing").Should().BeTrue();
+        StyleUsesStaticResource(document, "Style_WorkShellMiniButton", "FocusVisualStyle", "Style_FocusRing").Should().BeTrue();
         StyleUsesStaticResource(document, "Style_SecondaryButton", "Padding", "Spacing_Control_ButtonFamily_Compact").Should().BeTrue();
         TargetTypeStyleUsesStaticResource(document, "MenuItem", "Padding", "Spacing_Control_MenuItem").Should().BeTrue();
+    }
+
+    [Fact]
+    public void WidgetStyles_ShouldKeepEffectsTokenizedForRuntimeSurfaces()
+    {
+        var xaml = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Assets",
+            "Styles",
+            "WidgetStyles.xaml"));
+
+        xaml.Should().NotContain("<DropShadowEffect", "shared widget styles should reuse frozen effect resources from Colors.xaml");
+        xaml.Should().Contain("Style_FocusRing");
+        xaml.Should().Contain("FocusVisualStyle");
     }
 
     [Fact]
