@@ -133,7 +133,7 @@
 
             <Border Background="{StaticResource Brush_Surface_Secondary}" CornerRadius="8" Padding="4,3" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="QuickColor1Button" Background="Black" Tag="0"
+                    <ToggleButton x:Name="QuickColor1Button" Background="{StaticResource Brush_Text_Black}" Tag="0"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
                                   ToolTip="颜色 1：点按使用，长按换色"
                                   PreviewMouseLeftButtonDown="OnQuickColorPointerDown"

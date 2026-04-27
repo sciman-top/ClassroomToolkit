@@ -41,7 +41,7 @@
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_Apps}" Fill="White" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_Apps}" Fill="{StaticResource Brush_Text_Black}" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="{StaticResource FontSize_Title_Management}" FontWeight="Bold"/>
@@ -50,7 +50,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <Border Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{StaticResource Brush_Surface_Secondary}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="66"/>
@@ -73,7 +73,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Background="{StaticResource Brush_Surface_Secondary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{StaticResource Brush_Surface_Secondary}">
                         <StackPanel>
                             <TextBlock Text="链接" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,8"/>
                             <WrapPanel>

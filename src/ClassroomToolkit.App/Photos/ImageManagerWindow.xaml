@@ -272,7 +272,7 @@
                             </Button>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
+                        <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
                             <ToggleButton x:Name="ListViewButton" ToolTip="列表视图" Width="68" Margin="0,0,6,0"
                                           Click="OnViewModeClick" Style="{StaticResource Style_ImageManagerToolbarToggleButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -312,7 +312,7 @@
                                     MinWidth="86"
                                     Style="{StaticResource Style_ImageManagerToolbarButton}" Visibility="Collapsed"
                                     Click="OnExitSelectionModeClick"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
                 </DockPanel>
 

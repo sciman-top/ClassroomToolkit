@@ -858,6 +858,9 @@
                              <Setter TargetName="border" Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
                              <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                             <Setter Property="Opacity" Value="{StaticResource Opacity_State_Icon_Disabled}"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -1212,12 +1215,20 @@
         <Setter Property="Padding" Value="14"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
         <Setter Property="Effect" Value="{x:Null}"/>
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Focus}"/>
-                <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
-            </Trigger>
-        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Style_SurfaceSectionBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Brush_Surface_Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Border_Subtle}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource BorderThickness_Regular}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius_Control_Panel}"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Effect" Value="{x:Null}"/>
+    </Style>
+
+    <Style x:Key="Style_SurfaceSectionBorder_Danger" TargetType="Border" BasedOn="{StaticResource Style_SurfaceSectionBorder}">
+        <Setter Property="Background" Value="{StaticResource Brush_Danger_Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_Danger}"/>
     </Style>
 
     <Style x:Key="Style_StudentCardButton" TargetType="Button">

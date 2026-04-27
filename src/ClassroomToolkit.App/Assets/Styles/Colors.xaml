@@ -5,16 +5,16 @@
     <!-- Classroom focus theme: graphite board surfaces with restrained teaching accents. -->
 
     <!-- 1. Semantic color tokens -->
-    <Color x:Key="Color_Bg_App">#0D1211</Color>
-    <Color x:Key="Color_Bg_Surface_1">#151D1A</Color>
-    <Color x:Key="Color_Bg_Surface_2">#1E2824</Color>
-    <Color x:Key="Color_Bg_Input">#26322D</Color>
-    <Color x:Key="Color_Bg_Overlay">#D6080B0A</Color>
-    <Color x:Key="Color_Bg_Glass">#E0141817</Color>
+    <Color x:Key="Color_Bg_App">#101313</Color>
+    <Color x:Key="Color_Bg_Surface_1">#171C1E</Color>
+    <Color x:Key="Color_Bg_Surface_2">#20272A</Color>
+    <Color x:Key="Color_Bg_Input">#283236</Color>
+    <Color x:Key="Color_Bg_Overlay">#D6080A0A</Color>
+    <Color x:Key="Color_Bg_Glass">#E0141818</Color>
 
     <Color x:Key="Color_Text_Primary">#F6F4ED</Color>
-    <Color x:Key="Color_Text_Secondary">#C5CEC6</Color>
-    <Color x:Key="Color_Text_Tertiary">#87958D</Color>
+    <Color x:Key="Color_Text_Secondary">#C9D0CC</Color>
+    <Color x:Key="Color_Text_Tertiary">#8F9A95</Color>
     <Color x:Key="Color_Text_Black">#111412</Color>
 
     <Color x:Key="Color_Accent_Primary">#35C4B0</Color>
@@ -27,8 +27,8 @@
     <Color x:Key="Color_Accent_Danger">#C9655F</Color>
     <Color x:Key="Color_Accent_Violet_Muted">#9C8EC4</Color>
 
-    <Color x:Key="Color_Border_Subtle">#31413A</Color>
-    <Color x:Key="Color_Border_Strong">#506258</Color>
+    <Color x:Key="Color_Border_Subtle">#344044</Color>
+    <Color x:Key="Color_Border_Strong">#58666A</Color>
     <Color x:Key="Color_Border_Focus">#6ADFD1</Color>
     <Color x:Key="Color_Border_Active">#35C4B0</Color>
     <Color x:Key="Color_Border_Glass">#2EFFFFFF</Color>
@@ -38,8 +38,8 @@
     <Color x:Key="Color_Pen_Blue">#49A8D4</Color>
 
     <!-- 2. Legacy color aliases kept for Stage A compatibility -->
-    <Color x:Key="Color_Bg_Deep">#090D0C</Color>
-    <Color x:Key="Color_Bg_Surface">#151D1A</Color>
+    <Color x:Key="Color_Bg_Deep">#0A0D0D</Color>
+    <Color x:Key="Color_Bg_Surface">#171C1E</Color>
     <Color x:Key="Color_Primary">#35C4B0</Color>
     <Color x:Key="Color_Primary_GradientStart">#35C4B0</Color>
     <Color x:Key="Color_Primary_GradientEnd">#247F74</Color>
@@ -102,12 +102,12 @@
     <SolidColorBrush x:Key="Brush_Background_L3" Color="{StaticResource Color_Bg_Input}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Glass_Surface" Color="{StaticResource Color_Bg_Glass}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Glass_Border" Color="#24FFFFFF" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#2A3932" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#33463E" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#20342E" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Hover" Color="#2A3437" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Active" Color="#334044" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Surface_Tint" Color="#203033" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border" Color="{StaticResource Color_Border_Subtle}" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Border_Light" Color="{StaticResource Color_Border_Strong}" PresentationOptions:Freeze="true"/>
-    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#321C1A" PresentationOptions:Freeze="true"/>
+    <SolidColorBrush x:Key="Brush_Danger_Surface" Color="#351F1D" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Overlay_Dark" Color="#E6090B0A" PresentationOptions:Freeze="true"/>
     <SolidColorBrush x:Key="Brush_Timer_Neon" Color="{StaticResource Color_Timer_Display}" PresentationOptions:Freeze="true"/>
 
@@ -129,25 +129,25 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Hero_Glow" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#183A33" Offset="0"/>
-        <GradientStop Color="#20291F" Offset="0.58"/>
-        <GradientStop Color="#111412" Offset="1"/>
+        <GradientStop Color="#173632" Offset="0"/>
+        <GradientStop Color="#242A24" Offset="0.58"/>
+        <GradientStop Color="#111414" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Shell_Surface" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#111817" Offset="0"/>
-        <GradientStop Color="#151F1B" Offset="0.56"/>
-        <GradientStop Color="#0D1211" Offset="1"/>
+        <GradientStop Color="#111718" Offset="0"/>
+        <GradientStop Color="#171F20" Offset="0.56"/>
+        <GradientStop Color="#101313" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Card_Surface" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#1A2420" Offset="0"/>
-        <GradientStop Color="#151D1A" Offset="1"/>
+        <GradientStop Color="#1C2527" Offset="0"/>
+        <GradientStop Color="#171C1E" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Panel_Surface" StartPoint="0,0" EndPoint="0,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#202B26" Offset="0"/>
-        <GradientStop Color="#18211D" Offset="1"/>
+        <GradientStop Color="#222D30" Offset="0"/>
+        <GradientStop Color="#192123" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- Legacy gradients -->
@@ -177,9 +177,9 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_RollCall_Card" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">
-        <GradientStop Color="#203C34" Offset="0"/>
-        <GradientStop Color="#1C2A22" Offset="0.5"/>
-        <GradientStop Color="#0F1512" Offset="1"/>
+        <GradientStop Color="#203B36" Offset="0"/>
+        <GradientStop Color="#232A25" Offset="0.5"/>
+        <GradientStop Color="#101413" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="Gradient_Launcher" StartPoint="0,0" EndPoint="1,1" PresentationOptions:Freeze="true">

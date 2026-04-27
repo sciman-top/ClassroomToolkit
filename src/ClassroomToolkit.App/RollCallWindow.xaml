@@ -206,7 +206,7 @@
                             <TextBlock Text="{Binding CurrentStudentName}"
                                        FontSize="{StaticResource FontSize_Title_Management}"
                                        FontWeight="Bold"
-                                       Foreground="White"
+                                       Foreground="{StaticResource Brush_Text_Primary}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Margin="0,8,0,0"/>
@@ -351,21 +351,7 @@
                   Visibility="{Binding IsDataLoaded, ElementName=NameWindow, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- 旋转圆弧 -->
-                    <Border Width="48" Height="48" HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <RotateTransform x:Name="LoadingRotate" Angle="0"/>
-                        </Border.RenderTransform>
-                        <Border.Triggers>
-                            <EventTrigger RoutedEvent="Loaded">
-                                <BeginStoryboard>
-                                    <Storyboard RepeatBehavior="Forever">
-                                        <DoubleAnimation Storyboard.TargetName="LoadingRotate"
-                                                         Storyboard.TargetProperty="Angle"
-                                                         From="0" To="360" Duration="0:0:1.0"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </Border.Triggers>
+                    <Border Width="48" Height="48" HorizontalAlignment="Center">
                         <Ellipse Width="48" Height="48"
                                  Stroke="{StaticResource Brush_Primary}"
                                  StrokeThickness="3"

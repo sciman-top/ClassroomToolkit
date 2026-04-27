@@ -33,10 +33,10 @@
                 Opacity="1"
                 Panel.ZIndex="120">
             <TextBlock x:Name="NameText"
-                       MaxWidth="720"
+                       MaxWidth="560"
                        Foreground="{StaticResource Brush_Text_Primary}"
                        FontFamily="KaiTi, STKaiti, KaiTi_GB2312, Microsoft YaHei UI"
-                       FontSize="40"
+                       FontSize="34"
                        FontWeight="Bold"
                        TextAlignment="Center"
                        TextWrapping="Wrap"
