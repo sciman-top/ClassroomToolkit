@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionFocusOwnerPolicy
+internal static class UiSessionFocusOwnerPolicy
 {
     public static UiFocusOwner Resolve(UiSceneKind scene)
     {

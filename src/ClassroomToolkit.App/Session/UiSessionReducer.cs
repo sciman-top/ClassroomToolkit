@@ -2,7 +2,7 @@ using System;
 
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionReducer
+internal static class UiSessionReducer
 {
     public static UiSessionState Reduce(UiSessionState current, UiSessionEvent sessionEvent)
     {

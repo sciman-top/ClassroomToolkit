@@ -663,7 +663,7 @@ public partial class MainWindow
             RequestApplyZOrderPolicy);
     }
 
-    private IReadOnlyCollection<Rectangle> ResolveCapturePassthroughRegions()
+    private Rectangle[] ResolveCapturePassthroughRegions()
     {
         if (_toolbarWindow == null || !_toolbarWindow.IsVisible)
         {

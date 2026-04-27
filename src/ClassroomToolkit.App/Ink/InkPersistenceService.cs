@@ -542,7 +542,7 @@ public sealed class InkPersistenceService
         return clone;
     }
 
-    private static List<InkStrokeData> CloneStrokes(IReadOnlyList<InkStrokeData>? source)
+    private static List<InkStrokeData> CloneStrokes(List<InkStrokeData>? source)
     {
         if (source == null || source.Count == 0)
         {

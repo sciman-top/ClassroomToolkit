@@ -483,7 +483,7 @@ public sealed partial class AppSettingsService
         return result;
     }
 
-    private static string JoinList(IReadOnlyList<string> items)
+    private static string JoinList(List<string> items)
     {
         if (items == null || items.Count == 0)
         {

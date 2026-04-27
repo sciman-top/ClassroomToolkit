@@ -9,7 +9,7 @@ namespace ClassroomToolkit.App.Helpers
     /// <summary>
     /// 全局 Border 修复工具，自动修复 BorderBrush 问题
     /// </summary>
-    public static class BorderFixHelper
+    internal static class BorderFixHelper
     {
         /// <summary>
         /// 修复窗口中所有有问题的 Border 控件

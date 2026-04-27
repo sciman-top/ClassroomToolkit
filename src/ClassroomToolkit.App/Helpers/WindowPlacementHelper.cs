@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace ClassroomToolkit.App.Helpers;
 
-public static class WindowPlacementHelper
+internal static class WindowPlacementHelper
 {
     public static void EnsureVisible(Window window)
     {

@@ -8,7 +8,7 @@ using ClassroomToolkit.App.Utilities;
 
 namespace ClassroomToolkit.App.Photos;
 
-public sealed class StudentPhotoResolver : IDisposable
+internal sealed class StudentPhotoResolver : IDisposable
 {
     private static readonly string[] PreferredExtensions =
     {

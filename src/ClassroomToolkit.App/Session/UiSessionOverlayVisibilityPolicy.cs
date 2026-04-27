@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionOverlayVisibilityPolicy
+internal static class UiSessionOverlayVisibilityPolicy
 {
     public static bool IsOverlayTopmostRequired(UiSceneKind scene) => scene != UiSceneKind.Idle;
 

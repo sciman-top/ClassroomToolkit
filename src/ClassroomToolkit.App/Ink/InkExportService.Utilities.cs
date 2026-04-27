@@ -123,7 +123,7 @@ public sealed partial class InkExportService
         InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
     }
 
-    private static List<InkStrokeData> AdaptStrokesForBackground(IReadOnlyList<InkStrokeData>? strokes, BitmapSource background, double fallbackScale)
+    private static List<InkStrokeData> AdaptStrokesForBackground(List<InkStrokeData>? strokes, BitmapSource background, double fallbackScale)
     {
         if (strokes == null || strokes.Count == 0)
         {

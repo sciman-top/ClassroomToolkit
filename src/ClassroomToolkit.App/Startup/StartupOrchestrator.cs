@@ -210,7 +210,7 @@ internal sealed class StartupOrchestrator
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static IReadOnlyList<string> BuildStartupWarningQuickFixLines(
+    private static List<string> BuildStartupWarningQuickFixLines(
         StartupCompatibilityReport report)
     {
         var issueCodes = new HashSet<string>(

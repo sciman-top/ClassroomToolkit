@@ -333,7 +333,7 @@ public partial class PaintOverlayWindow
         return pen;
     }
 
-    private static Geometry BuildTrianglePreviewGeometry(WpfPoint p1, WpfPoint p2)
+    private static StreamGeometry BuildTrianglePreviewGeometry(WpfPoint p1, WpfPoint p2)
     {
         var geometry = new StreamGeometry();
         using var ctx = geometry.Open();
@@ -343,7 +343,7 @@ public partial class PaintOverlayWindow
         return geometry;
     }
 
-    private static Geometry BuildTriangleGeometry(WpfPoint p1, WpfPoint p2, WpfPoint p3)
+    private static StreamGeometry BuildTriangleGeometry(WpfPoint p1, WpfPoint p2, WpfPoint p3)
     {
         var geometry = new StreamGeometry();
         using var ctx = geometry.Open();
@@ -354,7 +354,7 @@ public partial class PaintOverlayWindow
         return geometry;
     }
 
-    private static Geometry BuildTriangleInteractivePreviewGeometry(WpfPoint p1, WpfPoint p2, WpfPoint cursor)
+    private static StreamGeometry BuildTriangleInteractivePreviewGeometry(WpfPoint p1, WpfPoint p2, WpfPoint cursor)
     {
         var geometry = new StreamGeometry();
         using var ctx = geometry.Open();

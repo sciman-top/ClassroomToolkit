@@ -389,7 +389,7 @@ public partial class PaintOverlayWindow
                 $"[PdfPrefetch] schedule failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
-    private void SchedulePdfVisiblePrefetch(IReadOnlyList<int> pageIndexes)
+    private void SchedulePdfVisiblePrefetch(List<int> pageIndexes)
     {
         if (!CanUsePdfDocument())
         {
@@ -533,4 +533,3 @@ public partial class PaintOverlayWindow
 
     #endregion
 }
-

@@ -9,7 +9,7 @@ namespace ClassroomToolkit.App.Paint;
 /// 用于协调绘图覆盖窗口、工具条窗口和点名窗口之间的穿透行为
 /// </summary>
 [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based paint state events are an existing internal UI contract covered by lifecycle and callback-safety tests.")]
-public sealed class PaintModeManager
+internal sealed class PaintModeManager
 {
     private static readonly Lazy<PaintModeManager> _instance = new(() => new PaintModeManager());
     

@@ -227,6 +227,65 @@
 - Rollback delta for this pass:
   - Revert the signature-only changes in `src/ClassroomToolkit.App/Diagnostics/SystemDiagnostics.cs`, `src/ClassroomToolkit.App/Diagnostics/StartupCompatibilityAutoRemediationPolicy.cs`, and `src/ClassroomToolkit.App/App.xaml.cs`, then rerun `build -> test -> contract/invariant -> hotspot`.
 
+## 2026-04-28 Follow-up Rendering and Settings Analyzer Pass
+- Rules: R1/R2/R5/R6/R8, E4/E5.
+- Risk: low. Scope is private helper signature precision in App rendering, ink export/persistence, settings serialization, photo/PDF prefetch, and capture region helpers. No public contract, persisted format, CLI, or classroom UX behavior was intentionally changed.
+- Changes:
+  - Converted proven-private helper signatures from broad interfaces to the concrete caller/return types already used at runtime: `List<T>`, arrays, `DrawingBrush`, `WriteableBitmap`, `StreamGeometry`, `SolidColorBrush`, and `RenderTargetBitmap` where applicable.
+  - Preserved interface-typed WPS/native interop fields despite remaining `CA1859` suggestions because those fields represent testable boundary seams, not hot local helper dispatch.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~InkPersistenceService|FullyQualifiedName~InkExportService|FullyQualifiedName~InkExportCoordinateInvariant|FullyQualifiedName~RegionCapture|FullyQualifiedName~SettingsRepository|FullyQualifiedName~AppSettingsService|FullyQualifiedName~Brush|FullyQualifiedName~PaintOverlay|FullyQualifiedName~InkStrokeQuality"` -> pass, `203` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~InkPersistenceService|FullyQualifiedName~InkExportService|FullyQualifiedName~InkExportCoordinateInvariant|FullyQualifiedName~RegionCapture|FullyQualifiedName~SettingsRepository|FullyQualifiedName~AppSettingsService|FullyQualifiedName~Brush|FullyQualifiedName~PaintOverlay|FullyQualifiedName~InkStrokeQuality|FullyQualifiedName~Pdf"` -> pass, `223` passed.
+  - `dotnet build src/ClassroomToolkit.App/ClassroomToolkit.App.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal` -> pass. App analyzer warning count moved from `352` before this follow-up slice to `316`; remaining direct `CA1859` items are interop/WPS boundary fields left intentionally unchanged.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - hotspot: `scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` hotspot step -> pass, all `.cs` files within `1200` line budget.
+  - `scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `158`.
+- Rollback delta for this pass:
+  - Revert the private signature changes in App ink/rendering/settings/photo/PDF/capture files touched by this pass, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## 2026-04-28 Follow-up Internal Visibility Analyzer Pass
+- Rules: R1/R2/R5/R6/R8, E4/E5.
+- Risk: low to medium-low. Scope is App-internal visibility tightening for non-XAML state-machine, brush-rendering, and presentation learn-history implementation types. No persisted data shape, public file format, interop contract, or classroom UX flow was intentionally changed.
+- Changes:
+  - Tightened `ClassroomToolkit.App.Session` implementation policies/coordinators/events where they do not need to be assembly-public. Public DTOs that still flow through existing public App members were kept public after compile evidence showed the real boundary.
+  - Tightened `ClassroomToolkit.App.Paint.Brushes` renderer/factory/config implementation types as one closed internal subdomain; tests continue to access through `InternalsVisibleTo`.
+  - Tightened `PresentationClassifierLearnHistoryPolicy` and its record type to internal while preserving existing JSON field content and parsing behavior.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~Session|FullyQualifiedName~UiSession|FullyQualifiedName~WhiteboardResume|FullyQualifiedName~PresentationFocusRestore|FullyQualifiedName~OverlayPresentationRouting|FullyQualifiedName~OverlayFocusAcceptance|FullyQualifiedName~FloatingTopmostRetouch|FullyQualifiedName~PaintWindowOrchestrator"` -> pass after boundary adjustment, `250` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~Brush|FullyQualifiedName~ClassroomWritingMode|FullyQualifiedName~InkRendererFactory|FullyQualifiedName~Stylus|FullyQualifiedName~CrossPageBrush|FullyQualifiedName~InkStrokeQuality"` -> pass, `172` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PresentationClassifierLearnHistory|FullyQualifiedName~AppSettingsService|FullyQualifiedName~SystemDiagnostics"` -> pass, `29` passed.
+  - `dotnet build src/ClassroomToolkit.App/ClassroomToolkit.App.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal` -> pass. App analyzer warning count moved from `316` before the visibility pass to `238` after pass16.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `119`.
+- Rollback delta for this pass:
+  - Revert App Session/Brushes/Presentation visibility changes from this pass, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## 2026-04-28 Follow-up Internal Utilities Visibility Pass
+- Rules: R1/R2/R5/R6/R8, E4/E5.
+- Risk: low. Scope is App-internal visibility tightening for non-XAML helper, diagnostics, settings bootstrap, photo diagnostics/resolver, and paint coordination helper types. Public DI constructor types, XAML-created windows/converters, WPF binding item types, persisted settings enums, and public event DTOs were intentionally left unchanged.
+- Changes:
+  - Tightened `Helpers` utility classes, startup compatibility status policy, settings bootstrap migration policy/executor, and `AppFlags` to internal.
+  - Tightened `PhotoNavigationDiagnostics` and `StudentPhotoResolver` to internal; retained `ImageItem`, `FolderItem`, `ImageManagerViewModel`, converters, and window/factory public boundaries due to WPF/DI exposure.
+  - Tightened `VariableWidthBrushRenderer` nested geometry DTOs and `PaintModeManager` to internal; retained paint enums that participate in settings or public toolbar/window contracts.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~BorderFix|FullyQualifiedName~StudentResourceLocator|FullyQualifiedName~Window|FullyQualifiedName~StartupCompatibilityStatus|FullyQualifiedName~SettingsDocumentBootstrapMigration|FullyQualifiedName~ConfigurationService|FullyQualifiedName~LowFrequencyCallbackIsolation|FullyQualifiedName~RollCallViewModelPhotoPathRefresh"` -> pass, `551` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~StudentPhotoResolver|FullyQualifiedName~PhotoNavigationDiagnostics|FullyQualifiedName~RollCallViewModelPhotoPathRefresh|FullyQualifiedName~PhotoNavigation"` -> pass, `47` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PaintModeManager|FullyQualifiedName~VariableWidthBrush|FullyQualifiedName~Brush|FullyQualifiedName~RollCallWindow|FullyQualifiedName~Toolbar"` -> pass, `267` passed.
+  - `dotnet build src/ClassroomToolkit.App/ClassroomToolkit.App.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal` -> pass after waiting for a stale `dotnet test` process to release `obj` locks. App analyzer warning count moved from `238` before this pass to `206` after pass19.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `103`.
+- Rollback delta for this pass:
+  - Revert helper/diagnostics/settings/photo/paint visibility changes from this pass, then rerun `build -> test -> contract/invariant -> hotspot`.
+
 ## Rollback
 - Revert:
   - `src/ClassroomToolkit.Infra/Storage/SqliteStorageUtilities.cs`

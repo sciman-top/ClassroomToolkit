@@ -425,7 +425,7 @@ public partial class PaintOverlayWindow
         CalligraphyRenderMode renderMode,
         bool sealEnabled,
         bool bloomEnabled,
-        IReadOnlyList<(Geometry Geometry, double Opacity)>? ribbonLayers,
+        List<(Geometry Geometry, double Opacity)>? ribbonLayers,
         IEnumerable<(Geometry Geometry, double Opacity)>? blooms,
         bool suppressOverlays,
         int? maskSeed)

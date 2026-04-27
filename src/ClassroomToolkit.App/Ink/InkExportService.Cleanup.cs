@@ -157,7 +157,7 @@ public sealed partial class InkExportService
         }
     }
 
-    private static IReadOnlyList<string> GetFilesSafely(string directoryPath)
+    private static string[] GetFilesSafely(string directoryPath)
     {
         try
         {

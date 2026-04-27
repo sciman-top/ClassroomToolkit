@@ -32,7 +32,7 @@ internal readonly record struct BrushMoveTelemetrySnapshot(
     double EffectiveTaperBaseMinDip,
     double EffectiveTaperBaseMaxDip);
 
-public partial class VariableWidthBrushRenderer : IBrushRenderer
+internal partial class VariableWidthBrushRenderer : IBrushRenderer
 {
     private const double DirectionNoiseAmplitude = 0.009;
     private const double DirectionNoiseFrequency = 0.4;

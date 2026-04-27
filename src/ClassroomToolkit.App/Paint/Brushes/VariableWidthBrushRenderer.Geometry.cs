@@ -8,7 +8,7 @@ using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public partial class VariableWidthBrushRenderer
+internal partial class VariableWidthBrushRenderer
 {
     private const int PreviewTailPointWindow = 56;
     private const int PreviewBaseRefreshStride = 14;
@@ -17,7 +17,7 @@ public partial class VariableWidthBrushRenderer
     private const double PreviewFastUpsampleSpacingFactor = 1.28;
     private const double PreviewFastArcLengthStepFactor = 1.35;
 
-    public sealed class RibbonGeometry
+    internal sealed class RibbonGeometry
     {
         public RibbonGeometry(Geometry geometry, double ribbonT)
         {
@@ -29,7 +29,7 @@ public partial class VariableWidthBrushRenderer
         public double RibbonT { get; }
     }
 
-    public sealed class InkBloomGeometry
+    internal sealed class InkBloomGeometry
     {
         public InkBloomGeometry(Geometry geometry, double opacity)
         {
@@ -162,7 +162,7 @@ public partial class VariableWidthBrushRenderer
         _geometryVersion++;
     }
 
-    private Geometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
+    private StreamGeometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
     {
         if (samples.Count < 2) return null;
 

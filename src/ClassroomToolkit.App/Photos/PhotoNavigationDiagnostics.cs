@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace ClassroomToolkit.App.Photos;
 
-public static class PhotoNavigationDiagnostics
+internal static class PhotoNavigationDiagnostics
 {
     // Enable via env var: CTK_PHOTO_NAV_TRACE=1
     private static readonly bool Enabled = string.Equals(

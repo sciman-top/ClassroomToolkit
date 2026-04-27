@@ -6,7 +6,7 @@ using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public partial class VariableWidthBrushRenderer
+internal partial class VariableWidthBrushRenderer
 {
     private static WpfPoint CatmullRomPoint(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3, double t)
     {

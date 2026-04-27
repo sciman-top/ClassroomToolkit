@@ -5,7 +5,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Helpers;
 
-public static class WindowExtensions
+internal static class WindowExtensions
 {
     public static bool SafeDragMove(this Window window, Action<Exception>? onFailure = null)
     {

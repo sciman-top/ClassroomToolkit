@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Settings;
 
-public static class AppFlags
+internal static class AppFlags
 {
     public static bool UseSqliteBusinessStore { get; } = ReadFlag("CTOOLKIT_USE_SQLITE_BUSINESS_STORE", false);
     public static bool EnableExperimentalSqliteBackend { get; } = ReadFlag("CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND", false);

@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public sealed record UiSessionWidgetVisibility(
+internal sealed record UiSessionWidgetVisibility(
     bool RollCallVisible,
     bool LauncherVisible,
     bool ToolbarVisible);

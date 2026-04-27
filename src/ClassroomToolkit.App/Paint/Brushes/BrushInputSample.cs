@@ -5,7 +5,7 @@ using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public readonly record struct BrushInputSample(
+internal readonly record struct BrushInputSample(
     WpfPoint Position,
     long TimestampTicks,
     double Pressure,

@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public sealed class GpuInkRendererFactory : IInkRendererFactory
+internal sealed class GpuInkRendererFactory : IInkRendererFactory
 {
     private readonly CpuInkRendererFactory _fallback = new();
 

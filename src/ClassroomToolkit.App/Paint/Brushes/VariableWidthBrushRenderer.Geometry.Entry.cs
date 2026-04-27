@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public partial class VariableWidthBrushRenderer
+internal partial class VariableWidthBrushRenderer
 {
     public Geometry? GetLastStrokeGeometry()
     {
@@ -91,7 +91,7 @@ public partial class VariableWidthBrushRenderer
         return _cachedPreviewGeometry;
     }
 
-    private Geometry? BuildPreviewGeometryForRange(int startInclusive, int endExclusive)
+    private StreamGeometry? BuildPreviewGeometryForRange(int startInclusive, int endExclusive)
     {
         int start = Math.Max(0, startInclusive);
         int end = Math.Min(_points.Count, endExclusive);
@@ -111,7 +111,7 @@ public partial class VariableWidthBrushRenderer
         return BuildRibbonGeometry(samples, ribbonT: 0, noiseSeedOffset: 0);
     }
 
-    private IReadOnlyList<StrokePoint> CopyRangeToPreviewSliceBuffer(int startInclusive, int endExclusive)
+    private List<StrokePoint> CopyRangeToPreviewSliceBuffer(int startInclusive, int endExclusive)
     {
         _previewSliceBuffer.Clear();
         int start = Math.Max(0, startInclusive);

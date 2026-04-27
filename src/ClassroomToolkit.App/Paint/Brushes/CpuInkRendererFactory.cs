@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public sealed class CpuInkRendererFactory : IInkRendererFactory
+internal sealed class CpuInkRendererFactory : IInkRendererFactory
 {
     public string BackendId => "cpu";
 

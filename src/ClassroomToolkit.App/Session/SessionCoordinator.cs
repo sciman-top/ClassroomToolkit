@@ -6,7 +6,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Session;
 
-public sealed class SessionCoordinator
+internal sealed class SessionCoordinator
 {
     private readonly object _sync = new();
     private readonly IUiSessionEffectRunner _effectRunner;

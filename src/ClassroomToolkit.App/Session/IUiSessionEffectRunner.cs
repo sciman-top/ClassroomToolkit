@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public interface IUiSessionEffectRunner
+internal interface IUiSessionEffectRunner
 {
     void Run(UiSessionTransition transition);
 }

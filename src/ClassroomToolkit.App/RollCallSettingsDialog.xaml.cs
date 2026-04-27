@@ -712,7 +712,7 @@ public partial class RollCallSettingsDialog : Window
         RemoteGroupSwitchKeyCombo.SelectedValue = selected;
     }
 
-    private static IReadOnlyList<ComboOption> GetRemoteKeyOptions()
+    private static ComboOption[] GetRemoteKeyOptions()
     {
         return new[]
         {
@@ -832,7 +832,7 @@ public partial class RollCallSettingsDialog : Window
 
     private sealed record RegistryVoice(string Name, string CultureName, string Gender, bool Enabled);
 
-    private static IEnumerable<RegistryVoice> ReadRegistryVoices()
+    private static List<RegistryVoice> ReadRegistryVoices()
     {
         var results = new List<RegistryVoice>();
         ReadRegistryVoices(results, RegistryHive.LocalMachine, RegistryView.Registry64);

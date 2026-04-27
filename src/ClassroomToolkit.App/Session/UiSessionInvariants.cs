@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionInvariants
+internal static class UiSessionInvariants
 {
     public static IReadOnlyList<string> Validate(UiSessionState state)
     {

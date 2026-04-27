@@ -10,7 +10,7 @@ using WpfPen = System.Windows.Media.Pen;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public sealed class MarkerBrushConfig
+internal sealed class MarkerBrushConfig
 {
     public double SpeedWidthFactor { get; set; }
     public double PressureWidthFactor { get; set; }
@@ -114,13 +114,13 @@ public sealed class MarkerBrushConfig
     };
 }
 
-public enum MarkerRenderMode
+internal enum MarkerRenderMode
 {
     SegmentUnion = 0,
     Ribbon
 }
 
-public class MarkerBrushRenderer : IBrushRenderer
+internal class MarkerBrushRenderer : IBrushRenderer
 {
     private const int PreviewTailPointWindow = 56;
     private const int PreviewBaseRefreshStride = 14;

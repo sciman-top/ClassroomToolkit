@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public interface IInkRendererFactory
+internal interface IInkRendererFactory
 {
     string BackendId { get; }
 

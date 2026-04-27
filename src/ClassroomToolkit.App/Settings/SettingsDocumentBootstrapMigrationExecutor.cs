@@ -2,7 +2,7 @@ using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Settings;
 
-public static class SettingsDocumentBootstrapMigrationExecutor
+internal static class SettingsDocumentBootstrapMigrationExecutor
 {
     public static bool TryMigrate(
         SettingsDocumentBootstrapMigrationDecision decision,

@@ -7,7 +7,7 @@ namespace ClassroomToolkit.App.Helpers
     /// <summary>
     /// 全局 BorderBrush 修复器，在应用程序启动时立即修复所有控件
     /// </summary>
-    public static class GlobalBorderFixer
+    internal static class GlobalBorderFixer
     {
         /// <summary>
         /// 立即修复应用程序中的所有 Border 控件

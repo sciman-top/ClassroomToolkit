@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionWidgetVisibilityEffectPolicy
+internal static class UiSessionWidgetVisibilityEffectPolicy
 {
     public static bool ShouldRequestFloatingZOrder(UiSessionWidgetVisibility visibility)
     {

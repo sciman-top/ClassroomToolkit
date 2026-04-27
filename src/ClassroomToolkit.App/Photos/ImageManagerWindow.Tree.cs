@@ -113,7 +113,7 @@ public partial class ImageManagerWindow
 
 #pragma warning disable CA1068 // Signature order is contract-bound across split partials/tests.
     private async Task AppendScanResultsAsync(
-        IReadOnlyList<ImageItem> result,
+        List<ImageItem> result,
         CancellationToken token,
         int requestId)
     {

@@ -2,13 +2,13 @@ using System;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public enum TaperCapStyle
+internal enum TaperCapStyle
 {
     Hidden = 0,
     Exposed = 1
 }
 
-public class BrushPhysicsConfig
+internal class BrushPhysicsConfig
 {
     public string PresetName { get; set; } = "CalligraphyBalanced";
     public string RenderModeTag { get; set; } = "Clarity";

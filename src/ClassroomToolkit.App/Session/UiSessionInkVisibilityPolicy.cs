@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionInkVisibilityPolicy
+internal static class UiSessionInkVisibilityPolicy
 {
     public static UiInkVisibility Resolve(UiSceneKind scene, UiToolMode toolMode)
     {

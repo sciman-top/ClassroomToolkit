@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionPresentationInputPolicy
+internal static class UiSessionPresentationInputPolicy
 {
     public static bool AllowsPresentationInput(UiNavigationMode navigationMode)
     {

@@ -102,7 +102,7 @@ internal static class InkStrokeQualityMetrics
         return (p - projection).Length;
     }
 
-    private static double Percentile(IReadOnlyList<double> values, double q)
+    private static double Percentile(List<double> values, double q)
     {
         if (values.Count == 0)
         {

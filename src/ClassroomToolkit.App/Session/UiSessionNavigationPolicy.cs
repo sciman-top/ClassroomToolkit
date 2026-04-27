@@ -1,6 +1,6 @@
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionNavigationPolicy
+internal static class UiSessionNavigationPolicy
 {
     public static UiNavigationMode Resolve(UiSceneKind scene, UiToolMode toolMode)
     {

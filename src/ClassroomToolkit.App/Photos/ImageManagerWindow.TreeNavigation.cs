@@ -103,7 +103,7 @@ public partial class ImageManagerWindow
         return _navigableCache;
     }
 
-    private IReadOnlyList<string> GetNavigablePaths()
+    private string[] GetNavigablePaths()
     {
         if (_navigableDirty)
         {

@@ -1,8 +1,8 @@
 namespace ClassroomToolkit.App.Settings;
 
-public readonly record struct SettingsDocumentBootstrapMigrationDecision(bool ShouldMigrate);
+internal readonly record struct SettingsDocumentBootstrapMigrationDecision(bool ShouldMigrate);
 
-public static class SettingsDocumentBootstrapMigrationPolicy
+internal static class SettingsDocumentBootstrapMigrationPolicy
 {
     public static SettingsDocumentBootstrapMigrationDecision Resolve(
         SettingsDocumentFormat settingsDocumentFormat,

@@ -11,7 +11,6 @@ using System.Windows.Shell;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
-using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
 using WpfPoint = System.Windows.Point;
 
@@ -95,7 +94,7 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private MediaBrush ResolvePhotoWindowBackgroundBrush()
+    private SolidColorBrush ResolvePhotoWindowBackgroundBrush()
     {
         if (_boardColor.A == 0)
         {

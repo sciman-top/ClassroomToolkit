@@ -6,7 +6,7 @@ using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public partial class VariableWidthBrushRenderer
+internal partial class VariableWidthBrushRenderer
 {
     private List<StrokePoint> BuildCenterlineSamplesFinal()
     {

@@ -2,14 +2,14 @@ using ClassroomToolkit.Services.Compatibility;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
-public enum CompatibilityHealthStatus
+internal enum CompatibilityHealthStatus
 {
     Normal = 0,
     Degraded = 1,
     Blocked = 2
 }
 
-public static class StartupCompatibilityStatusPolicy
+internal static class StartupCompatibilityStatusPolicy
 {
     public static CompatibilityHealthStatus Resolve(StartupCompatibilityReport? report)
     {

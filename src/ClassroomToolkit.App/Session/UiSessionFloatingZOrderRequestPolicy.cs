@@ -2,7 +2,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Session;
 
-public static class UiSessionFloatingZOrderRequestPolicy
+internal static class UiSessionFloatingZOrderRequestPolicy
 {
     public static bool TryResolveForOverlayTopmost(
         bool topmostRequired,

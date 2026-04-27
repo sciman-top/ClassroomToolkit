@@ -2,9 +2,9 @@ using System.Text.Json;
 
 namespace ClassroomToolkit.App.Presentation;
 
-public sealed record PresentationClassifierLearnRecord(string Utc, string Detail);
+internal sealed record PresentationClassifierLearnRecord(string Utc, string Detail);
 
-public static class PresentationClassifierLearnHistoryPolicy
+internal static class PresentationClassifierLearnHistoryPolicy
 {
     private const int MaxRecords = 5;
 

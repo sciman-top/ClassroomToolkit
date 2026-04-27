@@ -10,7 +10,7 @@ namespace ClassroomToolkit.App.Ink;
 
 public sealed partial class InkExportService
 {
-    private static BitmapSource CompositeImage(BitmapSource background, List<InkStrokeData> strokes)
+    private static RenderTargetBitmap CompositeImage(BitmapSource background, List<InkStrokeData> strokes)
     {
         int pixelWidth = background.PixelWidth;
         int pixelHeight = background.PixelHeight;
@@ -66,7 +66,7 @@ public sealed partial class InkExportService
         }
     }
 
-    private static BitmapSource? LoadImage(string sourcePath)
+    private static BitmapImage? LoadImage(string sourcePath)
     {
         try
         {

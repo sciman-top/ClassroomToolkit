@@ -9,7 +9,7 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 /// <summary>
 /// 笔画点数据，用于部分删除功能
 /// </summary>
-public sealed class StrokePointData
+internal sealed class StrokePointData
 {
     public WpfPoint Position { get; init; }
     public double Width { get; init; }
@@ -22,7 +22,7 @@ public sealed class StrokePointData
 }
 
 [SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Brush renderers expose mutable point lists for partial-erase and quality tests without per-frame copies.")]
-public interface IBrushRenderer
+internal interface IBrushRenderer
 {
     void Initialize(WpfColor color, double baseSize, double opacity);
     void OnDown(BrushInputSample input);

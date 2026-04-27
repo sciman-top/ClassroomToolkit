@@ -3,7 +3,7 @@ using ClassroomToolkit.App.Paint.Brushes;
 
 namespace ClassroomToolkit.App.Paint;
 
-public readonly record struct ClassroomWritingProfile(
+internal readonly record struct ClassroomWritingProfile(
     double MarkerPressureMultiplier,
     double CalligraphyPressureInfluenceMultiplier,
     double CalligraphyPressureScaleMultiplier,
@@ -11,12 +11,12 @@ public readonly record struct ClassroomWritingProfile(
     double PseudoPressureHighThreshold,
     double CalligraphyPreviewMinDistance);
 
-public readonly record struct ClassroomRuntimeSettings(
+internal readonly record struct ClassroomRuntimeSettings(
     double PseudoPressureLowThreshold,
     double PseudoPressureHighThreshold,
     double CalligraphyPreviewMinDistance);
 
-public static class ClassroomWritingModeTuner
+internal static class ClassroomWritingModeTuner
 {
     public const double DefaultCalligraphyPreviewMinDistance = 2.0;
     public const double DefaultPseudoPressureLowThreshold = 0.0001;

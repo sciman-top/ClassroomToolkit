@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Paint;
-using MediaBrush = System.Windows.Media.Brush;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using MediaPen = System.Windows.Media.Pen;
@@ -94,7 +93,7 @@ public sealed class InkStrokeRenderer
                 Opacity = 1.0
             };
             coreBrush.Freeze();
-            MediaBrush? coreMask = null;
+            DrawingBrush? coreMask = null;
             if ((inkMode || CalligraphySinglePassTextureMaskEnabled) && IsInkMaskEligible(geometry, stroke.BrushSize))
             {
                 coreMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
@@ -373,7 +372,7 @@ public sealed class InkStrokeRenderer
         return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
-    private static MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector strokeDirection, double brushSize, int seed)
+    private static DrawingBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector strokeDirection, double brushSize, int seed)
     {
         if (bounds.IsEmpty)
         {
@@ -526,7 +525,7 @@ public sealed class InkStrokeRenderer
         return bitmap;
     }
 
-    private static BitmapSource CreateInkNoiseTileCore(int size, double baseAlpha, double variation, int seed)
+    private static WriteableBitmap CreateInkNoiseTileCore(int size, double baseAlpha, double variation, int seed)
     {
         var rng = new Random(seed);
         int grid = 14;

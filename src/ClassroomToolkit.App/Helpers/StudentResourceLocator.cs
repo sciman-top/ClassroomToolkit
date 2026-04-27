@@ -3,7 +3,7 @@ using System.IO;
 
 namespace ClassroomToolkit.App.Helpers;
 
-public static class StudentResourceLocator
+internal static class StudentResourceLocator
 {
     private const string WorkbookFileName = "students.xlsx";
     private const string PhotoFolderName = "student_photos";

@@ -3,7 +3,7 @@ using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Session;
 
-public sealed class PaintOverlaySessionEffectRunner : IUiSessionEffectRunner
+internal sealed class PaintOverlaySessionEffectRunner : IUiSessionEffectRunner
 {
     private readonly Action<bool> _applyOverlayTopmost;
     private readonly Action<UiNavigationMode> _applyNavigationMode;

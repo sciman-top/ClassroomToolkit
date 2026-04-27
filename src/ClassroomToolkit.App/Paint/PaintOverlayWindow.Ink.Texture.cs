@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using MediaBrush = System.Windows.Media.Brush;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
@@ -12,7 +11,7 @@ public partial class PaintOverlayWindow
 {
     private const int InkNoiseSeedVariants = 64;
 
-    private MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection)
+    private DrawingBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection)
     {
         if (bounds.IsEmpty)
         {
@@ -89,7 +88,7 @@ public partial class PaintOverlayWindow
         return mask;
     }
 
-    private static MediaBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection, double brushSize, int seed)
+    private static DrawingBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection, double brushSize, int seed)
     {
         if (bounds.IsEmpty)
         {
@@ -283,7 +282,7 @@ public partial class PaintOverlayWindow
         return bitmap;
     }
 
-    private static BitmapSource CreateInkNoiseTileCore(int size, double baseAlpha, double variation, int seed)
+    private static WriteableBitmap CreateInkNoiseTileCore(int size, double baseAlpha, double variation, int seed)
     {
         var rng = new Random(seed);
         int grid = 14;

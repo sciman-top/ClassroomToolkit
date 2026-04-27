@@ -8,7 +8,7 @@ using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-public partial class VariableWidthBrushRenderer
+internal partial class VariableWidthBrushRenderer
 {
     private void BuildStrokePathV10(StreamGeometryContext ctx, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, List<StrokePoint> samples)
     {
