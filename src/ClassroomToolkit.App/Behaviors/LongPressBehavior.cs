@@ -49,16 +49,28 @@ public static class LongPressBehavior
             new PropertyMetadata(0L));
 
     public static void SetCommand(DependencyObject element, ICommand? value)
-        => element.SetValue(CommandProperty, value);
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        element.SetValue(CommandProperty, value);
+    }
 
     public static ICommand? GetCommand(DependencyObject element)
-        => element.GetValue(CommandProperty) as ICommand;
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        return element.GetValue(CommandProperty) as ICommand;
+    }
 
     public static void SetDuration(DependencyObject element, int value)
-        => element.SetValue(DurationProperty, value);
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        element.SetValue(DurationProperty, value);
+    }
 
     public static int GetDuration(DependencyObject element)
-        => (int)element.GetValue(DurationProperty);
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        return (int)element.GetValue(DurationProperty);
+    }
 
     private static void OnCommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {

@@ -124,12 +124,7 @@ public partial class PaintOverlayWindow
         pageImg.Uid = pageUid;
         pageImg.Tag = baseTop;
 
-        BitmapSource? inkBitmap = null;
-        var cacheKey = BuildNeighborInkCacheKey(previousPage);
-        if (inkBitmap == null)
-        {
-            inkBitmap = ResolveNeighborInkBitmap(previousPage, neighborBitmap, allowDeferredRender: false);
-        }
+        var inkBitmap = ResolveNeighborInkBitmap(previousPage, neighborBitmap, allowDeferredRender: false);
 
         if (inkBitmap == null)
         {

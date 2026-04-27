@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -16,6 +17,7 @@ using MediaColorConverter = System.Windows.Media.ColorConverter;
 
 namespace ClassroomToolkit.App.Paint;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing toolbar/window contract.")]
 public partial class PaintToolbarWindow : Window
 {
     private bool _initializing;

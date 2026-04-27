@@ -236,11 +236,20 @@ public class FileLoggerProvider : ILoggerProvider
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         if (Interlocked.Exchange(ref _disposeState, 1) != 0)
         {
             return;
         }
-        GC.SuppressFinalize(this);
+        if (!disposing)
+        {
+            return;
+        }
 
         try
         {

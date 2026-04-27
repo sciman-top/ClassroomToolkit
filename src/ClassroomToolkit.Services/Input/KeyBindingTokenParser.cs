@@ -6,7 +6,7 @@ public static class KeyBindingTokenParser
 {
     public static bool TryNormalize(string? text, out string normalized)
     {
-        var candidate = (text ?? string.Empty).Trim().ToLowerInvariant();
+        var candidate = (text ?? string.Empty).Trim();
         if (!KeyBindingParser.TryParse(candidate, out var binding) || binding == null)
         {
             normalized = string.Empty;

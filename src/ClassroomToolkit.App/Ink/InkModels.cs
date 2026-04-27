@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using ClassroomToolkit.App.Paint;
@@ -25,6 +26,8 @@ public sealed class InkRibbonData
     public double RibbonT { get; set; }
 }
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "List properties are part of the persisted ink JSON contract.")]
+[SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setters are required for JSON deserialization compatibility.")]
 public sealed class InkStrokeData
 {
     public InkStrokeType Type { get; set; } = InkStrokeType.Brush;
@@ -59,6 +62,8 @@ public sealed class InkStrokeData
     public List<System.Windows.Media.Geometry>? CachedRibbonGeometries { get; set; }
 }
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "List property is part of the persisted ink JSON contract.")]
+[SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setter is required for JSON deserialization compatibility.")]
 public sealed class InkPageData
 {
     public int PageIndex { get; set; } = 1;

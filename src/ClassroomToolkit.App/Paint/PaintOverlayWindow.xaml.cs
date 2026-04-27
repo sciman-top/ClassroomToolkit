@@ -159,8 +159,8 @@ public partial class PaintOverlayWindow : Window
         _presentationDispatchCoordinator = new OverlayPresentationDispatchCoordinator(_presentationTargetSnapshotProvider);
         _wpsNavHook = new WpsSlideshowNavigationHook();
         var navHook = _wpsNavHook;
-        _wpsNavHookClient = navHook == null ? null : new WpsNavHookClient(navHook);
-        if (navHook != null && navHook.Available)
+        _wpsNavHookClient = new WpsNavHookClient(navHook);
+        if (navHook.Available)
         {
             navHook.NavigationRequested += OnWpsNavHookRequested;
         }

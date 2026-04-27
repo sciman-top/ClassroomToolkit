@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Interop.Presentation;
 
 public static class KeyBindingParser
@@ -21,6 +23,7 @@ public static class KeyBindingParser
         ["w"] = VirtualKey.W
     };
 
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Lowercase tokens are the persisted and user-facing key binding format.")]
     public static bool TryParse(string? value, out KeyBinding? binding)
     {
         binding = null;
@@ -122,7 +125,7 @@ public static class KeyBindingParser
     private static bool TryParseFunctionKey(string token, out VirtualKey key)
     {
         key = default;
-        if (!token.StartsWith("f", StringComparison.OrdinalIgnoreCase))
+        if (!token.StartsWith('f'))
         {
             return false;
         }

@@ -278,6 +278,21 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
         ReadSqliteState(fallbackDbPath).Should().Be("{\"fallback\":2}");
     }
 
+    [Fact]
+    public void Save_ShouldPersist_WhenSqlitePathContainsConnectionStringSeparator()
+    {
+        var workbook = CreateWorkbook();
+        var bridge = new FakeStudentWorkbookStoreBridge(new StudentWorkbookLoadResult(workbook, CreatedTemplate: false, RollStateJson: null));
+        var dbDirectory = TestPathHelper.CreateDirectory("ctool_student_workbook_sqlite_semicolon");
+        var dbPath = Path.Combine(dbDirectory, "students;studentworkbook.sqlite3");
+        var adapter = new StudentWorkbookSqliteStoreAdapter(bridge, _ => dbPath);
+
+        adapter.Save(workbook, "students.xlsx", "{\"separator\":1}");
+
+        File.Exists(dbPath).Should().BeTrue();
+        ReadSqliteStateWithBuilder(dbPath).Should().Be("{\"separator\":1}");
+    }
+
     private static StudentWorkbook CreateWorkbook()
     {
         return new StudentWorkbook(
@@ -353,6 +368,21 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
         return scalar as string;
     }
 
+    private static string? ReadSqliteStateWithBuilder(string dbPath)
+    {
+        if (!File.Exists(dbPath))
+        {
+            return null;
+        }
+
+        using var connection = new SqliteConnection(BuildSqliteConnectionString(dbPath));
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT roll_state_json FROM student_workbook_state WHERE id = 1 LIMIT 1;";
+        var scalar = command.ExecuteScalar();
+        return scalar as string;
+    }
+
     private static void SeedStudentWorkbookSnapshot(string dbPath, string workbookJson)
     {
         using var connection = new SqliteConnection($"Data Source={dbPath}");
@@ -384,6 +414,14 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
         command.Parameters.AddWithValue("$workbook", workbookJson);
         command.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         command.ExecuteNonQuery();
+    }
+
+    private static string BuildSqliteConnectionString(string dbPath)
+    {
+        return new SqliteConnectionStringBuilder
+        {
+            DataSource = dbPath
+        }.ToString();
     }
 
     private static string CreateVersionedRollStateJson(long revision, DateTime updatedAtUtc, string currentStudent)

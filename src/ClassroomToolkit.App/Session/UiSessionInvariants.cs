@@ -6,6 +6,8 @@ public static class UiSessionInvariants
 {
     public static IReadOnlyList<string> Validate(UiSessionState state)
     {
+        ArgumentNullException.ThrowIfNull(state);
+
         var violations = new List<string>();
 
         if (state.Scene != UiSceneKind.Idle)

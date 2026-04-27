@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using WpfPoint = System.Windows.Point;
@@ -20,6 +21,7 @@ public sealed class StrokePointData
     }
 }
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Brush renderers expose mutable point lists for partial-erase and quality tests without per-frame copies.")]
 public interface IBrushRenderer
 {
     void Initialize(WpfColor color, double baseSize, double opacity);

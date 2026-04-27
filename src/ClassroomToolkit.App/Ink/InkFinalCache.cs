@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.App.Ink;
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "The ink final cache intentionally shares mutable stroke lists with the render pipeline to avoid copies on drawing hot paths.")]
 public sealed class InkFinalCache
 {
     private readonly int _capacity;

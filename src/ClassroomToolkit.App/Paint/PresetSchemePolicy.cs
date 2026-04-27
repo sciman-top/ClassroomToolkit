@@ -25,10 +25,10 @@ internal static class PresetSchemePolicy
 {
     internal static bool TryResolveManagedParameters(string preset, out PresetSchemeManagedParameters parameters)
     {
-        var normalizedPreset = (preset ?? string.Empty).Trim().ToLowerInvariant();
+        var normalizedPreset = (preset ?? string.Empty).Trim().ToUpperInvariant();
         switch (normalizedPreset)
         {
-            case PresetSchemeDefaults.Balanced:
+            case "BALANCED":
                 parameters = new PresetSchemeManagedParameters(
                     WpsInputModeDefaults.Auto,
                     WpsWheelForward: true,
@@ -42,7 +42,7 @@ internal static class PresetSchemePolicy
                     PhotoZoomInputDefaults.GestureSensitivityDefault,
                     PaintPresetDefaults.InertiaProfileBalanced);
                 return true;
-            case PresetSchemeDefaults.Responsive:
+            case "RESPONSIVE":
                 parameters = new PresetSchemeManagedParameters(
                     WpsInputModeDefaults.Auto,
                     WpsWheelForward: true,
@@ -56,7 +56,7 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.GestureSensitivityResponsive,
                     PaintPresetDefaults.InertiaProfileResponsive);
                 return true;
-            case PresetSchemeDefaults.Stable:
+            case "STABLE":
                 parameters = new PresetSchemeManagedParameters(
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
@@ -70,7 +70,7 @@ internal static class PresetSchemePolicy
                     PaintPresetDefaults.GestureSensitivityStable,
                     PaintPresetDefaults.InertiaProfileStable);
                 return true;
-            case PresetSchemeDefaults.DualScreen:
+            case "DUAL_SCREEN":
                 parameters = new PresetSchemeManagedParameters(
                     WpsInputModeDefaults.Message,
                     WpsWheelForward: true,
@@ -92,12 +92,13 @@ internal static class PresetSchemePolicy
 
     internal static string ResolveInitialScheme(AppSettings settings)
     {
-        var configured = (settings.PresetScheme ?? string.Empty).Trim().ToLowerInvariant();
+        var configured = (settings.PresetScheme ?? string.Empty).Trim();
         if (IsKnownScheme(configured))
         {
-            if (configured == PresetSchemeDefaults.Custom || Matches(settings, configured))
+            var canonicalConfigured = NormalizeLegacyScheme(configured);
+            if (canonicalConfigured == PresetSchemeDefaults.Custom || Matches(settings, configured))
             {
-                return NormalizeLegacyScheme(configured);
+                return canonicalConfigured;
             }
 
             if (TryInferByParameters(settings, out var inferred))
@@ -289,18 +290,25 @@ internal static class PresetSchemePolicy
 
     private static bool IsKnownScheme(string scheme)
     {
-        return scheme is PresetSchemeDefaults.Custom
-            or PresetSchemeDefaults.Balanced
-            or PresetSchemeDefaults.Responsive
-            or PresetSchemeDefaults.Stable
-            or PresetSchemeDefaults.DualScreen;
+        return string.Equals(scheme, PresetSchemeDefaults.Custom, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(scheme, PresetSchemeDefaults.Balanced, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(scheme, PresetSchemeDefaults.Responsive, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(scheme, PresetSchemeDefaults.Stable, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(scheme, PresetSchemeDefaults.DualScreen, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string NormalizeLegacyScheme(string scheme)
+    private static string NormalizeLegacyScheme(string? scheme)
     {
-        return string.Equals(scheme, PresetSchemeDefaults.DualScreen, StringComparison.OrdinalIgnoreCase)
-            ? PresetSchemeDefaults.Stable
-            : scheme;
+        var normalized = (scheme ?? string.Empty).Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "DUAL_SCREEN" => PresetSchemeDefaults.Stable,
+            "CUSTOM" => PresetSchemeDefaults.Custom,
+            "BALANCED" => PresetSchemeDefaults.Balanced,
+            "RESPONSIVE" => PresetSchemeDefaults.Responsive,
+            "STABLE" => PresetSchemeDefaults.Stable,
+            _ => PresetSchemeDefaults.Custom
+        };
     }
 
     private static bool MatchesLegacyDualScreenParameters(AppSettings settings)

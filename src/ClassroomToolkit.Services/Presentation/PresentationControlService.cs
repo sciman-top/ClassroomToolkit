@@ -148,6 +148,7 @@ public sealed class PresentationControlService
 
     public bool TrySendToTarget(PresentationTarget target, PresentationCommand command, PresentationControlOptions options)
     {
+        ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(options);
 
         try

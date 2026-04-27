@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Domain.Models;
 
@@ -35,6 +36,10 @@ public sealed class StudentWorkbook
 
     public IReadOnlyList<string> ClassNames => _classes.Keys.ToList();
 
+    [SuppressMessage(
+        "Design",
+        "CA1024:Use properties where appropriate",
+        Justification = "Keep method-shaped API for existing call sites and compatibility.")]
     public ClassRoster GetActiveRoster()
     {
         return _classes[ActiveClass];

@@ -108,6 +108,8 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)
     {
+        ArgumentNullException.ThrowIfNull(args);
+
         base.OnItemsChanged(sender, args);
         if (args.Action == NotifyCollectionChangedAction.Reset)
         {

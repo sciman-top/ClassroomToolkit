@@ -882,24 +882,29 @@ public static class StartupCompatibilityProbe
         public int TokenIsElevated;
     }
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr OpenProcess(int processAccess, bool inheritHandle, int processId);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool IsWow64Process(IntPtr processHandle, out bool wow64Process);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool IsWow64Process2(
         IntPtr processHandle,
         out ushort processMachine,
         out ushort nativeMachine);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool OpenProcessToken(
         IntPtr processHandle,
         uint desiredAccess,
         out IntPtr tokenHandle);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool GetTokenInformation(
         IntPtr tokenHandle,
@@ -908,6 +913,7 @@ public static class StartupCompatibilityProbe
         int tokenInformationLength,
         out int returnLength);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(IntPtr handle);
 }

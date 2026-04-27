@@ -20,6 +20,8 @@ public static class SystemDiagnostics
         string studentPath,
         string photoRoot)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         var lines = new List<string>();
         var issues = new List<string>();
         var fixes = new List<string>();
@@ -168,9 +170,9 @@ public static class SystemDiagnostics
 
     private static bool TryReportWritable(
         string settingsPath,
-        ICollection<string> lines,
-        ICollection<string> issues,
-        ICollection<string> fixes)
+        List<string> lines,
+        List<string> issues,
+        List<string> fixes)
     {
         var directory = Path.GetDirectoryName(settingsPath) ?? string.Empty;
         if (string.IsNullOrWhiteSpace(directory))
@@ -224,7 +226,7 @@ public static class SystemDiagnostics
         }
     }
 
-    private static string BuildSuggestions(IReadOnlyList<string> issues, IReadOnlyList<string> fixes, string okMessage)
+    private static string BuildSuggestions(List<string> issues, List<string> fixes, string okMessage)
     {
         var lines = new List<string>();
         if (issues.Count == 0)
@@ -243,9 +245,9 @@ public static class SystemDiagnostics
     }
 
     private static void AppendPresentationDiagnostics(
-        ICollection<string> lines,
-        ICollection<string> issues,
-        ICollection<string> fixes,
+        List<string> lines,
+        List<string> issues,
+        List<string> fixes,
         AppSettings settings)
     {
         var result = PresentationDiagnosticsProbe.Collect(
@@ -297,7 +299,7 @@ public static class SystemDiagnostics
         return null;
     }
 
-    private static void AppendClassifierOverrideSummary(ICollection<string> lines, string? overridesJson)
+    private static void AppendClassifierOverrideSummary(List<string> lines, string? overridesJson)
     {
         if (!PresentationDiagnosticsProbe.TrySummarizeClassifierOverrides(
                 overridesJson,
@@ -312,7 +314,7 @@ public static class SystemDiagnostics
         lines.Add($"演示规则覆盖摘要：classToken={classTokenCount}, processToken={processTokenCount}");
     }
 
-    private static void AppendClassifierLearnHistorySummary(ICollection<string> lines, AppSettings settings)
+    private static void AppendClassifierLearnHistorySummary(List<string> lines, AppSettings settings)
     {
         if (!string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnUtc)
             || !string.IsNullOrWhiteSpace(settings.PresentationClassifierLastLearnDetail))

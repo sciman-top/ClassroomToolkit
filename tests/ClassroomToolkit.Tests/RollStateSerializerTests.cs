@@ -35,6 +35,22 @@ public sealed class RollStateSerializerTests
     }
 
     [Fact]
+    public void SerializeClassState_ShouldThrowArgumentNullException_WhenStateIsNull()
+    {
+        Action act = () => RollStateSerializer.SerializeClassState(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void SerializeWorkbookStates_ShouldThrowArgumentNullException_WhenStatesIsNull()
+    {
+        Action act = () => RollStateSerializer.SerializeWorkbookStates(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void DeserializeInvalid_ShouldReturnNull()
     {
         var restored = RollStateSerializer.DeserializeClassState("{invalid");

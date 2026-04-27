@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace ClassroomToolkit.Application.UseCases.Photos;
@@ -16,6 +17,7 @@ public sealed class PhotoNavigationSession
         CurrentIndex = index;
     }
 
+    [SuppressMessage("Design", "CA1024:Use properties where appropriate", Justification = "Keep method-shaped API for existing UI call sites and navigation semantics.")]
     public string? GetCurrentPath()
     {
         if (CurrentIndex < 0 || CurrentIndex >= _sequence.Count)

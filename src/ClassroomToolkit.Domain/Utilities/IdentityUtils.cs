@@ -16,8 +16,8 @@ public static class IdentityUtils
             return string.Empty;
         }
         var trimmed = value.Trim();
-        var lower = trimmed.ToLowerInvariant();
-        if (lower is "nan" or "none" or "nat")
+        var upper = trimmed.ToUpperInvariant();
+        if (upper is "NAN" or "NONE" or "NAT")
         {
             return string.Empty;
         }

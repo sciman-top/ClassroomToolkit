@@ -70,6 +70,8 @@ public partial class RollCallSettingsDialog : Window
 
     public RollCallSettingsDialog(AppSettings settings, IReadOnlyList<string> availableClasses)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         InitializeComponent();
         var defaults = new AppSettings();
         _defaultRemotePresenterKey = string.IsNullOrWhiteSpace(defaults.RemotePresenterKey) ? "tab" : defaults.RemotePresenterKey;
@@ -916,7 +918,7 @@ public partial class RollCallSettingsDialog : Window
             return string.Empty;
         }
         var trimmed = value.Trim();
-        if (trimmed.Contains('-'))
+        if (trimmed.Contains('-', StringComparison.Ordinal))
         {
             return trimmed;
         }

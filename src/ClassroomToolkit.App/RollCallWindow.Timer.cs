@@ -67,31 +67,31 @@ public partial class RollCallWindow
 
     private static void PlayTimerSound(string? variant, bool isReminder)
     {
-        var key = (variant ?? string.Empty).Trim().ToLowerInvariant();
+        var key = (variant ?? string.Empty).Trim().ToUpperInvariant();
         switch (key)
         {
-            case "bell":
+            case "BELL":
                 SystemSounds.Exclamation.Play();
                 break;
-            case "digital":
+            case "DIGITAL":
                 SystemSounds.Beep.Play();
                 break;
-            case "buzz":
+            case "BUZZ":
                 SystemSounds.Hand.Play();
                 break;
-            case "urgent":
+            case "URGENT":
                 SystemSounds.Hand.Play();
                 break;
-            case "ping":
+            case "PING":
                 SystemSounds.Beep.Play();
                 break;
-            case "chime":
+            case "CHIME":
                 SystemSounds.Asterisk.Play();
                 break;
-            case "pulse":
+            case "PULSE":
                 SystemSounds.Asterisk.Play();
                 break;
-            case "short_bell":
+            case "SHORT_BELL":
                 SystemSounds.Exclamation.Play();
                 break;
             default:

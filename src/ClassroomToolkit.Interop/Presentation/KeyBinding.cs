@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed record KeyBinding(VirtualKey Key, KeyModifiers Modifiers)
@@ -25,6 +27,7 @@ public sealed record KeyBinding(VirtualKey Key, KeyModifiers Modifiers)
         return string.Join('+', parts);
     }
 
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Lowercase tokens are the persisted and user-facing key binding format.")]
     private static string KeyToToken(VirtualKey key)
     {
         return key switch

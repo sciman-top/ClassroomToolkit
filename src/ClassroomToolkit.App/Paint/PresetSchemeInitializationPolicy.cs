@@ -141,22 +141,24 @@ internal static class PresetSchemeInitializationPolicy
 
     private static string NormalizeScheme(string? scheme)
     {
-        var normalized = (scheme ?? string.Empty).Trim().ToLowerInvariant();
+        var normalized = (scheme ?? string.Empty).Trim().ToUpperInvariant();
         if (string.IsNullOrEmpty(normalized))
         {
             return PresetSchemeDefaults.Custom;
         }
 
-        if (normalized == PresetSchemeDefaults.DualScreen)
+        if (normalized == "DUAL_SCREEN")
         {
             return PresetSchemeDefaults.Stable;
         }
 
-        return normalized is PresetSchemeDefaults.Custom
-            or PresetSchemeDefaults.Balanced
-            or PresetSchemeDefaults.Responsive
-            or PresetSchemeDefaults.Stable
-            ? normalized
-            : PresetSchemeDefaults.Custom;
+        return normalized switch
+        {
+            "CUSTOM" => PresetSchemeDefaults.Custom,
+            "BALANCED" => PresetSchemeDefaults.Balanced,
+            "RESPONSIVE" => PresetSchemeDefaults.Responsive,
+            "STABLE" => PresetSchemeDefaults.Stable,
+            _ => PresetSchemeDefaults.Custom
+        };
     }
 }

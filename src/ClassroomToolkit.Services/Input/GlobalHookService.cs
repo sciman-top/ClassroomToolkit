@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ public class GlobalHookService : IDisposable
     private readonly List<KeyboardHook> _activeHooks = new();
     private bool _disposed;
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing app contract.")]
     public event Action? HookUnavailable;
 
     public Task<bool> RegisterHookAsync(
@@ -50,6 +52,7 @@ public class GlobalHookService : IDisposable
         return RegisterHookAsync(bindings, _ => TryInvokeBindingCallback(callback), shouldKeepActive);
     }
 
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "KeyboardHook ownership is transferred to the active hook list after successful registration; failure paths dispose started hooks.")]
     public async Task<bool> RegisterHookAsync(
         IEnumerable<KeyBinding> bindings,
         Action<KeyBinding> callback,
@@ -85,7 +88,7 @@ public class GlobalHookService : IDisposable
 
                 try
                 {
-                    await hook.StartAsync();
+                    await hook.StartAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex) when (IsNonFatal(ex))
                 {
@@ -156,6 +159,12 @@ public class GlobalHookService : IDisposable
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         List<KeyboardHook>? hooks = null;
         lock (_syncRoot)
         {
@@ -172,8 +181,6 @@ public class GlobalHookService : IDisposable
         {
             StopHooks(hooks, "dispose");
         }
-
-        GC.SuppressFinalize(this);
     }
 
     private bool IsDisposed()

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -98,7 +99,9 @@ public partial class LauncherBubbleWindow : Window
             out _);
     }
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing launcher bubble contract.")]
     public event Action? RestoreRequested;
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing launcher bubble contract.")]
     public event Action<System.Windows.Point>? PositionChanged;
 
     public void PlaceNear(System.Windows.Point target)

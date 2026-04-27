@@ -106,8 +106,9 @@ public sealed partial class InkExportService
         }
 
         BitmapEncoder encoder;
-        var ext = Path.GetExtension(outputPath)?.ToLowerInvariant();
-        if (ext == ".jpg" || ext == ".jpeg")
+        var ext = Path.GetExtension(outputPath);
+        if (string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase))
         {
             encoder = new JpegBitmapEncoder
             {

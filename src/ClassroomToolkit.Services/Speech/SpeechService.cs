@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Speech.Synthesis;
 using System.Threading.Tasks;
 
@@ -13,6 +14,7 @@ public class SpeechService : IDisposable
     private int _unavailableNotifiedState;
     private bool _disposed;
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing app contract.")]
     public event Action? SpeechUnavailable;
 
     public Task SpeakAsync(string text, string? voiceId = null)
@@ -80,6 +82,12 @@ public class SpeechService : IDisposable
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         SpeechSynthesizer? synthesizerToDispose = null;
         lock (_syncRoot)
         {
@@ -109,8 +117,6 @@ public class SpeechService : IDisposable
                 Debug.WriteLine($"[SpeechService] Dispose failed: {ex.Message}");
             }
         }
-
-        GC.SuppressFinalize(this);
     }
 
     private static bool IsNonFatal(Exception ex)

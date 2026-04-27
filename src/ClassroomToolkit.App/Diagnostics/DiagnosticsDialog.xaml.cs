@@ -13,6 +13,8 @@ public partial class DiagnosticsDialog : Window
 
     public DiagnosticsDialog(DiagnosticsResult result, AppSettingsService? settingsService = null, AppSettings? settings = null)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         InitializeComponent();
         _result = result;
         _settingsService = settingsService;

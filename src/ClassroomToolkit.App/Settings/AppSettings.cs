@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using MediaColor = System.Windows.Media.Color;
@@ -9,6 +10,8 @@ using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Settings;
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "List properties are part of the persisted app settings JSON contract.")]
+[SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setters are required for settings deserialization compatibility.")]
 public sealed class AppSettings
 {
     public const int UnsetPosition = int.MinValue;

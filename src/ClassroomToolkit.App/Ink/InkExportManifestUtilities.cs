@@ -12,6 +12,11 @@ namespace ClassroomToolkit.App.Ink;
 internal static class InkExportManifestUtilities
 {
     private const string ExportManifestFileName = ".ink-export.manifest.json";
+    private static readonly JsonSerializerOptions ManifestJsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
     private static readonly ConcurrentDictionary<string, object> ManifestWriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
     internal static string GetManifestPath(string exportDir)
@@ -72,10 +77,7 @@ internal static class InkExportManifestUtilities
                     merged.Remove(key);
                 }
 
-                var json = JsonSerializer.Serialize(merged, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                var json = JsonSerializer.Serialize(merged, ManifestJsonOptions);
                 AtomicFileReplaceUtility.WriteAtomically(
                     path,
                     tempPath => File.WriteAllText(tempPath, json),

@@ -172,6 +172,20 @@ public sealed class InkHistorySqliteStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldPersist_WhenSqlitePathContainsConnectionStringSeparator()
+    {
+        var bridge = new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-g.pptx", 7, null, CreatedTemplate: false));
+        var dbDirectory = TestPathHelper.CreateDirectory("ctool_ink_history_sqlite_semicolon");
+        var dbPath = Path.Combine(dbDirectory, "ink;history.sqlite3");
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => dbPath);
+
+        adapter.Save("lesson-g.pptx", 7, "[{\"separator\":1}]");
+
+        File.Exists(dbPath).Should().BeTrue();
+        ReadSqliteSnapshot(dbPath, "lesson-g.pptx", 7).Should().Be("[{\"separator\":1}]");
+    }
+
+    [Fact]
     public void ResolveDbPath_ShouldFallback_WhenSourcePathIsInvalid()
     {
         var method = typeof(InkHistorySqliteStoreAdapter).GetMethod(
@@ -193,7 +207,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
 
     private static void SeedSqliteSnapshot(string dbPath, string sourcePath, int pageIndex, string strokesJson)
     {
-        using var connection = new SqliteConnection($"Data Source={dbPath}");
+        using var connection = new SqliteConnection(BuildSqliteConnectionString(dbPath));
         connection.Open();
 
         using (var create = connection.CreateCommand())
@@ -235,7 +249,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
             return null;
         }
 
-        using var connection = new SqliteConnection($"Data Source={dbPath}");
+        using var connection = new SqliteConnection(BuildSqliteConnectionString(dbPath));
         connection.Open();
 
         using var command = connection.CreateCommand();
@@ -250,6 +264,14 @@ public sealed class InkHistorySqliteStoreAdapterTests
         command.Parameters.AddWithValue("$pageIndex", pageIndex);
         var scalar = command.ExecuteScalar();
         return scalar as string;
+    }
+
+    private static string BuildSqliteConnectionString(string dbPath)
+    {
+        return new SqliteConnectionStringBuilder
+        {
+            DataSource = dbPath
+        }.ToString();
     }
 
     private sealed class FakeInkHistoryStoreBridge : IInkHistoryStoreBridge

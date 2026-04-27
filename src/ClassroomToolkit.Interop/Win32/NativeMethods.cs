@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace ClassroomToolkit.Interop;
@@ -36,6 +37,8 @@ public static class NativeMethods
     public const uint GaRoot = 2;
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct NativePoint
     {
         public int X;
@@ -43,6 +46,8 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct NativeRect
     {
         public int Left;
@@ -52,6 +57,8 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct MonitorInfo
     {
         public int Size;
@@ -61,6 +68,9 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
+    [SuppressMessage("Naming", "CA1724:Type names should not match namespaces", Justification = "Input mirrors the Win32 INPUT structure name used by existing call sites.")]
     public struct Input
     {
         public uint Type;
@@ -68,6 +78,8 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Explicit)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct InputUnion
     {
         [FieldOffset(0)]
@@ -77,6 +89,8 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct KeyboardInput
     {
         public ushort VirtualKey;
@@ -87,6 +101,8 @@ public static class NativeMethods
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Struct is intentionally nested with Win32 declarations to preserve the NativeMethods ABI surface.")]
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "Interop struct is used only for marshaling and is not compared by value.")]
     public struct MouseInput
     {
         public int Dx;
@@ -100,61 +116,80 @@ public static class NativeMethods
     public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
 #pragma warning disable CA1401
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern int GetWindowLong(IntPtr hwnd, int index);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
     
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo exInfo);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetCursorPos(out NativePoint point);
     
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint flags);
 
     // Merged Methods
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool EnumWindows(EnumWindowsProc enumFunc, IntPtr lParam);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hwnd);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool IsWindow(IntPtr hwnd);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hwnd, [Out] char[] className, int maxCount);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern int GetWindowText(IntPtr hwnd, [Out] char[] text, int maxCount);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hwnd);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint inputs, [MarshalAs(UnmanagedType.LPArray), In] Input[] input, int size);
 #pragma warning restore CA1401

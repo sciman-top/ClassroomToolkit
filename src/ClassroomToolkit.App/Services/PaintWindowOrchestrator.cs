@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ClassroomToolkit.App.Services;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing app orchestration contract.")]
 public interface IPaintWindowOrchestrator
 {
     PaintOverlayWindow? OverlayWindow { get; }
@@ -43,8 +45,33 @@ public interface IPaintWindowOrchestrator
     void Close();
 }
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing app orchestration contract.")]
 public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 {
+    private static readonly Action<ILogger, bool, bool, Exception?> LogPartialPaintWindowLifecycleState =
+        LoggerMessage.Define<bool, bool>(
+            LogLevel.Warning,
+            new EventId(1, nameof(LogPartialPaintWindowLifecycleState)),
+            "Detected partial paint window lifecycle state. Rebuilding pair. overlayExists={OverlayExists}, toolbarExists={ToolbarExists}");
+
+    private static readonly Action<ILogger, Exception?> LogCreatingPaintWindows =
+        LoggerMessage.Define(
+            LogLevel.Information,
+            new EventId(2, nameof(LogCreatingPaintWindows)),
+            "Creating Paint Overlay and Toolbar windows.");
+
+    private static readonly Action<ILogger, string, Exception?> LogEventCallbackFailed =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(3, nameof(LogEventCallbackFailed)),
+            "PaintWindowOrchestrator event callback failed: {EventName}");
+
+    private static readonly Action<ILogger, string, Exception?> LogPresentationClassifierAutoLearnApplied =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(4, nameof(LogPresentationClassifierAutoLearnApplied)),
+            "Presentation classifier auto-learn applied. {Reason}");
+
     private readonly IPaintWindowFactory _paintWindowFactory;
     private readonly AppSettingsService _appSettingsService;
     private readonly ILogger<PaintWindowOrchestrator> _logger;
@@ -95,14 +122,11 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         if (OverlayWindow != null || ToolbarWindow != null)
         {
-            _logger.LogWarning(
-                "Detected partial paint window lifecycle state. Rebuilding pair. overlayExists={OverlayExists}, toolbarExists={ToolbarExists}",
-                OverlayWindow != null,
-                ToolbarWindow != null);
+            LogPartialPaintWindowLifecycleState(_logger, OverlayWindow != null, ToolbarWindow != null, null);
             Close();
         }
 
-        _logger.LogInformation("Creating Paint Overlay and Toolbar windows.");
+        LogCreatingPaintWindows(_logger, null);
         var windows = _paintWindowFactory.Create();
         OverlayWindow = windows.overlay;
         ToolbarWindow = windows.toolbar;
@@ -412,7 +436,7 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
     {
         SafeActionExecutionExecutor.TryExecute(
             callback,
-            ex => _logger.LogWarning(ex, "PaintWindowOrchestrator event callback failed: {EventName}", eventName));
+            ex => LogEventCallbackFailed(_logger, eventName, ex));
     }
 
     private PaintToolMode ResolvePreferredPrimaryToolMode()
@@ -520,7 +544,10 @@ public class PaintWindowOrchestrator : IPaintWindowOrchestrator
                 reason);
         _appSettingsService.Save(_currentSettings);
         OverlayWindow.UpdatePresentationClassifierOverrides(mergedOverridesJson);
-        _logger.LogInformation("Presentation classifier auto-learn applied. {Reason}", reason);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            LogPresentationClassifierAutoLearnApplied(_logger, reason, null);
+        }
     }
 
     public void Show(bool photoMode = false)

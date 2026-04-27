@@ -11,6 +11,7 @@ namespace ClassroomToolkit.App.Ink;
 /// Method B: Export composite images (original + ink overlay) to disk.
 /// PDF pages are rendered to bitmap first, then ink strokes are drawn on top.
 /// </summary>
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Ink export APIs preserve existing mutable list contracts used by export UI and tests without adding hot-path copies.")]
 public sealed partial class InkExportService
 {
     private const string ExportFolderName = "笔迹合成图片";
@@ -21,6 +22,7 @@ public sealed partial class InkExportService
         _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
     }
 
+    [SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "OutputPaths is an existing export result contract consumed by UI summaries and tests.")]
     public sealed class InkExportRunResult
     {
         public List<string> OutputPaths { get; } = new();

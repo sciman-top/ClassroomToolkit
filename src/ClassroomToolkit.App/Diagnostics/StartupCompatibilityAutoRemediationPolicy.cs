@@ -72,7 +72,7 @@ internal static class StartupCompatibilityAutoRemediationPolicy
             appliedActions);
     }
 
-    private static bool ShouldEnforceConservativePresentationMode(ISet<string> issueCodes)
+    private static bool ShouldEnforceConservativePresentationMode(HashSet<string> issueCodes)
     {
         for (var i = 0; i < PresentationConservativeModeIssueCodes.Length; i++)
         {
@@ -86,7 +86,7 @@ internal static class StartupCompatibilityAutoRemediationPolicy
     }
 
     private static bool TryEnsureSettingsDirectory(
-        ISet<string> issueCodes,
+        HashSet<string> issueCodes,
         string? settingsPath,
         out string createdDirectory)
     {

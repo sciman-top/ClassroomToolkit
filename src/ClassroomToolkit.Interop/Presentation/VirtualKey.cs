@@ -1,7 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Interop.Presentation;
 
+[SuppressMessage("Design", "CA1028:Enum Storage should be Int32", Justification = "Virtual key values are passed to Win32 APIs as ushort-compatible values.")]
 public enum VirtualKey : ushort
 {
+    None = 0,
     Tab = 0x09,
     Escape = 0x1B,
     Space = 0x20,

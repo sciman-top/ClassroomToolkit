@@ -193,6 +193,7 @@ public sealed partial class InkExportService
         return deleted;
     }
 
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Composite export file names intentionally keep lowercase file extensions for compatibility.")]
     private static string BuildOutputPath(string sourcePath, int pageIndex, bool isPdf, InkExportOptions options)
     {
         var sourceDir = Path.GetDirectoryName(sourcePath) ?? string.Empty;

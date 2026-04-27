@@ -287,14 +287,18 @@ public partial class PaintOverlayWindow
     {
         var rng = new Random(seed);
         int grid = 14;
-        var gridValues = new double[grid + 1, grid + 1];
+        var gridValues = new double[grid + 1][];
+        for (int x = 0; x <= grid; x++)
+        {
+            gridValues[x] = new double[grid + 1];
+        }
 
         for (int y = 0; y <= grid; y++)
         {
             for (int x = 0; x <= grid; x++)
             {
                 double jitter = (rng.NextDouble() * 2.0 - 1.0) * variation;
-                gridValues[x, y] = Math.Clamp(baseAlpha + jitter, 0.0, 1.0);
+                gridValues[x][y] = Math.Clamp(baseAlpha + jitter, 0.0, 1.0);
             }
         }
 
@@ -323,8 +327,8 @@ public partial class PaintOverlayWindow
                 int x1 = Math.Min(x0 + 1, grid);
                 double tx = gx - x0;
 
-                double n0 = Lerp(gridValues[x0, y0], gridValues[x1, y0], tx);
-                double n1 = Lerp(gridValues[x0, y1], gridValues[x1, y1], tx);
+                double n0 = Lerp(gridValues[x0][y0], gridValues[x1][y0], tx);
+                double n1 = Lerp(gridValues[x0][y1], gridValues[x1][y1], tx);
                 double noise = Lerp(n0, n1, ty);
 
                 double fiber = Math.Sin(((x * fx + y * fy) / size) * (Math.PI * 2.0 * fiberFreq) + fiberPhase) * fiberAmp;

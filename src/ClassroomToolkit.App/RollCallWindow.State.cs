@@ -49,6 +49,8 @@ public partial class RollCallWindow
 
     public void ApplySettings(AppSettings settings, bool updatePhoto = true)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         _viewModel.ShowId = settings.RollCallShowId;
         _viewModel.ShowName = settings.RollCallShowName;
         if (!_viewModel.ShowId && !_viewModel.ShowName)
@@ -74,10 +76,10 @@ public partial class RollCallWindow
         if (!_timerStateApplied)
         {
             var isRollCallMode = !string.Equals(settings.RollCallMode, "timer", StringComparison.OrdinalIgnoreCase);
-            var timerMode = settings.RollCallTimerMode?.Trim().ToLowerInvariant() switch
+            var timerMode = settings.RollCallTimerMode?.Trim().ToUpperInvariant() switch
             {
-                "stopwatch" => TimerMode.Stopwatch,
-                "clock" => TimerMode.Clock,
+                "STOPWATCH" => TimerMode.Stopwatch,
+                "CLOCK" => TimerMode.Clock,
                 _ => TimerMode.Countdown
             };
             _viewModel.ApplyTimerState(

@@ -80,10 +80,8 @@ public sealed class InkStorageService
 
     public void SavePage(DateTime date, InkPageData page)
     {
-        if (page == null)
-        {
-            throw new ArgumentNullException(nameof(page));
-        }
+        ArgumentNullException.ThrowIfNull(page);
+
         var jsonPath = GetPageJsonPath(date, page.DocumentName, page.PageIndex);
         var json = JsonSerializer.Serialize(page, _options);
         WriteAllTextAtomically(jsonPath, json);

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Photos;
@@ -12,6 +13,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.ViewModels;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing view-model contract.")]
 public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
 {
     private readonly RollCallWorkbookUseCase _workbookUseCase;

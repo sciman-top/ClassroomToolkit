@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class KeyboardHook : IDisposable
@@ -35,5 +37,6 @@ public sealed partial class KeyboardHook : IDisposable
 
     public bool SuppressWhenMatched { get; set; }
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing hook adapter contract.")]
     public event Action<KeyBinding>? BindingTriggered;
 }

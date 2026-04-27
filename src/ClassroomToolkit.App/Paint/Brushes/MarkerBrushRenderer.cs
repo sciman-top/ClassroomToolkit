@@ -282,6 +282,8 @@ public class MarkerBrushRenderer : IBrushRenderer
 
     public void Render(DrawingContext dc)
     {
+        ArgumentNullException.ThrowIfNull(dc);
+
         var geometry = _isActive
             ? GetPreviewGeometry()
             : GetLastStrokeGeometry();

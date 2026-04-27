@@ -32,10 +32,7 @@ internal static class FloatingTopmostDriftRepairExecutor
         Action<Window?, bool, bool> applyTopmostNoActivate,
         Action<Exception>? onFailure = null)
     {
-        if (applyTopmostNoActivate == null)
-        {
-            throw new ArgumentNullException(nameof(applyTopmostNoActivate));
-        }
+        ArgumentNullException.ThrowIfNull(applyTopmostNoActivate);
 
         if (plan.RepairToolbar)
         {

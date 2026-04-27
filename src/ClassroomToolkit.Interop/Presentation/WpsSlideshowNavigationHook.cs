@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
+[SuppressMessage("Usage", "CA2216:Disposable types should declare finalizer", Justification = "Hook handles are released by explicit lifecycle control; finalizers are avoided for callback-bound Win32 hooks.")]
 public sealed partial class WpsSlideshowNavigationHook : IDisposable
 {
     private const int WhKeyboardLl = 13;
@@ -44,6 +45,7 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
         _mouseProc = MouseProc;
     }
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing hook adapter contract.")]
     public event Action<int, string>? NavigationRequested;
 
     [SuppressMessage(

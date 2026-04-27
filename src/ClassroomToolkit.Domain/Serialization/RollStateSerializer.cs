@@ -15,6 +15,8 @@ public static class RollStateSerializer
 
     public static string SerializeClassState(ClassRollState state)
     {
+        ArgumentNullException.ThrowIfNull(state);
+
         var payload = CloneWithVersion(state, CurrentVersion);
         return JsonSerializer.Serialize(payload, Options);
     }
@@ -51,7 +53,9 @@ public static class RollStateSerializer
         long revision,
         DateTime updatedAtUtc)
     {
-        var payload = states ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(states);
+
+        var payload = states;
         var snapshot = new Dictionary<string, ClassRollState>(payload.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in payload)
         {

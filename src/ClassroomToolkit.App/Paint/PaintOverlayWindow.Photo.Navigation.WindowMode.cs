@@ -19,6 +19,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private static readonly int[] PhotoFullscreenBoundsEnforcementDelaysMs = [30, 120, 280];
+
     private void SetPhotoWindowMode(bool fullscreen)
     {
         var wasFullscreen = _photoFullscreen;
@@ -257,8 +259,7 @@ public partial class PaintOverlayWindow
             async cancellationToken =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var delays = new[] { 30, 120, 280 };
-                foreach (var delayMs in delays)
+                foreach (var delayMs in PhotoFullscreenBoundsEnforcementDelaysMs)
                 {
                     await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();

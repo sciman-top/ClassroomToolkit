@@ -71,10 +71,10 @@ public sealed class IniSettingsStore
             {
                 continue;
             }
-            var separatorIndex = line.IndexOf('=');
+            var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
             if (separatorIndex < 0)
             {
-                separatorIndex = line.IndexOf(':');
+                separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
             }
             if (separatorIndex <= 0)
             {
@@ -95,7 +95,7 @@ public sealed class IniSettingsStore
     {
         foreach (var line in lines)
         {
-            if (line.Contains('\0'))
+            if (line.Contains('\0', StringComparison.Ordinal))
             {
                 return true;
             }

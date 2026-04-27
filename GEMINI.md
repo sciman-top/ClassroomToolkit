@@ -2,11 +2,11 @@
 **项目**: ClassroomToolkit  
 **类型**: Windows WPF (.NET 10)  
 **适用范围**: 项目级（仓库根）  
-**版本**: 3.95
-**最后更新**: 2026-04-27
+**版本**: 3.97
+**最后更新**: 2026-04-28
 
 ## 1. 阅读指引（必读）
-- 本文件承接 `GlobalUser/GEMINI.md v9.44`，仅定义本仓落地动作（WHERE/HOW）。
+- 本文件承接 `GlobalUser/GEMINI.md v9.47`，仅定义本仓落地动作（WHERE/HOW）。
 - 固定结构：`1 / A / B / C / D`。
 - 裁决链：`运行事实/代码 > 项目级文件 > 全局文件 > 临时上下文`。
 - 自包含约束：执行规则以本文件正文为准，不依赖外部子文档或治理脚本作为前置条件。
@@ -24,6 +24,7 @@
 - 默认中文沟通、中文解释、中文汇报；代码标识符、命令、日志、报错和协议字段保留英文原文。
 - 全局规则给风险、语言、N/A 和门禁语义；本文件给 ClassroomToolkit 的模块边界、真实命令、课堂场景不变量、证据与回滚入口。
 - 项目规则只保留本仓不可由代码/CI自动推断且会改变执行、风险或验收的事实；长流程下沉到子文档或工具专属规则。
+- 规则文件、门禁、profile、baseline 或同步脚本修改前，必须先比对控制仓 `governed-ai-coding-runtime/rules/manifest.json`、源文件、用户目录/目标仓已分发副本、目标仓真实 gate/profile/CI/script/README 差异和当前工具官方加载模型；发现漂移先整合再同步，不盲目覆盖。
 - 小步闭环，优先根因修复；止血补丁必须标明回收时点。
 - 每次变更留痕：`依据 -> 命令 -> 证据 -> 回滚`。
 
@@ -43,7 +44,7 @@
 ### B.1 加载与覆盖
 - 用户规则：`~/.gemini/GEMINI.md`；项目/工作区规则按 Gemini CLI 层级加载和按需发现执行。
 - 启用 Trusted Folders 时，未受信目录可能进入 safe mode；遇到项目配置、环境变量、自动记忆或工具自动批准未生效，先记录 trust 状态或替代证据。
-- 可用 `@file.md` imports 组织长内容；只有本机 `settings.json` 明确配置 `context.fileName` 时，才把其他文件名视为 Gemini 上下文文件。
+- 可用 `@file.md` imports 组织长内容；只有本机 `settings.json` 明确配置上下文文件名时，才把其他文件名视为 Gemini 上下文文件，具体键名以当前 schema/help 为准。
 - 用 `.geminiignore` 排除 `bin/`、`obj/`、测试结果、日志和本机敏感配置；修改后用 `/memory show` 核查完整上下文；来源与刷新命令先看当前 `/memory` help，支持则用 `/memory list` / `/memory refresh`，否则记录版本并用 `/memory reload` 兜底。
 - 不假定 `GEMINI.override.md` 存在；临时排障规则必须记录清理点，结论后删除或恢复并复测。
 
@@ -105,5 +106,6 @@
   - `E4`: hotspot 复核课堂可用性、Interop 防护、触屏/窗口层级和设置加载边界。
   - `E5`: NuGet/.NET/系统组件变化必须记录依赖与平台基线；新增生产依赖前先说明必要性。
   - `E6`: `students.xlsx`、`settings.ini`、照片目录或持久化结构变化必须记录兼容性、迁移和回滚。
+- 本文件属于控制仓 `governed-ai-coding-runtime/rules/manifest.json` 管理的规则家族；目标仓现场修改必须回写控制仓源文件后再同步。
 - 子文档只承载细节，不替代根文件中的硬门禁和项目事实。
 - 三文件同构约束：`A/C/D` 必须语义一致，仅 `B` 允许平台差异。

@@ -79,6 +79,7 @@ internal sealed class PdfDocumentHost : IDisposable
         _document = null;
     }
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr hObject);
 }

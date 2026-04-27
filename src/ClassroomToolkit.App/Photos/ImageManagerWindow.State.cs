@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -15,6 +16,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Photos;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing image manager window contract.")]
 public partial class ImageManagerWindow : Window
 {
     private const double DefaultLeftRatio = 2.0 / 7.0;

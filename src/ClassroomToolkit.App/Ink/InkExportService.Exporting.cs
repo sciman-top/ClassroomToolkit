@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Photos;
@@ -8,6 +9,7 @@ namespace ClassroomToolkit.App.Ink;
 
 public sealed partial class InkExportService
 {
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "PdfDocumentHost is disposed in an unconditional finally block after open succeeds; open failures return before ownership is established.")]
     private static void ExportPdfFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
     {
         var exportDir = GetExportDirectory(sourcePath);
@@ -35,7 +37,7 @@ public sealed partial class InkExportService
             return;
         }
 
-        PdfDocumentHost? pdfDoc = null;
+        PdfDocumentHost? pdfDoc;
         try
         {
             pdfDoc = PdfDocumentHost.Open(sourcePath);
@@ -49,72 +51,76 @@ public sealed partial class InkExportService
             return;
         }
 
-        using (pdfDoc)
+        try
         {
-        int pageCount = pdfDoc.PageCount;
-        if (pageCount <= 0)
-        {
-            if (manifestDirty)
+            int pageCount = pdfDoc.PageCount;
+            if (pageCount <= 0)
             {
-                SaveExportManifest(exportDir, manifest);
+                if (manifestDirty)
+                {
+                    SaveExportManifest(exportDir, manifest);
+                }
+                return;
             }
-            return;
-        }
 
-        pagesWithInk = pagesWithInk
-            .Where(p => p.PageIndex <= pageCount)
-            .ToList();
-        expectedOutputFileNames = new HashSet<string>(
-            pagesWithInk
-                .Select(p => Path.GetFileName(BuildOutputPath(sourcePath, p.PageIndex, isPdf: true, options))),
-            StringComparer.OrdinalIgnoreCase);
-        manifestDirty |= CleanupStaleCompositeOutputsForSource(sourcePath, exportDir, expectedOutputFileNames, manifest);
-        if (pagesWithInk.Count == 0)
-        {
-            if (manifestDirty)
+            pagesWithInk = pagesWithInk
+                .Where(p => p.PageIndex <= pageCount)
+                .ToList();
+            expectedOutputFileNames = new HashSet<string>(
+                pagesWithInk
+                    .Select(p => Path.GetFileName(BuildOutputPath(sourcePath, p.PageIndex, isPdf: true, options))),
+                StringComparer.OrdinalIgnoreCase);
+            manifestDirty |= CleanupStaleCompositeOutputsForSource(sourcePath, exportDir, expectedOutputFileNames, manifest);
+            if (pagesWithInk.Count == 0)
             {
-                SaveExportManifest(exportDir, manifest);
+                if (manifestDirty)
+                {
+                    SaveExportManifest(exportDir, manifest);
+                }
+                return;
             }
-            return;
-        }
 
-        Directory.CreateDirectory(exportDir);
+            Directory.CreateDirectory(exportDir);
 
-        var dpiScale = Math.Max(0.0001, options.Dpi / 96.0);
-        var renderedPageCache = new Dictionary<int, BitmapSource>();
-        foreach (var page in pagesWithInk)
-        {
-            var pageIndex = page.PageIndex;
-            var outputPath = BuildOutputPath(sourcePath, pageIndex, isPdf: true, options);
-            var pageFingerprint = BuildExportFingerprint(sourcePath, pageIndex, page.Strokes, options);
-            if (ShouldSkipExport(outputPath, pageFingerprint, manifest))
+            var dpiScale = Math.Max(0.0001, options.Dpi / 96.0);
+            var renderedPageCache = new Dictionary<int, BitmapSource>();
+            foreach (var page in pagesWithInk)
             {
+                var pageIndex = page.PageIndex;
+                var outputPath = BuildOutputPath(sourcePath, pageIndex, isPdf: true, options);
+                var pageFingerprint = BuildExportFingerprint(sourcePath, pageIndex, page.Strokes, options);
+                if (ShouldSkipExport(outputPath, pageFingerprint, manifest))
+                {
+                    result.OutputPaths.Add(outputPath);
+                    result.SkippedCount++;
+                    continue;
+                }
+
+                var background = GetOrRenderPdfPage(renderedPageCache, pdfDoc, pageIndex, options.Dpi);
+                if (background == null)
+                {
+                    result.FailedCount++;
+                    continue;
+                }
+
+                var strokes = AdaptStrokesForBackground(page.Strokes, background, fallbackScale: dpiScale);
+                var outputBitmap = CompositeImage(background, strokes);
+
+                SaveImage(outputBitmap, outputPath, options);
+                manifest[GetManifestKey(outputPath)] = pageFingerprint;
+                manifestDirty = true;
                 result.OutputPaths.Add(outputPath);
-                result.SkippedCount++;
-                continue;
+                result.ExportedCount++;
             }
 
-            var background = GetOrRenderPdfPage(renderedPageCache, pdfDoc, pageIndex, options.Dpi);
-            if (background == null)
+            if (manifestDirty)
             {
-                result.FailedCount++;
-                continue;
+                SaveExportManifest(exportDir, manifest);
             }
-
-            var strokes = AdaptStrokesForBackground(page.Strokes, background, fallbackScale: dpiScale);
-            var outputBitmap = CompositeImage(background, strokes);
-
-            SaveImage(outputBitmap, outputPath, options);
-            manifest[GetManifestKey(outputPath)] = pageFingerprint;
-            manifestDirty = true;
-            result.OutputPaths.Add(outputPath);
-            result.ExportedCount++;
         }
-
-        if (manifestDirty)
+        finally
         {
-            SaveExportManifest(exportDir, manifest);
-        }
+            pdfDoc.Dispose();
         }
     }
 

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -17,6 +18,7 @@ using WpfSize = System.Windows.Size;
 
 namespace ClassroomToolkit.App.Photos;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based photo close callback is an existing UI contract covered by callback-safety contract tests.")]
 public partial class PhotoOverlayWindow : Window
 {
     private readonly DispatcherTimer _autoCloseTimer;

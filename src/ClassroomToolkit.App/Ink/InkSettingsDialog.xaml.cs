@@ -15,6 +15,8 @@ public partial class InkSettingsDialog : Window
 
     public InkSettingsDialog(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         InitializeComponent();
         InkRecordCheck.IsChecked = settings.InkRecordEnabled;
         InkReplayPreviousCheck.IsChecked = settings.InkReplayPreviousEnabled;

@@ -8,11 +8,11 @@ internal static class PhotoInertiaProfileDefaults
 
     internal static string Normalize(string? rawProfile)
     {
-        var normalized = (rawProfile ?? string.Empty).Trim().ToLowerInvariant();
+        var normalized = (rawProfile ?? string.Empty).Trim().ToUpperInvariant();
         return normalized switch
         {
-            Sensitive => Sensitive,
-            Heavy => Heavy,
+            "SENSITIVE" => Sensitive,
+            "HEAVY" => Heavy,
             _ => Standard
         };
     }

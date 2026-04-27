@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,21 +26,11 @@ using WpfRectangle = System.Windows.Shapes.Rectangle;
 
 namespace ClassroomToolkit.App.Paint;
 
+[SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing overlay/window contract.")]
 public partial class PaintOverlayWindow : Window
 {
-    private const int GwlStyle = -16;
-    private const int GwlExstyle = -20;
-    private const int WsExTransparent = 0x20;
-    private const int WsExNoActivate = 0x08000000;
-
-    private const uint MonitorDefaultToNearest = 2;
-    private const uint SwpNoZorder = 0x0004;
-    private const uint SwpNoActivate = 0x0010;
-    private const uint SwpShowWindow = 0x0040;
-
     private const int PresentationFocusMonitorIntervalMs = PresentationRuntimeDefaults.FocusMonitorIntervalMs;
     private const int PresentationFocusCooldownMs = PresentationRuntimeDefaults.FocusRestoreCooldownMs;
-    private const int CrossPageUpdateMinIntervalMs = CrossPageRuntimeDefaults.UpdateMinIntervalMs;
     private const double PhotoWheelZoomBaseDefault = PhotoZoomInputDefaults.WheelZoomBaseDefault;
     private const double PhotoKeyZoomStep = 1.06;
     private const double PhotoGestureZoomNoiseThreshold = PhotoZoomInputDefaults.GestureZoomNoiseThreshold;

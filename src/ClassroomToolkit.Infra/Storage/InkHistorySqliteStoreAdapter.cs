@@ -119,7 +119,7 @@ public sealed class InkHistorySqliteStoreAdapter
                 return null;
             }
 
-            using var connection = CreateOpenConnection(dbPath);
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
             EnsureSchema(connection);
 
             using var command = connection.CreateCommand();
@@ -146,7 +146,7 @@ public sealed class InkHistorySqliteStoreAdapter
     {
         try
         {
-            using var connection = CreateOpenConnection(dbPath);
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
             EnsureSchema(connection);
 
             using var command = connection.CreateCommand();
@@ -181,19 +181,6 @@ public sealed class InkHistorySqliteStoreAdapter
         {
             Debug.WriteLine($"[InkHistorySqlite] write failed: {ex.GetType().Name} - {ex.Message}");
         }
-    }
-
-    private static SqliteConnection CreateOpenConnection(string dbPath)
-    {
-        var directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var connection = new SqliteConnection($"Data Source={dbPath}");
-        connection.Open();
-        return connection;
     }
 
     private static void EnsureSchema(SqliteConnection connection)

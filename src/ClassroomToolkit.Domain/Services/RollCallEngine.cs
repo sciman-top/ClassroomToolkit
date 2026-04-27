@@ -1,8 +1,13 @@
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Utilities;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Domain.Services;
 
+[SuppressMessage(
+    "Security",
+    "CA5394:Do not use insecure randomness",
+    Justification = "Roll-call shuffling is classroom fairness behavior, not a security boundary.")]
 public sealed partial class RollCallEngine
 {
     private readonly Random _random = new();

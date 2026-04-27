@@ -1,0 +1,292 @@
+# 2026-04-27 Systematic Review Storage Logging Analyzer Hardening
+
+## Scope
+- Rule IDs: R1, R2, R6, R8, E4, E5
+- Risk: low
+- Boundary: storage/logging correctness, domain serialization null contracts, Services/Interop analyzer hardening, tests, and evidence only.
+- Current landing: `src/ClassroomToolkit.Infra`, `src/ClassroomToolkit.Domain`, `src/ClassroomToolkit.Application`, `src/ClassroomToolkit.Services`, `src/ClassroomToolkit.Interop`
+- Target home: preserve existing UI behavior, public data formats, `students.xlsx`, `student_photos/`, and `settings.ini` semantics while hardening storage/logging edges.
+
+## Platform Diagnostics
+- `codex --version`
+  - exit_code: 0
+  - key_output: `codex-cli 0.125.0`
+- `codex --help`
+  - exit_code: 0
+  - key_output: command list printed.
+- `codex status`
+  - result: `platform_na`
+  - reason: non-interactive execution returned `Error: stdin is not a terminal`.
+  - alternative_verification: active global and project rules were supplied in the current task context; repo gates below were run directly.
+  - evidence_link: this file.
+  - expires_at: next interactive Codex status investigation.
+- `dotnet --info`
+  - result: partial `platform_na`
+  - reason: SDK/runtime information printed, then workload info failed with `TypeInitializationException` / `NullReferenceException` from `InstallerBase`.
+  - alternative_verification: `. .\scripts\env\Initialize-WindowsProcessEnvironment.ps1` was used before repo `dotnet` gates; all required gates passed.
+  - evidence_link: this file.
+  - expires_at: next host environment repair.
+
+## Baseline Evidence
+- Direct `dotnet build ClassroomToolkit.sln -c Debug`
+  - exit_code: 1
+  - key_output: NuGet restore failed for all projects with `Value cannot be null. (Parameter 'path1')`.
+- Bootstrapped `dotnet build ClassroomToolkit.sln -c Debug`
+  - exit_code: 0
+  - key_output: `0 warning / 0 error`.
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+  - exit_code: 0
+  - key_output: `3466` passed.
+- Contract/invariant filter
+  - exit_code: 0
+  - key_output: `28` passed.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+  - exit_code: 0
+  - key_output: `[hotspot] PASS - all .cs files within line budget (max=1200)`.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug`
+  - exit_code: 0
+  - key_output: `[quality] ALL PASS`; analyzer backlog baseline `635`.
+- Settings-load performance baseline:
+  - output: `artifacts/validation/20260427-current-review-baseline/settings-load-performance-summary-20260427-233800.md`
+  - small: hot p95 `0.4175 ms`; medium: hot p95 `1.956 ms`.
+
+## Changes
+- `SqliteStorageUtilities.CreateOpenConnection` now builds connection strings with `SqliteConnectionStringBuilder` instead of interpolating `Data Source={dbPath}`.
+- `InkHistorySqliteStoreAdapter` now reuses the shared SQLite connection helper, removing duplicate connection-string construction.
+- SQLite schema helper now validates table names, column names, and simple column definitions before constructing schema SQL; CA2100 suppressions are scoped to the validated schema SQL paths.
+- `FileLoggerProvider`, `SpeechService`, and `GlobalHookService` now follow the standard public `Dispose()` -> protected virtual `Dispose(bool)` pattern without changing runtime shutdown behavior.
+- `IniSettingsStore` now uses explicit ordinal comparison overloads for INI separators and null-character detection.
+- Added regression tests for SQLite cache paths containing connection-string separators across ink history, roll-call cache, and student-workbook cache.
+- `RollStateSerializer` now fails fast with `ArgumentNullException` for non-null typed serialize inputs; regression tests cover null class state and workbook state dictionaries.
+- Domain identity/key normalization removes avoidable lowercase normalization in sentinel checks while preserving existing matching semantics.
+- Public analyzer suppressions were added only where changing shape would break existing contracts: mutable persisted JSON collections, action-based hook/timer events, lowercase key-binding tokens, Win32 marshaling structs, and non-security roll-call randomization.
+- `PresentationControlService.TrySendToTarget` now validates `target` before use so null callers get a deterministic argument exception instead of an incidental null reference in diagnostics.
+- Win32 P/Invoke declarations in `NativeMethods`, hook interop, and startup compatibility probes now use `DefaultDllImportSearchPaths(DllImportSearchPath.System32)`.
+- `VirtualKey` now defines `None = 0` while preserving the ushort-backed Win32 virtual-key representation.
+
+## Post-change Verification
+- Targeted tests:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~SettingsRepositoryTests|FullyQualifiedName~AppSettingsServiceTests|FullyQualifiedName~SettingsMigratorTests|FullyQualifiedName~SettingsDocumentMigrationServiceTests|FullyQualifiedName~InkHistorySqliteStoreAdapterTests|FullyQualifiedName~RollCallSqliteStoreAdapterTests|FullyQualifiedName~StudentWorkbookSqliteStoreAdapterTests|FullyQualifiedName~FileLoggerProviderTests"`
+  - exit_code: 0
+  - key_output: `112` passed.
+- Infra analyzer slice:
+  - `dotnet build src/ClassroomToolkit.Infra/ClassroomToolkit.Infra.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal`
+  - exit_code: 0
+  - key_output: warnings visible in this slice dropped from `21` before the fix to `14` after the fix.
+- Domain targeted tests:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~RollStateSerializerTests|FullyQualifiedName~IdentityUtilsTests|FullyQualifiedName~RollCallEngineTests|FullyQualifiedName~TimerEngineTests|FullyQualifiedName~StudentWorkbookTests"`
+  - exit_code: 0
+  - key_output: `38` passed.
+- Domain analyzer slice:
+  - `dotnet build src/ClassroomToolkit.Domain/ClassroomToolkit.Domain.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal`
+  - exit_code: 0
+  - key_output: `0 warning / 0 error`.
+- Application analyzer slice:
+  - `dotnet build src/ClassroomToolkit.Application/ClassroomToolkit.Application.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal`
+  - exit_code: 0
+  - key_output: `0 warning / 0 error`.
+- Services/Interop targeted tests:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PhotoNavigationSessionTests|FullyQualifiedName~SpeechServiceTests|FullyQualifiedName~SpeechServiceLifecycleContractTests|FullyQualifiedName~SpeechServiceUnavailableNotificationPolicyTests|FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~KeyBindingTokenParserTests|FullyQualifiedName~PresentationControlServiceTests"`
+  - exit_code: 0
+  - key_output: `58` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~KeyBindingTokenParserTests|FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~PresentationControlServiceTests|FullyQualifiedName~StartupCompatibility"`
+  - exit_code: 0
+  - key_output: `69` passed.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~KeyBindingTokenParserTests|FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~PresentationControlServiceTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests"`
+  - exit_code: 0
+  - key_output: `54` passed.
+- Services and Interop analyzer slices:
+  - `dotnet build src/ClassroomToolkit.Services/ClassroomToolkit.Services.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal`
+  - exit_code: 0
+  - key_output: `0 warning / 0 error`.
+  - `dotnet build src/ClassroomToolkit.Interop/ClassroomToolkit.Interop.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal`
+  - exit_code: 0
+  - key_output: `0 warning / 0 error`.
+- Final fixed-order gate:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1` -> pass.
+- Unified quality gate:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug`
+  - exit_code: 0
+  - key_output: `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog baseline `369`.
+- Diff hygiene:
+  - `git diff --check`
+  - exit_code: 0
+  - key_output: no whitespace errors; Git reported LF-to-CRLF normalization warnings only.
+
+## 2026-04-28 Follow-up Analyzer Hardening
+- Scope: App/Infra analyzer backlog reduction without changing UI workflows, persisted settings semantics, or classroom-facing behavior.
+- Changes:
+  - Normalized settings/preset/timer/telemetry comparisons with uppercase or ordinal comparisons while preserving existing lowercase persisted tokens.
+  - Added null argument guards in UI helper, diagnostics, view-model, ink, session, and roll-call settings boundaries.
+  - Removed unused App/Paint overlay constants that had already moved to shared windowing/runtime defaults.
+  - Constrained `PdfDocumentHost.DeleteObject` P/Invoke lookup to `System32`.
+  - Kept composite export lowercase file-extension output for compatibility and documented the analyzer suppression.
+  - Fixed EOF whitespace only in `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`; rule content was not changed in this pass.
+- Regression found and fixed:
+  - First pass used `DUALSCREEN` instead of `DUAL_SCREEN`, breaking `PresetSchemePolicyTests`.
+  - Root cause fixed by matching `DUAL_SCREEN` and preserving unknown configured schemes so preset inference still runs.
+- Targeted verification:
+  - preset/settings tests -> pass, `43` passed.
+  - App/UI/ink/session targeted tests -> pass, `259` passed.
+  - Infra analyzer slice -> pass, `0 warning / 0 error`.
+  - App analyzer slice -> pass; unique analyzer count observed in App slice dropped from `349` to `320`.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1` -> pass.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; analyzer backlog total `321`.
+  - One failed full-test run occurred during this pass; the failure was fixed before final gates were rerun.
+- Settings-load performance after:
+  - output: `artifacts/validation/20260427-current-review-after/settings-load-performance-summary-20260427-234851.md`
+  - small: hot p95 `0.7014 ms`; medium: hot p95 `1.7522 ms`.
+
+## Hotspot Review
+- Classroom usability: no UI event flow, WPF layout, touch target, or classroom workflow behavior changed.
+- Interop: no Win32/COM/WPS/UIAutomation behavior changed.
+- Compatibility: no change to `students.xlsx`, `student_photos/`, `settings.ini`, SQLite table shapes, or JSON payload shapes.
+- Security/supply-chain: no new dependency; SQLite path handling no longer treats file paths as raw connection strings; Win32 P/Invoke DLL lookup is constrained to System32.
+- Performance: settings-load sampling stayed within existing low-millisecond range; changes are outside per-frame UI paths.
+- Analyzer governance: Domain/Application/Services/Interop direct analyzer slices now build with `0 warning / 0 error`; unified backlog gate reports `total=369`, down from the prior `621`.
+- 2026-04-28 analyzer governance: unified backlog gate now reports `total=321`.
+
+## 2026-04-28 Follow-up Contract Analyzer Pass
+- Scope: App contract analyzer cleanup for event and collection shapes that are already part of UI, persistence, cache, or binding contracts.
+- Changes:
+  - Added documented `CA1003` suppressions for action-based UI events in paint mode, paint window orchestration, toolbar/overlay/photo/image-manager/roll-call surfaces.
+  - Added documented `CA1002/CA2227` suppressions for JSON/settings/ink document lists, ink export output paths, ink cache stroke lists, brush point lists, and image-manager navigation stacks.
+  - Did not change event signatures, WPF binding properties, JSON sidecar shape, settings payload shape, or ink cache semantics.
+- Analyzer verification:
+  - App analyzer slice after previous pass: `257` unique locations.
+  - App analyzer slice after this pass: `242` unique locations.
+  - `CA1002`, `CA1003`, and `CA2227` no longer appear in the App analyzer rule counts.
+  - Unified quality gate analyzer backlog: `total=243`.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PaintModeManager|FullyQualifiedName~PhotoOverlay|FullyQualifiedName~InkPersistenceServiceTests|FullyQualifiedName~InkExportServiceTests|FullyQualifiedName~Brush"` -> pass, `155` passed.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1` -> pass.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `243`.
+  - `git diff --check` -> pass; Git reported LF-to-CRLF normalization warnings only.
+- Operational note:
+  - A prior parallel `dotnet build` / App analyzer attempt caused transient `obj` and metadata write contention. The gate was rerun sequentially and passed; future local analyzer/build runs should avoid sharing the same `obj` directory concurrently.
+- Rollback delta for this pass:
+  - Revert the suppressions in `src/ClassroomToolkit.App/Ink/InkDocumentData.cs`, `src/ClassroomToolkit.App/Ink/InkExportService.cs`, `src/ClassroomToolkit.App/Ink/InkFinalCache.cs`, `src/ClassroomToolkit.App/Ink/InkModels.cs`, `src/ClassroomToolkit.App/Ink/InkPersistenceService.cs`, `src/ClassroomToolkit.App/LauncherBubbleWindow.xaml.cs`, `src/ClassroomToolkit.App/Paint/Brushes/IBrushRenderer.cs`, `src/ClassroomToolkit.App/Paint/PaintModeManager.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.State.cs`, `src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs`, `src/ClassroomToolkit.App/Photos/ImageManagerViewModel.cs`, `src/ClassroomToolkit.App/Photos/ImageManagerWindow.State.cs`, `src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml.cs`, `src/ClassroomToolkit.App/Services/PaintWindowOrchestrator.cs`, `src/ClassroomToolkit.App/Settings/AppSettings.cs`, and `src/ClassroomToolkit.App/ViewModels/RollCallViewModel.cs`, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## 2026-04-28 Follow-up Resource/Async Analyzer Pass
+- Scope: App analyzer cleanup for resource lifetime, WPF async continuation, visual randomness, logging delegates, constant allocations, and small dead-code findings.
+- Changes:
+  - Made PDF export host disposal explicit with `finally` and documented the remaining `CA2000` false positive before suppressing it.
+  - Reused manifest `JsonSerializerOptions` instead of allocating per write.
+  - Replaced thumbnail cancellation `Cancel()` with awaited `CancelAsync()` in the async load path.
+  - Removed analyzer-proven dead branches in startup service resolution, WPS hook wiring, and neighbor ink seed loading.
+  - Converted ink noise grids from multidimensional arrays to jagged arrays and reused fullscreen enforcement delay arrays.
+  - Switched `PaintWindowOrchestrator` logging to cached `LoggerMessage.Define` delegates.
+  - Added concentrated suppressions for WPF dispatcher-bound awaits, non-security visual randomness, WPF `App` naming, WPF command/view-model notification helpers, and intentionally nested DTOs.
+  - Preserved non-const calligraphy feature flags after a compile check proved `const` would make fallback branches unreachable.
+- Analyzer verification:
+  - App analyzer slice after prior pass: `242` unique locations.
+  - App analyzer slice after event/collection contract pass: `197` unique locations.
+  - Rules removed from App analyzer slice: `CA2000`, `CA2007`, `CA5394`, `CA1849`, `CA1869`, `CA1873`, `CA2208`, `CA1508`, `CA1802`, `CA1814`, `CA1303`, `CA1724`, `CA1030`, `CA1034`.
+  - Remaining App analyzer slice: `CA1515=155`, `CA1859=42`.
+  - Unified quality gate analyzer backlog: `total=198`.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~InkExportServiceTests|FullyQualifiedName~InkExportCoordinateInvariantTests|FullyQualifiedName~Brush|FullyQualifiedName~ImageManager|FullyQualifiedName~PaintOverlay|FullyQualifiedName~PaintWindowOrchestrator|FullyQualifiedName~RollCall"` -> pass, `375` passed.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1` -> pass.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `198`.
+  - `git diff --check` -> pass; Git reported LF-to-CRLF normalization warnings only.
+- Rollback delta for this pass:
+  - Revert changes in `src/ClassroomToolkit.App/App.xaml.cs`, `src/ClassroomToolkit.App/GlobalSuppressions.cs`, `src/ClassroomToolkit.App/Ink/InkExportManifestUtilities.cs`, `src/ClassroomToolkit.App/Ink/InkExportService.Exporting.cs`, `src/ClassroomToolkit.App/Ink/InkStrokeRenderer.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Core.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Graphics.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Texture.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.Seed.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Photo.Navigation.WindowMode.cs`, `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.xaml.cs`, `src/ClassroomToolkit.App/Photos/ImageManagerWindow.Loading.cs`, and `src/ClassroomToolkit.App/Services/PaintWindowOrchestrator.cs`, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## 2026-04-28 Follow-up Diagnostics Analyzer Pass
+- Scope: low-risk private-helper signature tightening in diagnostics/startup code only; no UI copy, settings format, persisted data, or WPF binding contract changes.
+- Changes:
+  - `SystemDiagnostics` private helper parameters now use the concrete `List<string>` type already created by callers, eliminating avoidable interface dispatch in diagnostic report construction.
+  - `StartupCompatibilityAutoRemediationPolicy` private issue-code helpers now accept the actual `HashSet<string>` used by `Apply`, preserving ordinal-ignore-case lookup behavior.
+  - `App.ResolveAppDataDirectory` now accepts the concrete `ConfigurationService` instance used by the static startup path.
+- Targeted verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~SystemDiagnostics|FullyQualifiedName~StartupCompatibility|FullyQualifiedName~AppGlobal"` -> pass, `34` passed.
+  - `dotnet build src/ClassroomToolkit.App/ClassroomToolkit.App.csproj -c Debug --no-incremental -m:1 -p:TreatWarningsAsErrors=false -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -v:minimal` -> pass after a sequential rerun; the targeted `CA1859` diagnostics for `SystemDiagnostics`, `StartupCompatibilityAutoRemediationPolicy`, and `App.ResolveAppDataDirectory` no longer appear.
+- Operational note:
+  - One parallel App analyzer run conflicted with a simultaneous test build and failed with `CS2012` on `src/ClassroomToolkit.Infra/obj/.../ClassroomToolkit.Infra.dll`; `dotnet build-server shutdown` plus a sequential analyzer rerun passed. Future analyzer/build/test runs that write shared `obj` folders should remain sequential.
+- Final fixed-order gate on 2026-04-28:
+  - `dotnet build ClassroomToolkit.sln -c Debug` -> pass, `0 warning / 0 error`.
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` -> pass, `3471` passed.
+  - contract/invariant filter -> pass, `28` passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1` -> pass.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile quick -Configuration Debug` -> pass, `[quality] ALL PASS`; dependency-vulnerability pass; analyzer backlog total `185`.
+- Rollback delta for this pass:
+  - Revert the signature-only changes in `src/ClassroomToolkit.App/Diagnostics/SystemDiagnostics.cs`, `src/ClassroomToolkit.App/Diagnostics/StartupCompatibilityAutoRemediationPolicy.cs`, and `src/ClassroomToolkit.App/App.xaml.cs`, then rerun `build -> test -> contract/invariant -> hotspot`.
+
+## Rollback
+- Revert:
+  - `src/ClassroomToolkit.Infra/Storage/SqliteStorageUtilities.cs`
+  - `src/ClassroomToolkit.Infra/Storage/InkHistorySqliteStoreAdapter.cs`
+  - `src/ClassroomToolkit.Infra/Logging/FileLoggerProvider.cs`
+  - `src/ClassroomToolkit.Infra/Settings/IniSettingsStore.cs`
+  - `src/ClassroomToolkit.Infra/Migration/SettingsMigrator.cs`
+  - `src/ClassroomToolkit.App/AboutDialog.xaml.cs`
+  - `src/ClassroomToolkit.App/App.xaml.cs`
+  - `src/ClassroomToolkit.App/Behaviors/LongPressBehavior.cs`
+  - `src/ClassroomToolkit.App/Diagnostics/BorderBrushDiagnostic.cs`
+  - `src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml.cs`
+  - `src/ClassroomToolkit.App/Diagnostics/SystemDiagnostics.cs`
+  - `src/ClassroomToolkit.App/Ink/InkExportService.CompositeIndexing.cs`
+  - `src/ClassroomToolkit.App/Ink/InkExportService.Rendering.cs`
+  - `src/ClassroomToolkit.App/Ink/InkSettingsDialog.xaml.cs`
+  - `src/ClassroomToolkit.App/Ink/InkStorageService.cs`
+  - `src/ClassroomToolkit.App/Ink/InkStrokeRenderer.cs`
+  - `src/ClassroomToolkit.App/Paint/Brushes/MarkerBrushRenderer.cs`
+  - `src/ClassroomToolkit.App/Paint/Brushes/VariableWidthBrushRenderer.cs`
+  - `src/ClassroomToolkit.App/Paint/InkRedrawTelemetryPolicy.cs`
+  - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.State.cs`
+  - `src/ClassroomToolkit.App/Paint/PhotoInertiaProfileDefaults.cs`
+  - `src/ClassroomToolkit.App/Paint/PresetSchemeInitializationPolicy.cs`
+  - `src/ClassroomToolkit.App/Paint/PresetSchemePolicy.cs`
+  - `src/ClassroomToolkit.App/Photos/ImageManagerViewModel.cs`
+  - `src/ClassroomToolkit.App/Photos/PdfDocumentHost.cs`
+  - `src/ClassroomToolkit.App/Photos/VirtualizingWrapPanel.cs`
+  - `src/ClassroomToolkit.App/RollCallSettingsDialog.xaml.cs`
+  - `src/ClassroomToolkit.App/RollCallWindow.State.cs`
+  - `src/ClassroomToolkit.App/RollCallWindow.Timer.cs`
+  - `src/ClassroomToolkit.App/Session/UiSessionInvariants.cs`
+  - `src/ClassroomToolkit.App/Session/UiSessionWidgetVisibilityEffectPolicy.cs`
+  - `src/ClassroomToolkit.App/Settings/AppSettingsService.Helpers.cs`
+  - `src/ClassroomToolkit.App/ViewModels/ViewModelBase.cs`
+  - `src/ClassroomToolkit.App/Windowing/FloatingTopmostDriftRepairExecutor.cs`
+  - `src/ClassroomToolkit.Domain/Serialization/RollStateSerializer.cs`
+  - `src/ClassroomToolkit.Domain/Utilities/IdentityUtils.cs`
+  - `src/ClassroomToolkit.Domain/Services/RollCallEngine.cs`
+  - `src/ClassroomToolkit.Domain/Timers/TimerEngine.cs`
+  - `src/ClassroomToolkit.Domain/Models/StudentWorkbook.cs`
+  - `src/ClassroomToolkit.Domain/Models/ClassRollState.cs`
+  - `src/ClassroomToolkit.Application/UseCases/Photos/PhotoNavigationSession.cs`
+  - `src/ClassroomToolkit.Services/Speech/SpeechService.cs`
+  - `src/ClassroomToolkit.Services/Input/GlobalHookService.cs`
+  - `src/ClassroomToolkit.Services/Input/KeyBindingTokenParser.cs`
+  - `src/ClassroomToolkit.Services/Presentation/PresentationControlService.cs`
+  - `src/ClassroomToolkit.Services/Compatibility/StartupCompatibilityProbe.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/KeyBinding.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/KeyBindingParser.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/KeyboardHook.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/KeyboardHook.Interop.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/VirtualKey.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/Win32PresentationResolver.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.cs`
+  - `src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.Interop.cs`
+  - `src/ClassroomToolkit.Interop/Win32/NativeMethods.cs`
+  - `tests/ClassroomToolkit.Tests/InkHistorySqliteStoreAdapterTests.cs`
+  - `tests/ClassroomToolkit.Tests/RollCallSqliteStoreAdapterTests.cs`
+  - `tests/ClassroomToolkit.Tests/StudentWorkbookSqliteStoreAdapterTests.cs`
+  - `tests/ClassroomToolkit.Tests/RollStateSerializerTests.cs`
+  - `docs/change-evidence/20260427-systematic-review-storage-logging.md`
+- Then rerun `build -> test -> contract/invariant -> hotspot`.

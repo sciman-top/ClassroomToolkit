@@ -6,6 +6,7 @@ using ClassroomToolkit.App.ViewModels;
 
 namespace ClassroomToolkit.App.Photos;
 
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Back/forward stacks are existing mutable navigation state used by WPF command handlers and tests.")]
 public sealed class ImageManagerViewModel : ViewModelBase
 {
     private string _currentFolder = string.Empty;
@@ -80,6 +81,9 @@ public sealed class ImageManagerViewModel : ViewModelBase
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for binding/test compatibility.")]
     public void LoadFolderList(ObservableCollection<FolderItem> target, IReadOnlyList<string> source)
     {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(source);
+
         target.Clear();
         foreach (var path in source)
         {

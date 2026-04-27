@@ -27,7 +27,6 @@ public partial class App : WpfApplication
     internal const string StartupCompatibilityWarningShownPropertyKey = "StartupCompatibilityWarningShown";
     private static readonly object LogWriteLock = new();
     private static readonly ConfigurationService AppConfiguration = new();
-    private static readonly string AppRootDirectory = AppConfiguration.BaseDirectory;
     private static readonly string AppDataDirectory = ResolveAppDataDirectory(AppConfiguration);
     private static readonly LogRetentionOptions DefaultLogRetentionOptions = new();
     private int _criticalDialogShowing;
@@ -49,13 +48,10 @@ public partial class App : WpfApplication
         // Prevent WPF from treating that dialog as the last window and shutting down the app.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        if (_services is null)
-        {
-            throw new InvalidOperationException("ServiceProvider is not configured.");
-        }
+        var services = _services ?? throw new InvalidOperationException("ServiceProvider is not configured.");
 
         var startupOrchestrator = new StartupOrchestrator(
-            _services,
+            services,
             AppDataDirectory,
             Properties,
             StartupCompatibilityWarningShownPropertyKey,
@@ -66,7 +62,7 @@ public partial class App : WpfApplication
             return;
         }
 
-        if (_services?.GetService<MainWindow>() is not MainWindow mainWindow)
+        if (services.GetService<MainWindow>() is not MainWindow mainWindow)
         {
             throw new InvalidOperationException("MainWindow service is not configured.");
         }
@@ -390,7 +386,7 @@ public partial class App : WpfApplication
         }
     }
 
-    private static string ResolveAppDataDirectory(IConfigurationService configuration)
+    private static string ResolveAppDataDirectory(ConfigurationService configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 

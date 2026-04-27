@@ -88,7 +88,7 @@ public partial class PaintOverlayWindow
         {
             if (index < 0 || index >= _children.Count)
             {
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             return _children[index];
         }

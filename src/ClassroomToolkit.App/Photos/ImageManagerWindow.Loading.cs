@@ -44,8 +44,20 @@ public partial class ImageManagerWindow
 
     private async Task LoadImagesAsync(string folder, int requestId)
     {
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
+        var previousThumbnailCts = _thumbnailCts;
+        if (previousThumbnailCts != null)
+        {
+            try
+            {
+                await previousThumbnailCts.CancelAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Token source may be disposed during rapid folder switching or shutdown.
+            }
+            previousThumbnailCts.Dispose();
+        }
+
         _thumbnailCts = new CancellationTokenSource();
         ResetThumbnailPendingQueue();
         _thumbnailBackgroundQueueTimer.Stop();

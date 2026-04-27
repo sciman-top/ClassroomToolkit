@@ -35,6 +35,8 @@ public abstract class ViewModelBase : INotifyPropertyChanged
 
     protected void RaisePropertyChanged(params string[] propertyNames)
     {
+        ArgumentNullException.ThrowIfNull(propertyNames);
+
         foreach (var name in propertyNames)
         {
             OnPropertyChanged(name);

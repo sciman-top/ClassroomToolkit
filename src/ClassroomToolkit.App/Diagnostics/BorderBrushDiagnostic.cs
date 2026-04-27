@@ -7,10 +7,12 @@ namespace ClassroomToolkit.App.Diagnostics
     /// <summary>
     /// 诊断工具，用于检测 BorderBrush 问题
     /// </summary>
-    public class BorderBrushDiagnostic
+    public static class BorderBrushDiagnostic
     {
         public static void CheckAllBorders(Window window)
         {
+            ArgumentNullException.ThrowIfNull(window);
+
             Console.WriteLine($"检查窗口: {window.GetType().Name}");
             BorderFixHelper.FixAllBorders(window);
         }

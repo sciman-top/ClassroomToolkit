@@ -1,5 +1,15 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ClassroomToolkit.Domain.Models;
 
+[SuppressMessage(
+    "Design",
+    "CA1002:Do not expose generic lists",
+    Justification = "Mutable collection properties are the persisted roll-state JSON contract.")]
+[SuppressMessage(
+    "Usage",
+    "CA2227:Collection properties should be read only",
+    Justification = "Setters are required for JSON deserialization and legacy persisted-state compatibility.")]
 public sealed class ClassRollState
 {
     public string Version { get; set; } = "2.0";

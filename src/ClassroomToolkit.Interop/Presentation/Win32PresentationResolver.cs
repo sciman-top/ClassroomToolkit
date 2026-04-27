@@ -28,6 +28,8 @@ public sealed partial class Win32PresentationResolver : IPresentationTargetResol
 
     public PresentationWindowCheck? CheckWindow(IntPtr hwnd, PresentationClassifier classifier)
     {
+        ArgumentNullException.ThrowIfNull(classifier);
+
         if (!OperatingSystem.IsWindows() || hwnd == IntPtr.Zero)
         {
             return null;

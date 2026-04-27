@@ -254,35 +254,37 @@ public sealed partial class AppSettingsService
 
     private static string NormalizeInputModeToken(string? rawMode)
     {
-        var normalizedMode = (rawMode ?? string.Empty).Trim().ToLowerInvariant();
+        var normalizedMode = (rawMode ?? string.Empty).Trim().ToUpperInvariant();
         return normalizedMode switch
         {
-            WpsInputModeDefaults.Auto => WpsInputModeDefaults.Auto,
-            WpsInputModeDefaults.Raw => WpsInputModeDefaults.Raw,
-            WpsInputModeDefaults.Message => WpsInputModeDefaults.Message,
+            "AUTO" => WpsInputModeDefaults.Auto,
+            "RAW" => WpsInputModeDefaults.Raw,
+            "MESSAGE" => WpsInputModeDefaults.Message,
             _ => string.Empty
         };
     }
 
     private static string NormalizePresetScheme(string? rawScheme)
     {
-        var normalized = (rawScheme ?? string.Empty).Trim().ToLowerInvariant();
+        var normalized = (rawScheme ?? string.Empty).Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return PresetSchemeDefaults.Custom;
         }
 
-        if (normalized == PresetSchemeDefaults.DualScreen)
+        if (normalized == "DUAL_SCREEN")
         {
             return PresetSchemeDefaults.Stable;
         }
 
-        return normalized is PresetSchemeDefaults.Custom
-            or PresetSchemeDefaults.Balanced
-            or PresetSchemeDefaults.Responsive
-            or PresetSchemeDefaults.Stable
-            ? normalized
-            : PresetSchemeDefaults.Custom;
+        return normalized switch
+        {
+            "CUSTOM" => PresetSchemeDefaults.Custom,
+            "BALANCED" => PresetSchemeDefaults.Balanced,
+            "RESPONSIVE" => PresetSchemeDefaults.Responsive,
+            "STABLE" => PresetSchemeDefaults.Stable,
+            _ => PresetSchemeDefaults.Custom
+        };
     }
 
     private static int NormalizeStylusPressureProfile(int rawProfile)

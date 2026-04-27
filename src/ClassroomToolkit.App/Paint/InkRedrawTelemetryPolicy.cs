@@ -20,13 +20,13 @@ internal static class InkRedrawTelemetryPolicy
             return false;
         }
 
-        return value.Trim().ToLowerInvariant() switch
+        return value.Trim().ToUpperInvariant() switch
         {
             "1" => true,
-            "true" => true,
-            "on" => true,
-            "yes" => true,
-            "enabled" => true,
+            "TRUE" => true,
+            "ON" => true,
+            "YES" => true,
+            "ENABLED" => true,
             _ => false
         };
     }

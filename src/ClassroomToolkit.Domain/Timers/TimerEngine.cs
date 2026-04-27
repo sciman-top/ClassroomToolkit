@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Domain.Timers;
 
@@ -27,8 +28,16 @@ public sealed class TimerEngine
         set => _reminderSeconds = Math.Max(0, value);
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1003:Use generic event handler instances",
+        Justification = "Action-based timer events are part of the existing app/view-model contract.")]
     public event Action? TimerCompleted;
 
+    [SuppressMessage(
+        "Design",
+        "CA1003:Use generic event handler instances",
+        Justification = "Action-based timer events are part of the existing app/view-model contract.")]
     public event Action? ReminderTriggered;
 
     public void SetMode(TimerMode mode)

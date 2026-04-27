@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -14,6 +15,7 @@ namespace ClassroomToolkit.App.Ink;
 /// Method A: Sidecar-based ink persistence.
 /// Reads/writes .ink.json files in a hidden .ctk-ink/ folder next to the source file.
 /// </summary>
+[SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Ink persistence list APIs match the JSON sidecar model and existing callers; changing them would alter persisted-contract behavior.")]
 public sealed class InkPersistenceService
 {
     private const string InkFolderName = ".ctk-ink";

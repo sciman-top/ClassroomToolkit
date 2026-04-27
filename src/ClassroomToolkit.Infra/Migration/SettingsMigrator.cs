@@ -74,13 +74,13 @@ public static class SettingsMigrator
         {
             return rawInput ? "raw" : "auto";
         }
-        var lower = mode.Trim().ToLowerInvariant();
-        return lower switch
+        var normalized = mode.Trim().ToUpperInvariant();
+        return normalized switch
         {
-            "auto" => "auto",
-            "raw" => "raw",
-            "message" => "message",
-            "manual" => rawInput ? "raw" : "message",
+            "AUTO" => "auto",
+            "RAW" => "raw",
+            "MESSAGE" => "message",
+            "MANUAL" => rawInput ? "raw" : "message",
             _ => rawInput ? "raw" : "auto"
         };
     }

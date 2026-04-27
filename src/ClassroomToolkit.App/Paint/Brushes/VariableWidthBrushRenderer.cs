@@ -545,6 +545,8 @@ public partial class VariableWidthBrushRenderer : IBrushRenderer
 
     public void Render(DrawingContext dc)
     {
+        ArgumentNullException.ThrowIfNull(dc);
+
         if (_points.Count < 2) return;
 
         var core = _isActive ? GetPreviewCoreGeometry() : GetLastCoreGeometry();
