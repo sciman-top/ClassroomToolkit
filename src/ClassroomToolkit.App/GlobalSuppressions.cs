@@ -93,12 +93,6 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage(
     "Design",
     "CA1034:Nested types should not be visible",
-    Justification = "Nested export result keeps the existing public result contract colocated with the export service.",
-    Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Ink.InkExportService.InkExportRunResult")]
-[assembly: SuppressMessage(
-    "Design",
-    "CA1034:Nested types should not be visible",
     Justification = "Geometry DTOs are intentionally nested under the renderer to avoid broadening the brush API surface.",
     Scope = "type",
     Target = "~T:ClassroomToolkit.App.Paint.Brushes.VariableWidthBrushRenderer.RibbonGeometry")]

@@ -23,7 +23,7 @@ public sealed partial class InkExportService
     }
 
     [SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "OutputPaths is an existing export result contract consumed by UI summaries and tests.")]
-    public sealed class InkExportRunResult
+    internal sealed class InkExportRunResult
     {
         public List<string> OutputPaths { get; } = new();
         public int ExportedCount { get; set; }
@@ -84,7 +84,7 @@ public sealed partial class InkExportService
     }
 
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing callers.")]
-    public InkExportRunResult ExportAllPagesForFileDetailed(
+    internal InkExportRunResult ExportAllPagesForFileDetailed(
         string sourcePath,
         InkDocumentData? inkDoc,
         InkExportOptions options)

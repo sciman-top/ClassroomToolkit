@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ClassroomToolkit.App.Windowing;
 
-public sealed class WindowOrchestrator : IWindowOrchestrator
+internal sealed class WindowOrchestrator : IWindowOrchestrator
 {
     public bool TouchSurface(IList<ZOrderSurface> surfaceStack, ZOrderSurface surface)
     {

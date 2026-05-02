@@ -46,7 +46,7 @@ public interface IPaintWindowOrchestrator
 }
 
 [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing app orchestration contract.")]
-public class PaintWindowOrchestrator : IPaintWindowOrchestrator
+internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 {
     private static readonly Action<ILogger, bool, bool, Exception?> LogPartialPaintWindowLifecycleState =
         LoggerMessage.Define<bool, bool>(
