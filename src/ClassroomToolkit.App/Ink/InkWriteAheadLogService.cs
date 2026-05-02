@@ -14,7 +14,7 @@ namespace ClassroomToolkit.App.Ink;
 /// Minimal write-ahead log for in-session ink snapshots.
 /// Used to recover unsaved page edits after abnormal process termination.
 /// </summary>
-public sealed class InkWriteAheadLogService
+internal sealed class InkWriteAheadLogService
 {
     private const string InkFolderName = ".ctk-ink";
     private const string WalFileName = ".ink-wal.json";

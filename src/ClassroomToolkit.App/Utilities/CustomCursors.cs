@@ -19,7 +19,7 @@ namespace ClassroomToolkit.App.Utilities;
 /// <summary>
 /// 自定义光标生成器 - 为画笔工具创建形象美观的光标
 /// </summary>
-public static class CustomCursors
+internal static class CustomCursors
 {
     private static WpfCursor? _brushCursor;
     private static MediaColor _currentBrushColor = Colors.Red;
@@ -467,4 +467,3 @@ public static class CustomCursors
         }
     }
 }
-

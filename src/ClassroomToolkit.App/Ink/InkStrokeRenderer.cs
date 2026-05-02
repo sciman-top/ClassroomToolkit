@@ -13,7 +13,7 @@ using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Ink;
 
-public sealed class InkStrokeRenderer
+internal sealed class InkStrokeRenderer
 {
     private const int InkNoiseTileCacheLimit = 96;
     [SuppressMessage("Performance", "CA1802:Use literals where appropriate", Justification = "Keep the feature flag non-const so fallback branches remain compile-checked and easy to re-enable.")]

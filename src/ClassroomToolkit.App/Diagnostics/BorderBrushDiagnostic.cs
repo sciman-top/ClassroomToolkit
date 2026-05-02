@@ -7,7 +7,7 @@ namespace ClassroomToolkit.App.Diagnostics
     /// <summary>
     /// 诊断工具，用于检测 BorderBrush 问题
     /// </summary>
-    public static class BorderBrushDiagnostic
+    internal static class BorderBrushDiagnostic
     {
         public static void CheckAllBorders(Window window)
         {

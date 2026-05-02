@@ -111,7 +111,7 @@ public partial class ImageManagerWindow
         SafeActionExecutionExecutor.TryExecute(
             () => LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth),
             ex => Debug.WriteLine($"ImageManager: close layout callback failed: {ex.Message}"));
-        _thumbnailCts?.Cancel();
+        TryCancelThumbnailCts();
     }
 
     private void CompleteClose()
@@ -135,9 +135,7 @@ public partial class ImageManagerWindow
         _multiSelectLongPressTimer.Tick -= OnMultiSelectLongPressTick;
         _thumbnailBackgroundQueueTimer.Stop();
         _thumbnailBackgroundQueueTimer.Tick -= OnThumbnailBackgroundQueueTick;
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _thumbnailCts = null;
+        TryCancelAndDisposeThumbnailCts();
         ResetThumbnailPendingQueue();
         lock (_thumbnailCacheLock)
         {
@@ -166,6 +164,59 @@ public partial class ImageManagerWindow
         catch (ObjectDisposedException)
         {
             // Expected when background workers race with window shutdown.
+        }
+    }
+
+    private void TryCancelThumbnailCts()
+    {
+        var cts = Volatile.Read(ref _thumbnailCts);
+        if (cts == null)
+        {
+            return;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when cancellation races with folder switching/cleanup.
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: thumbnail cancellation failed: {ex.Message}");
+        }
+    }
+
+    private void TryCancelAndDisposeThumbnailCts()
+    {
+        var cts = Interlocked.Exchange(ref _thumbnailCts, null);
+        if (cts == null)
+        {
+            return;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when cancellation races with folder switching/cleanup.
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: thumbnail cancellation failed: {ex.Message}");
+        }
+
+        try
+        {
+            cts.Dispose();
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"ImageManager: thumbnail token dispose failed: {ex.Message}");
         }
     }
 }

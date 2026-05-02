@@ -12,7 +12,7 @@ using ClassroomToolkit.Services.Presentation;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
-public static class SystemDiagnostics
+internal static class SystemDiagnostics
 {
     public static DiagnosticsResult CollectSystemDiagnostics(
         AppSettings settings,

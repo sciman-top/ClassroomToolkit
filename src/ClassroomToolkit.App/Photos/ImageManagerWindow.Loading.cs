@@ -44,7 +44,8 @@ public partial class ImageManagerWindow
 
     private async Task LoadImagesAsync(string folder, int requestId)
     {
-        var previousThumbnailCts = _thumbnailCts;
+        var nextThumbnailCts = new CancellationTokenSource();
+        var previousThumbnailCts = Interlocked.Exchange(ref _thumbnailCts, nextThumbnailCts);
         if (previousThumbnailCts != null)
         {
             try
@@ -55,13 +56,16 @@ public partial class ImageManagerWindow
             {
                 // Token source may be disposed during rapid folder switching or shutdown.
             }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine($"ImageManager: previous thumbnail cancellation failed: {ex.Message}");
+            }
             previousThumbnailCts.Dispose();
         }
 
-        _thumbnailCts = new CancellationTokenSource();
         ResetThumbnailPendingQueue();
         _thumbnailBackgroundQueueTimer.Stop();
-        var token = _thumbnailCts.Token;
+        var token = nextThumbnailCts.Token;
         ViewModel.Images.Clear();
         _navigableDirty = true;
         EmptyHintText.Visibility = Visibility.Collapsed;
@@ -113,9 +117,7 @@ public partial class ImageManagerWindow
 
     private void ShowEmptyState()
     {
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _thumbnailCts = null;
+        TryCancelAndDisposeThumbnailCts();
         _thumbnailBackgroundQueueTimer.Stop();
         ResetThumbnailPendingQueue();
         ViewModel.CurrentFolder = string.Empty;

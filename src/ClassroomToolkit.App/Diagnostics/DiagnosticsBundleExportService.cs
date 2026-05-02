@@ -8,12 +8,12 @@ using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
-public sealed record DiagnosticsBundleExportResult(
+internal sealed record DiagnosticsBundleExportResult(
     bool Success,
     string BundlePath,
     string Error);
 
-public static class DiagnosticsBundleExportService
+internal static class DiagnosticsBundleExportService
 {
     internal const long MaxOptionalSourceFileBytes = 8L * 1024 * 1024;
 

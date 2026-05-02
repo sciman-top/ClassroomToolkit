@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -70,5 +71,25 @@ public sealed class GovernanceTruthSourceContractTests
         content.Should().Contain("check-dependency-vulnerabilities.ps1");
         content.Should().Contain("check-logging-alert-threshold.ps1");
         content.Should().Contain("check-analyzer-backlog-baseline.ps1");
+    }
+
+    [Fact]
+    public void AnalyzerBacklogBaseline_ShouldPreserveArrayShape_WhenOnlyOneProjectOrRuleRemains()
+    {
+        var scriptPath = TestPathHelper.ResolveRepoPath("scripts", "quality", "check-analyzer-backlog-baseline.ps1");
+        var script = File.ReadAllText(scriptPath);
+
+        script.Should().Contain("$projectCounts = @($uniqueDiagnostics |");
+        script.Should().Contain("$ruleCounts = @($uniqueDiagnostics |");
+        script.Should().Contain("foreach ($entry in @($baseline.rule_counts))");
+        script.Should().Contain("foreach ($entry in @($baseline.project_counts))");
+        script.Should().Contain("Get-ChildItem -LiteralPath $srcRoot");
+        script.Should().Contain("Set-Content -LiteralPath $resolvedReportPath");
+        script.Should().Contain("Get-Content -LiteralPath $resolvedBaselinePath");
+
+        var baselinePath = TestPathHelper.ResolveRepoPath("scripts", "quality", "analyzer-backlog-baseline.json");
+        using var document = JsonDocument.Parse(File.ReadAllText(baselinePath));
+        document.RootElement.GetProperty("project_counts").ValueKind.Should().Be(JsonValueKind.Array);
+        document.RootElement.GetProperty("rule_counts").ValueKind.Should().Be(JsonValueKind.Array);
     }
 }

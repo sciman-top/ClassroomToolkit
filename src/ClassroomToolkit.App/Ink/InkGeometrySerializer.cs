@@ -3,7 +3,7 @@ using System.Windows.Media;
 
 namespace ClassroomToolkit.App.Ink;
 
-public static class InkGeometrySerializer
+internal static class InkGeometrySerializer
 {
     public static string Serialize(Geometry geometry)
     {
@@ -31,4 +31,3 @@ public static class InkGeometrySerializer
         }
     }
 }
-

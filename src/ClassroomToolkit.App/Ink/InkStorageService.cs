@@ -11,7 +11,7 @@ using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
-public sealed class InkStorageService
+internal sealed class InkStorageService
 {
     private static readonly string DefaultRootPath = ResolveDefaultRootPath();
     private static readonly EnumerationOptions TopLevelIgnoreInaccessibleOptions = new()

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ClassroomToolkit.App.Paint;
 
-public sealed class PaintWindowFactory : IPaintWindowFactory
+internal sealed class PaintWindowFactory : IPaintWindowFactory
 {
     private readonly InkPersistenceService _persistence;
     private readonly InkExportService _export;

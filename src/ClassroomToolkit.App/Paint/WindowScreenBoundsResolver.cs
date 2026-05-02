@@ -9,7 +9,7 @@ namespace ClassroomToolkit.App.Paint;
 
 internal static class WindowScreenBoundsResolver
 {
-    private static readonly ICursorWindowGeometryInteropAdapter WindowGeometryAdapter = new NativeCursorWindowGeometryInteropAdapter();
+    private static readonly NativeCursorWindowGeometryInteropAdapter WindowGeometryAdapter = new();
 
     internal static bool TryResolve(Window? window, out Rectangle bounds, out double dpiScaleX, out double dpiScaleY)
     {

@@ -76,9 +76,9 @@ public partial class PaintOverlayWindow : Window
     private PresentationClassifier _presentationClassifier;
     private readonly Win32PresentationResolver _presentationResolver;
     private readonly WpsSlideshowNavigationHook? _wpsNavHook;
-    private readonly IWpsNavHookClient? _wpsNavHookClient;
+    private readonly WpsNavHookClient? _wpsNavHookClient;
     private readonly WpsHookOrchestrator _wpsHookOrchestrator = new();
-    private readonly IWpsHookUnavailableNotifier _wpsHookUnavailableNotifier = new MessageBoxWpsHookUnavailableNotifier();
+    private readonly MessageBoxWpsHookUnavailableNotifier _wpsHookUnavailableNotifier = new();
     private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();
     private bool _wpsNavHookActive;
     private bool _wpsHookInterceptKeyboard = true;

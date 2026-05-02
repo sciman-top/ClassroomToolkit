@@ -3,7 +3,7 @@ using ClassroomToolkit.App;
 
 namespace ClassroomToolkit.App.Commands;
 
-public sealed class RelayCommand : ICommand
+internal sealed class RelayCommand : ICommand
 {
     private readonly Action _execute;
     private readonly Func<bool>? _canExecute;

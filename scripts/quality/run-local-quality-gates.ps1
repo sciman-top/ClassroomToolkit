@@ -25,19 +25,49 @@ function Resolve-PowerShellExecutable {
     throw "No PowerShell executable found. Expected 'pwsh' or 'powershell'."
 }
 
+function Test-ContainsOrdinalIgnoreCase {
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+        [Parameter(Mandatory = $true)][string]$Value
+    )
+
+    return $Text.IndexOf($Value, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 function Invoke-NativeStep {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$FilePath,
-        [Parameter()][string[]]$Arguments = @()
+        [Parameter()][string[]]$Arguments = @(),
+        [Parameter()][int]$RetryCount = 0,
+        [Parameter()][int]$RetryDelaySeconds = 2
     )
 
-    Write-Host "[quality] START $Name"
-    & $FilePath @Arguments
-    if ($LASTEXITCODE -ne 0) {
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        Write-Host "[quality] START $Name (attempt=$attempt)"
+        $output = & $FilePath @Arguments 2>&1
+        if ($output) {
+            $output | ForEach-Object { Write-Host $_ }
+        }
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[quality] PASS  $Name"
+            return
+        }
+
+        $outputText = [string]::Join([Environment]::NewLine, @($output))
+        $isTransientFileLock = (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "because it is being used by another process") `
+            -or (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "已被另一进程使用")
+        if ($attempt -le $RetryCount -and $isTransientFileLock) {
+            Write-Warning "[quality] RETRY $Name due to transient file lock (sleep=${RetryDelaySeconds}s)"
+            Start-Sleep -Seconds $RetryDelaySeconds
+            continue
+        }
+
         throw "[quality] FAIL  $Name (exit=$LASTEXITCODE)"
     }
-    Write-Host "[quality] PASS  $Name"
 }
 
 Invoke-NativeStep -Name "build" -FilePath "dotnet" -Arguments @(
@@ -46,7 +76,7 @@ Invoke-NativeStep -Name "build" -FilePath "dotnet" -Arguments @(
     "-c",
     $Configuration,
     "-m:1"
-)
+) -RetryCount 2
 
 $stableTestsScript = Join-Path $PSScriptRoot "..\validation\run-stable-tests.ps1"
 $stableConfigValidator = Join-Path $PSScriptRoot "..\validation\validate-stable-test-config.ps1"
@@ -70,7 +100,7 @@ if ((Test-Path -LiteralPath $stableTestsScript) -and (Test-Path -LiteralPath $st
         $Configuration,
         "-Profile",
         $Profile
-    )
+    ) -RetryCount 1
 }
 else {
     Invoke-NativeStep -Name "test(full)" -FilePath "dotnet" -Arguments @(
@@ -79,7 +109,7 @@ else {
         "-c",
         $Configuration,
         "-m:1"
-    )
+    ) -RetryCount 1
 }
 
 Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
@@ -90,7 +120,7 @@ Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
     "-m:1",
     "--filter",
     "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
-)
+) -RetryCount 1
 
 Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
     "-NoProfile",

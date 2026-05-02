@@ -3,7 +3,7 @@ using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Photos;
 
-public sealed class ImageManagerWindowFactory : IImageManagerWindowFactory
+internal sealed class ImageManagerWindowFactory : IImageManagerWindowFactory
 {
     private readonly InkPersistenceService _persistence;
     private readonly InkExportService _export;

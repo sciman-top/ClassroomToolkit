@@ -39,8 +39,8 @@ public sealed class BrushPerformanceGuardTests
             baselineFactory: () => CreateMarkerRenderer(ClassroomWritingMode.Balanced),
             candidateFactory: () => CreateMarkerRenderer(ClassroomWritingMode.Responsive),
             trace: trace,
-            iterations: 7,
-            passesPerIteration: 3);
+            iterations: 9,
+            passesPerIteration: 5);
 
         ratio.Should().BeLessThanOrEqualTo(maxRatio, "scenario: {0}", scenario);
     }
@@ -56,8 +56,8 @@ public sealed class BrushPerformanceGuardTests
             baselineFactory: () => CreateCalligraphyRenderer(ClassroomWritingMode.Balanced),
             candidateFactory: () => CreateCalligraphyRenderer(ClassroomWritingMode.Responsive),
             trace: trace,
-            iterations: 7,
-            passesPerIteration: 3);
+            iterations: 9,
+            passesPerIteration: 5);
 
         ratio.Should().BeLessThanOrEqualTo(maxRatio, "scenario: {0}", scenario);
     }
@@ -98,13 +98,28 @@ public sealed class BrushPerformanceGuardTests
         var ratios = new List<double>(iterations);
         for (int i = 0; i < iterations; i++)
         {
-            var baselineMs = MeasureReplayMs(baselineFactory, trace, passesPerIteration);
-            var candidateMs = MeasureReplayMs(candidateFactory, trace, passesPerIteration);
-            var ratio = candidateMs / Math.Max(0.1, baselineMs);
-            ratios.Add(ratio);
+            double baselineMs;
+            double candidateMs;
+            if (i % 2 == 0)
+            {
+                baselineMs = MeasureReplayMs(baselineFactory, trace, passesPerIteration);
+                candidateMs = MeasureReplayMs(candidateFactory, trace, passesPerIteration);
+            }
+            else
+            {
+                candidateMs = MeasureReplayMs(candidateFactory, trace, passesPerIteration);
+                baselineMs = MeasureReplayMs(baselineFactory, trace, passesPerIteration);
+            }
+
+            ratios.Add(candidateMs / Math.Max(0.1, baselineMs));
         }
 
-        return ratios.OrderBy(value => value).ElementAt(ratios.Count / 2);
+        return Median(ratios);
+    }
+
+    private static double Median(IReadOnlyList<double> values)
+    {
+        return values.OrderBy(value => value).ElementAt(values.Count / 2);
     }
 
     private static double MeasureReplayMs(

@@ -3,7 +3,7 @@ using ClassroomToolkit.Application.UseCases.RollCall;
 
 namespace ClassroomToolkit.App;
 
-public sealed class RollCallWindowFactory : IRollCallWindowFactory
+internal sealed class RollCallWindowFactory : IRollCallWindowFactory
 {
     private readonly AppSettingsService _settingsService;
     private readonly AppSettings _settings;

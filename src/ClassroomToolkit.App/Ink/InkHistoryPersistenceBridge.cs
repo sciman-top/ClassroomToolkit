@@ -6,7 +6,7 @@ using ClassroomToolkit.Application.Abstractions;
 
 namespace ClassroomToolkit.App.Ink;
 
-public sealed class InkHistoryPersistenceBridge : IInkHistoryStoreBridge
+internal sealed class InkHistoryPersistenceBridge : IInkHistoryStoreBridge
 {
     private static readonly JsonSerializerOptions JsonOptions = BuildJsonOptions();
     private readonly InkPersistenceService _persistence;

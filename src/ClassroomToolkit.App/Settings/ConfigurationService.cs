@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace ClassroomToolkit.App.Settings;
 
-public sealed class ConfigurationService : IConfigurationService
+internal sealed class ConfigurationService : IConfigurationService
 {
     private const string AppSettingsFileName = "appsettings.json";
     private const string DefaultSettingsIniName = "settings.ini";

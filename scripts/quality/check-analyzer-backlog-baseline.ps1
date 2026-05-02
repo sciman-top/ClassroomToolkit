@@ -22,7 +22,7 @@ if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
     throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
 }
 
-$projectFiles = Get-ChildItem -Path $srcRoot -Filter "*.csproj" -File -Recurse | Sort-Object FullName
+$projectFiles = Get-ChildItem -LiteralPath $srcRoot -Filter "*.csproj" -File -Recurse | Sort-Object FullName
 if (-not $projectFiles) {
     throw "[analyzer-backlog] No src csproj files found under: $srcRoot"
 }
@@ -58,7 +58,7 @@ foreach ($project in $projectFiles) {
 $uniqueDiagnostics = $diagnostics |
     Sort-Object project, file, line, column, rule -Unique
 
-$projectCounts = $uniqueDiagnostics |
+$projectCounts = @($uniqueDiagnostics |
     Group-Object project |
     Sort-Object Name |
     ForEach-Object {
@@ -66,9 +66,9 @@ $projectCounts = $uniqueDiagnostics |
             project = $_.Name
             count = $_.Count
         }
-    }
+    })
 
-$ruleCounts = $uniqueDiagnostics |
+$ruleCounts = @($uniqueDiagnostics |
     Group-Object rule |
     Sort-Object Name |
     ForEach-Object {
@@ -76,7 +76,7 @@ $ruleCounts = $uniqueDiagnostics |
             rule = $_.Name
             count = $_.Count
         }
-    }
+    })
 
 $report = [pscustomobject]@{
     generated_at_utc = [DateTime]::UtcNow.ToString("o")
@@ -93,15 +93,15 @@ if (-not [string]::IsNullOrWhiteSpace($reportDirectory)) {
     New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
 }
 
-$report | ConvertTo-Json -Depth 6 | Set-Content -Path $resolvedReportPath -Encoding UTF8
+$report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $resolvedReportPath -Encoding UTF8
 
-$baseline = Get-Content -Path $resolvedBaselinePath -Raw | ConvertFrom-Json
+$baseline = Get-Content -LiteralPath $resolvedBaselinePath -Raw | ConvertFrom-Json
 $baselineRuleMap = @{}
-foreach ($entry in $baseline.rule_counts) {
+foreach ($entry in @($baseline.rule_counts)) {
     $baselineRuleMap[$entry.rule] = [int]$entry.count
 }
 $baselineProjectMap = @{}
-foreach ($entry in $baseline.project_counts) {
+foreach ($entry in @($baseline.project_counts)) {
     $baselineProjectMap[$entry.project] = [int]$entry.count
 }
 
