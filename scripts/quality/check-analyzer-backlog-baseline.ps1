@@ -18,6 +18,15 @@ $resolvedBaselinePath = Join-Path $repoRoot $BaselinePath
 $resolvedReportPath = Join-Path $repoRoot $ReportPath
 $srcRoot = Join-Path $repoRoot "src"
 
+function Test-ContainsOrdinalIgnoreCase {
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+        [Parameter(Mandatory = $true)][string]$Value
+    )
+
+    return $Text.IndexOf($Value, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 function Convert-ToRepoRelativePath {
     param(
         [Parameter(Mandatory = $true)][string]$Path
@@ -29,6 +38,59 @@ function Convert-ToRepoRelativePath {
     }
     catch {
         return $Path
+    }
+}
+
+function Test-IsTransientAnalyzerBuildFailure {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Output
+    )
+
+    $outputText = [string]::Join([Environment]::NewLine, @($Output))
+    $isFileLock = (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "because it is being used by another process") `
+        -or (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "已被另一进程使用")
+    $isWpfTempProjectDrift = (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "_wpftmp.csproj") `
+        -and (
+            (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value ".g.cs") `
+            -or (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "InitializeComponent") `
+            -or (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "未能找到源文件")
+        )
+
+    return $isFileLock -or $isWpfTempProjectDrift
+}
+
+function Invoke-AnalyzerBuild {
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectPath,
+        [Parameter(Mandatory = $true)][string]$ProjectName,
+        [Parameter(Mandatory = $true)][string]$Configuration,
+        [Parameter()][int]$RetryCount = 1,
+        [Parameter()][int]$RetryDelaySeconds = 2
+    )
+
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        $output = @(& dotnet build $ProjectPath `
+            -c $Configuration `
+            --no-incremental `
+            -m:1 `
+            -p:TreatWarningsAsErrors=false `
+            -p:EnableNETAnalyzers=true `
+            -p:AnalysisLevel=latest-all 2>&1)
+
+        if ($LASTEXITCODE -eq 0) {
+            return $output
+        }
+
+        if ($attempt -le $RetryCount -and (Test-IsTransientAnalyzerBuildFailure -Output $output)) {
+            Write-Warning ("[analyzer-backlog] RETRY {0} after transient analyzer build failure (attempt={1})" -f $ProjectName, $attempt)
+            & dotnet build-server shutdown 2>&1 | ForEach-Object { Write-Host $_ }
+            Start-Sleep -Seconds $RetryDelaySeconds
+            continue
+        }
+
+        throw ("[analyzer-backlog] dotnet build failed for {0} (exit={1})" -f $ProjectName, $LASTEXITCODE)
     }
 }
 
@@ -44,17 +106,7 @@ if (-not $projectFiles) {
 $diagnostics = New-Object System.Collections.Generic.List[object]
 foreach ($project in $projectFiles) {
     Write-Host ("[analyzer-backlog] SCAN {0}" -f $project.Name)
-    $output = & dotnet build $project.FullName `
-        -c $Configuration `
-        --no-incremental `
-        -m:1 `
-        -p:TreatWarningsAsErrors=false `
-        -p:EnableNETAnalyzers=true `
-        -p:AnalysisLevel=latest-all 2>&1
-
-    if ($LASTEXITCODE -ne 0) {
-        throw ("[analyzer-backlog] dotnet build failed for {0} (exit={1})" -f $project.Name, $LASTEXITCODE)
-    }
+    $output = Invoke-AnalyzerBuild -ProjectPath $project.FullName -ProjectName $project.Name -Configuration $Configuration
 
     foreach ($line in $output) {
         if ($line -match "^(?<file>.+?)\((?<line>\d+),(?<column>\d+)\):\s+(?:warning|error)\s+(?<rule>CA\d{4}):") {
@@ -69,8 +121,8 @@ foreach ($project in $projectFiles) {
     }
 }
 
-$uniqueDiagnostics = $diagnostics |
-    Sort-Object project, file, line, column, rule -Unique
+$uniqueDiagnostics = @($diagnostics |
+    Sort-Object project, file, line, column, rule -Unique)
 
 $projectCounts = @($uniqueDiagnostics |
     Group-Object project |
@@ -109,7 +161,7 @@ $report = [pscustomobject]@{
     configuration = $Configuration
     scope = "src-projects"
     analysis_level = "latest-all"
-    diagnostics_total = $uniqueDiagnostics.Count
+    diagnostics_total = @($uniqueDiagnostics).Count
     project_counts = $projectCounts
     rule_counts = $ruleCounts
     diagnostics = $diagnosticDetails
@@ -171,5 +223,5 @@ if ($regressions.Count -gt 0) {
     exit 1
 }
 
-Write-Host ("[analyzer-backlog] PASS total={0} report={1}" -f $uniqueDiagnostics.Count, $ReportPath)
+Write-Host ("[analyzer-backlog] PASS total={0} report={1}" -f @($uniqueDiagnostics).Count, $ReportPath)
 exit 0

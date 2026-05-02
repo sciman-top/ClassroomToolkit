@@ -25,5 +25,25 @@ public sealed class PublicContractVisibilitySuppressionContractTests
         source.Should().Contain("~T:ClassroomToolkit.App.Session.UiSessionEvent");
         source.Should().Contain("~T:ClassroomToolkit.App.Session.UiSessionState");
         source.Should().Contain("~T:ClassroomToolkit.App.Session.UiSessionTransition");
+        source.Should().Contain("~T:ClassroomToolkit.App.MainWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.RollCallWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.Paint.PaintOverlayWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.Paint.PaintToolbarWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.Photos.ImageManagerWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.Photos.PhotoOverlayWindow");
+        source.Should().Contain("~T:ClassroomToolkit.App.Photos.VirtualizingWrapPanel");
+        source.Should().Contain("~T:ClassroomToolkit.App.Behaviors.LongPressBehavior");
+        source.Should().Contain("~T:ClassroomToolkit.App.Controls.SafeBorder");
+        source.Should().Contain("~T:ClassroomToolkit.App.Converters.InverseBooleanToVisibilityConverter");
+        source.Should().Contain("~T:ClassroomToolkit.App.Photos.MultiplyConverter");
+        source.Should().Contain("~T:ClassroomToolkit.App.ViewModels.ViewModelBase");
+        source.Should().Contain("~T:ClassroomToolkit.App.ViewModels.MainViewModel");
+        source.Should().Contain("~T:ClassroomToolkit.App.ViewModels.RollCallViewModel");
+        source.Should().Contain("~T:ClassroomToolkit.App.IRollCallWindowFactory");
+        source.Should().Contain("~T:ClassroomToolkit.App.Paint.IPaintWindowFactory");
+        source.Should().Contain("~T:ClassroomToolkit.App.Ink.InkExportService");
+        source.Should().Contain("~T:ClassroomToolkit.App.Photos.IImageManagerWindowFactory");
+        source.Should().Contain("~T:ClassroomToolkit.App.Windowing.IWindowOrchestrator");
+        source.Should().Contain("~T:ClassroomToolkit.App.Services.IPaintWindowOrchestrator");
     }
 }

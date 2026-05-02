@@ -81,6 +81,7 @@ public sealed class GovernanceTruthSourceContractTests
 
         script.Should().Contain("$projectCounts = @($uniqueDiagnostics |");
         script.Should().Contain("$ruleCounts = @($uniqueDiagnostics |");
+        script.Should().Contain("$uniqueDiagnostics = @($diagnostics |");
         script.Should().Contain("foreach ($entry in @($baseline.rule_counts))");
         script.Should().Contain("foreach ($entry in @($baseline.project_counts))");
         script.Should().Contain("Get-ChildItem -LiteralPath $srcRoot");
@@ -89,6 +90,11 @@ public sealed class GovernanceTruthSourceContractTests
         script.Should().Contain("Convert-ToRepoRelativePath");
         script.Should().Contain("[System.IO.Path]::GetRelativePath($repoRoot, $fullPath)");
         script.Should().Contain("diagnostics = $diagnosticDetails");
+        script.Should().Contain("diagnostics_total = @($uniqueDiagnostics).Count");
+        script.Should().Contain("function Test-IsTransientAnalyzerBuildFailure");
+        script.Should().Contain("function Invoke-AnalyzerBuild");
+        script.Should().Contain("dotnet build-server shutdown");
+        script.Should().Contain("_wpftmp.csproj");
 
         var baselinePath = TestPathHelper.ResolveRepoPath("scripts", "quality", "analyzer-backlog-baseline.json");
         using var document = JsonDocument.Parse(File.ReadAllText(baselinePath));

@@ -252,3 +252,345 @@ using System.Diagnostics.CodeAnalysis;
     Justification = "UI session transitions flow through public overlay transition events and windowing policies, so they remain an intentional public record contract.",
     Scope = "type",
     Target = "~T:ClassroomToolkit.App.Session.UiSessionTransition")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF application and window root types are activated through generated XAML and app composition, so they remain public framework entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.App")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF application and window root types are activated through generated XAML and app composition, so they remain public framework entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.MainWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF application and window root types are activated through generated XAML and app composition, so they remain public framework entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.RollCallWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.AboutDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.AutoExitDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.ClassSelectDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.LauncherBubbleWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.RemoteKeyDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.RollCallSettingsDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.StudentListDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.TimerSetDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Diagnostic result data is shared between UI dialogs, export helpers, and tests as a stable compatibility DTO.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Diagnostics.DiagnosticsResult")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Diagnostics.DiagnosticsDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Diagnostics.StartupCompatibilityWarningDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Ink export service is instantiated directly in tests and app startup, and its public surface represents the composite export compatibility boundary.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkExportService")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Ink persistence service is instantiated directly in tests and app startup, and its public surface represents the sidecar persistence contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkPersistenceService")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkSettingsDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Factory interfaces appear in MainWindow constructor injection and application composition, so they remain public DI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.IRollCallWindowFactory")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound model items are referenced by templates, bindings, dialogs, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Models.GroupButtonItem")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound model items are referenced by templates, bindings, dialogs, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Models.StudentListItem")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint preset enums participate in settings and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.WhiteboardBrushPreset")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint preset enums participate in settings and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.CalligraphyBrushPreset")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint/render enums participate in settings, ink schema, and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.CalligraphyRenderMode")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint/render enums participate in settings, ink schema, and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.ClassroomWritingMode")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint/render enums participate in settings, ink schema, and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintBrushStyle")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint/render enums participate in settings, ink schema, and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintShapeType")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted paint/render enums participate in settings, ink schema, and UI selection contracts, so they remain public compatibility enums.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintToolMode")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Factory interfaces appear in MainWindow constructor injection and application composition, so they remain public DI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.IPaintWindowFactory")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.BoardColorDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintOverlayWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintSettingsDialog")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.PaintToolbarWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.QuickColorPaletteWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Paint.RegionSelectionOverlayWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Paint window orchestration is consumed through MainWindow constructor injection and explicit event contracts, so it remains public at the composition boundary.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Services.IPaintWindowOrchestrator")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Settings service is instantiated directly in tests and app startup, and its public surface represents the settings document compatibility boundary.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Settings.AppSettingsService")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.FolderItem")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.ImageItem")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.ImageManagerViewModel")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Factory interfaces appear in MainWindow constructor injection and application composition, so they remain public DI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.IImageManagerWindowFactory")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.ImageManagerWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.PhotoOverlayWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.RollCallGroupOverlayWindow")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "The custom virtualizing panel is referenced directly from XAML and validated by touch-flow tests, so it remains a public WPF component contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.VirtualizingWrapPanel")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Behaviors.LongPressBehavior")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Controls.SafeBorder")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Converters.InverseBooleanToVisibilityConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Converters.PdfFontWeightConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Converters.PdfForegroundConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.MultiplyConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.FolderVisibilityConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.FileVisibilityConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Photos.PdfBackgroundConverter")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.ViewModels.ViewModelBase")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.ViewModels.MainViewModel")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.ViewModels.RollCallViewModel")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Factory interfaces appear in MainWindow constructor injection and application composition, so they remain public DI contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Windowing.IWindowOrchestrator")]
