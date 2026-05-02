@@ -173,18 +173,18 @@ public partial class App : WpfApplication
         }
         services.AddSingleton<Ink.InkExportOptions>();
         services.AddSingleton<Ink.InkExportService>();
-        
+
         // Logging
         services.AddLogging(builder =>
         {
-            #if DEBUG
+#if DEBUG
             builder.SetMinimumLevel(LogLevel.Debug);
-            #else
+#else
             builder.SetMinimumLevel(LogLevel.Information);
-            #endif
+#endif
             // Console logger for development
             builder.AddConsole();
-            
+
             // File logger for production/persistence
             var logPath = Path.Combine(AppDataDirectory, "logs");
             builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(

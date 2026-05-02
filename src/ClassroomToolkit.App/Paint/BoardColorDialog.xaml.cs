@@ -70,13 +70,13 @@ public partial class BoardColorDialog : Window
         border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(WpfButton.BorderBrushProperty));
         border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(WpfButton.BorderThicknessProperty));
         border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
-        
+
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
 
         border.AppendChild(presenter);
-        
+
         template.VisualTree = border;
         return template;
     }

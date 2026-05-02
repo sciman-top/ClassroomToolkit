@@ -1,4 +1,5 @@
 namespace ClassroomToolkit.App.RollCall;
+
 using ClassroomToolkit.App.Windowing;
 
 internal readonly record struct RollCallRemoteHookStartRequest(

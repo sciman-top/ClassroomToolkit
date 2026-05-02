@@ -38,13 +38,13 @@ public partial class PaintOverlayWindow
         switch (executionPlan.Action)
         {
             case StylusDownExecutionAction.HandleFirstStylusPoint:
-            {
-                long nowTicks = Stopwatch.GetTimestamp();
-                var input = CreateStylusInputSample(stylusPoints[0], nowTicks);
-                RememberStylusSampleTimestamp(input.TimestampTicks);
-                HandlePointerDown(input);
-                break;
-            }
+                {
+                    long nowTicks = Stopwatch.GetTimestamp();
+                    var input = CreateStylusInputSample(stylusPoints[0], nowTicks);
+                    RememberStylusSampleTimestamp(input.TimestampTicks);
+                    HandlePointerDown(input);
+                    break;
+                }
             case StylusDownExecutionAction.HandlePointerPosition:
                 HandlePointerDown(e.GetPosition(OverlayRoot));
                 break;
@@ -168,14 +168,14 @@ public partial class PaintOverlayWindow
             case StylusUpExecutionAction.None:
                 return;
             case StylusUpExecutionAction.HandleLastStylusPoint:
-            {
-                long nowTicks = Stopwatch.GetTimestamp();
-                long timestampTicks = EnsureMonotonicStylusTimestamp(nowTicks);
-                var input = CreateStylusInputSample(stylusPoints[^1], timestampTicks);
-                RememberStylusSampleTimestamp(input.TimestampTicks);
-                HandlePointerUp(input);
-                break;
-            }
+                {
+                    long nowTicks = Stopwatch.GetTimestamp();
+                    long timestampTicks = EnsureMonotonicStylusTimestamp(nowTicks);
+                    var input = CreateStylusInputSample(stylusPoints[^1], timestampTicks);
+                    RememberStylusSampleTimestamp(input.TimestampTicks);
+                    HandlePointerUp(input);
+                    break;
+                }
             case StylusUpExecutionAction.HandlePointerPosition:
                 HandlePointerUp(e.GetPosition(OverlayRoot));
                 break;

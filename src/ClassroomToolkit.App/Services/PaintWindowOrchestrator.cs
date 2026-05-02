@@ -20,7 +20,7 @@ public interface IPaintWindowOrchestrator
     PaintToolbarWindow? ToolbarWindow { get; }
     UiSessionState? CurrentOverlaySessionState { get; }
     IReadOnlyList<string> CurrentOverlaySessionViolations { get; }
-    
+
     event Action<bool>? PhotoModeChanged;
     event Action<int>? PhotoNavigationRequested;
     event Action<double, double, double, double>? PhotoUnifiedTransformChanged;
@@ -139,7 +139,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         ApplyPaintToolbarPosition(settings);
         ToolbarWindow.ApplySettings(settings);
         WireToolbarBehaviorEvents();
-        
+
         ApplyInitialOverlaySettings(settings, ResolvePreferredPrimaryToolMode());
     }
 
@@ -455,7 +455,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
     private void ApplyInitialOverlaySettings(AppSettings settings, PaintToolMode preferredPrimaryMode)
     {
         if (OverlayWindow == null || ToolbarWindow == null) return;
-        
+
         OverlayWindow.SetMode(preferredPrimaryMode);
         OverlayWindow.SetBrush(settings.BrushColor, settings.BrushSize, settings.BrushOpacity);
         OverlayWindow.SetClassroomWritingMode(settings.ClassroomWritingMode);
@@ -471,7 +471,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         OverlayWindow.SetCalligraphyOverlayOpacityThreshold(settings.CalligraphyOverlayOpacityThreshold);
         OverlayWindow.SetEraserSize(settings.EraserSize);
         OverlayWindow.SetShapeType(settings.ShapeType);
-        
+
         OverlayWindow.SetBoardColor(settings.BoardColor);
         OverlayWindow.SetBoardOpacity(ToolbarWindow.BoardActive ? (byte)255 : (byte)0);
 

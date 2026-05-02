@@ -12,7 +12,7 @@ public partial class PaintSettingsDialog : Window
         InitializeComponent();
         MaxHeight = Math.Max(360, SystemParameters.WorkArea.Height - 24);
         MaxWidth = Math.Max(560, SystemParameters.WorkArea.Width - 24);
-        
+
         // 在构造函数中立即修复 BorderBrush 问题
         SafeActionExecutionExecutor.TryExecute(
             () =>

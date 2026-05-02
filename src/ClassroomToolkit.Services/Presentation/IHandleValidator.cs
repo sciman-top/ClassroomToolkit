@@ -17,7 +17,7 @@ public interface IHandleValidator
 public sealed class DefaultHandleValidator : IHandleValidator
 {
     public static DefaultHandleValidator Instance { get; } = new();
-    
+
     public bool IsValid(IntPtr handle)
     {
         return ClassroomToolkit.Interop.Presentation.PresentationWindowFocus.IsWindowValid(handle);

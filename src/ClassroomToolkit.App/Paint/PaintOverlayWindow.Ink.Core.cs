@@ -52,7 +52,7 @@ public partial class PaintOverlayWindow
     private PaintBrushStyle _brushStyle = PaintBrushStyle.Standard;
     // _activeRenderer moved to Rendering but defined here for visibility if needed? 
     // Actually, partial classes share fields so valid to define it here.
-    private IBrushRenderer? _activeRenderer; 
+    private IBrushRenderer? _activeRenderer;
     private DrawingVisualHost _visualHost;
     private WriteableBitmap? _rasterSurface;
     private int _surfacePixelWidth;
@@ -87,7 +87,7 @@ public partial class PaintOverlayWindow
     private int _brushPredictionHorizonMs = 8;
     private readonly IInkRendererFactory _inkRendererFactory;
     private const double BrushPredictionMaxDistanceDip = InkPredictionDefaults.MaxDistanceDip;
-    
+
     // Ink History & Cache
     private readonly List<InkStrokeData> _inkStrokes = new();
     private readonly List<InkSnapshot> _inkHistory = new();
@@ -104,7 +104,7 @@ public partial class PaintOverlayWindow
     private bool _inkShowEnabled = true;
     private DateTime _lastInkInputUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
     private bool _pendingInkContextCheck;
-    
+
     // Pools & Buffers
     private static readonly ArrayPool<byte> PixelPool = ArrayPool<byte>.Shared;
     private const int HistoryLimit = InkCacheRuntimeDefaults.HistoryLimit;
@@ -126,19 +126,19 @@ public partial class PaintOverlayWindow
 
     private InkCacheScope _currentCacheScope = InkCacheScope.None;
     private InkStorageService _inkStorage = new();
-    
+
     private readonly InkStrokeRenderer _inkStrokeRenderer = new();
     private bool _redrawPending;
     private bool _redrawInProgress;
     private InkRedrawVersionStamp _pendingInkRedrawVersionStamp;
     private bool _boardSuspendedPhotoCache;
-    
+
     private enum InkCacheScope
     {
         None = 0,
         Photo = 1
     }
-    
+
     private readonly InkFinalCache _photoCache = new(80);
     private readonly InkDirtyPageCoordinator _inkDirtyPages = new();
     private readonly InkWriteAheadLogService _inkWal = new();
@@ -281,7 +281,7 @@ public partial class PaintOverlayWindow
         rtb.CopyPixels(pixelsOut, stride, 0);
         target.WritePixels(new Int32Rect(0, 0, target.PixelWidth, target.PixelHeight), pixelsOut, stride, 0);
     }
-    
+
     // Core Helpers
     private static double Lerp(double a, double b, double t)
     {
@@ -327,7 +327,7 @@ public partial class PaintOverlayWindow
         }
         return _compositeSurfaceBuffer;
     }
-    
+
     private void BlendSourceOver(Int32Rect rect, byte[] srcPixels, int srcStride)
     {
         if (_rasterSurface == null)

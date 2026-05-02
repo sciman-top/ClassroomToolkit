@@ -7,7 +7,7 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
     [Fact]
     public void PaintOverlayPresentation_ShouldUseAtomicWpsHookUnavailableNotificationGate()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = GetSource();
 
         source.Should().Contain("WpsHookUnavailableNotificationPolicy.ShouldNotify(ref _wpsHookUnavailableNotifiedState)");
     }
@@ -15,7 +15,7 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
     [Fact]
     public void PaintOverlayPresentation_ShouldResetWpsHookUnavailableGate_OnRecoveryAndModeReset()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = GetSource();
 
         source.Should().Contain("WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);");
     }
@@ -23,7 +23,7 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
     [Fact]
     public void PaintOverlayPresentation_ShouldFallbackInline_WhenWpsHookDispatchSchedulingFailsOnUiThread()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = GetSource();
 
         source.Should().Contain("var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Background);");
         source.Should().Contain("if (Dispatcher.CheckAccess())");
@@ -32,12 +32,16 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
         source.Should().Contain("ShowUnavailableMessage();");
     }
 
-    private static string GetSourcePath()
+    private static string GetSource()
     {
-        return TestPathHelper.ResolveRepoPath(
+        var paintRoot = TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Presentation.cs");
+            "Paint");
+        return string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(paintRoot, "PaintOverlayWindow.Presentation*.cs")
+                .OrderBy(static path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText));
     }
 }

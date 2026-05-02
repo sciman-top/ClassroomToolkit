@@ -46,7 +46,7 @@ public partial class PaintToolbarWindow
         {
             return;
         }
-        
+
         var index = ResolveQuickColorIndex(button.Tag);
         if (!index.HasValue || index.Value < 0 || index.Value >= _quickColors.Length)
         {
@@ -69,28 +69,28 @@ public partial class PaintToolbarWindow
     private void ApplyQuickColorSelection(int index)
     {
         PrepareForNonBoardToolbarAction(exitWhiteboard: true);
-        
+
         var shouldResetShape = _shapeType != PaintShapeType.None;
         var selectedColor = _quickColors[index];
-        
+
         // 更新颜色选择状态
         UpdateQuickColorSelection(selectedColor);
-        
+
         // 始终同步回画笔模式，避免工具高亮状态残留
         SelectToolMode(PaintToolMode.Brush, allowToggleOffCurrent: false);
-        
+
         // 重置形状类型（如果需要）
         if (shouldResetShape)
         {
             ResetShapeType();
         }
-        
+
         // 应用画笔设置
         if (_overlay != null)
         {
             _overlay.SetBrush(selectedColor, _brushSize, _brushOpacity);
         }
-        
+
         SafeActionExecutionExecutor.TryExecute(
             () => BrushColorChanged?.Invoke(selectedColor),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: brush color callback failed: {ex.Message}"));

@@ -89,7 +89,7 @@ public sealed class WpsNavigationDebouncePolicyTests
             nowUtc: nowUtc,
             debounceMs: 200);
 
-        state.LastEvent.Should().Be(( -1, (IntPtr)999, nowUtc ));
+        state.LastEvent.Should().Be((-1, (IntPtr)999, nowUtc));
         state.BlockUntilUtc.Should().Be(nowUtc.AddMilliseconds(200));
     }
 }

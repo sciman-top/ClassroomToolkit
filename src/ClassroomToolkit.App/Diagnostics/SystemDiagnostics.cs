@@ -109,7 +109,7 @@ internal static class SystemDiagnostics
             {
                 lines.Add($"语音包检测错误：{voiceError}");
                 issues.Add("语音播报可能不可用：语音包异常。");
-            fixes.Add("在 Windows“语音/讲述人/语言包”里安装中文语音后重启。");
+                fixes.Add("在 Windows“语音/讲述人/语言包”里安装中文语音后重启。");
             }
         }
         else

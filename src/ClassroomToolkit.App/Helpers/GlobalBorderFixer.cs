@@ -23,7 +23,7 @@ namespace ClassroomToolkit.App.Helpers
                     BorderFixHelper.FixAllBorders(mainWindow);
                     System.Diagnostics.Debug.WriteLine("GlobalBorderFixer: 修复主窗口完成");
                 }
-                
+
                 // 修复所有已打开的窗口
                 var currentApp = System.Windows.Application.Current;
                 if (currentApp?.Windows != null)

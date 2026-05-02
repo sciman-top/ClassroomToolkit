@@ -248,7 +248,7 @@ public partial class PaintOverlayWindow
         // Fallback to direct render once so visible neighbors are always drawable.
         return GetPdfPageBitmap(pageIndex);
     }
-    
+
     private void ScheduleNeighborImagePrefetch(int pageIndex)
     {
         var interactionActiveForPrefetch = IsCrossPagePanOrDragActive();

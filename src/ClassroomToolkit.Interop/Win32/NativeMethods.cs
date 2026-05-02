@@ -8,10 +8,10 @@ public static class NativeMethods
 {
     public const int GwlStyle = -16;
     public const int GwlExstyle = -20;
-    
+
     public const int WsCaption = 0x00C00000;
     public const int WsMinimizeBox = 0x20000;
-    
+
     public const uint MonitorDefaultToNearest = 2;
 
     public const int WsExTransparent = 0x00000020;
@@ -143,7 +143,7 @@ public static class NativeMethods
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
-    
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo exInfo);
@@ -151,7 +151,7 @@ public static class NativeMethods
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetCursorPos(out NativePoint point);
-    
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
     public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint flags);

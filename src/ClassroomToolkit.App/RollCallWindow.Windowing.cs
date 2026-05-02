@@ -334,7 +334,7 @@ public partial class RollCallWindow
         }
 
         var shouldShowPersistent = WindowState == WindowState.Minimized || !IsVisible;
-        
+
         if (shouldShowPersistent)
         {
             // 点名窗口隐藏时：持久显示组名

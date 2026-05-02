@@ -305,7 +305,7 @@ public partial class PaintOverlayWindow
         var r = useWorkArea ? screen.WorkingArea : screen.Bounds;
         return new Rect(r.X, r.Y, r.Width, r.Height);
     }
-    
+
     private Rect GetCurrentMonitorRectInDip(bool useWorkArea = false)
     {
         var screenRect = GetCurrentMonitorRect(useWorkArea);

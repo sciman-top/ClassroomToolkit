@@ -72,7 +72,7 @@ public partial class RollCallWindow : Window
     private IntPtr _hwnd;
     private bool? _lastTransparentStyleEnabled;
     private readonly DispatcherTimer _hoverCheckTimer;
-    
+
     public ICommand OpenRemoteKeyCommand { get; }
 
     public bool IsDataLoaded
@@ -82,8 +82,8 @@ public partial class RollCallWindow : Window
     }
 
     public RollCallWindow(
-        string dataPath, 
-        AppSettingsService settingsService, 
+        string dataPath,
+        AppSettingsService settingsService,
         AppSettings settings,
         ClassroomToolkit.Services.Input.GlobalHookService hookService,
         ClassroomToolkit.Services.Speech.SpeechService speechService,
@@ -109,11 +109,11 @@ public partial class RollCallWindow : Window
         _speechService.SpeechUnavailable += OnSpeechUnavailable;
         _rollCallWorkbookUseCase = rollCallWorkbookUseCase;
         ApplyWindowBounds(settings);
-        
+
         _viewModel = new RollCallViewModel(dataPath, _rollCallWorkbookUseCase);
         DataContext = _viewModel;
         _viewModel.GroupButtons.CollectionChanged += OnGroupButtonsCollectionChanged;
-        
+
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
         MouseEnter += OnWindowMouseEnter;
@@ -140,7 +140,7 @@ public partial class RollCallWindow : Window
             Interval = TimeSpan.FromMilliseconds(240)
         };
         _windowBoundsSaveTimer.Tick += OnWindowBoundsSaveTick;
-        
+
         _hoverCheckTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(120)
@@ -158,7 +158,7 @@ public partial class RollCallWindow : Window
 
         SizeChanged += OnWindowSizeChanged;
         LocationChanged += OnWindowLocationChanged;
-        
+
         IsVisibleChanged += OnWindowVisibilityChanged;
         StateChanged += OnWindowStateChanged;
     }

@@ -32,12 +32,12 @@ namespace ClassroomToolkit.App.Helpers
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
-                
+
                 if (child is Border border)
                 {
                     FixBorderIfNeeded(border);
                 }
-                
+
                 // 递归检查子元素
                 FixBordersRecursive(child);
             }
@@ -46,12 +46,12 @@ namespace ClassroomToolkit.App.Helpers
         private static void FixBorderIfNeeded(Border border)
         {
             var cornerRadius = border.CornerRadius;
-            
+
             // 如果有圆角但没有边框，自动修复
             if (cornerRadius != new CornerRadius(0))
             {
                 var borderBrush = border.BorderBrush;
-                
+
                 // 检查是否为 DependencyProperty.UnsetValue 或 null
                 if (borderBrush == null || borderBrush == DependencyProperty.UnsetValue)
                 {
@@ -59,7 +59,7 @@ namespace ClassroomToolkit.App.Helpers
                     {
                         // 设置透明边框
                         border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                        
+
                         // 记录修复
                         var name = border.Name ?? "(未命名)";
                         var parentName = (border.Parent as FrameworkElement)?.Name ?? "(未知父元素)";
@@ -68,7 +68,7 @@ namespace ClassroomToolkit.App.Helpers
                     catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                     {
                         System.Diagnostics.Debug.WriteLine($"BorderFixHelper: 修复 Border 失败 - {ex.Message}");
-                        
+
                         // 尝试其他方法：清除并重新设置
                         try
                         {
@@ -95,7 +95,7 @@ namespace ClassroomToolkit.App.Helpers
                 typeof(Window),
                 Window.LoadedEvent,
                 new RoutedEventHandler(OnWindowLoaded));
-            
+
             // 立即修复当前已存在的窗口
             try
             {
@@ -126,7 +126,7 @@ namespace ClassroomToolkit.App.Helpers
                 {
                     System.Diagnostics.Debug.WriteLine($"BorderFixHelper 加载修复失败: {ex.Message}");
                 }
-                
+
                 // 延迟再次执行，确保动态创建的控件也被修复
                 try
                 {

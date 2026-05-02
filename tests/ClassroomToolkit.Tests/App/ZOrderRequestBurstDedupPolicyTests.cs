@@ -57,7 +57,7 @@ public sealed class ZOrderRequestBurstDedupPolicyTests
         decision.LastRequestUtc.Should().Be(now);
         decision.LastForceEnforceZOrder.Should().BeTrue();
         decision.Reason.Should().Be(ZOrderRequestAdmissionReason.QueuedForceEscalationWithinWindow);
-        }
+    }
 
     [Fact]
     public void Resolve_ShouldSkip_WhenRecentForceRequestDowngradesToNonForce()

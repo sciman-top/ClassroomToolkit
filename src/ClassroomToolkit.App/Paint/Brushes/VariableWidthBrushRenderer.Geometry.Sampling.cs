@@ -333,17 +333,17 @@ internal partial class VariableWidthBrushRenderer
         switch (style)
         {
             case TaperCapStyle.Exposed:
-            {
-                double edge = Math.Max(0.02, 1.0 - strength);
-                double exposedCurve = smooth * smooth;
-                return Lerp(edge, 1.0, exposedCurve);
-            }
+                {
+                    double edge = Math.Max(0.02, 1.0 - strength);
+                    double exposedCurve = smooth * smooth;
+                    return Lerp(edge, 1.0, exposedCurve);
+                }
             case TaperCapStyle.Hidden:
             default:
-            {
-                double edge = Math.Max(0.06, 1.0 - (strength * 0.55));
-                return Lerp(edge, 1.0, smooth);
-            }
+                {
+                    double edge = Math.Max(0.06, 1.0 - (strength * 0.55));
+                    return Lerp(edge, 1.0, smooth);
+                }
         }
     }
 

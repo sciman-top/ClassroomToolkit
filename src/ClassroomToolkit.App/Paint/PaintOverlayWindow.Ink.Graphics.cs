@@ -57,7 +57,7 @@ public partial class PaintOverlayWindow
         {
             _children.Add(visual);
         }
-        
+
         public void RemoveVisual(Visual visual)
         {
             _children.Remove(visual);

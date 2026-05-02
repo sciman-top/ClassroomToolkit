@@ -195,7 +195,7 @@ public partial class RollCallWindow
             }
             if (result.ShouldNotifyUnavailable)
             {
-                 NotifyRemoteHookError();
+                NotifyRemoteHookError();
             }
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -331,7 +331,7 @@ public partial class RollCallWindow
         RestartKeyboardHook();
         UpdateGroupNameDisplay();
     }
-    
+
     private void RestartKeyboardHook()
     {
         var generation = _remoteHookStartGate.NextGeneration();

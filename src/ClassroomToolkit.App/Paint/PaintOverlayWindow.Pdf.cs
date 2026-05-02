@@ -302,7 +302,7 @@ public partial class PaintOverlayWindow
             _pdfPageOrder.Remove(node);
             _pdfPageCache.Remove(node.Value);
         }
-        
+
         System.Diagnostics.Debug.WriteLine($"[PdfCache] Count: {_pdfPageOrder.Count}, Bytes: {_pdfCacheCurrentBytes / 1024 / 1024}MB");
     }
 

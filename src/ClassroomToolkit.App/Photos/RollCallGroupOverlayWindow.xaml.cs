@@ -18,7 +18,7 @@ public partial class RollCallGroupOverlayWindow : Window
         };
         _autoCloseTimer.Tick += OnAutoCloseTimerTick;
         Closed += OnOverlayClosed;
-        
+
         Left = 0;
         Top = 0;
     }
@@ -43,7 +43,7 @@ public partial class RollCallGroupOverlayWindow : Window
     {
         _isPersistent = persistent;
         GroupNameText.Text = groupName ?? "全部";
-        
+
         Left = 0;
         Top = 0;
 
@@ -60,12 +60,12 @@ public partial class RollCallGroupOverlayWindow : Window
             // 短暂弹窗模式：播放淡入淡出动画后自动关闭
             _autoCloseTimer.Stop();
             _autoCloseTimer.Start();
-            
+
             if (Resources["FadeStoryboard"] is System.Windows.Media.Animation.Storyboard storyboard)
             {
                 storyboard.Begin();
             }
-            
+
             Show();
             WindowTopmostExecutor.ApplyNoActivate(this, enabled: true, enforceZOrder: true);
         }

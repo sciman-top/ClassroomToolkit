@@ -22,12 +22,12 @@ public partial class MainWindow
         EnsurePaintWindows();
         var overlay = _paintWindowOrchestrator.OverlayWindow;
         var toolbar = _paintWindowOrchestrator.ToolbarWindow;
-        
+
         if (overlay == null || toolbar == null)
         {
             return;
         }
-        
+
         var transitionPlan = PaintVisibilityTransitionPolicy.ResolvePaintToggle(overlay.IsVisible);
         ApplyPaintToggleTransition(transitionPlan);
         UpdateToggleButtons();
@@ -422,7 +422,7 @@ public partial class MainWindow
         TryFixWindowBorders(this, "paint-settings", "main-window");
         TryFixWindowBorders(dialog, "paint-settings", "paint-settings-dialog");
         var result = TryShowDialogWithDiagnostics(dialog, nameof(Paint.PaintSettingsDialog));
-        
+
         var applied = result;
         if (applied)
         {

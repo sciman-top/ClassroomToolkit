@@ -12,26 +12,6 @@ using WpfColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-internal readonly record struct BrushMoveTelemetrySnapshot(
-    string PresetName,
-    string ModeTag,
-    double DtAvgMs,
-    double DtP95Ms,
-    double DtMaxMs,
-    double AllocAvgBytes,
-    double AllocP95Bytes,
-    long AllocMaxBytes,
-    double RawAvgPoints,
-    double RawP95Points,
-    int RawMaxPoints,
-    double ResampledAvgPoints,
-    double ResampledP95Points,
-    int ResampledMaxPoints,
-    double EffectiveTaperBaseAvgDip,
-    double EffectiveTaperBaseP95Dip,
-    double EffectiveTaperBaseMinDip,
-    double EffectiveTaperBaseMaxDip);
-
 internal partial class VariableWidthBrushRenderer : IBrushRenderer
 {
     private const double DirectionNoiseAmplitude = 0.009;
@@ -212,63 +192,63 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             if (!_isActive) return;
             var point = input.Position;
 
-        // 数据验证：检查 NaN/Infinity
+            // 数据验证：检查 NaN/Infinity
             if (double.IsNaN(point.X) || double.IsNaN(point.Y) ||
                 double.IsInfinity(point.X) || double.IsInfinity(point.Y))
             {
                 return;
             }
 
-        var rawNow = input.TimestampTicks > 0
-            ? input.TimestampTicks
-            : Stopwatch.GetTimestamp();
-        double rawDtMs = (rawNow - _lastRawTimestamp) * 1000.0 / Stopwatch.Frequency;
-        if (rawDtMs < 1) rawDtMs = 1;
-        double dtSeconds = rawDtMs / 1000.0;
-        double rawSpeed = 0;
-        if (_hasRawPoint)
-        {
-            rawSpeed = (point - _lastRawPos).Length / rawDtMs;
-        }
-        _lastRawPos = point;
-        _lastRawTimestamp = rawNow;
-        _hasRawPoint = true;
+            var rawNow = input.TimestampTicks > 0
+                ? input.TimestampTicks
+                : Stopwatch.GetTimestamp();
+            double rawDtMs = (rawNow - _lastRawTimestamp) * 1000.0 / Stopwatch.Frequency;
+            if (rawDtMs < 1) rawDtMs = 1;
+            double dtSeconds = rawDtMs / 1000.0;
+            double rawSpeed = 0;
+            if (_hasRawPoint)
+            {
+                rawSpeed = (point - _lastRawPos).Length / rawDtMs;
+            }
+            _lastRawPos = point;
+            _lastRawTimestamp = rawNow;
+            _hasRawPoint = true;
 
-        // Position smoothing (adaptive EMA)
-        double speedAlpha = Math.Clamp(rawSpeed / Math.Max(_config.PositionSmoothingSpeedReference, 0.001), 0, 1);
-        double posAlpha = Lerp(_config.PositionSmoothingMinAlpha, _config.PositionSmoothingMaxAlpha, speedAlpha);
-        double followBoost = Math.Clamp((rawSpeed - 1.1) / 2.4, 0, 1);
-        if (rawDtMs > 9.0)
-        {
-            followBoost = Math.Max(followBoost, Math.Clamp((rawDtMs - 9.0) / 24.0, 0, 1));
-        }
-        posAlpha = Lerp(posAlpha, 0.97, followBoost);
-        var filteredPoint = _positionFilter.Filter(point, dtSeconds);
-        _smoothedPos = new WpfPoint(
-            _smoothedPos.X * (1 - posAlpha) + filteredPoint.X * posAlpha,
-            _smoothedPos.Y * (1 - posAlpha) + filteredPoint.Y * posAlpha
-        );
-
-        var lastPt = _points[^1];
-        var dist = (_smoothedPos - lastPt.Position).Length;
-
-        // 去噪：忽略过小的移动（阈值随当前宽度调整）
-        double minDistFactor = 0.15;
-        if (_config.EnableAdaptiveSampling)
-        {
-            double speedNorm = Math.Clamp(rawSpeed / Math.Max(_config.AdaptiveSamplingSpeedReference, 0.001), 0, 1);
-            minDistFactor = Lerp(_config.AdaptiveSamplingMinFactor, _config.AdaptiveSamplingMaxFactor, speedNorm);
-            // Fast handwriting prefers continuity over aggressive thinning.
-            minDistFactor *= Lerp(1.0, 0.62, speedNorm);
+            // Position smoothing (adaptive EMA)
+            double speedAlpha = Math.Clamp(rawSpeed / Math.Max(_config.PositionSmoothingSpeedReference, 0.001), 0, 1);
+            double posAlpha = Lerp(_config.PositionSmoothingMinAlpha, _config.PositionSmoothingMaxAlpha, speedAlpha);
+            double followBoost = Math.Clamp((rawSpeed - 1.1) / 2.4, 0, 1);
             if (rawDtMs > 9.0)
             {
-                minDistFactor *= Lerp(1.0, 0.82, Math.Clamp((rawDtMs - 9.0) / 22.0, 0, 1));
+                followBoost = Math.Max(followBoost, Math.Clamp((rawDtMs - 9.0) / 24.0, 0, 1));
             }
-        }
-        double minDist = Math.Clamp(_smoothedWidth * minDistFactor, 0.4, 2.6);
+            posAlpha = Lerp(posAlpha, 0.97, followBoost);
+            var filteredPoint = _positionFilter.Filter(point, dtSeconds);
+            _smoothedPos = new WpfPoint(
+                _smoothedPos.X * (1 - posAlpha) + filteredPoint.X * posAlpha,
+                _smoothedPos.Y * (1 - posAlpha) + filteredPoint.Y * posAlpha
+            );
+
+            var lastPt = _points[^1];
+            var dist = (_smoothedPos - lastPt.Position).Length;
+
+            // 去噪：忽略过小的移动（阈值随当前宽度调整）
+            double minDistFactor = 0.15;
+            if (_config.EnableAdaptiveSampling)
+            {
+                double speedNorm = Math.Clamp(rawSpeed / Math.Max(_config.AdaptiveSamplingSpeedReference, 0.001), 0, 1);
+                minDistFactor = Lerp(_config.AdaptiveSamplingMinFactor, _config.AdaptiveSamplingMaxFactor, speedNorm);
+                // Fast handwriting prefers continuity over aggressive thinning.
+                minDistFactor *= Lerp(1.0, 0.62, speedNorm);
+                if (rawDtMs > 9.0)
+                {
+                    minDistFactor *= Lerp(1.0, 0.82, Math.Clamp((rawDtMs - 9.0) / 22.0, 0, 1));
+                }
+            }
+            double minDist = Math.Clamp(_smoothedWidth * minDistFactor, 0.4, 2.6);
             if (dist < minDist) return;
 
-        // 数据验证：异常跳变保护（掉帧时允许更大的连续位移，避免断线）
+            // 数据验证：异常跳变保护（掉帧时允许更大的连续位移，避免断线）
             double maxPointJumpDistance = ResolveDynamicMaxPointJumpDistance(rawDtMs);
             if (dist > maxPointJumpDistance)
             {
@@ -288,154 +268,154 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 dist = maxPointJumpDistance;
             }
 
-        var now = input.TimestampTicks > 0
-            ? input.TimestampTicks
-            : Stopwatch.GetTimestamp();
-        double dtMs = (now - _lastTimestamp) * 1000.0 / Stopwatch.Frequency;
-        if (dtMs < 1) dtMs = 1;
+            var now = input.TimestampTicks > 0
+                ? input.TimestampTicks
+                : Stopwatch.GetTimestamp();
+            double dtMs = (now - _lastTimestamp) * 1000.0 / Stopwatch.Frequency;
+            if (dtMs < 1) dtMs = 1;
 
-        double velocity = dist / dtMs;
+            double velocity = dist / dtMs;
 
-        // v10: 跟踪速度范围用于归一化
-        _minVelocity = Math.Min(_minVelocity, velocity);
-        _maxVelocity = Math.Max(_maxVelocity, velocity);
+            // v10: 跟踪速度范围用于归一化
+            _minVelocity = Math.Min(_minVelocity, velocity);
+            _maxVelocity = Math.Max(_maxVelocity, velocity);
 
-        double smoothVelocity = _velocityAverage.Push(velocity, _config.VelocitySmoothWindow);
-        double resolvedPressure = input.HasPressure ? Math.Clamp(input.Pressure, 0, 1) : 0.5;
-        resolvedPressure = _pressureFilter.Filter(resolvedPressure, dtSeconds);
-        double smoothedPressure = _pressureAverage.Push(
-            resolvedPressure,
-            _config.PressureSmoothWindow);
-        double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount, smoothedPressure, input.HasPressure);
+            double smoothVelocity = _velocityAverage.Push(velocity, _config.VelocitySmoothWindow);
+            double resolvedPressure = input.HasPressure ? Math.Clamp(input.Pressure, 0, 1) : 0.5;
+            resolvedPressure = _pressureFilter.Filter(resolvedPressure, dtSeconds);
+            double smoothedPressure = _pressureAverage.Push(
+                resolvedPressure,
+                _config.PressureSmoothWindow);
+            double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount, smoothedPressure, input.HasPressure);
 
-        double brushAngle = ResolveEffectiveBrushAngle(input);
-        double orientationStrength = ResolveOrientationStrength(input);
+            double brushAngle = ResolveEffectiveBrushAngle(input);
+            double orientationStrength = ResolveOrientationStrength(input);
 
-        // 轻微各向异性：模拟毛笔扁平笔锋（宽度层）
-        if (dist > 0.001)
-        {
-            var dir = _smoothedPos - lastPt.Position;
-            if (dir.LengthSquared > 0.0001)
+            // 轻微各向异性：模拟毛笔扁平笔锋（宽度层）
+            if (dist > 0.001)
             {
-                double angle = Math.Atan2(dir.Y, dir.X);
-                double anisotropy = _config.AnisotropyStrength * orientationStrength;
-                double angleFactor = 1.0 - (anisotropy * Math.Cos(2 * (angle - brushAngle)));
-                angleFactor = Math.Clamp(angleFactor, 0.9, 1.1);
-                targetWidth = ClampWidth(targetWidth * angleFactor);
-            }
-        }
-
-        // v11: 顿笔逻辑 - 低速时累积墨水扩散
-        double speedFloor = Math.Max(_config.SpeedFloorPxPerMs, _config.MinVelocityClamp);
-        double normalizedSpeed = Math.Clamp((smoothVelocity - speedFloor) /
-                                            Math.Max(0.001, _config.VelocityThreshold - speedFloor), 0, 1);
-        UpdateWetness(smoothedPressure, normalizedSpeed, dtSeconds);
-        double absorption = Math.Clamp(_config.PaperAbsorption, 0.0, 1.0);
-        bool inStartSuppressionWindow = _pointCount < Math.Max(0, _config.StartBurstSuppressPoints);
-        double turnAttenuation = 1.0;
-        double turnSharpness = 0.0;
-        if (dist > 0.001)
-        {
-            var moveDir = _smoothedPos - lastPt.Position;
-            if (moveDir.LengthSquared > 0.0001)
-            {
-                moveDir.Normalize();
-                var lastDir = _lastStrokeDirection;
-                if (lastDir.LengthSquared > 0.0001)
+                var dir = _smoothedPos - lastPt.Position;
+                if (dir.LengthSquared > 0.0001)
                 {
-                    lastDir.Normalize();
-                    double turnAngle = Math.Abs(Vector.AngleBetween(lastDir, moveDir));
-                    double turnNorm = Math.Clamp(turnAngle / 120.0, 0.0, 1.0);
-                    turnSharpness = turnNorm;
-                    // Reduce accumulation at sharper turns to avoid local blobs.
-                    turnAttenuation = Lerp(1.0, 0.8, turnNorm);
+                    double angle = Math.Atan2(dir.Y, dir.X);
+                    double anisotropy = _config.AnisotropyStrength * orientationStrength;
+                    double angleFactor = 1.0 - (anisotropy * Math.Cos(2 * (angle - brushAngle)));
+                    angleFactor = Math.Clamp(angleFactor, 0.9, 1.1);
+                    targetWidth = ClampWidth(targetWidth * angleFactor);
                 }
             }
-        }
-        double overlapAttenuation = ResolveOverlapAttenuation(_smoothedPos, targetWidth);
 
-        if (normalizedSpeed < _config.DunBiSpeedThreshold)
-        {
-            // 低速时累积宽度（墨水扩散）
-            double wetnessFactor = 0.65 + (_inkWetness * 0.7);
-            double absorptionFactor = 1.0 - (absorption * 0.35);
-            double accumulationRate = (_config.DunBiSpreadRate * wetnessFactor * absorptionFactor * turnAttenuation * overlapAttenuation) / Math.Max(velocity, Math.Max(_config.SpeedFloorPxPerMs, 0.08));
-            double deltaTime = dtMs / 1000.0; // 转换为秒
-            _accumulatedWidth += accumulationRate * deltaTime;
-
-            // 限制最大累积
-            double maxAccumulation = targetWidth * (_config.DunBiMaxAccumulation - 1.0);
-            maxAccumulation *= turnAttenuation * overlapAttenuation;
-            if (inStartSuppressionWindow)
+            // v11: 顿笔逻辑 - 低速时累积墨水扩散
+            double speedFloor = Math.Max(_config.SpeedFloorPxPerMs, _config.MinVelocityClamp);
+            double normalizedSpeed = Math.Clamp((smoothVelocity - speedFloor) /
+                                                Math.Max(0.001, _config.VelocityThreshold - speedFloor), 0, 1);
+            UpdateWetness(smoothedPressure, normalizedSpeed, dtSeconds);
+            double absorption = Math.Clamp(_config.PaperAbsorption, 0.0, 1.0);
+            bool inStartSuppressionWindow = _pointCount < Math.Max(0, _config.StartBurstSuppressPoints);
+            double turnAttenuation = 1.0;
+            double turnSharpness = 0.0;
+            if (dist > 0.001)
             {
-                double startCap = Math.Clamp(_config.StartBurstAccumulationCap, 0.0, 1.0);
-                maxAccumulation *= startCap;
+                var moveDir = _smoothedPos - lastPt.Position;
+                if (moveDir.LengthSquared > 0.0001)
+                {
+                    moveDir.Normalize();
+                    var lastDir = _lastStrokeDirection;
+                    if (lastDir.LengthSquared > 0.0001)
+                    {
+                        lastDir.Normalize();
+                        double turnAngle = Math.Abs(Vector.AngleBetween(lastDir, moveDir));
+                        double turnNorm = Math.Clamp(turnAngle / 120.0, 0.0, 1.0);
+                        turnSharpness = turnNorm;
+                        // Reduce accumulation at sharper turns to avoid local blobs.
+                        turnAttenuation = Lerp(1.0, 0.8, turnNorm);
+                    }
+                }
             }
-            _accumulatedWidth = Math.Min(_accumulatedWidth, maxAccumulation);
-        }
-        else
-        {
-            // 高速时衰减累积
-            _accumulatedWidth *= (1.0 - (_config.DunBiDecayRate * (1.0 + absorption * 0.4)));
-        }
+            double overlapAttenuation = ResolveOverlapAttenuation(_smoothedPos, targetWidth);
 
-        // 应用累积宽度
-        double effectiveWidth = targetWidth + (_accumulatedWidth * (0.6 + (_inkWetness * 0.8)));
-        if (inStartSuppressionWindow && normalizedSpeed < 0.3)
-        {
-            double startWidthCap = ClampWidth(_baseSize * Math.Max(0.6, _config.StartBurstMaxWidthFactor));
-            effectiveWidth = Math.Min(effectiveWidth, startWidthCap);
-        }
-        if (turnSharpness > 0.2)
-        {
-            double cornerGrowthCap = Lerp(_baseSize * 0.48, _baseSize * 0.24, turnSharpness);
-            effectiveWidth = Math.Min(effectiveWidth, _smoothedWidth + cornerGrowthCap);
-        }
-        if (overlapAttenuation < 0.92)
-        {
-            double overlapStrength = Math.Clamp((0.92 - overlapAttenuation) / 0.24, 0.0, 1.0);
-            double overlapGrowthCap = Lerp(_baseSize * 0.24, _baseSize * 0.12, overlapStrength);
-            effectiveWidth = Math.Min(effectiveWidth, targetWidth + overlapGrowthCap);
-        }
-        if (normalizedSpeed < 0.22)
-        {
-            double lowSpeedMax = ClampWidth(_baseSize * Math.Max(1.0, _config.LowSpeedWidthMaxFactor));
-            effectiveWidth = Math.Min(effectiveWidth, lowSpeedMax);
-        }
+            if (normalizedSpeed < _config.DunBiSpeedThreshold)
+            {
+                // 低速时累积宽度（墨水扩散）
+                double wetnessFactor = 0.65 + (_inkWetness * 0.7);
+                double absorptionFactor = 1.0 - (absorption * 0.35);
+                double accumulationRate = (_config.DunBiSpreadRate * wetnessFactor * absorptionFactor * turnAttenuation * overlapAttenuation) / Math.Max(velocity, Math.Max(_config.SpeedFloorPxPerMs, 0.08));
+                double deltaTime = dtMs / 1000.0; // 转换为秒
+                _accumulatedWidth += accumulationRate * deltaTime;
 
-        targetWidth = _widthAverage.Push(effectiveWidth, _config.PressureSmoothWindow);
-        targetWidth = ClampWidth(targetWidth);
+                // 限制最大累积
+                double maxAccumulation = targetWidth * (_config.DunBiMaxAccumulation - 1.0);
+                maxAccumulation *= turnAttenuation * overlapAttenuation;
+                if (inStartSuppressionWindow)
+                {
+                    double startCap = Math.Clamp(_config.StartBurstAccumulationCap, 0.0, 1.0);
+                    maxAccumulation *= startCap;
+                }
+                _accumulatedWidth = Math.Min(_accumulatedWidth, maxAccumulation);
+            }
+            else
+            {
+                // 高速时衰减累积
+                _accumulatedWidth *= (1.0 - (_config.DunBiDecayRate * (1.0 + absorption * 0.4)));
+            }
 
-        double lowPassSpeedNorm = Math.Clamp(
-            smoothVelocity / Math.Max(_config.WidthLowPassSpeedReference, 0.001),
-            0,
-            1);
-        double maxStepDelta = Lerp(_baseSize * 0.28, _baseSize * 0.78, lowPassSpeedNorm);
-        if (input.HasPressure)
-        {
-            double pressureDelta = Math.Abs((Math.Clamp(smoothedPressure, 0, 1) - 0.5) * 2.0);
-            maxStepDelta *= 1.0 + (pressureDelta * 0.45);
-        }
-        maxStepDelta = Math.Clamp(maxStepDelta, 0.9, _baseSize * 1.1);
-        double desiredDelta = targetWidth - _smoothedWidth;
-        targetWidth = _smoothedWidth + Math.Clamp(desiredDelta, -maxStepDelta, maxStepDelta);
+            // 应用累积宽度
+            double effectiveWidth = targetWidth + (_accumulatedWidth * (0.6 + (_inkWetness * 0.8)));
+            if (inStartSuppressionWindow && normalizedSpeed < 0.3)
+            {
+                double startWidthCap = ClampWidth(_baseSize * Math.Max(0.6, _config.StartBurstMaxWidthFactor));
+                effectiveWidth = Math.Min(effectiveWidth, startWidthCap);
+            }
+            if (turnSharpness > 0.2)
+            {
+                double cornerGrowthCap = Lerp(_baseSize * 0.48, _baseSize * 0.24, turnSharpness);
+                effectiveWidth = Math.Min(effectiveWidth, _smoothedWidth + cornerGrowthCap);
+            }
+            if (overlapAttenuation < 0.92)
+            {
+                double overlapStrength = Math.Clamp((0.92 - overlapAttenuation) / 0.24, 0.0, 1.0);
+                double overlapGrowthCap = Lerp(_baseSize * 0.24, _baseSize * 0.12, overlapStrength);
+                effectiveWidth = Math.Min(effectiveWidth, targetWidth + overlapGrowthCap);
+            }
+            if (normalizedSpeed < 0.22)
+            {
+                double lowSpeedMax = ClampWidth(_baseSize * Math.Max(1.0, _config.LowSpeedWidthMaxFactor));
+                effectiveWidth = Math.Min(effectiveWidth, lowSpeedMax);
+            }
 
-        double dynamicWidthAlpha = Lerp(_config.WidthLowPassMaxAlpha, _config.WidthLowPassMinAlpha, lowPassSpeedNorm);
-        dynamicWidthAlpha = Math.Clamp(dynamicWidthAlpha, 0.45, 0.95);
-        double widthAlpha = Math.Clamp((_config.WidthSmoothing * 0.35) + (dynamicWidthAlpha * 0.65), 0.45, 0.96);
-        _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
-        if (input.HasPressure)
-        {
-            double centeredPressure = MapPressureSigned(Math.Clamp(smoothedPressure, 0, 1), 0.04, 1.12);
-            double pressureBoost = centeredPressure * _config.RealPressureWidthScale * 0.32;
-            pressureBoost = Math.Clamp(pressureBoost, -0.18, 0.24);
-            double pressureAdjustedWidth = ClampWidth(_smoothedWidth * (1.0 + pressureBoost));
-            double pressureBlend = Math.Clamp(_config.RealPressureWidthInfluence * 0.24, 0.04, 0.27);
-            _smoothedWidth = Lerp(_smoothedWidth, pressureAdjustedWidth, pressureBlend);
-        }
-        _smoothedWidth = ClampWidth(_smoothedWidth);
+            targetWidth = _widthAverage.Push(effectiveWidth, _config.PressureSmoothWindow);
+            targetWidth = ClampWidth(targetWidth);
 
-        // 数据验证：检查宽度有效性
+            double lowPassSpeedNorm = Math.Clamp(
+                smoothVelocity / Math.Max(_config.WidthLowPassSpeedReference, 0.001),
+                0,
+                1);
+            double maxStepDelta = Lerp(_baseSize * 0.28, _baseSize * 0.78, lowPassSpeedNorm);
+            if (input.HasPressure)
+            {
+                double pressureDelta = Math.Abs((Math.Clamp(smoothedPressure, 0, 1) - 0.5) * 2.0);
+                maxStepDelta *= 1.0 + (pressureDelta * 0.45);
+            }
+            maxStepDelta = Math.Clamp(maxStepDelta, 0.9, _baseSize * 1.1);
+            double desiredDelta = targetWidth - _smoothedWidth;
+            targetWidth = _smoothedWidth + Math.Clamp(desiredDelta, -maxStepDelta, maxStepDelta);
+
+            double dynamicWidthAlpha = Lerp(_config.WidthLowPassMaxAlpha, _config.WidthLowPassMinAlpha, lowPassSpeedNorm);
+            dynamicWidthAlpha = Math.Clamp(dynamicWidthAlpha, 0.45, 0.95);
+            double widthAlpha = Math.Clamp((_config.WidthSmoothing * 0.35) + (dynamicWidthAlpha * 0.65), 0.45, 0.96);
+            _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
+            if (input.HasPressure)
+            {
+                double centeredPressure = MapPressureSigned(Math.Clamp(smoothedPressure, 0, 1), 0.04, 1.12);
+                double pressureBoost = centeredPressure * _config.RealPressureWidthScale * 0.32;
+                pressureBoost = Math.Clamp(pressureBoost, -0.18, 0.24);
+                double pressureAdjustedWidth = ClampWidth(_smoothedWidth * (1.0 + pressureBoost));
+                double pressureBlend = Math.Clamp(_config.RealPressureWidthInfluence * 0.24, 0.04, 0.27);
+                _smoothedWidth = Lerp(_smoothedWidth, pressureAdjustedWidth, pressureBlend);
+            }
+            _smoothedWidth = ClampWidth(_smoothedWidth);
+
+            // 数据验证：检查宽度有效性
             if (double.IsNaN(_smoothedWidth) || double.IsInfinity(_smoothedWidth) || _smoothedWidth <= 0)
             {
                 return;
@@ -611,11 +591,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             result.Add(new StrokePointData(sample.Position, sample.Width));
         }
         return result;
-    }
-
-    internal bool TryGetMoveTelemetrySnapshotForDiagnostics(out BrushMoveTelemetrySnapshot snapshot)
-    {
-        return _moveTelemetry.TryGetLastSnapshot(out snapshot);
     }
 
     private int ResolveRibbonCount()
@@ -950,230 +925,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         return (int)Math.Round(value * scale);
-    }
-
-    private bool IsMoveTelemetryEnabled()
-    {
-        return _config.EnableDebugMoveTelemetry || BrushMoveTelemetryFlag;
-    }
-
-    private static bool ResolveTelemetryFlagFromEnvironment()
-    {
-        var raw = Environment.GetEnvironmentVariable("CTOOLKIT_BRUSH_TELEMETRY");
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return false;
-        }
-
-        raw = raw.Trim();
-        return string.Equals(raw, "1", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "on", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "yes", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private sealed class BrushMoveTelemetry
-    {
-        private const int Capacity = 256;
-        private readonly double[] _dtMs = new double[Capacity];
-        private readonly long[] _allocBytes = new long[Capacity];
-        private readonly int[] _rawPoints = new int[Capacity];
-        private readonly int[] _resampledPoints = new int[Capacity];
-        private readonly double[] _effectiveTaperBaseDip = new double[Capacity];
-        private readonly double[] _scratchDtMs = new double[Capacity];
-        private readonly long[] _scratchAllocBytes = new long[Capacity];
-        private readonly int[] _scratchRawPoints = new int[Capacity];
-        private readonly int[] _scratchResampledPoints = new int[Capacity];
-        private readonly double[] _scratchEffectiveTaperBaseDip = new double[Capacity];
-        private int _count;
-        private int _index;
-        private long _sequence;
-        private BrushMoveTelemetrySnapshot _lastSnapshot;
-        private bool _hasSnapshot;
-
-        public void Record(
-            double dtMs,
-            long allocBytes,
-            int rawPoints,
-            int resampledPoints,
-            double effectiveTaperBaseDip,
-            string presetName,
-            string modeTag)
-        {
-            _dtMs[_index] = Math.Max(0.0, dtMs);
-            _allocBytes[_index] = Math.Max(0, allocBytes);
-            _rawPoints[_index] = Math.Max(0, rawPoints);
-            _resampledPoints[_index] = Math.Max(0, resampledPoints);
-            _effectiveTaperBaseDip[_index] = Math.Max(0.0, effectiveTaperBaseDip);
-            _index = (_index + 1) % Capacity;
-            _count = Math.Min(_count + 1, Capacity);
-            _sequence++;
-
-            if (_count < 16 || (_sequence % 64) != 0)
-            {
-                return;
-            }
-
-            EmitSnapshot(presetName, modeTag);
-        }
-
-        private void EmitSnapshot(string presetName, string modeTag)
-        {
-            int count = _count;
-            if (count <= 0)
-            {
-                return;
-            }
-
-            double dtSum = 0.0;
-            double dtMax = 0.0;
-            long allocSum = 0;
-            long allocMax = 0;
-            long rawSum = 0;
-            int rawMax = 0;
-            long resampledSum = 0;
-            int resampledMax = 0;
-            double effectiveBaseSum = 0.0;
-            double effectiveBaseMin = double.MaxValue;
-            double effectiveBaseMax = 0.0;
-
-            for (int i = 0; i < count; i++)
-            {
-                double dt = _dtMs[i];
-                long alloc = _allocBytes[i];
-                int raw = _rawPoints[i];
-                int resampled = _resampledPoints[i];
-                double effectiveBase = _effectiveTaperBaseDip[i];
-
-                dtSum += dt;
-                if (dt > dtMax)
-                {
-                    dtMax = dt;
-                }
-
-                allocSum += alloc;
-                if (alloc > allocMax)
-                {
-                    allocMax = alloc;
-                }
-
-                rawSum += raw;
-                if (raw > rawMax)
-                {
-                    rawMax = raw;
-                }
-
-                resampledSum += resampled;
-                if (resampled > resampledMax)
-                {
-                    resampledMax = resampled;
-                }
-                effectiveBaseSum += effectiveBase;
-                if (effectiveBase < effectiveBaseMin)
-                {
-                    effectiveBaseMin = effectiveBase;
-                }
-                if (effectiveBase > effectiveBaseMax)
-                {
-                    effectiveBaseMax = effectiveBase;
-                }
-
-                _scratchDtMs[i] = dt;
-                _scratchAllocBytes[i] = alloc;
-                _scratchRawPoints[i] = raw;
-                _scratchResampledPoints[i] = resampled;
-                _scratchEffectiveTaperBaseDip[i] = effectiveBase;
-            }
-
-            double dtAvg = dtSum / count;
-            double allocAvg = (double)allocSum / count;
-            double rawAvg = (double)rawSum / count;
-            double resampledAvg = (double)resampledSum / count;
-            double effectiveBaseAvg = effectiveBaseSum / count;
-            if (effectiveBaseMin == double.MaxValue)
-            {
-                effectiveBaseMin = 0.0;
-            }
-
-            double dtP95 = PercentileInPlace(_scratchDtMs, count, 0.95);
-            double allocP95 = PercentileInPlace(_scratchAllocBytes, count, 0.95);
-            double rawP95 = PercentileInPlace(_scratchRawPoints, count, 0.95);
-            double resampledP95 = PercentileInPlace(_scratchResampledPoints, count, 0.95);
-            double effectiveBaseP95 = PercentileInPlace(_scratchEffectiveTaperBaseDip, count, 0.95);
-
-            _lastSnapshot = new BrushMoveTelemetrySnapshot(
-                presetName,
-                modeTag,
-                dtAvg,
-                dtP95,
-                dtMax,
-                allocAvg,
-                allocP95,
-                allocMax,
-                rawAvg,
-                rawP95,
-                rawMax,
-                resampledAvg,
-                resampledP95,
-                resampledMax,
-                effectiveBaseAvg,
-                effectiveBaseP95,
-                effectiveBaseMin,
-                effectiveBaseMax);
-            _hasSnapshot = true;
-
-            Debug.WriteLine(
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"[BrushMoveTelemetry] preset={presetName} mode={modeTag} " +
-                    $"dt_ms(avg/p95/max)={dtAvg:F3}/{dtP95:F3}/{dtMax:F3} " +
-                    $"alloc_bytes(avg/p95/max)={allocAvg:F0}/{allocP95:F0}/{allocMax} " +
-                    $"points_raw(avg/p95/max)={rawAvg:F1}/{rawP95:F1}/{rawMax} " +
-                    $"points_resampled(avg/p95/max)={resampledAvg:F1}/{resampledP95:F1}/{resampledMax} " +
-                    $"taper_base_dip(avg/p95/min/max)={effectiveBaseAvg:F2}/{effectiveBaseP95:F2}/{effectiveBaseMin:F2}/{effectiveBaseMax:F2}"));
-        }
-
-        public bool TryGetLastSnapshot(out BrushMoveTelemetrySnapshot snapshot)
-        {
-            snapshot = _lastSnapshot;
-            return _hasSnapshot;
-        }
-
-        private static double PercentileInPlace(double[] values, int count, double q)
-        {
-            if (count <= 0)
-            {
-                return 0.0;
-            }
-
-            Array.Sort(values, 0, count);
-            int idx = Math.Clamp((int)Math.Ceiling((count - 1) * q), 0, count - 1);
-            return values[idx];
-        }
-
-        private static double PercentileInPlace(long[] values, int count, double q)
-        {
-            if (count <= 0)
-            {
-                return 0.0;
-            }
-
-            Array.Sort(values, 0, count);
-            int idx = Math.Clamp((int)Math.Ceiling((count - 1) * q), 0, count - 1);
-            return values[idx];
-        }
-
-        private static double PercentileInPlace(int[] values, int count, double q)
-        {
-            if (count <= 0)
-            {
-                return 0.0;
-            }
-
-            Array.Sort(values, 0, count);
-            int idx = Math.Clamp((int)Math.Ceiling((count - 1) * q), 0, count - 1);
-            return values[idx];
-        }
     }
 
     private sealed class SlidingAverageWindow

@@ -249,7 +249,7 @@ internal static class CustomCursors
             // 1. 从 XAML 资源加载橡皮擦图标几何形状（避免 Geometry.Parse 的区域设置问题）
             var resourceGeometry = (Geometry)System.Windows.Application.Current.FindResource("Icon_Eraser");
             var eraserGeometry = resourceGeometry.Clone();
-            
+
             // 2. 变换：居中显示
             var transform = new TranslateTransform(offset, offset);
             eraserGeometry.Transform = transform;
@@ -268,7 +268,7 @@ internal static class CustomCursors
             // 主体填充：白色 (高对比度)
             var fillBrush = new SolidColorBrush(Colors.White);
             fillBrush.Freeze();
-            
+
             // 描边：深灰色 (清晰轮廓)
             var outlinePen = new WpfPen(new SolidColorBrush(MediaColor.FromRgb(30, 30, 30)), 1.0);
             outlinePen.LineJoin = PenLineJoin.Round;
@@ -282,20 +282,20 @@ internal static class CustomCursors
             // 简单的做法是：绘制一个覆盖在中间的蓝色带子，或者直接用几何路径的第二部分
             // 观察 geometry, M4.22,15.58... 是下面的部分(橡皮头), M16.24... 是整体?
             // Material Icon path 通常是一个整体。为了简单且好看，我们在中间加一个装饰带。
-            
+
             var bandBrush = new SolidColorBrush(MediaColor.FromRgb(59, 130, 246)); // Electric Blue
             bandBrush.Freeze();
-            
+
             // 创建一个裁剪区域来绘制蓝色的"手柄"部分 (右上部分)
             // 简单的近似：用一个旋转矩形覆盖右上半部分
             context.PushClip(eraserGeometry);
-            
+
             // 绘制蓝色矩形覆盖上半部分 (模拟手柄)
             var bandRect = new Rect(offset + 8, offset - 5, 20, 20);
             context.PushTransform(new RotateTransform(45, offset + 12, offset + 12));
             context.DrawRectangle(bandBrush, null, bandRect);
             context.Pop(); // Pop Rotate
-            
+
             context.Pop(); // Pop Clip
 
             // 重新描边以确保轮廓清晰（因为Clip可能切断了描边）
@@ -381,7 +381,7 @@ internal static class CustomCursors
             // 中心十字准星（精确定位）
             var crossPen = new WpfPen(System.Windows.Media.Brushes.Black, 1);
             crossPen.Freeze();
-            
+
             context.DrawLine(crossPen,
                 new WpfPoint(centerX - 2, centerY),
                 new WpfPoint(centerX + 2, centerY));

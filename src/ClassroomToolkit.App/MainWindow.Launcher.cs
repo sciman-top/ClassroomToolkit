@@ -64,7 +64,7 @@ public partial class MainWindow
         {
             Owner = this
         };
-        
+
         TryFixWindowBorders(this, "launcher-settings", "main-window");
         TryFixWindowBorders(dialog, "launcher-settings", "auto-exit-dialog");
 

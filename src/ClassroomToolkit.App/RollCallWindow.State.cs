@@ -92,7 +92,7 @@ public partial class RollCallWindow
                 running: false);
             _timerStateApplied = true;
         }
-        
+
         UpdateRemoteHookState();
         if (updatePhoto)
         {
@@ -288,7 +288,7 @@ public partial class RollCallWindow
     {
         NotifySpeechError();
     }
-    
+
     private void SpeakStudentName()
     {
         var lifecycleToken = _lifecycleCancellation.Token;

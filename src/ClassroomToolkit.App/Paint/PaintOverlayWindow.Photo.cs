@@ -363,7 +363,7 @@ public partial class PaintOverlayWindow
         var ext = IoPath.GetExtension(path);
         return !string.IsNullOrWhiteSpace(ext) && ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
     }
-    
+
     private string BuildNeighborInkCacheKey(int pageIndex)
     {
         if (_photoDocumentIsPdf)
@@ -379,7 +379,7 @@ public partial class PaintOverlayWindow
     }
 
     private readonly record struct InkBitmapCacheEntry(int PageIndex, List<InkStrokeData> Strokes, BitmapSource Bitmap, double HorizontalOffsetDip = 0);
-    
+
 
 
     public bool IsWhiteboardActive => IsBoardActive();

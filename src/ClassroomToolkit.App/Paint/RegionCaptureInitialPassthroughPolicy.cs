@@ -16,10 +16,10 @@ internal static class RegionCaptureInitialPassthroughPolicy
     {
         if (passthroughRegions == null)
         {
-                return new RegionCaptureInitialPassthroughDecision(
-                    ShouldCancel: false,
-                    InputKind: RegionScreenCapturePassthroughInputKind.None,
-                    ScreenPoint: null);
+            return new RegionCaptureInitialPassthroughDecision(
+                ShouldCancel: false,
+                InputKind: RegionScreenCapturePassthroughInputKind.None,
+                ScreenPoint: null);
         }
 
         foreach (var region in passthroughRegions)

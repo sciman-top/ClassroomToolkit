@@ -12,19 +12,19 @@ namespace ClassroomToolkit.App.Paint;
 internal sealed class PaintModeManager
 {
     private static readonly Lazy<PaintModeManager> _instance = new(() => new PaintModeManager());
-    
+
     private bool _isPaintMode;
     private bool _isDrawing;
-    
+
     /// <summary>
     /// 获取 PaintModeManager 的单例实例
     /// </summary>
     public static PaintModeManager Instance => _instance.Value;
-    
+
     private PaintModeManager()
     {
     }
-    
+
     /// <summary>
     /// 获取或设置当前是否处于绘图模式（画笔、橡皮擦、形状等）
     /// </summary>
@@ -40,7 +40,7 @@ internal sealed class PaintModeManager
             }
         }
     }
-    
+
     /// <summary>
     /// 获取或设置当前是否正在绘图（鼠标左键按下书写状态）
     /// </summary>
@@ -56,17 +56,17 @@ internal sealed class PaintModeManager
             }
         }
     }
-    
+
     /// <summary>
     /// 当绘图模式状态改变时触发
     /// </summary>
     public event Action<bool>? PaintModeChanged;
-    
+
     /// <summary>
     /// 当绘图状态改变时触发（开始/结束书写）
     /// </summary>
     public event Action<bool>? IsDrawingChanged;
-    
+
     /// <summary>
     /// 判断是否应该允许窗口穿透
     /// 工具条窗口：永远不穿透，确保用户始终可以点击按钮
@@ -81,11 +81,11 @@ internal sealed class PaintModeManager
         {
             return false;
         }
-        
+
         // 点名窗口：只有在绘图模式且正在绘图时才穿透
         return _isPaintMode && _isDrawing;
     }
-    
+
     /// <summary>
     /// 判断工具条窗口是否应该允许穿透
     /// 工具条窗口的穿透策略：只有在正在绘图时才穿透

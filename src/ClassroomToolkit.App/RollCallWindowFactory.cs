@@ -12,7 +12,7 @@ internal sealed class RollCallWindowFactory : IRollCallWindowFactory
     private readonly RollCallWorkbookUseCase _rollCallWorkbookUseCase;
 
     public RollCallWindowFactory(
-        AppSettingsService settingsService, 
+        AppSettingsService settingsService,
         AppSettings settings,
         ClassroomToolkit.Services.Input.GlobalHookService hookService,
         ClassroomToolkit.Services.Speech.SpeechService speechService,

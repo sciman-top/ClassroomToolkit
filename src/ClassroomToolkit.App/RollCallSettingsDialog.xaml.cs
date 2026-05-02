@@ -1,11 +1,8 @@
-using System.Globalization;
-using System.Speech.Synthesis;
 using System.Windows;
 using ClassroomToolkit.App.Settings;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.Services.Input;
-using Microsoft.Win32;
 
 namespace ClassroomToolkit.App;
 
@@ -246,15 +243,6 @@ public partial class RollCallSettingsDialog : Window
             PhotoSharedClass: GetSelectedValue(PhotoSharedCombo, string.Empty));
     }
 
-    private SpeechTabState CaptureSpeechTabState()
-    {
-        return new SpeechTabState(
-            SpeechEnabled: SpeechCheck.IsChecked == true,
-            SpeechEngine: GetSelectedValue(SpeechEngineCombo, "sapi"),
-            SpeechVoiceId: GetSelectedValue(SpeechVoiceCombo, string.Empty),
-            SpeechOutputId: GetSelectedValue(SpeechOutputCombo, string.Empty));
-    }
-
     private RemoteTabState CaptureRemoteTabState()
     {
         return new RemoteTabState(
@@ -292,26 +280,6 @@ public partial class RollCallSettingsDialog : Window
 
         UpdatePhotoDurationLabel();
         UpdatePhotoControls();
-    }
-
-    private void ApplySpeechTabState(SpeechTabState state)
-    {
-        _suppressDirtyTracking = true;
-        try
-        {
-            SpeechCheck.IsChecked = state.SpeechEnabled;
-            BuildSpeechEngineCombo(state.SpeechEngine);
-            BuildVoiceCombo(state.SpeechVoiceId);
-            BuildOutputCombo(state.SpeechEngine, state.SpeechOutputId);
-            SelectComboValue(SpeechVoiceCombo, state.SpeechVoiceId, _initialVoiceId);
-            SelectComboValue(SpeechOutputCombo, state.SpeechOutputId, _initialOutputId);
-        }
-        finally
-        {
-            _suppressDirtyTracking = false;
-        }
-
-        UpdateSpeechControls();
     }
 
     private void ApplyRemoteTabState(RemoteTabState state)
@@ -378,16 +346,6 @@ public partial class RollCallSettingsDialog : Window
             || !string.Equals(current.PhotoSharedClass, initial.PhotoSharedClass, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool IsSpeechTabDirty()
-    {
-        var current = CaptureSpeechTabState();
-        var initial = _initialSpeechTabState;
-        return current.SpeechEnabled != initial.SpeechEnabled
-            || !string.Equals(current.SpeechEngine, initial.SpeechEngine, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(current.SpeechVoiceId, initial.SpeechVoiceId, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(current.SpeechOutputId, initial.SpeechOutputId, StringComparison.OrdinalIgnoreCase);
-    }
-
     private bool IsRemoteTabDirty()
     {
         var current = CaptureRemoteTabState();
@@ -451,27 +409,6 @@ public partial class RollCallSettingsDialog : Window
         ReminderIntervalSlider.ToolTip = reminderEnabled ? null : reminderTip;
     }
 
-    private void UpdateSpeechControls()
-    {
-        var speechEnabled = SpeechCheck.IsChecked == true;
-        SpeechEngineCombo.IsEnabled = speechEnabled;
-        SpeechVoiceCombo.IsEnabled = speechEnabled;
-        if (!speechEnabled)
-        {
-            SpeechOutputCombo.IsEnabled = false;
-            SpeechOutputCombo.ToolTip = "已关闭语音播报。";
-            return;
-        }
-
-        SpeechOutputCombo.IsEnabled = false;
-        SpeechOutputCombo.ToolTip = "当前版本暂不支持播报设备选择。";
-
-        if (SpeechVoiceCombo.Items.Count == 0)
-        {
-            SpeechVoiceCombo.IsEnabled = false;
-        }
-    }
-
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
         var keyText = GetRemoteKey();
@@ -500,10 +437,10 @@ public partial class RollCallSettingsDialog : Window
             groupKeyText = normalizedGroupKey;
         }
 
-        if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true && 
+        if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true &&
             string.Equals(keyText, groupKeyText, StringComparison.OrdinalIgnoreCase))
         {
-                System.Windows.MessageBox.Show("点名按键和分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show("点名按键和分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
 
@@ -721,231 +658,6 @@ public partial class RollCallSettingsDialog : Window
             new ComboOption("f5", "F5/Shift+F5/Esc键（全屏/退出全屏）"),
             new ComboOption("b", "B/b键（黑屏）")
         };
-    }
-
-    private void BuildSpeechEngineCombo(string? current)
-    {
-        var items = new[]
-        {
-            new ComboOption("sapi", "系统语音（SAPI）")
-        };
-        SpeechEngineCombo.ItemsSource = items;
-        SpeechEngineCombo.DisplayMemberPath = nameof(ComboOption.Label);
-        SpeechEngineCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechEngineCombo.SelectedValue = "sapi";
-    }
-
-    private static void BuildSapiVoices(List<ComboOption> voices)
-    {
-        using var synth = new SpeechSynthesizer();
-        var allVoices = synth.GetInstalledVoices(CultureInfo.CurrentUICulture).ToList();
-        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var voice in allVoices)
-        {
-            var info = voice.VoiceInfo;
-            if (!voice.Enabled)
-            {
-                continue;
-            }
-            existing.Add(info.Name);
-            var label = $"{info.Name} ({info.Culture.Name}, {info.Gender})";
-            voices.Add(new ComboOption(info.Name, label));
-        }
-
-        if (voices.Count == 0)
-        {
-            voices.Add(new ComboOption(string.Empty, "暂无可用发音人"));
-        }
-    }
-
-    private void BuildVoiceCombo(string? current)
-    {
-        var voices = new List<ComboOption>();
-        try
-        {
-            BuildSapiVoices(voices);
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            voices.Clear();
-        }
-
-        if (voices.Count == 0)
-        {
-            voices.Add(new ComboOption(string.Empty, "暂无可选发音人"));
-        }
-
-        SpeechVoiceCombo.ItemsSource = voices;
-        SpeechVoiceCombo.DisplayMemberPath = nameof(ComboOption.Label);
-        SpeechVoiceCombo.SelectedValuePath = nameof(ComboOption.Value);
-
-        var decision = RollCallVoiceSelectionPolicy.Resolve(
-            voices.Select(option => option.Value).ToList(),
-            preferredVoiceId: current,
-            fallbackVoiceId: _initialVoiceId);
-
-        SpeechVoiceCombo.IsEnabled = decision.IsVoiceSelectionEnabled;
-        SpeechVoiceCombo.SelectedValue = decision.SelectedVoiceId;
-    }
-
-    /// <summary>
-    /// 获取语言的显示名称
-    /// </summary>
-    private static string GetLanguageDisplayName(string cultureName)
-    {
-        try
-        {
-            var culture = new System.Globalization.CultureInfo(cultureName);
-            var nativeName = culture.NativeName; // 本地语言名称
-            var englishName = culture.EnglishName; // 英文名称
-
-            // 如果本地名称和英文名称不同，显示两个
-            if (nativeName != englishName && !string.IsNullOrWhiteSpace(nativeName))
-            {
-                // 提取本地名称的第一部分（避免显示过于冗长）
-                var nativeShort = nativeName.Split('(')[0].Trim();
-                return $"{englishName}·{nativeShort}";
-            }
-
-            return englishName;
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            return cultureName.ToUpperInvariant();
-        }
-    }
-
-    /// <summary>
-    /// 获取性别的显示名称
-    /// </summary>
-    private static string GetGenderDisplayName(System.Speech.Synthesis.VoiceInfo info)
-    {
-        return info.Gender switch
-        {
-            System.Speech.Synthesis.VoiceGender.Male => "男",
-            System.Speech.Synthesis.VoiceGender.Female => "女",
-            System.Speech.Synthesis.VoiceGender.Neutral => "中性",
-            _ => "未知"
-        };
-    }
-
-    private sealed record RegistryVoice(string Name, string CultureName, string Gender, bool Enabled);
-
-    private static List<RegistryVoice> ReadRegistryVoices()
-    {
-        var results = new List<RegistryVoice>();
-        ReadRegistryVoices(results, RegistryHive.LocalMachine, RegistryView.Registry64);
-        ReadRegistryVoices(results, RegistryHive.LocalMachine, RegistryView.Registry32);
-        ReadRegistryVoices(results, RegistryHive.CurrentUser, RegistryView.Registry64);
-        ReadRegistryVoices(results, RegistryHive.CurrentUser, RegistryView.Registry32);
-        return results;
-    }
-
-    private static void ReadRegistryVoices(List<RegistryVoice> results, RegistryHive hive, RegistryView view)
-    {
-        ReadRegistryVoicePath(results, hive, view, @"SOFTWARE\Microsoft\Speech\Voices\Tokens");
-        ReadRegistryVoicePath(results, hive, view, @"SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens");
-    }
-
-    private static void ReadRegistryVoicePath(List<RegistryVoice> results, RegistryHive hive, RegistryView view, string path)
-    {
-        try
-        {
-            using var baseKey = RegistryKey.OpenBaseKey(hive, view);
-            using var root = baseKey.OpenSubKey(path);
-            if (root == null)
-            {
-                return;
-            }
-            foreach (var tokenName in root.GetSubKeyNames())
-            {
-                using var tokenKey = root.OpenSubKey(tokenName);
-                if (tokenKey == null)
-                {
-                    continue;
-                }
-                var name = ReadRegistryValue(tokenKey, "Name");
-                using var attributesKey = tokenKey.OpenSubKey("Attributes");
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    name = ReadRegistryValue(attributesKey, "Name");
-                }
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    name = tokenName;
-                }
-                var cultureName = ReadRegistryValue(tokenKey, "Language");
-                if (string.IsNullOrWhiteSpace(cultureName))
-                {
-                    cultureName = ReadRegistryValue(attributesKey, "Language");
-                }
-                cultureName = NormalizeCultureName(cultureName);
-                var gender = ReadRegistryValue(tokenKey, "Gender");
-                if (string.IsNullOrWhiteSpace(gender))
-                {
-                    gender = ReadRegistryValue(attributesKey, "Gender");
-                }
-                var enabled = true;
-                var enabledValue = ReadRegistryValue(tokenKey, "Enabled");
-                if (!string.IsNullOrWhiteSpace(enabledValue) && int.TryParse(enabledValue, out var enabledInt))
-                {
-                    enabled = enabledInt != 0;
-                }
-                results.Add(new RegistryVoice(name, cultureName, gender, enabled));
-            }
-        }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-        {
-            // Ignore registry access errors to avoid breaking the settings dialog.
-        }
-    }
-
-    private static string ReadRegistryValue(RegistryKey? key, string name)
-    {
-        if (key == null)
-        {
-            return string.Empty;
-        }
-        var value = key.GetValue(name);
-        return value?.ToString() ?? string.Empty;
-    }
-
-    private static string NormalizeCultureName(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-        var trimmed = value.Trim();
-        if (trimmed.Contains('-', StringComparison.Ordinal))
-        {
-            return trimmed;
-        }
-        if (int.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var lcid) ||
-            int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out lcid))
-        {
-            try
-            {
-                return new CultureInfo(lcid).Name;
-            }
-            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
-            {
-                return string.Empty;
-            }
-        }
-        return string.Empty;
-    }
-
-    private void BuildOutputCombo(string? engine, string? current)
-    {
-        var items = new List<ComboOption>();
-        items.Add(new ComboOption(string.Empty, "当前版本暂不支持输出设备选择"));
-        SpeechOutputCombo.ItemsSource = items;
-        SpeechOutputCombo.DisplayMemberPath = nameof(ComboOption.Label);
-        SpeechOutputCombo.SelectedValuePath = nameof(ComboOption.Value);
-        SpeechOutputCombo.SelectedValue = string.Empty;
-        UpdateSpeechControls();
     }
 
     private void BuildTimerSoundCombo(string? current)

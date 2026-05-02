@@ -36,7 +36,7 @@ public partial class PaintOverlayWindow
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.UriSource = new Uri(path, UriKind.Absolute);
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-            
+
             // Limit decoding resolution to prevent OOM in cross-page mode.
             // Important: decode width must only downsample large sources, never upscale.
             if (downsampleToMonitor)

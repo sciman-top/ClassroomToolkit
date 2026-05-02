@@ -8,7 +8,10 @@ public sealed class PaintToolbarDragModeContractTests
     [Fact]
     public void ToolbarDrag_ShouldUseManagedMouseCaptureFlow_InsteadOfDragMove()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = string.Join(
+            Environment.NewLine,
+            File.ReadAllText(GetSourcePath("PaintToolbarWindow.xaml.cs")),
+            File.ReadAllText(GetSourcePath("PaintToolbarWindow.Pointer.cs")));
 
         source.Should().NotContain("PaintActionInvoker.TryInvoke(DragMove);");
         source.Should().Contain("CaptureMouse();");
@@ -22,12 +25,12 @@ public sealed class PaintToolbarDragModeContractTests
         source.Should().Contain("private void MoveToolbarWithinVirtualScreen(");
     }
 
-    private static string GetSourcePath()
+    private static string GetSourcePath(string fileName)
     {
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
             "Paint",
-            "PaintToolbarWindow.xaml.cs");
+            fileName);
     }
 }

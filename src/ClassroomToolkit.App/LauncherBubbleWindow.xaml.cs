@@ -27,7 +27,7 @@ public partial class LauncherBubbleWindow : Window
     private IntPtr _hwnd;
     private IDisposable? _dragScope;
     private int? _activeTouchId;
-    
+
     // 拖动阈值：移动超过此距离才算拖动，否则算点击
     private const double DragThreshold = 5.0;
     private const double DragThresholdSquared = DragThreshold * DragThreshold;
@@ -157,7 +157,7 @@ public partial class LauncherBubbleWindow : Window
             return;
         }
         BeginDrag(e.GetPosition(this));
-        
+
         // 捕获鼠标，防止拖动时失去鼠标事件
         CaptureMouse();
     }
@@ -178,7 +178,7 @@ public partial class LauncherBubbleWindow : Window
         {
             return;
         }
-        
+
         // 释放鼠标捕获
         ReleaseMouseCapture();
         EndDrag(shouldRestoreWhenTap: true);
@@ -252,7 +252,7 @@ public partial class LauncherBubbleWindow : Window
             var screen = PointToScreen(position);
             var newX = screen.X - _dragOffset.X;
             var newY = screen.Y - _dragOffset.Y;
-            
+
             // 使用缓存屏幕工作区边界，跨屏时再更新，减少高频查询开销。
             if (!_hasDragScreenArea || !_dragScreenBounds.Contains((int)screen.X, (int)screen.Y))
             {
@@ -265,7 +265,7 @@ public partial class LauncherBubbleWindow : Window
 
             newX = Math.Max(_dragWorkingArea.Left, Math.Min(newX, _dragWorkingArea.Right - Width));
             newY = Math.Max(_dragWorkingArea.Top, Math.Min(newY, _dragWorkingArea.Bottom - Height));
-            
+
             // 计算移动距离，超过阈值才算拖动
             var deltaX = newX - _dragStartPosition.X;
             var deltaY = newY - _dragStartPosition.Y;
@@ -273,7 +273,7 @@ public partial class LauncherBubbleWindow : Window
             {
                 _moved = true;
             }
-            
+
             Left = newX;
             Top = newY;
         }
@@ -332,7 +332,7 @@ public partial class LauncherBubbleWindow : Window
                 SnapBubbleToNearestEdge();
             }
         }
-        
+
         _moved = false;
     }
 

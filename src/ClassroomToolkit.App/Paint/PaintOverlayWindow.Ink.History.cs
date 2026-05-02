@@ -63,7 +63,7 @@ public partial class PaintOverlayWindow
 
         var stride = _surfacePixelWidth * 4;
         var bytesRequired = stride * _surfacePixelHeight;
-        
+
         // Check memory pressure and trim if needed
         while (_history.Count > 0 && (_history.Count >= HistoryLimit || _currentHistoryMemoryBytes + bytesRequired > MaxHistoryMemoryBytes))
         {
@@ -75,7 +75,7 @@ public partial class PaintOverlayWindow
 
         var pixels = PixelPool.Rent(bytesRequired);
         _rasterSurface.CopyPixels(pixels, stride, 0);
-        
+
         var snapshot = new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels);
         _history.Add(snapshot);
         _currentHistoryMemoryBytes += pixels.Length;

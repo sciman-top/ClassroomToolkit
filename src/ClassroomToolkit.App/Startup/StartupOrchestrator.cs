@@ -201,7 +201,7 @@ internal sealed class StartupOrchestrator
             }
             lines.Add(string.Empty);
         }
-            lines.Add("程序将继续启动。请尽快修复。");
+        lines.Add("程序将继续启动。请尽快修复。");
         if (!string.IsNullOrWhiteSpace(startupCompatibilityReportPath))
         {
             lines.Add($"诊断报告：{startupCompatibilityReportPath}");

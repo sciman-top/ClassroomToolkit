@@ -51,13 +51,13 @@ public partial class PaintOverlayWindow
 
         if (!photoInkModeActive && stroke.CachedBounds.HasValue)
         {
-             var bounds = stroke.CachedBounds.Value;
-             if (bounds.Right < 0 || bounds.Bottom < 0 || bounds.Left > _surfacePixelWidth || bounds.Top > _surfacePixelHeight)
-             {
-                 return;
-             }
+            var bounds = stroke.CachedBounds.Value;
+            if (bounds.Right < 0 || bounds.Bottom < 0 || bounds.Left > _surfacePixelWidth || bounds.Top > _surfacePixelHeight)
+            {
+                return;
+            }
         }
-        
+
         var usePhotoTransform = photoInkModeActive && ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
         var renderGeometry = usePhotoTransform
             ? geometry
@@ -72,7 +72,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        
+
         if (photoInkModeActive
             && !PhotoInkViewportIntersectionPolicy.ShouldRender(
                 photoInkModeActive,
@@ -707,7 +707,7 @@ public partial class PaintOverlayWindow
 
 
 
-    
+
     private void RedrawInkSurface()
     {
         var redrawSw = Stopwatch.StartNew();

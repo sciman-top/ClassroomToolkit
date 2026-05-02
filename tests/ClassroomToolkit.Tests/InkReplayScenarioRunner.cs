@@ -59,69 +59,69 @@ public static class InkReplayScenarioRunner
                     break;
 
                 case InkReplayEventType.PointerUp:
-                {
-                    pointerUpCount++;
-                    var deferredState = CrossPagePointerUpDeferredStatePolicy.Resolve(
-                        deferredByInkInput: deferredByInkInput,
-                        crossPageDisplayActive: crossPageDisplayActive);
-                    deferredByInkInput = deferredState.NextDeferredByInkInput;
-
-                    var decision = CrossPagePointerUpDecisionPolicy.Resolve(
-                        crossPageDisplayActive: crossPageDisplayActive,
-                        hadInkOperation: inkOperationActive,
-                        deferredRefreshRequested: deferredState.DeferredRefreshRequested,
-                        updatePending: updatePending);
-
-                    var executionPlan = CrossPagePointerUpExecutionPlanPolicy.Resolve(
-                        decision,
-                        hadInkOperation: inkOperationActive,
-                        pendingInkContextCheck: pendingInkContextCheck);
-
-                    var postPlan = CrossPagePointerUpPostExecutionPolicy.Resolve(
-                        executionPlan,
-                        crossPageFirstInputTraceActive: crossPageFirstInputTraceActive);
-
-                    if (postPlan.ShouldApplyFastRefresh && decision.ShouldRequestImmediateRefresh)
                     {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.FastRefreshImmediate,
-                            CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.PointerUpFast)));
-                    }
+                        pointerUpCount++;
+                        var deferredState = CrossPagePointerUpDeferredStatePolicy.Resolve(
+                            deferredByInkInput: deferredByInkInput,
+                            crossPageDisplayActive: crossPageDisplayActive);
+                        deferredByInkInput = deferredState.NextDeferredByInkInput;
 
-                    if (postPlan.ShouldScheduleDeferredRefresh)
-                    {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.DeferredRefreshScheduled,
-                            postPlan.DeferredRefreshSource));
-                    }
+                        var decision = CrossPagePointerUpDecisionPolicy.Resolve(
+                            crossPageDisplayActive: crossPageDisplayActive,
+                            hadInkOperation: inkOperationActive,
+                            deferredRefreshRequested: deferredState.DeferredRefreshRequested,
+                            updatePending: updatePending);
 
-                    if (postPlan.ShouldFlushReplay)
-                    {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.ReplayFlushed));
-                    }
+                        var executionPlan = CrossPagePointerUpExecutionPlanPolicy.Resolve(
+                            decision,
+                            hadInkOperation: inkOperationActive,
+                            pendingInkContextCheck: pendingInkContextCheck);
 
-                    if (postPlan.ShouldTrackPointerUp)
-                    {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.PointerUpTracked));
-                    }
+                        var postPlan = CrossPagePointerUpPostExecutionPolicy.Resolve(
+                            executionPlan,
+                            crossPageFirstInputTraceActive: crossPageFirstInputTraceActive);
 
-                    if (postPlan.ShouldEndFirstInputTrace)
-                    {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.FirstInputTraceEnded));
-                    }
+                        if (postPlan.ShouldApplyFastRefresh && decision.ShouldRequestImmediateRefresh)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.FastRefreshImmediate,
+                                CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.PointerUpFast)));
+                        }
 
-                    if (postPlan.ShouldRequestInkContextRefresh)
-                    {
-                        actions.Add(new InkReplayAction(
-                            InkReplayActionType.InkContextRefreshRequested));
-                    }
+                        if (postPlan.ShouldScheduleDeferredRefresh)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.DeferredRefreshScheduled,
+                                postPlan.DeferredRefreshSource));
+                        }
 
-                    inkOperationActive = false;
-                    break;
-                }
+                        if (postPlan.ShouldFlushReplay)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.ReplayFlushed));
+                        }
+
+                        if (postPlan.ShouldTrackPointerUp)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.PointerUpTracked));
+                        }
+
+                        if (postPlan.ShouldEndFirstInputTrace)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.FirstInputTraceEnded));
+                        }
+
+                        if (postPlan.ShouldRequestInkContextRefresh)
+                        {
+                            actions.Add(new InkReplayAction(
+                                InkReplayActionType.InkContextRefreshRequested));
+                        }
+
+                        inkOperationActive = false;
+                        break;
+                    }
             }
         }
 

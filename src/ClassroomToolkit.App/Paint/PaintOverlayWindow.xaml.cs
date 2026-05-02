@@ -69,7 +69,7 @@ public partial class PaintOverlayWindow : Window
         _photoContentTransform.Children.Add(_photoTranslate);
         PhotoBackground.RenderTransform = _photoContentTransform;
         RasterImage.RenderTransform = _photoInkPanCompensation;
-        
+
         WindowStateTransitionExecutor.Apply(this, WindowState.Maximized);
         _refreshOrchestrator = new RefreshOrchestrator(Dispatcher, MonitorInkContext);
         _presentationFocusMonitor = new DispatcherTimer
@@ -99,7 +99,7 @@ public partial class PaintOverlayWindow : Window
         _perfEnsureSurface = new PerfStats("EnsureSurface");
         _perfClearSurface = new PerfStats("ClearSurface");
         _perfApplyStrokes = new PerfStats("ApplyStrokes");
-        
+
         KeyDown += OnKeyDown;
         Loaded += OnOverlayLoaded;
         IsVisibleChanged += OnOverlayVisibleChanged;

@@ -1,10 +1,16 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Threading;
 
 namespace ClassroomToolkit.Tests;
 
 internal static class TestPathHelper
 {
+    private const int TempDirectorySoftLimit = 2048;
+    private static readonly TimeSpan TempDirectoryMaxAge = TimeSpan.FromDays(7);
+    private static int _repoTempCleanupAttempted;
+
     public static string GetRepositoryRootOrThrow()
     {
         var baseDir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -82,6 +88,7 @@ internal static class TestPathHelper
         var repoRoot = GetRepositoryRootOrThrow();
         var root = Path.Combine(repoRoot, "tests", ".tmp");
         Directory.CreateDirectory(root);
+        EnsureRepositoryTempRootMaintenance(root);
         return root;
     }
 
@@ -121,5 +128,90 @@ internal static class TestPathHelper
         }
 
         return null;
+    }
+
+    private static void EnsureRepositoryTempRootMaintenance(string root)
+    {
+        if (Interlocked.Exchange(ref _repoTempCleanupAttempted, 1) != 0)
+        {
+            return;
+        }
+
+        TryCleanupRepositoryTempRoot(root, DateTime.UtcNow, TempDirectoryMaxAge, TempDirectorySoftLimit);
+    }
+
+    internal static void TryCleanupRepositoryTempRoot(
+        string root,
+        DateTime utcNow,
+        TimeSpan maxAge,
+        int maxDirectories)
+    {
+        if (string.IsNullOrWhiteSpace(root) || maxDirectories < 0 || maxAge < TimeSpan.Zero)
+        {
+            return;
+        }
+
+        DirectoryInfo[] directories;
+        try
+        {
+            directories = new DirectoryInfo(root).Exists
+                ? new DirectoryInfo(root).GetDirectories()
+                : Array.Empty<DirectoryInfo>();
+        }
+        catch
+        {
+            return;
+        }
+
+        if (directories.Length == 0)
+        {
+            return;
+        }
+
+        var staleCutoff = utcNow - maxAge;
+        foreach (var directory in directories)
+        {
+            if (directory.LastWriteTimeUtc < staleCutoff)
+            {
+                TryDeleteDirectory(directory);
+            }
+        }
+
+        DirectoryInfo[] remainingDirectories;
+        try
+        {
+            remainingDirectories = new DirectoryInfo(root).Exists
+                ? new DirectoryInfo(root).GetDirectories()
+                : Array.Empty<DirectoryInfo>();
+        }
+        catch
+        {
+            return;
+        }
+
+        if (remainingDirectories.Length <= maxDirectories)
+        {
+            return;
+        }
+
+        foreach (var directory in remainingDirectories
+                     .OrderBy(entry => entry.LastWriteTimeUtc)
+                     .ThenBy(entry => entry.Name)
+                     .Take(remainingDirectories.Length - maxDirectories))
+        {
+            TryDeleteDirectory(directory);
+        }
+    }
+
+    private static void TryDeleteDirectory(DirectoryInfo directory)
+    {
+        try
+        {
+            directory.Delete(recursive: true);
+        }
+        catch
+        {
+            // best-effort cleanup only; active test runs may still hold handles
+        }
     }
 }
