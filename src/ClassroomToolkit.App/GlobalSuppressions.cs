@@ -108,3 +108,147 @@ using System.Diagnostics.CodeAnalysis;
     Justification = "The app currently stores classroom UI copy inline; this dialog text must remain consistent until localization resources are introduced.",
     Scope = "member",
     Target = "~M:ClassroomToolkit.App.Photos.ImageManagerWindow.OnAddFavoriteClick(System.Object,System.Windows.RoutedEventArgs)")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "App settings are a persisted compatibility contract consumed by the settings loaders, UI dialogs, and tests; narrowing visibility would not change runtime access but would obscure an intentional public data contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Settings.AppSettings")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Settings document format is exposed through IConfigurationService and persisted settings migration logic, so it remains part of the compatibility surface.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Settings.SettingsDocumentFormat")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "The configuration service interface appears in app composition and public constructor signatures; keeping it public avoids inconsistent accessibility across the WPF startup surface.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Settings.IConfigurationService")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink sidecar documents are a compatibility contract shared across storage, export, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkDocumentData")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Ink export scope is persisted in settings and exchanged between the paint settings dialog and export services, so it is an intentional public enum contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkExportScope")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Ink export options are registered in app composition and consumed by public-facing window wiring, so keeping the DTO public avoids inconsistent accessibility in the app startup graph.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkExportOptions")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink stroke metadata is part of the saved ink JSON schema and test fixture surface.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkStrokeType")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink bloom geometry is part of the saved ink JSON schema and must remain deserializable across sessions.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkBloomData")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink ribbon geometry is part of the saved ink JSON schema and must remain deserializable across sessions.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkRibbonData")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink strokes are consumed by storage, export, rendering, and tests, so the DTO remains an intentional public contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkStrokeData")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Persisted ink pages are consumed by storage, export, rendering, and tests, so the DTO remains an intentional public contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Ink.InkPageData")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Presentation source is emitted through public paint-window orchestration events and session restoration policies.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Presentation.PresentationForegroundSource")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Floating z-order requests are emitted through the public paint-window orchestration event contract and consumed by windowing policies and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Windowing.FloatingZOrderRequest")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Z-order surfaces are part of the public window orchestration contract and its tests, so they remain public until a broader API review changes that boundary.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Windowing.ZOrderSurface")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI session events and state records flow through public orchestration events, session coordinators, and tests, so they remain public compatibility contracts.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiSessionEvent")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI session scene kind is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiSceneKind")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI tool mode is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiToolMode")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI navigation mode is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiNavigationMode")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI focus owner is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiFocusOwner")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI ink visibility is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiInkVisibility")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Presentation source kind is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.PresentationSourceKind")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "Photo source kind is part of the public session state contract used by orchestration, restoration policies, and tests.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.PhotoSourceKind")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI session state flows through public overlay state accessors and orchestration events, so it remains an intentional public record contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiSessionState")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Justification = "UI session transitions flow through public overlay transition events and windowing policies, so they remain an intentional public record contract.",
+    Scope = "type",
+    Target = "~T:ClassroomToolkit.App.Session.UiSessionTransition")]
