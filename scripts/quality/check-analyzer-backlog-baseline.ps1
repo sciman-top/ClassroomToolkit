@@ -18,6 +18,20 @@ $resolvedBaselinePath = Join-Path $repoRoot $BaselinePath
 $resolvedReportPath = Join-Path $repoRoot $ReportPath
 $srcRoot = Join-Path $repoRoot "src"
 
+function Convert-ToRepoRelativePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    try {
+        $fullPath = [System.IO.Path]::GetFullPath($Path)
+        return [System.IO.Path]::GetRelativePath($repoRoot, $fullPath).Replace('\', '/')
+    }
+    catch {
+        return $Path
+    }
+}
+
 if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
     throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
 }
@@ -46,7 +60,7 @@ foreach ($project in $projectFiles) {
         if ($line -match "^(?<file>.+?)\((?<line>\d+),(?<column>\d+)\):\s+(?:warning|error)\s+(?<rule>CA\d{4}):") {
             [void]$diagnostics.Add([pscustomobject]@{
                 project = $project.Name
-                file = $matches.file
+                file = Convert-ToRepoRelativePath -Path $matches.file
                 line = [int]$matches.line
                 column = [int]$matches.column
                 rule = $matches.rule
@@ -78,6 +92,18 @@ $ruleCounts = @($uniqueDiagnostics |
         }
     })
 
+$diagnosticDetails = @($uniqueDiagnostics |
+    Sort-Object project, file, line, column, rule |
+    ForEach-Object {
+        [pscustomobject]@{
+            project = $_.project
+            file = $_.file
+            line = $_.line
+            column = $_.column
+            rule = $_.rule
+        }
+    })
+
 $report = [pscustomobject]@{
     generated_at_utc = [DateTime]::UtcNow.ToString("o")
     configuration = $Configuration
@@ -86,6 +112,7 @@ $report = [pscustomobject]@{
     diagnostics_total = $uniqueDiagnostics.Count
     project_counts = $projectCounts
     rule_counts = $ruleCounts
+    diagnostics = $diagnosticDetails
 }
 
 $reportDirectory = Split-Path -Parent $resolvedReportPath

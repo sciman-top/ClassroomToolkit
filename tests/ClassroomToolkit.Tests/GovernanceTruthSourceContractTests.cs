@@ -86,6 +86,9 @@ public sealed class GovernanceTruthSourceContractTests
         script.Should().Contain("Get-ChildItem -LiteralPath $srcRoot");
         script.Should().Contain("Set-Content -LiteralPath $resolvedReportPath");
         script.Should().Contain("Get-Content -LiteralPath $resolvedBaselinePath");
+        script.Should().Contain("Convert-ToRepoRelativePath");
+        script.Should().Contain("[System.IO.Path]::GetRelativePath($repoRoot, $fullPath)");
+        script.Should().Contain("diagnostics = $diagnosticDetails");
 
         var baselinePath = TestPathHelper.ResolveRepoPath("scripts", "quality", "analyzer-backlog-baseline.json");
         using var document = JsonDocument.Parse(File.ReadAllText(baselinePath));
