@@ -109,13 +109,13 @@
 **Description:** 审查 `GlobalHookService`、`KeyboardHook`、`WpsSlideshowNavigationHook` 的启动/停止/Dispose 路径，重点看重复释放、停止失败后状态残留、回调解绑一致性。
 
 **Acceptance criteria:**
-- [ ] `Dispose`、`Stop`、注册失败回滚路径具备幂等性
-- [ ] 事件解绑与对象释放顺序稳定
-- [ ] 失败路径保留最小诊断
+- [x] `Dispose`、`Stop`、注册失败回滚路径具备幂等性
+- [x] 事件解绑与对象释放顺序稳定
+- [x] 失败路径保留最小诊断
 
 **Verification:**
-- [ ] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests"`
-- [ ] 热点人工复核低层 hook stop/dispose 路径
+- [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests"`
+- [x] 热点人工复核低层 hook stop/dispose 路径
 
 **Dependencies:** None
 
