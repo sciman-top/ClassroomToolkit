@@ -57,18 +57,18 @@
 
 **Estimated scope:** S
 
-### Task 3: 存储层原子写回退策略一致性复核
+### Task 3: 存储层原子写回退策略一致性复核 `[Done 2026-05-04]`
 
 **Description:** 统一检查 `settings / ink / workbook / wal` 的临时文件写入与 `File.Replace` 回退策略，重点确认锁文件、权限异常、部分失败后的残留临时文件与覆盖语义是否一致。
 
 **Acceptance criteria:**
-- [ ] 同类存储组件的原子写/回退策略一致
-- [ ] 出现回退时不破坏现有文件格式与可读性
-- [ ] 临时文件清理策略明确且有测试覆盖
+- [x] 同类存储组件的原子写/回退策略一致
+- [x] 出现回退时不破坏现有文件格式与可读性
+- [x] 临时文件清理策略明确且有测试覆盖
 
 **Verification:**
-- [ ] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~JsonSettingsDocumentStoreAdapterTests|FullyQualifiedName~InkPersistenceServiceTests|FullyQualifiedName~InkStorageServiceTests|FullyQualifiedName~StudentWorkbookStoreTests"`
-- [ ] 手工复核 `TryReplaceOrOverwrite` 调用点
+- [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~JsonSettingsDocumentStoreAdapterTests|FullyQualifiedName~IniSettingsStoreSaveTests|FullyQualifiedName~InkPersistenceServiceTests|FullyQualifiedName~InkStorageServiceTests|FullyQualifiedName~InkWriteAheadLogServiceTests|FullyQualifiedName~StudentWorkbookStoreTests|FullyQualifiedName~AtomicFileReplaceUtilityTests"`
+- [x] 手工复核 `WriteAtomically / ReplaceOrOverwrite` 调用点
 
 **Dependencies:** None
 
