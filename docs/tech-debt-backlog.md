@@ -87,13 +87,13 @@
 **Description:** 继续补齐 `FileLoggerProvider`、关键后台任务和异常吞掉路径的诊断输出，避免静默失败但不改变现有容错策略。
 
 **Acceptance criteria:**
-- [ ] 关键后台失败至少输出 `source + exception type + message`
-- [ ] 不新增用户可见弹窗
-- [ ] 不引入额外依赖
+- [x] 关键后台失败至少输出 `source + exception type + message`
+- [x] 不新增用户可见弹窗
+- [x] 不引入额外依赖
 
 **Verification:**
-- [ ] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~FileLoggerProviderShutdownSafetyContractTests|FullyQualifiedName~SafeTaskRunnerTests"`
-- [ ] 热点人工复核日志关闭与后台任务取消路径
+- [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~FileLoggerProviderShutdownSafetyContractTests|FullyQualifiedName~SafeTaskRunnerTests"`
+- [x] 热点人工复核日志关闭与后台任务取消路径
 
 **Dependencies:** None
 
