@@ -442,7 +442,7 @@ public sealed class InkPersistenceService
                     return;
                 }
 
-                Debug.WriteLine($"[InkPersistence] delete file failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
+                Debug.WriteLine($"[InkPersistence] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
     }
 

@@ -16,6 +16,7 @@ public sealed class InkStorageDiagnosticsContractTests
         source.Should().Contain("[InkPersistence] failed to parse sidecar json");
         source.Should().Contain("[InkPersistence] failed to read sidecar json");
         source.Should().Contain("[InkPersistence] delete file failed");
+        source.Should().Contain("[InkPersistence] temp cleanup failed");
     }
 
     [Fact]
