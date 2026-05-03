@@ -19,7 +19,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
         var source = File.ReadAllText(GetSourcePath());
 
         source.Should().Contain("catch (Exception ex) when (IsNonFatal(ex))");
-        source.Should().Contain("HookUnavailable callback failed");
+        source.Should().Contain("HookUnavailable callback failed: {ex.GetType().Name} - {ex.Message}");
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        source.Should().Contain("Start hook failed");
+        source.Should().Contain("Start hook failed: {ex.GetType().Name} - {ex.Message}");
         source.Should().Contain("CleanupHooks(startedHooks, callback);");
         source.Should().Contain("NotifyHookUnavailable();");
     }
@@ -56,7 +56,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     {
         var source = File.ReadAllText(GetSourcePath());
 
-        source.Should().Contain("Register bindings failed");
+        source.Should().Contain("Register bindings failed: {ex.GetType().Name} - {ex.Message}");
         source.Should().Contain("CleanupHooks(startedHooks, callback);");
         source.Should().Contain("NotifyHookUnavailable();");
     }
@@ -68,7 +68,15 @@ public sealed class GlobalHookServiceLifecycleContractTests
 
         source.Should().Contain("TryInvokeBindingCallback(callback)");
         source.Should().Contain("private static void TryInvokeBindingCallback(Action callback)");
-        source.Should().Contain("Binding callback failed");
+        source.Should().Contain("Binding callback failed: {ex.GetType().Name} - {ex.Message}");
+    }
+
+    [Fact]
+    public void GlobalHookService_ShouldIncludeExceptionType_InStopHookDiagnostics()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+
+        source.Should().Contain("Stop hook failed ({reason}): {ex.GetType().Name} - {ex.Message}");
     }
 
     private static string GetSourcePath()

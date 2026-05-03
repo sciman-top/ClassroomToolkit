@@ -92,7 +92,7 @@ public class GlobalHookService : IDisposable
                 }
                 catch (Exception ex) when (IsNonFatal(ex))
                 {
-                    Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.Message}");
+                    Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.GetType().Name} - {ex.Message}");
                     hook.BindingTriggered -= callback;
                     TryStopHook(hook, "register-failed");
                     CleanupHooks(startedHooks, callback);
@@ -121,7 +121,7 @@ public class GlobalHookService : IDisposable
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
-            Debug.WriteLine($"[GlobalHookService] Register bindings failed: {ex.Message}");
+            Debug.WriteLine($"[GlobalHookService] Register bindings failed: {ex.GetType().Name} - {ex.Message}");
             CleanupHooks(startedHooks, callback);
             NotifyHookUnavailable();
             return false;
@@ -236,7 +236,7 @@ public class GlobalHookService : IDisposable
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
-            Debug.WriteLine($"[GlobalHookService] Stop hook failed ({reason}): {ex.Message}");
+            Debug.WriteLine($"[GlobalHookService] Stop hook failed ({reason}): {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -260,7 +260,7 @@ public class GlobalHookService : IDisposable
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
-            Debug.WriteLine($"[GlobalHookService] Binding callback failed: {ex.Message}");
+            Debug.WriteLine($"[GlobalHookService] Binding callback failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -280,7 +280,7 @@ public class GlobalHookService : IDisposable
             }
             catch (Exception ex) when (IsNonFatal(ex))
             {
-                Debug.WriteLine($"[GlobalHookService] HookUnavailable callback failed: {ex.Message}");
+                Debug.WriteLine($"[GlobalHookService] HookUnavailable callback failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
     }
