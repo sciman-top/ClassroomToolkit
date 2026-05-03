@@ -12,6 +12,7 @@ public sealed class RollCallWindowLifecycleSubscriptionContractTests
         source.Should().Contain("PaintModeManager.Instance.PaintModeChanged += OnPaintModeChanged;");
         source.Should().Contain("PaintModeManager.Instance.IsDrawingChanged += OnDrawingStateChanged;");
         source.Should().Contain("_viewModel.GroupButtons.CollectionChanged += OnGroupButtonsCollectionChanged;");
+        source.Should().Contain("_speechService.SpeechUnavailable += NotifySpeechError;");
         source.Should().Contain("_windowBoundsSaveTimer.Tick += OnWindowBoundsSaveTick;");
         source.Should().Contain("_hoverCheckTimer.Tick += OnHoverCheckTimerTick;");
         source.Should().Contain("SizeChanged += OnWindowSizeChanged;");
@@ -29,7 +30,8 @@ public sealed class RollCallWindowLifecycleSubscriptionContractTests
 
         source.Should().Contain("PaintModeManager.Instance.PaintModeChanged -= OnPaintModeChanged;");
         source.Should().Contain("PaintModeManager.Instance.IsDrawingChanged -= OnDrawingStateChanged;");
-        source.Should().Contain("_speechService.SpeechUnavailable -= OnSpeechUnavailable;");
+        source.Should().Contain("_speechService.SpeechUnavailable -= NotifySpeechError;");
+        source.Should().NotContain("OnSpeechUnavailable");
         source.Should().Contain("if (_closingCleanupStarted)");
         source.Should().Contain("_closingCleanupStarted = true;");
         source.Should().Contain("_lifecycleCancellation.Cancel();");

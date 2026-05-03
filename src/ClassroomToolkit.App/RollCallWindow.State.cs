@@ -284,11 +284,6 @@ public partial class RollCallWindow
         ShowRollCallInfoMessageSafe("rollcall-message", message);
     }
 
-    private void OnSpeechUnavailable()
-    {
-        NotifySpeechError();
-    }
-
     private void SpeakStudentName()
     {
         var lifecycleToken = _lifecycleCancellation.Token;

@@ -141,7 +141,7 @@ public partial class RollCallWindow
         _viewModel.DataSaveFailed -= OnDataSaveFailed;
         PaintModeManager.Instance.PaintModeChanged -= OnPaintModeChanged;
         PaintModeManager.Instance.IsDrawingChanged -= OnDrawingStateChanged;
-        _speechService.SpeechUnavailable -= OnSpeechUnavailable;
+        _speechService.SpeechUnavailable -= NotifySpeechError;
         _remoteHookStartGate.NextGeneration();
         StopKeyboardHook();
         _remoteHookStartGate.Dispose();

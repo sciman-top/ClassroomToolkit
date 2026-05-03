@@ -106,7 +106,7 @@ public partial class RollCallWindow : Window
             RollCallRemoteHookBindingPolicy.ResolveTokens,
             () => _hookService.UnregisterAll());
         _speechService = speechService;
-        _speechService.SpeechUnavailable += OnSpeechUnavailable;
+        _speechService.SpeechUnavailable += NotifySpeechError;
         _rollCallWorkbookUseCase = rollCallWorkbookUseCase;
         ApplyWindowBounds(settings);
 
