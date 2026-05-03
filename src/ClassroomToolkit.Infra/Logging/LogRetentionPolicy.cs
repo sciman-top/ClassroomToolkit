@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
@@ -31,7 +32,8 @@ public static class LogRetentionPolicy
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Best effort cleanup only; logging must never fail because retention failed.
+            Debug.WriteLine(
+                $"[LogRetentionPolicy] retention scan failed directory={logDirectory} prefix={filePrefix} ex={ex.GetType().Name} msg={ex.Message}");
         }
     }
 
@@ -64,7 +66,8 @@ public static class LogRetentionPolicy
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            // Ignore individual file failures so one locked file does not block the app.
+            Debug.WriteLine(
+                $"[LogRetentionPolicy] file cleanup failed path={filePath} ex={ex.GetType().Name} msg={ex.Message}");
         }
     }
 

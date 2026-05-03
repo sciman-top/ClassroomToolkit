@@ -332,6 +332,20 @@ public sealed class FileLoggerProviderTests
     }
 
     [Fact]
+    public void LogRetentionPolicy_ShouldKeepBestEffortFailureDiagnostics()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.Infra",
+            "Logging",
+            "LogRetentionPolicy.cs"));
+
+        source.Should().Contain("[LogRetentionPolicy] retention scan failed");
+        source.Should().Contain("[LogRetentionPolicy] file cleanup failed");
+        source.Should().Contain("ex={ex.GetType().Name} msg={ex.Message}");
+    }
+
+    [Fact]
     public void Log_ShouldNotThrow_WhenNowProviderThrowsNonFatal()
     {
         var directory = TestPathHelper.CreateDirectory("ctool_file_logger_now_provider_nonfatal");
