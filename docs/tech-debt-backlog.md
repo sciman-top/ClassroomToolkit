@@ -14,18 +14,18 @@
 
 ## P0
 
-### Task 1: 统一照片缓存与预热关闭路径
+### Task 1: 统一照片缓存与预热关闭路径 `[Done 2026-05-04]`
 
 **Description:** 继续审查 `StudentPhotoResolver` 及其调用链，确保窗口关闭、ViewModel 释放、后台预热之间不存在释放后回填状态、重复取消或失效缓存继续复用的问题。
 
 **Acceptance criteria:**
-- [ ] `Dispose` 后不再新增缓存项、不再继续预热、不再持有可增长状态
-- [ ] 关闭窗口与切换班级时，照片路径解析保持兼容
-- [ ] 新增至少 1 个并发/关闭路径回归测试
+- [x] `Dispose` 后不再新增缓存项、不再继续预热、不再持有可增长状态
+- [x] 关闭窗口与切换班级时，照片路径解析保持兼容
+- [x] 新增至少 1 个并发/关闭路径回归测试
 
 **Verification:**
-- [ ] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~RollCallViewModelPhotoPathRefreshTests"`
-- [ ] 全量测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1`
+- [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~RollCallViewModelPhotoPathRefreshTests"`
+- [x] 全量测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
 
 **Dependencies:** None
 

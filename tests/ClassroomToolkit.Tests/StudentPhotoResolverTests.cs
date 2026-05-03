@@ -8,6 +8,8 @@ public sealed class StudentPhotoResolverTests
 {
     private static readonly MethodInfo GetIndexMethod = typeof(StudentPhotoResolver)
         .GetMethod("GetIndex", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly MethodInfo GetWarmupIndexMethod = typeof(StudentPhotoResolver)
+        .GetMethod("GetWarmupIndex", BindingFlags.Instance | BindingFlags.NonPublic)!;
     private static readonly MethodInfo GetIndexLockMethod = typeof(StudentPhotoResolver)
         .GetMethod("GetIndexLock", BindingFlags.Instance | BindingFlags.NonPublic)!;
     private static readonly FieldInfo CacheField = typeof(StudentPhotoResolver)
@@ -487,6 +489,52 @@ public sealed class StudentPhotoResolverTests
                 }, cancellationToken);
                 started.Wait(TimeSpan.FromSeconds(5), cancellationToken).Should().BeTrue();
                 resolver.Dispose();
+            }
+
+            await buildTask;
+
+            var cache = CacheField.GetValue(resolver);
+            cache.Should().NotBeNull();
+            ((System.Collections.IDictionary)cache!).Count.Should().Be(0);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task WarmupCancellation_ShouldNotPopulateCache_WhenIndexBuildResumesAfterCancellation()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_warmup_cancel_race");
+        var classDirectory = Path.Combine(rootPath, "ClassA");
+        Directory.CreateDirectory(classDirectory);
+        File.WriteAllBytes(Path.Combine(classDirectory, "1001.jpg"), new byte[] { 0x01, 0x02, 0x03 });
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+            var indexLock = GetIndexLockMethod.Invoke(resolver, new object[] { classDirectory });
+            indexLock.Should().NotBeNull();
+            using var warmupCancellation = new CancellationTokenSource();
+            using var started = new ManualResetEventSlim(false);
+
+            Task buildTask;
+            lock (indexLock!)
+            {
+                buildTask = Task.Run(() =>
+                {
+                    started.Set();
+                    return GetWarmupIndexMethod.Invoke(
+                        resolver,
+                        new object[] { classDirectory, warmupCancellation.Token });
+                }, cancellationToken);
+                started.Wait(TimeSpan.FromSeconds(5), cancellationToken).Should().BeTrue();
+                warmupCancellation.Cancel();
             }
 
             await buildTask;

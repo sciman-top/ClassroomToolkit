@@ -66,7 +66,7 @@ internal sealed class StudentPhotoResolver : IDisposable
                         var directory = Path.Combine(_rootPath, normalizedClass);
                         if (Directory.Exists(directory))
                         {
-                            GetIndex(directory);  // 触发索引构建
+                            GetWarmupIndex(directory, token);  // 触发索引构建
                         }
                     }
                 }
@@ -84,7 +84,7 @@ internal sealed class StudentPhotoResolver : IDisposable
                 {
                     return;
                 }
-                GetIndex(directory);
+                GetWarmupIndex(directory, token);
             }
         }, token, ex => Debug.WriteLine($"StudentPhotoResolver warmup failed: {ex.GetType().Name} - {ex.Message}"));
     }
@@ -265,7 +265,22 @@ internal sealed class StudentPhotoResolver : IDisposable
 
     private Dictionary<string, string> GetIndex(string directory)
     {
+        return GetIndexCore(directory, CancellationToken.None);
+    }
+
+    private Dictionary<string, string> GetWarmupIndex(string directory, CancellationToken cancellationToken)
+    {
+        return GetIndexCore(directory, cancellationToken);
+    }
+
+    private Dictionary<string, string> GetIndexCore(string directory, CancellationToken cancellationToken)
+    {
         if (IsDisposed())
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -283,6 +298,11 @@ internal sealed class StudentPhotoResolver : IDisposable
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
             now = DateTime.UtcNow;
             if (_cache.TryGetValue(directory, out cached)
                 && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
@@ -294,6 +314,11 @@ internal sealed class StudentPhotoResolver : IDisposable
             {
                 foreach (var file in Directory.EnumerateFiles(directory, "*", TopLevelIgnoreInaccessibleOptions))
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    }
+
                     var ext = Path.GetExtension(file);
                     if (string.IsNullOrWhiteSpace(ext) || !Extensions.Contains(ext))
                     {
@@ -309,6 +334,11 @@ internal sealed class StudentPhotoResolver : IDisposable
             }
             var directoryWriteTimeUtc = GetDirectoryWriteTimeUtcOrDefault(directory);
             if (IsDisposed())
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (cancellationToken.IsCancellationRequested)
             {
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
