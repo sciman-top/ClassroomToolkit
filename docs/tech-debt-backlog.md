@@ -41,13 +41,13 @@
 **Description:** 复核 `RollCallViewModel` 预加载逻辑，重点检查 `_preloadTask/_preloadedResult/_preloadedPath` 的竞争更新、旧任务覆盖新任务、异常路径未清理与关闭取消路径。
 
 **Acceptance criteria:**
-- [ ] 旧预加载任务不能覆盖新任务状态
-- [ ] 关闭或取消时不触发 UI 线程越界更新
-- [ ] 预加载失败时回退路径可诊断
+- [x] 旧预加载任务不能覆盖新任务状态
+- [x] 关闭或取消时不触发 UI 线程越界更新
+- [x] 预加载失败时回退路径可诊断
 
 **Verification:**
-- [ ] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests"`
-- [ ] 热点人工复核 `WarmupData/LoadDataAsync/TryConsumePreloadedResult`
+- [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests"`
+- [x] 热点人工复核 `WarmupData/LoadDataAsync/TryConsumePreloadedResult`
 
 **Dependencies:** Task 1
 
