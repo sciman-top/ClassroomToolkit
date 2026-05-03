@@ -30,6 +30,7 @@ public sealed class InkStorageDiagnosticsContractTests
         source.Should().Contain("[InkStorage] failed to parse page json");
         source.Should().Contain("[InkStorage] failed to read page json");
         source.Should().Contain("[InkStorage] cleanup folder failed");
+        source.Should().Contain("[InkStorage] temp cleanup failed");
     }
 
     [Fact]

@@ -321,14 +321,14 @@ internal sealed class InkStorageService
         AtomicFileReplaceUtility.WriteAtomically(
             path,
             tempPath => File.WriteAllText(tempPath, content),
-            onTempCleanupFailure: static (_, ex) =>
+            onTempCleanupFailure: static (tempPath, ex) =>
             {
                 if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     return;
                 }
 
-                // Best-effort cleanup; keep the primary write/replace exception.
+                Debug.WriteLine($"[InkStorage] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
     }
 
