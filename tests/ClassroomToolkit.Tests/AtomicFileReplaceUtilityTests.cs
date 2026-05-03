@@ -56,6 +56,38 @@ public sealed class AtomicFileReplaceUtilityTests
     }
 
     [Fact]
+    public void WriteAtomically_ShouldPreserveRequestedTempFileExtension()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_atomic_write_ext");
+        var targetPath = Path.Combine(rootPath, "students");
+        string? observedTempPath = null;
+
+        try
+        {
+            AtomicFileReplaceUtility.WriteAtomically(
+                targetPath,
+                ".xlsx",
+                tempPath =>
+                {
+                    observedTempPath = tempPath;
+                    File.WriteAllText(tempPath, "new");
+                });
+
+            observedTempPath.Should().NotBeNull();
+            observedTempPath!.Should().EndWith(".tmp.xlsx");
+            File.ReadAllText(targetPath).Should().Be("new");
+            Directory.GetFiles(rootPath, $"{Path.GetFileName(targetPath)}.*.tmp.xlsx").Should().BeEmpty();
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void WriteAtomically_ShouldCleanupTempFile_WhenReplaceFails()
     {
         var targetPath = TestPathHelper.CreateFilePath("ctool_atomic_write_cleanup", ".json");

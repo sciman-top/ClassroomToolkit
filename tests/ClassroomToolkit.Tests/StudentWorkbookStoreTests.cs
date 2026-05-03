@@ -71,8 +71,9 @@ public sealed class StudentWorkbookStoreTests
     {
         var source = File.ReadAllText(GetStoreSourcePath());
 
-        source.Should().Contain("Best-effort cleanup for temp workbook files.");
-        source.Should().Contain("catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))");
+        source.Should().Contain("AtomicFileReplaceUtility.WriteAtomically(");
+        source.Should().Contain("onTempCleanupFailure:");
+        source.Should().Contain("[StudentWorkbookStore] temp cleanup failed");
     }
 
     [Fact]

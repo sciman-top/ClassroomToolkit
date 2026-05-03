@@ -23,7 +23,21 @@ public static class AtomicFileReplaceUtility
         Action<string> writeTempFile,
         Action<string, Exception>? onTempCleanupFailure = null)
     {
+        WriteAtomically(
+            targetPath,
+            ".tmp",
+            writeTempFile,
+            onTempCleanupFailure);
+    }
+
+    public static void WriteAtomically(
+        string targetPath,
+        string tempFileExtension,
+        Action<string> writeTempFile,
+        Action<string, Exception>? onTempCleanupFailure = null)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tempFileExtension);
         ArgumentNullException.ThrowIfNull(writeTempFile);
 
         var directory = Path.GetDirectoryName(targetPath);
@@ -32,7 +46,10 @@ public static class AtomicFileReplaceUtility
             Directory.CreateDirectory(directory);
         }
 
-        var tempPath = $"{targetPath}.{Guid.NewGuid():N}.tmp";
+        var normalizedTempExtension = tempFileExtension[0] == '.'
+            ? tempFileExtension
+            : $".{tempFileExtension}";
+        var tempPath = $"{targetPath}.{Guid.NewGuid():N}.tmp{normalizedTempExtension}";
         try
         {
             writeTempFile(tempPath);

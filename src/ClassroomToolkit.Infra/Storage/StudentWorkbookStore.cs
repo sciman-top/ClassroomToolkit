@@ -90,24 +90,18 @@ public sealed class StudentWorkbookStore
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        var directory = System.IO.Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-        var fileName = System.IO.Path.GetFileNameWithoutExtension(path);
         var extension = System.IO.Path.GetExtension(path);
         if (string.IsNullOrWhiteSpace(extension))
         {
             extension = ".xlsx";
         }
-        var tempPath = System.IO.Path.Combine(
-            directory ?? string.Empty,
-            $"{fileName}.tmp.{Guid.NewGuid():N}{extension}");
-        try
-        {
-            using (var xl = new XLWorkbook())
+
+        AtomicFileReplaceUtility.WriteAtomically(
+            path,
+            extension,
+            tempPath =>
             {
+                using var xl = new XLWorkbook();
                 foreach (var pair in workbook.Classes)
                 {
                     var sheet = xl.Worksheets.Add(pair.Key);
@@ -118,32 +112,12 @@ public sealed class StudentWorkbookStore
                 stateSheet.Cell(2, 1).Value = EnsureRollStateJson(rollStateJson);
                 stateSheet.Column(1).Width = 100;
                 xl.SaveAs(tempPath);
-            }
-            if (File.Exists(path))
+            },
+            onTempCleanupFailure: static (tempPath, ex) =>
             {
-                AtomicFileReplaceUtility.ReplaceOrOverwrite(tempPath, path);
-            }
-            else
-            {
-                File.Move(tempPath, path);
-            }
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                try
-                {
-                    File.Delete(tempPath);
-                }
-                catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-                {
-                    // Best-effort cleanup for temp workbook files.
-                    Debug.WriteLine(
-                        $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
-                }
-            }
-        }
+                Debug.WriteLine(
+                    $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
+            });
     }
 
     private void TrySaveWorkbook(StudentWorkbook workbook, string path, string? rollStateJson)
