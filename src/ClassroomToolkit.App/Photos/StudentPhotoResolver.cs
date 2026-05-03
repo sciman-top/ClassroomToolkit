@@ -192,16 +192,8 @@ internal sealed class StudentPhotoResolver : IDisposable
                 return;
             }
 
-            if (!cached.Index.ContainsKey(normalizedStudentId))
-            {
-                return;
-            }
-
             var updatedIndex = new Dictionary<string, string>(cached.Index, StringComparer.OrdinalIgnoreCase);
-            if (!updatedIndex.Remove(normalizedStudentId))
-            {
-                return;
-            }
+            updatedIndex.Remove(normalizedStudentId);
 
             var updated = cached with
             {

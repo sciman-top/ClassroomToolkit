@@ -338,6 +338,39 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void InvalidateStudentCache_ShouldForceNextProbe_WhenStudentWasPreviouslyMissing()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_invalidate_miss");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var studentId = "1005";
+        var target = Path.Combine(classDirectory, $"{studentId}.jpg");
+
+        try
+        {
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            resolver.ResolvePhotoPath(className, studentId).Should().BeNull();
+            resolver.ResolvePhotoPath(className, studentId).Should().BeNull();
+
+            File.WriteAllBytes(target, new byte[] { 0x01, 0x02, 0x03 });
+            Directory.SetLastWriteTimeUtc(classDirectory, DateTime.UtcNow.AddMinutes(-1));
+
+            resolver.InvalidateStudentCache(className, studentId);
+
+            resolver.ResolvePhotoPath(className, studentId).Should().Be(target);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolvePhotoPath_ShouldDetectNewFile_WhenDirectoryWriteTimeDoesNotAdvance()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
