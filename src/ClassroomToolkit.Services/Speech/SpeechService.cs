@@ -54,7 +54,7 @@ public class SpeechService : IDisposable
 
         if (failure != null)
         {
-            Debug.WriteLine($"[SpeechService] Speak failed: {failure.Message}");
+            Debug.WriteLine(FormatDiagnostic("Speak", failure));
             if (shouldNotifyUnavailable)
             {
                 var handlers = SpeechUnavailable?.GetInvocationList();
@@ -71,7 +71,7 @@ public class SpeechService : IDisposable
                     }
                     catch (Exception callbackEx) when (IsNonFatal(callbackEx))
                     {
-                        Debug.WriteLine($"[SpeechService] SpeechUnavailable callback failed: {callbackEx.Message}");
+                        Debug.WriteLine(FormatDiagnostic("SpeechUnavailable callback", callbackEx));
                     }
                 }
             }
@@ -105,7 +105,7 @@ public class SpeechService : IDisposable
             }
             catch (Exception ex) when (IsNonFatal(ex))
             {
-                Debug.WriteLine($"[SpeechService] Cancel pending speech failed: {ex.Message}");
+                Debug.WriteLine(FormatDiagnostic("Cancel pending speech", ex));
             }
 
             try
@@ -114,9 +114,14 @@ public class SpeechService : IDisposable
             }
             catch (Exception ex) when (IsNonFatal(ex))
             {
-                Debug.WriteLine($"[SpeechService] Dispose failed: {ex.Message}");
+                Debug.WriteLine(FormatDiagnostic("Dispose", ex));
             }
         }
+    }
+
+    private static string FormatDiagnostic(string operation, Exception ex)
+    {
+        return $"[SpeechService] {operation} failed: {ex.GetType().Name} - {ex.Message}";
     }
 
     private static bool IsNonFatal(Exception ex)
