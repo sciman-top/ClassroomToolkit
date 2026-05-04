@@ -3,10 +3,10 @@
 **类型**: Windows WPF (.NET 10)  
 **适用范围**: 项目级（仓库根）  
 **版本**: 3.98
-**最后更新**: 2026-05-03
+**最后更新**: 2026-05-04
 
 ## 1. 阅读指引（必读）
-- 本文件承接 `GlobalUser/GEMINI.md v9.50`，仅定义本仓落地动作（WHERE/HOW）。
+- 本文件承接 `GlobalUser/GEMINI.md v9.51`，仅定义本仓落地动作（WHERE/HOW）。
 - 固定结构：`1 / A / B / C / D`。
 - 裁决链：`运行事实/代码 > 项目级文件 > 全局文件 > 临时上下文`。
 - 自包含约束：执行规则以本文件正文为准，不依赖外部子文档或治理脚本作为前置条件。
@@ -45,12 +45,12 @@
 - 用户规则：`~/.gemini/GEMINI.md`；项目/工作区规则按 Gemini CLI 层级加载和按需发现执行。
 - 启用 Trusted Folders 时，未受信目录可能进入 safe mode；遇到项目配置、环境变量、自动记忆或工具自动批准未生效，先记录 trust 状态或替代证据。
 - 可用 `@file.md` imports 组织长内容；只有本机 `settings.json` 明确配置上下文文件名时，才把其他文件名视为 Gemini 上下文文件，具体键名以当前 schema/help 为准。
-- 用 `.geminiignore` 排除 `bin/`、`obj/`、测试结果、日志和本机敏感配置；修改后用 `/memory show` 核查完整上下文；来源与刷新命令先看当前 `/memory` help，支持则用 `/memory list` / `/memory refresh`，否则记录版本并用 `/memory reload` 兜底。
+- 用 `.geminiignore` 排除 `bin/`、`obj/`、测试结果、日志和本机敏感配置；修改后用 `/memory show` 核查完整上下文；来源与刷新命令先看当前 `/memory` help，支持则用 `/memory refresh`；其他来源命令只在当前 help 可见时调用，否则记录版本与替代证据。
 - 不假定 `GEMINI.override.md` 存在；临时排障规则必须记录清理点，结论后删除或恢复并复测。
 
 ### B.2 最小诊断矩阵
 - 必做：`gemini --version`、`gemini --help`。
-- 状态/诊断命令采用“help 探测 -> 有则执行 -> 无则 `platform_na` 落证”；交互场景用 `/memory show` 查完整上下文；来源与刷新命令先看当前 `/memory` help，支持则用 `/memory list` / `/memory refresh`，否则记录版本并用 `/memory reload` 兜底；非交互不可用时按 `platform_na` 记录。
+- 状态/诊断命令采用“help 探测 -> 有则执行 -> 无则 `platform_na` 落证”；交互场景用 `/memory show` 查完整上下文；来源与刷新命令先看当前 `/memory` help，支持则用 `/memory refresh`；其他来源命令只在当前 help 可见时调用，否则记录版本与替代证据；非交互不可用时按 `platform_na` 记录。
 - 留痕最低字段：`cmd`、`exit_code`、`key_output`、`timestamp`。
 
 ### B.3 平台异常回退
