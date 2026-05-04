@@ -129,9 +129,7 @@ public partial class ImageManagerWindow
         }
 
         ViewModel.Recents.Clear();
-        SafeActionExecutionExecutor.TryExecute(
-            () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
-            ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));
+        NotifyRecentsChanged();
     }
 
     private void OnFavoriteStarToggleClick(object sender, RoutedEventArgs e)
@@ -600,13 +598,9 @@ public partial class ImageManagerWindow
         if (existingRecent != null)
         {
             ViewModel.Recents.Remove(existingRecent);
-            SafeActionExecutionExecutor.TryExecute(
-                () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
-                ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));
+            NotifyRecentsChanged();
         }
-        SafeActionExecutionExecutor.TryExecute(
-            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
-            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+        NotifyFavoritesChanged();
     }
 
     private void RemoveFavorite(string path, bool keepInRecents)
@@ -623,9 +617,7 @@ public partial class ImageManagerWindow
         }
 
         ViewModel.Favorites.Remove(favorite);
-        SafeActionExecutionExecutor.TryExecute(
-            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
-            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+        NotifyFavoritesChanged();
 
         if (keepInRecents)
         {
@@ -792,6 +784,18 @@ public partial class ImageManagerWindow
         {
             ViewModel.Recents.RemoveAt(ViewModel.Recents.Count - 1);
         }
+        NotifyRecentsChanged();
+    }
+
+    private void NotifyFavoritesChanged()
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            () => FavoritesChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Favorites)),
+            ex => Debug.WriteLine($"ImageManager: favorites callback failed: {ex.Message}"));
+    }
+
+    private void NotifyRecentsChanged()
+    {
         SafeActionExecutionExecutor.TryExecute(
             () => RecentsChanged?.Invoke(CreateFolderPathSnapshot(ViewModel.Recents)),
             ex => Debug.WriteLine($"ImageManager: recents callback failed: {ex.Message}"));

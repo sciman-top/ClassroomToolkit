@@ -396,15 +396,22 @@ public static class StartupCompatibilityProbe
         {
             try
             {
-                if (!TryGetProcessElevation(process.Id, out var processElevated, out var error))
+                var processLabel = FormatProcessLabel(process);
+                if (!TryGetProcessId(process, out var processId))
                 {
-                    unknownProcesses.Add($"{process.ProcessName}({process.Id}): {error}");
+                    unknownProcesses.Add($"{processLabel}: process-id-unavailable");
+                    continue;
+                }
+
+                if (!TryGetProcessElevation(processId, out var processElevated, out var error))
+                {
+                    unknownProcesses.Add($"{processLabel}: {error}");
                     continue;
                 }
 
                 if (processElevated != currentElevated)
                 {
-                    mismatchedProcesses.Add($"{process.ProcessName}({process.Id})");
+                    mismatchedProcesses.Add(processLabel);
                 }
             }
             finally
@@ -446,15 +453,22 @@ public static class StartupCompatibilityProbe
         {
             try
             {
-                if (!TryGetProcessArchitecture(process.Id, out var processArch, out var error))
+                var processLabel = FormatProcessLabel(process);
+                if (!TryGetProcessId(process, out var processId))
                 {
-                    unknownProcesses.Add($"{process.ProcessName}({process.Id}): {error}");
+                    unknownProcesses.Add($"{processLabel}: process-id-unavailable");
+                    continue;
+                }
+
+                if (!TryGetProcessArchitecture(processId, out var processArch, out var error))
+                {
+                    unknownProcesses.Add($"{processLabel}: {error}");
                     continue;
                 }
 
                 if (processArch != appArch)
                 {
-                    mismatchedProcesses.Add($"{process.ProcessName}({process.Id})={processArch}");
+                    mismatchedProcesses.Add($"{processLabel}={processArch}");
                 }
             }
             finally
@@ -531,7 +545,13 @@ public static class StartupCompatibilityProbe
 
         foreach (var process in processes)
         {
-            if (IsPresentationProcessNameMatch(process.ProcessName, processTokens))
+            if (!TryGetProcessName(process, out var processName))
+            {
+                process.Dispose();
+                continue;
+            }
+
+            if (IsPresentationProcessNameMatch(processName, processTokens))
             {
                 yield return process;
             }
@@ -539,6 +559,46 @@ public static class StartupCompatibilityProbe
             {
                 process.Dispose();
             }
+        }
+    }
+
+    private static string FormatProcessLabel(Process process)
+    {
+        var processName = TryGetProcessName(process, out var resolvedName)
+            ? resolvedName
+            : "unknown-process";
+        return TryGetProcessId(process, out var processId)
+            ? $"{processName}({processId})"
+            : $"{processName}(unknown-id)";
+    }
+
+    internal static bool TryGetProcessName(Process process, out string processName)
+    {
+        processName = string.Empty;
+        try
+        {
+            processName = process.ProcessName;
+            return !string.IsNullOrWhiteSpace(processName);
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[StartupCompatibility] Read process name failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    internal static bool TryGetProcessId(Process process, out int processId)
+    {
+        processId = 0;
+        try
+        {
+            processId = process.Id;
+            return true;
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[StartupCompatibility] Read process id failed: {ex.Message}");
+            return false;
         }
     }
 

@@ -24,4 +24,29 @@ internal static class ContractSourceAggregateLoader
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .Select(File.ReadAllText));
     }
+
+    internal static int CountOccurrences(string source, string value)
+    {
+        if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(value))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        var offset = 0;
+
+        while (offset < source.Length)
+        {
+            var index = source.IndexOf(value, offset, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return count;
+            }
+
+            count++;
+            offset = index + value.Length;
+        }
+
+        return count;
+    }
 }

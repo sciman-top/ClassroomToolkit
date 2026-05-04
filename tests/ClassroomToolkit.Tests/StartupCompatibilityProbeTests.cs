@@ -1,5 +1,6 @@
 using ClassroomToolkit.Services.Compatibility;
 using FluentAssertions;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace ClassroomToolkit.Tests;
@@ -128,5 +129,35 @@ public sealed class StartupCompatibilityProbeTests
         success.Should().BeTrue();
         error.Should().BeEmpty();
         architecture.Should().BeOneOf(Architecture.X64, Architecture.X86, Architecture.Arm64);
+    }
+
+    [Fact]
+    public void ProcessIdentityHelpers_ShouldReadCurrentProcessSafely()
+    {
+        using var process = Process.GetCurrentProcess();
+
+        StartupCompatibilityProbe.TryGetProcessId(process, out var processId).Should().BeTrue();
+        StartupCompatibilityProbe.TryGetProcessName(process, out var processName).Should().BeTrue();
+
+        processId.Should().Be(Environment.ProcessId);
+        processName.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void ProcessEnumeration_ShouldCentralizeVolatileProcessIdentityReads()
+    {
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.Services",
+            "Compatibility",
+            "StartupCompatibilityProbe.cs");
+
+        source.Should().Contain("private static string FormatProcessLabel(Process process)");
+        source.Should().Contain("internal static bool TryGetProcessName(Process process, out string processName)");
+        source.Should().Contain("internal static bool TryGetProcessId(Process process, out int processId)");
+        source.Should().Contain("TryGetProcessName(process, out var processName)");
+        source.Should().Contain("TryGetProcessId(process, out var processId)");
+        ContractSourceAggregateLoader.CountOccurrences(source, "process.ProcessName").Should().Be(1);
+        ContractSourceAggregateLoader.CountOccurrences(source, "process.Id").Should().Be(1);
     }
 }

@@ -3,7 +3,7 @@
 ## Scope
 
 - Rules: R1, R2, R4, R6, R8; project C.2 fixed gate order.
-- Risk: low. Changes are limited to diagnostics responsiveness, converter no-op robustness, redundant diagnostic cleanup, and contract tests.
+- Risk: low. Changes are limited to diagnostics responsiveness, converter no-op robustness, redundant diagnostic cleanup, callback-path simplification, startup probe race hardening, source-contract helper deduplication, and contract tests.
 - Boundary: no persisted data format changes; no `students.xlsx`, `student_photos/`, `settings.ini`, or settings JSON schema changes.
 
 ## Plan and task list
@@ -38,6 +38,26 @@ Completed slice 3:
    - Keep startup diagnostics unchanged; this guard applies only to user-triggered manual diagnostics.
    - Extend diagnostics entry contract tests to lock the gate and release behavior.
 
+Completed slice 4:
+
+6. ImageManager favorites/recents callback centralization.
+   - Centralize `FavoritesChanged` and `RecentsChanged` notifications into named safe callback helpers.
+   - Preserve existing callback order and `SafeActionExecutionExecutor` exception isolation.
+   - Tighten the event callback contract so favorites/recents each have a single invoke entry.
+
+Completed slice 5:
+
+7. Startup compatibility process identity hardening.
+   - Centralize volatile `Process.ProcessName` and `Process.Id` reads behind non-fatal guarded helpers.
+   - Keep external PPT/WPS process race failures as diagnostic unknowns instead of letting startup compatibility checks throw.
+   - Add helper tests and a source contract that keeps volatile process identity reads centralized.
+
+Completed slice 6:
+
+8. Source-contract occurrence helper deduplication.
+   - Move duplicate `CountOccurrences` implementations into `ContractSourceAggregateLoader`.
+   - Update ImageManager and startup compatibility source-contract tests to use the shared helper.
+
 ## Evidence
 
 - Baseline: `git status --short --branch` returned `## main...origin/main`.
@@ -45,7 +65,7 @@ Completed slice 3:
 - Baseline test: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` passed: 3482 passed, 0 failed.
 - Static review:
   - Production code scan found no `Thread.Sleep`, empty `catch`, `Console.WriteLine`, `GC.Collect`, `TODO`, `FIXME`, or `HACK` after cleanup.
-  - Remaining `Task.Result` usages are in `RollCallViewModel.Data.cs` behind completed-task checks and were not changed in this slice.
+  - Slice 2 removed remaining production `.Result` matches from the RollCall preload path.
 - Focused verification:
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~MainWindowDiagnosticsEntryContractTests|FullyQualifiedName~SystemDiagnosticsCopyContractTests|FullyQualifiedName~MainWindowStartupDiagnosticsDispatchContractTests|FullyQualifiedName~BorderFixHelperDeferredDispatchFallbackContractTests"` passed: 7 passed, 0 failed.
   - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerConvertersTests|FullyQualifiedName~MainWindowDiagnosticsEntryContractTests"` passed: 8 passed, 0 failed.
@@ -70,13 +90,34 @@ Completed slice 3:
   - test: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` passed: 3485 passed, 0 failed.
   - contract/invariant: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"` passed: 29 passed, 0 failed.
   - hotspot: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\quality\check-hotspot-line-budgets.ps1` passed.
+- Slice 4 focused verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerEventCallbackSafetyContractTests"` passed: 1 passed, 0 failed.
+- Final hard gate after slice 4:
+  - build: `dotnet build ClassroomToolkit.sln -c Debug` passed with 0 warnings and 0 errors.
+  - test: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` passed: 3485 passed, 0 failed.
+  - contract/invariant: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"` passed: 29 passed, 0 failed.
+  - hotspot: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\quality\check-hotspot-line-budgets.ps1` passed.
+- Slice 5 focused verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~StartupCompatibilityProbeTests"` passed: 13 passed, 0 failed.
+- Final hard gate after slice 5:
+  - build: `dotnet build ClassroomToolkit.sln -c Debug` passed with 0 warnings and 0 errors.
+  - test: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` passed: 3487 passed, 0 failed.
+  - contract/invariant: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"` passed: 29 passed, 0 failed.
+  - hotspot: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\quality\check-hotspot-line-budgets.ps1` passed.
+- Slice 6 focused verification:
+  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ImageManagerEventCallbackSafetyContractTests|FullyQualifiedName~StartupCompatibilityProbeTests"` passed: 14 passed, 0 failed.
+- Final hard gate after slice 6:
+  - build: `dotnet build ClassroomToolkit.sln -c Debug` passed with 0 warnings and 0 errors.
+  - test: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` passed: 3487 passed, 0 failed.
+  - contract/invariant: `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"` passed: 29 passed, 0 failed.
+  - hotspot: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\quality\check-hotspot-line-budgets.ps1` passed.
 
 ## Rollback
 
 Restore the changed files:
 
 ```powershell
-git restore -- src/ClassroomToolkit.App/MainWindow.xaml.cs src/ClassroomToolkit.App/MainWindow.Launcher.cs src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml.cs src/ClassroomToolkit.App/Photos/ImageManagerWindow.Converters.cs src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml.cs src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs tests/ClassroomToolkit.Tests/MainWindowDiagnosticsEntryContractTests.cs tests/ClassroomToolkit.Tests/ImageManagerConvertersTests.cs tests/ClassroomToolkit.Tests/PresentationDiagnosticsProbeBlockingSafetyContractTests.cs tests/ClassroomToolkit.Tests/BlockingWaitUsageContractTests.cs tests/ClassroomToolkit.Tests/RollCallPreloadBlockingSafetyContractTests.cs docs/change-evidence/20260504-code-optimization-diagnostics-responsiveness.md
+git restore -- src/ClassroomToolkit.App/MainWindow.xaml.cs src/ClassroomToolkit.App/MainWindow.Launcher.cs src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml.cs src/ClassroomToolkit.App/Photos/ImageManagerWindow.Converters.cs src/ClassroomToolkit.App/Photos/ImageManagerWindow.Navigation.cs src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml.cs src/ClassroomToolkit.App/ViewModels/RollCallViewModel.Data.cs src/ClassroomToolkit.Services/Compatibility/StartupCompatibilityProbe.cs tests/ClassroomToolkit.Tests/ContractSourceAggregateLoader.cs tests/ClassroomToolkit.Tests/MainWindowDiagnosticsEntryContractTests.cs tests/ClassroomToolkit.Tests/ImageManagerConvertersTests.cs tests/ClassroomToolkit.Tests/ImageManagerEventCallbackSafetyContractTests.cs tests/ClassroomToolkit.Tests/PresentationDiagnosticsProbeBlockingSafetyContractTests.cs tests/ClassroomToolkit.Tests/BlockingWaitUsageContractTests.cs tests/ClassroomToolkit.Tests/RollCallPreloadBlockingSafetyContractTests.cs tests/ClassroomToolkit.Tests/StartupCompatibilityProbeTests.cs docs/change-evidence/20260504-code-optimization-diagnostics-responsiveness.md
 git restore --source=HEAD -- src/ClassroomToolkit.App/Diagnostics/BorderBrushDiagnostic.cs
 ```
 
