@@ -11,7 +11,7 @@ public sealed class MultiplyConverter : System.Windows.Data.IValueConverter
         => value is double d ? d * Factor : value;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+        => System.Windows.Data.Binding.DoNothing;
 }
 
 public sealed class FolderVisibilityConverter : System.Windows.Data.IValueConverter

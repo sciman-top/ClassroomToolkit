@@ -42,16 +42,6 @@ public partial class DiagnosticsDialog : Window
     private void OnDialogLoaded(object sender, RoutedEventArgs e)
     {
         WindowPlacementHelper.EnsureVisible(this);
-
-        // 再次诊断 BorderBrush 问题
-        try
-        {
-            BorderBrushDiagnostic.CheckAllBorders(this);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            System.Diagnostics.Debug.WriteLine($"BorderBrush 诊断失败: {ex.Message}");
-        }
     }
 
     private void OnDialogClosed(object? sender, EventArgs e)

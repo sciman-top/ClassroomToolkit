@@ -40,11 +40,37 @@ public partial class MainWindow
             : _configurationService.SettingsDocumentPath;
         var studentPath = ResolveStudentWorkbookPath();
         var photoRoot = _settings.InkPhotoRootPath;
-        var result = SystemDiagnostics.CollectSystemDiagnostics(
-            _settings,
-            settingsPath,
-            studentPath,
-            photoRoot);
+        Func<CancellationToken, Task> collectAndShowDiagnostics = async token =>
+        {
+            var result = SystemDiagnostics.CollectSystemDiagnostics(
+                _settings,
+                settingsPath,
+                studentPath,
+                photoRoot);
+            if (token.IsCancellationRequested
+                || _backgroundTasksCancellation.IsCancellationRequested
+                || Dispatcher.HasShutdownStarted
+                || Dispatcher.HasShutdownFinished)
+            {
+                return;
+            }
+
+            await Dispatcher.InvokeAsync(
+                () => ShowDiagnosticsResultDialog(result),
+                DispatcherPriority.Normal,
+                token);
+        };
+
+        _ = SafeTaskRunner.Run(
+            "MainWindow.DiagnosticsClick",
+            collectAndShowDiagnostics,
+            _backgroundTasksCancellation.Token,
+            ex => System.Diagnostics.Debug.WriteLine(
+                $"MainWindow: diagnostics click failed: {ex.GetType().Name} - {ex.Message}"));
+    }
+
+    private void ShowDiagnosticsResultDialog(DiagnosticsResult result)
+    {
         var dialog = new DiagnosticsDialog(result, _settingsService, _settings)
         {
             Owner = this
@@ -429,11 +455,7 @@ public partial class MainWindow
                 {
                     return;
                 }
-                var dialog = new DiagnosticsDialog(result, _settingsService, _settings)
-                {
-                    Owner = this
-                };
-                TryShowDialogWithDiagnostics(dialog, nameof(DiagnosticsDialog));
+                ShowDiagnosticsResultDialog(result);
             }
 
             var scheduled = false;

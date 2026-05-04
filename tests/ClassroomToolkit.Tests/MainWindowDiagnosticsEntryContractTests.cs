@@ -10,9 +10,25 @@ public sealed class MainWindowDiagnosticsEntryContractTests
     {
         var source = File.ReadAllText(GetLauncherSourcePath());
 
+        source.Should().Contain("_ = SafeTaskRunner.Run(");
+        source.Should().Contain("\"MainWindow.DiagnosticsClick\"");
+        source.Should().Contain("await Dispatcher.InvokeAsync(");
         source.Should().Contain("SystemDiagnostics.CollectSystemDiagnostics(");
         source.Should().Contain("var studentPath = ResolveStudentWorkbookPath();");
         source.Should().Contain("var photoRoot = _settings.InkPhotoRootPath;");
+    }
+
+    [Fact]
+    public void DiagnosticsDialog_ShouldNotRunRedundantBorderDiagnosticPass()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Diagnostics",
+            "DiagnosticsDialog.xaml.cs"));
+
+        source.Should().NotContain("BorderBrushDiagnostic.CheckAllBorders");
+        source.Should().NotContain("Console.WriteLine");
     }
 
     [Fact]

@@ -551,8 +551,6 @@ public partial class PhotoOverlayWindow : Window
             bitmap.EndInit();
             bitmap.Freeze();
 
-            // GC.Collect(); // Removed aggressive GC
-
             return bitmap;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))

@@ -8,6 +8,16 @@ namespace ClassroomToolkit.Tests;
 public sealed class ImageManagerConvertersTests
 {
     [Fact]
+    public void MultiplyConverter_ConvertBack_ShouldReturnDoNothing()
+    {
+        var converter = new MultiplyConverter();
+
+        var result = converter.ConvertBack(120.0, typeof(double), string.Empty, CultureInfo.InvariantCulture);
+
+        result.Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
+
+    [Fact]
     public void FolderVisibilityConverter_ConvertBack_ShouldReturnDoNothing()
     {
         var converter = new FolderVisibilityConverter();
