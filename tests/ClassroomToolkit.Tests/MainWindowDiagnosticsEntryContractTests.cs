@@ -12,6 +12,8 @@ public sealed class MainWindowDiagnosticsEntryContractTests
 
         source.Should().Contain("_ = SafeTaskRunner.Run(");
         source.Should().Contain("\"MainWindow.DiagnosticsClick\"");
+        source.Should().Contain("Interlocked.CompareExchange(ref _manualDiagnosticsInFlight, 1, 0)");
+        source.Should().Contain("Interlocked.Exchange(ref _manualDiagnosticsInFlight, 0)");
         source.Should().Contain("await Dispatcher.InvokeAsync(");
         source.Should().Contain("SystemDiagnostics.CollectSystemDiagnostics(");
         source.Should().Contain("var studentPath = ResolveStudentWorkbookPath();");

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -35,6 +36,16 @@ public partial class MainWindow
 
     private void OnDiagnosticsClick(object sender, RoutedEventArgs e)
     {
+        if (_backgroundTasksCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        if (Interlocked.CompareExchange(ref _manualDiagnosticsInFlight, 1, 0) != 0)
+        {
+            System.Diagnostics.Debug.WriteLine("MainWindow: diagnostics click skipped because a diagnostic run is already in flight.");
+            return;
+        }
+
         var settingsPath = string.IsNullOrWhiteSpace(_configurationService.SettingsDocumentPath)
             ? _configurationService.SettingsIniPath
             : _configurationService.SettingsDocumentPath;
@@ -42,23 +53,30 @@ public partial class MainWindow
         var photoRoot = _settings.InkPhotoRootPath;
         Func<CancellationToken, Task> collectAndShowDiagnostics = async token =>
         {
-            var result = SystemDiagnostics.CollectSystemDiagnostics(
-                _settings,
-                settingsPath,
-                studentPath,
-                photoRoot);
-            if (token.IsCancellationRequested
-                || _backgroundTasksCancellation.IsCancellationRequested
-                || Dispatcher.HasShutdownStarted
-                || Dispatcher.HasShutdownFinished)
+            try
             {
-                return;
-            }
+                var result = SystemDiagnostics.CollectSystemDiagnostics(
+                    _settings,
+                    settingsPath,
+                    studentPath,
+                    photoRoot);
+                if (token.IsCancellationRequested
+                    || _backgroundTasksCancellation.IsCancellationRequested
+                    || Dispatcher.HasShutdownStarted
+                    || Dispatcher.HasShutdownFinished)
+                {
+                    return;
+                }
 
-            await Dispatcher.InvokeAsync(
-                () => ShowDiagnosticsResultDialog(result),
-                DispatcherPriority.Normal,
-                token);
+                await Dispatcher.InvokeAsync(
+                    () => ShowDiagnosticsResultDialog(result),
+                    DispatcherPriority.Normal,
+                    token);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _manualDiagnosticsInFlight, 0);
+            }
         };
 
         _ = SafeTaskRunner.Run(

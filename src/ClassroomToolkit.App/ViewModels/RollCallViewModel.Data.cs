@@ -209,8 +209,7 @@ public sealed partial class RollCallViewModel
         {
             try
             {
-                if (!preloadTask.IsCompletedSuccessfully) return null;
-                var result = preloadTask.Result;
+                if (!TryReadCompletedSuccessfulPreloadResult(preloadTask, out var result)) return null;
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
@@ -275,7 +274,11 @@ public sealed partial class RollCallViewModel
                     return;
                 }
 
-                var completedResult = preloadTask.Result;
+                if (!TryReadCompletedSuccessfulPreloadResult(preloadTask, out var completedResult))
+                {
+                    return;
+                }
+
                 if (!string.IsNullOrWhiteSpace(completedResult.ErrorMessage))
                 {
                     return;
@@ -295,6 +298,21 @@ public sealed partial class RollCallViewModel
                 }
             }
         }
+    }
+
+    private static bool TryReadCompletedSuccessfulPreloadResult(
+        Task<RollCallLoadResult> preloadTask,
+        out RollCallLoadResult result)
+    {
+        result = default!;
+        if (!preloadTask.IsCompletedSuccessfully)
+        {
+            return false;
+        }
+
+        var awaiter = preloadTask.GetAwaiter();
+        result = awaiter.GetResult();
+        return true;
     }
 
     private static bool TryGetFileWriteTimeUtc(string path, out DateTime writeTimeUtc)

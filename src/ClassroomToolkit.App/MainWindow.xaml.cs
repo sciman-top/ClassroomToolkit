@@ -56,6 +56,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _autoExitTimer;
     private readonly CancellationTokenSource _backgroundTasksCancellation = new();
     private bool _backgroundTasksCancellationDisposed;
+    private int _manualDiagnosticsInFlight;
     private bool _allowClose;
     private bool _settingsSaveFailedNotified;
     private readonly AppSettingsService _settingsService;

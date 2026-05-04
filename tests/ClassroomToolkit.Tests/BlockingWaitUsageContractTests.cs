@@ -50,6 +50,7 @@ public sealed class BlockingWaitUsageContractTests
     private static bool ContainsBlockingWaitPattern(string line)
     {
         return line.Contains(".GetAwaiter().GetResult()", StringComparison.Ordinal)
-               || line.Contains(".Wait(", StringComparison.Ordinal);
+               || line.Contains(".Wait(", StringComparison.Ordinal)
+               || line.Contains(".Result", StringComparison.Ordinal);
     }
 }
