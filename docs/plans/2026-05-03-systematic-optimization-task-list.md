@@ -54,7 +54,7 @@
 - [x] contract/invariant filter
 - [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`
 
-## Task 3: 超长 App 文件拆分与职责收敛（已完成第五阶段）
+## Task 3: 超长 App 文件拆分与职责收敛（已完成第六阶段）
 
 **Description:** 优先审查 `PaintToolbarWindow.xaml.cs`、`VariableWidthBrushRenderer.cs`、`RollCallSettingsDialog.xaml.cs`、`PaintOverlayWindow.*` 和 `ImageManagerWindow.Navigation.cs`。只拆已有职责边界，不引入新框架或猜测式抽象。
 
@@ -91,9 +91,15 @@
 - 将 WPS hook 请求、WPS navigation fallback、hook runtime state、不可用通知和 WPS debounce 状态拆分到 `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.WpsHook.cs`。
 - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.cs` 当前为 657 行，新增 `PaintOverlayWindow.Presentation.WpsHook.cs` 342 行。
 - 同步把 WPS hook 与 foreground ownership 的源码 contract 调整为按 `PaintOverlayWindow.Presentation*.cs` 文件族聚合校验，保持契约意图不变。
+- 第六批处理 `PaintOverlayWindow.Ink.Rendering` 文件族。
+- 将 redraw 调度执行路径收敛到 `RunPendingInkRedraw()`，避免 throttled/direct 分支重复维护 pending stamp、version check、redraw、completion sync 和 diagnostics callback。
+- 将 stored stroke、ribbon、bloom 的 photo-transform geometry 决策收敛到 `ResolveStoredInkRenderGeometry()`。
+- 将 draw command、pen cache key、brush/pen cache helper、opacity packing 和 layer-step helper 拆分到 `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Rendering.Cache.cs`。
+- `src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Ink.Rendering.cs` 从 874 行降到 759 行，新增 cache partial 124 行。
+- 同步扩展 `PaintOverlayInkRedrawTelemetryContractTests`，锁定共享 redraw 执行路径和 rendering cache partial 边界。
 
 **Follow-up:**
-- [ ] 下一刀继续 `PaintOverlayWindow.*` 中最肥的 rendering 或 cross-page 子文件族。
+- [x] 下一刀继续 `PaintOverlayWindow.*` 中最肥的 rendering 或 cross-page 子文件族。
 - [ ] 再下一刀评估 `ImageManagerWindow` 或 `RollCallWindow` 的状态/窗口编排子文件族。
 - [ ] `RollCallSettingsDialog` 若后续继续拆分，只再拆一层通用 tab-state/default-apply helper，不引入新抽象。
 

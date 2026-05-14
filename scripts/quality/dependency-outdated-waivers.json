@@ -29,6 +29,12 @@
       "owner": "engineering",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
       "expires_at": "2026-06-30"
+    },
+    {
+      "package": "SixLabors.Fonts",
+      "owner": "engineering",
+      "reason": "Major-version migration can change font metrics and workbook/image export behavior; requires a dedicated visual/export compatibility slice before upgrade.",
+      "expires_at": "2026-06-30"
     }
   ]
 }

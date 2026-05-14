@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ClassroomToolkit.App;
-using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -432,18 +431,7 @@ public sealed class InkPersistenceService
 
     private static void WriteAllTextAtomically(string path, string content)
     {
-        AtomicFileReplaceUtility.WriteAtomically(
-            path,
-            tempPath => File.WriteAllText(tempPath, content),
-            onTempCleanupFailure: static (tempPath, ex) =>
-            {
-                if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    return;
-                }
-
-                Debug.WriteLine($"[InkPersistence] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
-            });
+        InkAtomicFileWriter.WriteAllText(path, content, "[InkPersistence]");
     }
 
     private static DateTime GetLastWriteUtcSafe(string path)

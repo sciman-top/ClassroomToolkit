@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using ClassroomToolkit.App;
-using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -78,19 +77,7 @@ internal static class InkExportManifestUtilities
                 }
 
                 var json = JsonSerializer.Serialize(merged, ManifestJsonOptions);
-                AtomicFileReplaceUtility.WriteAtomically(
-                    path,
-                    tempPath => File.WriteAllText(tempPath, json),
-                    onTempCleanupFailure: static (tempPath, cleanupEx) =>
-                    {
-                        if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(cleanupEx))
-                        {
-                            return;
-                        }
-
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[InkExportManifestUtilities] temp cleanup failed path={tempPath} ex={cleanupEx.GetType().Name} msg={cleanupEx.Message}");
-                    });
+                InkAtomicFileWriter.WriteAllText(path, json, "[InkExportManifestUtilities]");
             }
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))

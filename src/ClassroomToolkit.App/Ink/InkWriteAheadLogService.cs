@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ClassroomToolkit.Domain.Utilities;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -198,19 +197,7 @@ internal sealed class InkWriteAheadLogService
             }
 
             var json = JsonSerializer.Serialize(map, _options);
-            AtomicFileReplaceUtility.WriteAtomically(
-                walPath,
-                tempPath => File.WriteAllText(tempPath, json),
-                onTempCleanupFailure: static (tempPath, ex) =>
-                {
-                    if (!ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                    {
-                        return;
-                    }
-
-                    Debug.WriteLine($"[InkWAL] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
-                    // Best-effort cleanup for temp WAL files.
-                });
+            InkAtomicFileWriter.WriteAllText(walPath, json, "[InkWAL]");
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

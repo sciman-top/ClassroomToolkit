@@ -16,7 +16,7 @@ public sealed class InkStorageDiagnosticsContractTests
         source.Should().Contain("[InkPersistence] failed to parse sidecar json");
         source.Should().Contain("[InkPersistence] failed to read sidecar json");
         source.Should().Contain("[InkPersistence] delete file failed");
-        source.Should().Contain("[InkPersistence] temp cleanup failed");
+        source.Should().Contain("InkAtomicFileWriter.WriteAllText(path, content, \"[InkPersistence]\")");
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class InkStorageDiagnosticsContractTests
         source.Should().Contain("[InkStorage] failed to parse page json");
         source.Should().Contain("[InkStorage] failed to read page json");
         source.Should().Contain("[InkStorage] cleanup folder failed");
-        source.Should().Contain("[InkStorage] temp cleanup failed");
+        source.Should().Contain("InkAtomicFileWriter.WriteAllText(path, content, \"[InkStorage]\")");
     }
 
     [Fact]
@@ -45,7 +45,21 @@ public sealed class InkStorageDiagnosticsContractTests
 
         source.Should().Contain("[InkWAL] failed to load wal");
         source.Should().Contain("[InkWAL] save failed");
-        source.Should().Contain("[InkWAL] temp cleanup failed");
+        source.Should().Contain("InkAtomicFileWriter.WriteAllText(walPath, json, \"[InkWAL]\")");
+    }
+
+    [Fact]
+    public void InkAtomicFileWriter_ShouldCentralizeTempCleanupDiagnostics()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Ink",
+            "InkAtomicFileWriter.cs"));
+
+        source.Should().Contain("AtomicFileReplaceUtility.WriteAtomically(");
+        source.Should().Contain("AppGlobalExceptionHandlingPolicy.IsNonFatal(ex)");
+        source.Should().Contain("temp cleanup failed path={tempPath}");
     }
 
     [Fact]
