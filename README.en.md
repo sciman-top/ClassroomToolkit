@@ -89,6 +89,8 @@ tests/ClassroomToolkit.Tests      Automated tests
 
 ## Build and Verification
 
+The fixed delivery gate order is `build -> test -> contract/invariant -> hotspot`:
+
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
@@ -96,10 +98,23 @@ dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug 
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
 
+The repository also provides an aggregate quality gate:
+
+```powershell
+powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
+```
+
+For documentation-only changes, run at least:
+
+```powershell
+git diff --check
+```
+
 ## Documentation
 
 - [Chinese README](./README.md)
 - [Teacher Guide](./使用指南.md)
+- [Documentation index](./docs/README.md)
 - [Architecture docs](./docs/architecture/)
 - [Release checklist](./docs/runbooks/release-checklist.md)
 - [Classroom pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
