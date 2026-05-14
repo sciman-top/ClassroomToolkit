@@ -104,6 +104,8 @@ public static class StartupCompatibilityProbe
         "wppt"
     };
 
+    private readonly record struct PresentationProcessSnapshot(string Label, int? ProcessId);
+
     public static StartupCompatibilityReport Collect(
         string settingsPath,
         string? presentationClassifierOverridesJson = null)
@@ -115,12 +117,13 @@ public static class StartupCompatibilityProbe
         EvaluateVcppRuntime(issues);
         EvaluateNativeDependencies(issues);
         var presentationProcessTokens = BuildPresentationProcessTokens(presentationClassifierOverridesJson);
+        var presentationProcesses = BuildPresentationProcessSnapshots(presentationProcessTokens);
         EvaluatePresentationPrivilegeConsistency(
             issues,
-            presentationProcessTokens);
+            presentationProcesses);
         EvaluatePresentationArchitectureConsistency(
             issues,
-            presentationProcessTokens);
+            presentationProcesses);
 
         return new StartupCompatibilityReport(issues);
     }
@@ -378,7 +381,7 @@ public static class StartupCompatibilityProbe
 
     private static void EvaluatePresentationPrivilegeConsistency(
         List<StartupCompatibilityIssue> issues,
-        IReadOnlyList<string> processTokens)
+        IReadOnlyList<PresentationProcessSnapshot> presentationProcesses)
     {
         if (!TryGetCurrentProcessElevation(out var currentElevated, out var currentError))
         {
@@ -392,31 +395,23 @@ public static class StartupCompatibilityProbe
 
         var mismatchedProcesses = new List<string>();
         var unknownProcesses = new List<string>();
-        foreach (var process in EnumeratePresentationProcesses(processTokens))
+        foreach (var process in presentationProcesses)
         {
-            try
+            if (!process.ProcessId.HasValue)
             {
-                var processLabel = FormatProcessLabel(process);
-                if (!TryGetProcessId(process, out var processId))
-                {
-                    unknownProcesses.Add($"{processLabel}: process-id-unavailable");
-                    continue;
-                }
-
-                if (!TryGetProcessElevation(processId, out var processElevated, out var error))
-                {
-                    unknownProcesses.Add($"{processLabel}: {error}");
-                    continue;
-                }
-
-                if (processElevated != currentElevated)
-                {
-                    mismatchedProcesses.Add(processLabel);
-                }
+                unknownProcesses.Add($"{process.Label}: process-id-unavailable");
+                continue;
             }
-            finally
+
+            if (!TryGetProcessElevation(process.ProcessId.Value, out var processElevated, out var error))
             {
-                process.Dispose();
+                unknownProcesses.Add($"{process.Label}: {error}");
+                continue;
+            }
+
+            if (processElevated != currentElevated)
+            {
+                mismatchedProcesses.Add(process.Label);
             }
         }
 
@@ -444,36 +439,28 @@ public static class StartupCompatibilityProbe
 
     private static void EvaluatePresentationArchitectureConsistency(
         List<StartupCompatibilityIssue> issues,
-        IReadOnlyList<string> processTokens)
+        IReadOnlyList<PresentationProcessSnapshot> presentationProcesses)
     {
         var appArch = RuntimeInformation.ProcessArchitecture;
         var mismatchedProcesses = new List<string>();
         var unknownProcesses = new List<string>();
-        foreach (var process in EnumeratePresentationProcesses(processTokens))
+        foreach (var process in presentationProcesses)
         {
-            try
+            if (!process.ProcessId.HasValue)
             {
-                var processLabel = FormatProcessLabel(process);
-                if (!TryGetProcessId(process, out var processId))
-                {
-                    unknownProcesses.Add($"{processLabel}: process-id-unavailable");
-                    continue;
-                }
-
-                if (!TryGetProcessArchitecture(processId, out var processArch, out var error))
-                {
-                    unknownProcesses.Add($"{processLabel}: {error}");
-                    continue;
-                }
-
-                if (processArch != appArch)
-                {
-                    mismatchedProcesses.Add($"{processLabel}={processArch}");
-                }
+                unknownProcesses.Add($"{process.Label}: process-id-unavailable");
+                continue;
             }
-            finally
+
+            if (!TryGetProcessArchitecture(process.ProcessId.Value, out var processArch, out var error))
             {
-                process.Dispose();
+                unknownProcesses.Add($"{process.Label}: {error}");
+                continue;
+            }
+
+            if (processArch != appArch)
+            {
+                mismatchedProcesses.Add($"{process.Label}={processArch}");
             }
         }
 
@@ -529,6 +516,25 @@ public static class StartupCompatibilityProbe
         return EnumeratePresentationProcesses(DefaultPresentationProcessTokens);
     }
 
+    private static List<PresentationProcessSnapshot> BuildPresentationProcessSnapshots(
+        IReadOnlyList<string> processTokens)
+    {
+        var snapshots = new List<PresentationProcessSnapshot>();
+        foreach (var process in EnumeratePresentationProcesses(processTokens))
+        {
+            try
+            {
+                snapshots.Add(CreatePresentationProcessSnapshot(process));
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return snapshots;
+    }
+
     private static IEnumerable<Process> EnumeratePresentationProcesses(
         IReadOnlyList<string> processTokens)
     {
@@ -562,14 +568,19 @@ public static class StartupCompatibilityProbe
         }
     }
 
-    private static string FormatProcessLabel(Process process)
+    private static PresentationProcessSnapshot CreatePresentationProcessSnapshot(Process process)
     {
         var processName = TryGetProcessName(process, out var resolvedName)
             ? resolvedName
             : "unknown-process";
-        return TryGetProcessId(process, out var processId)
-            ? $"{processName}({processId})"
+        var processId = TryGetProcessId(process, out var resolvedProcessId)
+            ? resolvedProcessId
+            : (int?)null;
+        var label = processId.HasValue
+            ? $"{processName}({processId.Value})"
             : $"{processName}(unknown-id)";
+
+        return new PresentationProcessSnapshot(label, processId);
     }
 
     internal static bool TryGetProcessName(Process process, out string processName)
