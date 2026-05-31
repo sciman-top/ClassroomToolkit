@@ -348,6 +348,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         _currentSettings.BrushColor = color;
+        _currentSettings.BrushSize = ToolbarWindow.BrushSize;
         _appSettingsService.Save(_currentSettings);
     }
 
@@ -394,6 +395,8 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
             case 2: _currentSettings.QuickColor3 = color; break;
         }
 
+        _currentSettings.BrushColor = color;
+        _currentSettings.BrushSize = ToolbarWindow?.BrushSize ?? _currentSettings.BrushSize;
         _appSettingsService.Save(_currentSettings);
     }
 
@@ -457,7 +460,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         if (OverlayWindow == null || ToolbarWindow == null) return;
 
         OverlayWindow.SetMode(preferredPrimaryMode);
-        OverlayWindow.SetBrush(settings.BrushColor, settings.BrushSize, settings.BrushOpacity);
+        OverlayWindow.SetBrush(settings.BrushColor, ToolbarWindow.BrushSize, settings.BrushOpacity);
         OverlayWindow.SetClassroomWritingMode(settings.ClassroomWritingMode);
         OverlayWindow.RestoreStylusAdaptiveState(
             settings.StylusAdaptivePressureProfile,

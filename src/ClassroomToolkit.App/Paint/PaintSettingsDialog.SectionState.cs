@@ -30,6 +30,8 @@ public partial class PaintSettingsDialog
         ToolbarScaleCombo.SelectionChanged += OnSectionDirtySelectionChanged;
 
         BrushSizeSlider.ValueChanged += OnSectionDirtyValueChanged;
+        BrushSize2Slider.ValueChanged += OnSectionDirtyValueChanged;
+        BrushSize3Slider.ValueChanged += OnSectionDirtyValueChanged;
         BrushOpacitySlider.ValueChanged += OnSectionDirtyValueChanged;
         EraserSizeSlider.ValueChanged += OnSectionDirtyValueChanged;
         CalligraphyOverlayThresholdSlider.ValueChanged += OnSectionDirtyValueChanged;
@@ -81,6 +83,8 @@ public partial class PaintSettingsDialog
         ToolbarScaleCombo.SelectionChanged -= OnSectionDirtySelectionChanged;
 
         BrushSizeSlider.ValueChanged -= OnSectionDirtyValueChanged;
+        BrushSize2Slider.ValueChanged -= OnSectionDirtyValueChanged;
+        BrushSize3Slider.ValueChanged -= OnSectionDirtyValueChanged;
         BrushOpacitySlider.ValueChanged -= OnSectionDirtyValueChanged;
         EraserSizeSlider.ValueChanged -= OnSectionDirtyValueChanged;
         CalligraphyOverlayThresholdSlider.ValueChanged -= OnSectionDirtyValueChanged;
@@ -132,7 +136,9 @@ public partial class PaintSettingsDialog
             WhiteboardPreset: ResolveWhiteboardPreset(),
             CalligraphyPreset: ResolveCalligraphyPreset(),
             ClassroomWritingMode: ResolveClassroomWritingMode(),
-            BrushSizePx: (int)Math.Round(BrushSizeSlider.Value),
+            QuickBrushSize1Px: (int)Math.Round(BrushSizeSlider.Value),
+            QuickBrushSize2Px: (int)Math.Round(BrushSize2Slider.Value),
+            QuickBrushSize3Px: (int)Math.Round(BrushSize3Slider.Value),
             BrushOpacityPercent: (int)Math.Round(BrushOpacitySlider.Value),
             EraserSizePx: (int)Math.Round(EraserSizeSlider.Value),
             CalligraphyInkBloomEnabled: CalligraphyInkBloomCheck.IsChecked == true,
@@ -204,7 +210,9 @@ public partial class PaintSettingsDialog
             SelectWhiteboardPreset(state.WhiteboardPreset);
             SelectCalligraphyPreset(state.CalligraphyPreset);
             SelectClassroomWritingMode(state.ClassroomWritingMode);
-            BrushSizeSlider.Value = Clamp(state.BrushSizePx, 1, 50);
+            BrushSizeSlider.Value = Clamp(state.QuickBrushSize1Px, 1, 50);
+            BrushSize2Slider.Value = Clamp(state.QuickBrushSize2Px, 1, 50);
+            BrushSize3Slider.Value = Clamp(state.QuickBrushSize3Px, 1, 50);
             BrushOpacitySlider.Value = Clamp(state.BrushOpacityPercent, 0, 100);
             EraserSizeSlider.Value = Clamp(state.EraserSizePx, 6, 60);
             CalligraphyInkBloomCheck.IsChecked = state.CalligraphyInkBloomEnabled;
@@ -240,6 +248,9 @@ public partial class PaintSettingsDialog
             SaveCurrentAsCustomSnapshot();
         }
         UpdateCalligraphyOptionState();
+        UpdateBrushSizeLabel();
+        UpdateBrushOpacityLabel();
+        UpdateEraserSizeLabel();
         UpdateClassroomWritingModeHint(state.ClassroomWritingMode);
         UpdatePresetHint(state.PresetScheme);
     }
@@ -363,7 +374,9 @@ public partial class PaintSettingsDialog
             SelectClassroomWritingMode(defaults.ClassroomWritingMode);
             CalligraphyInkBloomCheck.IsChecked = defaults.CalligraphyInkBloomEnabled;
             CalligraphySealCheck.IsChecked = defaults.CalligraphySealEnabled;
-            BrushSizeSlider.Value = Clamp(defaults.BrushSize, 1, 50);
+            BrushSizeSlider.Value = Clamp(defaults.QuickBrushSize1, 1, 50);
+            BrushSize2Slider.Value = Clamp(defaults.QuickBrushSize2, 1, 50);
+            BrushSize3Slider.Value = Clamp(defaults.QuickBrushSize3, 1, 50);
             EraserSizeSlider.Value = Clamp(defaults.EraserSize, 6, 60);
             BrushOpacitySlider.Value = ToPercent(defaults.BrushOpacity);
             CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
@@ -372,6 +385,9 @@ public partial class PaintSettingsDialog
             QuickColor1 = defaults.QuickColor1;
             QuickColor2 = defaults.QuickColor2;
             QuickColor3 = defaults.QuickColor3;
+            QuickBrushSize1 = defaults.QuickBrushSize1;
+            QuickBrushSize2 = defaults.QuickBrushSize2;
+            QuickBrushSize3 = defaults.QuickBrushSize3;
         }
         finally
         {

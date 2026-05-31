@@ -1,4 +1,5 @@
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.Interop.Presentation;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
@@ -47,6 +48,17 @@ public sealed class WpsHookOrchestratorTests
         hook.InterceptWheel.Should().BeTrue();
         hook.EmitWheelOnBlock.Should().BeTrue();
         hook.StopCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApplyDisabled_ShouldClearSuppressedKeyboardKeys()
+    {
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient();
+
+        orchestrator.ApplyDisabled(hook);
+
+        hook.SuppressedKeyboardKeys.Should().BeEmpty();
     }
 
     [Fact]
@@ -129,12 +141,15 @@ public sealed class WpsHookOrchestratorTests
         public bool StartCalled { get; private set; }
         public bool StartResult { get; set; } = true;
         public Exception? StartException { get; set; }
+        public IReadOnlyList<VirtualKey> SuppressedKeyboardKeys { get; private set; } = [VirtualKey.Enter];
 
         public void SetInterceptEnabled(bool enabled) => InterceptEnabled = enabled;
         public void SetBlockOnly(bool enabled) => BlockOnly = enabled;
         public void SetInterceptKeyboard(bool enabled) => InterceptKeyboard = enabled;
         public void SetInterceptWheel(bool enabled) => InterceptWheel = enabled;
         public void SetEmitWheelOnBlock(bool enabled) => EmitWheelOnBlock = enabled;
+        public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys) =>
+            SuppressedKeyboardKeys = keys.ToArray();
 
         public Task<bool> StartAsync()
         {

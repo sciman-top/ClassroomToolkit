@@ -130,6 +130,102 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void SaveAndLoad_ShouldPersistQuickBrushSizePresets()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_brush_sizes");
+        try
+        {
+            var service = CreateService(path);
+            var initial = service.Load();
+            initial.BrushSize = 16;
+            initial.QuickBrushSize1 = 5;
+            initial.QuickBrushSize2 = 13;
+            initial.QuickBrushSize3 = 31;
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.BrushSize.Should().Be(16);
+            reloaded.QuickBrushSize1.Should().Be(5);
+            reloaded.QuickBrushSize2.Should().Be(13);
+            reloaded.QuickBrushSize3.Should().Be(31);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldClampQuickBrushSizePresets()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_brush_size_clamp");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                [Paint]
+                brush_base_size=0
+                quick_brush_size_1=-2
+                quick_brush_size_2=12
+                quick_brush_size_3=200
+                """);
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.BrushSize.Should().Be(1);
+            settings.QuickBrushSize1.Should().Be(1);
+            settings.QuickBrushSize2.Should().Be(12);
+            settings.QuickBrushSize3.Should().Be(50);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldFallbackQuickBrushSizePresets_WhenValuesAreNonFinite()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_brush_size_non_finite");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                [Paint]
+                brush_base_size=NaN
+                quick_brush_size_1=NaN
+                quick_brush_size_2=Infinity
+                quick_brush_size_3=-Infinity
+                """);
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.BrushSize.Should().Be(12);
+            settings.QuickBrushSize1.Should().Be(6);
+            settings.QuickBrushSize2.Should().Be(12);
+            settings.QuickBrushSize3.Should().Be(24);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_ShouldPersistPhotoShowInkOverlayState()
     {
         var path = CreateTempIniPath("ctool_app_settings");

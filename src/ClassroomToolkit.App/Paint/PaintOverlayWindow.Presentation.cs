@@ -51,7 +51,9 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        return PresentationForegroundSuppressionInteropAdapter.EnsureForeground(target.Handle);
+        var restored = PresentationForegroundSuppressionInteropAdapter.EnsureForeground(target.Handle);
+        RequestPresentationOverlayRetouchIfNeeded(restored, "presentation-focus-restore");
+        return restored;
     }
 
     public bool ForwardKeyboardToPresentation(Key key)
@@ -481,12 +483,14 @@ public partial class PaintOverlayWindow
 
     private bool TrySendPresentationCommand(ClassroomToolkit.Services.Presentation.PresentationCommand command)
     {
-        return _presentationDispatchCoordinator.TryDispatch(
+        var sent = _presentationDispatchCoordinator.TryDispatch(
             allowOffice: _presentationOptions.AllowOffice,
             allowWps: _presentationOptions.AllowWps,
             currentPresentationType: _currentPresentationType,
             trySendWps: (target, allowBackground) => TrySendWpsNavigation(command, target, allowBackground),
             trySendOffice: (target, allowBackground) => TrySendOfficeNavigation(command, target, allowBackground));
+        RequestPresentationOverlayRetouchIfNeeded(sent, $"presentation-command:{command}");
+        return sent;
     }
 
     private bool TrySendOfficeNavigation(
@@ -652,6 +656,32 @@ public partial class PaintOverlayWindow
             $"hookActive={_wpsNavHookActive}; hookKeyboard={_wpsHookInterceptKeyboard}; hookWheel={_wpsHookInterceptWheel}; " +
             $"forceMessage={_presentationInputPipeline.WpsForceMessageFallback}; photoMode={_photoModeActive}; boardMode={IsBoardActive()}; " +
             $"fullscreen={_presentationFullscreenActive}; fgType={_foregroundPresentationType}; currentType={_currentPresentationType}");
+    }
+
+    private void RequestPresentationOverlayRetouchIfNeeded(bool actionApplied, string reason)
+    {
+        if (!PresentationOverlayRetouchPolicy.ShouldRequest(
+                actionApplied,
+                IsVisible,
+                _presentationFullscreenActive))
+        {
+            return;
+        }
+
+        EnsureOverlayTopmost(enforceZOrder: true);
+        SafeActionExecutionExecutor.TryExecute(
+            () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(ForceEnforceZOrder: true)),
+            ex => Debug.WriteLine($"[PresentationOverlayRetouch] callback failed reason={reason}: {ex.GetType().Name} - {ex.Message}"));
+    }
+
+    public void UpdateReservedPresentationNavigationKeys(
+        bool rollCallGroupSwitchEnabled,
+        string? rollCallGroupSwitchKey)
+    {
+        var reservedKeys = PresentationReservedNavigationKeyPolicy.ResolveRollCallGroupSwitchKeys(
+            rollCallGroupSwitchEnabled,
+            rollCallGroupSwitchKey);
+        _wpsNavHookClient?.SetSuppressedKeyboardKeys(reservedKeys);
     }
 
 }

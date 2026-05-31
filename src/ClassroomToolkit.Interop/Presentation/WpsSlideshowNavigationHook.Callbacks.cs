@@ -46,6 +46,10 @@ public sealed partial class WpsSlideshowNavigationHook
             {
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
+            if (IsKeyboardKeySuppressed(key))
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
 
             if (isDown)
             {

@@ -68,6 +68,24 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, knownCacheKey: cacheKey)");
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCrossPageIndex(pageIndex, visibleNeighborSlotIndex: i)");
     }
+
+    [Fact]
+    public void UndoAcrossPages_ShouldRestoreRuntimeAndPersistedPhotoInkState()
+    {
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow*.cs");
+
+        source.Should().Contain("if (!TryApplyGlobalUndoSnapshot(snapshot))");
+        source.Should().Contain("_globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);");
+        source.Should().Contain("RemoveMatchingCurrentInkHistorySnapshot(snapshot, snapshotHash);");
+        source.Should().Contain("PersistUndoRestoredPhotoInkSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes);");
+        source.Should().Contain("_inkSidecarAutoSaveGate.NextGeneration();");
+        source.Should().Contain("PersistInkToSidecar(CloneInkStrokes(strokes), sourcePath, pageIndex);");
+    }
+
     private static string GetPhotoSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(

@@ -41,7 +41,8 @@ internal static class RegionScreenCaptureWorkflow
 
     internal static RegionScreenCaptureResult TryCaptureToPng(
         IReadOnlyCollection<Rectangle>? passthroughRegions = null,
-        Point? initialPointerScreenPoint = null)
+        Point? initialPointerScreenPoint = null,
+        bool deferInitialPassthroughCancelUntilPointerLeaves = false)
     {
         var virtualBounds = SystemInformation.VirtualScreen;
         if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
@@ -54,7 +55,7 @@ internal static class RegionScreenCaptureWorkflow
             cursorPosition.X,
             cursorPosition.Y,
             passthroughRegions);
-        if (initialPassthroughDecision.ShouldCancel)
+        if (initialPassthroughDecision.ShouldCancel && !deferInitialPassthroughCancelUntilPointerLeaves)
         {
             return new RegionScreenCaptureResult(
                 false,
@@ -64,7 +65,10 @@ internal static class RegionScreenCaptureWorkflow
                 initialPassthroughDecision.ScreenPoint);
         }
 
-        var selector = new RegionSelectionOverlayWindow(virtualBounds, passthroughRegions);
+        var selector = new RegionSelectionOverlayWindow(
+            virtualBounds,
+            passthroughRegions,
+            deferInitialPassthroughCancelUntilPointerLeaves ? cursorPosition : null);
         var accepted = ShowSelectionOverlay(selector);
         if (!accepted || !selector.TryGetSelection(out var selection))
         {

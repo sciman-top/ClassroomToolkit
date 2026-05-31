@@ -15,8 +15,10 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
 
     private readonly HookProc _keyboardProc;
     private readonly HookProc _mouseProc;
+    private readonly object _suppressedKeyboardKeysSync = new();
     private IntPtr _keyboardHook;
     private IntPtr _mouseHook;
+    private HashSet<VirtualKey> _suppressedKeyboardKeys = [];
     private bool _interceptEnabled;
     private bool _blockOnly;
     private bool _interceptKeyboard = true;
@@ -63,4 +65,23 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
     public void SetInterceptWheel(bool enabled) => _interceptWheel = enabled;
 
     public void SetEmitWheelOnBlock(bool enabled) => _emitWheelOnBlock = enabled;
+
+    public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey>? keys)
+    {
+        lock (_suppressedKeyboardKeysSync)
+        {
+            _suppressedKeyboardKeys = keys?
+                .Where(key => key != VirtualKey.None)
+                .ToHashSet()
+                ?? [];
+        }
+    }
+
+    private bool IsKeyboardKeySuppressed(VirtualKey key)
+    {
+        lock (_suppressedKeyboardKeysSync)
+        {
+            return _suppressedKeyboardKeys.Contains(key);
+        }
+    }
 }

@@ -13,6 +13,8 @@ public partial class RegionSelectionOverlayWindow : Window
 {
     private readonly DrawingRectangle _virtualBounds;
     private readonly DrawingRectangle[] _passthroughRegions;
+    private readonly DrawingRectangle? _initialPassthroughRegion;
+    private bool _ignoreInitialPassthroughHover;
     private bool _isSelecting;
     private System.Windows.Point _startPoint;
     private Rect _selectionRect;
@@ -23,13 +25,16 @@ public partial class RegionSelectionOverlayWindow : Window
 
     public RegionSelectionOverlayWindow(
         DrawingRectangle virtualBounds,
-        IReadOnlyCollection<DrawingRectangle>? passthroughRegions = null)
+        IReadOnlyCollection<DrawingRectangle>? passthroughRegions = null,
+        DrawingPoint? initialPointerScreenPoint = null)
     {
         InitializeComponent();
         _virtualBounds = virtualBounds;
         _passthroughRegions = passthroughRegions?
             .Where(region => region.Width > 0 && region.Height > 0)
             .ToArray() ?? Array.Empty<DrawingRectangle>();
+        _initialPassthroughRegion = ResolveInitialPassthroughRegion(_passthroughRegions, initialPointerScreenPoint);
+        _ignoreInitialPassthroughHover = _initialPassthroughRegion.HasValue;
         Left = virtualBounds.Left;
         Top = virtualBounds.Top;
         Width = Math.Max(virtualBounds.Width, 1);
@@ -217,6 +222,11 @@ public partial class RegionSelectionOverlayWindow : Window
 
         var screenX = (int)Math.Round(Left + point.X);
         var screenY = (int)Math.Round(Top + point.Y);
+        if (ShouldIgnoreInitialPassthroughHover(screenX, screenY, inputKind))
+        {
+            return false;
+        }
+
         for (var i = 0; i < _passthroughRegions.Length; i++)
         {
             if (!_passthroughRegions[i].Contains(screenX, screenY))
@@ -233,6 +243,46 @@ public partial class RegionSelectionOverlayWindow : Window
         }
 
         return false;
+    }
+
+    private bool ShouldIgnoreInitialPassthroughHover(
+        int screenX,
+        int screenY,
+        RegionScreenCapturePassthroughInputKind inputKind)
+    {
+        if (!_ignoreInitialPassthroughHover || !_initialPassthroughRegion.HasValue)
+        {
+            return false;
+        }
+
+        var insideInitialRegion = _initialPassthroughRegion.Value.Contains(screenX, screenY);
+        if (!insideInitialRegion)
+        {
+            _ignoreInitialPassthroughHover = false;
+            return false;
+        }
+
+        return inputKind == RegionScreenCapturePassthroughInputKind.PointerMove;
+    }
+
+    private static DrawingRectangle? ResolveInitialPassthroughRegion(
+        DrawingRectangle[] passthroughRegions,
+        DrawingPoint? initialPointerScreenPoint)
+    {
+        if (!initialPointerScreenPoint.HasValue)
+        {
+            return null;
+        }
+
+        for (var i = 0; i < passthroughRegions.Length; i++)
+        {
+            if (passthroughRegions[i].Contains(initialPointerScreenPoint.Value))
+            {
+                return passthroughRegions[i];
+            }
+        }
+
+        return null;
     }
 
     internal bool CancelFromToolbarHandledPress()

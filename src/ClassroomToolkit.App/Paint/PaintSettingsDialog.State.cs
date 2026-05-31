@@ -137,7 +137,9 @@ public partial class PaintSettingsDialog : Window
         WhiteboardBrushPreset WhiteboardPreset,
         CalligraphyBrushPreset CalligraphyPreset,
         ClassroomWritingMode ClassroomWritingMode,
-        int BrushSizePx,
+        int QuickBrushSize1Px,
+        int QuickBrushSize2Px,
+        int QuickBrushSize3Px,
         int BrushOpacityPercent,
         int EraserSizePx,
         bool CalligraphyInkBloomEnabled,
@@ -198,6 +200,9 @@ public partial class PaintSettingsDialog : Window
     public string PresentationClassifierOverridesJson { get; private set; } = string.Empty;
     public bool ForcePresentationForegroundOnFullscreen { get; private set; }
     public double BrushSize { get; private set; }
+    public double QuickBrushSize1 { get; private set; } = 6;
+    public double QuickBrushSize2 { get; private set; } = 12;
+    public double QuickBrushSize3 { get; private set; } = 24;
     public byte BrushOpacity { get; private set; }
     public PaintBrushStyle BrushStyle { get; private set; } = PaintBrushStyle.StandardRibbon;
     public WhiteboardBrushPreset WhiteboardPreset { get; private set; } = WhiteboardBrushPreset.Smooth;
@@ -234,6 +239,7 @@ public partial class PaintSettingsDialog : Window
     private bool _suppressSectionDirtyTracking = true;
     private bool _advancedModeEnabled;
     private string _workingPresentationClassifierOverridesJson = string.Empty;
+    private double _initialBrushSize = 12;
     private PresetBrushSectionState _initialPresetBrushSectionState;
     private SceneSectionState _initialSceneSectionState;
     private AdvancedSectionState _initialAdvancedSectionState;

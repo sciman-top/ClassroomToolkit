@@ -68,10 +68,11 @@ public partial class PaintToolbarWindow
 
     private void ApplyQuickColorSelection(int index)
     {
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
+        PrepareForNonBoardToolbarAction();
 
         var shouldResetShape = _shapeType != PaintShapeType.None;
         var selectedColor = _quickColors[index];
+        _brushSize = _quickBrushSizes[index];
 
         // 更新颜色选择状态
         UpdateQuickColorSelection(selectedColor);
@@ -126,7 +127,7 @@ public partial class PaintToolbarWindow
         }
 
         ResetPendingSecondTapState();
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
+        PrepareForNonBoardToolbarAction();
         var shapeType = ResolveEffectiveShapeType();
         ApplyShapeType(shapeType);
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: true);
@@ -174,7 +175,19 @@ public partial class PaintToolbarWindow
             RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();
         }
 
-        if (IsSessionCaptureWhiteboardActive())
+        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
+        var shouldEnterWhiteboardBySecondTap = _pendingSecondTapTarget == ToolbarSecondTapTarget.Board;
+        var action = ToolbarBoardClickActionPolicy.Resolve(
+            sessionCaptureWhiteboardActive: IsSessionCaptureWhiteboardActive(),
+            whiteboardActive: whiteboardActive,
+            shouldEnterWhiteboardBySecondTap: shouldEnterWhiteboardBySecondTap,
+            directWhiteboardEntryArmed: _directWhiteboardEntryArmed,
+            resumeRegionCaptureArmed: _resumeRegionCaptureArmed,
+            regionCapturePending: _regionCapturePending,
+            photoModeActive: _overlay?.IsPhotoModeActive == true);
+        ResetPendingSecondTapState();
+
+        if (action == ToolbarBoardClickAction.ExitSessionCaptureWhiteboard)
         {
             ClearDirectWhiteboardEntryArm();
             _regionCapturePending = false;
@@ -185,8 +198,7 @@ public partial class PaintToolbarWindow
             return;
         }
 
-        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
-        if (whiteboardActive)
+        if (action == ToolbarBoardClickAction.ExitWhiteboard)
         {
             ClearDirectWhiteboardEntryArm();
             _regionCapturePending = false;
@@ -195,24 +207,7 @@ public partial class PaintToolbarWindow
             return;
         }
 
-        var shouldEnterWhiteboardBySecondTap = _pendingSecondTapTarget == ToolbarSecondTapTarget.Board;
-        ResetPendingSecondTapState();
-        if (shouldEnterWhiteboardBySecondTap)
-        {
-            _lastBoardPrimaryAction = BoardPrimaryAction.EnterWhiteboard;
-            EnterWhiteboardAction();
-            return;
-        }
-
-        if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)
-            && _overlay?.IsPhotoModeActive != true)
-        {
-            _lastBoardPrimaryAction = BoardPrimaryAction.EnterWhiteboard;
-            EnterWhiteboardAction();
-            return;
-        }
-
-        if (_overlay?.IsPhotoModeActive == true)
+        if (action == ToolbarBoardClickAction.EnterWhiteboard)
         {
             _lastBoardPrimaryAction = BoardPrimaryAction.EnterWhiteboard;
             EnterWhiteboardAction();
@@ -266,7 +261,11 @@ public partial class PaintToolbarWindow
     {
         ResetPendingSecondTapState();
         BoardActionsPopup.IsOpen = false;
-        OpenBoardColorDialog();
+        if (TryApplyBoardColorFromDialog())
+        {
+            _lastBoardPrimaryAction = BoardPrimaryAction.EnterWhiteboard;
+            EnterWhiteboardAction();
+        }
     }
 
     private void ResetPendingSecondTapState()

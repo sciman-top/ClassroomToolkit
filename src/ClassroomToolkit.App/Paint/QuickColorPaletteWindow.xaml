@@ -20,6 +20,10 @@
             <Border Background="{StaticResource Brush_Surface_Primary}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
             </Border>
+            <TextBlock Text="粗细" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,8,0,4"/>
+            <Border Background="{StaticResource Brush_Surface_Primary}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+                <StackPanel x:Name="BrushSizeOptionsPanel" Orientation="Horizontal" />
+            </Border>
         </StackPanel>
     </Border>
 </Window>

@@ -41,12 +41,11 @@ public partial class PaintOverlayWindow
         }
 
         var snapshot = _globalInkHistory[^1];
-        _globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);
-
         if (!TryApplyGlobalUndoSnapshot(snapshot))
         {
             return false;
         }
+        _globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);
         return true;
     }
 
@@ -68,6 +67,9 @@ public partial class PaintOverlayWindow
             RedrawInkSurface();
             MarkInkPageModified(_currentDocumentPath, _currentPageIndex, snapshotHash, _inkStrokes);
             NotifyInkStateChanged(updateActiveSnapshot: true);
+            RemoveMatchingCurrentInkHistorySnapshot(snapshot, snapshotHash);
+            PersistUndoRestoredPhotoInkSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes);
+            RequestCrossPageDisplayUpdate(CrossPageUpdateSources.UndoSnapshot);
             return true;
         }
 
@@ -86,11 +88,52 @@ public partial class PaintOverlayWindow
             {
                 _photoCache.Set(cacheKey, snapshotStrokes);
             }
+
+            InvalidateNeighborInkCache(cacheKey);
         }
 
         MarkInkPageModified(snapshot.SourcePath, snapshot.PageIndex, snapshotHash, snapshotStrokes);
+        PersistUndoRestoredPhotoInkSnapshot(snapshot.SourcePath, snapshot.PageIndex, snapshotStrokes);
         RequestCrossPageDisplayUpdate(CrossPageUpdateSources.UndoSnapshot);
         return true;
+    }
+
+    private void RemoveMatchingCurrentInkHistorySnapshot(GlobalInkSnapshot snapshot, string snapshotHash)
+    {
+        if (_inkHistory.Count == 0)
+        {
+            return;
+        }
+
+        var local = _inkHistory[^1];
+        if (!string.Equals(local.SourcePath, snapshot.SourcePath, StringComparison.OrdinalIgnoreCase)
+            || local.PageIndex != snapshot.PageIndex
+            || !string.Equals(local.Hash, snapshotHash, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _inkHistory.RemoveAt(_inkHistory.Count - 1);
+    }
+
+    private void PersistUndoRestoredPhotoInkSnapshot(
+        string sourcePath,
+        int pageIndex,
+        IReadOnlyList<InkStrokeData> strokes)
+    {
+        if (!_photoModeActive || !_inkSaveEnabled || _inkPersistence == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return;
+        }
+
+        _inkSidecarAutoSaveTimer?.Stop();
+        _inkSidecarAutoSaveGate.NextGeneration();
+        PersistInkToSidecar(CloneInkStrokes(strokes), sourcePath, pageIndex);
     }
 
     public void UpdateNeighborPrefetchRadiusMax(int maxRadius)

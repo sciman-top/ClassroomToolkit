@@ -165,37 +165,79 @@
                            Margin="0,16,0,8"
                            Foreground="{StaticResource Brush_Text_Secondary}"
                            FontWeight="SemiBold"/>
-                <Grid Margin="0,0,0,16">
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="44"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="笔画粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                    <TextBlock Text="笔画粗细 1" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
                     <Slider Grid.Column="1" x:Name="BrushSizeSlider" Minimum="1" Maximum="50" ValueChanged="OnBrushSizeChanged" Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="2" x:Name="BrushSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    <Grid Grid.Column="2" Width="56" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="BrushSizePreview" Fill="{StaticResource Brush_Text_Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Grid.Column="3" x:Name="BrushSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="44"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="笔画粗细 2" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                    <Slider Grid.Column="1" x:Name="BrushSize2Slider" Minimum="1" Maximum="50" ValueChanged="OnBrushSizeChanged" Margin="0,0,8,0"/>
+                    <Grid Grid.Column="2" Width="56" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="BrushSize2Preview" Fill="{StaticResource Brush_Text_Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Grid.Column="3" x:Name="BrushSize2Value" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                 <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="44"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="笔画粗细 3" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
+                    <Slider Grid.Column="1" x:Name="BrushSize3Slider" Minimum="1" Maximum="50" ValueChanged="OnBrushSizeChanged" Margin="0,0,8,0"/>
+                    <Grid Grid.Column="2" Width="56" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="BrushSize3Preview" Fill="{StaticResource Brush_Text_Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Grid.Column="3" x:Name="BrushSize3Value" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="44"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="橡皮粗细" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
                     <Slider Grid.Column="1" x:Name="EraserSizeSlider" Minimum="6" Maximum="60" ValueChanged="OnEraserSizeChanged" Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="2" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    <Grid Grid.Column="2" Width="64" Height="38" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="EraserSizePreview" Fill="{StaticResource Brush_Warning}" Opacity="0.85" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Grid.Column="3" x:Name="EraserSizeValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="44"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="不透明度" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
                     <Slider Grid.Column="1" x:Name="BrushOpacitySlider" Minimum="0" Maximum="100" ValueChanged="OnBrushOpacityChanged" Margin="0,0,8,0"/>
-                    <TextBlock Grid.Column="2" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                    <Grid Grid.Column="2" Width="56" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse x:Name="BrushOpacityPreview" Width="24" Height="24" Fill="{StaticResource Brush_Text_Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Grid.Column="3" x:Name="BrushOpacityValue" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
                 </Grid>
 
                             </StackPanel>
@@ -210,15 +252,6 @@
                                                    Foreground="{StaticResource Brush_Text_Tertiary}"
                                                    FontSize="{StaticResource FontSize_Body_S}"
                                                    Margin="0,0,0,12"/>
-                                        <Grid Margin="0,0,0,16">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="图形工具" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
-                                            <ComboBox Grid.Column="1" x:Name="ShapeCombo" Height="{StaticResource Size_Button_Icon_Regular}"/>
-                                        </Grid>
-
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="100"/>
@@ -227,6 +260,7 @@
                                             <TextBlock Text="工具条缩放" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontWeight="Medium"/>
                                             <ComboBox Grid.Column="1" x:Name="ToolbarScaleCombo" Height="{StaticResource Size_Button_Icon_Regular}"/>
                                         </Grid>
+                                        <ComboBox x:Name="ShapeCombo" Visibility="Collapsed" IsHitTestVisible="False" Width="0" Height="0"/>
                                     </StackPanel>
                                 </Border>
 

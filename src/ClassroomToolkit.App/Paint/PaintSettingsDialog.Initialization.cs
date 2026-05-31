@@ -11,9 +11,13 @@ public partial class PaintSettingsDialog
         ControlMsPpt = settings.ControlMsPpt;
         ControlWpsPpt = settings.ControlWpsPpt;
         BrushColor = settings.BrushColor;
+        _initialBrushSize = settings.BrushSize;
         QuickColor1 = settings.QuickColor1;
         QuickColor2 = settings.QuickColor2;
         QuickColor3 = settings.QuickColor3;
+        QuickBrushSize1 = settings.QuickBrushSize1;
+        QuickBrushSize2 = settings.QuickBrushSize2;
+        QuickBrushSize3 = settings.QuickBrushSize3;
         _workingPresentationClassifierOverridesJson =
             NormalizePresentationClassifierOverridesJson(settings.PresentationClassifierOverridesJson);
         PresentationClassifierOverridesJson = _workingPresentationClassifierOverridesJson;
@@ -185,7 +189,9 @@ public partial class PaintSettingsDialog
         CalligraphySealCheck.IsChecked = settings.CalligraphySealEnabled;
         UpdateCalligraphyOptionState();
 
-        BrushSizeSlider.Value = Clamp(settings.BrushSize, 1, 50);
+        BrushSizeSlider.Value = Clamp(settings.QuickBrushSize1, 1, 50);
+        BrushSize2Slider.Value = Clamp(settings.QuickBrushSize2, 1, 50);
+        BrushSize3Slider.Value = Clamp(settings.QuickBrushSize3, 1, 50);
         EraserSizeSlider.Value = Clamp(settings.EraserSize, 6, 60);
         BrushOpacitySlider.Value = ToPercent(settings.BrushOpacity);
         CalligraphyOverlayThresholdSlider.Value = ToPercent(settings.CalligraphyOverlayOpacityThreshold);

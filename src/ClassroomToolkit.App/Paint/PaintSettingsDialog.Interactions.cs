@@ -86,7 +86,10 @@ public partial class PaintSettingsDialog : Window
             ? string.Empty
             : _workingPresentationClassifierOverridesJson;
         ForcePresentationForegroundOnFullscreen = ForceForegroundCheck.IsChecked == true;
-        BrushSize = Clamp(BrushSizeSlider.Value, 1, 50);
+        QuickBrushSize1 = Clamp(BrushSizeSlider.Value, 1, 50);
+        QuickBrushSize2 = Clamp(BrushSize2Slider.Value, 1, 50);
+        QuickBrushSize3 = Clamp(BrushSize3Slider.Value, 1, 50);
+        BrushSize = ResolveActiveBrushSize();
         EraserSize = Clamp(EraserSizeSlider.Value, 6, 60);
         BrushOpacity = ToByte(BrushOpacitySlider.Value);
         BrushStyle = ResolveBrushStyle();
@@ -182,7 +185,9 @@ public partial class PaintSettingsDialog : Window
                     SelectClassroomWritingMode(defaults.ClassroomWritingMode);
                     CalligraphyInkBloomCheck.IsChecked = defaults.CalligraphyInkBloomEnabled;
                     CalligraphySealCheck.IsChecked = defaults.CalligraphySealEnabled;
-                    BrushSizeSlider.Value = Clamp(defaults.BrushSize, 1, 50);
+                    BrushSizeSlider.Value = Clamp(defaults.QuickBrushSize1, 1, 50);
+                    BrushSize2Slider.Value = Clamp(defaults.QuickBrushSize2, 1, 50);
+                    BrushSize3Slider.Value = Clamp(defaults.QuickBrushSize3, 1, 50);
                     EraserSizeSlider.Value = Clamp(defaults.EraserSize, 6, 60);
                     BrushOpacitySlider.Value = ToPercent(defaults.BrushOpacity);
                     CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
@@ -274,6 +279,31 @@ public partial class PaintSettingsDialog : Window
     private void OnEraserSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         UpdateEraserSizeLabel();
+    }
+
+    private double ResolveActiveBrushSize()
+    {
+        if (IsSameRgb(BrushColor, QuickColor1))
+        {
+            return QuickBrushSize1;
+        }
+
+        if (IsSameRgb(BrushColor, QuickColor2))
+        {
+            return QuickBrushSize2;
+        }
+
+        if (IsSameRgb(BrushColor, QuickColor3))
+        {
+            return QuickBrushSize3;
+        }
+
+        return Clamp(_initialBrushSize, 1, 50);
+    }
+
+    private static bool IsSameRgb(MediaColor left, MediaColor right)
+    {
+        return left.R == right.R && left.G == right.G && left.B == right.B;
     }
 
     private void OnBrushStyleChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

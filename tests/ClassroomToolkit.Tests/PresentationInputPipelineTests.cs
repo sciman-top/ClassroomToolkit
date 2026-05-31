@@ -66,6 +66,26 @@ public sealed class PresentationInputPipelineTests
     }
 
     [Fact]
+    public void BuildWpsOptions_WheelAsKeyFromKeyboardHook_ShouldForceMessage()
+    {
+        var pipeline = CreatePipeline();
+        pipeline.UpdateWpsMode(WpsInputModeDefaults.Raw);
+        var baseOptions = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            WpsDebounceMs = 120,
+            LockStrategyWhenDegraded = true
+        };
+
+        var options = pipeline.BuildWpsOptions(baseOptions, source: "keyboard");
+
+        options.Strategy.Should().Be(InputStrategy.Message);
+        options.AllowWps.Should().BeTrue();
+        options.AllowOffice.Should().BeFalse();
+    }
+
+    [Fact]
     public void BuildOfficeOptions_ShouldUseOfficeStrategyAndOfficeChannel()
     {
         var pipeline = CreatePipeline();

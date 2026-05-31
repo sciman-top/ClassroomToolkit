@@ -3,10 +3,10 @@
 **类型**: Windows WPF (.NET 10)  
 **适用范围**: 项目级（仓库根）  
 **版本**: 3.98
-**最后更新**: 2026-05-04
+**最后更新**: 2026-05-23
 
 ## 1. 阅读指引（必读）
-- 本文件承接 `GlobalUser/AGENTS.md v9.52`，仅定义本仓落地动作（WHERE/HOW）。
+- 本文件承接 `GlobalUser/AGENTS.md v9.53`，仅定义本仓落地动作（WHERE/HOW）。
 - 本文件是三工具共同项目规则主体；Codex 直接读取，Claude/Gemini 通过各自 wrapper 的 `AGENTS.md` import 承接并只追加平台差异。
 - 固定结构：本文件保持 `1 / A / B / C / D`；Claude/Gemini wrapper 保持 `1 / B / D`，并通过 import 承接本文件 `A/C/D`。
 - 裁决链：`运行事实/代码 > 项目级文件 > 全局文件 > 临时上下文`。

@@ -77,6 +77,7 @@ public partial class MainWindow
                 hasToolbarWindow: toolbarWindow != null))
         {
             _paintWindowOrchestrator.EnsureWindows(_settings);
+            RefreshPresentationNavigationReservations();
         }
         WirePaintWindowOrchestrator();
         WirePaintWindowLifecycle();
@@ -459,6 +460,9 @@ public partial class MainWindow
             }
             _settings.ForcePresentationForegroundOnFullscreen = dialog.ForcePresentationForegroundOnFullscreen;
             _settings.BrushSize = dialog.BrushSize;
+            _settings.QuickBrushSize1 = dialog.QuickBrushSize1;
+            _settings.QuickBrushSize2 = dialog.QuickBrushSize2;
+            _settings.QuickBrushSize3 = dialog.QuickBrushSize3;
             _settings.BrushOpacity = dialog.BrushOpacity;
             _settings.BrushStyle = dialog.BrushStyle;
             _settings.WhiteboardPreset = dialog.WhiteboardPreset;
@@ -492,6 +496,7 @@ public partial class MainWindow
             _inkExportOptions.MaxParallelFiles = _settings.InkExportMaxParallelFiles;
 
             _paintWindowOrchestrator.ApplySettings(_settings);
+            RefreshPresentationNavigationReservations();
         }
         _paintWindowOrchestrator.OverlayWindow?.RestorePresentationFocusIfNeeded(requireFullscreen: true);
     }
@@ -593,7 +598,8 @@ public partial class MainWindow
 
         var captureResult = RegionScreenCaptureWorkflow.TryCaptureToPng(
             ResolveCapturePassthroughRegions(),
-            _toolbarWindow?.TryGetLastInteractionScreenPoint());
+            _toolbarWindow?.TryGetLastInteractionScreenPoint(),
+            deferInitialPassthroughCancelUntilPointerLeaves: true);
 
         if (wasOverlayVisible)
         {

@@ -18,19 +18,23 @@ public sealed class PaintToolbarTouchSettingsContractTests
         xaml.Should().Contain("PreviewTouchDown=\"OnToolbarTouchDragStart\"");
         xaml.Should().NotContain("<Setter Property=\"MinWidth\" Value=\"30\"/>");
         xaml.Should().NotContain("<Setter Property=\"MinHeight\" Value=\"30\"/>");
-        xaml.Should().Contain("ToolTip=\"颜色 1：点按使用，长按换色\"");
+        xaml.Should().Contain("ToolTip=\"画笔 1：点按使用，再点/长按换色和粗细\"");
         xaml.Should().Contain("ToolTip=\"图形：点按使用，长按选择\"");
         xaml.Should().Contain("ToolTipService.Placement\" Value=\"Top\"");
         source.Should().Contain("ToolbarSecondTapIntentPolicy.Resolve(");
         source.Should().Contain("ApplyToolbarTouchMetrics();");
         source.Should().Contain("Math.Ceiling(44.0 / scale)");
         source.Should().Contain("OpenQuickColorDialog(index.Value);");
+        source.Should().Contain("ApplyQuickColorSelection(selectedSizeIndex);");
+        source.Should().Contain("_brushSize = _quickBrushSizes[index];");
         source.Should().Contain("OpenShapeMenu();");
         source.Should().Contain("GetQuickColorDisplayName");
         source.Should().Contain("GetShapeDisplayName");
         paletteSource.Should().Contain("Width = 36");
         paletteSource.Should().Contain("Height = 36");
         paletteSource.Should().Contain("ToolTip = $\"选择{option.Name}\"");
+        paletteSource.Should().Contain("SelectedBrushSizeIndex");
+        paletteSource.Should().Contain("BuildBrushSizeButtons");
     }
 
     private static string GetToolbarXamlPath() => TestPathHelper.ResolveRepoPath(

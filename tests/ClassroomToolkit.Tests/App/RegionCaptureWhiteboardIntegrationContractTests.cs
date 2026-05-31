@@ -20,20 +20,31 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         source.Should().Contain("OnBoardCaptureActionClick");
         source.Should().Contain("OnBoardWhiteboardActionClick");
         source.Should().Contain("OnBoardColorActionClick");
+        source.Should().Contain("ToolbarBoardClickActionPolicy.Resolve(");
         source.Should().Contain("OpenBoardActionsPopup();");
         source.Should().Contain("BoardActionsPopup.IsOpen = !BoardActionsPopup.IsOpen;");
     }
 
     [Fact]
-    public void ToolbarNonBoardActions_ShouldClearRegionCaptureResumeArm_AndExitWhiteboardForToolSwitch()
+    public void ToolbarNonBoardActions_ShouldClearRegionCaptureResumeArm_AndKeepWhiteboardForToolSwitch()
     {
         var source = ReadToolbarSource();
 
-        source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: true);");
-        source.Should().Contain("PrepareForNonBoardToolbarAction(exitWhiteboard: false);");
+        source.Should().Contain("PrepareForNonBoardToolbarAction();");
         source.Should().Contain("ClearDirectWhiteboardEntryArm();");
-        source.Should().Contain("ExitWhiteboardForToolSwitchIfNeeded();");
-        source.Should().Contain("SetBoardActive(false);");
+        source.Should().NotContain("exitWhiteboard");
+        source.Should().NotContain("ExitWhiteboardForToolSwitchIfNeeded");
+    }
+
+    [Fact]
+    public void BoardColorAction_ShouldApplyColorAndEnterWhiteboardImmediately()
+    {
+        var source = ReadToolbarSource();
+
+        source.Should().Contain("if (TryApplyBoardColorFromDialog())");
+        source.Should().Contain("_lastBoardPrimaryAction = BoardPrimaryAction.EnterWhiteboard;");
+        source.Should().Contain("EnterWhiteboardAction();");
+        source.Should().Contain("SetBoardActive(true);");
     }
 
     [Fact]
@@ -86,10 +97,12 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     {
         var toolbarSource = ReadToolbarSource();
         var workflowSource = File.ReadAllText(GetRegionScreenCaptureWorkflowSourcePath());
+        var overlaySource = File.ReadAllText(GetRegionSelectionOverlaySourcePath());
 
         toolbarSource.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress()");
         workflowSource.Should().Contain("ToolbarHandledPress");
         workflowSource.Should().Contain("CancelActiveSelectionFromToolbarHandledPress");
+        overlaySource.Should().Contain("if (_isSelecting || !IsVisible)");
     }
 
     [Fact]
@@ -118,6 +131,7 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
         source.Should().Contain("ApplyPhotoOverlayEntry(");
         source.Should().Contain("overlay.EnsurePhotoWindowedMode();");
         source.Should().Contain("_toolbarWindow?.SetBoardActive(false);");
+        source.Should().Contain("deferInitialPassthroughCancelUntilPointerLeaves: true");
     }
 
     [Fact]
@@ -175,7 +189,9 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
 
         source.Should().Contain("if (_regionCapturePending || _directWhiteboardEntryArmed || _resumeRegionCaptureArmed)");
         source.Should().Contain("RegionScreenCaptureWorkflow.CancelActiveSelectionFromToolbarHandledPress();");
-        source.Should().Contain("if ((_directWhiteboardEntryArmed || _resumeRegionCaptureArmed || _regionCapturePending)");
+        source.Should().Contain("ToolbarBoardClickActionPolicy.Resolve(");
+        source.Should().Contain("regionCapturePending: _regionCapturePending");
+        source.Should().Contain("ToolbarBoardClickAction.EnterWhiteboard");
         source.Should().Contain("ShowBoardHint(\"已进入白板\")");
     }
 
@@ -264,4 +280,3 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     }
 
 }
-

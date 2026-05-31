@@ -149,11 +149,17 @@ internal sealed class PresentationInputPipeline
         {
             strategy = InputStrategy.Message;
         }
-        if (string.Equals(source, "wheel", StringComparison.OrdinalIgnoreCase) && currentOptions.WheelAsKey)
+        if (IsWpsHookNavigationSource(source) && currentOptions.WheelAsKey)
         {
             strategy = InputStrategy.Message;
         }
 
         return strategy;
+    }
+
+    private static bool IsWpsHookNavigationSource(string? source)
+    {
+        return string.Equals(source, "wheel", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(source, "keyboard", StringComparison.OrdinalIgnoreCase);
     }
 }

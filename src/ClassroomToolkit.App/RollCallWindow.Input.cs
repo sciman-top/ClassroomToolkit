@@ -73,6 +73,10 @@ public partial class RollCallWindow
     {
         _viewModel.ToggleMode();
         UpdateRemoteHookState();
+        if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.RefreshPresentationNavigationReservations();
+        }
         UpdatePhotoDisplay(forceHide: true);
         UpdateMinWindowSize();
     }
@@ -128,6 +132,10 @@ public partial class RollCallWindow
         RollCallSettingsApplier.Apply(_settings, patch);
         SaveSettingsSafe();
         ApplySettings(_settings, updatePhoto: false);
+        if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.RefreshPresentationNavigationReservations();
+        }
         HidePhotoOverlay();
     }
 

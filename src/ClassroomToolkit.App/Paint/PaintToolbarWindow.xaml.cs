@@ -22,6 +22,7 @@ public partial class PaintToolbarWindow : Window
 {
     private bool _initializing;
     private readonly MediaColor[] _quickColors = new MediaColor[3];
+    private readonly double[] _quickBrushSizes = new double[3] { 6, 12, 24 };
     private double _brushSize = 12;
     private double _eraserSize = 24;
     private byte _brushOpacity = 255;
@@ -158,6 +159,9 @@ public partial class PaintToolbarWindow : Window
         try
         {
             _brushSize = settings.BrushSize;
+            SetQuickBrushSizeSlot(0, settings.QuickBrushSize1);
+            SetQuickBrushSizeSlot(1, settings.QuickBrushSize2);
+            SetQuickBrushSizeSlot(2, settings.QuickBrushSize3);
             _eraserSize = settings.EraserSize;
             _brushOpacity = settings.BrushOpacity;
             _boardOpacity = 255;
@@ -170,6 +174,7 @@ public partial class PaintToolbarWindow : Window
             SetQuickColorSlot(0, settings.QuickColor1);
             SetQuickColorSlot(1, settings.QuickColor2);
             SetQuickColorSlot(2, settings.QuickColor3);
+            _brushSize = ResolveBrushSizeForColor(settings.BrushColor, settings.BrushSize);
             BoardButton.IsChecked = _boardActive;
             UpdateQuickColorSelection(settings.BrushColor);
             ApplyUiScale(settings.PaintToolbarScale);
@@ -261,7 +266,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
         ResetPendingSecondTapState();
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
+        PrepareForNonBoardToolbarAction();
         if (ReferenceEquals(sender, CursorButton))
         {
             SelectToolMode(PaintToolMode.Cursor, allowToggleOffCurrent: false);
@@ -283,7 +288,7 @@ public partial class PaintToolbarWindow : Window
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
         ResetPendingSecondTapState();
-        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
+        PrepareForNonBoardToolbarAction();
         if (_overlay != null)
         {
             _overlay.ClearAll();
@@ -297,7 +302,7 @@ public partial class PaintToolbarWindow : Window
     private void OnUndoClick(object sender, RoutedEventArgs e)
     {
         ResetPendingSecondTapState();
-        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
+        PrepareForNonBoardToolbarAction();
         if (_overlay != null)
         {
             _overlay.Undo();
@@ -321,7 +326,7 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
+        PrepareForNonBoardToolbarAction();
         ApplyShapeType(type);
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
     }
@@ -353,7 +358,7 @@ public partial class PaintToolbarWindow : Window
 
     private void OnPhotoOpenClick(object sender, RoutedEventArgs e)
     {
-        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
+        PrepareForNonBoardToolbarAction();
         SafeActionExecutionExecutor.TryExecute(
             () => PhotoOpenRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: photo open callback failed: {ex.Message}"));
@@ -431,19 +436,25 @@ public partial class PaintToolbarWindow : Window
 
     private void OpenBoardColorDialog()
     {
+        _ = TryApplyBoardColorFromDialog();
+    }
+
+    private bool TryApplyBoardColorFromDialog()
+    {
         var dialog = new BoardColorDialog
         {
             Owner = this
         };
         if (!TryShowDialogWithDiagnostics(dialog, nameof(BoardColorDialog)) || dialog.SelectedColor == null)
         {
-            return;
+            return false;
         }
         var color = dialog.SelectedColor.Value;
         ApplyBoardColor(color);
         SafeActionExecutionExecutor.TryExecute(
             () => BoardColorChanged?.Invoke(color),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: board color callback failed: {ex.Message}"));
+        return true;
     }
 
     private void ApplyBoardColor(MediaColor color)
@@ -622,8 +633,8 @@ public partial class PaintToolbarWindow : Window
 
     private void OpenQuickColorDialog(int index)
     {
-        PrepareForNonBoardToolbarAction(exitWhiteboard: true);
-        var picker = new QuickColorPaletteWindow
+        PrepareForNonBoardToolbarAction();
+        var picker = new QuickColorPaletteWindow(_quickBrushSizes, index)
         {
             Owner = this
         };
@@ -634,10 +645,24 @@ public partial class PaintToolbarWindow : Window
             picker.Left = anchor.X;
             picker.Top = anchor.Y;
         }
-        if (!TryShowDialogWithDiagnostics(picker, nameof(QuickColorPaletteWindow)) || picker.SelectedColor == null)
+        if (!TryShowDialogWithDiagnostics(picker, nameof(QuickColorPaletteWindow)))
         {
             return;
         }
+
+        if (picker.SelectedBrushSizeIndex is int selectedSizeIndex
+            && selectedSizeIndex >= 0
+            && selectedSizeIndex < _quickColors.Length)
+        {
+            ApplyQuickColorSelection(selectedSizeIndex);
+            return;
+        }
+
+        if (picker.SelectedColor == null)
+        {
+            return;
+        }
+
         var color = picker.SelectedColor.Value;
         SetQuickColorSlot(index, color);
         SafeActionExecutionExecutor.TryExecute(
@@ -658,6 +683,7 @@ public partial class PaintToolbarWindow : Window
 
         // 更新颜色选择状态
         UpdateQuickColorSelection(color);
+        _brushSize = _quickBrushSizes[index];
 
         // 应用画笔设置
         if (_overlay != null)
@@ -693,6 +719,17 @@ public partial class PaintToolbarWindow : Window
         UpdateQuickColorButton(index, color);
     }
 
+    private void SetQuickBrushSizeSlot(int index, double brushSize)
+    {
+        if (index < 0 || index >= _quickBrushSizes.Length)
+        {
+            return;
+        }
+
+        _quickBrushSizes[index] = Math.Clamp(brushSize, 1.0, 50.0);
+        UpdateQuickColorButton(index, _quickColors[index]);
+    }
+
     private void UpdateQuickColorButton(int index, MediaColor color)
     {
         var button = GetQuickColorButton(index);
@@ -702,7 +739,8 @@ public partial class PaintToolbarWindow : Window
         }
         button.Background = new SolidColorBrush(color);
         button.Foreground = GetContrastingBrush(color);
-        button.ToolTip = $"颜色 {index + 1}：{GetQuickColorDisplayName(color)}。点按使用，再点/长按换色";
+        button.FontSize = ResolveToolbarBrushPreviewSize(_quickBrushSizes[index]);
+        button.ToolTip = $"画笔 {index + 1}：{GetQuickColorDisplayName(color)}，{Math.Round(_quickBrushSizes[index])}px。点按使用，再点/长按换色和粗细";
     }
 
     private ToggleButton? GetQuickColorButton(int index)
@@ -714,6 +752,29 @@ public partial class PaintToolbarWindow : Window
             2 => QuickColor3Button,
             _ => null
         };
+    }
+
+    private double ResolveBrushSizeForColor(MediaColor color, double fallback)
+    {
+        for (var i = 0; i < _quickColors.Length; i++)
+        {
+            if (IsSameRgb(_quickColors[i], color))
+            {
+                return _quickBrushSizes[i];
+            }
+        }
+
+        return Math.Clamp(fallback, 1.0, 50.0);
+    }
+
+    private static double ResolveToolbarBrushPreviewSize(double brushSize)
+    {
+        return Math.Clamp(brushSize * 0.55, 7.0, 20.0);
+    }
+
+    private static bool IsSameRgb(MediaColor left, MediaColor right)
+    {
+        return left.R == right.R && left.G == right.G && left.B == right.B;
     }
 
     private static SolidColorBrush GetContrastingBrush(MediaColor color)
@@ -784,24 +845,20 @@ public partial class PaintToolbarWindow : Window
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
         ResetPendingSecondTapState();
-        PrepareForNonBoardToolbarAction(exitWhiteboard: false);
+        PrepareForNonBoardToolbarAction();
         SafeActionExecutionExecutor.TryExecute(
             () => SettingsRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: settings callback failed: {ex.Message}"));
     }
 
 
-    private void PrepareForNonBoardToolbarAction(bool exitWhiteboard)
+    private void PrepareForNonBoardToolbarAction()
     {
         if (BoardActionsPopup != null)
         {
             BoardActionsPopup.IsOpen = false;
         }
         ClearDirectWhiteboardEntryArm();
-        if (exitWhiteboard)
-        {
-            ExitWhiteboardForToolSwitchIfNeeded();
-        }
     }
 
     private void ClearNonBoardSelectionVisualState()
@@ -821,17 +878,6 @@ public partial class PaintToolbarWindow : Window
         {
             _initializing = false;
         }
-    }
-
-    private void ExitWhiteboardForToolSwitchIfNeeded()
-    {
-        var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
-        if (!whiteboardActive)
-        {
-            return;
-        }
-
-        SetBoardActive(false);
     }
 
     private void UpdateQuickColorSelection(MediaColor color)

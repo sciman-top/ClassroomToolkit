@@ -314,6 +314,11 @@ public sealed partial class AppSettingsService
         return Math.Max(0, debounceMs);
     }
 
+    private static double NormalizeBrushSize(double size)
+    {
+        return Math.Clamp(size, 1.0, 50.0);
+    }
+
     private static int NormalizePresentationAutoFallbackFailureThreshold(int threshold)
     {
         return Math.Clamp(

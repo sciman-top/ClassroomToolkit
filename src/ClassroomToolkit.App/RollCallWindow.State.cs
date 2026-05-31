@@ -12,6 +12,11 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow
 {
+    internal bool IsRemoteGroupSwitchNavigationReservationActive =>
+        _viewModel.RemoteGroupSwitchEnabled && _viewModel.IsRollCallMode;
+
+    internal string RemoteGroupSwitchNavigationReservationKey => _viewModel.RemoteGroupSwitchKey;
+
     private void OnDataLoadFailed(string message)
     {
         var owner = System.Windows.Application.Current?.MainWindow;

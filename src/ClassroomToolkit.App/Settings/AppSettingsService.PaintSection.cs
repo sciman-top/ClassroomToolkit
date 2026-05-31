@@ -7,7 +7,10 @@ public sealed partial class AppSettingsService
 {
     private static void ApplyPaintSettings(Dictionary<string, string> paint, AppSettings settings)
     {
-        settings.BrushSize = GetDouble(paint, "brush_base_size", settings.BrushSize);
+        settings.BrushSize = NormalizeBrushSize(GetDouble(paint, "brush_base_size", settings.BrushSize));
+        settings.QuickBrushSize1 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_1", settings.QuickBrushSize1));
+        settings.QuickBrushSize2 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_2", settings.QuickBrushSize2));
+        settings.QuickBrushSize3 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_3", settings.QuickBrushSize3));
         settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
         settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
         settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
@@ -192,7 +195,10 @@ public sealed partial class AppSettingsService
         AppSettings settings)
     {
         var paint = GetOrCreate(data, "Paint");
-        paint["brush_base_size"] = settings.BrushSize.ToString("0.##", CultureInfo.InvariantCulture);
+        paint["brush_base_size"] = NormalizeBrushSize(settings.BrushSize).ToString("0.##", CultureInfo.InvariantCulture);
+        paint["quick_brush_size_1"] = NormalizeBrushSize(settings.QuickBrushSize1).ToString("0.##", CultureInfo.InvariantCulture);
+        paint["quick_brush_size_2"] = NormalizeBrushSize(settings.QuickBrushSize2).ToString("0.##", CultureInfo.InvariantCulture);
+        paint["quick_brush_size_3"] = NormalizeBrushSize(settings.QuickBrushSize3).ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_style"] = settings.BrushStyle.ToString();
         paint["whiteboard_preset"] = settings.WhiteboardPreset.ToString();
         paint["calligraphy_preset"] = settings.CalligraphyPreset.ToString();

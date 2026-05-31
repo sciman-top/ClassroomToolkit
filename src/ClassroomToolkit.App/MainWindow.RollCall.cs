@@ -73,6 +73,7 @@ public partial class MainWindow
         var path = ResolveStudentWorkbookPath();
         _rollCallWindow = _rollCallWindowFactory.Create(path);
         WireRollCallWindow(_rollCallWindow);
+        RefreshPresentationNavigationReservations();
     }
 
     private void WireRollCallWindow(RollCallWindow rollCallWindow)
@@ -108,6 +109,7 @@ public partial class MainWindow
         }
 
         _rollCallWindow = null;
+        RefreshPresentationNavigationReservations();
         UpdateToggleButtons();
     }
 
@@ -153,10 +155,22 @@ public partial class MainWindow
         RollCallSettingsApplier.Apply(_settings, patch);
         SaveSettings();
         _rollCallWindow?.ApplySettings(_settings);
+        RefreshPresentationNavigationReservations();
     }
 
     private IReadOnlyList<string> ResolveAvailableClasses()
     {
         return _rollCallWindow?.AvailableClasses ?? Array.Empty<string>();
+    }
+
+    internal void RefreshPresentationNavigationReservations()
+    {
+        var reservationActive = _rollCallWindow?.IsRemoteGroupSwitchNavigationReservationActive == true;
+        var reservationKey = reservationActive
+            ? _rollCallWindow?.RemoteGroupSwitchNavigationReservationKey
+            : null;
+        _paintWindowOrchestrator.OverlayWindow?.UpdateReservedPresentationNavigationKeys(
+            reservationActive,
+            reservationKey);
     }
 }

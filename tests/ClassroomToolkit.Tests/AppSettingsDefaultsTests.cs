@@ -28,4 +28,14 @@ public sealed class AppSettingsDefaultsTests
         settings.PhotoRememberTransform.Should().BeTrue();
         settings.PhotoInertiaProfile.Should().Be("standard");
     }
+
+    [Fact]
+    public void Defaults_ShouldExposeThreeQuickBrushSizePresets()
+    {
+        var settings = new AppSettings();
+
+        settings.QuickBrushSize1.Should().Be(6);
+        settings.QuickBrushSize2.Should().Be(12);
+        settings.QuickBrushSize3.Should().Be(24);
+    }
 }

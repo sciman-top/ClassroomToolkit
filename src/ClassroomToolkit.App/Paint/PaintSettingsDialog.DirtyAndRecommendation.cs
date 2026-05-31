@@ -29,7 +29,9 @@ public partial class PaintSettingsDialog
             || current.WhiteboardPreset != initial.WhiteboardPreset
             || current.CalligraphyPreset != initial.CalligraphyPreset
             || current.ClassroomWritingMode != initial.ClassroomWritingMode
-            || current.BrushSizePx != initial.BrushSizePx
+            || current.QuickBrushSize1Px != initial.QuickBrushSize1Px
+            || current.QuickBrushSize2Px != initial.QuickBrushSize2Px
+            || current.QuickBrushSize3Px != initial.QuickBrushSize3Px
             || current.BrushOpacityPercent != initial.BrushOpacityPercent
             || current.EraserSizePx != initial.EraserSizePx
             || current.CalligraphyInkBloomEnabled != initial.CalligraphyInkBloomEnabled

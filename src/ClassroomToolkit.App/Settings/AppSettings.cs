@@ -111,6 +111,9 @@ public sealed class AppSettings
     public double PhotoUnifiedTranslateY { get; set; }
 
     public double BrushSize { get; set; } = 12;
+    public double QuickBrushSize1 { get; set; } = 6;
+    public double QuickBrushSize2 { get; set; } = 12;
+    public double QuickBrushSize3 { get; set; } = 24;
     public double EraserSize { get; set; } = 24;
     public byte BrushOpacity { get; set; } = 255;
     public byte BoardOpacity { get; set; } = 255;

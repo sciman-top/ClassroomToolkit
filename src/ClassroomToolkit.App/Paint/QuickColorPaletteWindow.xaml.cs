@@ -1,13 +1,19 @@
+using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using MediaColor = System.Windows.Media.Color;
+using MediaBrushes = System.Windows.Media.Brushes;
+using WpfHorizontalAlignment = System.Windows.HorizontalAlignment;
+using WpfOrientation = System.Windows.Controls.Orientation;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class QuickColorPaletteWindow : Window
 {
     private sealed record ColorOption(string Name, MediaColor Color);
+    private sealed record BrushSizeOption(int Index, double Size);
 
     private static readonly ColorOption[] Options =
     {
@@ -22,11 +28,18 @@ public partial class QuickColorPaletteWindow : Window
     };
 
     public MediaColor? SelectedColor { get; private set; }
+    public int? SelectedBrushSizeIndex { get; private set; }
 
     public QuickColorPaletteWindow()
+        : this(Array.Empty<double>(), selectedBrushSizeIndex: -1)
+    {
+    }
+
+    public QuickColorPaletteWindow(IReadOnlyList<double> brushSizes, int selectedBrushSizeIndex)
     {
         InitializeComponent();
         BuildButtons();
+        BuildBrushSizeButtons(brushSizes, selectedBrushSizeIndex);
         Deactivated += OnWindowDeactivated;
         Closed += OnWindowClosed;
     }
@@ -52,6 +65,79 @@ public partial class QuickColorPaletteWindow : Window
         }
     }
 
+    private void BuildBrushSizeButtons(IReadOnlyList<double> brushSizes, int selectedBrushSizeIndex)
+    {
+        var options = NormalizeBrushSizeOptions(brushSizes);
+        foreach (var option in options)
+        {
+            var isSelected = option.Index == selectedBrushSizeIndex;
+            var button = new System.Windows.Controls.Button
+            {
+                MinWidth = 58,
+                Height = 42,
+                Margin = new Thickness(4, 0, 4, 0),
+                Padding = new Thickness(8, 4, 8, 4),
+                Background = MediaBrushes.White,
+                BorderBrush = isSelected ? MediaBrushes.DodgerBlue : MediaBrushes.Gray,
+                BorderThickness = new Thickness(isSelected ? 2 : 1),
+                Foreground = MediaBrushes.Black,
+                ToolTip = $"选择{Math.Round(option.Size)}px笔画",
+                Tag = option.Index,
+                Content = BuildBrushSizePreview(option.Size)
+            };
+            button.Click += OnBrushSizeButtonClick;
+            BrushSizeOptionsPanel.Children.Add(button);
+        }
+    }
+
+    private static BrushSizeOption[] NormalizeBrushSizeOptions(IReadOnlyList<double> brushSizes)
+    {
+        if (brushSizes.Count >= 3)
+        {
+            return new[]
+            {
+                new BrushSizeOption(0, Math.Clamp(brushSizes[0], 1.0, 50.0)),
+                new BrushSizeOption(1, Math.Clamp(brushSizes[1], 1.0, 50.0)),
+                new BrushSizeOption(2, Math.Clamp(brushSizes[2], 1.0, 50.0))
+            };
+        }
+
+        return new[]
+        {
+            new BrushSizeOption(0, 6),
+            new BrushSizeOption(1, 12),
+            new BrushSizeOption(2, 24)
+        };
+    }
+
+    private static StackPanel BuildBrushSizePreview(double size)
+    {
+        var diameter = Math.Clamp(size, 5.0, 28.0);
+        return new StackPanel
+        {
+            Orientation = WpfOrientation.Horizontal,
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                new System.Windows.Shapes.Ellipse
+                {
+                    Width = diameter,
+                    Height = diameter,
+                    Fill = MediaBrushes.Black,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 5, 0)
+                },
+                new TextBlock
+                {
+                    Text = $"{Math.Round(size)}",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = MediaBrushes.Black
+                }
+            }
+        };
+    }
+
     private void OnColorButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is not System.Windows.Controls.Button { Tag: MediaColor color })
@@ -62,9 +148,19 @@ public partial class QuickColorPaletteWindow : Window
         SelectColor(color);
     }
 
+    private void OnBrushSizeButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: int index })
+        {
+            return;
+        }
+
+        SelectBrushSize(index);
+    }
+
     private void OnWindowDeactivated(object? sender, EventArgs e)
     {
-        if (IsVisible && SelectedColor == null)
+        if (IsVisible && SelectedColor == null && SelectedBrushSizeIndex == null)
         {
             Close();
         }
@@ -82,11 +178,25 @@ public partial class QuickColorPaletteWindow : Window
                 button.Click -= OnColorButtonClick;
             }
         }
+
+        foreach (var child in BrushSizeOptionsPanel.Children)
+        {
+            if (child is System.Windows.Controls.Button button)
+            {
+                button.Click -= OnBrushSizeButtonClick;
+            }
+        }
     }
 
     private void SelectColor(MediaColor color)
     {
         SelectedColor = color;
+        DialogResult = true;
+    }
+
+    private void SelectBrushSize(int index)
+    {
+        SelectedBrushSizeIndex = index;
         DialogResult = true;
     }
 

@@ -50,9 +50,11 @@ public partial class PaintOverlayWindow
                 ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
                 : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
             var options = BuildWpsOptions(source);
-            if (TrySendPresentationCommandToTarget(target, command, options))
+            var sent = TrySendPresentationCommandToTarget(target, command, options);
+            if (sent)
             {
                 RememberWpsNav(direction, target.Handle);
+                RequestPresentationOverlayRetouchIfNeeded(true, $"wps-nav:{source}:{direction}");
                 LogPresentationState($"wps-nav:{source}:{direction}");
                 Debug.WriteLine($"[WpsNavHook] sent source={source} dir={direction}");
             }

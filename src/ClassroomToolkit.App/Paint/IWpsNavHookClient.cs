@@ -8,6 +8,7 @@ internal interface IWpsNavHookClient
     void SetInterceptKeyboard(bool enabled);
     void SetInterceptWheel(bool enabled);
     void SetEmitWheelOnBlock(bool enabled);
+    void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys);
     Task<bool> StartAsync();
     void Stop();
 }
@@ -28,6 +29,8 @@ internal sealed class WpsNavHookClient : IWpsNavHookClient
     public void SetInterceptKeyboard(bool enabled) => _hook.SetInterceptKeyboard(enabled);
     public void SetInterceptWheel(bool enabled) => _hook.SetInterceptWheel(enabled);
     public void SetEmitWheelOnBlock(bool enabled) => _hook.SetEmitWheelOnBlock(enabled);
+    public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys) =>
+        _hook.SetSuppressedKeyboardKeys(keys);
     public Task<bool> StartAsync() => _hook.StartAsync();
     public void Stop() => _hook.Stop();
 }

@@ -1427,6 +1427,7 @@
         <Setter Property="MinHeight" Value="{StaticResource Size_Touch_Target_Bubble_Hit}"/>
         <Setter Property="Margin" Value="2,0"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontSize" Value="20"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="120"/>
         <Setter Property="ToolTipService.BetweenShowDelay" Value="50"/>
         <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
@@ -1441,12 +1442,16 @@
                                  Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"
                                  StrokeThickness="2"/>
                         <Border x:Name="Dot"
-                                Width="20"
-                                Height="20"
-                                CornerRadius="10"
+                                Width="{TemplateBinding FontSize}"
+                                Height="{TemplateBinding FontSize}"
+                                CornerRadius="99"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{StaticResource Brush_Border_Strong}"
-                                BorderThickness="2">
+                                BorderThickness="2"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                             </Border.Effect>
@@ -1455,14 +1460,18 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Ring" Property="Opacity" Value="0.5"/>
-                            <Setter TargetName="Dot" Property="Width" Value="22"/>
-                            <Setter TargetName="Dot" Property="Height" Value="22"/>
-                            <Setter TargetName="Dot" Property="CornerRadius" Value="11"/>
+                            <Setter TargetName="Dot" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Dot" Property="Width" Value="22"/>
-                            <Setter TargetName="Dot" Property="Height" Value="22"/>
-                            <Setter TargetName="Dot" Property="CornerRadius" Value="11"/>
+                            <Setter TargetName="Dot" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
