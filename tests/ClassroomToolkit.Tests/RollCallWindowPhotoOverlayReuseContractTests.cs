@@ -18,6 +18,9 @@ public sealed class RollCallWindowPhotoOverlayReuseContractTests
         ensureOverlayIndex.Should().BeGreaterThan(resolveFromViewModelIndex);
         source.Should().NotContain("_lastPhotoStudentId");
         source.Should().NotContain("ClosePhotoOverlay();");
+        source.Should().NotContain("RecreateHiddenPhotoOverlayIfNeeded");
+        source.Should().NotContain("overlay-recreate");
+        source.Should().NotContain("recreate-hidden-overlay");
     }
 
     private static string GetSourcePath()

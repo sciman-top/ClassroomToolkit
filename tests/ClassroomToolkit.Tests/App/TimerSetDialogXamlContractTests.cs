@@ -22,6 +22,7 @@ public sealed class TimerSetDialogXamlContractTests
         xaml.Should().Contain("x:Name=\"MinutesDownButton\"");
         xaml.Should().Contain("x:Name=\"MinutesUpButton\"");
         xaml.Should().Contain("Style_SecondaryButton");
+        xaml.Should().Contain("Style_TimerValueTextBox\" TargetType=\"TextBox\" BasedOn=\"{StaticResource {x:Type TextBox}}\"");
         xaml.Should().NotContain("<Button.Template>", "stepper buttons should reuse shared button style");
     }
 

@@ -354,10 +354,35 @@ public partial class MainWindow
             rollCallAuxOverlayVisible,
             photoModeActive: _overlayWindow?.IsPhotoModeActive == true);
 
+        _rollCallWindow?.RetouchAuxOverlayWindowsTopmost(strictEnforceZOrder, ResolvePhotoOverlayZOrderAnchor());
         WindowTopmostExecutor.ApplyNoActivate(_toolbarWindow, toolbarVisible, strictEnforceZOrder);
         WindowTopmostExecutor.ApplyNoActivate(_rollCallWindow, rollCallVisible, strictEnforceZOrder);
         WindowTopmostExecutor.ApplyNoActivate(launcherWindow, launcherVisible, strictEnforceZOrder);
-        _rollCallWindow?.RetouchAuxOverlayWindowsTopmost(strictEnforceZOrder);
+    }
+
+    internal Window? ResolvePhotoOverlayZOrderAnchor()
+    {
+        // Match the final critical-window retouch order: toolbar is the lowest
+        // critical floating control, so inserting the photo after it keeps the
+        // photo below toolbar/roll-call/launcher from its first topmost apply.
+        if (IsVisibleZOrderAnchor(_toolbarWindow))
+        {
+            return _toolbarWindow;
+        }
+
+        if (IsVisibleZOrderAnchor(_rollCallWindow))
+        {
+            return _rollCallWindow;
+        }
+
+        var launcherWindow = ResolveLauncherWindow(CaptureLauncherWindowRuntimeSnapshot());
+        return IsVisibleZOrderAnchor(launcherWindow) ? launcherWindow : null;
+    }
+
+    private static bool IsVisibleZOrderAnchor(Window? window)
+    {
+        return window?.IsVisible == true
+            && window.WindowState != WindowState.Minimized;
     }
 
     private void SyncOverlayOwnedWindow(Window? child)

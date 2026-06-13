@@ -23,4 +23,22 @@ internal sealed class NativeWindowTopmostInteropAdapter : IWindowTopmostInteropA
         errorCode = success ? 0 : Marshal.GetLastWin32Error();
         return success;
     }
+
+    public bool TrySetWindowBehindNoActivate(IntPtr hwnd, IntPtr insertAfter, out int errorCode)
+    {
+        var success = NativeMethods.SetWindowPos(
+            hwnd,
+            insertAfter,
+            0,
+            0,
+            0,
+            0,
+            NativeMethods.SwpNoMove
+            | NativeMethods.SwpNoSize
+            | NativeMethods.SwpNoActivate
+            | NativeMethods.SwpNoOwnerZOrder);
+
+        errorCode = success ? 0 : Marshal.GetLastWin32Error();
+        return success;
+    }
 }

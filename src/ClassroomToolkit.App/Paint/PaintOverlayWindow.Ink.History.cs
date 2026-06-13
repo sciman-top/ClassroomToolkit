@@ -80,7 +80,7 @@ public partial class PaintOverlayWindow
         _history.Add(snapshot);
         _currentHistoryMemoryBytes += pixels.Length;
 
-        if (_inkRecordEnabled)
+        if (InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive()))
         {
             var strokeSnapshot = CloneInkStrokes(_inkStrokes);
             var snapshotHash = ComputeInkHash(strokeSnapshot);

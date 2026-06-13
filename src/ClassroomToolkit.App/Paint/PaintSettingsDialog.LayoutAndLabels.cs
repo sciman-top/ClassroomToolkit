@@ -75,7 +75,15 @@ public partial class PaintSettingsDialog
 
     private void UpdateBrushSizeLabel()
     {
-        if (BrushSizeValue == null)
+        if (BrushSizeSlider == null
+            || BrushSize2Slider == null
+            || BrushSize3Slider == null
+            || BrushSizeValue == null
+            || BrushSize2Value == null
+            || BrushSize3Value == null
+            || BrushSizePreview == null
+            || BrushSize2Preview == null
+            || BrushSize3Preview == null)
         {
             return;
         }
@@ -90,7 +98,7 @@ public partial class PaintSettingsDialog
 
     private void UpdateBrushOpacityLabel()
     {
-        if (BrushOpacityValue == null)
+        if (BrushOpacitySlider == null || BrushOpacityValue == null || BrushOpacityPreview == null)
         {
             return;
         }
@@ -101,7 +109,7 @@ public partial class PaintSettingsDialog
 
     private void UpdateEraserSizeLabel()
     {
-        if (EraserSizeValue == null)
+        if (EraserSizeSlider == null || EraserSizeValue == null || EraserSizePreview == null)
         {
             return;
         }
@@ -119,7 +127,7 @@ public partial class PaintSettingsDialog
 
     private void UpdateCalligraphyOverlayThresholdLabel()
     {
-        if (CalligraphyOverlayThresholdValue == null)
+        if (CalligraphyOverlayThresholdSlider == null || CalligraphyOverlayThresholdValue == null)
         {
             return;
         }

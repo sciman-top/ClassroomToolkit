@@ -6,7 +6,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class PhotoOverlayCloseHideGuardContractTests
 {
     [Fact]
-    public void CloseOverlay_ShouldEnterTransparentMaskedState_BeforeHide()
+    public void CloseOverlay_ShouldEnterTransparentPassthroughState_WithoutHide()
     {
         var source = File.ReadAllText(GetSourcePath());
         var closeStart = source.IndexOf("public void CloseOverlay()", StringComparison.Ordinal);
@@ -16,14 +16,28 @@ public sealed class PhotoOverlayCloseHideGuardContractTests
 
         var closeSource = source.Substring(closeStart, closeEnd - closeStart);
         var maskVisibleIndex = closeSource.IndexOf("LoadingMask.Visibility = Visibility.Visible;", StringComparison.Ordinal);
-        var opacityZeroIndex = closeSource.IndexOf("Opacity = 0.0;", StringComparison.Ordinal);
-        var hideIndex = closeSource.IndexOf("Hide();", StringComparison.Ordinal);
+        var inactiveIndex = closeSource.IndexOf("EnterInactivePassthroughState();", StringComparison.Ordinal);
 
         maskVisibleIndex.Should().BeGreaterThan(0);
-        opacityZeroIndex.Should().BeGreaterThan(0);
-        hideIndex.Should().BeGreaterThan(0);
-        maskVisibleIndex.Should().BeLessThan(hideIndex);
-        opacityZeroIndex.Should().BeLessThan(hideIndex);
+        inactiveIndex.Should().BeGreaterThan(0);
+        maskVisibleIndex.Should().BeLessThan(inactiveIndex);
+        closeSource.Should().NotContain("Hide();");
+    }
+
+    [Fact]
+    public void InactivePassthroughState_ShouldDisableHitTestingAndEnableTransparentExtendedStyle()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+        var methodStart = source.IndexOf("private void EnterInactivePassthroughState()", StringComparison.Ordinal);
+        var methodEnd = source.IndexOf("private void SetInputPassthrough(", methodStart, StringComparison.Ordinal);
+        methodStart.Should().BeGreaterThan(0);
+        methodEnd.Should().BeGreaterThan(methodStart);
+
+        var methodSource = source.Substring(methodStart, methodEnd - methodStart);
+
+        methodSource.Should().Contain("Opacity = 0.0;");
+        methodSource.Should().Contain("IsHitTestVisible = false;");
+        methodSource.Should().Contain("SetInputPassthrough(enabled: true);");
     }
 
     private static string GetSourcePath()

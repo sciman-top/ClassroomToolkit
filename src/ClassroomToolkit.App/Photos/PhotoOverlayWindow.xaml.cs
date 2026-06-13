@@ -31,15 +31,22 @@ public partial class PhotoOverlayWindow : Window
     private CancellationTokenSource? _photoLoadCts;
     private string? _cachedBitmapPath;
     private BitmapSource? _cachedBitmap;
+    private Window? _zOrderAnchor;
     private static readonly SolidColorBrush OpaqueFrameGuardBrush = CreateOpaqueFrameGuardBrush();
 
     public event Action<string?>? PhotoClosed;
+
+    public bool IsDisplayActive => IsVisible
+        && Opacity > 0.0
+        && PhotoImage.Source != null
+        && PhotoImage.Visibility == Visibility.Visible;
 
     public PhotoOverlayWindow()
     {
         InitializeComponent();
         ShowActivated = false;
         Focusable = false;
+        IsHitTestVisible = false;
         _autoCloseTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
         {
             Interval = TimeSpan.FromSeconds(1)
@@ -53,6 +60,7 @@ public partial class PhotoOverlayWindow : Window
     private void OnOverlaySourceInitialized(object? sender, EventArgs e)
     {
         _hwnd = new WindowInteropHelper(this).Handle;
+        SetInputPassthrough(enabled: !IsHitTestVisible || Opacity <= 0.0);
     }
 
     private void OnOverlayClosed(object? sender, EventArgs e)
@@ -66,8 +74,9 @@ public partial class PhotoOverlayWindow : Window
         ClearPhotoCache(enterHideGuardState: false);
     }
 
-    public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? owner)
+    public void ShowPhoto(string path, string studentName, string studentId, int durationSeconds, Window? zOrderAnchor)
     {
+        _zOrderAnchor = zOrderAnchor;
         var requestId = Interlocked.Increment(ref _photoLoadRequestId);
         CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
@@ -100,6 +109,7 @@ public partial class PhotoOverlayWindow : Window
             $"req={requestId} path={IOPath.GetFileName(path)} duration={durationSeconds} clearing-old-frame");
         // 显示窗口前先透明，避免系统复用上一帧导致旧图闪现。
         Opacity = 0.0;
+        IsHitTestVisible = false;
 
         // 先清空上一张图并进入遮挡态，避免窗口可见时先闪出旧图。
         PhotoImage.Source = null;
@@ -109,9 +119,15 @@ public partial class PhotoOverlayWindow : Window
         // Force immediate visual state commit while this window is still on-screen
         // so the previous frame is less likely to flash for a single composition frame.
         UpdateLayout();
+        var becameVisibleForPrewarm = EnsureOverlayVisible();
+        if (becameVisibleForPrewarm)
+        {
+            DeferInitialZOrderRetouch(requestId);
+        }
+
         if (!deferShowUntilBitmapReady)
         {
-            EnsureOverlayVisible();
+            _ = EnsureOverlayVisible();
             PhotoOverlayDiagnostics.Log(
                 "show-visible",
                 $"req={requestId} path={IOPath.GetFileName(path)} visible={IsVisible} topmost={Topmost} state={WindowState}");
@@ -120,11 +136,12 @@ public partial class PhotoOverlayWindow : Window
         {
             ApplyWindowedBounds();
             PhotoOverlayDiagnostics.Log(
-                "show-deferred",
-                $"req={requestId} path={IOPath.GetFileName(path)} visible={IsVisible}");
+                "show-prewarm",
+                $"req={requestId} path={IOPath.GetFileName(path)} visible={IsVisible} prewarmed={becameVisibleForPrewarm}");
         }
         // 窗口复显后再次施加透明保护，避免复显首帧复用旧合成帧。
         Opacity = 0.0;
+        IsHitTestVisible = false;
         if (TryGetCachedBitmap(path, out var cachedBitmap))
         {
             PhotoOverlayDiagnostics.Log(
@@ -320,8 +337,7 @@ public partial class PhotoOverlayWindow : Window
             $"path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} studentId={_currentStudentId ?? string.Empty}");
         ClearPhotoCache(enterHideGuardState: true);
         LoadingMask.Visibility = Visibility.Visible;
-        Opacity = 0.0;
-        Hide();
+        EnterInactivePassthroughState();
     }
 
     private void OnAutoCloseTick(object? sender, EventArgs e)
@@ -399,21 +415,29 @@ public partial class PhotoOverlayWindow : Window
                 $"req={requestId} path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} hideWhenFailed={hideWhenFailed}");
             if (hideWhenFailed)
             {
-                Hide();
+                EnterInactivePassthroughState();
             }
             return;
         }
 
         PhotoImage.Source = bitmap;
         PhotoImage.Visibility = Visibility.Visible;
+        var becameVisible = false;
         if (ensureVisibleOnApply || !IsVisible)
         {
-            EnsureOverlayVisible();
+            becameVisible = EnsureOverlayVisible();
             PhotoOverlayDiagnostics.Log(
                 "show-visible",
                 $"req={requestId} path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} visible={IsVisible} topmost={Topmost} state={WindowState} via=apply");
+            if (becameVisible)
+            {
+                DeferRevealAfterInitialZOrderRetouch(requestId);
+            }
         }
-        Opacity = 1.0;
+        if (!becameVisible)
+        {
+            RevealOverlay();
+        }
         PhotoOverlayDiagnostics.Log(
             "apply-success",
             $"req={requestId} path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} bitmap={bitmap.PixelWidth}x{bitmap.PixelHeight} duration={durationSeconds}");
@@ -497,17 +521,18 @@ public partial class PhotoOverlayWindow : Window
             $"req={_photoLoadRequestId} path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} duration={durationSeconds}");
     }
 
-    private void EnsureOverlayVisible()
+    private bool EnsureOverlayVisible()
     {
         ApplyWindowedBounds();
         var becameVisible = false;
         if (!IsVisible)
         {
+            WindowTopmostExecutor.PrepareNoActivateBehind(this, _zOrderAnchor);
             Show();
             becameVisible = true;
         }
 
-        WindowTopmostExecutor.ApplyNoActivate(this, enabled: false, enforceZOrder: false);
+        WindowTopmostExecutor.ApplyNoActivateBehind(this, _zOrderAnchor);
         if (becameVisible)
         {
             SafeActionExecutionExecutor.TryExecute(
@@ -520,6 +545,85 @@ public partial class PhotoOverlayWindow : Window
                 },
                 ex => Debug.WriteLine($"[PhotoOverlayWindow] immediate z-order retouch failed: {ex.Message}"));
         }
+
+        return becameVisible;
+    }
+
+    private void DeferRevealAfterInitialZOrderRetouch(int requestId)
+    {
+        DeferZOrderRetouch(requestId, reveal: true);
+    }
+
+    private void DeferInitialZOrderRetouch(int requestId)
+    {
+        DeferZOrderRetouch(requestId, reveal: false);
+    }
+
+    private void DeferZOrderRetouch(int requestId, bool reveal)
+    {
+        try
+        {
+            _ = Dispatcher.InvokeAsync(
+                () =>
+                {
+                    if (requestId != Volatile.Read(ref _photoLoadRequestId) || !IsVisible)
+                    {
+                        return;
+                    }
+
+                    WindowTopmostExecutor.ApplyNoActivateBehind(this, _zOrderAnchor);
+                    if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
+                    {
+                        mainWindow.RequestImmediateFloatingZOrderRetouch();
+                    }
+
+                    if (reveal)
+                    {
+                        RevealOverlay();
+                    }
+
+                    PhotoOverlayDiagnostics.Log(
+                        reveal ? "show-reveal" : "show-prewarm-retouch",
+                        $"req={requestId} path={IOPath.GetFileName(_currentPhotoPath ?? string.Empty)} mode=deferred-zorder-retouch");
+                },
+                DispatcherPriority.Render);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[PhotoOverlayWindow] deferred z-order retouch dispatch failed: {ex.GetType().Name} - {ex.Message}");
+            if (reveal)
+            {
+                RevealOverlay();
+            }
+        }
+    }
+
+    private void RevealOverlay()
+    {
+        SetInputPassthrough(enabled: false);
+        IsHitTestVisible = true;
+        Opacity = 1.0;
+    }
+
+    private void EnterInactivePassthroughState()
+    {
+        Opacity = 0.0;
+        IsHitTestVisible = false;
+        SetInputPassthrough(enabled: true);
+    }
+
+    private void SetInputPassthrough(bool enabled)
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        _ = WindowStyleExecutor.TryUpdateExtendedStyleBits(
+            _hwnd,
+            setMask: enabled ? WindowStyleBitMasks.WsExTransparent : 0,
+            clearMask: enabled ? 0 : WindowStyleBitMasks.WsExTransparent,
+            out _);
     }
 
     private void UpdateStudentName(string? studentName, bool visible)

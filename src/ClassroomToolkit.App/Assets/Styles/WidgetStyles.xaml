@@ -1434,28 +1434,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Ellipse x:Name="Ring"
-                                 Width="28"
-                                 Height="28"
-                                 Opacity="0"
-                                 Stroke="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"
-                                 StrokeThickness="2"/>
-                        <Border x:Name="Dot"
-                                Width="{TemplateBinding FontSize}"
-                                Height="{TemplateBinding FontSize}"
-                                CornerRadius="99"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource Brush_Border_Strong}"
-                                BorderThickness="2"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <Border.Effect>
-                                <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-                            </Border.Effect>
-                        </Border>
+                    <Grid Background="Transparent" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}">
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Ellipse x:Name="Ring"
+                                     Width="30"
+                                     Height="30"
+                                     Opacity="0"
+                                     Stroke="{StaticResource Brush_Border_Focus}"
+                                     StrokeThickness="2.5"/>
+                            <Border x:Name="Dot"
+                                    Width="22"
+                                    Height="22"
+                                    CornerRadius="99"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding Foreground}"
+                                    BorderThickness="2.5"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <Border.Effect>
+                                    <StaticResource ResourceKey="Shadow_Card_Subtle"/>
+                                </Border.Effect>
+                            </Border>
+                        </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">

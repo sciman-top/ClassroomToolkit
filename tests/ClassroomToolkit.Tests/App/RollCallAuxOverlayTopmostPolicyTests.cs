@@ -7,15 +7,15 @@ namespace ClassroomToolkit.Tests.App;
 public sealed class RollCallAuxOverlayTopmostPolicyTests
 {
     [Fact]
-    public void Resolve_ShouldKeepPhotoOverlayBelowFloatingUtilities()
+    public void Resolve_ShouldKeepPhotoOverlayInTopmostBand_WhenVisible()
     {
         var plan = RollCallAuxOverlayTopmostPolicy.Resolve(
             photoOverlayVisible: true,
             groupOverlayVisible: true,
             enforceZOrder: true);
 
-        plan.PhotoOverlayTopmost.Should().BeFalse();
-        plan.PhotoOverlayEnforceZOrder.Should().BeFalse();
+        plan.PhotoOverlayTopmost.Should().BeTrue();
+        plan.PhotoOverlayEnforceZOrder.Should().BeTrue();
     }
 
     [Theory]

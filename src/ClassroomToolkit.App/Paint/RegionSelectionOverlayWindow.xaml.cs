@@ -287,7 +287,7 @@ public partial class RegionSelectionOverlayWindow : Window
 
     internal bool CancelFromToolbarHandledPress()
     {
-        if (!IsVisible)
+        if (_isSelecting || !IsVisible)
         {
             return false;
         }
@@ -302,7 +302,7 @@ public partial class RegionSelectionOverlayWindow : Window
 
     internal bool CancelFromToolbarPointerMove()
     {
-        if (!IsVisible)
+        if (_isSelecting || !IsVisible)
         {
             return false;
         }

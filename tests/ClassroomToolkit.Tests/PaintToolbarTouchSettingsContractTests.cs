@@ -10,6 +10,7 @@ public sealed class PaintToolbarTouchSettingsContractTests
         var xaml = File.ReadAllText(GetToolbarXamlPath());
         var source = GetToolbarSource();
         var paletteSource = File.ReadAllText(GetPaletteSourcePath());
+        var widgetStyles = File.ReadAllText(GetWidgetStylesPath());
 
         xaml.Should().Contain("PreviewMouseLeftButtonDown=\"OnQuickColorPointerDown\"");
         xaml.Should().Contain("PreviewTouchDown=\"OnQuickColorTouchDown\"");
@@ -25,8 +26,12 @@ public sealed class PaintToolbarTouchSettingsContractTests
         source.Should().Contain("ApplyToolbarTouchMetrics();");
         source.Should().Contain("Math.Ceiling(44.0 / scale)");
         source.Should().Contain("OpenQuickColorDialog(index.Value);");
-        source.Should().Contain("ApplyQuickColorSelection(selectedSizeIndex);");
+        source.Should().Contain("ApplyQuickBrushSizeSelection(index, selectedSizeIndex);");
+        source.Should().NotContain("ApplyQuickColorSelection(selectedSizeIndex);");
+        source.Should().Contain("SetQuickBrushSizeSlot(quickColorIndex, selectedBrushSize);");
         source.Should().Contain("_brushSize = _quickBrushSizes[index];");
+        source.Should().NotContain("ResolveToolbarBrushPreviewSize");
+        source.Should().NotContain("button.FontSize =");
         source.Should().Contain("OpenShapeMenu();");
         source.Should().Contain("GetQuickColorDisplayName");
         source.Should().Contain("GetShapeDisplayName");
@@ -35,6 +40,13 @@ public sealed class PaintToolbarTouchSettingsContractTests
         paletteSource.Should().Contain("ToolTip = $\"选择{option.Name}\"");
         paletteSource.Should().Contain("SelectedBrushSizeIndex");
         paletteSource.Should().Contain("BuildBrushSizeButtons");
+        paletteSource.Should().Contain("BorderThickness = new Thickness(isSelected ? 3 : 1)");
+        paletteSource.Should().Contain("BuildBrushSizePreview(option.Size, isSelected)");
+        widgetStyles.Should().Contain("<Grid Background=\"Transparent\" MinWidth=\"{TemplateBinding MinWidth}\" MinHeight=\"{TemplateBinding MinHeight}\">");
+        widgetStyles.Should().Contain("Width=\"22\"");
+        widgetStyles.Should().Contain("Height=\"22\"");
+        widgetStyles.Should().Contain("BorderBrush=\"{TemplateBinding Foreground}\"");
+        widgetStyles.Should().Contain("Stroke=\"{StaticResource Brush_Border_Focus}\"");
     }
 
     private static string GetToolbarXamlPath() => TestPathHelper.ResolveRepoPath(
@@ -54,4 +66,11 @@ public sealed class PaintToolbarTouchSettingsContractTests
         "ClassroomToolkit.App",
         "Paint",
         "QuickColorPaletteWindow.xaml.cs");
+
+    private static string GetWidgetStylesPath() => TestPathHelper.ResolveRepoPath(
+        "src",
+        "ClassroomToolkit.App",
+        "Assets",
+        "Styles",
+        "WidgetStyles.xaml");
 }

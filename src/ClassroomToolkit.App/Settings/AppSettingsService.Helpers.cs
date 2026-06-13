@@ -314,8 +314,14 @@ public sealed partial class AppSettingsService
         return Math.Max(0, debounceMs);
     }
 
-    private static double NormalizeBrushSize(double size)
+    private static double NormalizeBrushSize(double size, double fallback)
     {
+        if (double.IsNaN(size) || double.IsInfinity(size))
+        {
+            var safeFallback = double.IsNaN(fallback) || double.IsInfinity(fallback) ? 12.0 : fallback;
+            return Math.Clamp(safeFallback, 1.0, 50.0);
+        }
+
         return Math.Clamp(size, 1.0, 50.0);
     }
 

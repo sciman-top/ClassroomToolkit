@@ -56,6 +56,7 @@ internal sealed class WpsHookOrchestrator
         hookClient.SetInterceptKeyboard(true);
         hookClient.SetInterceptWheel(true);
         hookClient.SetEmitWheelOnBlock(true);
+        hookClient.SetSuppressedKeyboardKeys([]);
         hookClient.Stop();
 
         return new WpsHookRuntimeState(

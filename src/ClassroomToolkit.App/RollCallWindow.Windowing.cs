@@ -296,19 +296,27 @@ public partial class RollCallWindow
         UpdateGroupNameDisplay();
     }
 
-    internal void RetouchAuxOverlayWindowsTopmost(bool enforceZOrder)
+    internal void RetouchAuxOverlayWindowsTopmost(bool enforceZOrder, Window? photoZOrderAnchor = null)
     {
-        var photoVisible = _photoOverlay?.IsVisible == true;
+        var photoVisible = _photoOverlay?.IsDisplayActive == true;
         var groupVisible = _groupOverlay?.IsVisible == true;
         var plan = RollCallAuxOverlayTopmostPolicy.Resolve(
             photoVisible,
             groupVisible,
             enforceZOrder);
 
-        WindowTopmostExecutor.ApplyNoActivate(
-            _photoOverlay,
-            plan.PhotoOverlayTopmost,
-            plan.PhotoOverlayEnforceZOrder);
+        if (plan.PhotoOverlayTopmost && plan.PhotoOverlayEnforceZOrder && photoZOrderAnchor != null)
+        {
+            WindowTopmostExecutor.ApplyNoActivateBehind(_photoOverlay, photoZOrderAnchor);
+        }
+        else
+        {
+            WindowTopmostExecutor.ApplyNoActivate(
+                _photoOverlay,
+                plan.PhotoOverlayTopmost,
+                plan.PhotoOverlayEnforceZOrder);
+        }
+
         WindowTopmostExecutor.ApplyNoActivate(
             _groupOverlay,
             plan.GroupOverlayTopmost,
@@ -317,7 +325,7 @@ public partial class RollCallWindow
 
     internal bool HasVisibleAuxOverlay()
     {
-        return _photoOverlay?.IsVisible == true
+        return _photoOverlay?.IsDisplayActive == true
             || _groupOverlay?.IsVisible == true;
     }
 

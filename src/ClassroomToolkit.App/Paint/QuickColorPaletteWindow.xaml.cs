@@ -35,7 +35,7 @@ public partial class QuickColorPaletteWindow : Window
     {
     }
 
-    public QuickColorPaletteWindow(IReadOnlyList<double> brushSizes, int selectedBrushSizeIndex)
+    public QuickColorPaletteWindow(IReadOnlyList<double>? brushSizes, int selectedBrushSizeIndex)
     {
         InitializeComponent();
         BuildButtons();
@@ -65,7 +65,7 @@ public partial class QuickColorPaletteWindow : Window
         }
     }
 
-    private void BuildBrushSizeButtons(IReadOnlyList<double> brushSizes, int selectedBrushSizeIndex)
+    private void BuildBrushSizeButtons(IReadOnlyList<double>? brushSizes, int selectedBrushSizeIndex)
     {
         var options = NormalizeBrushSizeOptions(brushSizes);
         foreach (var option in options)
@@ -73,32 +73,37 @@ public partial class QuickColorPaletteWindow : Window
             var isSelected = option.Index == selectedBrushSizeIndex;
             var button = new System.Windows.Controls.Button
             {
-                MinWidth = 58,
-                Height = 42,
+                MinWidth = 66,
+                Height = 48,
                 Margin = new Thickness(4, 0, 4, 0),
-                Padding = new Thickness(8, 4, 8, 4),
-                Background = MediaBrushes.White,
-                BorderBrush = isSelected ? MediaBrushes.DodgerBlue : MediaBrushes.Gray,
-                BorderThickness = new Thickness(isSelected ? 2 : 1),
+                Padding = new Thickness(10, 5, 10, 5),
+                Background = isSelected
+                    ? new SolidColorBrush(MediaColor.FromRgb(0xE6, 0xF6, 0xFF))
+                    : MediaBrushes.White,
+                BorderBrush = isSelected
+                    ? new SolidColorBrush(MediaColor.FromRgb(0x0E, 0x74, 0xB8))
+                    : MediaBrushes.Gray,
+                BorderThickness = new Thickness(isSelected ? 3 : 1),
                 Foreground = MediaBrushes.Black,
+                FontWeight = isSelected ? FontWeights.SemiBold : FontWeights.Normal,
                 ToolTip = $"选择{Math.Round(option.Size)}px笔画",
                 Tag = option.Index,
-                Content = BuildBrushSizePreview(option.Size)
+                Content = BuildBrushSizePreview(option.Size, isSelected)
             };
             button.Click += OnBrushSizeButtonClick;
             BrushSizeOptionsPanel.Children.Add(button);
         }
     }
 
-    private static BrushSizeOption[] NormalizeBrushSizeOptions(IReadOnlyList<double> brushSizes)
+    private static BrushSizeOption[] NormalizeBrushSizeOptions(IReadOnlyList<double>? brushSizes)
     {
-        if (brushSizes.Count >= 3)
+        if (brushSizes is { Count: >= 3 })
         {
             return new[]
             {
-                new BrushSizeOption(0, Math.Clamp(brushSizes[0], 1.0, 50.0)),
-                new BrushSizeOption(1, Math.Clamp(brushSizes[1], 1.0, 50.0)),
-                new BrushSizeOption(2, Math.Clamp(brushSizes[2], 1.0, 50.0))
+                new BrushSizeOption(0, NormalizeBrushSize(brushSizes[0], fallback: 6)),
+                new BrushSizeOption(1, NormalizeBrushSize(brushSizes[1], fallback: 12)),
+                new BrushSizeOption(2, NormalizeBrushSize(brushSizes[2], fallback: 24))
             };
         }
 
@@ -110,7 +115,18 @@ public partial class QuickColorPaletteWindow : Window
         };
     }
 
-    private static StackPanel BuildBrushSizePreview(double size)
+    private static double NormalizeBrushSize(double size, double fallback)
+    {
+        if (double.IsNaN(size) || double.IsInfinity(size))
+        {
+            var safeFallback = double.IsNaN(fallback) || double.IsInfinity(fallback) ? 12.0 : fallback;
+            return Math.Clamp(safeFallback, 1.0, 50.0);
+        }
+
+        return Math.Clamp(size, 1.0, 50.0);
+    }
+
+    private static StackPanel BuildBrushSizePreview(double size, bool isSelected)
     {
         var diameter = Math.Clamp(size, 5.0, 28.0);
         return new StackPanel
@@ -125,6 +141,8 @@ public partial class QuickColorPaletteWindow : Window
                     Width = diameter,
                     Height = diameter,
                     Fill = MediaBrushes.Black,
+                    Stroke = isSelected ? MediaBrushes.DodgerBlue : MediaBrushes.Transparent,
+                    StrokeThickness = isSelected ? 3 : 0,
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 5, 0)
                 },
@@ -132,7 +150,8 @@ public partial class QuickColorPaletteWindow : Window
                 {
                     Text = $"{Math.Round(size)}",
                     VerticalAlignment = VerticalAlignment.Center,
-                    Foreground = MediaBrushes.Black
+                    Foreground = MediaBrushes.Black,
+                    FontWeight = isSelected ? FontWeights.SemiBold : FontWeights.Normal
                 }
             }
         };

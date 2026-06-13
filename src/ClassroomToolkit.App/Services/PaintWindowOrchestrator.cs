@@ -220,6 +220,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         ToolbarWindow.ClearRequested += OnToolbarClearRequested;
         ToolbarWindow.UndoRequested += OnToolbarUndoRequested;
         ToolbarWindow.QuickColorSlotChanged += OnToolbarQuickColorSlotChanged;
+        ToolbarWindow.QuickBrushSizeSlotChanged += OnToolbarQuickBrushSizeSlotChanged;
         ToolbarWindow.ShapeTypeChanged += OnToolbarShapeTypeChanged;
         ToolbarWindow.WhiteboardToggled += OnToolbarWhiteboardToggled;
         ToolbarWindow.SettingsRequested += OnToolbarSettingsRequested;
@@ -240,6 +241,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         toolbarWindow.ClearRequested -= OnToolbarClearRequested;
         toolbarWindow.UndoRequested -= OnToolbarUndoRequested;
         toolbarWindow.QuickColorSlotChanged -= OnToolbarQuickColorSlotChanged;
+        toolbarWindow.QuickBrushSizeSlotChanged -= OnToolbarQuickBrushSizeSlotChanged;
         toolbarWindow.ShapeTypeChanged -= OnToolbarShapeTypeChanged;
         toolbarWindow.WhiteboardToggled -= OnToolbarWhiteboardToggled;
         toolbarWindow.SettingsRequested -= OnToolbarSettingsRequested;
@@ -397,6 +399,24 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         _currentSettings.BrushColor = color;
         _currentSettings.BrushSize = ToolbarWindow?.BrushSize ?? _currentSettings.BrushSize;
+        _appSettingsService.Save(_currentSettings);
+    }
+
+    private void OnToolbarQuickBrushSizeSlotChanged(int index, double brushSize)
+    {
+        if (_currentSettings == null)
+        {
+            return;
+        }
+
+        switch (index)
+        {
+            case 0: _currentSettings.QuickBrushSize1 = brushSize; break;
+            case 1: _currentSettings.QuickBrushSize2 = brushSize; break;
+            case 2: _currentSettings.QuickBrushSize3 = brushSize; break;
+        }
+
+        _currentSettings.BrushSize = ToolbarWindow?.BrushSize ?? brushSize;
         _appSettingsService.Save(_currentSettings);
     }
 

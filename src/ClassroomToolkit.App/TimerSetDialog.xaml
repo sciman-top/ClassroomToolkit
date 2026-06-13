@@ -19,7 +19,7 @@
             <Setter Property="Foreground" Value="{StaticResource Brush_Primary}"/>
         </Style>
 
-        <Style x:Key="Style_TimerValueTextBox" TargetType="TextBox">
+        <Style x:Key="Style_TimerValueTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Height" Value="{StaticResource Size_Touch_Target_Min}"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="FontWeight" Value="Bold"/>

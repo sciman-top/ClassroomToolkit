@@ -8,16 +8,16 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-## 覆盖范围
+## 项目定位
+
+本仓库的目标是让教师在一台普通 Windows 教室电脑上，用一个本地应用完成课堂里最常见的几类动作：
 
 - 随机点名与课堂互动
-- 倒计时、正计时和课堂活动计时
+- 倒计时、正计时和活动计时
 - 支持触屏、手写屏、数位板和鼠标的屏幕批注
 - 图片与 PDF 全屏讲解、翻页、缩放和平移
 - PowerPoint / WPS 放映导航与叠加批注
 - 悬浮启动器，用于课堂中快速切换工具
-
-## 非目标
 
 本仓库不覆盖：
 
@@ -33,13 +33,37 @@
 - 开发需要 `.NET 10 SDK`
 - 可选硬件：触屏一体机、手写屏、数位板、翻页笔、投影仪或外接显示器
 
+## 最新状态（2026-06-13）
+
+最近几批工作集中在课堂高频链路的稳定性与触控体验：
+
+- 图片 / PDF 全屏下，白板按钮会先给出“截图入白板 / 纯白板 / 底色白板”入口，而不是直接跳进白板。
+- 3 个快捷画笔现在支持各自独立的粗细；再次点击同一快捷画笔，会弹出颜色和 3 档粗细选择。
+- 图片 / PDF 批注的撤销链路已补到运行态历史、缓存和持久化状态，避免“撤销后移动一下又消失”。
+- 悬浮学生照片、工具条、点名窗口、启动器之间的窗口层级做了首帧与复显加固，尽量避免课堂中首帧遮挡和抢焦点。
+- 画笔设置对话框补了构造期空引用防护，避免设置按钮在 XAML 初始化阶段偶发崩溃。
+
+最新本地验证快照：
+
+- `dotnet build ClassroomToolkit.sln -c Debug`：通过，0 warning / 0 error
+- contract / invariant 过滤集：通过，29/29
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：当前为 `3533` 通过、`0` 失败
+- 当前代码阻断项：无
+  - 照片叠加层空图失败分支契约已同步到 `EnterInactivePassthroughState()` 透明穿透语义，不再要求 `Hide()`
+
+更多背景请看：
+
+- [文档目录](./docs/README.md)
+- [当前接手说明](./docs/handover.md)
+- [最新变更证据](./docs/change-evidence/)
+
 ## 快速开始
 
 ### 教师使用
 
 1. 从 GitHub Releases 下载发布包。
 2. 解压到固定目录，运行 `sciman Classroom Toolkit.exe`。
-3. 确认悬浮启动器出现，再检查点名、图片/PDF 查看和 PPT/WPS 批注。
+3. 确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注。
 
 教师日常操作请优先看 [使用指南](./使用指南.md)。
 
@@ -49,6 +73,13 @@
 dotnet restore
 dotnet build ClassroomToolkit.sln -c Debug
 dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
+```
+
+如果要准备发布包，优先使用仓库内脚本：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
 ## 本地数据
@@ -89,6 +120,7 @@ src/ClassroomToolkit.Services     运行时桥接与应用服务
 src/ClassroomToolkit.Infra        配置、持久化与文件系统细节
 src/ClassroomToolkit.Interop      Win32 / COM / WPS 集成边界
 tests/ClassroomToolkit.Tests      自动化测试
+scripts/                         质量门禁、验证、发布和环境脚本
 docs/                            架构、计划、验证、证据与运行手册
 ```
 
@@ -115,21 +147,26 @@ powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -
 git diff --check
 ```
 
+如果你是基于当前主分支继续开发，请先查看 [docs/handover.md](./docs/handover.md) 中的当前验证快照；代码门禁已恢复全绿，但发布仍需课堂现场验证。
+
 ## 文档入口
 
 - [English README](./README.en.md)
 - [教师使用指南](./使用指南.md)
 - [文档目录](./docs/README.md)
-- [架构文档](./docs/architecture/)
+- [当前接手说明](./docs/handover.md)
+- [技术债与稳定性清单](./docs/tech-debt-backlog.md)
+- [变更证据目录](./docs/change-evidence/)
 - [发布检查清单](./docs/runbooks/release-checklist.md)
 - [课堂试点验收手册](./docs/runbooks/classroom-pilot-validation-runbook.md)
 
-## 已知限制
+## 已知限制与发布边界
 
 - 主要目标是 Windows 教室电脑和触屏一体机
-- 多显示器、DPI 缩放、投影、PPT/WPS 放映仍需要现场验证
+- 多显示器、DPI 缩放、投影、PPT / WPS 放映仍需要现场验证
 - 缺少运行时、权限或设备驱动时，可能需要学校信息老师介入
 - 学生名册、照片和设置均为本地文件，应由学校或使用者做好备份
+- 当前代码门禁已恢复全绿；发布基线仍应补齐多显示器、DPI、投影、PPT / WPS 与学生照片悬浮层的现场验证
 
 ## License
 

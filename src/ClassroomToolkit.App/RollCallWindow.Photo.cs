@@ -37,29 +37,9 @@ public partial class RollCallWindow
         PhotoOverlayDiagnostics.Log(
             "rollcall-request",
             $"studentId={studentId} path={System.IO.Path.GetFileName(path)} duration={_viewModel.PhotoDurationSeconds} rollVisible={IsVisible} rollState={WindowState} groupOverlayVisible={_groupOverlay?.IsVisible == true}");
-        RecreateHiddenPhotoOverlayIfNeeded();
         var overlay = EnsurePhotoOverlay();
-        overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.CurrentStudentId, _viewModel.PhotoDurationSeconds, this);
-    }
-
-    private void RecreateHiddenPhotoOverlayIfNeeded()
-    {
-        if (_photoOverlay == null || _photoOverlay.IsVisible)
-        {
-            return;
-        }
-
-        var overlay = _photoOverlay;
-        _photoOverlay = null;
-        overlay.PhotoClosed -= OnPhotoClosed;
-        SafeActionExecutionExecutor.TryExecute(
-            overlay.Close,
-            ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
-                    "recreate-hidden-overlay",
-                    ex.GetType().Name,
-                    ex.Message)));
-        PhotoOverlayDiagnostics.Log("overlay-recreate", "reason=hidden-window-recreate");
+        var zOrderAnchor = ResolvePhotoOverlayZOrderAnchor();
+        overlay.ShowPhoto(path, _viewModel.CurrentStudentName, _viewModel.CurrentStudentId, _viewModel.PhotoDurationSeconds, zOrderAnchor);
     }
 
     private PhotoOverlayWindow EnsurePhotoOverlay()
@@ -71,6 +51,13 @@ public partial class RollCallWindow
         _photoOverlay = new PhotoOverlayWindow();
         _photoOverlay.PhotoClosed += OnPhotoClosed;
         return _photoOverlay;
+    }
+
+    private Window? ResolvePhotoOverlayZOrderAnchor()
+    {
+        return System.Windows.Application.Current?.MainWindow is MainWindow mainWindow
+            ? mainWindow.ResolvePhotoOverlayZOrderAnchor()
+            : this;
     }
 
     private void HidePhotoOverlay()

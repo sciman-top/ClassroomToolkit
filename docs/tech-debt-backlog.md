@@ -1,5 +1,18 @@
 # ClassroomToolkit 技术债与稳定性优化清单
 
+## 当前状态（2026-06-13）
+
+本页既记录长期低风险清理项，也记录曾经阻断完整门禁或发布判断的现实问题及其收口状态。
+
+当前验证快照：
+
+- `dotnet build ClassroomToolkit.sln -c Debug`：通过
+- contract / invariant 过滤集：通过，29/29
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：3533 通过，0 失败
+- 当前代码阻断测试：无
+
+> 下面的历史 `[Done]` 项反映的是当时批次的完成情况；当前是否“全绿”，以本页顶部快照和 `docs/handover.md` 为准。
+
 ## 概览
 
 本清单聚焦 `正确性优先、稳定性优先、兼容性优先、可维护性优先`。
@@ -7,12 +20,38 @@
 
 ## 排序原则
 
-- `P0`：存在真实风险，已复现、已静态证明或直接影响关闭/恢复/持久化一致性
+- `P0`：存在真实风险，已复现、已静态证明或直接影响关闭 / 恢复 / 持久化一致性，或阻断完整门禁
 - `P1`：提升可观测性、异常隔离、资源释放安全，收益高且兼容性风险低
 - `P2`：清理重复代码、命名与结构优化、局部性能优化
 - `Deferred`：高风险、低证据、难验证，默认暂缓
 
 ## P0
+
+### Task 0: 照片叠加层失败分支契约与实现收口 `[Done 2026-06-13]`
+
+**Description:**
+`PhotoOverlayWindow` 的空 bitmap 失败分支已确认使用 `EnterInactivePassthroughState()`，与关闭分支的透明穿透语义保持一致；契约测试和入口文档已同步，不再要求 `Hide()`。
+
+**Acceptance criteria:**
+- [x] 明确失败分支目标语义：保持窗口存在但进入透明 / 穿透态
+- [x] 代码实现、契约测试和文档使用同一语义
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug` 恢复全绿
+
+**Verification:**
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~PhotoOverlayLoadFailureBranchContractTests|FullyQualifiedName~PhotoOverlayCloseHideGuardContractTests|FullyQualifiedName~PhotoOverlayTopmostNoActivateContractTests|FullyQualifiedName~RollCallWindowPhotoOverlayReuseContractTests"`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
+- [x] 热点人工复核 `ApplyLoadedBitmap`、`EnterInactivePassthroughState`、`OnPhotoClosed`
+
+**Dependencies:**
+None
+
+**Files likely touched:**
+- `src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml.cs`
+- `tests/ClassroomToolkit.Tests/PhotoOverlayLoadFailureBranchContractTests.cs`
+- `docs/handover.md`
+- `docs/change-evidence/`
+
+**Estimated scope:** S
 
 ### Task 1: 统一照片缓存与预热关闭路径 `[Done 2026-05-04]`
 
@@ -21,7 +60,7 @@
 **Acceptance criteria:**
 - [x] `Dispose` 后不再新增缓存项、不再继续预热、不再持有可增长状态
 - [x] 关闭窗口与切换班级时，照片路径解析保持兼容
-- [x] 新增至少 1 个并发/关闭路径回归测试
+- [x] 新增至少 1 个并发 / 关闭路径回归测试
 
 **Verification:**
 - [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~RollCallViewModelPhotoPathRefreshTests"`
@@ -62,7 +101,7 @@
 **Description:** 统一检查 `settings / ink / workbook / wal` 的临时文件写入与 `File.Replace` 回退策略，重点确认锁文件、权限异常、部分失败后的残留临时文件与覆盖语义是否一致。
 
 **Acceptance criteria:**
-- [x] 同类存储组件的原子写/回退策略一致
+- [x] 同类存储组件的原子写 / 回退策略一致
 - [x] 出现回退时不破坏现有文件格式与可读性
 - [x] 临时文件清理策略明确且有测试覆盖
 
@@ -104,9 +143,9 @@
 
 **Estimated scope:** S
 
-### Task 5: Hook/Interop 生命周期边界复核 `[Done 2026-04-18]`
+### Task 5: Hook / Interop 生命周期边界复核 `[Done 2026-04-18]`
 
-**Description:** 审查 `GlobalHookService`、`KeyboardHook`、`WpsSlideshowNavigationHook` 的启动/停止/Dispose 路径，重点看重复释放、停止失败后状态残留、回调解绑一致性。
+**Description:** 审查 `GlobalHookService`、`KeyboardHook`、`WpsSlideshowNavigationHook` 的启动 / 停止 / Dispose 路径，重点看重复释放、停止失败后状态残留、回调解绑一致性。
 
 **Acceptance criteria:**
 - [x] `Dispose`、`Stop`、注册失败回滚路径具备幂等性
@@ -115,7 +154,7 @@
 
 **Verification:**
 - [x] 定向测试：`dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -m:1 --filter "FullyQualifiedName~GlobalHookServiceTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests"`
-- [x] 热点人工复核低层 hook stop/dispose 路径
+- [x] 热点人工复核低层 hook stop / dispose 路径
 
 **Dependencies:** None
 
@@ -214,27 +253,20 @@
 
 ## 检查点
 
-### Checkpoint A: 完成 P0 后
+### Checkpoint A: 完成当前 P0 后
 
 - [x] `build -> test -> contract/invariant -> hotspot` 全部通过
-- [x] 关闭/恢复/预热/持久化路径没有新增兼容性回归
+- [x] 照片叠加层失败分支的实现、契约和文档口径一致
 - [x] 所有改动都已写入 `docs/change-evidence/`
 
-### Checkpoint B: 完成 P1 后
+### Checkpoint B: 历史 P1 收口后保留的目标
 
 - [x] 后台异常可定位
 - [x] 关键生命周期路径具备幂等性与最小诊断
 - [x] 没有新增用户可见干扰
 
-### Checkpoint C: 准备进入 P2 前
+### Checkpoint C: 准备进入新的清理项前
 
-- [x] 只保留“收益明确、风险低、易回滚”的清理项
-- [x] 任何跨模块抽象先单独评审，默认不做
-
-## 本轮建议执行顺序
-
-1. Task 2: 点名预加载并发状态机
-2. Task 3: 存储层原子写回退策略一致性复核
-3. Task 5: Hook/Interop 生命周期边界复核
-4. Task 6: UI 关闭路径定时器与后台任务收敛
-5. Task 4: 日志与诊断链补齐最小可观测性
+- [x] 先恢复完整测试集全绿
+- [ ] 只保留“收益明确、风险低、易回滚”的清理项
+- [ ] 任何跨模块抽象先单独评审，默认不做

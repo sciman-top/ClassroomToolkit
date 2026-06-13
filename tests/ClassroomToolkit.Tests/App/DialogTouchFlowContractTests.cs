@@ -29,6 +29,8 @@ public sealed class DialogTouchFlowContractTests
         rollCallXaml.Should().Contain("Style_RollCallBottomBarTextButton");
         rollCallXaml.Should().Contain("Style_RollCallBottomBarAccentButton");
         rollCallXaml.Should().Contain("Style_RollCallGroupButton");
+        rollCallXaml.Should().Contain("<TextBlock Text=\"设置\"");
+        rollCallXaml.Should().NotContain("<TextBlock Text=\"时长\"");
         rollCallXaml.Should().Contain("<Setter Property=\"MinWidth\" Value=\"48\"/>");
         rollCallXaml.Should().NotContain("MinWidth=\"44\" Height=\"{StaticResource Size_Button_Action_Height_Compact}\"");
     }

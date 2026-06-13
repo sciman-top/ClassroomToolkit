@@ -61,6 +61,7 @@ public sealed partial class WpsSlideshowNavigationHook
         _interceptKeyboard = true;
         _interceptWheel = true;
         _emitWheelOnBlock = true;
+        SetSuppressedKeyboardKeys(null);
         Interlocked.Increment(ref _dispatchGeneration);
 
         var unhookFailed = false;

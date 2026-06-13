@@ -19,6 +19,7 @@ public sealed class PaintToolbarEventCallbackSafetyContractTests
         source.Should().Contain("PhotoOpenRequested?.Invoke()");
         source.Should().Contain("RegionCaptureRequested?.Invoke()");
         source.Should().Contain("QuickColorSlotChanged?.Invoke(index, color)");
+        source.Should().Contain("QuickBrushSizeSlotChanged?.Invoke(quickColorIndex, _quickBrushSizes[quickColorIndex])");
         source.Should().Contain("SettingsRequested?.Invoke()");
         source.Should().Contain("ShapeTypeChanged?.Invoke(_shapeType)");
         source.Should().Contain("WhiteboardToggled?.Invoke(_boardActive)");

@@ -14,9 +14,10 @@ internal static class RollCallAuxOverlayTopmostPolicy
         bool enforceZOrder)
     {
         return new RollCallAuxOverlayTopmostPlan(
-            PhotoOverlayTopmost: false,
-            // 学生照片层必须位于工具条/启动器/点名窗口下一层，不参与强制重排。
-            PhotoOverlayEnforceZOrder: false,
+            PhotoOverlayTopmost: photoOverlayVisible,
+            // 学生照片需要进入 topmost band，才能稳定压住普通焦点窗口；
+            // 主窗口会随后重排工具条/启动器/点名窗口，让它们继续位于照片上方。
+            PhotoOverlayEnforceZOrder: enforceZOrder,
             GroupOverlayTopmost: groupOverlayVisible,
             GroupOverlayEnforceZOrder: enforceZOrder);
     }

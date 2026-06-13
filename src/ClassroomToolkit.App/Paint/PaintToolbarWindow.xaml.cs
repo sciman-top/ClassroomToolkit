@@ -56,6 +56,7 @@ public partial class PaintToolbarWindow : Window
     public event Action? ClearRequested;
     public event Action? UndoRequested;
     public event Action<int, MediaColor>? QuickColorSlotChanged;
+    public event Action<int, double>? QuickBrushSizeSlotChanged;
     public event Action<PaintShapeType>? ShapeTypeChanged;
     public event Action? SettingsRequested;
     public event Action? PhotoOpenRequested;
@@ -158,7 +159,7 @@ public partial class PaintToolbarWindow : Window
         _initializing = true;
         try
         {
-            _brushSize = settings.BrushSize;
+            _brushSize = NormalizeToolbarBrushSize(settings.BrushSize, fallback: 12.0);
             SetQuickBrushSizeSlot(0, settings.QuickBrushSize1);
             SetQuickBrushSizeSlot(1, settings.QuickBrushSize2);
             SetQuickBrushSizeSlot(2, settings.QuickBrushSize3);
@@ -654,7 +655,7 @@ public partial class PaintToolbarWindow : Window
             && selectedSizeIndex >= 0
             && selectedSizeIndex < _quickColors.Length)
         {
-            ApplyQuickColorSelection(selectedSizeIndex);
+            ApplyQuickBrushSizeSelection(index, selectedSizeIndex);
             return;
         }
 
@@ -726,8 +727,24 @@ public partial class PaintToolbarWindow : Window
             return;
         }
 
-        _quickBrushSizes[index] = Math.Clamp(brushSize, 1.0, 50.0);
+        _quickBrushSizes[index] = NormalizeToolbarBrushSize(brushSize, fallback: _quickBrushSizes[index]);
         UpdateQuickColorButton(index, _quickColors[index]);
+    }
+
+    private void ApplyQuickBrushSizeSelection(int quickColorIndex, int selectedSizeIndex)
+    {
+        if (quickColorIndex < 0 || quickColorIndex >= _quickBrushSizes.Length
+            || selectedSizeIndex < 0 || selectedSizeIndex >= _quickBrushSizes.Length)
+        {
+            return;
+        }
+
+        var selectedBrushSize = _quickBrushSizes[selectedSizeIndex];
+        SetQuickBrushSizeSlot(quickColorIndex, selectedBrushSize);
+        ApplyQuickColorSelection(quickColorIndex);
+        SafeActionExecutionExecutor.TryExecute(
+            () => QuickBrushSizeSlotChanged?.Invoke(quickColorIndex, _quickBrushSizes[quickColorIndex]),
+            ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: quick brush size callback failed: {ex.Message}"));
     }
 
     private void UpdateQuickColorButton(int index, MediaColor color)
@@ -739,7 +756,6 @@ public partial class PaintToolbarWindow : Window
         }
         button.Background = new SolidColorBrush(color);
         button.Foreground = GetContrastingBrush(color);
-        button.FontSize = ResolveToolbarBrushPreviewSize(_quickBrushSizes[index]);
         button.ToolTip = $"画笔 {index + 1}：{GetQuickColorDisplayName(color)}，{Math.Round(_quickBrushSizes[index])}px。点按使用，再点/长按换色和粗细";
     }
 
@@ -760,16 +776,22 @@ public partial class PaintToolbarWindow : Window
         {
             if (IsSameRgb(_quickColors[i], color))
             {
-                return _quickBrushSizes[i];
+                return NormalizeToolbarBrushSize(_quickBrushSizes[i], fallback);
             }
         }
 
-        return Math.Clamp(fallback, 1.0, 50.0);
+        return NormalizeToolbarBrushSize(fallback, fallback: 12.0);
     }
 
-    private static double ResolveToolbarBrushPreviewSize(double brushSize)
+    private static double NormalizeToolbarBrushSize(double brushSize, double fallback)
     {
-        return Math.Clamp(brushSize * 0.55, 7.0, 20.0);
+        if (double.IsNaN(brushSize) || double.IsInfinity(brushSize))
+        {
+            var safeFallback = double.IsNaN(fallback) || double.IsInfinity(fallback) ? 12.0 : fallback;
+            return Math.Clamp(safeFallback, 1.0, 50.0);
+        }
+
+        return Math.Clamp(brushSize, 1.0, 50.0);
     }
 
     private static bool IsSameRgb(MediaColor left, MediaColor right)
