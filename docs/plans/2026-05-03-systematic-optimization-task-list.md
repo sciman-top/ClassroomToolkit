@@ -100,8 +100,135 @@
 
 **Follow-up:**
 - [x] 下一刀继续 `PaintOverlayWindow.*` 中最肥的 rendering 或 cross-page 子文件族。
-- [ ] 再下一刀评估 `ImageManagerWindow` 或 `RollCallWindow` 的状态/窗口编排子文件族。
+- [x] 再下一刀评估 `ImageManagerWindow` 或 `RollCallWindow` 的状态/窗口编排子文件族。
 - [ ] `RollCallSettingsDialog` 若后续继续拆分，只再拆一层通用 tab-state/default-apply helper，不引入新抽象。
+
+### Task 3: 第七批 ImageManagerWindow 导航/选择职责拆分 `[Done 2026-06-14]`
+
+**Description:** 继续处理 `ImageManagerWindow` 文件族，将 `ImageManagerWindow.Navigation.cs` 中混合的目录/收藏导航与选择/多选/预览逻辑拆分到独立 partial，降低热点文件冲突面与认知负担。
+
+**Acceptance criteria:**
+- [x] `ImageManagerWindow.Navigation.cs` 不再同时承载收藏/最近与多选/预览两类职责
+- [x] 收藏/最近回调、单击打开、多选删除等现有行为与合同语义保持不变
+- [x] 相关合同测试改为按 `ImageManagerWindow*.cs` 文件族聚合校验，避免后续继续拆分时反复改测试入口
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Photos/ImageManagerWindow.Favorites.cs`，承接收藏/最近、目录收藏对话框与安全回调逻辑。
+- 新增 `src/ClassroomToolkit.App/Photos/ImageManagerWindow.Selection.cs`，承接列表选择、长按多选、删除、多选状态与预览打开逻辑。
+- `src/ClassroomToolkit.App/Photos/ImageManagerWindow.Navigation.cs` 收口为默认目录、树选择、路径输入、前进/后退/上级与目录解析。
+- `tests/ClassroomToolkit.Tests/ImageManagerTouchFlowContractTests.cs` 改为按 `ImageManagerWindow*.cs` 文件族聚合读取源码，保持合同意图不变。
+- `ImageManagerWindow.Navigation.cs` 从 861 行降到 289 行；最大热点转移到 `ImageManagerWindow.Selection.cs` 406 行，仍在预算内。
+
+### Task 3: 第八批 MainWindow.Photo image-manager 协调拆分 `[Done 2026-06-14]`
+
+**Description:** 将 `MainWindow.Photo.cs` 中的 image-manager 打开、关闭、状态同步和收藏/最近回调逻辑拆到独立 partial，保留照片进入、导航、焦点和前台 retouch 主线在原文件中。
+
+**Acceptance criteria:**
+- [x] `MainWindow.Photo.cs` 不再同时承载 image-manager 协调和 photo navigation/focus 两类职责
+- [x] `OnImageSelected`、`ApplyPhotoOverlayEntry`、`OnPhotoNavigateRequested`、`FocusOverlayForPhotoNavigation` 的行为与源码合同语义保持不变
+- [x] 依赖 `MainWindow.Photo.cs` 的源码合同测试改为按 `MainWindow.Photo*.cs` 文件族聚合校验
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/MainWindow.Photo.ImageManager.cs`，承接 image-manager 创建、打开、关闭、state-change、收藏/最近、show-ink 同步和布局回调。
+- `src/ClassroomToolkit.App/MainWindow.Photo.cs` 收口为 photo overlay entry、photo navigation、photo mode change、overlay focus 与 foreground retouch。
+- `tests/ClassroomToolkit.Tests/MainWindowPhotoFocusDispatchContractTests.cs` 改为按 `MainWindow.Photo*.cs` 文件族聚合校验。
+- `tests/ClassroomToolkit.Tests/App/RegionCaptureWhiteboardIntegrationContractTests.cs` 改为按 `MainWindow.Photo*.cs` 文件族聚合校验 photo-source 片段。
+- `MainWindow.Photo.cs` 从 573 行降到 438 行；新增 `MainWindow.Photo.ImageManager.cs` 146 行，热点仍显著低于预算。
+
+### Task 3: 第九批 PaintSettingsDialog section-state/defaults 拆分 `[Done 2026-06-14]`
+
+**Description:** 继续压缩 `PaintSettingsDialog` 复杂度，将 `PaintSettingsDialog.SectionState.cs` 中混合的脏状态跟踪与“全部恢复默认”逻辑拆到独立 partial，保留 section snapshot/apply 主线在原文件。
+
+**Acceptance criteria:**
+- [x] `PaintSettingsDialog.SectionState.cs` 不再同时承载 section snapshot/apply、dirty tracking 和 defaults reset 三类职责
+- [x] `PaintSettingsDialog` 的源码合同仍按 `PaintSettingsDialog*.cs` 文件族聚合成立，无需新增单文件脆弱依赖
+- [x] 对话框构造、默认值恢复和 section dirty tracking 行为保持不变
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.SectionDirtyTracking.cs`，承接控件 dirty tracking 注册/注销与回调。
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.Defaults.cs`，承接 `ApplyDefaultSettings()` 的全局默认恢复逻辑。
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.SectionState.cs` 收口为 section state record、capture/apply 主线。
+- `PaintSettingsDialog.SectionState.cs` 从 390 行降到 191 行；dirty tracking 和全局默认恢复分别下沉到 117 行与 92 行的独立 partial。
+
+### Task 3: 第十批 PaintSettingsDialog interactions/lifecycle/restore 拆分 `[Done 2026-06-14]`
+
+**Description:** 继续压缩 `PaintSettingsDialog` 设置页复杂度，将 `PaintSettingsDialog.Interactions.cs` 中混合的窗口生命周期和“重置本页/全部重置”流程拆到独立 partial，保留确认保存与画笔即时联动主线在原文件。
+
+**Acceptance criteria:**
+- [x] `PaintSettingsDialog.Interactions.cs` 不再同时承载 lifecycle、restore defaults 和 confirm/change handlers 三类职责
+- [x] `OnDialogLoaded` 的延迟 `SizeToContent` 提交流程和关闭解绑逻辑保持不变
+- [x] “重置本页/全部重置”提示文案、按页默认恢复和 classifier rollback 状态刷新保持不变
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.Lifecycle.cs`，承接 `OnDialogLoaded`、`OnDialogClosed` 与窗口生命周期清理。
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.Restore.cs`，承接 `OnRestoreDefaultsClick`、`OnRestoreAllDefaultsClick` 与 `ApplyDefaultSettingsForCurrentTab()`。
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.Interactions.cs` 收口为确认保存、取消、画笔 slider/change handler 和 active brush size 解析。
+- `PaintSettingsDialog.Interactions.cs` 从 289 行降到 108 行；新增 lifecycle 与 restore partial 分别为 52 行和 135 行，最大 `PaintSettingsDialog*.cs` 文件降到 277 行。
+
+### Task 3: 第十一批 PaintSettingsDialog selection/combo helper 拆分 `[Done 2026-06-14]`
+
+**Description:** 继续压缩 `PaintSettingsDialog` 设置页复杂度，将 `PaintSettingsDialog.Selection.cs` 中通用 ComboBox 标签选择、数值 ComboBox 回填/解析和百分比换算 helper 拆到独立 partial，保留画笔/形状/导出范围等业务选项选择器在原文件。
+
+**Acceptance criteria:**
+- [x] `PaintSettingsDialog.Selection.cs` 不再同时承载业务选项选择器与通用 ComboBox helper
+- [x] `Clamp`、`ToPercent`、`ToByte`、`SelectComboByTag`、`ResolveIntCombo`、`ResolveDoubleCombo` 等调用点保持原签名与行为
+- [x] 初始化、确认保存、按页恢复默认、section state capture/apply 继续通过同一 helper 路径
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.ComboSelection.cs`，承接通用 ComboBox、int/double ComboBox 与基础数值转换 helper。
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.Selection.cs` 收口为 `Shape`、`BrushStyle`、`WhiteboardPreset`、`CalligraphyPreset`、`ClassroomWritingMode`、`InkExportScope` 等业务选项选择/解析。
+- `PaintSettingsDialog.Selection.cs` 从 277 行降到 135 行；新增 `ComboSelection.cs` 148 行，最大 `PaintSettingsDialog*.cs` 文件降到 `PaintSettingsDialog.PresetScheme.cs` 258 行。
+
+### Task 3: 第十二批 PaintSettingsDialog preset scheme 拆分 `[Done 2026-06-14]`
+
+**Description:** 继续压缩 `PaintSettingsDialog` 设置页复杂度，将 `PaintSettingsDialog.PresetScheme.cs` 中托管控件事件/降级逻辑和托管参数快照/应用逻辑拆到独立 partial，保留预设选择、应用和提示刷新主线在原文件。
+
+**Acceptance criteria:**
+- [x] `PaintSettingsDialog.PresetScheme.cs` 不再同时承载 preset selection、managed control wiring 和 managed parameter snapshot 三类职责
+- [x] 预设切换、自定义降级、托管控件 enable/tooltip 和 custom snapshot 行为保持不变
+- [x] 现有 preset policy/initialization 测试与 `PaintSettingsDialog*.cs` 源码合同继续成立
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.PresetManagedControls.cs`，承接托管控件事件注册/注销、手动覆盖降级和控件视觉状态。
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.PresetManagedParameters.cs`，承接 custom snapshot、托管参数 capture/apply 和 debug format。
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.PresetScheme.cs` 收口为 preset scheme change、convert-to-custom、apply scheme、initial scheme 和 hint update 主线。
+- `PaintSettingsDialog.PresetScheme.cs` 从 258 行降到 87 行；最大 `PaintSettingsDialog*.cs` 文件降到 240 行。
 
 ## Task 4: 存储原子写与临时文件策略复核
 

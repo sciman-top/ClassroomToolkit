@@ -8,19 +8,14 @@ public sealed class MainWindowPhotoFocusDispatchContractTests
     [Fact]
     public void FocusOverlayForPhotoNavigation_ShouldFallbackInlineOnlyOnUiThread_WhenDispatchFails()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.Photo*.cs");
 
         source.Should().Contain("var scheduled = TryBeginInvoke(");
         source.Should().Contain("if (!scheduled)");
         source.Should().Contain("if (Dispatcher.CheckAccess())");
         source.Should().Contain("FocusNow();");
-    }
-
-    private static string GetSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "MainWindow.Photo.cs");
     }
 }

@@ -8,7 +8,11 @@ public sealed class ImageManagerTouchFlowContractTests
     public void ImageManager_ShouldExposeVisibleSelectionMode_AndKeepSingleTapOpen()
     {
         var xaml = File.ReadAllText(GetXamlPath());
-        var source = File.ReadAllText(GetSourcePath());
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Photos",
+            "ImageManagerWindow*.cs");
 
         xaml.Should().Contain("x:Name=\"EnterSelectionModeButton\"");
         xaml.Should().Contain("Click=\"OnEnterSelectionModeClick\"");
@@ -67,12 +71,6 @@ public sealed class ImageManagerTouchFlowContractTests
         "ClassroomToolkit.App",
         "Photos",
         "ImageManagerWindow.xaml");
-
-    private static string GetSourcePath() => TestPathHelper.ResolveRepoPath(
-        "src",
-        "ClassroomToolkit.App",
-        "Photos",
-        "ImageManagerWindow.Navigation.cs");
 
     private static string GetVirtualizingWrapPanelPath() => TestPathHelper.ResolveRepoPath(
         "src",

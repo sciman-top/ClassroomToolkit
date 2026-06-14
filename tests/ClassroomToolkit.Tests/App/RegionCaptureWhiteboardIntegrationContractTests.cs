@@ -138,7 +138,10 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
     public void RegionCaptureFlow_ShouldKeepScreenshotVisible_AndAvoidFullscreenEntry()
     {
         var source = File.ReadAllText(GetMainWindowPaintSourcePath());
-        var photoSource = File.ReadAllText(GetMainWindowPhotoSourcePath());
+        var photoSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.Photo*.cs");
         var inputSource = ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
@@ -251,14 +254,6 @@ public sealed class RegionCaptureWhiteboardIntegrationContractTests
             "ClassroomToolkit.App",
             "Paint",
             "PaintToolbarWindow.xaml");
-    }
-
-    private static string GetMainWindowPhotoSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "MainWindow.Photo.cs");
     }
 
     private static string GetRegionScreenCaptureWorkflowSourcePath()
