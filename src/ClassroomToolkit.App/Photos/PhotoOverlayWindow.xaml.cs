@@ -328,6 +328,11 @@ public partial class PhotoOverlayWindow : Window
 
     public void CloseOverlay()
     {
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
         Interlocked.Increment(ref _photoLoadRequestId);
         CancelPendingPhotoLoad();
         _autoCloseTimer.Stop();
@@ -566,6 +571,11 @@ public partial class PhotoOverlayWindow : Window
             _ = Dispatcher.InvokeAsync(
                 () =>
                 {
+                    if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+                    {
+                        return;
+                    }
+
                     if (requestId != Volatile.Read(ref _photoLoadRequestId) || !IsVisible)
                     {
                         return;
@@ -713,7 +723,6 @@ public partial class PhotoOverlayWindow : Window
 
         if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
-            HideMask();
             return;
         }
 

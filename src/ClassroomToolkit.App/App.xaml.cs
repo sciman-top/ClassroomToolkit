@@ -31,6 +31,7 @@ public partial class App : WpfApplication
     private static readonly LogRetentionOptions DefaultLogRetentionOptions = new();
     private int _criticalDialogShowing;
     private int _errorLogRetentionApplied;
+    private int _errorLogRetentionSucceeded;
     private int _globalExceptionHandlersRegistered;
     private IServiceProvider? _services;
 
@@ -361,6 +362,11 @@ public partial class App : WpfApplication
 
     private void TryApplyErrorLogRetention(string? logPath = null)
     {
+        if (Volatile.Read(ref _errorLogRetentionSucceeded) == 1)
+        {
+            return;
+        }
+
         if (Interlocked.Exchange(ref _errorLogRetentionApplied, 1) == 1)
         {
             return;
@@ -379,10 +385,16 @@ public partial class App : WpfApplication
                 "error_",
                 DateTime.Now,
                 DefaultLogRetentionOptions);
+            Volatile.Write(ref _errorLogRetentionSucceeded, 1);
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"日志保留清理失败: {ex.Message}");
+            Volatile.Write(ref _errorLogRetentionSucceeded, 0);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _errorLogRetentionApplied, 0);
         }
     }
 

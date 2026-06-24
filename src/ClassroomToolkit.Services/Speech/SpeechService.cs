@@ -57,27 +57,16 @@ public class SpeechService : IDisposable
             Debug.WriteLine(FormatDiagnostic("Speak", failure));
             if (shouldNotifyUnavailable)
             {
-                var handlers = SpeechUnavailable?.GetInvocationList();
-                if (handlers == null)
-                {
-                    return Task.CompletedTask;
-                }
-
-                foreach (var callback in handlers)
-                {
-                    try
-                    {
-                        ((Action)callback)();
-                    }
-                    catch (Exception callbackEx) when (IsNonFatal(callbackEx))
-                    {
-                        Debug.WriteLine(FormatDiagnostic("SpeechUnavailable callback", callbackEx));
-                    }
-                }
+                NotifySpeechUnavailable();
             }
         }
 
         return Task.CompletedTask;
+    }
+
+    internal void NotifySpeechUnavailableForTest()
+    {
+        NotifySpeechUnavailable();
     }
 
     public void Dispose()
@@ -115,6 +104,27 @@ public class SpeechService : IDisposable
             catch (Exception ex) when (IsNonFatal(ex))
             {
                 Debug.WriteLine(FormatDiagnostic("Dispose", ex));
+            }
+        }
+    }
+
+    private void NotifySpeechUnavailable()
+    {
+        var handlers = SpeechUnavailable?.GetInvocationList();
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var callback in handlers)
+        {
+            try
+            {
+                ((Action)callback)();
+            }
+            catch (Exception callbackEx) when (IsNonFatal(callbackEx))
+            {
+                Debug.WriteLine(FormatDiagnostic("SpeechUnavailable callback", callbackEx));
             }
         }
     }

@@ -1,6 +1,6 @@
 # ClassroomToolkit 技术债与稳定性优化清单
 
-## 当前状态（2026-06-13）
+## 当前状态（2026-06-24）
 
 本页既记录长期低风险清理项，也记录曾经阻断完整门禁或发布判断的现实问题及其收口状态。
 
@@ -8,7 +8,12 @@
 
 - `dotnet build ClassroomToolkit.sln -c Debug`：通过
 - contract / invariant 过滤集：通过，29/29
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：3533 通过，0 失败
+- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：3544 通过，0 失败
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug`：通过
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1`：已通过，稳定过期包仅剩 active waiver 覆盖项
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-analyzer-backlog-baseline.ps1 -Configuration Debug`：已通过，`diagnostics_total=0`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run-compatibility-preflight.ps1 -Configuration Debug`：通过
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/collect-settings-load-performance-samples.ps1`：通过
 - 当前代码阻断测试：无
 
 > 下面的历史 `[Done]` 项反映的是当时批次的完成情况；当前是否“全绿”，以本页顶部快照和 `docs/handover.md` 为准。
@@ -184,6 +189,34 @@ None
 - `src/ClassroomToolkit.App/MainWindow*.cs`
 - `src/ClassroomToolkit.App/Photos/ImageManagerWindow*.cs`
 - `src/ClassroomToolkit.App/Paint/PaintOverlayWindow*.cs`
+
+**Estimated scope:** M
+
+### Task 9: 依赖治理与关闭路径深审收口 `[Done 2026-06-24]`
+
+**Description:** 收口本地 full quality gate 中唯一明确失败的 dependency-governance，并补强窗口关闭/dispatcher shutdown 与日志保留失败后的恢复路径，避免一次性失败被永久锁定或关闭后异步回写 UI。
+
+**Acceptance criteria:**
+- [x] patch 级稳定依赖升级后，dependency-governance 仅剩 active waiver 覆盖项
+- [x] analyzer backlog baseline 与当前真实扫描结果对齐，不再保留过宽旧基线
+- [x] 关闭路径补至少 1 组新契约/行为测试，覆盖 dispatcher shutdown / 初始化异步守卫 / 通知回调隔离
+
+**Verification:**
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-analyzer-backlog-baseline.ps1 -Configuration Debug`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~SpeechServiceTests|FullyQualifiedName~SpeechServiceLifecycleContractTests|FullyQualifiedName~SpeechServiceNotificationTests|FullyQualifiedName~PhotoOverlayLoadFailureBranchContractTests|FullyQualifiedName~PhotoOverlayAsyncLoadDispatchContractTests|FullyQualifiedName~PhotoOverlayLoadedBitmapDispatchContractTests|FullyQualifiedName~PhotoOverlayEventCallbackSafetyContractTests|FullyQualifiedName~PhotoOverlayWindowLifecycleContractTests|FullyQualifiedName~ImageManagerWindowLifecycleContractTests|FullyQualifiedName~AppGlobalExceptionDialogDispatchContractTests|FullyQualifiedName~AppLogRetentionLifecycleContractTests|FullyQualifiedName~SettingsDocumentBootstrapMigrationExecutorTests"`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run-compatibility-preflight.ps1 -Configuration Debug`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/collect-settings-load-performance-samples.ps1`
+
+**Dependencies:** None
+
+**Files likely touched:**
+- `src/ClassroomToolkit.App/App.xaml.cs`
+- `src/ClassroomToolkit.App/Photos/ImageManagerWindow.Lifecycle.cs`
+- `src/ClassroomToolkit.App/Photos/PhotoOverlayWindow.xaml.cs`
+- `src/ClassroomToolkit.Services/Speech/SpeechService.cs`
+- `scripts/quality/analyzer-backlog-baseline.json`
 
 **Estimated scope:** M
 

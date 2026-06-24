@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Photos;
@@ -14,7 +15,11 @@ public partial class ImageManagerWindow
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         _imageListScrollViewer = FindDescendant<ScrollViewer>(ImageList);
-        _ = InitializeTreeAsync(_lifecycleCancellation.Token);
+        _ = SafeTaskRunner.Run(
+            "ImageManagerWindow.InitializeTree",
+            InitializeTreeAsync,
+            _lifecycleCancellation.Token,
+            ex => Debug.WriteLine($"ImageManager: InitializeTree scheduling failed: {ex.Message}"));
         InitializeDefaultFolder();
         EnterInitialMaximizedState();
         ApplyAdaptiveLayout();
