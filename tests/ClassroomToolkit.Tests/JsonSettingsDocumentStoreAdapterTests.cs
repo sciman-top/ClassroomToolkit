@@ -260,6 +260,37 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldNotLeaveTempFile_WhenTargetIsLocked()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(path, "{\"Paint\":{\"brush_base_size\":\"12\"}}");
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["brush_base_size"] = "18"
+                }
+            };
+
+            using var lockStream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Action act = () => adapter.Save(data);
+
+            act.Should().Throw<Exception>().Where(ex =>
+                ex.GetType() == typeof(IOException)
+                || ex.GetType() == typeof(UnauthorizedAccessException));
+            Directory.GetFiles(tempDir, $"{Path.GetFileName(path)}.*.tmp").Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldRecoverAfterNonObjectJsonLoad()
     {
         var tempDir = CreateTempDirectory();

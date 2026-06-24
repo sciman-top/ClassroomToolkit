@@ -230,16 +230,60 @@
 - `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.PresetScheme.cs` 收口为 preset scheme change、convert-to-custom、apply scheme、initial scheme 和 hint update 主线。
 - `PaintSettingsDialog.PresetScheme.cs` 从 258 行降到 87 行；最大 `PaintSettingsDialog*.cs` 文件降到 240 行。
 
+### Task 3: 第十三批 PaintSettingsDialog classifier package 拆分 `[Done 2026-06-14]`
+
+**Description:** 继续压缩 `PaintSettingsDialog` 设置页复杂度，将 `PaintSettingsDialog.ClassifierPackage.cs` 中导入导出入口、导入/回滚流程和状态文本/回滚状态 helper 拆到独立 partial，保留按钮入口在原文件。
+
+**Acceptance criteria:**
+- [x] `PaintSettingsDialog.ClassifierPackage.cs` 不再同时承载 file/clipboard button entry、import flow、status text 和 rollback state 四类职责
+- [x] 导入确认、撤销最近一次导入、状态摘要和剪贴板/文件错误提示保持不变
+- [x] 初始化、默认恢复、section state apply 对 classifier status helper 的调用路径保持兼容
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.ClassifierPackage.Import.cs`，承接导入、撤销、文件读写 helper 与应用覆盖逻辑。
+- 新增 `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.ClassifierPackage.Status.cs`，承接状态文本、override 归一化、回滚按钮状态与 warning helper。
+- `src/ClassroomToolkit.App/Paint/PaintSettingsDialog.ClassifierPackage.cs` 收口为文件/剪贴板导入导出按钮入口。
+- `PaintSettingsDialog.ClassifierPackage.cs` 从 240 行降到 105 行；最大 `PaintSettingsDialog*.cs` 文件仍为定义型 `State.cs` 240 行。
+
 ## Task 4: 存储原子写与临时文件策略复核
 
 **Description:** 对 `settings / ink / workbook / wal` 的 `temp + replace/copy + cleanup` 模式做一致性审查。只有调用点语义一致时才收敛 helper。
 
 **Acceptance criteria:**
-- [ ] 不改变编码、异常语义、覆盖语义和兼容格式。
-- [ ] 临时文件残留和回退语义有测试保护。
+- [x] 不改变编码、异常语义、覆盖语义和兼容格式。
+- [x] 临时文件残留和回退语义有测试保护。
 - [ ] 更新或补充相关存储测试。
 
 **Verification:** `JsonSettingsDocumentStoreAdapterTests|InkPersistenceServiceTests|InkStorageServiceTests|StudentWorkbookStoreTests` + full gate。
+
+### Task 4: 第一批原子写锁文件清理保护 `[Done 2026-06-14]`
+
+**Description:** 先做低风险一致性收口，只补 `settings / ink / workbook / wal` 在目标文件被锁时“不遗留 temp 文件”的真实测试保护，不改 `AtomicFileReplaceUtility` 或 `InkAtomicFileWriter` 语义。
+
+**Acceptance criteria:**
+- [x] `JsonSettingsDocumentStoreAdapter`、`InkPersistenceService`、`InkWriteAheadLogService`、`StudentWorkbookStore` 均有锁文件场景下的 temp 清理保护测试
+- [x] 不引入新的持久化 helper，不改变现有编码、覆盖、异常和回退语义
+- [x] 证明 `settings / workbook` 统一走 `AtomicFileReplaceUtility`，`ink / wal` 统一走 `InkAtomicFileWriter`
+
+**Verification:**
+- [x] `dotnet build ClassroomToolkit.sln -c Debug -p:UseSharedCompilation=false`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false --filter "FullyQualifiedName~AtomicFileReplaceUtilityTests|FullyQualifiedName~JsonSettingsDocumentStoreAdapterTests|FullyQualifiedName~IniSettingsStoreSaveTests|FullyQualifiedName~InkPersistenceServiceTests|FullyQualifiedName~InkStorageServiceTests|FullyQualifiedName~InkWriteAheadLogServiceTests|FullyQualifiedName~StudentWorkbookStoreTests"`
+- [x] `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug -p:UseSharedCompilation=false`
+- [x] contract/invariant filter
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
+
+**Implemented scope:**
+- `tests/ClassroomToolkit.Tests/JsonSettingsDocumentStoreAdapterTests.cs` 新增锁定 `settings.json` 时不遗留 `*.tmp` 的保护测试。
+- `tests/ClassroomToolkit.Tests/InkPersistenceServiceTests.cs` 新增锁定 sidecar 时不遗留 `*.tmp` 的保护测试。
+- `tests/ClassroomToolkit.Tests/InkWriteAheadLogServiceTests.cs` 新增锁定 `.ink-wal.json` 时不遗留 `*.tmp` 的保护测试。
+- `tests/ClassroomToolkit.Tests/StudentWorkbookStoreTests.cs` 新增锁定 `students.xlsx` 时不遗留 `*.tmp.xlsx` 的保护测试。
+- 结论保持不变：`settings / workbook` 已统一复用 `AtomicFileReplaceUtility`，`ink / wal` 已统一通过 `InkAtomicFileWriter` 间接复用同一原子写底座。
 
 ## Task 5: 性能测量优先的 hot path 批次
 

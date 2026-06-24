@@ -82,6 +82,34 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         act.Should().Throw<BadImageFormatException>();
     }
 
+    [Fact]
+    public void Upsert_ShouldNotLeaveTempFile_WhenWalIsLocked()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_locked.png");
+        File.WriteAllText(sourcePath, "x");
+        var strokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M0,0 L1,1",
+                ColorHex = "#0000FF",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        var hash = ComputeInkHash(strokes);
+        _wal.Upsert(sourcePath, 1, strokes, hash);
+
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        using var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        Action act = () => _wal.Upsert(sourcePath, 1, strokes, hash);
+
+        act.Should().NotThrow();
+        Directory.GetFiles(Path.GetDirectoryName(walPath)!, $"{Path.GetFileName(walPath)}.*.tmp").Should().BeEmpty();
+    }
+
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
     {
         if (strokes == null || strokes.Count == 0)

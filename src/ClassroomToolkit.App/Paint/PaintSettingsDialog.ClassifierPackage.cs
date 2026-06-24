@@ -1,4 +1,3 @@
-using System.IO;
 using System.Windows;
 using ClassroomToolkit.Services.Presentation;
 
@@ -34,17 +33,13 @@ public partial class PaintSettingsDialog
             return;
         }
 
-        try
+        if (!TryWriteClassifierPackageFile(dialog.FileName, packageJson, out var writeError))
         {
-            File.WriteAllText(dialog.FileName, packageJson);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-        {
-            ShowClassifierPackageWarning("导出规则包", $"写入文件失败：{ex.Message}");
+            ShowClassifierPackageWarning("导出规则包", writeError);
             return;
         }
 
-        RefreshPresentationClassifierPackageStatusText($"规则包状态：已导出 {Path.GetFileName(dialog.FileName)}。");
+        RefreshPresentationClassifierPackageStatusText($"规则包状态：已导出 {GetClassifierPackageFileName(dialog.FileName)}。");
     }
 
     private void OnImportClassifierPackageClick(object sender, RoutedEventArgs e)
@@ -59,21 +54,16 @@ public partial class PaintSettingsDialog
             return;
         }
 
-        string packageJson;
-        try
+        if (!TryReadClassifierPackageFile(dialog.FileName, out var packageJson, out var readError))
         {
-            packageJson = File.ReadAllText(dialog.FileName);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-        {
-            ShowClassifierPackageWarning("导入规则包", $"读取文件失败：{ex.Message}");
+            ShowClassifierPackageWarning("导入规则包", readError);
             return;
         }
 
         ImportClassifierPackage(
             packageJson,
             sourceTitle: "导入规则包",
-            importedStatusPrefix: $"已导入 {Path.GetFileName(dialog.FileName)}");
+            importedStatusPrefix: $"已导入 {GetClassifierPackageFileName(dialog.FileName)}");
     }
 
     private void OnCopyClassifierPackageClick(object sender, RoutedEventArgs e)
@@ -127,149 +117,5 @@ public partial class PaintSettingsDialog
             packageJson,
             sourceTitle: "粘贴并导入",
             importedStatusPrefix: "已从剪贴板导入");
-    }
-
-    private void OnUndoClassifierPackageImportClick(object sender, RoutedEventArgs e)
-    {
-        if (!_hasRollbackPresentationClassifierOverrides)
-        {
-            RefreshPresentationClassifierPackageStatusText("规则包状态：没有可撤销的导入。");
-            return;
-        }
-
-        ApplyWorkingClassifierOverrides(_rollbackPresentationClassifierOverridesJson);
-        ClearClassifierImportRollback();
-        RefreshPresentationClassifierPackageStatusText(
-            BuildClassifierPackageStatusFromOverrides(
-                _workingPresentationClassifierOverridesJson,
-                importedDetail: "已撤销最近一次导入。"));
-        UpdateSectionDirtyStates();
-    }
-
-    private void ImportClassifierPackage(
-        string packageJson,
-        string sourceTitle,
-        string importedStatusPrefix)
-    {
-        if (!PresentationClassifierOverridesPackagePolicy.TryImport(
-                packageJson,
-                out var importedOverridesJson,
-                out var importDetail,
-                out var importError))
-        {
-            ShowClassifierPackageWarning(sourceTitle, $"导入失败：{importError}");
-            return;
-        }
-
-        var normalizedImported = NormalizePresentationClassifierOverridesJson(importedOverridesJson);
-        var confirmationMessage = BuildClassifierImportConfirmationMessage(normalizedImported, importDetail);
-        if (System.Windows.MessageBox.Show(
-                this,
-                confirmationMessage,
-                sourceTitle,
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question) != MessageBoxResult.Yes)
-        {
-            RefreshPresentationClassifierPackageStatusText("规则包状态：已取消导入。");
-            return;
-        }
-
-        _rollbackPresentationClassifierOverridesJson = _workingPresentationClassifierOverridesJson;
-        _hasRollbackPresentationClassifierOverrides = true;
-        ApplyWorkingClassifierOverrides(normalizedImported);
-
-        var statusDetail = string.IsNullOrWhiteSpace(importDetail)
-            ? $"{importedStatusPrefix}。"
-            : $"{importedStatusPrefix}；{importDetail}。";
-        RefreshPresentationClassifierPackageStatusText(
-            BuildClassifierPackageStatusFromOverrides(
-                _workingPresentationClassifierOverridesJson,
-                statusDetail));
-        UpdateSectionDirtyStates();
-    }
-
-    private void ApplyWorkingClassifierOverrides(string? overridesJson)
-    {
-        _workingPresentationClassifierOverridesJson = NormalizePresentationClassifierOverridesJson(overridesJson);
-        PresentationClassifierOverridesJson = _workingPresentationClassifierOverridesJson;
-        if (PresentationClassifierClearOverridesCheck.IsChecked == true)
-        {
-            PresentationClassifierClearOverridesCheck.IsChecked = false;
-        }
-    }
-
-    private static string BuildClassifierImportConfirmationMessage(string importedOverridesJson, string importDetail)
-    {
-        var summary = "摘要不可用";
-        if (PresentationDiagnosticsProbe.TrySummarizeClassifierOverrides(
-                importedOverridesJson,
-                out var classTokenCount,
-                out var processTokenCount,
-                out _))
-        {
-            summary = $"classToken={classTokenCount}; processToken={processTokenCount}";
-        }
-
-        var detailText = string.IsNullOrWhiteSpace(importDetail) ? "未提供额外详情" : importDetail;
-        return $"将覆盖当前演示识别规则。\n摘要：{summary}\n详情：{detailText}\n\n是否继续？";
-    }
-
-    private void ShowClassifierPackageWarning(string title, string message)
-    {
-        RefreshPresentationClassifierPackageStatusText($"规则包状态：{message}");
-        System.Windows.MessageBox.Show(this, message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
-    }
-
-    private void RefreshPresentationClassifierPackageStatusText(string statusText)
-    {
-        if (PresentationClassifierPackageStatusText == null)
-        {
-            return;
-        }
-
-        PresentationClassifierPackageStatusText.Text = statusText;
-        UpdateClassifierPackageActionState();
-    }
-
-    private static string BuildClassifierPackageStatusFromOverrides(string? overridesJson, string? importedDetail)
-    {
-        var normalized = NormalizePresentationClassifierOverridesJson(overridesJson);
-        var prefix = string.IsNullOrWhiteSpace(normalized)
-            ? "规则包状态：当前未配置自定义覆盖。"
-            : "规则包状态：当前已配置自定义覆盖。";
-
-        if (!string.IsNullOrWhiteSpace(normalized)
-            && PresentationDiagnosticsProbe.TrySummarizeClassifierOverrides(
-                normalized,
-                out var classTokenCount,
-                out var processTokenCount,
-                out _))
-        {
-            prefix = $"规则包状态：当前已配置自定义覆盖（classToken={classTokenCount}; processToken={processTokenCount}）。";
-        }
-
-        return string.IsNullOrWhiteSpace(importedDetail) ? prefix : $"{prefix} {importedDetail}";
-    }
-
-    private static string NormalizePresentationClassifierOverridesJson(string? overridesJson)
-    {
-        return string.IsNullOrWhiteSpace(overridesJson) ? string.Empty : overridesJson.Trim();
-    }
-
-    private void UpdateClassifierPackageActionState()
-    {
-        if (UndoClassifierPackageImportButton == null)
-        {
-            return;
-        }
-
-        UndoClassifierPackageImportButton.IsEnabled = _hasRollbackPresentationClassifierOverrides;
-    }
-
-    private void ClearClassifierImportRollback()
-    {
-        _rollbackPresentationClassifierOverridesJson = string.Empty;
-        _hasRollbackPresentationClassifierOverrides = false;
-        UpdateClassifierPackageActionState();
     }
 }

@@ -77,6 +77,44 @@ public sealed class StudentWorkbookStoreTests
     }
 
     [Fact]
+    public void Save_ShouldNotLeaveTempFile_WhenTargetIsLocked()
+    {
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_locked", ".xlsx");
+        try
+        {
+            var students = new List<StudentRecord>
+            {
+                StudentRecord.Create("1001", "张三", "A班", "一组"),
+            };
+            var roster = new ClassRoster("A班", students);
+            var workbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["A班"] = roster }, "A班");
+            var store = new StudentWorkbookStore();
+            store.Save(workbook, tempPath, "{\"version\":\"2.0\"}");
+
+            using var lockStream = new FileStream(tempPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Action act = () => store.Save(workbook, tempPath, "{\"version\":\"3.0\"}");
+
+            act.Should().Throw<Exception>().Where(ex =>
+                ex.GetType() == typeof(IOException)
+                || ex.GetType() == typeof(UnauthorizedAccessException));
+            Directory.GetFiles(Path.GetDirectoryName(tempPath)!, $"{Path.GetFileName(tempPath)}.*.tmp.xlsx").Should().BeEmpty();
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (IOException)
+                {
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void LoadOrCreate_ShouldFallbackToTemplate_WhenWorkbookFileIsCorrupted()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_corrupt", ".xlsx");

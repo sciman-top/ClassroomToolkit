@@ -118,6 +118,28 @@ public sealed class InkPersistenceServiceTests : IDisposable
     }
 
     [Fact]
+    public void SaveInkForFile_ShouldNotLeaveTempFile_WhenSidecarIsLocked()
+    {
+        var filePath = CreateTempFile("locked.png");
+        _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        });
+
+        var jsonPath = InkPersistenceService.GetJsonPath(filePath);
+        using var lockStream = new FileStream(jsonPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Action act = () => _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
+        {
+            new() { ColorHex = "#00FF00", BrushSize = 2.0, GeometryPath = "M 1 1 L 2 2" }
+        });
+
+        act.Should().Throw<Exception>().Where(ex =>
+            ex.GetType() == typeof(IOException)
+            || ex.GetType() == typeof(UnauthorizedAccessException));
+        Directory.GetFiles(Path.GetDirectoryName(jsonPath)!, $"{Path.GetFileName(jsonPath)}.*.tmp").Should().BeEmpty();
+    }
+
+    [Fact]
     public void SaveEmptyStrokes_ShouldDeleteSidecar()
     {
         var filePath = CreateTempFile();
