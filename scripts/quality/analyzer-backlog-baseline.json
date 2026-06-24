@@ -1,19 +1,10 @@
 {
-  "generated_at_utc": "2026-05-02T09:17:03.1803667Z",
+  "generated_at_utc": "2026-06-24T13:04:42.3065016Z",
   "configuration": "Debug",
   "scope": "src-projects",
   "analysis_level": "latest-all",
-  "diagnostics_total": 84,
-  "project_counts": [
-    {
-      "project": "ClassroomToolkit.App.csproj",
-      "count": 84
-    }
-  ],
-  "rule_counts": [
-    {
-      "rule": "CA1515",
-      "count": 84
-    }
-  ]
+  "diagnostics_total": 0,
+  "project_counts": [],
+  "rule_counts": [],
+  "diagnostics": []
 }

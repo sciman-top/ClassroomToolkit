@@ -26,12 +26,12 @@
     <ProjectReference Include="..\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
     <PackageReference Include="PdfiumViewer.Core" Version="1.0.4" />
     <PackageReference Include="PdfiumViewer.Native.x86_64.no_v8-no_xfa" Version="2018.4.8.256" />
-    <PackageReference Include="System.Speech" Version="10.0.8" />
+    <PackageReference Include="System.Speech" Version="10.0.9" />
   </ItemGroup>
   <ItemGroup Condition="Exists('..\..\students.xlsx')">
     <Content Include="..\..\students.xlsx">
