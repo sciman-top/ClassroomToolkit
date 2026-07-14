@@ -3,38 +3,56 @@
     {
       "package": "Microsoft.ApplicationInsights",
       "owner": "engineering",
+      "status": "active",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Extensions.Telemetry",
       "owner": "engineering",
+      "status": "active",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
       "owner": "engineering",
+      "status": "active",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Platform",
       "owner": "engineering",
+      "status": "active",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Platform.MSBuild",
       "owner": "engineering",
+      "status": "active",
       "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "SixLabors.Fonts",
       "owner": "engineering",
+      "status": "active",
       "reason": "Major-version migration can change font metrics and workbook/image export behavior; requires a dedicated visual/export compatibility slice before upgrade.",
-      "expires_at": "2026-06-30"
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Validate workbook layout, image export, font metrics, and classroom display output against SixLabors.Fonts 3.x before removing the 2.1.3 compatibility pin.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     }
   ]
 }

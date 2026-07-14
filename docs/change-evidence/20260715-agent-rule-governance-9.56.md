@@ -2,7 +2,7 @@
 
 - verified_at: `2026-07-15T00:30:00+08:00`
 - scope: `AGENTS.md` global review marker only; application, data formats, and dependencies were not changed.
-- risk: low for the rule marker; release verification is blocked by dependency governance.
+- risk: low for the rule marker; release verification was initially blocked by dependency governance and was closed by the follow-up dependency slice below.
 - compatibility: project contract remains `2.0`; `CLAUDE.md` remains the one-line `@AGENTS.md` wrapper.
 
 ## Ordered gates
@@ -16,8 +16,12 @@
 | canonical full | `scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug` | 1 | blocked at `dependency-governance`; preceding build/test/contract/hotspot passed |
 | rule contract | control-repo `verify-target-project-rules.py --require-all` | 0 | project rule/wrapper/workflow passed |
 
-## Blocker
+## Initial blocker
 
 `scripts/quality/dependency-outdated-waivers.json` expired on `2026-06-30`. The full gate reported unwaived stable drift including `SixLabors.Fonts`, `SourceGear.sqlite3`, `Microsoft.ApplicationInsights`, and test-platform packages. Renewing risk acceptance or performing major/test-platform upgrades requires an owner decision and a dedicated compatibility slice; this rule-only task does neither.
 
 Rollback is limited to this evidence file and the `AGENTS.md` 9.56 marker. This repository is audited and changed but not fully verified for release.
+
+## Follow-up closure
+
+The dependency blocker was resolved in [20260715-dependency-governance-closure.md](20260715-dependency-governance-closure.md). The final `standard` quality gate and compatibility preflight both passed after stable package updates and time-bounded compatibility waivers. The repository is fully verified by the automated release gates recorded in that follow-up evidence.

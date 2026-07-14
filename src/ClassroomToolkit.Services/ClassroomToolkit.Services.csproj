@@ -7,7 +7,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Speech" Version="10.0.9" />
+    <PackageReference Include="System.Speech" Version="10.0.10" />
   </ItemGroup>
 
   <PropertyGroup>
