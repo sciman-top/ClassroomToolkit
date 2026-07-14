@@ -1,6 +1,6 @@
 # ClassroomToolkit 技术债与稳定性优化清单
 
-## 当前状态（2026-06-24）
+## 当前状态（2026-07-15）
 
 本页既记录长期低风险清理项，也记录曾经阻断完整门禁或发布判断的现实问题及其收口状态。
 
@@ -9,10 +9,10 @@
 - `dotnet build ClassroomToolkit.sln -c Debug`：通过
 - contract / invariant 过滤集：通过，29/29
 - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：3544 通过，0 失败
-- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug`：通过
-- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1`：已通过，稳定过期包仅剩 active waiver 覆盖项
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`：通过
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1`：已通过，仅剩 `SixLabors.Fonts 3.0` 与 xUnit MTP 传递链由截至 `2026-10-15` 的 active waiver 覆盖
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-analyzer-backlog-baseline.ps1 -Configuration Debug`：已通过，`diagnostics_total=0`
-- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run-compatibility-preflight.ps1 -Configuration Debug`：通过
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run-compatibility-preflight.ps1 -Configuration Debug`：通过
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/collect-settings-load-performance-samples.ps1`：通过
 - 当前代码阻断测试：无
 
