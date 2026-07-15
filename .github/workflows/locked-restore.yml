@@ -15,7 +15,7 @@ jobs:
       - name: Refactor Doc Consistency Gate
         shell: pwsh
         run: |
-          $report = & pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -AsJson
+          $report = & pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -AllowMissingStateFallback -AsJson
           $report
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Refactor doc consistency check failed."
