@@ -4,6 +4,7 @@
     [string]$ProgressDoc = "docs/validation/2026-03-06-target-architecture-progress.md",
     [string]$HandoverDoc = "docs/handover.md",
     [string]$FinalAcceptanceDoc = "docs/validation/target-architecture-final-acceptance.md",
+    [switch]$AllowMissingStateFallback,
     [switch]$Fix,
     [switch]$AsJson
 )
@@ -19,6 +20,30 @@ function Read-JsonFile {
     }
 
     return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+}
+
+function New-StateDocFromTaskStatusHints {
+    param([object]$TasksDoc)
+
+    $taskStates = [ordered]@{}
+    foreach ($task in @($TasksDoc.tasks)) {
+        if ($null -eq $task -or [string]::IsNullOrWhiteSpace([string]$task.id)) {
+            continue
+        }
+
+        $statusHint = [string]$task.status_hint
+        if ([string]::IsNullOrWhiteSpace($statusHint)) {
+            throw "Task status_hint is required for clean-runner fallback: $($task.id)"
+        }
+
+        $taskStates[[string]$task.id] = [pscustomobject]@{ status = $statusHint }
+    }
+
+    if ($taskStates.Count -eq 0) {
+        throw "No task status_hint entries are available for clean-runner fallback."
+    }
+
+    return [pscustomobject]@{ tasks = [pscustomobject]$taskStates }
 }
 
 function Write-JsonFile {
@@ -125,7 +150,17 @@ function Find-LineIndex {
 }
 
 $tasksDoc = Read-JsonFile -Path $TaskFile
-$stateDoc = Read-JsonFile -Path $StateFile
+$stateSource = "state_file:$StateFile"
+if (Test-Path -LiteralPath $StateFile) {
+    $stateDoc = Read-JsonFile -Path $StateFile
+}
+elseif ($AllowMissingStateFallback) {
+    $stateDoc = New-StateDocFromTaskStatusHints -TasksDoc $tasksDoc
+    $stateSource = "task_status_hints:$TaskFile"
+}
+else {
+    $stateDoc = Read-JsonFile -Path $StateFile
+}
 $modeFamily = ""
 if ($null -ne $tasksDoc.PSObject.Properties["mode_family"]) {
     $modeFamily = [string]$tasksDoc.mode_family
@@ -404,6 +439,7 @@ else {
 
 $result = [ordered]@{
     status = $status
+    state_source = $stateSource
     fix_mode = [bool]$Fix
     issues_total = $issues.Count
     issues_remaining = $remainingIssues.Count
