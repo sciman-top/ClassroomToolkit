@@ -7,8 +7,8 @@ namespace ClassroomToolkit.Tests;
 
 internal static class TestPathHelper
 {
-    private const int TempDirectorySoftLimit = 2048;
-    private static readonly TimeSpan TempDirectoryMaxAge = TimeSpan.FromDays(7);
+    private const int TempEntrySoftLimit = 2048;
+    private static readonly TimeSpan TempEntryMaxAge = TimeSpan.FromDays(7);
     private static int _repoTempCleanupAttempted;
 
     public static string GetRepositoryRootOrThrow()
@@ -137,25 +137,25 @@ internal static class TestPathHelper
             return;
         }
 
-        TryCleanupRepositoryTempRoot(root, DateTime.UtcNow, TempDirectoryMaxAge, TempDirectorySoftLimit);
+        TryCleanupRepositoryTempRoot(root, DateTime.UtcNow, TempEntryMaxAge, TempEntrySoftLimit);
     }
 
     internal static void TryCleanupRepositoryTempRoot(
         string root,
         DateTime utcNow,
         TimeSpan maxAge,
-        int maxDirectories)
+        int maxEntries)
     {
-        if (string.IsNullOrWhiteSpace(root) || maxDirectories < 0 || maxAge < TimeSpan.Zero)
+        if (string.IsNullOrWhiteSpace(root) || maxEntries < 0 || maxAge < TimeSpan.Zero)
         {
             return;
         }
 
-        DirectoryInfo[] directories;
+        FileSystemInfo[] entries;
         try
         {
-            directories = new DirectoryInfo(root).Exists
-                ? new DirectoryInfo(root).GetDirectories()
+            entries = new DirectoryInfo(root).Exists
+                ? new DirectoryInfo(root).GetFileSystemInfos()
                 : Array.Empty<DirectoryInfo>();
         }
         catch
@@ -163,25 +163,25 @@ internal static class TestPathHelper
             return;
         }
 
-        if (directories.Length == 0)
+        if (entries.Length == 0)
         {
             return;
         }
 
         var staleCutoff = utcNow - maxAge;
-        foreach (var directory in directories)
+        foreach (var entry in entries)
         {
-            if (directory.LastWriteTimeUtc < staleCutoff)
+            if (entry.LastWriteTimeUtc < staleCutoff)
             {
-                TryDeleteDirectory(directory);
+                TryDeleteEntry(entry);
             }
         }
 
-        DirectoryInfo[] remainingDirectories;
+        FileSystemInfo[] remainingEntries;
         try
         {
-            remainingDirectories = new DirectoryInfo(root).Exists
-                ? new DirectoryInfo(root).GetDirectories()
+            remainingEntries = new DirectoryInfo(root).Exists
+                ? new DirectoryInfo(root).GetFileSystemInfos()
                 : Array.Empty<DirectoryInfo>();
         }
         catch
@@ -189,29 +189,59 @@ internal static class TestPathHelper
             return;
         }
 
-        if (remainingDirectories.Length <= maxDirectories)
+        if (remainingEntries.Length <= maxEntries)
         {
             return;
         }
 
-        foreach (var directory in remainingDirectories
+        foreach (var entry in remainingEntries
                      .OrderBy(entry => entry.LastWriteTimeUtc)
                      .ThenBy(entry => entry.Name)
-                     .Take(remainingDirectories.Length - maxDirectories))
+                     .Take(remainingEntries.Length - maxEntries))
         {
-            TryDeleteDirectory(directory);
+            TryDeleteEntry(entry);
         }
     }
 
-    private static void TryDeleteDirectory(DirectoryInfo directory)
+    private static void TryDeleteEntry(FileSystemInfo entry)
     {
         try
         {
-            directory.Delete(recursive: true);
+            TryClearReadOnlyAttribute(entry);
+            if (entry is DirectoryInfo directory)
+            {
+                directory.Delete(recursive: true);
+            }
+            else
+            {
+                entry.Delete();
+            }
         }
         catch
         {
             // best-effort cleanup only; active test runs may still hold handles
+        }
+    }
+
+    private static void TryClearReadOnlyAttribute(FileSystemInfo entry)
+    {
+        try
+        {
+            if (entry is DirectoryInfo directory &&
+                (directory.Attributes & FileAttributes.ReparsePoint) == 0)
+            {
+                foreach (var child in directory.EnumerateFileSystemInfos())
+                {
+                    TryClearReadOnlyAttribute(child);
+                }
+            }
+
+            entry.Refresh();
+            entry.Attributes &= ~FileAttributes.ReadOnly;
+        }
+        catch
+        {
+            // best-effort normalization only; deletion remains fail-open
         }
     }
 }

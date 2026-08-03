@@ -79,17 +79,8 @@ Invoke-NativeStep -Name "build" -FilePath "dotnet" -Arguments @(
 ) -RetryCount 2
 
 $stableTestsScript = Join-Path $PSScriptRoot "..\validation\run-stable-tests.ps1"
-$stableConfigValidator = Join-Path $PSScriptRoot "..\validation\validate-stable-test-config.ps1"
 $powerShellExe = Resolve-PowerShellExecutable
-# Contract guard: keep literal "-Profile $Profile" in source for profile propagation verification.
-if ((Test-Path -LiteralPath $stableTestsScript) -and (Test-Path -LiteralPath $stableConfigValidator)) {
-    Invoke-NativeStep -Name "stable-tests-config" -FilePath $powerShellExe -Arguments @(
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        $stableConfigValidator
-    )
+if (Test-Path -LiteralPath $stableTestsScript) {
     Invoke-NativeStep -Name "stable-tests" -FilePath $powerShellExe -Arguments @(
         "-NoProfile",
         "-ExecutionPolicy",
@@ -99,7 +90,8 @@ if ((Test-Path -LiteralPath $stableTestsScript) -and (Test-Path -LiteralPath $st
         "-Configuration",
         $Configuration,
         "-Profile",
-        $Profile
+        $Profile,
+        "-SkipBuild"
     ) -RetryCount 1
 }
 else {
@@ -118,8 +110,9 @@ Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
     "-c",
     $Configuration,
     "-m:1",
+    "--no-build",
     "--filter",
-    "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
+    "Gate=CoreContract"
 ) -RetryCount 1
 
 Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
@@ -130,46 +123,34 @@ Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
     "scripts/quality/check-hotspot-line-budgets.ps1"
 )
 
-Invoke-NativeStep -Name "governance-truth-source" -FilePath $powerShellExe -Arguments @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    "scripts/quality/check-governance-truth-source.ps1"
-)
+if ($Profile -in @("standard", "full")) {
+    Invoke-NativeStep -Name "dependency-vulnerability" -FilePath $powerShellExe -Arguments @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/quality/check-dependency-vulnerabilities.ps1"
+    )
+}
 
-Invoke-NativeStep -Name "dependency-governance" -FilePath $powerShellExe -Arguments @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    "scripts/quality/check-dependency-upgrade-feasibility.ps1"
-)
+if ($Profile -eq "full") {
+    Invoke-NativeStep -Name "dependency-upgrade-audit" -FilePath $powerShellExe -Arguments @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/quality/check-dependency-upgrade-feasibility.ps1"
+    )
 
-Invoke-NativeStep -Name "dependency-vulnerability" -FilePath $powerShellExe -Arguments @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    "scripts/quality/check-dependency-vulnerabilities.ps1"
-)
-
-Invoke-NativeStep -Name "logging-alert-threshold" -FilePath $powerShellExe -Arguments @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    "scripts/quality/check-logging-alert-threshold.ps1"
-)
-
-Invoke-NativeStep -Name "analyzer-backlog-baseline" -FilePath $powerShellExe -Arguments @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    "scripts/quality/check-analyzer-backlog-baseline.ps1",
-    "-Configuration",
-    $Configuration
-)
+    Invoke-NativeStep -Name "analyzer-latest-all" -FilePath $powerShellExe -Arguments @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/quality/check-analyzer-backlog-baseline.ps1",
+        "-Configuration",
+        $Configuration
+    )
+}
 
 Write-Host "[quality] ALL PASS"

@@ -78,7 +78,7 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 如果要准备发布包，优先使用仓库内脚本：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
@@ -130,8 +130,8 @@ docs/                            架构、计划、验证、证据与运行手�
 
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate=CoreContract"
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
 
@@ -140,6 +140,8 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```powershell
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
+
+`quick` 用于本地快速反馈；`standard` 是日常交付门禁，并增加依赖漏洞扫描；发布前使用 `full`，额外执行依赖升级候选和 `latest-all` analyzer 审计。依赖有新版本不再阻断日常代码交付，但仍会在发布审计中明确失败并要求处理或登记 waiver。
 
 文档或注释类改动至少执行：
 

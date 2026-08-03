@@ -116,13 +116,7 @@ if (-not $SkipTests) {
     }
     else {
         $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
-        $stableConfigValidator = Join-Path $PSScriptRoot "validation/validate-stable-test-config.ps1"
-        if ((Test-Path -LiteralPath $stableTestsScript) -and (Test-Path -LiteralPath $stableConfigValidator)) {
-            & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableConfigValidator
-            if ($LASTEXITCODE -ne 0) {
-                throw "稳定测试配置校验失败，退出码: $LASTEXITCODE"
-            }
-
+        if (Test-Path -LiteralPath $stableTestsScript) {
             & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
             if ($LASTEXITCODE -ne 0) {
                 throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"

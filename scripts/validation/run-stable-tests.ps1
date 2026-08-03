@@ -22,10 +22,11 @@ function Resolve-StableFilter {
 
     switch ($StableProfile) {
         "quick" {
-            return "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests|FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~SafeTaskRunnerTests|FullyQualifiedName~WindowInteropRetryExecutorTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests|FullyQualifiedName~ImageManagerThumbnailCacheWarmupContractTests|FullyQualifiedName~DiagnosticsBundleExportServiceTests"
+            return "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~SafeTaskRunnerTests|FullyQualifiedName~WindowInteropRetryExecutorTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests|FullyQualifiedName~ImageManagerThumbnailCacheWarmupContractTests|FullyQualifiedName~DiagnosticsBundleExportServiceTests"
         }
-        "standard" { return "" }
-        "full" { return "" }
+        { $_ -in @("standard", "full") } {
+            return "Gate!=CoreContract"
+        }
         default { throw "Unsupported stable test profile: $StableProfile" }
     }
 }

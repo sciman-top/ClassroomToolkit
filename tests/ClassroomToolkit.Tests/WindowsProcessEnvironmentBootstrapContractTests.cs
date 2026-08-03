@@ -32,7 +32,6 @@ public sealed class WindowsProcessEnvironmentBootstrapContractTests
     [InlineData("scripts/release/preflight-check.ps1")]
     [InlineData("scripts/validation/run-compatibility-preflight.ps1")]
     [InlineData("scripts/validation/run-stable-tests.ps1")]
-    [InlineData("scripts/validation/validate-stable-test-config.ps1")]
     [InlineData("scripts/quality/check-dependency-vulnerabilities.ps1")]
     [InlineData("scripts/quality/check-dependency-upgrade-feasibility.ps1")]
     [InlineData("scripts/quality/check-analyzer-backlog-baseline.ps1")]

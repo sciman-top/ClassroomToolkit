@@ -78,7 +78,7 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 To prepare release packages, prefer the built-in scripts:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <version> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
@@ -130,8 +130,8 @@ The fixed delivery gate order is `build -> test -> contract/invariant -> hotspot
 
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests|FullyQualifiedName~InteropHookLifecycleContractTests|FullyQualifiedName~InteropHookEventDispatchContractTests|FullyQualifiedName~GlobalHookServiceLifecycleContractTests|FullyQualifiedName~CrossPageDisplayLifecycleContractTests"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate=CoreContract"
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
 
@@ -140,6 +140,8 @@ The repository also provides an aggregate quality gate:
 ```powershell
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
+
+Use `quick` for local feedback, `standard` for the normal delivery gate plus vulnerability scanning, and `full` before a release for dependency-update and `latest-all` analyzer audits. Available dependency updates no longer block routine code delivery, but remain explicit release-audit failures until upgraded or waived.
 
 For documentation-only changes, run at least:
 

@@ -3,6 +3,7 @@ using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
 
+[Trait("Gate", "CoreContract")]
 public sealed class ArchitectureDependencyTests
 {
     [Fact]

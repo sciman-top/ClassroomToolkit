@@ -28,7 +28,7 @@
 ## 4. 发布入口（推荐）
 
 1. 预检：
-   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile standard`
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full`
 2. 打包：
    - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
 

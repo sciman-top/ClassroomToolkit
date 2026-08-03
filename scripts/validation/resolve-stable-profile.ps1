@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("locked-restore", "quality-gate")]
+    [ValidateSet("locked-restore")]
     [string]$Pipeline,
     [Parameter(Mandatory = $true)]
     [string]$EventName
@@ -16,10 +16,6 @@ switch ($Pipeline)
 {
     "locked-restore" {
         if ($isPush) { "standard" } else { "quick" }
-        break
-    }
-    "quality-gate" {
-        if ($isPush) { "full" } else { "standard" }
         break
     }
     default {
