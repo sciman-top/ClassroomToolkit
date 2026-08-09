@@ -1,6 +1,6 @@
 # AGENTS.md - ClassroomToolkit
 **项目契约**: 2.0
-**全局规则复核**: 9.73
+**全局规则复核**: 9.75
 **类型**: Windows WPF (.NET 10)
 **最后更新**: 2026-08-08
 
@@ -41,7 +41,7 @@
 - 回滚只撤销本任务切片；数据变化还需备份、逆向迁移或兼容读取入口。
 
 ## D. Global Rule -> Repo Action
-- Git profile: baseline=`main`; upstream=`origin/main`; closeout=`push_after_full_gate`。
+- Git profile: baseline=`main`; upstream=`origin/main`; closeout=`proportional_standard_or_release_full`。
 - `R1`：先声明课堂场景及 WPF、Interop、数据或 docs 落点。
 - `R2`：受影响测试先行，再由 standard profile 收口。
 - `R3`：止血兼容必须写回收点、最终归宿和回滚入口。
