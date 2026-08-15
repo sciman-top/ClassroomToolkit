@@ -304,7 +304,7 @@ public partial class MainWindow
             : new System.Windows.Point(Left + Width / 2, Top + Height / 2);
         _bubbleWindow.PlaceNear(target);
         System.Diagnostics.Debug.WriteLine(
-            $"[Launcher][Minimize] reason={LauncherVisibilityTransitionReasonPolicy.ResolveMinimizeTag(minimizeDecision.Reason)}");
+            $"[Launcher][Minimize] reason={minimizeDecision.Reason}");
         _settings.LauncherMinimized = true;
         ApplyLauncherMinimizeTransition(transitionPlan);
     }
@@ -315,7 +315,7 @@ public partial class MainWindow
             CaptureLauncherRestoreTransitionContext());
         var transitionPlan = restoreDecision.Plan;
         System.Diagnostics.Debug.WriteLine(
-            $"[Launcher][Restore] reason={LauncherVisibilityTransitionReasonPolicy.ResolveRestoreTag(restoreDecision.Reason)}");
+            $"[Launcher][Restore] reason={restoreDecision.Reason}");
         _settings.LauncherMinimized = false;
         ApplyLauncherRestoreTransition(transitionPlan);
     }

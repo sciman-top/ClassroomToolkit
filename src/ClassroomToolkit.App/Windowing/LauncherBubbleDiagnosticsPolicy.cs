@@ -6,10 +6,10 @@ internal static class LauncherBubbleDiagnosticsPolicy
         LauncherBubbleZOrderApplyGateReason reason,
         LauncherBubbleVisibleChangedApplyReason sourceReason = LauncherBubbleVisibleChangedApplyReason.None)
     {
-        var message = $"[LauncherBubble][VisibleChangedGate] skip reason={LauncherBubbleZOrderApplyGateReasonPolicy.ResolveTag(reason)}";
+        var message = $"[LauncherBubble][VisibleChangedGate] skip reason={reason}";
         if (sourceReason != LauncherBubbleVisibleChangedApplyReason.None)
         {
-            message += $" source={LauncherBubbleVisibleChangedApplyReasonPolicy.ResolveTag(sourceReason)}";
+            message += $" source={sourceReason}";
         }
 
         return message;
@@ -17,6 +17,6 @@ internal static class LauncherBubbleDiagnosticsPolicy
 
     internal static string FormatVisibleChangedDedupSkipMessage(LauncherBubbleVisibleChangedDedupReason reason)
     {
-        return $"[LauncherBubble][VisibleChangedDedup] skip reason={LauncherBubbleVisibleChangedDedupReasonPolicy.ResolveTag(reason)}";
+        return $"[LauncherBubble][VisibleChangedDedup] skip reason={reason}";
     }
 }

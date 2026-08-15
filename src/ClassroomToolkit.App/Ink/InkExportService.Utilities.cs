@@ -77,21 +77,6 @@ public sealed partial class InkExportService
         return Convert.ToHexString(hash.GetHashAndReset());
     }
 
-    private static string GetManifestPath(string exportDir)
-    {
-        return InkExportManifestUtilities.GetManifestPath(exportDir);
-    }
-
-    private static string GetManifestKey(string outputPath)
-    {
-        return InkExportManifestUtilities.GetManifestKey(outputPath);
-    }
-
-    private static Dictionary<string, string> LoadExportManifest(string exportDir)
-    {
-        return InkExportManifestUtilities.LoadExportManifest(exportDir);
-    }
-
     private static BitmapSource? GetOrRenderPdfPage(
         Dictionary<int, BitmapSource> cache,
         PdfDocumentHost pdfDoc,
@@ -116,11 +101,6 @@ public sealed partial class InkExportService
         {
             return null;
         }
-    }
-
-    private static void SaveExportManifest(string exportDir, Dictionary<string, string> manifest)
-    {
-        InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
     }
 
     private static List<InkStrokeData> AdaptStrokesForBackground(List<InkStrokeData>? strokes, BitmapSource background, double fallbackScale)

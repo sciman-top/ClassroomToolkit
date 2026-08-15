@@ -97,15 +97,13 @@ internal static class FloatingWindowExecutionExecutor
             if (!activated)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    FloatingWindowDiagnosticsPolicy.FormatActivationAttemptFailedMessage(targetName));
+                    $"[FloatingWindow][Activation] attempt-failed target={targetName}");
             }
 
             return;
         }
 
         System.Diagnostics.Debug.WriteLine(
-            FloatingWindowDiagnosticsPolicy.FormatActivationSkipMessage(
-                targetName,
-                decision.Reason));
+            $"[FloatingWindow][Activation] skip target={targetName} reason={decision.Reason}");
     }
 }

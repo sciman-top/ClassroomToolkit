@@ -15,7 +15,7 @@ internal static class ZOrderRequestBurstDedupPolicy
         bool lastForceEnforceZOrder,
         DateTime nowUtc,
         bool forceEnforceZOrder,
-        int minIntervalMs = ZOrderRequestBurstDedupDefaults.MinIntervalMs)
+        int minIntervalMs = ZOrderRequestBurstThresholds.RequestDedupMs)
     {
         if (minIntervalMs <= 0 || lastRequestUtc == WindowDedupDefaults.UnsetTimestampUtc)
         {

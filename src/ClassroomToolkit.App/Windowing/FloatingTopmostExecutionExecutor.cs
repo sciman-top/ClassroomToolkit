@@ -3,6 +3,13 @@ using System.Windows;
 
 namespace ClassroomToolkit.App.Windowing;
 
+internal readonly record struct FloatingTopmostExecutionPlan(
+    bool ToolbarTopmost,
+    bool RollCallTopmost,
+    bool LauncherTopmost,
+    bool ImageManagerTopmost,
+    bool EnforceZOrder);
+
 internal static class FloatingTopmostExecutionExecutor
 {
     internal static void Apply(

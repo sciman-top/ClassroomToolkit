@@ -63,10 +63,13 @@ public partial class MainWindow
             return;
         }
 
-        SurfaceZOrderCoordinator.Apply(
-            decision,
-            surface => _windowOrchestrator.TouchSurface(_surfaceStack, surface),
-            RequestApplyZOrderPolicy);
+        var touchChanged = !decision.ShouldTouchSurface
+            || _windowOrchestrator.TouchSurface(_surfaceStack, decision.Surface);
+        if (decision.RequestZOrderApply
+            && (touchChanged || decision.ForceEnforceZOrder))
+        {
+            RequestApplyZOrderPolicy(decision.ForceEnforceZOrder);
+        }
     }
 
     private void RequestApplyZOrderPolicy(bool forceEnforceZOrder = false)
@@ -89,80 +92,65 @@ public partial class MainWindow
             nowUtc,
             forceEnforceZOrder,
             dedupIntervalMs: dedupIntervalMs);
-        ZOrderRequestStateUpdater.Apply(
-            ref _zOrderRequestState,
-            admission);
+        _zOrderRequestState = new ZOrderRequestRuntimeState(
+            admission.LastRequestUtc,
+            admission.LastForceEnforceZOrder);
         if (!admission.ShouldQueue)
         {
-            System.Diagnostics.Debug.WriteLine(ZOrderRequestDiagnosticsPolicy.FormatSkipMessage(
-                admission.Reason,
-                forceEnforceZOrder,
-                _floatingDispatchQueueState.ApplyQueued,
-                _zOrderPolicyApplying));
+            System.Diagnostics.Debug.WriteLine(
+                $"[ZOrderRequest] skip reason={admission.Reason} force={forceEnforceZOrder} queued={_floatingDispatchQueueState.ApplyQueued} applying={_zOrderPolicyApplying}");
             return;
         }
 
-        if (ZOrderRequestQueuedDiagnosticsAdmissionPolicy.ShouldLog(admission.Reason))
+        if (admission.Reason == ZOrderRequestAdmissionReason.QueuedForceEscalationWithinWindow)
         {
-            System.Diagnostics.Debug.WriteLine(ZOrderRequestDiagnosticsPolicy.FormatQueuedMessage(
-                admission.Reason,
-                forceEnforceZOrder));
+            System.Diagnostics.Debug.WriteLine(
+                $"[ZOrderRequest] queued reason={admission.Reason} force={forceEnforceZOrder}");
         }
 
         var queueDispatchFailed = false;
-        FloatingDispatchQueueStateUpdater.ApplyRequest(
-            ref _floatingDispatchQueueState,
+        _floatingDispatchQueueState = FloatingDispatchQueueExecutor.RequestApply(
+            _floatingDispatchQueueState,
             forceEnforceZOrder,
             () => TryBeginInvoke(ExecuteQueuedApplyZOrderPolicy, DispatcherPriority.Background, "ExecuteQueuedApplyZOrderPolicy"),
             decision =>
             {
-                var handlingPlan = ZOrderQueueDispatchDecisionHandlingPolicy.Resolve(decision.Reason);
-                if (handlingPlan.ShouldLogDecision)
+                if (decision.Reason is FloatingDispatchQueueReason.MergedIntoQueuedRequest
+                    or FloatingDispatchQueueReason.QueueDispatchFailed)
                 {
                     System.Diagnostics.Debug.WriteLine(
-                        FloatingDispatchQueueDiagnosticsPolicy.FormatRequestDecisionMessage(
-                            decision.Action,
-                            decision.Reason,
-                            forceEnforceZOrder));
+                        $"[FloatingDispatchQueue] action={decision.Action} reason={decision.Reason} force={forceEnforceZOrder}");
                 }
 
-                if (handlingPlan.ShouldMarkQueueDispatchFailed)
+                if (decision.Reason == FloatingDispatchQueueReason.QueueDispatchFailed)
                 {
                     queueDispatchFailed = true;
                 }
             },
             ex => System.Diagnostics.Debug.WriteLine(
-                FloatingDispatchQueueDiagnosticsPolicy.FormatQueueDispatchFailureExceptionMessage(
-                    ex.GetType().Name,
-                    ex.Message)));
-        ZOrderQueueDispatchFailureRollbackStateUpdater.Apply(
-            ref _zOrderRequestState,
-            queueDispatchFailed,
-            previousRequestState);
+                $"[FloatingDispatchQueue] dispatch-failed ex={ex.GetType().Name} msg={ex.Message}"));
         if (queueDispatchFailed)
         {
+            _zOrderRequestState = previousRequestState;
             System.Diagnostics.Debug.WriteLine(
-                ZOrderRequestDiagnosticsPolicy.FormatQueueDispatchFailedRollbackMessage(forceEnforceZOrder));
+                $"[ZOrderRequest] rollback reason=queue-dispatch-failed force={forceEnforceZOrder}");
         }
     }
 
     private void ExecuteQueuedApplyZOrderPolicy()
     {
-        var admission = FloatingDispatchExecuteAdmissionPolicy.Resolve(_floatingDispatchQueueState.ApplyQueued);
-        if (!admission.ShouldExecute)
+        if (!_floatingDispatchQueueState.ApplyQueued)
         {
             System.Diagnostics.Debug.WriteLine(
-                FloatingDispatchExecuteDiagnosticsPolicy.FormatSkipMessage(admission.Reason));
+                "[FloatingDispatchQueue][Execute] skip reason=NotQueued");
             return;
         }
 
-        FloatingDispatchQueueStateUpdater.ApplyExecuteQueued(
-            ref _floatingDispatchQueueState,
+        _floatingDispatchQueueState = FloatingDispatchQueueExecutor.ExecuteQueuedApply(
+            _floatingDispatchQueueState,
             ApplyZOrderPolicy,
             ex => System.Diagnostics.Debug.WriteLine(
-                FloatingDispatchExecuteDiagnosticsPolicy.FormatFailureMessage(
-                    ex.GetType().Name,
-                    ex.Message)));
+                $"[FloatingDispatchQueue][Execute] failed ex={ex.GetType().Name} msg={ex.Message}"));
     }
 
     private bool TryBeginInvoke(Action action, DispatcherPriority priority, string operation)
@@ -213,11 +201,11 @@ public partial class MainWindow
     private FloatingUtilityActivitySnapshot CaptureFloatingUtilityActivity(
         LauncherWindowRuntimeSnapshot launcherSnapshot)
     {
-        return FloatingUtilityActivitySnapshotPolicy.Resolve(
-            toolbarActive: _toolbarWindow?.IsActive == true,
-            rollCallActive: _rollCallWindow?.IsActive == true,
-            imageManagerActive: _imageManagerWindow?.IsActive == true,
-            launcherActive: launcherSnapshot.Active);
+        return new FloatingUtilityActivitySnapshot(
+            ToolbarActive: _toolbarWindow?.IsActive == true,
+            RollCallActive: _rollCallWindow?.IsActive == true,
+            ImageManagerActive: _imageManagerWindow?.IsActive == true,
+            LauncherActive: launcherSnapshot.Active);
     }
 
     private void ApplyZOrderPolicy(bool forceEnforceZOrder = false)
@@ -254,9 +242,7 @@ public partial class MainWindow
                 _rollCallWindow,
                 launcherWindow,
                 coordination.Runtime.ImageManagerVisible ? _imageManagerWindow : null);
-            SessionTransitionDecisionStateUpdater.Apply(
-                ref _floatingCoordinationState,
-                state);
+            _floatingCoordinationState = state;
             EnsureCriticalFloatingWindowsTopmost(
                 launcherWindow,
                 enforceZOrder: forceEnforceZOrder);
@@ -286,18 +272,21 @@ public partial class MainWindow
         var launcherSnapshot = CaptureLauncherWindowRuntimeSnapshot();
         var runtimeSnapshot = CaptureFloatingWindowRuntimeSnapshot(launcherSnapshot);
         var overlay = _overlayWindow;
-        return FloatingWindowCoordinationSnapshotPolicy.Resolve(
-            runtimeSnapshot,
-            launcherSnapshot,
-            toolbarVisible: _toolbarWindow?.IsVisible == true,
-            rollCallVisible: _rollCallWindow?.IsVisible == true,
-            toolbarActive: _toolbarWindow?.IsActive == true,
-            rollCallActive: _rollCallWindow?.IsActive == true,
-            imageManagerActive: _imageManagerWindow?.IsActive == true,
-            launcherActive: launcherSnapshot.Active,
-            toolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
-            rollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
-            imageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null);
+        return new FloatingWindowCoordinationSnapshot(
+            Runtime: runtimeSnapshot,
+            Launcher: launcherSnapshot,
+            TopmostVisibility: new FloatingTopmostVisibilitySnapshot(
+                ToolbarVisible: _toolbarWindow?.IsVisible == true,
+                RollCallVisible: _rollCallWindow?.IsVisible == true,
+                LauncherVisible: runtimeSnapshot.LauncherVisible,
+                ImageManagerVisible: runtimeSnapshot.ImageManagerVisible,
+                OverlayVisible: runtimeSnapshot.OverlayVisible),
+            UtilityActivity: CaptureFloatingUtilityActivity(launcherSnapshot),
+            Owner: new FloatingOwnerRuntimeSnapshot(
+                OverlayVisible: runtimeSnapshot.OverlayVisible,
+                ToolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
+                RollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
+                ImageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null));
     }
 
     private LauncherWindowRuntimeSnapshot CaptureLauncherWindowRuntimeSnapshot()
@@ -388,31 +377,33 @@ public partial class MainWindow
     private void SyncOverlayOwnedWindow(Window? child)
     {
         var overlay = _overlayWindow;
-        var action = FloatingSingleOwnerExecutionPolicy.Resolve(
-            childExists: child != null,
-            overlayVisible: overlay?.IsVisible == true,
-            ownerAlreadyOverlay: child?.Owner == overlay && overlay != null);
+        var action = child == null
+            ? FloatingOwnerBindingAction.None
+            : FloatingOwnerBindingPolicy.Resolve(
+                overlayVisible: overlay?.IsVisible == true,
+                ownerAlreadyOverlay: child.Owner == overlay && overlay != null);
         FloatingSingleOwnerExecutionExecutor.Apply(action, child, overlay);
     }
 
     private void DetachOverlayOwnedWindow(Window? child)
     {
         var overlay = _overlayWindow;
-        var action = FloatingSingleOwnerExecutionPolicy.Resolve(
-            childExists: child != null,
-            overlayVisible: false,
-            ownerAlreadyOverlay: child?.Owner == overlay && overlay != null);
+        var action = child == null
+            ? FloatingOwnerBindingAction.None
+            : FloatingOwnerBindingPolicy.Resolve(
+                overlayVisible: false,
+                ownerAlreadyOverlay: child.Owner == overlay && overlay != null);
         FloatingSingleOwnerExecutionExecutor.Apply(action, child, overlay);
     }
 
     private void SyncFloatingWindowOwners(bool overlayVisible)
     {
         var overlay = _overlayWindow;
-        var snapshot = FloatingOwnerRuntimeSnapshotPolicy.Resolve(
-            overlayVisible: overlayVisible,
-            toolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
-            rollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
-            imageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null);
+        var snapshot = new FloatingOwnerRuntimeSnapshot(
+            OverlayVisible: overlayVisible,
+            ToolbarOwnerAlreadyOverlay: _toolbarWindow?.Owner == overlay && overlay != null,
+            RollCallOwnerAlreadyOverlay: _rollCallWindow?.Owner == overlay && overlay != null,
+            ImageManagerOwnerAlreadyOverlay: _imageManagerWindow?.Owner == overlay && overlay != null);
         var plan = FloatingOwnerExecutionPlanPolicy.Resolve(snapshot);
         FloatingOwnerExecutionExecutor.Apply(
             plan,

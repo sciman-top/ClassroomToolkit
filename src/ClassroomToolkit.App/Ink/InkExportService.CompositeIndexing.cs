@@ -37,7 +37,7 @@ public sealed partial class InkExportService
             return 0;
         }
 
-        var manifest = LoadExportManifest(exportDir);
+        var manifest = InkExportManifestUtilities.LoadExportManifest(exportDir);
         var manifestDirty = false;
         var deleted = 0;
         foreach (var outputPath in GetFilesSafely(exportDir))
@@ -60,7 +60,7 @@ public sealed partial class InkExportService
             deleted++;
             manifestDirty = true;
 
-            if (manifest.Remove(GetManifestKey(outputPath)))
+            if (manifest.Remove(InkExportManifestUtilities.GetManifestKey(outputPath)))
             {
                 manifestDirty = true;
             }
@@ -68,7 +68,7 @@ public sealed partial class InkExportService
 
         if (manifestDirty)
         {
-            SaveExportManifest(exportDir, manifest);
+            InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
         }
         return deleted;
     }
@@ -151,7 +151,7 @@ public sealed partial class InkExportService
             return 0;
         }
 
-        var manifest = LoadExportManifest(exportDir);
+        var manifest = InkExportManifestUtilities.LoadExportManifest(exportDir);
         var manifestDirty = false;
         var deleted = 0;
         var sourceDir = Path.GetDirectoryName(sourcePath) ?? string.Empty;
@@ -180,7 +180,7 @@ public sealed partial class InkExportService
             deleted++;
             manifestDirty = true;
 
-            if (manifest.Remove(GetManifestKey(outputPath)))
+            if (manifest.Remove(InkExportManifestUtilities.GetManifestKey(outputPath)))
             {
                 manifestDirty = true;
             }
@@ -188,7 +188,7 @@ public sealed partial class InkExportService
 
         if (manifestDirty)
         {
-            SaveExportManifest(exportDir, manifest);
+            InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
         }
         return deleted;
     }
@@ -311,7 +311,7 @@ public sealed partial class InkExportService
             return false;
         }
 
-        return manifest.TryGetValue(GetManifestKey(outputPath), out var recorded)
+        return manifest.TryGetValue(InkExportManifestUtilities.GetManifestKey(outputPath), out var recorded)
                && string.Equals(recorded, fingerprint, StringComparison.Ordinal);
     }
 }

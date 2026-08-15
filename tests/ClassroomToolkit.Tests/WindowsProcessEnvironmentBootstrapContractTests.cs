@@ -38,11 +38,9 @@ public sealed class WindowsProcessEnvironmentBootstrapContractTests
     [InlineData("scripts/validation/run-compatibility-matrix-report.ps1")]
     [InlineData("scripts/validation/collect-settings-load-performance-samples.ps1")]
     [InlineData("scripts/release/prepare-distribution.ps1")]
-    [InlineData("scripts/validation/run-final-acceptance-evidence.ps1")]
     [InlineData("scripts/collect-brush-quality-baseline.ps1")]
     [InlineData("scripts/collect-brush-telemetry-report.ps1")]
     [InlineData("scripts/ctoolkit.ps1")]
-    [InlineData("scripts/automation/run-safe-autopilot.ps1")]
     public void DotnetEntrypoints_ShouldLoadWindowsProcessEnvironmentBootstrap(string relativePath)
     {
         var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(

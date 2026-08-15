@@ -7,6 +7,6 @@ internal static class ForegroundExplicitRetouchDiagnosticsPolicy
         ForegroundExplicitRetouchThrottleReason reason)
     {
         return
-            $"[ExplicitForeground][Throttle] skip surface={surface} reason={ForegroundExplicitRetouchThrottleReasonPolicy.ResolveTag(reason)}";
+            $"[ExplicitForeground][Throttle] skip surface={surface} reason={reason}";
     }
 }

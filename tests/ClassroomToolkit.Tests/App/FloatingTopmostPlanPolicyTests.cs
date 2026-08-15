@@ -105,12 +105,12 @@ public sealed class FloatingTopmostPlanPolicyTests
     [Fact]
     public void Resolve_ShouldSupportVisibilitySnapshotInput()
     {
-        var visibility = FloatingTopmostVisibilitySnapshotPolicy.Resolve(
-            toolbarVisible: true,
-            rollCallVisible: false,
-            launcherVisible: true,
-            imageManagerVisible: false,
-            overlayVisible: true);
+        var visibility = new FloatingTopmostVisibilitySnapshot(
+            ToolbarVisible: true,
+            RollCallVisible: false,
+            LauncherVisible: true,
+            ImageManagerVisible: false,
+            OverlayVisible: true);
 
         var plan = FloatingTopmostPlanPolicy.Resolve(
             ZOrderSurface.Whiteboard,

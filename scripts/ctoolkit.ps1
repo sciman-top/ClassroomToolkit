@@ -6,8 +6,6 @@
     [switch]$SmokeZOrder,
     [switch]$SmokeZOrderAuto,
     [switch]$SmokeNonInteractive,
-    [switch]$CheckRefactorConsistency,
-    [switch]$InstallPreCommitHook,
     [ValidateSet("quick", "standard", "full")]
     [string]$StableTestProfile = "standard",
     [switch]$LegacyTestRunner
@@ -133,32 +131,6 @@ if (-not $SkipTests) {
                 "-m:1"
             )
         }
-    }
-}
-
-if ($CheckRefactorConsistency) {
-    Write-Host "==> Refactor 文档口径一致性检查/修正" -ForegroundColor Cyan
-    $consistencyScript = Join-Path $PSScriptRoot "refactor/check-doc-consistency.ps1"
-    if (-not (Test-Path -LiteralPath $consistencyScript)) {
-        throw "未找到一致性脚本: $consistencyScript"
-    }
-
-    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $consistencyScript -Fix
-    if ($LASTEXITCODE -ne 0) {
-        throw "文档口径一致性检查存在未自动修复问题，退出码: $LASTEXITCODE"
-    }
-}
-
-if ($InstallPreCommitHook) {
-    Write-Host "==> 安装 pre-commit 文档一致性 Hook" -ForegroundColor Cyan
-    $installHookScript = Join-Path $PSScriptRoot "refactor/install-precommit-consistency-hook.ps1"
-    if (-not (Test-Path -LiteralPath $installHookScript)) {
-        throw "未找到 hook 安装脚本: $installHookScript"
-    }
-
-    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $installHookScript
-    if ($LASTEXITCODE -ne 0) {
-        throw "安装 pre-commit hook 失败，退出码: $LASTEXITCODE"
     }
 }
 

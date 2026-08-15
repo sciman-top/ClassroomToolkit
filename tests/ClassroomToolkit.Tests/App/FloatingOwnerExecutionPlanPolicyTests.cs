@@ -37,11 +37,11 @@ public sealed class FloatingOwnerExecutionPlanPolicyTests
     [Fact]
     public void Resolve_ShouldSupportSnapshotInput()
     {
-        var snapshot = FloatingOwnerRuntimeSnapshotPolicy.Resolve(
-            overlayVisible: true,
-            toolbarOwnerAlreadyOverlay: false,
-            rollCallOwnerAlreadyOverlay: true,
-            imageManagerOwnerAlreadyOverlay: false);
+        var snapshot = new FloatingOwnerRuntimeSnapshot(
+            OverlayVisible: true,
+            ToolbarOwnerAlreadyOverlay: false,
+            RollCallOwnerAlreadyOverlay: true,
+            ImageManagerOwnerAlreadyOverlay: false);
 
         var plan = FloatingOwnerExecutionPlanPolicy.Resolve(snapshot);
 

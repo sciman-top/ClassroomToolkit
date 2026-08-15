@@ -1,9 +1,0 @@
-规则ID=R8,E4
-影响模块=README.md,README.en.md,docs/README.md
-当前落点=中文 README 信息少于英文入口，docs 目录缺少面向接手者的索引，质量门禁入口未在 README 中明确聚合脚本。
-目标归宿=中英文 README 都能指向课堂使用、开发验证和文档目录；docs/README.md 作为文档导航入口。
-迁移批次=20260515-readme-docs-entrypoint-refresh
-风险等级=低
-执行命令=git diff --check
-验证证据=文档改动不触碰代码、数据格式或构建配置；执行 git diff --check 验证空白与补丁格式。
-回滚动作=git restore README.md README.en.md docs/README.md docs/change-evidence/20260515-readme-docs-entrypoint-refresh.md

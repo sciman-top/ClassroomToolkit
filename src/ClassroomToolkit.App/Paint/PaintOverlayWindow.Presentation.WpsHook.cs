@@ -267,7 +267,7 @@ public partial class PaintOverlayWindow
         void ShowUnavailableMessage()
         {
             SafeActionExecutionExecutor.TryExecute(
-                () => _wpsHookUnavailableNotifier.Notify(this),
+                () => MessageBoxWpsHookUnavailableNotifier.Notify(this),
                 ex => Debug.WriteLine(
                     $"[WpsNavHook] unavailable message failed: {ex.GetType().Name} - {ex.Message}"));
         }

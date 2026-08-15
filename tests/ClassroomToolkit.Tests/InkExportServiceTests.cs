@@ -572,11 +572,6 @@ public sealed class InkExportServiceTests : IDisposable
         File.WriteAllText(outputA, "a");
         File.WriteAllText(outputB, "b");
 
-        var method = typeof(InkExportService).GetMethod(
-            "SaveExportManifest",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull();
-
         var startGate = new ManualResetEventSlim(false);
         static Dictionary<string, string> BuildManifest(string fileName, string hash)
         {
@@ -591,7 +586,9 @@ public sealed class InkExportServiceTests : IDisposable
             startGate.Wait(cancellationToken);
             for (var i = 0; i < 120; i++)
             {
-                method!.Invoke(null, new object?[] { exportDir, BuildManifest("a+笔迹.png", "hash-a") });
+                InkExportManifestUtilities.SaveExportManifest(
+                    exportDir,
+                    BuildManifest("a+笔迹.png", "hash-a"));
             }
         }, cancellationToken);
         var t2 = Task.Run(() =>
@@ -599,7 +596,9 @@ public sealed class InkExportServiceTests : IDisposable
             startGate.Wait(cancellationToken);
             for (var i = 0; i < 120; i++)
             {
-                method!.Invoke(null, new object?[] { exportDir, BuildManifest("b+笔迹.png", "hash-b") });
+                InkExportManifestUtilities.SaveExportManifest(
+                    exportDir,
+                    BuildManifest("b+笔迹.png", "hash-b"));
             }
         }, cancellationToken);
 

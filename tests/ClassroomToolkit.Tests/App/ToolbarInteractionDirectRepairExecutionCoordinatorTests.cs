@@ -11,118 +11,134 @@ public sealed class ToolbarInteractionDirectRepairExecutionCoordinatorTests
     public void Apply_ShouldRunImmediateRepair_WhenDispatchModeIsImmediate()
     {
         var applyCount = 0;
-        var queued = false;
-        var rerunRequested = false;
+        var state = new RuntimeState();
 
-        var outcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+        var outcome = Apply(
+            state,
             ToolbarInteractionRetouchDispatchMode.Immediate,
-            () => queued,
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref queued),
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref queued),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref rerunRequested),
             () => applyCount++,
             _ => throw new InvalidOperationException("scheduler should not be used"));
 
         outcome.Should().Be(ToolbarInteractionDirectRepairExecutionOutcome.ImmediateApplied);
         applyCount.Should().Be(1);
-        queued.Should().BeFalse();
-        rerunRequested.Should().BeFalse();
+        state.Queued.Should().BeFalse();
+        state.RerunRequested.Should().BeFalse();
     }
 
     [Fact]
     public void Apply_ShouldRequestRerun_WhenBackgroundRepairIsAlreadyQueued()
     {
         var applyCount = 0;
-        var queued = true;
-        var rerunRequested = false;
+        var state = new RuntimeState { Queued = true };
 
-        var outcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+        var outcome = Apply(
+            state,
             ToolbarInteractionRetouchDispatchMode.Background,
-            () => queued,
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref queued),
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref queued),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref rerunRequested),
             () => applyCount++,
             _ => true);
 
         outcome.Should().Be(ToolbarInteractionDirectRepairExecutionOutcome.BackgroundDispatchRejected);
         applyCount.Should().Be(0);
-        queued.Should().BeTrue();
-        rerunRequested.Should().BeTrue();
+        state.Queued.Should().BeTrue();
+        state.RerunRequested.Should().BeTrue();
     }
 
     [Fact]
     public void Apply_ShouldReplayOnce_WhenSecondBackgroundRequestArrivesWhileQueued()
     {
         var applyCount = 0;
-        var queued = false;
-        var rerunRequested = false;
+        var state = new RuntimeState();
         Action? queuedAction = null;
 
-        var firstOutcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+        var firstOutcome = Apply(
+            state,
             ToolbarInteractionRetouchDispatchMode.Background,
-            () => queued,
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref queued),
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref queued),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref rerunRequested),
             () => applyCount++,
             action =>
             {
                 queuedAction = action;
                 return true;
             });
-
-        var secondOutcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+        var secondOutcome = Apply(
+            state,
             ToolbarInteractionRetouchDispatchMode.Background,
-            () => queued,
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref queued),
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref queued),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref rerunRequested),
             () => applyCount++,
             _ => true);
 
         firstOutcome.Should().Be(ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduled);
         secondOutcome.Should().Be(ToolbarInteractionDirectRepairExecutionOutcome.BackgroundDispatchRejected);
-        queued.Should().BeTrue();
-        rerunRequested.Should().BeTrue();
+        state.Queued.Should().BeTrue();
+        state.RerunRequested.Should().BeTrue();
 
         queuedAction.Should().NotBeNull();
         queuedAction!();
 
         applyCount.Should().Be(2);
-        queued.Should().BeFalse();
-        rerunRequested.Should().BeFalse();
+        state.Queued.Should().BeFalse();
+        state.RerunRequested.Should().BeFalse();
     }
 
     [Fact]
     public void Apply_ShouldClearQueuedAndRerunFlags_WhenBackgroundScheduleFails()
     {
         var applyCount = 0;
-        var queued = false;
-        var rerunRequested = true;
+        var state = new RuntimeState { RerunRequested = true };
 
-        var outcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+        var outcome = Apply(
+            state,
             ToolbarInteractionRetouchDispatchMode.Background,
-            () => queued,
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref queued),
-            () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref queued),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref rerunRequested),
-            () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref rerunRequested),
             () => applyCount++,
             _ => false);
 
         outcome.Should().Be(ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduleFailed);
         applyCount.Should().Be(0);
-        queued.Should().BeFalse();
-        rerunRequested.Should().BeFalse();
+        state.Queued.Should().BeFalse();
+        state.RerunRequested.Should().BeFalse();
+    }
+
+    private static ToolbarInteractionDirectRepairExecutionOutcome Apply(
+        RuntimeState state,
+        ToolbarInteractionRetouchDispatchMode mode,
+        Action repair,
+        Func<Action, bool> schedule)
+    {
+        return ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
+            mode,
+            () => state.Queued,
+            state.TryMarkQueued,
+            () => state.Queued = false,
+            () => state.RerunRequested = true,
+            state.TryConsumeRerun,
+            () => state.RerunRequested = false,
+            repair,
+            schedule);
+    }
+
+    private sealed class RuntimeState
+    {
+        internal bool Queued { get; set; }
+        internal bool RerunRequested { get; set; }
+
+        internal bool TryMarkQueued()
+        {
+            if (Queued)
+            {
+                return false;
+            }
+
+            Queued = true;
+            return true;
+        }
+
+        internal bool TryConsumeRerun()
+        {
+            if (!RerunRequested)
+            {
+                return false;
+            }
+
+            RerunRequested = false;
+            return true;
+        }
     }
 }

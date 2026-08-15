@@ -123,7 +123,7 @@ Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
     "scripts/quality/check-hotspot-line-budgets.ps1"
 )
 
-if ($Profile -in @("standard", "full")) {
+if ($Profile -eq "full") {
     Invoke-NativeStep -Name "dependency-vulnerability" -FilePath $powerShellExe -Arguments @(
         "-NoProfile",
         "-ExecutionPolicy",

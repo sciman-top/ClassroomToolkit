@@ -23,13 +23,13 @@ internal static class FloatingOwnerExecutionPlanPolicy
         bool imageManagerOwnerAlreadyOverlay)
     {
         return new FloatingOwnerExecutionPlan(
-            ToolbarAction: FloatingOwnerExecutionActionResolver.Resolve(
+            ToolbarAction: FloatingOwnerBindingPolicy.Resolve(
                 overlayVisible,
                 toolbarOwnerAlreadyOverlay),
-            RollCallAction: FloatingOwnerExecutionActionResolver.Resolve(
+            RollCallAction: FloatingOwnerBindingPolicy.Resolve(
                 overlayVisible,
                 rollCallOwnerAlreadyOverlay),
-            ImageManagerAction: FloatingOwnerExecutionActionResolver.Resolve(
+            ImageManagerAction: FloatingOwnerBindingPolicy.Resolve(
                 overlayVisible,
                 imageManagerOwnerAlreadyOverlay));
     }

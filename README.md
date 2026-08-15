@@ -33,7 +33,7 @@
 - 开发需要 `.NET 10 SDK`
 - 可选硬件：触屏一体机、手写屏、数位板、翻页笔、投影仪或外接显示器
 
-## 最新状态（2026-06-13）
+## 最新状态（2026-08-15）
 
 最近几批工作集中在课堂高频链路的稳定性与触控体验：
 
@@ -43,11 +43,11 @@
 - 悬浮学生照片、工具条、点名窗口、启动器之间的窗口层级做了首帧与复显加固，尽量避免课堂中首帧遮挡和抢焦点。
 - 画笔设置对话框补了构造期空引用防护，避免设置按钮在 XAML 初始化阶段偶发崩溃。
 
-最新本地验证快照：
+本轮精简后的本地验证快照：
 
 - `dotnet build ClassroomToolkit.sln -c Debug`：通过，0 warning / 0 error
-- contract / invariant 过滤集：通过，29/29
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`：当前为 `3533` 通过、`0` 失败
+- 普通测试（排除核心契约）：通过，3014/3014
+- contract / invariant：通过，29/29
 - 当前代码阻断项：无
   - 照片叠加层空图失败分支契约已同步到 `EnterInactivePassthroughState()` 透明穿透语义，不再要求 `Hide()`
 
@@ -55,7 +55,7 @@
 
 - [文档目录](./docs/README.md)
 - [当前接手说明](./docs/handover.md)
-- [最新变更证据](./docs/change-evidence/)
+- [高风险变更证据](./docs/change-evidence/)
 
 ## 快速开始
 
@@ -121,7 +121,7 @@ src/ClassroomToolkit.Infra        配置、持久化与文件系统细节
 src/ClassroomToolkit.Interop      Win32 / COM / WPS 集成边界
 tests/ClassroomToolkit.Tests      自动化测试
 scripts/                         质量门禁、验证、发布和环境脚本
-docs/                            架构、计划、验证、证据与运行手册
+docs/                            架构、验收、少量高风险证据与运行手册
 ```
 
 ## 构建与验证
@@ -141,7 +141,7 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
 
-`quick` 用于本地快速反馈；`standard` 是日常交付门禁，并增加依赖漏洞扫描；发布前使用 `full`，额外执行依赖升级候选和 `latest-all` analyzer 审计。依赖有新版本不再阻断日常代码交付，但仍会在发布审计中明确失败并要求处理或登记 waiver。
+普通改动优先运行受影响测试与 build；`quick` 只做快速反馈，`standard` 用于共享或高风险 seam 的阶段收口。发布前或依赖变化使用 `full`，统一执行漏洞、升级候选和 `latest-all` analyzer 审计。
 
 文档或注释类改动至少执行：
 
@@ -149,7 +149,7 @@ powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -
 git diff --check
 ```
 
-如果你是基于当前主分支继续开发，请先查看 [docs/handover.md](./docs/handover.md) 中的当前验证快照；代码门禁已恢复全绿，但发布仍需课堂现场验证。
+如果你是基于当前主分支继续开发，请先查看 [docs/handover.md](./docs/handover.md)；上述数量只代表本次精简后的仓库验证，发布仍需课堂现场验收。
 
 ## 文档入口
 
@@ -158,7 +158,7 @@ git diff --check
 - [文档目录](./docs/README.md)
 - [当前接手说明](./docs/handover.md)
 - [技术债与稳定性清单](./docs/tech-debt-backlog.md)
-- [变更证据目录](./docs/change-evidence/)
+- [高风险变更证据](./docs/change-evidence/)
 - [发布检查清单](./docs/runbooks/release-checklist.md)
 - [课堂试点验收手册](./docs/runbooks/classroom-pilot-validation-runbook.md)
 

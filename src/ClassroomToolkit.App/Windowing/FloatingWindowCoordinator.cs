@@ -6,7 +6,26 @@ namespace ClassroomToolkit.App.Windowing;
 
 internal readonly record struct FloatingWindowCoordinationState(
     ZOrderSurface? LastFrontSurface,
-    FloatingTopmostPlan? LastTopmostPlan);
+    FloatingTopmostPlan? LastTopmostPlan)
+{
+    internal static FloatingWindowCoordinationState Default => new(
+        LastFrontSurface: null,
+        LastTopmostPlan: null);
+}
+
+internal readonly record struct FloatingWindowExecutionPlan(
+    FloatingTopmostExecutionPlan TopmostExecutionPlan,
+    FloatingWindowActivationPlan ActivationPlan,
+    FloatingOwnerExecutionPlan OwnerPlan,
+    bool ReplayOverlayBelowFloatingUtilities = false);
+
+internal enum FloatingWindowExecutionSkipReason
+{
+    EnforceZOrder,
+    ActivationIntent,
+    OwnerBindingIntent,
+    NoExecutionIntent
+}
 
 internal static class FloatingWindowCoordinator
 {
@@ -23,37 +42,41 @@ internal static class FloatingWindowCoordinator
         ArgumentNullException.ThrowIfNull(surfaceStack);
         ArgumentNullException.ThrowIfNull(executePlan);
 
-        var decision = FloatingWindowZOrderDecisionPolicy.Resolve(
+        var frontSurface = FloatingFrontSurfaceResolver.Resolve(
             windowOrchestrator,
             surfaceStack,
-            coordination.Runtime,
-            coordination.TopmostVisibility,
+            coordination.Runtime);
+        var topmostPlan = FloatingTopmostPlanPolicy.Resolve(
+            frontSurface,
+            coordination.TopmostVisibility);
+        var enforceZOrder = FloatingTopmostApplyPolicy.ShouldEnforceZOrder(
             state.LastFrontSurface,
+            frontSurface,
             state.LastTopmostPlan,
+            topmostPlan,
             forceEnforceZOrder);
-        var executionPlan = FloatingWindowExecutionPlanPolicy.Resolve(
+        var executionPlan = CreateExecutionPlan(
             coordination.Runtime,
-            decision.TopmostPlan,
-            decision.EnforceZOrder,
+            topmostPlan,
+            enforceZOrder,
             coordination.UtilityActivity,
             coordination.Owner,
             suppressOverlayActivation);
 
-        var skipDecision = FloatingWindowExecutionSkipPolicy.Resolve(executionPlan);
-        if (skipDecision.ShouldExecute)
+        var executionReason = ResolveExecutionReason(executionPlan);
+        if (executionReason != FloatingWindowExecutionSkipReason.NoExecutionIntent)
         {
             executePlan(executionPlan);
         }
         else
         {
             System.Diagnostics.Debug.WriteLine(
-                FloatingWindowDiagnosticsPolicy.FormatExecutionSkipMessage(
-                    skipDecision.Reason));
+                $"[FloatingWindow][Execution] skip reason={executionReason}");
         }
 
         return new FloatingWindowCoordinationState(
-            LastFrontSurface: decision.FrontSurface,
-            LastTopmostPlan: decision.TopmostPlan);
+            LastFrontSurface: frontSurface,
+            LastTopmostPlan: topmostPlan);
     }
 
     internal static FloatingWindowCoordinationState Apply(
@@ -83,5 +106,73 @@ internal static class FloatingWindowCoordinator
                 rollCallWindow,
                 launcherWindow,
                 imageManagerWindow));
+    }
+
+    private static FloatingWindowExecutionPlan CreateExecutionPlan(
+        FloatingWindowRuntimeSnapshot runtimeSnapshot,
+        FloatingTopmostPlan topmostPlan,
+        bool enforceZOrder,
+        FloatingUtilityActivitySnapshot utilityActivity,
+        FloatingOwnerRuntimeSnapshot ownerSnapshot,
+        bool suppressOverlayActivation)
+    {
+        var activationPlan = FloatingWindowActivationPolicy.Resolve(
+            runtimeSnapshot,
+            topmostPlan,
+            utilityActivity);
+
+        return new FloatingWindowExecutionPlan(
+            TopmostExecutionPlan: new FloatingTopmostExecutionPlan(
+                ToolbarTopmost: topmostPlan.ToolbarTopmost,
+                RollCallTopmost: topmostPlan.RollCallTopmost,
+                LauncherTopmost: topmostPlan.LauncherTopmost,
+                ImageManagerTopmost: topmostPlan.ImageManagerTopmost,
+                EnforceZOrder: enforceZOrder),
+            ActivationPlan: OverlayActivationSuppressionPolicyAdapter.ApplySuppression(
+                activationPlan,
+                suppressOverlayActivation),
+            OwnerPlan: FloatingOwnerExecutionPlanPolicy.Resolve(ownerSnapshot),
+            ReplayOverlayBelowFloatingUtilities: ShouldReplayOverlayBelowFloatingUtilities(
+                runtimeSnapshot,
+                topmostPlan,
+                enforceZOrder));
+    }
+
+    private static FloatingWindowExecutionSkipReason ResolveExecutionReason(FloatingWindowExecutionPlan plan)
+    {
+        if (plan.TopmostExecutionPlan.EnforceZOrder)
+        {
+            return FloatingWindowExecutionSkipReason.EnforceZOrder;
+        }
+
+        if (plan.ActivationPlan.ActivateOverlay || plan.ActivationPlan.ActivateImageManager)
+        {
+            return FloatingWindowExecutionSkipReason.ActivationIntent;
+        }
+
+        if (plan.OwnerPlan.ToolbarAction != FloatingOwnerBindingAction.None
+            || plan.OwnerPlan.RollCallAction != FloatingOwnerBindingAction.None
+            || plan.OwnerPlan.ImageManagerAction != FloatingOwnerBindingAction.None)
+        {
+            return FloatingWindowExecutionSkipReason.OwnerBindingIntent;
+        }
+
+        return FloatingWindowExecutionSkipReason.NoExecutionIntent;
+    }
+
+    private static bool ShouldReplayOverlayBelowFloatingUtilities(
+        FloatingWindowRuntimeSnapshot runtimeSnapshot,
+        FloatingTopmostPlan topmostPlan,
+        bool enforceZOrder)
+    {
+        if (!runtimeSnapshot.PhotoActive || !runtimeSnapshot.OverlayVisible || !enforceZOrder)
+        {
+            return false;
+        }
+
+        return topmostPlan.ToolbarTopmost
+            || topmostPlan.RollCallTopmost
+            || topmostPlan.LauncherTopmost
+            || topmostPlan.ImageManagerTopmost;
     }
 }

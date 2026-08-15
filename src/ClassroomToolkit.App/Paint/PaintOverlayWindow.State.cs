@@ -78,7 +78,6 @@ public partial class PaintOverlayWindow : Window
     private readonly WpsSlideshowNavigationHook? _wpsNavHook;
     private readonly WpsNavHookClient? _wpsNavHookClient;
     private readonly WpsHookOrchestrator _wpsHookOrchestrator = new();
-    private readonly MessageBoxWpsHookUnavailableNotifier _wpsHookUnavailableNotifier = new();
     private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();
     private bool _wpsNavHookActive;
     private bool _wpsHookInterceptKeyboard = true;

@@ -13,7 +13,7 @@ public sealed partial class InkExportService
     private static void ExportPdfFile(string sourcePath, InkDocumentData? inkDoc, InkExportOptions options, InkExportRunResult result)
     {
         var exportDir = GetExportDirectory(sourcePath);
-        var manifest = LoadExportManifest(exportDir);
+        var manifest = InkExportManifestUtilities.LoadExportManifest(exportDir);
         var manifestDirty = false;
 
         var pagesWithInk = (inkDoc?.Pages ?? new List<InkPageData>())
@@ -32,7 +32,7 @@ public sealed partial class InkExportService
         {
             if (manifestDirty)
             {
-                SaveExportManifest(exportDir, manifest);
+                InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
             }
             return;
         }
@@ -46,7 +46,7 @@ public sealed partial class InkExportService
         {
             if (manifestDirty)
             {
-                SaveExportManifest(exportDir, manifest);
+                InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
             }
             return;
         }
@@ -58,7 +58,7 @@ public sealed partial class InkExportService
             {
                 if (manifestDirty)
                 {
-                    SaveExportManifest(exportDir, manifest);
+                    InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
                 }
                 return;
             }
@@ -75,7 +75,7 @@ public sealed partial class InkExportService
             {
                 if (manifestDirty)
                 {
-                    SaveExportManifest(exportDir, manifest);
+                    InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
                 }
                 return;
             }
@@ -107,7 +107,7 @@ public sealed partial class InkExportService
                 var outputBitmap = CompositeImage(background, strokes);
 
                 SaveImage(outputBitmap, outputPath, options);
-                manifest[GetManifestKey(outputPath)] = pageFingerprint;
+                manifest[InkExportManifestUtilities.GetManifestKey(outputPath)] = pageFingerprint;
                 manifestDirty = true;
                 result.OutputPaths.Add(outputPath);
                 result.ExportedCount++;
@@ -115,7 +115,7 @@ public sealed partial class InkExportService
 
             if (manifestDirty)
             {
-                SaveExportManifest(exportDir, manifest);
+                InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
             }
         }
         finally
@@ -150,7 +150,7 @@ public sealed partial class InkExportService
 
         var exportDir = GetExportDirectory(sourcePath);
         Directory.CreateDirectory(exportDir);
-        var manifest = LoadExportManifest(exportDir);
+        var manifest = InkExportManifestUtilities.LoadExportManifest(exportDir);
         var outputPath = BuildOutputPath(sourcePath, 1, isPdf: false, options);
         var fingerprintSourceStrokes = rawStrokes ?? new List<InkStrokeData>();
         var pageFingerprint = BuildExportFingerprint(sourcePath, 1, fingerprintSourceStrokes, options);
@@ -162,8 +162,8 @@ public sealed partial class InkExportService
         }
 
         SaveImage(outputBitmap, outputPath, options);
-        manifest[GetManifestKey(outputPath)] = pageFingerprint;
-        SaveExportManifest(exportDir, manifest);
+        manifest[InkExportManifestUtilities.GetManifestKey(outputPath)] = pageFingerprint;
+        InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
         result.OutputPaths.Add(outputPath);
         result.ExportedCount++;
     }

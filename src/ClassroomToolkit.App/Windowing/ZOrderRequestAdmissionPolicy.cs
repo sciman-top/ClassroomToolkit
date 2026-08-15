@@ -56,10 +56,14 @@ internal static class ZOrderRequestAdmissionPolicy
             forceEnforceZOrder);
         if (!reentryDecision.ShouldAcceptRequest)
         {
-            return ZOrderRequestAdmissionDecisionFactory.Reject(
-                lastRequestUtc,
-                lastForceEnforceZOrder,
-                ZOrderRequestReentryReasonPolicy.ResolveAdmissionReason(reentryDecision.Reason));
+            var reason = reentryDecision.Reason == ZOrderApplyReentryReason.ApplyingAndQueued
+                ? ZOrderRequestAdmissionReason.ReentryApplyingAndQueued
+                : ZOrderRequestAdmissionReason.ReentryBlocked;
+            return new ZOrderRequestAdmissionDecision(
+                ShouldQueue: false,
+                LastRequestUtc: lastRequestUtc,
+                LastForceEnforceZOrder: lastForceEnforceZOrder,
+                Reason: reason);
         }
 
         var dedup = ZOrderRequestBurstDedupPolicy.Resolve(
@@ -68,6 +72,10 @@ internal static class ZOrderRequestAdmissionPolicy
             nowUtc,
             forceEnforceZOrder,
             dedupIntervalMs);
-        return ZOrderRequestAdmissionDecisionFactory.FromDedup(dedup);
+        return new ZOrderRequestAdmissionDecision(
+            ShouldQueue: dedup.ShouldQueue,
+            LastRequestUtc: dedup.LastRequestUtc,
+            LastForceEnforceZOrder: dedup.LastForceEnforceZOrder,
+            Reason: dedup.Reason);
     }
 }

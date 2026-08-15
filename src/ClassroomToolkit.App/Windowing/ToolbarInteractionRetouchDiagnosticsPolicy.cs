@@ -7,7 +7,7 @@ internal static class ToolbarInteractionRetouchDiagnosticsPolicy
         ToolbarInteractionRetouchDecisionReason reason)
     {
         return
-            $"[ToolbarRetouch][Decision] skip trigger={trigger} reason={ToolbarInteractionRetouchDecisionReasonPolicy.ResolveTag(reason)}";
+            $"[ToolbarRetouch][Decision] skip trigger={trigger} reason={reason}";
     }
 
     internal static string FormatActivationSuppressionSkipMessage(
@@ -15,25 +15,25 @@ internal static class ToolbarInteractionRetouchDiagnosticsPolicy
         ToolbarInteractionActivationSuppressionReason reason)
     {
         return
-            $"[ToolbarRetouch][Suppression] skip trigger={trigger} reason={ToolbarInteractionActivationSuppressionReasonPolicy.ResolveTag(reason)}";
+            $"[ToolbarRetouch][Suppression] skip trigger={trigger} reason={reason}";
     }
 
     internal static string FormatAdmissionSkipMessage(
         ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchAdmissionReason reason,
+        ZOrderApplyReentryReason reason,
         bool forceEnforceZOrder)
     {
         return
-            $"[ToolbarRetouch][Admission] skip trigger={trigger} reason={ToolbarInteractionRetouchAdmissionReasonPolicy.ResolveTag(reason)} force={forceEnforceZOrder}";
+            $"[ToolbarRetouch][Admission] skip trigger={trigger} reason={reason} force={forceEnforceZOrder}";
     }
 
     internal static string FormatThrottleSkipMessage(
         ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchThrottleReason reason,
+        RetouchThrottleReason reason,
         int minimumIntervalMs)
     {
         return
-            $"[ToolbarRetouch][Throttle] skip trigger={trigger} reason={ToolbarInteractionRetouchThrottleReasonPolicy.ResolveTag(reason)} minIntervalMs={minimumIntervalMs}";
+            $"[ToolbarRetouch][Throttle] skip trigger={trigger} reason={reason} minIntervalMs={minimumIntervalMs}";
     }
 
     internal static string FormatExecutionPlanMessage(
@@ -49,7 +49,7 @@ internal static class ToolbarInteractionRetouchDiagnosticsPolicy
         ToolbarInteractionDirectRepairAdmissionReason reason)
     {
         return
-            $"[ToolbarRetouch][DirectRepair] skip trigger={trigger} reason={ToolbarInteractionDirectRepairAdmissionReasonPolicy.ResolveTag(reason)}";
+            $"[ToolbarRetouch][DirectRepair] skip trigger={trigger} reason={reason}";
     }
 
     internal static string FormatDirectRepairDispatchMessage(
@@ -61,11 +61,10 @@ internal static class ToolbarInteractionRetouchDiagnosticsPolicy
     }
 
     internal static string FormatDirectRepairDispatchAdmissionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionDirectRepairDispatchAdmissionReason reason)
+        ToolbarInteractionRetouchTrigger trigger)
     {
         return
-            $"[ToolbarRetouch][DirectRepair] dispatch-skip trigger={trigger} reason={ToolbarInteractionDirectRepairDispatchAdmissionReasonPolicy.ResolveTag(reason)}";
+            $"[ToolbarRetouch][DirectRepair] dispatch-skip trigger={trigger} reason=AlreadyQueued";
     }
 
     internal static string FormatDirectRepairDispatchFailureMessage(
@@ -80,6 +79,6 @@ internal static class ToolbarInteractionRetouchDiagnosticsPolicy
     internal static string FormatRuntimeResetMessage(ToolbarInteractionRetouchRuntimeResetReason reason)
     {
         return
-            $"[ToolbarRetouch][RuntimeReset] reason={ToolbarInteractionRetouchRuntimeResetReasonPolicy.ResolveTag(reason)}";
+            $"[ToolbarRetouch][RuntimeReset] reason={reason}";
     }
 }

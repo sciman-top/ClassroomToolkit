@@ -40,7 +40,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _floatingTopmostWatchdogTimer;
     private IDisposable? _presentationForegroundSuppression;
     private bool _zOrderPolicyApplying;
-    private FloatingCoordinationRuntimeState _floatingCoordinationState = FloatingCoordinationRuntimeState.Default;
+    private FloatingWindowCoordinationState _floatingCoordinationState = FloatingWindowCoordinationState.Default;
     private FloatingDispatchQueueState _floatingDispatchQueueState = FloatingDispatchQueueState.Default;
     private ToolbarInteractionRetouchRuntimeState _toolbarInteractionRetouchState = ToolbarInteractionRetouchRuntimeState.Default;
     private bool _toolbarDirectRepairBackgroundQueued;

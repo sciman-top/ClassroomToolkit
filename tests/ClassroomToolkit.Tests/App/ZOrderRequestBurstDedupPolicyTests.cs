@@ -16,7 +16,7 @@ public sealed class ZOrderRequestBurstDedupPolicyTests
             lastForceEnforceZOrder: false,
             nowUtc: now,
             forceEnforceZOrder: false,
-            minIntervalMs: ZOrderRequestBurstDedupDefaults.MinIntervalMs);
+            minIntervalMs: ZOrderRequestBurstThresholds.RequestDedupMs);
 
         decision.ShouldQueue.Should().BeTrue();
         decision.LastRequestUtc.Should().Be(now);
@@ -34,7 +34,7 @@ public sealed class ZOrderRequestBurstDedupPolicyTests
             lastForceEnforceZOrder: false,
             nowUtc: now,
             forceEnforceZOrder: false,
-            minIntervalMs: ZOrderRequestBurstDedupDefaults.MinIntervalMs);
+            minIntervalMs: ZOrderRequestBurstThresholds.RequestDedupMs);
 
         decision.ShouldQueue.Should().BeFalse();
         decision.LastRequestUtc.Should().Be(last);
@@ -51,7 +51,7 @@ public sealed class ZOrderRequestBurstDedupPolicyTests
             lastForceEnforceZOrder: false,
             nowUtc: now,
             forceEnforceZOrder: true,
-            minIntervalMs: ZOrderRequestBurstDedupDefaults.MinIntervalMs);
+            minIntervalMs: ZOrderRequestBurstThresholds.RequestDedupMs);
 
         decision.ShouldQueue.Should().BeTrue();
         decision.LastRequestUtc.Should().Be(now);
@@ -69,7 +69,7 @@ public sealed class ZOrderRequestBurstDedupPolicyTests
             lastForceEnforceZOrder: true,
             nowUtc: now,
             forceEnforceZOrder: false,
-            minIntervalMs: ZOrderRequestBurstDedupDefaults.MinIntervalMs);
+            minIntervalMs: ZOrderRequestBurstThresholds.RequestDedupMs);
 
         decision.ShouldQueue.Should().BeFalse();
         decision.LastRequestUtc.Should().Be(last);

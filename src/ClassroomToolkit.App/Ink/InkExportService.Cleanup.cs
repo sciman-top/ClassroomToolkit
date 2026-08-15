@@ -34,7 +34,7 @@ public sealed partial class InkExportService
             return;
         }
 
-        var manifest = LoadExportManifest(exportDir);
+        var manifest = InkExportManifestUtilities.LoadExportManifest(exportDir);
         var manifestDirty = false;
         foreach (var sourcePath in filesWithComposite)
         {
@@ -52,7 +52,7 @@ public sealed partial class InkExportService
 
         if (manifestDirty)
         {
-            SaveExportManifest(exportDir, manifest);
+            InkExportManifestUtilities.SaveExportManifest(exportDir, manifest);
         }
     }
 
@@ -124,7 +124,7 @@ public sealed partial class InkExportService
             }
             dirty = true;
 
-            if (manifest.Remove(GetManifestKey(outputPath)))
+            if (manifest.Remove(InkExportManifestUtilities.GetManifestKey(outputPath)))
             {
                 dirty = true;
             }

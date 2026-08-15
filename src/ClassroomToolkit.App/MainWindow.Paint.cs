@@ -201,7 +201,9 @@ public partial class MainWindow
             _toolbarInteractionRetouchState.LastPreviewMouseDownUtc,
             _toolbarInteractionRetouchState.LastRetouchUtc,
             nowUtc,
-            launcherOnlySuppressionMs: ToolbarInteractionActivationSuppressionWindowPolicy.ResolveMs(snapshot));
+            launcherOnlySuppressionMs: snapshot.PhotoModeActive || snapshot.WhiteboardActive
+                ? ToolbarInteractionActivationSuppressionDefaults.LauncherOnlyAfterPreviewInteractiveSuppressionMs
+                : ToolbarInteractionActivationSuppressionDefaults.LauncherOnlyAfterPreviewSuppressionMs);
         if (suppressionDecision.ShouldSuppress)
         {
             System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatActivationSuppressionSkipMessage(
@@ -219,11 +221,11 @@ public partial class MainWindow
             return;
         }
 
-        var admission = ToolbarInteractionRetouchAdmissionPolicy.Resolve(
+        var admission = ZOrderApplyReentryPolicy.Resolve(
             _zOrderPolicyApplying,
             _floatingDispatchQueueState.ApplyQueued,
             decision.ForceEnforceZOrder);
-        if (!admission.ShouldRequest)
+        if (!admission.ShouldAcceptRequest)
         {
             System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatAdmissionSkipMessage(
                 trigger,
@@ -233,7 +235,7 @@ public partial class MainWindow
         }
 
         var intervalMs = ToolbarInteractionRetouchIntervalPolicy.ResolveMs(snapshot, trigger);
-        var throttleDecision = ToolbarInteractionRetouchThrottlePolicy.Resolve(
+        var throttleDecision = RetouchThrottlePolicy.Resolve(
             _toolbarInteractionRetouchState.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs: intervalMs);
@@ -246,8 +248,13 @@ public partial class MainWindow
             return;
         }
 
-        var executionPlan = ToolbarInteractionRetouchExecutionPlanPolicy.Resolve(snapshot, decision);
-        if (ToolbarInteractionRetouchStateStampPolicy.ShouldMarkRetouched(trigger, executionPlan))
+        var executionPlan = ToolbarInteractionRetouchExecutionPlanPolicy.Resolve(decision);
+        var shouldMarkRetouched =
+            (executionPlan.ApplyDirectDriftRepair || executionPlan.RequestZOrderApply)
+            && !(trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown
+                 && executionPlan.RequestZOrderApply
+                 && executionPlan.ForceEnforceZOrder);
+        if (shouldMarkRetouched)
         {
             ToolbarInteractionRetouchStateUpdater.MarkRetouched(
                 ref _toolbarInteractionRetouchState,
@@ -283,11 +290,29 @@ public partial class MainWindow
             var executionOutcome = ToolbarInteractionDirectRepairExecutionCoordinator.Apply(
                 dispatchMode,
                 () => _toolbarDirectRepairBackgroundQueued,
-                () => ToolbarInteractionDirectRepairDispatchStateUpdater.TryMarkQueued(ref _toolbarDirectRepairBackgroundQueued),
-                () => ToolbarInteractionDirectRepairDispatchStateUpdater.Clear(ref _toolbarDirectRepairBackgroundQueued),
-                () => ToolbarInteractionDirectRepairRerunStateUpdater.Request(ref _toolbarDirectRepairRerunRequested),
-                () => ToolbarInteractionDirectRepairRerunStateUpdater.TryConsume(ref _toolbarDirectRepairRerunRequested),
-                () => ToolbarInteractionDirectRepairRerunStateUpdater.Clear(ref _toolbarDirectRepairRerunRequested),
+                () =>
+                {
+                    if (_toolbarDirectRepairBackgroundQueued)
+                    {
+                        return false;
+                    }
+
+                    _toolbarDirectRepairBackgroundQueued = true;
+                    return true;
+                },
+                () => _toolbarDirectRepairBackgroundQueued = false,
+                () => _toolbarDirectRepairRerunRequested = true,
+                () =>
+                {
+                    if (!_toolbarDirectRepairRerunRequested)
+                    {
+                        return false;
+                    }
+
+                    _toolbarDirectRepairRerunRequested = false;
+                    return true;
+                },
+                () => _toolbarDirectRepairRerunRequested = false,
                 () => ApplyToolbarDirectRepair(trigger, launcherWindow),
                 action => TryBeginInvoke(
                     action,
@@ -299,8 +324,7 @@ public partial class MainWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchAdmissionSkipMessage(
-                        trigger,
-                        ToolbarInteractionDirectRepairDispatchAdmissionReason.AlreadyQueued));
+                        trigger));
                 return;
             }
 
@@ -367,10 +391,9 @@ public partial class MainWindow
 
     private void ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason reason)
     {
-        ToolbarInteractionRetouchRuntimeResetExecutor.Apply(
-            ref _toolbarDirectRepairBackgroundQueued,
-            ref _toolbarDirectRepairRerunRequested,
-            ref _toolbarInteractionRetouchState);
+        _toolbarDirectRepairBackgroundQueued = false;
+        _toolbarDirectRepairRerunRequested = false;
+        ToolbarInteractionRetouchStateUpdater.Reset(ref _toolbarInteractionRetouchState);
         if (reason != ToolbarInteractionRetouchRuntimeResetReason.None)
         {
             System.Diagnostics.Debug.WriteLine(

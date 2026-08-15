@@ -14,6 +14,20 @@ internal readonly record struct FloatingWindowActivationPlan(
 
 internal static class FloatingWindowActivationPolicy
 {
+    internal static FloatingWindowActivationPlan Resolve(
+        FloatingWindowRuntimeSnapshot runtimeSnapshot,
+        FloatingTopmostPlan topmostPlan,
+        FloatingUtilityActivitySnapshot utilityActivity)
+    {
+        return Resolve(new FloatingWindowActivationSnapshot(
+            OverlayVisible: runtimeSnapshot.OverlayVisible,
+            OverlayShouldActivate: topmostPlan.OverlayShouldActivate,
+            OverlayActive: runtimeSnapshot.OverlayActive,
+            ImageManagerTopmost: topmostPlan.ImageManagerTopmost,
+            ImageManagerActive: utilityActivity.ImageManagerActive,
+            UtilityActivity: utilityActivity));
+    }
+
     internal static FloatingWindowActivationPlan Resolve(FloatingWindowActivationSnapshot snapshot)
     {
         var overlayDecision = OverlayActivationPolicy.Resolve(

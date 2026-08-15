@@ -7,8 +7,8 @@
 ## 1. 当前落点与目标归宿
 - 当前落点：`ClassroomToolkit.sln` 是课堂教学工具主解决方案，现有 WPF、Interop、配置与数据兼容是运行真相。
 - 目标归宿：持续交付课堂可用、可降级、可恢复的教师桌面工具，不以重构破坏既有用户数据和操作路径。
-- 下一最小里程碑：完成当前任务切片，并以 standard quality profile 和 fresh evidence 收口。
-- 当前 issue、发布状态和课堂验收从任务记录、当前代码/配置与 `docs/change-evidence/` fresh read；根规则不固化完成数或机器状态。
+- 下一最小里程碑：完成当前任务切片，并以覆盖当前风险的最低充分验证收口。
+- 当前 issue、发布状态和课堂验收从当前代码、配置与入口文档 fresh read；根规则不固化完成数或机器状态。
 
 ## A. 仓库事实与模块边界
 - `src/ClassroomToolkit.App`：WPF UI/启动；`Application`：用例；`Domain`：规则；`Services`：桥接；`Interop`：高风险系统接口；`Infra`：配置、存储和外部资源。
@@ -35,21 +35,22 @@
 - test：全量 profile 排除下述 5 组 contract，避免同一用例重复执行；quick 仅跑高风险精选回归。
 - contract/invariant：运行标记为 `Gate=CoreContract` 的 5 组架构与 Interop 生命周期契约。
 - hotspot：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
-- standard：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`，执行固定四段并做依赖漏洞扫描。
-- full：同一入口使用 `-Profile full`，额外执行依赖升级审计和 `latest-all` analyzer 审计；quick 不替代 standard，standard 不替代发布前 full。
-- 任一阶段失败或课堂 hotspot 未收敛即阻断；证据放 `docs/change-evidence/`。
+- focused：低风险切片运行受影响测试与 build；不要求为普通文案、样式或局部实现重复整套门禁。
+- standard：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`，仅用于共享 seam、高风险路径或阶段收口。
+- full：同一入口使用 `-Profile full`，增加依赖漏洞、升级和 `latest-all` analyzer 审计；仅用于依赖变化或发布前。
+- 任一适用阶段失败或课堂 hotspot 未收敛即阻断；只有数据迁移、Interop 生命周期、发布或不可逆修复才新增 `docs/change-evidence/`。
 - 回滚只撤销本任务切片；数据变化还需备份、逆向迁移或兼容读取入口。
 
 ## D. Global Rule -> Repo Action
 - Git profile: baseline=`main`; upstream=`origin/main`; closeout=`proportional_standard_or_release_full`。
 - `R1`：先声明课堂场景及 WPF、Interop、数据或 docs 落点。
-- `R2`：受影响测试先行，再由 standard profile 收口。
+- `R2`：受影响测试先行；只有共享或高风险 seam 再由 standard profile 收口。
 - `R3`：止血兼容必须写回收点、最终归宿和回滚入口。
 - `R4`：学生数据、照片与 Office 进程变更先预演备份/回滚。
 - `R5`：无重复或量化热点证据，不新增框架抽象。
-- `R6`：C 章命令与 standard profile 是交付门禁；quick 只作反馈。
+- `R6`：C 章按风险选择 focused / standard / full，不重复已覆盖的测试层。
 - `R7`：保护课堂主路径、Interop 生命周期及学生、设置和照片数据兼容。
-- `R8`：`docs/change-evidence/` 承接依据、命令、证据和回滚。
+- `R8`：Git diff 与测试输出承接普通变更；高风险切片才写 `docs/change-evidence/`。
 - `S1`：先跑课堂入口到可观察输出的最薄主路径。
 - `S2`：运行态与阶段状态留在 plan/evidence。
 - `S3`：外部依据足以形成可逆决定即停止。

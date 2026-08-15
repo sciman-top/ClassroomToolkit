@@ -16,7 +16,7 @@
 3. 依据模板记录：
    - `docs/validation/templates/classroom-pilot-acceptance-template.md`
 4. 填写最终验收：
-   - `docs/validation/target-architecture-final-acceptance.md`
+   - `docs/validation/manual-final-regression-checklist.md`
 5. 同步主文档：
    - `docs/validation/2026-03-06-target-architecture-progress.md`
    - `docs/handover.md`

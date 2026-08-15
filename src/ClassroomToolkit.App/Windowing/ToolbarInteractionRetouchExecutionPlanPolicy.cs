@@ -8,7 +8,6 @@ internal readonly record struct ToolbarInteractionRetouchExecutionPlan(
 internal static class ToolbarInteractionRetouchExecutionPlanPolicy
 {
     internal static ToolbarInteractionRetouchExecutionPlan Resolve(
-        ToolbarInteractionRetouchSnapshot snapshot,
         ToolbarInteractionRetouchDecision decision)
     {
         if (!decision.ShouldRetouch)
@@ -19,8 +18,7 @@ internal static class ToolbarInteractionRetouchExecutionPlanPolicy
                 ForceEnforceZOrder: false);
         }
 
-        var path = ToolbarInteractionRetouchPathPolicy.Resolve(snapshot, decision);
-        if (path == ToolbarInteractionRetouchPath.ZOrderApply)
+        if (decision.ForceEnforceZOrder)
         {
             return new ToolbarInteractionRetouchExecutionPlan(
                 ApplyDirectDriftRepair: false,
@@ -29,7 +27,7 @@ internal static class ToolbarInteractionRetouchExecutionPlanPolicy
         }
 
         return new ToolbarInteractionRetouchExecutionPlan(
-            ApplyDirectDriftRepair: path == ToolbarInteractionRetouchPath.DirectDriftRepair,
+            ApplyDirectDriftRepair: true,
             RequestZOrderApply: false,
             ForceEnforceZOrder: false);
     }

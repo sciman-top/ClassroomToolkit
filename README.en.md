@@ -33,7 +33,7 @@ Out of scope:
 - `.NET 10 SDK` for development
 - Optional hardware: touch display, pen tablet, presentation remote, projector, or external monitor
 
-## Current Status (2026-06-13)
+## Current Status (2026-08-15)
 
 Recent work has focused on high-frequency classroom flows and touch-first stability:
 
@@ -43,11 +43,11 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Student photo overlay, toolbar, roll-call window, and launcher z-order behavior has been hardened, especially on first show and re-show.
 - Paint settings dialog construction is now guarded against initialization-time null-reference crashes.
 
-Latest local verification snapshot:
+Local verification after the current simplification:
 
 - `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- contract / invariant subset: passed, 29/29
-- `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`: currently `3533` passed, `0` failed
+- non-core tests: passed, 3014/3014
+- contract / invariant: passed, 29/29
 - Current code blocker: none
   - The photo-overlay null-bitmap failure branch contract now matches the `EnterInactivePassthroughState()` transparent passthrough behavior and no longer expects `Hide()`
 
@@ -55,7 +55,7 @@ For more context:
 
 - [Documentation index](./docs/README.md)
 - [Current handover](./docs/handover.md)
-- [Recent change evidence](./docs/change-evidence/)
+- [High-risk change evidence](./docs/change-evidence/)
 
 ## Quick Start
 
@@ -121,7 +121,7 @@ src/ClassroomToolkit.Infra        Configuration, persistence, and filesystem det
 src/ClassroomToolkit.Interop      Win32 / COM / WPS integration boundaries
 tests/ClassroomToolkit.Tests      Automated tests
 scripts/                         Quality gates, validation, release, and environment scripts
-docs/                            Architecture, plans, validation, evidence, and runbooks
+docs/                            Architecture, acceptance, selected high-risk evidence, and runbooks
 ```
 
 ## Build and Verification
@@ -141,7 +141,7 @@ The repository also provides an aggregate quality gate:
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
 
-Use `quick` for local feedback, `standard` for the normal delivery gate plus vulnerability scanning, and `full` before a release for dependency-update and `latest-all` analyzer audits. Available dependency updates no longer block routine code delivery, but remain explicit release-audit failures until upgraded or waived.
+For routine changes, run the affected tests and a build. Use `quick` only for fast feedback, `standard` to close shared or high-risk seams, and `full` before releases or after dependency changes; `full` owns vulnerability, update, and `latest-all` analyzer audits.
 
 For documentation-only changes, run at least:
 
@@ -149,7 +149,7 @@ For documentation-only changes, run at least:
 git diff --check
 ```
 
-If you are continuing from the current main branch, read [docs/handover.md](./docs/handover.md) first for the current verification snapshot; code gates are green, while release still needs classroom-site validation.
+If you are continuing from the current main branch, read [docs/handover.md](./docs/handover.md) first. The counts above are only the repository snapshot after this simplification; release still needs classroom-site validation.
 
 ## Documentation
 
@@ -158,7 +158,7 @@ If you are continuing from the current main branch, read [docs/handover.md](./do
 - [Documentation index](./docs/README.md)
 - [Current handover](./docs/handover.md)
 - [Tech debt and stability backlog](./docs/tech-debt-backlog.md)
-- [Change evidence directory](./docs/change-evidence/)
+- [High-risk change evidence](./docs/change-evidence/)
 - [Release checklist](./docs/runbooks/release-checklist.md)
 - [Classroom pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 

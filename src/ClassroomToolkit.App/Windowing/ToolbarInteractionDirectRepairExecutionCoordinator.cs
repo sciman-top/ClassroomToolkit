@@ -39,25 +39,15 @@ internal static class ToolbarInteractionDirectRepairExecutionCoordinator
             return ToolbarInteractionDirectRepairExecutionOutcome.ImmediateApplied;
         }
 
-        var dispatchAdmission = ToolbarInteractionDirectRepairDispatchAdmissionPolicy.Resolve(
-            alreadyQueued: isBackgroundQueued());
-        if (!dispatchAdmission.ShouldDispatch)
+        if (isBackgroundQueued())
         {
-            ApplyFailurePlan(
-                requestRerun,
-                clearBackgroundQueued,
-                clearRerun,
-                ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveAdmissionRejected());
+            requestRerun();
             return ToolbarInteractionDirectRepairExecutionOutcome.BackgroundDispatchRejected;
         }
 
         if (!tryMarkBackgroundQueued())
         {
-            ApplyFailurePlan(
-                requestRerun,
-                clearBackgroundQueued,
-                clearRerun,
-                ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveMarkQueuedFailed());
+            requestRerun();
             return ToolbarInteractionDirectRepairExecutionOutcome.BackgroundMarkQueuedFailed;
         }
 
@@ -79,36 +69,11 @@ internal static class ToolbarInteractionDirectRepairExecutionCoordinator
             });
         if (!scheduled)
         {
-            ApplyFailurePlan(
-                requestRerun,
-                clearBackgroundQueued,
-                clearRerun,
-                ToolbarInteractionDirectRepairDispatchFailurePlanPolicy.ResolveScheduleFailed());
+            clearBackgroundQueued();
+            clearRerun();
             return ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduleFailed;
         }
 
         return ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduled;
-    }
-
-    private static void ApplyFailurePlan(
-        Action requestRerun,
-        Action clearBackgroundQueued,
-        Action clearRerun,
-        ToolbarInteractionDirectRepairDispatchFailurePlan failurePlan)
-    {
-        if (failurePlan.ShouldRequestRerun)
-        {
-            requestRerun();
-        }
-
-        if (failurePlan.ShouldClearQueuedState)
-        {
-            clearBackgroundQueued();
-        }
-
-        if (failurePlan.ShouldClearRerunState)
-        {
-            clearRerun();
-        }
     }
 }

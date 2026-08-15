@@ -31,7 +31,7 @@ public partial class PaintOverlayWindow
             _inkDiagnostics?.OnCrossPageUpdateEvent(
                 "skip",
                 source,
-                CrossPageRequestAdmissionReasonPolicy.ResolveDiagnosticTag(admissionDecision.Reason));
+                admissionDecision.Reason.ToString());
             return;
         }
 
@@ -51,7 +51,7 @@ public partial class PaintOverlayWindow
             CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
                 ref _crossPageReplayState,
                 replayQueueDecision);
-            var reason = CrossPageDuplicateWindowReasonPolicy.ResolveDiagnosticTag(duplicateDecision.Reason);
+            var reason = duplicateDecision.Reason.ToString();
             _inkDiagnostics?.OnCrossPageUpdateEvent("skip", source, reason);
             return;
         }

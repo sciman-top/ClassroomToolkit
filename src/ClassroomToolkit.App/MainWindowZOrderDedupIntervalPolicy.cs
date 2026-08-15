@@ -14,9 +14,9 @@ internal static class MainWindowZOrderDedupIntervalPolicy
 
     internal static int ResolveRequestIntervalMs(MainWindowOverlayInteractionState interactionState)
     {
-        return ZOrderRequestDedupIntervalPolicy.ResolveMs(
-            overlayVisible: interactionState.OverlayVisible,
-            photoModeActive: interactionState.PhotoModeActive,
-            whiteboardActive: interactionState.WhiteboardActive);
+        return interactionState.OverlayVisible
+            && (interactionState.PhotoModeActive || interactionState.WhiteboardActive)
+                ? ZOrderRequestBurstThresholds.InteractiveRequestDedupMs
+                : ZOrderRequestBurstThresholds.RequestDedupMs;
     }
 }

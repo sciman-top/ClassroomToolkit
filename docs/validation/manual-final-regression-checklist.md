@@ -1,66 +1,33 @@
-# 人工最终回归执行清单（终态冻结前）
+# 人工最终回归清单
 
-最后更新：2026-03-15  
-适用范围：`manual-final-regression` 人工门
+## 自动化前置
 
-## 1. 执行前准备
+发布候选冻结后只运行一次：
 
-- 构建与自动化基线必须已通过：
-  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
-  - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`
-- 准备真实教室环境：
-  - 双屏或投影（建议 4K + 投影组合）
-  - WPS 与 PowerPoint 可正常全屏放映
-  - 触控/鼠标/触笔设备可用
-- 记录日志目录与截图目录（建议：`docs/validation/evidence/2026-03-15-manual-final-regression/`）
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Release
+```
 
-## 2. 核心功能回归
+不要再额外重复 Debug/Release 全量测试或 contract 子集。
 
-- `PPT 全屏`：放映进入/退出、翻页、批注、焦点恢复
-- `WPS 全屏`：放映进入/退出、翻页、批注、焦点恢复
-- `图片全屏`：打开/关闭、缩放/平移、前后台切换
-- `PDF 全屏跨页`：跨页书写、翻页、回放、刷新一致性
-- `白板`：书写/擦除/清空/恢复
-- `互切`：图片 / PDF / 白板 / PPT-WPS 任意互切后输入与窗口关系正确
+## 现场环境
 
-## 3. 窗口与输入关系回归
+- 双屏或投影，覆盖常见 DPI 缩放。
+- PowerPoint 与 WPS 全屏放映。
+- 触控、鼠标、触笔/数位板与翻页笔按实际设备覆盖。
+- 使用脱敏或测试名单与照片；不要修改教师真实数据。
 
-- 启动器置顶关系稳定
-- 工具条置顶关系稳定
-- 点名窗口置顶与透明关系正确
-- Overlay 激活、焦点、输入穿透符合预期
-- ImageManager 激活与前台切换正常
+## 课堂主链
 
-## 4. Ink 与跨页专项回归
+- 启动、配置/名单加载、点名、计时。
+- 图片/PDF 打开、缩放、平移、翻页、批注、撤销、跨页恢复。
+- 白板书写、擦除、清空、恢复。
+- PPT/WPS 进入/退出、翻页、批注、焦点恢复。
+- Overlay、工具条、点名、启动器和图片管理器的置顶、穿透与关闭关系。
+- 外部依赖不可用时有降级、无崩溃、无长时间卡死。
 
-- 书写、擦除、翻页、恢复稳定
-- 跨页连续书写稳定
-- 不依赖“拖动/缩放后才刷新”的补偿行为
-- GPU 关闭时 CPU 路径稳定
-- 仅在 `CTOOLKIT_USE_GPU_INK_RENDERER=1` 且 `CTOOLKIT_ENABLE_EXPERIMENTAL_GPU_INK=1` 且能力满足时启用 GPU；失败必须回退 CPU
+## 结果
 
-## 5. 结果判定与落档
-
-- 使用模板：`docs/validation/templates/classroom-pilot-acceptance-template.md`
-- 产出文件建议：`docs/validation/classroom-pilot-acceptance-YYYY-MM-DD.md`
-- 同步更新：
-  - `docs/validation/2026-03-06-target-architecture-progress.md`
-  - `docs/handover.md`
-  - `docs/validation/target-architecture-final-acceptance.md`（结果区）
-
-## 6. 失败回退准则
-
-- 任何阻断级问题（崩溃/卡死/控制失效）直接判定人工门不通过
-- 回退依据：`docs/runbooks/migration-rollback-playbook.md`
-- 回退后需重新执行第 1 节自动化基线，再重跑人工回归
-
-## 7. 自动跳过口径（仅当用户明确要求）
-
-- 可使用：`powershell -File scripts/validation/run-final-acceptance-evidence.ps1 -SkipManualRegression`
-- 该模式不会宣称人工门通过，只会生成 `gate_na` 证据并标记补做时限。
-- 输出证据必须包含：
-  - `reason`
-  - `alternative_verification`
-  - `evidence_link`
-  - `expires_at`
-  - `recovery_plan`
+- 使用 `docs/validation/templates/classroom-pilot-acceptance-template.md`。
+- 任何崩溃、卡死、输入失效、数据破坏或无法恢复均阻断发布。
+- 代码门禁通过只证明 `repo_verified`；完成现场清单后才可报告 `live_accepted`。

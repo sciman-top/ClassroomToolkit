@@ -12,16 +12,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Refactor Doc Consistency Gate
-        shell: pwsh
-        run: |
-          $report = & pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/refactor/check-doc-consistency.ps1 -AllowMissingStateFallback -AsJson
-          $report
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Refactor doc consistency check failed."
-            exit $LASTEXITCODE
-          }
-
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -60,6 +50,14 @@ jobs:
             -Configuration Debug `
             -SkipBuild `
             -Profile "${{ steps.stable_profile.outputs.profile }}"
+
+      - name: Core Contract Tests
+        run: >-
+          dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj
+          -c Debug
+          --no-build
+          -m:1
+          --filter "Gate=CoreContract"
 
       - name: Upload Stable Test Summary
         if: always()

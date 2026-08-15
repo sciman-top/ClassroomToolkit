@@ -102,8 +102,10 @@ public sealed class InteropHookLifecycleContractTests
 
     private static string ReadInteropSources(string pattern)
     {
-        return ContractSourceAggregationHelper.ReadSourcesInDirectory(
-            ["src", "ClassroomToolkit.Interop", "Presentation"],
+        return ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.Interop",
+            "Presentation",
             pattern);
     }
 }

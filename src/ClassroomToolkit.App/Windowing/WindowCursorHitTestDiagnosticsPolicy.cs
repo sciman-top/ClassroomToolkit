@@ -6,6 +6,6 @@ internal static class WindowCursorHitTestDiagnosticsPolicy
         WindowCursorHitTestExecutionReason executionReason,
         WindowCursorHitTestReason hitTestReason)
     {
-        return $"[WindowCursorHitTest] exec={WindowCursorHitTestExecutionReasonPolicy.ResolveTag(executionReason)} hit={WindowCursorHitTestReasonPolicy.ResolveTag(hitTestReason)}";
+        return $"[WindowCursorHitTest] exec={executionReason} hit={hitTestReason}";
     }
 }

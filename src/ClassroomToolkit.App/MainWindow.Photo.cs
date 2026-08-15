@@ -303,7 +303,7 @@ public partial class MainWindow
 
             PhotoNavigationDiagnostics.Log(
                 "MainWindow.Focus",
-                $"defer={defer}, activate={focusPlan.ActivateOverlay}, keyboard={focusPlan.KeyboardFocusOverlay}, activateReason={OverlayNavigationActivateReasonPolicy.ResolveTag(focusPlanDecision.ActivateReason)}, keyboardReason={OverlayNavigationKeyboardFocusReasonPolicy.ResolveTag(focusPlanDecision.KeyboardFocusReason)}");
+                $"defer={defer}, activate={focusPlan.ActivateOverlay}, keyboard={focusPlan.KeyboardFocusOverlay}, activateReason={focusPlanDecision.ActivateReason}, keyboardReason={focusPlanDecision.KeyboardFocusReason}");
         }
 
         if (defer)

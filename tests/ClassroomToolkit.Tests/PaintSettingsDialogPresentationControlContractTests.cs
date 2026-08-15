@@ -17,8 +17,10 @@ public sealed class PaintSettingsDialogPresentationControlContractTests
 
     private static string ReadPaintSettingsDialogSources()
     {
-        return ContractSourceAggregationHelper.ReadSourcesInDirectory(
-            ["src", "ClassroomToolkit.App", "Paint"],
+        return ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
             "PaintSettingsDialog*.cs");
     }
 }

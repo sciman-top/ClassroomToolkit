@@ -1,6 +1,6 @@
 # Governance Truth Source
 
-Last updated: 2026-08-03
+Last updated: 2026-08-15
 Status: active
 
 ## 1. Canonical Entrypoints
@@ -24,7 +24,7 @@ The current quality chain remains:
 Profile additions after hotspot:
 
 - `quick`: no network governance checks.
-- `standard`: `dependency-vulnerability`.
+- `standard`: no network governance checks.
 - `full`: `dependency-vulnerability`, dependency-upgrade audit, then `latest-all` analyzer audit.
 
 The runtime log diagnostic is deliberately outside code gates because host-local logs are not a deterministic property of the worktree. Dependency updates are release-maintenance input, not routine correctness failures.
@@ -41,7 +41,7 @@ The following paths are retired in this repository and should not be referenced 
 - `scripts/quality/check-governance-truth-source.ps1`
 - `scripts/validation/validate-stable-test-config.ps1`
 
-Historical snapshots under `docs/governance/reports/` and `docs/governance/*.md` may still contain old paths; treat them as archived evidence only, not as active runtime policy.
+Retired governance snapshots remain available from Git history; they are not active runtime policy.
 
 ## 4. Verification Commands
 
