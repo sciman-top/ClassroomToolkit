@@ -11,10 +11,9 @@ public static class AtomicFileReplaceUtility
         {
             File.Replace(tempPath, targetPath, null);
         }
-        catch (Exception ex) when (AtomicReplaceFallbackPolicy.ShouldFallback(ex))
+        catch (PlatformNotSupportedException)
         {
-            File.Copy(tempPath, targetPath, overwrite: true);
-            File.Delete(tempPath);
+            File.Move(tempPath, targetPath, overwrite: true);
         }
     }
 

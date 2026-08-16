@@ -40,14 +40,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
-                Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
-                Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
-                _lastValidatedContentHash = GetCurrentContentHash();
-                return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-            }
+            EnsureObjectRoot(document, operation: "load");
 
             var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var sectionNode in document.RootElement.EnumerateObject())
@@ -149,6 +142,17 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         return ex is JsonException or InvalidDataException;
     }
 
+    private void EnsureObjectRoot(JsonDocument document, string operation)
+    {
+        if (document.RootElement.ValueKind == JsonValueKind.Object)
+        {
+            return;
+        }
+
+        throw new InvalidDataException(
+            $"Settings JSON root must be an object during {operation}. path={_path} actual={document.RootElement.ValueKind}.");
+    }
+
     private void EnsureExistingFileStateValidated()
     {
         if (!File.Exists(_path))
@@ -174,6 +178,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
+            EnsureObjectRoot(document, operation: "save-preflight");
             Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, currentWriteTimeUtcTicks);
             _lastValidatedContentHash = currentContentHash ?? GetCurrentContentHash();

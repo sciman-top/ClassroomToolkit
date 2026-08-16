@@ -110,6 +110,46 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         Directory.GetFiles(Path.GetDirectoryName(walPath)!, $"{Path.GetFileName(walPath)}.*.tmp").Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task ConcurrentUpserts_ShouldPreserveEveryWalEntry()
+    {
+        const int entryCount = 32;
+        var sources = Enumerable.Range(1, entryCount)
+            .Select(index => Path.Combine(_tempDir, $"lesson_{index:D2}.png"))
+            .ToArray();
+        foreach (var sourcePath in sources)
+        {
+            File.WriteAllText(sourcePath, "x");
+        }
+
+        await Task.WhenAll(sources.Select((sourcePath, index) => Task.Run(() =>
+        {
+            var strokes = new List<InkStrokeData>
+            {
+                new()
+                {
+                    Type = InkStrokeType.Shape,
+                    GeometryPath = $"M0,0 L{index + 1},{index + 1}",
+                    ColorHex = "#123456",
+                    Opacity = 255,
+                    BrushSize = 2
+                }
+            };
+            _wal.Upsert(sourcePath, 1, strokes, ComputeInkHash(strokes));
+        })));
+
+        var recovered = _wal.RecoverDirectory(
+            _tempDir,
+            _persistence,
+            ComputeInkHash);
+
+        recovered.Should().Be(entryCount);
+        foreach (var sourcePath in sources)
+        {
+            _persistence.LoadInkPageForFile(sourcePath, 1).Should().ContainSingle();
+        }
+    }
+
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
     {
         if (strokes == null || strokes.Count == 0)

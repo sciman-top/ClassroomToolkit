@@ -67,16 +67,6 @@ public sealed class StudentWorkbookStoreTests
     }
 
     [Fact]
-    public void Save_ShouldUseBestEffortTempCleanup()
-    {
-        var source = File.ReadAllText(GetStoreSourcePath());
-
-        source.Should().Contain("AtomicFileReplaceUtility.WriteAtomically(");
-        source.Should().Contain("onTempCleanupFailure:");
-        source.Should().Contain("[StudentWorkbookStore] temp cleanup failed");
-    }
-
-    [Fact]
     public void Save_ShouldNotLeaveTempFile_WhenTargetIsLocked()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_locked", ".xlsx");
@@ -238,12 +228,4 @@ public sealed class StudentWorkbookStoreTests
         }
     }
 
-    private static string GetStoreSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.Infra",
-            "Storage",
-            "StudentWorkbookStore.cs");
-    }
 }

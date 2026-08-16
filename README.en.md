@@ -33,7 +33,7 @@ Out of scope:
 - `.NET 10 SDK` for development
 - Optional hardware: touch display, pen tablet, presentation remote, projector, or external monitor
 
-## Current Status (2026-08-15)
+## Current Status (2026-08-16)
 
 Recent work has focused on high-frequency classroom flows and touch-first stability:
 
@@ -42,14 +42,17 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Undo for image / PDF annotation now restores runtime history, cache, and persistence state, so ink does not disappear again after pan / zoom.
 - Student photo overlay, toolbar, roll-call window, and launcher z-order behavior has been hardened, especially on first show and re-show.
 - Paint settings dialog construction is now guarded against initialization-time null-reference crashes.
+- JSON settings now treat array and other non-object roots as corrupt input; saves refuse to overwrite the original file whether or not a load was attempted first.
+- Shared atomic writes no longer fall back to `File.Copy(overwrite: true)`; unsupported `File.Replace` environments use a same-directory overwrite move, and the single-caller fallback policy was removed.
+- Source-string assertions for ink diagnostic text and workbook atomic-write wiring were retired; existing behavior tests continue to cover corrupt reads, locked files, WAL recovery, and temp-file cleanup.
 
 Local verification after the current simplification:
 
 - `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- non-core tests: passed, 3014/3014
+- non-core tests: passed, 3007/3007
 - contract / invariant: passed, 29/29
 - Current code blocker: none
-  - The photo-overlay null-bitmap failure branch contract now matches the `EnterInactivePassthroughState()` transparent passthrough behavior and no longer expects `Hide()`
+  - Non-object JSON settings roots now fail closed as corrupt input, preserving the original file instead of replacing it with defaults
 
 For more context:
 

@@ -290,20 +290,23 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
         }
     }
 
-    [Fact]
-    public void Save_ShouldRecoverAfterNonObjectJsonLoad()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Save_ShouldThrow_WhenExistingJsonRootIsNotObject(bool loadBeforeSave)
     {
         var tempDir = CreateTempDirectory();
         var path = Path.Combine(tempDir, "settings.json");
         try
         {
             var adapter = new JsonSettingsDocumentStoreAdapter(path);
-            File.WriteAllText(path, "{invalid-json");
-            _ = adapter.Load();
-
             File.WriteAllText(path, "[]");
-            var loaded = adapter.Load();
-            loaded.Should().BeEmpty();
+            if (loadBeforeSave)
+            {
+                var loaded = adapter.Load();
+                loaded.Should().BeEmpty();
+            }
+            var original = File.ReadAllText(path);
 
             var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
             {
@@ -315,9 +318,8 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
 
             Action act = () => adapter.Save(data);
 
-            act.Should().NotThrow();
-            var saved = adapter.Load();
-            saved["Paint"]["brush_base_size"].Should().Be("20");
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be(original);
         }
         finally
         {
