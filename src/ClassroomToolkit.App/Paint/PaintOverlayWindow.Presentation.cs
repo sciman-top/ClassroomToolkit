@@ -470,7 +470,7 @@ public partial class PaintOverlayWindow
     {
         var presentationAllowed = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
         var keyMapped = PresentationKeyCommandPolicy.TryMap(key, out var command);
-        if (!PresentationKeyboardDispatchPolicy.ShouldDispatch(presentationAllowed, keyMapped))
+        if (!presentationAllowed || !keyMapped)
         {
             return false;
         }

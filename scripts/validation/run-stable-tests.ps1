@@ -24,7 +24,10 @@ function Resolve-StableFilter {
         "quick" {
             return "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~SafeTaskRunnerTests|FullyQualifiedName~WindowInteropRetryExecutorTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests|FullyQualifiedName~ImageManagerThumbnailCacheWarmupContractTests|FullyQualifiedName~DiagnosticsBundleExportServiceTests"
         }
-        { $_ -in @("standard", "full") } {
+        "standard" {
+            return "Gate!=CoreContract&Gate!=Performance"
+        }
+        "full" {
             return "Gate!=CoreContract"
         }
         default { throw "Unsupported stable test profile: $StableProfile" }

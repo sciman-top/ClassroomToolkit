@@ -88,9 +88,7 @@ public partial class PaintOverlayWindow
 
     private bool IsPhotoInkModeActive()
     {
-        return PhotoInkModePolicy.IsActive(
-            photoModeActive: _photoModeActive,
-            boardActive: IsBoardActive());
+        return _photoModeActive && !IsBoardActive();
     }
 
     private void NotifyInkStateChanged(

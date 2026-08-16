@@ -7,6 +7,7 @@ public sealed class SettingsRepository
 {
     private readonly IniSettingsStore _store;
     private bool _hasValidatedExistingFileState;
+    private bool _migrationBackupRequired;
     private long _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
     private string? _lastValidatedContentHash;
 
@@ -24,7 +25,10 @@ public sealed class SettingsRepository
         _hasValidatedExistingFileState = true;
         _lastValidatedWriteTimeUtcTicks = GetCurrentWriteTimeUtcTicks();
         _lastValidatedContentHash = TryGetCurrentContentHash();
-        return SettingsMigrator.Migrate(data, _store.Path);
+        _migrationBackupRequired = loaded
+            && File.Exists(_store.Path)
+            && SettingsMigrator.RequiresMigration(data);
+        return SettingsMigrator.Migrate(data);
     }
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)
@@ -37,6 +41,10 @@ public sealed class SettingsRepository
         {
             throw new InvalidOperationException("设置文件读取失败，已阻止写入以避免覆盖原有配置。");
         }
+        if (_migrationBackupRequired)
+        {
+            EnsureMigrationBackup();
+        }
         if (!data.TryGetValue(SettingsMigrator.MetaSection, out var meta))
         {
             meta = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -45,6 +53,7 @@ public sealed class SettingsRepository
         meta[SettingsMigrator.VersionKey] = SettingsMigrator.CurrentVersion;
         _store.Save(data);
         LastLoadSucceeded = true;
+        _migrationBackupRequired = false;
         _hasValidatedExistingFileState = true;
         _lastValidatedWriteTimeUtcTicks = GetCurrentWriteTimeUtcTicks();
         _lastValidatedContentHash = TryGetCurrentContentHash();
@@ -55,6 +64,7 @@ public sealed class SettingsRepository
         if (!File.Exists(_store.Path))
         {
             _hasValidatedExistingFileState = false;
+            _migrationBackupRequired = false;
             _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
             _lastValidatedContentHash = null;
             return;
@@ -69,7 +79,9 @@ public sealed class SettingsRepository
             return;
         }
 
-        LastLoadSucceeded = _store.TryLoad(out _);
+        LastLoadSucceeded = _store.TryLoad(out var existingData);
+        _migrationBackupRequired = LastLoadSucceeded
+            && SettingsMigrator.RequiresMigration(existingData);
         _hasValidatedExistingFileState = true;
         _lastValidatedWriteTimeUtcTicks = currentWriteTimeUtcTicks;
         _lastValidatedContentHash = currentContentHash ?? TryGetCurrentContentHash();
@@ -107,5 +119,30 @@ public sealed class SettingsRepository
         {
             return null;
         }
+    }
+
+    private void EnsureMigrationBackup()
+    {
+        var contentHash = GetCurrentContentHash()
+            ?? throw new IOException("无法读取旧设置文件，已阻止迁移覆盖。");
+        var directory = Path.GetDirectoryName(_store.Path) ?? string.Empty;
+        var fileName = Path.GetFileNameWithoutExtension(_store.Path);
+        var extension = Path.GetExtension(_store.Path);
+        var backupName = $"{fileName}.bak-v{SettingsMigrator.CurrentVersion}-{contentHash}{extension}";
+        var backupPath = Path.Combine(directory, backupName);
+
+        if (File.Exists(backupPath))
+        {
+            using var backupStream = File.OpenRead(backupPath);
+            var backupHash = Convert.ToHexString(SHA256.HashData(backupStream));
+            if (string.Equals(contentHash, backupHash, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new IOException($"迁移备份路径已存在但内容不匹配：{backupPath}");
+        }
+
+        File.Copy(_store.Path, backupPath, overwrite: false);
     }
 }

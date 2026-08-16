@@ -1,74 +1,35 @@
-# 依赖与还原源基线（保守方案）
+# 依赖与还原基线
 
-更新时间：2026-03-10
-范围：ClassroomToolkit 仓库（仅文档基线，不改变构建行为）
+最后更新：2026-08-17
 
-## 1. 当前依赖事实（仓库证据）
+## 当前事实
 
-- 应用层 `src/ClassroomToolkit.App/ClassroomToolkit.App.csproj`
-  - `PdfiumViewer.Core` `1.0.4`
-  - `PdfiumViewer.Native.x86_64.no_v8-no_xfa` `2018.4.8.256`
-  - `System.Speech` `8.0.0`
-- 基础设施层 `src/ClassroomToolkit.Infra/ClassroomToolkit.Infra.csproj`
-  - `ClosedXML` `0.105.0`
-  - `Microsoft.Data.Sqlite` `8.0.8`
-  - `Microsoft.Extensions.Logging` `8.0.0`
-- 服务层 `src/ClassroomToolkit.Services/ClassroomToolkit.Services.csproj`
-  - `System.Speech` `8.0.0`
-- 测试层 `tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj`
-  - `ClosedXML` `0.105.0`
-  - `FluentAssertions` `6.12.0`
-  - `Microsoft.NET.Test.Sdk` `17.6.0`
-  - `xunit` `2.9.3`
-  - `xunit.runner.visualstudio` `3.1.5`
-  - `coverlet.collector` `6.0.0`
+- 目标框架：生产核心 `net10.0`，WPF/Interop `net10.0-windows`。
+- `global.json` 禁止 prerelease，但未固定 feature band；本轮实际 SDK 为 `10.0.303`。
+- 所有解决方案项目都有 `packages.lock.json`；CI 使用 `dotnet restore ClassroomToolkit.sln --locked-mode`。
+- 本地开发可更新 lockfile，但依赖变化必须提交对应 lockfile，并运行 full profile。
 
-## 1.1 当前框架基线
+生产直接依赖按职责保留：
 
-- 解决方案当前主目标框架：`.NET 10`
-- `global.json`：SDK `10.0.100-preview.6.25358.103`
+- App：Microsoft DI/Logging、PdfiumViewer、System.Speech。
+- Infra：ClosedXML、OpenXML/Fonts/Packaging 补丁版本固定、Microsoft.Data.Sqlite/SQLitePCL、Logging。
+- Services：System.Speech。
+- Domain、Application、Interop：无第三方包。
 
-## 2. 源配置现状（仓库内）
+测试项目只直接引用测试框架、覆盖率和其源码真正使用的 ClosedXML；生产项目已提供的包不再在测试项目重复固定。未使用的 `SourceGear.sqlite3` native SQLite 实现已删除，SQLite 统一由 `Microsoft.Data.Sqlite + SQLitePCLRaw.bundle_e_sqlite3` 提供。
 
-- 仓库根未发现 `NuGet.config`。
-- 已存在 lock 文件：
-  - `src/ClassroomToolkit.App/packages.lock.json`
-  - `src/ClassroomToolkit.Domain/packages.lock.json`
-  - `src/ClassroomToolkit.Infra/packages.lock.json`
-  - `src/ClassroomToolkit.Interop/packages.lock.json`
-  - `src/ClassroomToolkit.Services/packages.lock.json`
-  - `tests/ClassroomToolkit.Tests/packages.lock.json`
-- 结论：依赖版本已锁定；还原源选择仍受本机/CI 环境默认 NuGet 配置影响。
-
-## 3. 还原与审计基线（当前执行口径）
-
-- CI 使用 `dotnet restore --locked-mode`（见 `.github/workflows/locked-restore.yml`）。
-- 本地开发默认不强制 locked mode（保守策略）。
-- 建议每次升级依赖时记录：
-  - 变更前后包名与版本
-  - 触发原因（安全修复/功能需要）
-  - 最小验证命令与结果
-
-## 4. 快速核验命令
+## 验证
 
 ```powershell
-# 1) 检查 lock 文件是否齐全
-rg --files -g "**/packages.lock.json"
-
-# 2) 校验锁定还原
-dotnet restore ClassroomToolkit.sln --locked-mode
-
-# 3) 最小测试验证
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug
+dotnet restore ClassroomToolkit.sln --locked-mode -m:1
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-vulnerabilities.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug
 ```
 
-## 5. 当前落地策略（已执行）
+跨 major 升级遵循 `scripts/quality/dependency-outdated-waivers.json` 的有效 waiver；不得为清空版本提示直接升级会改变字体度量、工作簿、PDF、WPF 或测试平台行为的依赖。
 
-- 已新增 CI 工作流：`.github/workflows/locked-restore.yml`
-- 策略：仅 CI 使用 `dotnet restore --locked-mode`；本地开发不强制 locked mode。
-- 目的：在不改变本地工作流的前提下，约束主分支依赖漂移。
+## 边界与回滚
 
-## 6. 回滚说明
-
-- 文档回滚：删除或回退本文件。
-- CI 回滚：删除或回退 `.github/workflows/locked-restore.yml`。
+- lockfile/漏洞/analyzer 通过只证明仓库依赖闭包，不证明课堂设备上的 native runtime 与 Office/WPS 已现场验收。
+- 回滚依赖切片时，同时回滚 `.csproj` 与对应 `packages.lock.json`，再执行 locked restore 和 full profile。

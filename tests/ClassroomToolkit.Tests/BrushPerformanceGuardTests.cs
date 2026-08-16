@@ -10,6 +10,14 @@ using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class BrushPerformanceCollection
+{
+    public const string Name = "Brush performance";
+}
+
+[Collection(BrushPerformanceCollection.Name)]
+[Trait("Gate", "Performance")]
 public sealed class BrushPerformanceGuardTests
 {
     public static IEnumerable<object[]> MarkerPerformanceScenarios()

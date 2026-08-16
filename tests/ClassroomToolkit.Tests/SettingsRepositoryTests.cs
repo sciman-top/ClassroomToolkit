@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
 
@@ -5,6 +6,82 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class SettingsRepositoryTests
 {
+    [Fact]
+    public void Save_ShouldRefuseMigration_WhenBackupPathContainsDifferentContent()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_settings_migration_collision", ".ini");
+        const string original = "[Paint]\nwps_input_mode=manual\nwps_raw_input=True\n";
+        File.WriteAllText(path, original);
+        string contentHash;
+        using (var source = File.OpenRead(path))
+        {
+            contentHash = Convert.ToHexString(SHA256.HashData(source));
+        }
+        var backupPath = Path.Combine(
+            Path.GetDirectoryName(path)!,
+            $"{Path.GetFileNameWithoutExtension(path)}.bak-v2.0-{contentHash}.ini");
+        File.WriteAllText(backupPath, "different content");
+
+        try
+        {
+            var repo = new SettingsRepository(path);
+            var data = repo.Load();
+
+            var act = () => repo.Save(data);
+
+            act.Should().Throw<IOException>();
+            File.ReadAllText(path).Should().Be(original);
+        }
+        finally
+        {
+            if (File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+            }
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldCreateOneDeduplicatedBackup_WhenPersistingMigration()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_settings_migration_backup", ".ini");
+        var directory = Path.GetDirectoryName(path)!;
+        var backupPattern = $"{Path.GetFileNameWithoutExtension(path)}.bak-*";
+        const string original = "[Paint]\nwps_input_mode=manual\nwps_raw_input=True\n";
+        File.WriteAllText(path, original);
+
+        try
+        {
+            var repo = new SettingsRepository(path);
+            var data = repo.Load();
+
+            Directory.GetFiles(directory, backupPattern, SearchOption.TopDirectoryOnly)
+                .Should().BeEmpty("loading settings must not create filesystem side effects");
+
+            repo.Save(data);
+            repo.Save(data);
+
+            var backups = Directory.GetFiles(directory, backupPattern, SearchOption.TopDirectoryOnly);
+            backups.Should().ContainSingle();
+            File.ReadAllText(backups[0]).Should().Be(original);
+        }
+        finally
+        {
+            foreach (var backup in Directory.GetFiles(directory, backupPattern, SearchOption.TopDirectoryOnly))
+            {
+                File.Delete(backup);
+            }
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
     [Fact]
     public void Save_ShouldThrow_WhenDataIsNull()
     {

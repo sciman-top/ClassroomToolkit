@@ -1,12 +1,13 @@
 # ClassroomToolkit 当前技术债
 
-最后更新：2026-08-16
+最后更新：2026-08-17
 
 这里只记录仍未关闭、收益明确的问题；已完成任务从 Git 历史查询，不在当前 backlog 重复保留。
 
 ## P2
 
-- 四组只有一个生产实现的 native adapter 接口收益有限；下次触及对应路径时考虑收敛为统一 Interop seam，不单独为删接口承担窗口风险。
+- App 的 Paint/Windowing 仍有较多单调用者短 policy；只在触及对应路径时按 deletion test 局部内联，不启动全仓批量合并，也不删除有生产 adapter + 测试 adapter 的真实 Interop seam。
+- xUnit 4、测试平台传递链和 SixLabors.Fonts 3.x 属于 major 迁移，当前 waiver 到期日为 2026-10-15；到期前需分别完成测试发现/CI 与字体/工作簿视觉兼容切片。
 
 ## P3
 

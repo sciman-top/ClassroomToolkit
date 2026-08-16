@@ -367,7 +367,7 @@ public partial class PaintOverlayWindow
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var crossPageDisplayActive = ShouldRefreshCrossPagePdfDisplay();
-                    var delay = PdfPrefetchTimingPolicy.ResolveInitialDelayMs(crossPageDisplayActive);
+                    var delay = crossPageDisplayActive ? 0 : PhotoDocumentRuntimeDefaults.PdfPrefetchDelayMs;
                     if (delay > 0)
                     {
                         await Task.Delay(delay, cancellationToken).ConfigureAwait(false);

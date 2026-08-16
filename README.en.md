@@ -33,7 +33,7 @@ Out of scope:
 - `.NET 10 SDK` for development
 - Optional hardware: touch display, pen tablet, presentation remote, projector, or external monitor
 
-## Current Status (2026-08-16)
+## Current Status (2026-08-17)
 
 Recent work has focused on high-frequency classroom flows and touch-first stability:
 
@@ -45,12 +45,16 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - JSON settings now treat array and other non-object roots as corrupt input; saves refuse to overwrite the original file whether or not a load was attempted first.
 - Shared atomic writes no longer fall back to `File.Copy(overwrite: true)`; unsupported `File.Replace` environments use a same-directory overwrite move, and the single-caller fallback policy was removed.
 - Source-string assertions for ink diagnostic text and workbook atomic-write wiring were retired; existing behavior tests continue to cover corrupt reads, locked files, WAL recovery, and temp-file cleanup.
+- Legacy INI files are now backed up once, by content hash, immediately before a migration is persisted. Read-only loads no longer create duplicate backups, and backup failure blocks overwrite.
+- Four one-expression Paint policies and their implementation-mirroring tests were inlined and removed. Wall-clock brush microbenchmarks now run in full/focused verification instead of standard.
+- The dependency graph no longer carries the unused SourceGear native SQLite implementation or duplicate test pins; .NET 10 packages are on 10.0.11 and the Test SDK is on 18.9.0.
 
 Local verification after the current simplification:
 
 - `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- non-core tests: passed, 3007/3007
+- full non-core functional and performance tests: passed, 2997/2997
 - contract / invariant: passed, 29/29
+- `latest-all` analyzer: 0 diagnostics; dependency vulnerabilities: 0
 - Current code blocker: none
   - Non-object JSON settings roots now fail closed as corrupt input, preserving the original file instead of replacing it with defaults
 
@@ -133,7 +137,7 @@ The fixed delivery gate order is `build -> test -> contract/invariant -> hotspot
 
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract&Gate!=Performance"
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate=CoreContract"
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
@@ -144,7 +148,7 @@ The repository also provides an aggregate quality gate:
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
 
-For routine changes, run the affected tests and a build. Use `quick` only for fast feedback, `standard` to close shared or high-risk seams, and `full` before releases or after dependency changes; `full` owns vulnerability, update, and `latest-all` analyzer audits.
+For routine changes, run the affected tests and a build. Use `quick` only for fast feedback. `standard` closes shared or high-risk seams without wall-clock microbenchmarks; brush-performance changes should run `BrushPerformanceGuardTests` directly. Use `full` before releases or after dependency changes; it includes the performance budget plus vulnerability, update, and `latest-all` analyzer audits.
 
 For documentation-only changes, run at least:
 

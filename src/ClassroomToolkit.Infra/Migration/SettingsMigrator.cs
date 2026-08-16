@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace ClassroomToolkit.Infra.Migration;
 
 public static class SettingsMigrator
@@ -8,9 +6,17 @@ public static class SettingsMigrator
     public const string MetaSection = "_meta";
     public const string VersionKey = "_settings_version";
 
+    public static bool RequiresMigration(Dictionary<string, Dictionary<string, string>> data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+
+        return !data.TryGetValue(MetaSection, out var meta)
+            || !meta.TryGetValue(VersionKey, out var version)
+            || !string.Equals(version, CurrentVersion, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static Dictionary<string, Dictionary<string, string>> Migrate(
-        Dictionary<string, Dictionary<string, string>> data,
-        string? settingsPath)
+        Dictionary<string, Dictionary<string, string>> data)
     {
         ArgumentNullException.ThrowIfNull(data);
 
@@ -23,11 +29,6 @@ public static class SettingsMigrator
         if (string.Equals(existingVersion, CurrentVersion, StringComparison.OrdinalIgnoreCase))
         {
             return data;
-        }
-
-        if (!string.IsNullOrWhiteSpace(settingsPath) && File.Exists(settingsPath))
-        {
-            CreateBackup(settingsPath);
         }
 
         NormalizePresentationInputModes(data);
@@ -85,25 +86,4 @@ public static class SettingsMigrator
         };
     }
 
-    private static void CreateBackup(string path)
-    {
-        var directory = Path.GetDirectoryName(path) ?? string.Empty;
-        var fileName = Path.GetFileNameWithoutExtension(path);
-        var ext = Path.GetExtension(path);
-        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-        var backupName = $"{fileName}.bak-{timestamp}-{Guid.NewGuid():N}{ext}";
-        var backupPath = Path.Combine(directory, backupName);
-        try
-        {
-            File.Copy(path, backupPath, overwrite: false);
-        }
-        catch (IOException)
-        {
-            // 备份失败不阻塞主流程。
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // 备份失败不阻塞主流程。
-        }
-    }
 }

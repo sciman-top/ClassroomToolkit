@@ -6,6 +6,7 @@
 
 - [handover](./handover.md)：当前开发边界、验证选择和剩余精简方向。
 - [tech-debt-backlog](./tech-debt-backlog.md)：尚未关闭的工程问题。
+- [current architecture](./architecture/README.md)：当前技术栈、依赖方向、模块 seam 与演进边界。
 - [governance truth source](./governance/truth-source.md)：唯一门禁入口与 profile 分层。
 - [release checklist](./runbooks/release-checklist.md)：发布前检查。
 - [classroom pilot runbook](./runbooks/classroom-pilot-validation-runbook.md)：现场验收。
@@ -14,7 +15,7 @@
 ## 长期文档
 
 - `adr/`：已接受的架构决策。
-- `architecture/`：模块依赖与 Interop seam。
+- `architecture/`：当前模块依赖与 Interop seam；日期型旧台账不作为真值入口。
 - `compatibility/`：兼容性基线和现场矩阵。
 - `runbooks/`：发布、迁移、现场验收与恢复。
 - `validation/templates/`：现场验收模板。

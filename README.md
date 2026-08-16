@@ -33,7 +33,7 @@
 - 开发需要 `.NET 10 SDK`
 - 可选硬件：触屏一体机、手写屏、数位板、翻页笔、投影仪或外接显示器
 
-## 最新状态（2026-08-16）
+## 最新状态（2026-08-17）
 
 最近几批工作集中在课堂高频链路的稳定性与触控体验：
 
@@ -45,12 +45,16 @@
 - JSON 设置现在把数组等非对象根节点视为损坏输入；无论是否先执行过加载，保存都会拒绝覆盖原文件。
 - 共享原子写入不再降级为 `File.Copy(overwrite: true)`；不支持 `File.Replace` 时改用同目录覆盖移动，并移除了只有一个调用者的 fallback policy。
 - 墨迹诊断文本和工作簿原子写的实现字符串断言已退役；损坏读取、锁文件、WAL 恢复与临时文件清理由现有行为测试继续保护。
+- 旧版 INI 只在真正持久化迁移前生成按内容哈希去重的备份；只读加载不再制造重复备份，备份失败会阻止覆盖。
+- 4 个单表达式 Paint policy 及其逐字复述测试已内联删除；墙钟画笔微基准改为 full/focused 运行，standard 不再受机器争用误报影响。
+- 依赖闭包删除未使用的 SourceGear native SQLite 与测试重复固定，.NET 10 包更新到 10.0.11，Test SDK 更新到 18.9.0。
 
 本轮精简后的本地验证快照：
 
 - `dotnet build ClassroomToolkit.sln -c Debug`：通过，0 warning / 0 error
-- 普通测试（排除核心契约）：通过，3007/3007
+- full 普通与性能测试（排除核心契约）：通过，2997/2997
 - contract / invariant：通过，29/29
+- `latest-all` analyzer：0 diagnostics；依赖漏洞：0
 - 当前代码阻断项：无
   - 非对象 JSON 设置根节点已按损坏输入 fail-closed，原文件不会被默认值覆盖
 
@@ -133,7 +137,7 @@ docs/                            架构、验收、少量高风险证据与运�
 
 ```powershell
 dotnet build ClassroomToolkit.sln -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract"
+dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract&Gate!=Performance"
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate=CoreContract"
 powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 ```
@@ -144,7 +148,7 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 powershell -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
 
-普通改动优先运行受影响测试与 build；`quick` 只做快速反馈，`standard` 用于共享或高风险 seam 的阶段收口。发布前或依赖变化使用 `full`，统一执行漏洞、升级候选和 `latest-all` analyzer 审计。
+普通改动优先运行受影响测试与 build；`quick` 只做快速反馈，`standard` 用于共享或高风险 seam 的阶段收口并排除墙钟性能微基准。画笔性能改动应聚焦运行 `BrushPerformanceGuardTests`；发布前或依赖变化使用 `full`，统一纳入性能预算、漏洞、升级候选和 `latest-all` analyzer 审计。
 
 文档或注释类改动至少执行：
 

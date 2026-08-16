@@ -53,6 +53,25 @@
       "expires_at": "2026-10-15",
       "recovery_plan": "Validate workbook layout, image export, font metrics, and classroom display output against SixLabors.Fonts 3.x before removing the 2.1.3 compatibility pin.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
+    },
+    {
+      "package": "xunit.v3",
+      "package_regex": "^(xunit\\.v3(?:\\..+)?|xunit\\.runner\\.visualstudio|xunit\\.analyzers)$",
+      "owner": "engineering",
+      "status": "active",
+      "reason": "xUnit 4 is a major test-platform migration; the current 3.x suite is green and should not be upgraded without runner, analyzer, MTP, and CI compatibility validation.",
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Migrate the xUnit packages as one dedicated slice, update runner and analyzer contracts, then verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
+      "evidence_link": "docs/change-evidence/20260817-deep-audit-closeout.md"
+    },
+    {
+      "package": "Microsoft.Bcl.AsyncInterfaces",
+      "owner": "engineering",
+      "status": "active",
+      "reason": "Version 6.0.0 is a transitive dependency of xunit.v3.common 3.2.2 and is not consumed directly by production or test source.",
+      "expires_at": "2026-10-15",
+      "recovery_plan": "Remove this waiver together with the xUnit 4 migration after the upstream xunit.v3.common dependency no longer resolves Microsoft.Bcl.AsyncInterfaces 6.0.0.",
+      "evidence_link": "docs/change-evidence/20260817-deep-audit-closeout.md"
     }
   ]
 }

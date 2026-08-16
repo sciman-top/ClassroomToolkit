@@ -143,9 +143,7 @@ public partial class PaintOverlayWindow
             FlushPhotoTransformSave();
             ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: false);
         }
-        if (PhotoPanEndRedrawPolicy.ShouldRequestInkRedraw(
-                hadEffectiveMovement && !inertiaStarted,
-                hadCrossPageDragCommit && !inertiaStarted))
+        if (!inertiaStarted && (hadEffectiveMovement || hadCrossPageDragCommit))
         {
             MarkInkTransformVersionDirty();
             RequestInkRedraw();
