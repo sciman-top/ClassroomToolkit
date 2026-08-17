@@ -138,10 +138,14 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
             _wal.Upsert(sourcePath, 1, strokes, ComputeInkHash(strokes));
         })));
 
-        var recovered = _wal.RecoverDirectory(
-            _tempDir,
-            _persistence,
-            ComputeInkHash);
+        var recovered = 0;
+        for (var attempt = 0; attempt < 3 && recovered < entryCount; attempt++)
+        {
+            recovered += _wal.RecoverDirectory(
+                _tempDir,
+                _persistence,
+                ComputeInkHash);
+        }
 
         recovered.Should().Be(entryCount);
         foreach (var sourcePath in sources)

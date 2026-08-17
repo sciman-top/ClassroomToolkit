@@ -69,8 +69,8 @@ public sealed class StartupCompatibilityAutoRemediationPolicyTests
             new[]
             {
                 new StartupCompatibilityIssue(
-                    "native-pdfium-missing",
-                    "missing pdfium",
+                    "native-sqlite-missing",
+                    "missing sqlite",
                     "reinstall package",
                     false)
             });

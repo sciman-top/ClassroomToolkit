@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0-windows7.0": {
+    "net10.0-windows10.0.19041": {
       "ClosedXML": {
         "type": "Direct",
         "requested": "[0.105.1, )",
@@ -269,16 +269,6 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
-      "PdfiumViewer.Core": {
-        "type": "Transitive",
-        "resolved": "1.0.4",
-        "contentHash": "4SZb57POygmbgVaiSs/itCcrPiFmaAacBK85a5a2CKIJsoDqfOZSNWBPY1Ntp1/xn6OmfI7vvS9Ix/tCV3mCGA=="
-      },
-      "PdfiumViewer.Native.x86_64.no_v8-no_xfa": {
-        "type": "Transitive",
-        "resolved": "2018.4.8.256",
-        "contentHash": "Vc5TY9nc6oYDzsC4gWIjIZGbUDXBPF++HzIlg5HsC7Pa0SsPgjXH2UIwfY6YcbAhwbf11NuXrBCNzgKYvPXSfw=="
-      },
       "RBush.Signed": {
         "type": "Transitive",
         "resolved": "4.0.0",
@@ -447,8 +437,6 @@
           "Microsoft.Extensions.DependencyInjection": "[10.0.11, )",
           "Microsoft.Extensions.Logging": "[10.0.11, )",
           "Microsoft.Extensions.Logging.Console": "[10.0.11, )",
-          "PdfiumViewer.Core": "[1.0.4, )",
-          "PdfiumViewer.Native.x86_64.no_v8-no_xfa": "[2018.4.8.256, )",
           "System.Speech": "[10.0.11, )"
         }
       }

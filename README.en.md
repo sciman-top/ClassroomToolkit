@@ -44,7 +44,7 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Paint settings dialog construction is now guarded against initialization-time null-reference crashes.
 - JSON settings now treat schema corruption, file locks, and transient I/O failures as unsafe-to-overwrite states. Saving resumes only after an explicit successful reload, preserving unknown sections and keys.
 - A corrupt `students.xlsx` is no longer replaced by the sample template, and later state saves are blocked. Valid legacy normalization first creates a SHA-256-deduplicated byte-for-byte backup.
-- Zero-page PDFs now release their native document immediately on the failed-open path. `IPdfDocumentHost` isolates window logic from the concrete PDFium implementation for a future renderer replacement.
+- PDF rendering has moved from `PdfiumViewer.Core 1.0.4` and the 2018 native PDFium build to the Windows-provided `Windows.Data.Pdf` API. Automated coverage now includes corrupt-file degradation, oversized-page memory limits, 128-page metadata, black/white visual content, and 96/144-DPI pixel dimensions.
 - Shared atomic writes no longer fall back to `File.Copy(overwrite: true)`; unsupported `File.Replace` environments use a same-directory overwrite move, and the single-caller fallback policy was removed.
 - Source-string assertions for ink diagnostic text and workbook atomic-write wiring were retired; existing behavior tests continue to cover corrupt reads, locked files, WAL recovery, and temp-file cleanup.
 - WPS hook stop/dispose invalidation, intercept gating, and subscriber isolation now use deterministic queued-work behavior tests, retiring four source-string assertions.
@@ -52,15 +52,15 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Four one-expression Paint policies and their implementation-mirroring tests were inlined and removed. Wall-clock brush microbenchmarks now run in full/focused verification instead of standard.
 - The dependency graph no longer carries the unused SourceGear native SQLite implementation or duplicate test pins; .NET 10 packages are on 10.0.11 and the Test SDK is on 18.9.0.
 
-Local verification after the current simplification:
+Local verification after the current closeout:
 
 - `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- standard non-core, non-performance tests: passed, 2991/2991
+- full stable tests (excluding core contracts and including 9 performance budgets): passed, 3006/3006
 - contract / invariant: passed, 29/29
 - `latest-all` analyzer: 0 diagnostics; dependency vulnerabilities: 0
 - Current code blocker: none
   - Roster workbook and JSON settings read failures now fail closed, preserving originals instead of replacing them with templates or defaults
-  - The native PDFium dependency still requires a separate replacement assessment; zero registered NuGet vulnerabilities is not treated as native security acceptance
+  - PDF rendering no longer ships a third-party native engine; repository verification is not treated as acceptance of real lesson PDFs, DPI scaling, projection, or classroom visuals
 
 For more context:
 
@@ -176,7 +176,7 @@ If you are continuing from the current main branch, read [docs/handover.md](./do
 ## Known Limitations and Release Boundary
 
 - Windows classroom PCs remain the primary target
-- Multi-monitor, DPI scaling, projector, and PPT / WPS slideshow integration still require on-site validation
+- Multi-monitor, DPI scaling, projection, real classroom-PDF visuals, and PPT / WPS slideshow integration still require on-site validation
 - Missing runtimes, permissions, or device drivers may require school IT support
 - Student rosters, photos, and settings are local files and should be backed up appropriately
 - Code gates are currently green; a release baseline should still include on-site checks for multi-monitor, DPI, projector, PPT / WPS, and student-photo overlay behavior

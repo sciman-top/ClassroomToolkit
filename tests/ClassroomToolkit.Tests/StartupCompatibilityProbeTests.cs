@@ -105,6 +105,15 @@ public sealed class StartupCompatibilityProbeTests
         resolved.Should().Be(sqlitePath);
     }
 
+    [Fact]
+    public void Collect_ShouldNotRequireArchivedPdfiumNativeDependency()
+    {
+        var report = StartupCompatibilityProbe.Collect(settingsPath: string.Empty);
+
+        report.Issues.Should().NotContain(issue =>
+            issue.Code.Contains("pdfium", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(0x014c, Architecture.X86)]
     [InlineData(0x8664, Architecture.X64)]

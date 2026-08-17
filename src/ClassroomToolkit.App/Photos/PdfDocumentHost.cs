@@ -1,8 +1,10 @@
 using System;
 using System.Drawing;
-using System.Runtime.InteropServices;
+using System.IO;
 using System.Windows.Media.Imaging;
-using PdfiumViewer;
+using Windows.Data.Pdf;
+using Windows.Storage;
+using Windows.Storage.Streams;
 
 namespace ClassroomToolkit.App.Photos;
 
@@ -17,6 +19,9 @@ internal interface IPdfDocumentHost : IDisposable
 
 internal sealed class PdfDocumentHost : IPdfDocumentHost
 {
+    internal const uint MaxRenderDimension = 16_384;
+    internal const ulong MaxRenderPixels = 32UL * 1024 * 1024;
+
     private PdfDocument? _document;
 
     private PdfDocumentHost(PdfDocument document)
@@ -24,71 +29,105 @@ internal sealed class PdfDocumentHost : IPdfDocumentHost
         _document = document;
     }
 
-    public int PageCount => _document?.PageCount ?? 0;
+    public int PageCount => _document == null ? 0 : checked((int)_document.PageCount);
 
     public static PdfDocumentHost Open(string path)
     {
-        var doc = PdfDocument.Load(path);
-        return new PdfDocumentHost(doc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var file = StorageFile
+            .GetFileFromPathAsync(Path.GetFullPath(path))
+            .AsTask()
+            .GetAwaiter()
+            .GetResult();
+        var document = PdfDocument
+            .LoadFromFileAsync(file)
+            .AsTask()
+            .GetAwaiter()
+            .GetResult();
+        return new PdfDocumentHost(document);
     }
 
     public bool TryGetPageSize(int pageIndex, out SizeF size)
     {
         size = default;
-        if (_document == null || _document.PageCount <= 0)
+        var document = _document;
+        if (document == null || document.PageCount == 0)
         {
             return false;
         }
-        var page = Math.Clamp(pageIndex, 1, _document.PageCount) - 1;
-        size = _document.PageSizes[page];
+
+        var pageIndexZeroBased = Math.Clamp(pageIndex, 1, checked((int)document.PageCount)) - 1;
+        using var page = document.GetPage(checked((uint)pageIndexZeroBased));
+        size = new SizeF(
+            checked((float)(page.Size.Width * 72.0 / 96.0)),
+            checked((float)(page.Size.Height * 72.0 / 96.0)));
         return true;
     }
 
     public BitmapSource? RenderPage(int pageIndex, double dpi)
     {
-        using var bitmap = RenderPageBitmap(pageIndex, dpi);
-        if (bitmap == null)
+        var document = _document;
+        if (document == null || document.PageCount == 0 || !double.IsFinite(dpi) || dpi <= 0)
         {
             return null;
         }
-        var hBitmap = bitmap.GetHbitmap();
-        try
-        {
-            var source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                hBitmap,
-                IntPtr.Zero,
-                System.Windows.Int32Rect.Empty,
-                BitmapSizeOptions.FromEmptyOptions());
-            source.Freeze();
-            return source;
-        }
-        finally
-        {
-            DeleteObject(hBitmap);
-        }
-    }
 
-    public Bitmap? RenderPageBitmap(int pageIndex, double dpi)
-    {
-        if (_document == null)
+        var pageIndexZeroBased = Math.Clamp(pageIndex, 1, checked((int)document.PageCount)) - 1;
+        using var page = document.GetPage(checked((uint)pageIndexZeroBased));
+        if (!TryCalculateRenderDimensions(page, dpi, out var width, out var height))
         {
             return null;
         }
-        var page = Math.Clamp(pageIndex, 1, _document.PageCount) - 1;
-        var size = _document.PageSizes[page];
-        var width = Math.Max(1, (int)Math.Round(size.Width / 72.0 * dpi));
-        var height = Math.Max(1, (int)Math.Round(size.Height / 72.0 * dpi));
-        using var image = _document.Render(page, width, height, (int)dpi, (int)dpi, PdfRenderFlags.Annotations);
-        return new Bitmap(image);
+
+        var options = new PdfPageRenderOptions
+        {
+            DestinationWidth = width,
+            DestinationHeight = height,
+            BackgroundColor = Windows.UI.Color.FromArgb(255, 255, 255, 255)
+        };
+
+        using var randomAccessStream = new InMemoryRandomAccessStream();
+        page.RenderToStreamAsync(randomAccessStream, options)
+            .AsTask()
+            .GetAwaiter()
+            .GetResult();
+        randomAccessStream.Seek(0);
+        using var stream = randomAccessStream.AsStreamForRead();
+        var source = BitmapFrame.Create(
+            stream,
+            BitmapCreateOptions.PreservePixelFormat,
+            BitmapCacheOption.OnLoad);
+        source.Freeze();
+        return source;
     }
 
     public void Dispose()
     {
-        _document?.Dispose();
         _document = null;
     }
 
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr hObject);
+    private static bool TryCalculateRenderDimensions(
+        PdfPage page,
+        double dpi,
+        out uint width,
+        out uint height)
+    {
+        var widthPixels = Math.Max(1, Math.Round(page.Size.Width * dpi / 96.0));
+        var heightPixels = Math.Max(1, Math.Round(page.Size.Height * dpi / 96.0));
+        if (!double.IsFinite(widthPixels)
+            || !double.IsFinite(heightPixels)
+            || widthPixels > MaxRenderDimension
+            || heightPixels > MaxRenderDimension
+            || widthPixels * heightPixels > MaxRenderPixels)
+        {
+            width = 0;
+            height = 0;
+            return false;
+        }
+
+        width = checked((uint)widthPixels);
+        height = checked((uint)heightPixels);
+        return true;
+    }
 }

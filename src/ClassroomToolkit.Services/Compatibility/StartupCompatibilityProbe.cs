@@ -225,28 +225,6 @@ public static class StartupCompatibilityProbe
                 IsBlocking: false));
         }
 
-        var pdfiumCandidates = new[]
-        {
-            Path.Combine(baseDirectory, "x64", "pdfium.dll"),
-            Path.Combine(baseDirectory, "pdfium.dll")
-        };
-        var pdfiumPath = pdfiumCandidates.FirstOrDefault(File.Exists);
-        if (string.IsNullOrWhiteSpace(pdfiumPath))
-        {
-            issues.Add(new StartupCompatibilityIssue(
-                Code: "native-pdfium-missing",
-                Message: $"缺少 PDF 渲染依赖：{string.Join(" / ", pdfiumCandidates)}",
-                Suggestion: "请确认安装目录完整，或改用离线标准包重新部署。",
-                IsBlocking: false));
-        }
-        else if (TryProbeNativeLibraryLoad(pdfiumPath, out var pdfiumLoadError))
-        {
-            issues.Add(new StartupCompatibilityIssue(
-                Code: "native-pdfium-load-failed",
-                Message: $"PDF 渲染依赖加载失败：{pdfiumPath}（{pdfiumLoadError}）",
-                Suggestion: "请安装/修复 VC++ 运行库（x64），并检查 pdfium 相关文件是否被安全软件隔离。",
-                IsBlocking: false));
-        }
     }
 
     internal static string? ResolveNativeDependencyPath(

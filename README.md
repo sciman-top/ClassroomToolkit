@@ -44,7 +44,7 @@
 - 画笔设置对话框补了构造期空引用防护，避免设置按钮在 XAML 初始化阶段偶发崩溃。
 - JSON 设置现在把 schema 损坏、文件锁和短暂 IO 失败统一视为不可安全覆盖；只有显式成功重载后才恢复保存，未知 section/key 会继续保留。
 - 损坏的 `students.xlsx` 不再被示例模板覆盖，后续状态保存也会被阻断；合法旧格式规范化前会生成按 SHA-256 去重的原字节备份。
-- 零页 PDF 在打开失败路径立即释放 native document；窗口通过 `IPdfDocumentHost` 与具体 PDFium 实现隔离，为后续替换归档引擎保留 seam。
+- PDF 渲染已从 `PdfiumViewer.Core 1.0.4` 和 2018 native PDFium 迁移到 Windows 原生 `Windows.Data.Pdf`；损坏文件降级、大页面内存预算、128 页元数据、黑白视觉内容及 96/144 DPI 像素尺寸均有自动化保护。
 - 共享原子写入不再降级为 `File.Copy(overwrite: true)`；不支持 `File.Replace` 时改用同目录覆盖移动，并移除了只有一个调用者的 fallback policy。
 - 墨迹诊断文本和工作簿原子写的实现字符串断言已退役；损坏读取、锁文件、WAL 恢复与临时文件清理由现有行为测试继续保护。
 - WPS hook 的停止/释放、拦截门禁与订阅者异常隔离已改用可控后台队列的行为测试，4 个源码字符串断言退役。
@@ -52,15 +52,15 @@
 - 4 个单表达式 Paint policy 及其逐字复述测试已内联删除；墙钟画笔微基准改为 full/focused 运行，standard 不再受机器争用误报影响。
 - 依赖闭包删除未使用的 SourceGear native SQLite 与测试重复固定，.NET 10 包更新到 10.0.11，Test SDK 更新到 18.9.0。
 
-本轮精简后的本地验证快照：
+本轮收口后的本地验证快照：
 
 - `dotnet build ClassroomToolkit.sln -c Debug`：通过，0 warning / 0 error
-- standard 普通测试（排除核心契约与墙钟性能预算）：通过，2991/2991
+- full stable tests（排除核心契约，包含 9 个性能预算）：通过，3006/3006
 - contract / invariant：通过，29/29
 - `latest-all` analyzer：0 diagnostics；依赖漏洞：0
 - 当前代码阻断项：无
   - 学生工作簿和 JSON 设置读取失败均 fail-closed，原文件不会被模板或默认值覆盖
-  - PDFium 原生依赖仍待独立替换评估，不把“无已登记 NuGet 漏洞”外推为 native 安全验收
+  - PDF 渲染不再携带第三方 native 引擎；仓库验证不外推为真实课件、DPI、投影或课堂视觉验收
 
 更多背景请看：
 
@@ -176,7 +176,7 @@ git diff --check
 ## 已知限制与发布边界
 
 - 主要目标是 Windows 教室电脑和触屏一体机
-- 多显示器、DPI 缩放、投影、PPT / WPS 放映仍需要现场验证
+- 多显示器、DPI 缩放、投影、真实课堂 PDF 视觉效果和 PPT / WPS 放映仍需要现场验证
 - 缺少运行时、权限或设备驱动时，可能需要学校信息老师介入
 - 学生名册、照片和设置均为本地文件，应由学校或使用者做好备份
 - 当前代码门禁已恢复全绿；发布基线仍应补齐多显示器、DPI、投影、PPT / WPS 与学生照片悬浮层的现场验证

@@ -53,4 +53,29 @@
 - 工作簿规范化回滚时，优先从哈希匹配的 `.bak-normalize-*.xlsx` 恢复；若损坏读取已触发阻断，人工恢复或替换原件并成功重载后再保存。
 - JSON 锁或短暂 IO 恢复后先显式重载，再允许保存；不得通过保存前预检绕过失败状态。
 - PDF 生命周期改动回滚需同时回滚 `IPdfDocumentHost`、窗口字段/打开逻辑和两项所有权测试。
-- 当前 PDFium native 版本仍未替换，供应链风险保持开放；多显示器、DPI、投影、PPT/WPS、触控及真实 PDF 视觉仍需课堂 `live_accepted`。
+- 该阶段的 PDFium 供应链风险已由下述渲染器迁移切片关闭；多显示器、DPI、投影、PPT/WPS、触控及真实 PDF 视觉仍需课堂 `live_accepted`。
+
+## 2026-08-17 PDF 渲染器迁移
+
+### 决策与许可证边界
+
+- 选择 Windows 10/11 随系统提供的 [`Windows.Data.Pdf.PdfDocument`](https://learn.microsoft.com/uwp/api/windows.data.pdf.pdfdocument) 与 [`PdfPage.RenderToStreamAsync`](https://learn.microsoft.com/uwp/api/windows.data.pdf.pdfpage.rendertostreamasync)，App/Tests 目标框架提升到 `net10.0-windows10.0.19041.0`；当前产品基线仍是 Windows 10 22H2+ / Windows 11 22H2+。
+- 删除 `PdfiumViewer.Core 1.0.4` 和 `PdfiumViewer.Native.x86_64.no_v8-no_xfa 2018.4.8.256`，App/Test lockfile 与新目标框架输出均不再包含 `PdfiumViewer` 或 `pdfium.dll`。
+- 启动兼容探针不再把归档的 `pdfium.dll` 当成发布必需文件；行为测试保证迁移后的正常发布包不会产生 `native-pdfium-missing` 误报。
+- 系统 API 不新增第三方渲染器包、native redistributable 或对应开源许可证条目，部署继续受 Windows 平台许可约束。MIT 的 `PDFtoImage 5.4.0` 仅作为失败回退候选评估，因会重新引入 SkiaSharp/PDFium native 闭包而未采纳。
+
+### 实现与兼容保护
+
+- 保留现有一基页码 `IPdfDocumentHost`，用 `StorageFile -> PdfDocument -> PdfPage -> InMemoryRandomAccessStream -> frozen BitmapFrame` 替换具体实现；调用方的窗口、预览和墨迹导出降级边界不变。
+- `PdfPage.Size` 从 96-DPI DIP 换算为 PDF point；渲染目标按请求 DPI 计算，单边超过 16,384 像素或总量超过 32M 像素时返回 `null`，避免损坏/异常页面触发失控分配。
+- 运行时构造的非二进制 fixture 覆盖：损坏 PDF 拒绝且可立即删除、Letter `612 x 792` point、96/144-DPI 输出 `816 x 1056` / `1224 x 1584`、白底黑矩形视觉像素、128 页最后一页尺寸，以及被系统归一到 14,400 point 后仍 fail-closed 的超大页面。
+- 性能 focused 实测：预热后连续 3 次 Letter/96-DPI 渲染共 57.0 ms，平均 19.0 ms；测试预算为 5 秒，属于回归护栏而非跨设备 SLA。
+
+### Fresh verification 与边界
+
+- `dotnet test ... --filter "FullyQualifiedName~PdfDocumentHost"`：PASS，6/6；其中 1 项标记 `Gate=Performance`。
+- `dotnet restore ClassroomToolkit.sln --locked-mode -m:1`：PASS。
+- full Debug：build 0 warning / 0 error；stable tests 3006/3006（含 9 个性能预算）；CoreContract 29/29；hotspot、dependency vulnerability、dependency upgrade audit、`latest-all` analyzer 全部 PASS，analyzer 0 diagnostics。
+- full 首次复跑暴露 WAL 并发用例首轮恢复 31/32；生产契约本就会保留单项非致命 I/O 失败供下次恢复，测试改为最多 3 次有界恢复，仍会阻断 Upsert 条目丢失或持续失败。原用例修改前独立连续运行 12/12 通过，修正后 focused 1/1、最终 full 全绿。
+- 回滚需同时恢复 `PdfDocumentHost`、App/Test TFM、两个旧包引用与对应 lockfile，再运行 locked restore 和 full；不得只恢复 native 包而保留系统 API 实现。
+- `repo_verified` 只证明当前 Windows 主机的 API 调用与基础合成结果；密码/签名/复杂字体或透明度 PDF、真实课件视觉、DPI、多屏、投影和课堂延迟仍未 `live_accepted`。

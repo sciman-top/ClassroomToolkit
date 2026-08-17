@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0-windows7.0": {
+    "net10.0-windows10.0.19041": {
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Direct",
         "requested": "[10.0.11, )",
@@ -34,18 +34,6 @@
           "Microsoft.Extensions.Logging.Configuration": "10.0.11",
           "Microsoft.Extensions.Options": "10.0.11"
         }
-      },
-      "PdfiumViewer.Core": {
-        "type": "Direct",
-        "requested": "[1.0.4, )",
-        "resolved": "1.0.4",
-        "contentHash": "4SZb57POygmbgVaiSs/itCcrPiFmaAacBK85a5a2CKIJsoDqfOZSNWBPY1Ntp1/xn6OmfI7vvS9Ix/tCV3mCGA=="
-      },
-      "PdfiumViewer.Native.x86_64.no_v8-no_xfa": {
-        "type": "Direct",
-        "requested": "[2018.4.8.256, )",
-        "resolved": "2018.4.8.256",
-        "contentHash": "Vc5TY9nc6oYDzsC4gWIjIZGbUDXBPF++HzIlg5HsC7Pa0SsPgjXH2UIwfY6YcbAhwbf11NuXrBCNzgKYvPXSfw=="
       },
       "System.Speech": {
         "type": "Direct",

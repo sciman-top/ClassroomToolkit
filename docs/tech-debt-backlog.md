@@ -7,7 +7,6 @@
 ## P2
 
 - App 的 Paint/Windowing 仍有较多单调用者短 policy；只在触及对应路径时按 deletion test 局部内联，不启动全仓批量合并，也不删除有生产 adapter + 测试 adapter 的真实 Interop seam。
-- `PdfiumViewer.Core 1.0.4` 与 2018 年 native PDFium 构建链已归档；当前已用 `IPdfDocumentHost` 隔离具体实现，后续需独立选择受维护渲染后端并做损坏/超大 PDF、视觉与性能兼容验证。
 - xUnit 4、测试平台传递链和 SixLabors.Fonts 3.x 属于 major 迁移，当前 waiver 到期日为 2026-10-15；到期前需分别完成测试发现/CI 与字体/工作簿视觉兼容切片。
 
 ## P3
