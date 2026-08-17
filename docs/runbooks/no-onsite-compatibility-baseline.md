@@ -49,13 +49,14 @@
 
 1. 标准版（FDD）至少存在：
    - `app/*.runtimeconfig.json`（引用 `Microsoft.WindowsDesktop.App 10.x`）
-   - `app/` 子目录内存在 `pdfium.dll`
+   - `app/` 子目录内不存在已退役的 `pdfium.dll`（PDF 使用 Windows `Windows.Data.Pdf`）
    - `app/` 子目录内存在 `e_sqlite3.dll`
 2. 离线版（SCD）至少存在：
    - `app/hostfxr.dll`
    - `app/coreclr.dll`
    - `app/vcruntime140_cor3.dll`
    - `app/` 子目录内存在 `e_sqlite3.dll`
+   - `app/` 子目录内不存在已退役的 `pdfium.dll`
 
 ## 6. 演示控制兼容基线（无现场版）
 

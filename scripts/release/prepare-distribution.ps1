@@ -151,6 +151,18 @@ function Assert-FileExistsByName {
     }
 }
 
+function Assert-FileDoesNotExistByName {
+    param(
+        [Parameter(Mandatory = $true)][string]$Root,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    $hit = Get-ChildItem -LiteralPath $Root -Recurse -File -Filter $Name -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -ne $hit) {
+        throw "Unexpected retired dependency '$Name' under $Root -> $($hit.FullName)"
+    }
+}
+
 function Write-FileSha256 {
     param([Parameter(Mandatory = $true)][string]$Root)
 
@@ -273,6 +285,8 @@ function Invoke-Publish {
         "-p:DebugType=None",
         "-p:DebugSymbols=false",
         "-p:ContinuousIntegrationBuild=true",
+        "-p:NuGetLockFilePath=obj/release-packages.lock.json",
+        "-p:RestoreForceEvaluate=true",
         "-o",
         $OutputPath
     )
@@ -347,8 +361,8 @@ if ($buildStandard) {
 
     Write-StandardBootstrap -Root $standardRoot -AppExeName $appExeName -RuntimeMajor $runtimeRequiredMajor -RuntimeInstallerFileName $runtimeInstallerFileName
     Assert-FileExistsByName -Root $standardApp -Name "*.runtimeconfig.json"
-    Assert-FileExistsByName -Root $standardApp -Name "pdfium.dll"
     Assert-FileExistsByName -Root $standardApp -Name "e_sqlite3.dll"
+    Assert-FileDoesNotExistByName -Root $standardApp -Name "pdfium.dll"
     Write-FileSha256 -Root $standardRoot
 
     if (-not $SkipZip) {
@@ -374,6 +388,7 @@ if ($buildOffline) {
     Assert-FileExists -Path (Join-Path $offlineApp "coreclr.dll") -Label "coreclr.dll"
     Assert-FileExists -Path (Join-Path $offlineApp "vcruntime140_cor3.dll") -Label "vcruntime140_cor3.dll"
     Assert-FileExistsByName -Root $offlineApp -Name "e_sqlite3.dll"
+    Assert-FileDoesNotExistByName -Root $offlineApp -Name "pdfium.dll"
     Write-FileSha256 -Root $offlineRoot
 
     if (-not $SkipZip) {

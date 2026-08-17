@@ -54,8 +54,8 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 
 Local verification after the current closeout:
 
-- `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- full stable tests (excluding core contracts and including 9 performance budgets): passed, 3006/3006
+- `dotnet build ClassroomToolkit.sln -c Release`: passed, 0 warnings / 0 errors
+- full Release stable tests (excluding core contracts and including 9 performance budgets): passed, 3009/3009
 - contract / invariant: passed, 29/29
 - `latest-all` analyzer: 0 diagnostics; dependency vulnerabilities: 0
 - Current code blocker: none

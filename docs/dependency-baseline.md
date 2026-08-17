@@ -8,6 +8,7 @@
 - `global.json` 禁止 prerelease，但未固定 feature band；本轮实际 SDK 为 `10.0.303`。
 - 所有解决方案项目都有 `packages.lock.json`；CI 使用 `dotnet restore ClassroomToolkit.sln --locked-mode`。
 - 本地开发可更新 lockfile，但依赖变化必须提交对应 lockfile，并运行 full profile。
+- 标准发布包通过 `aka.ms/dotnet/10.0` 下载当前 x64 Desktop Runtime，使用补丁中性文件名并校验微软 Authenticode 签名；当前实测版本为 `10.0.11.50000`。
 
 生产直接依赖按职责保留：
 

@@ -79,3 +79,15 @@
 - full 首次复跑暴露 WAL 并发用例首轮恢复 31/32；生产契约本就会保留单项非致命 I/O 失败供下次恢复，测试改为最多 3 次有界恢复，仍会阻断 Upsert 条目丢失或持续失败。原用例修改前独立连续运行 12/12 通过，修正后 focused 1/1、最终 full 全绿。
 - 回滚需同时恢复 `PdfDocumentHost`、App/Test TFM、两个旧包引用与对应 lockfile，再运行 locked restore 和 full；不得只恢复 native 包而保留系统 API 实现。
 - `repo_verified` 只证明当前 Windows 主机的 API 调用与基础合成结果；密码/签名/复杂字体或透明度 PDF、真实课件视觉、DPI、多屏、投影和课堂延迟仍未 `live_accepted`。
+
+## 2026-08-18 Release 链收口
+
+- 发现并修复 `prepare-distribution.ps1` 仍强制要求 `pdfium.dll` 的过期发布门禁；standard/offline 现在反向断言该归档依赖不存在，并继续要求 `e_sqlite3.dll`。
+- 发布命令将发布专用 lockfile 重定向到各项目 `obj/release-packages.lock.json` 并强制重新求值，避免 `win-x64` publish 将瞬态 RID 目标写回已提交的 `packages.lock.json` 并破坏 solution-level locked restore。
+- `release-config.json` 的 TFM 同步为 `net10.0-windows10.0.19041.0`；从 `aka.ms/dotnet/10.0` 下载的运行时改用补丁中性文件名，避免实际 `10.0.11.50000` 被误标为 `10.0.5`。
+- focused：PowerShell AST 与 release JSON 解析 PASS；最终发布契约 5/5。
+- Release/full preflight：build 0 warning / 0 error；新增最终发布锁定契约后的 stable tests 3009/3009；CoreContract 29/29；hotspot、漏洞、升级 waiver、`latest-all` analyzer、兼容矩阵、UI 与设置加载性能采样全部 PASS。
+- 本地 `1.0.0` 双包：standard 86 个文件、offline 552 个文件；各自 `SHA256SUMS.txt` 全量复算 0 失败，均含 1 份 `e_sqlite3.dll` 且不含 `pdfium.dll`。运行时安装器 Authenticode 为 `Valid`，签发者为 Microsoft `.NET`。
+- `ClassroomToolkit-1.0.0-standard.zip`：`99,070,373` bytes，SHA-256 `9DB79BF896ABD447411E6BBF323CC7B6977C5F873FD8D16D04386444C4EE168B`。
+- `ClassroomToolkit-1.0.0-offline.zip`：`134,217,752` bytes，SHA-256 `ADD3C88656EA4D63EA27CA25993A36438F57D7B6850C00354079DA675DAC48D3`。
+- 以上是本地 Release 产物验证；GitHub Actions、GitHub Release 发布和课堂现场验收分别保留独立终态。
