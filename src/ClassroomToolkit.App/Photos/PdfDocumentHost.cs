@@ -6,7 +6,16 @@ using PdfiumViewer;
 
 namespace ClassroomToolkit.App.Photos;
 
-internal sealed class PdfDocumentHost : IDisposable
+internal interface IPdfDocumentHost : IDisposable
+{
+    int PageCount { get; }
+
+    bool TryGetPageSize(int pageIndex, out SizeF size);
+
+    BitmapSource? RenderPage(int pageIndex, double dpi);
+}
+
+internal sealed class PdfDocumentHost : IPdfDocumentHost
 {
     private PdfDocument? _document;
 

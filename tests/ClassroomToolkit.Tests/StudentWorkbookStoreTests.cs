@@ -105,19 +105,30 @@ public sealed class StudentWorkbookStoreTests
     }
 
     [Fact]
-    public void LoadOrCreate_ShouldFallbackToTemplate_WhenWorkbookFileIsCorrupted()
+    public void LoadOrCreate_ShouldThrowPreserveOriginalAndBlockSave_WhenWorkbookFileIsCorrupted()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_corrupt", ".xlsx");
         try
         {
             File.WriteAllText(tempPath, "not-an-xlsx");
+            var originalBytes = File.ReadAllBytes(tempPath);
             var store = new StudentWorkbookStore();
 
-            var loaded = store.LoadOrCreate(tempPath);
+            var act = () => store.LoadOrCreate(tempPath);
 
-            loaded.CreatedTemplate.Should().BeFalse();
-            loaded.Workbook.ClassNames.Should().Contain("1班");
-            loaded.Workbook.GetActiveRoster().Students.Should().NotBeEmpty();
+            act.Should().Throw<Exception>();
+            File.ReadAllBytes(tempPath).Should().Equal(originalBytes);
+
+            var fallbackRoster = new ClassRoster(
+                "1班",
+                [StudentRecord.Create("01", "恢复数据", "1班", "A")]);
+            var fallbackWorkbook = new StudentWorkbook(
+                new Dictionary<string, ClassRoster> { ["1班"] = fallbackRoster },
+                "1班");
+            var save = () => store.Save(fallbackWorkbook, tempPath, rollStateJson: null);
+
+            save.Should().Throw<InvalidOperationException>();
+            File.ReadAllBytes(tempPath).Should().Equal(originalBytes);
         }
         finally
         {
@@ -181,6 +192,7 @@ public sealed class StudentWorkbookStoreTests
     public void LoadOrCreate_ShouldRepairColumnsAndRollStateSheet_WhenWorkbookFormatIsInvalid()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_repair", ".xlsx");
+        var backupPattern = $"{Path.GetFileNameWithoutExtension(tempPath)}.bak-normalize-*{Path.GetExtension(tempPath)}";
         try
         {
             using (var workbook = new XLWorkbook())
@@ -192,8 +204,11 @@ public sealed class StudentWorkbookStoreTests
                 sheet.Cell(2, 1).Value = "张三";
                 sheet.Cell(2, 2).Value = "01";
                 sheet.Cell(2, 3).Value = "1班";
+                sheet.Cell(5, 8).FormulaA1 = "1+1";
+                sheet.Cell(5, 8).Style.Fill.BackgroundColor = XLColor.Yellow;
                 workbook.SaveAs(tempPath);
             }
+            var originalBytes = File.ReadAllBytes(tempPath);
 
             var store = new StudentWorkbookStore();
             var loaded = store.LoadOrCreate(tempPath);
@@ -212,6 +227,12 @@ public sealed class StudentWorkbookStoreTests
             classSheet.Cell(2, 2).GetString().Should().Be("张三");
             repairedWorkbook.Worksheet(StudentWorkbookStore.RollStateSheetName).Cell(1, 1).GetString().Should().Be(StudentWorkbookStore.RollStateColumn);
             loaded.RollStateJson.Should().NotBeNullOrWhiteSpace();
+
+            var backups = Directory.GetFiles(Path.GetDirectoryName(tempPath)!, backupPattern);
+            backups.Should().ContainSingle();
+            File.ReadAllBytes(backups[0]).Should().Equal(originalBytes);
+            using var backupWorkbook = new XLWorkbook(backups[0]);
+            backupWorkbook.Worksheet("1班").Cell(5, 8).FormulaA1.Should().Be("1+1");
         }
         finally
         {
@@ -224,6 +245,10 @@ public sealed class StudentWorkbookStoreTests
                 catch (IOException)
                 {
                 }
+            }
+            foreach (var backup in Directory.GetFiles(Path.GetDirectoryName(tempPath)!, backupPattern))
+            {
+                File.Delete(backup);
             }
         }
     }

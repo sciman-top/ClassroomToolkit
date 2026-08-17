@@ -13,7 +13,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     private static long _oversizedSettingsRejectCount;
     private readonly string _path;
     private int _hasValidatedExistingFileState;
-    private int _overwriteBlockedAfterCorruptLoad;
+    private int _overwriteBlockedAfterLoadFailure;
     private long _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
     private string? _lastValidatedContentHash;
 
@@ -30,7 +30,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             if (!File.Exists(_path))
             {
                 Interlocked.Exchange(ref _hasValidatedExistingFileState, 0);
-                Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+                Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 0);
                 Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, DateTime.MinValue.Ticks);
                 _lastValidatedContentHash = null;
                 return new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
@@ -68,7 +68,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             }
 
             Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
-            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+            Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 0);
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
             _lastValidatedContentHash = GetCurrentContentHash();
             return result;
@@ -84,10 +84,10 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     {
         ArgumentNullException.ThrowIfNull(data);
         EnsureExistingFileStateValidated();
-        if (File.Exists(_path) && Volatile.Read(ref _overwriteBlockedAfterCorruptLoad) == 1)
+        if (File.Exists(_path) && Volatile.Read(ref _overwriteBlockedAfterLoadFailure) == 1)
         {
             throw new InvalidOperationException(
-                "Settings load detected JSON corruption; refusing to overwrite existing JSON settings file.");
+                "Settings file could not be safely loaded; refusing to overwrite existing JSON settings file.");
         }
 
         var parent = Path.GetDirectoryName(_path);
@@ -129,18 +129,12 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             });
 
         Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
-        Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
+        Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 0);
         Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
         _lastValidatedContentHash = GetCurrentContentHash();
     }
 
     public static long OversizedSettingsRejectCount => Interlocked.Read(ref _oversizedSettingsRejectCount);
-
-    private static bool ShouldBlockOverwriteAfterLoadFailure(Exception ex)
-    {
-        ArgumentNullException.ThrowIfNull(ex);
-        return ex is JsonException or InvalidDataException;
-    }
 
     private void EnsureObjectRoot(JsonDocument document, string operation)
     {
@@ -179,7 +173,6 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             using var stream = File.OpenRead(_path);
             using var document = JsonDocument.Parse(stream);
             EnsureObjectRoot(document, operation: "save-preflight");
-            Interlocked.Exchange(ref _overwriteBlockedAfterCorruptLoad, 0);
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, currentWriteTimeUtcTicks);
             _lastValidatedContentHash = currentContentHash ?? GetCurrentContentHash();
         }
@@ -196,9 +189,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     private void RecordLoadFailure(Exception ex, string operation)
     {
         Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
-        Interlocked.Exchange(
-            ref _overwriteBlockedAfterCorruptLoad,
-            ShouldBlockOverwriteAfterLoadFailure(ex) ? 1 : 0);
+        Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 1);
         Debug.WriteLine(
             $"[JsonSettingsDocumentStoreAdapter] {operation} failed path={_path} ex={ex.GetType().Name} msg={ex.Message}");
     }

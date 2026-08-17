@@ -30,3 +30,27 @@
 - 依赖回滚必须同时回滚 `.csproj` 和 `packages.lock.json`，再运行 locked restore 与 full profile。
 - 门禁语义回滚需同时回滚性能 Trait、stable-test filter、README 与项目契约。
 - 当前没有最近 24 小时 UI 运行日志，因此图片解码、dispatcher 排队、墨迹重绘 P95 仍缺现场样本。多显示器、DPI、投影、PPT/WPS、触控和照片悬浮层仍需课堂 `live_accepted`。
+
+## 2026-08-17 审计问题修复补充
+
+### 已修复
+
+- 学生工作簿读取失败不再返回可保存的示例模板；异常由应用用例转为可见错误并禁用持久化，同一 store 后续保存也会拒绝覆盖原文件。
+- 合法旧格式工作簿规范化前创建 `*.bak-normalize-<SHA256>.xlsx`，并在写回前校验备份内容哈希；备份保留公式、样式和其他未建模内容的原始字节。
+- JSON 设置任意既有文件读取失败都会保持覆盖阻断；保存前结构预检不能解除阻断，只有显式成功 `Load()` 或成功保存才可恢复。
+- 零页 PDF 在所有权转移前立即释放，失败分支不再遗留 native document/file handle；`IPdfDocumentHost` 隔离当前 PDFium 实现。
+- WPS hook 后台队列可注入，停止/释放后的已排队回调失效、拦截门禁和订阅者异常隔离由行为测试证明，4 个源码字符串断言退役。
+
+### Fresh verification
+
+- 红测复现：损坏工作簿原件/后续保存、规范化备份、JSON transient load、零页 PDF 所有权均在旧行为上失败。
+- focused：`StudentWorkbookStoreTests` 7/7、JSON + workbook 23/23、PDF 生命周期 2/2、Interop 生命周期/派发 11/11，全部 PASS。
+- standard：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`，build 0 warning / 0 error，普通测试 2991/2991，核心契约 29/29，hotspot PASS。
+- 本切片未改变依赖或发布输入，按项目比例门禁不重复运行 full。
+
+### 恢复与开放边界
+
+- 工作簿规范化回滚时，优先从哈希匹配的 `.bak-normalize-*.xlsx` 恢复；若损坏读取已触发阻断，人工恢复或替换原件并成功重载后再保存。
+- JSON 锁或短暂 IO 恢复后先显式重载，再允许保存；不得通过保存前预检绕过失败状态。
+- PDF 生命周期改动回滚需同时回滚 `IPdfDocumentHost`、窗口字段/打开逻辑和两项所有权测试。
+- 当前 PDFium native 版本仍未替换，供应链风险保持开放；多显示器、DPI、投影、PPT/WPS、触控及真实 PDF 视觉仍需课堂 `live_accepted`。

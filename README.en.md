@@ -42,9 +42,12 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Undo for image / PDF annotation now restores runtime history, cache, and persistence state, so ink does not disappear again after pan / zoom.
 - Student photo overlay, toolbar, roll-call window, and launcher z-order behavior has been hardened, especially on first show and re-show.
 - Paint settings dialog construction is now guarded against initialization-time null-reference crashes.
-- JSON settings now treat array and other non-object roots as corrupt input; saves refuse to overwrite the original file whether or not a load was attempted first.
+- JSON settings now treat schema corruption, file locks, and transient I/O failures as unsafe-to-overwrite states. Saving resumes only after an explicit successful reload, preserving unknown sections and keys.
+- A corrupt `students.xlsx` is no longer replaced by the sample template, and later state saves are blocked. Valid legacy normalization first creates a SHA-256-deduplicated byte-for-byte backup.
+- Zero-page PDFs now release their native document immediately on the failed-open path. `IPdfDocumentHost` isolates window logic from the concrete PDFium implementation for a future renderer replacement.
 - Shared atomic writes no longer fall back to `File.Copy(overwrite: true)`; unsupported `File.Replace` environments use a same-directory overwrite move, and the single-caller fallback policy was removed.
 - Source-string assertions for ink diagnostic text and workbook atomic-write wiring were retired; existing behavior tests continue to cover corrupt reads, locked files, WAL recovery, and temp-file cleanup.
+- WPS hook stop/dispose invalidation, intercept gating, and subscriber isolation now use deterministic queued-work behavior tests, retiring four source-string assertions.
 - Legacy INI files are now backed up once, by content hash, immediately before a migration is persisted. Read-only loads no longer create duplicate backups, and backup failure blocks overwrite.
 - Four one-expression Paint policies and their implementation-mirroring tests were inlined and removed. Wall-clock brush microbenchmarks now run in full/focused verification instead of standard.
 - The dependency graph no longer carries the unused SourceGear native SQLite implementation or duplicate test pins; .NET 10 packages are on 10.0.11 and the Test SDK is on 18.9.0.
@@ -52,11 +55,12 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 Local verification after the current simplification:
 
 - `dotnet build ClassroomToolkit.sln -c Debug`: passed, 0 warnings / 0 errors
-- full non-core functional and performance tests: passed, 2997/2997
+- standard non-core, non-performance tests: passed, 2991/2991
 - contract / invariant: passed, 29/29
 - `latest-all` analyzer: 0 diagnostics; dependency vulnerabilities: 0
 - Current code blocker: none
-  - Non-object JSON settings roots now fail closed as corrupt input, preserving the original file instead of replacing it with defaults
+  - Roster workbook and JSON settings read failures now fail closed, preserving originals instead of replacing them with templates or defaults
+  - The native PDFium dependency still requires a separate replacement assessment; zero registered NuGet vulnerabilities is not treated as native security acceptance
 
 For more context:
 
@@ -114,7 +118,7 @@ Data conventions:
 - Photo folders are grouped by class
 - File names should preferably use student IDs
 - Supported formats: `.jpg`, `.jpeg`, `.png`, `.bmp`
-- The app can generate a template when no roster is found
+- The app can generate a template when `students.xlsx` is missing; an existing corrupt file is preserved and reported as a load failure
 - Any format change must preserve compatibility with existing classroom machines and files
 
 ## Repository Layout

@@ -152,7 +152,7 @@ public partial class PaintOverlayWindow : Window
     private bool _photoRestoreFullscreenPending;
     private int _photoFullscreenBoundsToken;
     private bool _photoDocumentIsPdf;
-    private PdfDocumentHost? _pdfDocument;
+    private IPdfDocumentHost? _pdfDocument;
     private int _pdfPageCount;
     private int _lastPdfNavigationDirection;
     private readonly Dictionary<int, BitmapSource> _pdfPageCache = new();

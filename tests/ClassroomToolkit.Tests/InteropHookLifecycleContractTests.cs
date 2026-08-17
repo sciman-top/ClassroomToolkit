@@ -1,4 +1,5 @@
 using FluentAssertions;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Tests;
 
@@ -6,34 +7,52 @@ namespace ClassroomToolkit.Tests;
 public sealed class InteropHookLifecycleContractTests
 {
     [Fact]
-    public void WpsHook_Stop_ShouldDisableIntercept_BeforeDispatchGenerationBump()
+    public void WpsHook_Stop_ShouldInvalidateAlreadyQueuedNavigation()
     {
-        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
-        var disableIndex = source.IndexOf("_interceptEnabled = false;", StringComparison.Ordinal);
-        var generationIndex = source.IndexOf("Interlocked.Increment(ref _dispatchGeneration);", StringComparison.Ordinal);
+        Action? pending = null;
+        using var hook = new WpsSlideshowNavigationHook((_, action, _) => pending = action);
+        var dispatchCount = 0;
+        hook.NavigationRequested += (_, _) => dispatchCount++;
+        hook.SetInterceptEnabled(true);
 
-        disableIndex.Should().BeGreaterThan(0);
-        generationIndex.Should().BeGreaterThan(0);
-        disableIndex.Should().BeLessThan(generationIndex);
+        hook.QueueNavigationRequest(1, "test");
+        pending.Should().NotBeNull();
+        hook.Stop();
+        pending!();
+
+        dispatchCount.Should().Be(0);
     }
 
     [Fact]
-    public void WpsHook_QueueNavigationRequest_ShouldGateByInterceptState()
+    public void WpsHook_QueueNavigationRequest_ShouldRequireInterceptEnabled()
     {
-        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+        Action? pending = null;
+        using var hook = new WpsSlideshowNavigationHook((_, action, _) => pending = action);
 
-        source.Should().Contain("if (_disposed || !_interceptEnabled)");
-        source.Should().Contain("if (_disposed || !_interceptEnabled || generation != Volatile.Read(ref _dispatchGeneration))");
+        hook.QueueNavigationRequest(1, "disabled");
+        pending.Should().BeNull();
+
+        hook.SetInterceptEnabled(true);
+        hook.QueueNavigationRequest(1, "enabled");
+        pending.Should().NotBeNull();
     }
 
     [Fact]
-    public void WpsHook_ShouldRejectRestartAfterDispose_AndClearSubscribers()
+    public async Task WpsHook_ShouldRejectRestartAndInvalidateQueuedNavigation_AfterDispose()
     {
-        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+        Action? pending = null;
+        var hook = new WpsSlideshowNavigationHook((_, action, _) => pending = action);
+        var dispatchCount = 0;
+        hook.NavigationRequested += (_, _) => dispatchCount++;
+        hook.SetInterceptEnabled(true);
+        hook.QueueNavigationRequest(-1, "test");
 
-        source.Should().Contain("if (_disposed)");
-        source.Should().Contain("Stop();");
-        source.Should().Contain("NavigationRequested = null;");
+        hook.Dispose();
+        pending.Should().NotBeNull();
+        pending!();
+
+        dispatchCount.Should().Be(0);
+        (await hook.StartAsync()).Should().BeFalse();
     }
 
     [Fact]

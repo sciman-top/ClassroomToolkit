@@ -100,21 +100,41 @@ public partial class PaintOverlayWindow
                 $"[PdfOpen] async-open failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
-    private static bool TryOpenPdfDocumentCore(string path, out PdfDocumentHost? document, out int pageCount)
+    private static bool TryOpenPdfDocumentCore(string path, out IPdfDocumentHost? document, out int pageCount)
     {
+        return TryOpenPdfDocumentCore(path, PdfDocumentHost.Open, out document, out pageCount);
+    }
+
+    internal static bool TryOpenPdfDocumentCore(
+        string path,
+        Func<string, IPdfDocumentHost> openDocument,
+        out IPdfDocumentHost? document,
+        out int pageCount)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(openDocument);
+
         document = PaintActionInvoker.TryInvoke(
-            () => PdfDocumentHost.Open(path),
+            () => openDocument(path),
             fallback: null);
         pageCount = 0;
         if (document == null)
         {
             return false;
         }
-        pageCount = document.PageCount;
-        return pageCount > 0;
+        var openedDocument = document;
+        pageCount = PaintActionInvoker.TryInvoke(() => openedDocument.PageCount, fallback: 0);
+        if (pageCount > 0)
+        {
+            return true;
+        }
+
+        PaintActionInvoker.TryInvoke(openedDocument.Dispose);
+        document = null;
+        return false;
     }
 
-    private void ApplyPdfDocument(PdfDocumentHost document, int pageCount)
+    private void ApplyPdfDocument(IPdfDocumentHost document, int pageCount)
     {
         lock (_pdfRenderLock)
         {

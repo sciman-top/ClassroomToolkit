@@ -2,8 +2,9 @@ using ClosedXML.Excel;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -18,6 +19,7 @@ public sealed class StudentWorkbookStore
     private static readonly string[] DefaultHeaders = { "学号", "姓名", "分组" };
     private static readonly string[] CanonicalColumns = { "学号", "姓名", "分组", ClassRoster.InternalRowIdColumn };
     private const string InternalRowIdColumn = ClassRoster.InternalRowIdColumn;
+    private readonly ConcurrentDictionary<string, byte> _overwriteBlockedPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Dictionary<string, string> HeaderAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,64 +42,75 @@ public sealed class StudentWorkbookStore
     public StudentWorkbookLoadResult LoadOrCreate(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fullPath = Path.GetFullPath(path);
 
-        if (!File.Exists(path))
+        if (!File.Exists(fullPath))
         {
+            _overwriteBlockedPaths.TryRemove(fullPath, out _);
             var template = CreateTemplateWorkbook();
-            TrySaveWorkbook(template.Workbook, path, template.RollStateJson);
+            TrySaveWorkbook(template.Workbook, fullPath, template.RollStateJson);
             return template with { CreatedTemplate = true };
         }
 
         try
         {
-            using var workbook = new XLWorkbook(path);
-            var rollStateJson = ExtractRollState(workbook, out var rollStateNeedsRepair);
-            var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var sheet in workbook.Worksheets)
-            {
-                if (sheet.Name.Equals(RollStateSheetName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-                var roster = ReadWorksheet(sheet);
-                classes[roster.ClassName] = roster;
-            }
-
-            var normalizedWorkbook = NormalizeWorkbook(classes, out var workbookNeedsRepair);
-            var normalizedRollStateJson = EnsureRollStateJson(rollStateJson);
-            if (rollStateNeedsRepair || workbookNeedsRepair || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
-            {
-                TrySaveWorkbook(normalizedWorkbook, path, normalizedRollStateJson);
-            }
-
-            return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
+            var result = LoadExistingWorkbook(fullPath);
+            _overwriteBlockedPaths.TryRemove(fullPath, out _);
+            return result;
         }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex) && ShouldFallbackToTemplateOnReadFailure(ex))
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            var template = CreateTemplateWorkbook();
-            TrySaveWorkbook(template.Workbook, path, template.RollStateJson);
-            return template with { CreatedTemplate = false };
+            _overwriteBlockedPaths[fullPath] = 0;
+            throw;
         }
     }
 
-    [SuppressMessage(
-        "Performance",
-        "CA1822:Mark members as static",
-        Justification = "Public instance API is intentionally preserved for compatibility with existing consumers.")]
+    private StudentWorkbookLoadResult LoadExistingWorkbook(string path)
+    {
+        using var workbook = new XLWorkbook(path);
+        var rollStateJson = ExtractRollState(workbook, out var rollStateNeedsRepair);
+        var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var sheet in workbook.Worksheets)
+        {
+            if (sheet.Name.Equals(RollStateSheetName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            var roster = ReadWorksheet(sheet);
+            classes[roster.ClassName] = roster;
+        }
+
+        var normalizedWorkbook = NormalizeWorkbook(classes, out var workbookNeedsRepair);
+        var normalizedRollStateJson = EnsureRollStateJson(rollStateJson);
+        if (rollStateNeedsRepair || workbookNeedsRepair || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
+        {
+            EnsureNormalizationBackup(path);
+            TrySaveWorkbook(normalizedWorkbook, path, normalizedRollStateJson);
+        }
+
+        return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
+    }
+
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
     {
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fullPath = Path.GetFullPath(path);
+        if (File.Exists(fullPath) && _overwriteBlockedPaths.ContainsKey(fullPath))
+        {
+            throw new InvalidOperationException(
+                $"学生工作簿此前读取失败；拒绝覆盖原文件，需先恢复或替换后重新加载：{fullPath}");
+        }
 
-        var extension = System.IO.Path.GetExtension(path);
+        var extension = System.IO.Path.GetExtension(fullPath);
         if (string.IsNullOrWhiteSpace(extension))
         {
             extension = ".xlsx";
         }
 
         AtomicFileReplaceUtility.WriteAtomically(
-            path,
+            fullPath,
             extension,
             tempPath =>
             {
@@ -118,6 +131,7 @@ public sealed class StudentWorkbookStore
                 Debug.WriteLine(
                     $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
+        _overwriteBlockedPaths.TryRemove(fullPath, out _);
     }
 
     private void TrySaveWorkbook(StudentWorkbook workbook, string path, string? rollStateJson)
@@ -133,17 +147,35 @@ public sealed class StudentWorkbookStore
         }
     }
 
-    private static bool ShouldFallbackToTemplateOnReadFailure(Exception ex)
+    private static void EnsureNormalizationBackup(string path)
     {
-        ArgumentNullException.ThrowIfNull(ex);
+        var fullPath = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Directory.GetCurrentDirectory();
+        }
 
-        // Access/IO failures are operational issues and must surface to caller.
-        // Only parsing/format-style failures should trigger self-heal fallback.
-        return ex is not (
-            IOException
-            or UnauthorizedAccessException
-            or PathTooLongException
-            or NotSupportedException);
+        var extension = Path.GetExtension(fullPath);
+        var fileName = Path.GetFileNameWithoutExtension(fullPath);
+        var contentHash = ComputeFileHash(fullPath);
+        var backupPath = Path.Combine(directory, $"{fileName}.bak-normalize-{contentHash}{extension}");
+        if (!File.Exists(backupPath))
+        {
+            File.Copy(fullPath, backupPath, overwrite: false);
+        }
+
+        var backupHash = ComputeFileHash(backupPath);
+        if (!string.Equals(contentHash, backupHash, StringComparison.Ordinal))
+        {
+            throw new IOException($"学生工作簿迁移备份校验失败：{backupPath}");
+        }
+    }
+
+    private static string ComputeFileHash(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream));
     }
 
     private static StudentWorkbookLoadResult CreateTemplateWorkbook()

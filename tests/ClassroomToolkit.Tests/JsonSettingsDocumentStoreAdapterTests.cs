@@ -225,13 +225,14 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
     }
 
     [Fact]
-    public void Save_ShouldNotThrow_WhenPreviousLoadFailedDueToTransientIoError()
+    public void Save_ShouldFailClosedUntilSuccessfulReload_WhenPreviousLoadFailedDueToTransientIoError()
     {
         var tempDir = CreateTempDirectory();
         var path = Path.Combine(tempDir, "settings.json");
         try
         {
-            File.WriteAllText(path, "{\"Paint\":{\"brush_base_size\":\"12\"}}");
+            const string original = "{\"Paint\":{\"brush_base_size\":\"12\"},\"Future\":{\"keep\":\"yes\"}}";
+            File.WriteAllText(path, original);
             var adapter = new JsonSettingsDocumentStoreAdapter(path);
             using var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
 
@@ -249,9 +250,16 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
             lockStream.Dispose();
             Action act = () => adapter.Save(data);
 
-            act.Should().NotThrow();
+            act.Should().Throw<InvalidOperationException>();
+            File.ReadAllText(path).Should().Be(original);
+
+            var reloaded = adapter.Load();
+            reloaded["Paint"]["brush_base_size"] = "18";
+            adapter.Save(reloaded);
+
             var saved = adapter.Load();
             saved["Paint"]["brush_base_size"].Should().Be("18");
+            saved["Future"]["keep"].Should().Be("yes");
         }
         finally
         {
@@ -279,9 +287,8 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
             using var lockStream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             Action act = () => adapter.Save(data);
 
-            act.Should().Throw<Exception>().Where(ex =>
-                ex.GetType() == typeof(IOException)
-                || ex.GetType() == typeof(UnauthorizedAccessException));
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("*could not be safely loaded*");
             Directory.GetFiles(tempDir, $"{Path.GetFileName(path)}.*.tmp").Should().BeEmpty();
         }
         finally

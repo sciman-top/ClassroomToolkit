@@ -135,7 +135,7 @@ public sealed partial class WpsSlideshowNavigationHook
         }
     }
 
-    private void QueueNavigationRequest(int direction, string source)
+    internal void QueueNavigationRequest(int direction, string source)
     {
         if (_disposed || !_interceptEnabled)
         {
@@ -143,7 +143,7 @@ public sealed partial class WpsSlideshowNavigationHook
         }
 
         var generation = Volatile.Read(ref _dispatchGeneration);
-        InteropBackgroundDispatchExecutor.Queue(
+        _queueBackgroundWork(
             $"WpsSlideshowNavigationHook.QueueNavigationRequest.{source}",
             () =>
             {

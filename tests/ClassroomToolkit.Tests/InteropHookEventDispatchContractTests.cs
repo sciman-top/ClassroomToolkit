@@ -1,4 +1,5 @@
 using FluentAssertions;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Tests;
 
@@ -16,13 +17,20 @@ public sealed class InteropHookEventDispatchContractTests
     }
 
     [Fact]
-    public void WpsSlideshowNavigationHook_ShouldUseInteropEventDispatchPolicy_ForNavigationRequested()
+    public void WpsSlideshowNavigationHook_ShouldIsolateSubscriberFailure()
     {
-        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+        Action? pending = null;
+        using var hook = new WpsSlideshowNavigationHook((_, action, _) => pending = action);
+        var successfulSubscriberCount = 0;
+        hook.NavigationRequested += (_, _) => throw new InvalidOperationException("subscriber-failure");
+        hook.NavigationRequested += (_, _) => successfulSubscriberCount++;
+        hook.SetInterceptEnabled(true);
 
-        source.Should().Contain("InteropEventDispatchPolicy.InvokeSafely(");
-        source.Should().Contain("\"WpsSlideshowNavigationHook.NavigationRequested\"");
-        source.Should().NotContain("NavigationRequested?.Invoke(");
+        hook.QueueNavigationRequest(1, "test");
+        pending.Should().NotBeNull();
+        pending!();
+
+        successfulSubscriberCount.Should().Be(1);
     }
 
     private static string ReadInteropSources(string pattern)

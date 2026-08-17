@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
@@ -15,6 +16,7 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
 
     private readonly HookProc _keyboardProc;
     private readonly HookProc _mouseProc;
+    private readonly Action<string, Action, Action<Exception>?> _queueBackgroundWork;
     private readonly object _suppressedKeyboardKeysSync = new();
     private IntPtr _keyboardHook;
     private IntPtr _mouseHook;
@@ -42,7 +44,13 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
     };
 
     public WpsSlideshowNavigationHook()
+        : this(InteropBackgroundDispatchExecutor.Queue)
     {
+    }
+
+    internal WpsSlideshowNavigationHook(Action<string, Action, Action<Exception>?> queueBackgroundWork)
+    {
+        _queueBackgroundWork = queueBackgroundWork ?? throw new ArgumentNullException(nameof(queueBackgroundWork));
         _keyboardProc = KeyboardProc;
         _mouseProc = MouseProc;
     }

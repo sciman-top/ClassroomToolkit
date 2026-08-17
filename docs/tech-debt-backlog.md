@@ -7,11 +7,12 @@
 ## P2
 
 - App 的 Paint/Windowing 仍有较多单调用者短 policy；只在触及对应路径时按 deletion test 局部内联，不启动全仓批量合并，也不删除有生产 adapter + 测试 adapter 的真实 Interop seam。
+- `PdfiumViewer.Core 1.0.4` 与 2018 年 native PDFium 构建链已归档；当前已用 `IPdfDocumentHost` 隔离具体实现，后续需独立选择受维护渲染后端并做损坏/超大 PDF、视觉与性能兼容验证。
 - xUnit 4、测试平台传递链和 SixLabors.Fonts 3.x 属于 major 迁移，当前 waiver 到期日为 2026-10-15；到期前需分别完成测试发现/CI 与字体/工作簿视觉兼容切片。
 
 ## P3
 
-- 剩余源码形状契约主要保护 Interop、生命周期、阻塞等待和少量难以直接触发的持久化安全分支；已有损坏读取、锁文件和临时文件清理行为覆盖的路径不再新增字符串断言，仅在触及对应模块时继续局部退役。
+- WPS 后台派发生命周期已有行为 seam，4 个字符串契约已退役；剩余源码形状契约主要保护 Win32 native unhook、阻塞等待和少量尚无可注入 seam 的安全分支，只在建立对应行为证据后局部退役。
 
 ## 暂缓
 
