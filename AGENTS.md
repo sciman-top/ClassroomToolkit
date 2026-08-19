@@ -2,7 +2,7 @@
 **项目契约**: 2.0
 **全局规则复核**: 9.77
 **类型**: Windows WPF (.NET 10)
-**最后更新**: 2026-08-17
+**最后更新**: 2026-08-19
 
 ## 1. 当前落点与目标归宿
 - 当前落点：`ClassroomToolkit.sln` 是课堂教学工具主解决方案，现有 WPF、Interop、配置与数据兼容是运行真相。
@@ -41,21 +41,6 @@
 - 任一适用阶段失败或课堂 hotspot 未收敛即阻断；只有数据迁移、Interop 生命周期、发布或不可逆修复才新增 `docs/change-evidence/`。
 - 回滚只撤销本任务切片；数据变化还需备份、逆向迁移或兼容读取入口。
 
-## D. Global Rule -> Repo Action
-- Git profile: baseline=`main`; upstream=`origin/main`; closeout=`proportional_standard_or_release_full`。
-- `R1`：先声明课堂场景及 WPF、Interop、数据或 docs 落点。
-- `R2`：受影响测试先行；只有共享或高风险 seam 再由 standard profile 收口。
-- `R3`：止血兼容必须写回收点、最终归宿和回滚入口。
-- `R4`：学生数据、照片与 Office 进程变更先预演备份/回滚。
-- `R5`：无重复或量化热点证据，不新增框架抽象。
-- `R6`：C 章按风险选择 focused / standard / full，不重复已覆盖的测试层。
-- `R7`：保护课堂主路径、Interop 生命周期及学生、设置和照片数据兼容。
-- `R8`：Git diff 与测试输出承接普通变更；高风险切片才写 `docs/change-evidence/`。
-- `S1`：先跑课堂入口到可观察输出的最薄主路径。
-- `S2`：运行态与阶段状态留在 plan/evidence。
-- `S3`：外部依据足以形成可逆决定即停止。
-- `S4`：参考源按消费者、许可与维护收益晋降退役。
-- `S5`：`scripts/quality/run-local-quality-gates.ps1` 承接可重复强制，根规则不复制实现细节。
-- `E4`：standard/hotspot 结果承接健康证据。
-- `E5`：SDK、Office 与依赖变化记录供应链。
-- `E6`：数据和配置变化必须有迁移、兼容和回滚。
+## D. Git 与回滚
+- Git baseline=`main`; upstream=`origin/main`; closeout=`proportional_standard_or_release_full`。
+- 回滚只撤销本任务切片；数据变化还需备份、逆向迁移或兼容读取入口。
