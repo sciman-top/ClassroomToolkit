@@ -86,12 +86,12 @@ try {
     $stagingItems = @(
         "installer",
         "user-installers-manifest.json",
-        "ClassroomToolkit-Source-{0}.zip" -f $Version,
+        ("ClassroomToolkit-Source-{0}.zip" -f $Version),
         "source-package-manifest.json"
     )
     if ($PackageMode -in @("all", "offline")) {
         $stagingItems += @(
-            "ClassroomToolkit-{0}-portable.zip" -f $Version,
+            ("ClassroomToolkit-{0}-portable.zip" -f $Version),
             "portable-package-manifest.json"
         )
     }
