@@ -57,7 +57,7 @@
 本轮收口后的本地验证快照：
 
 - `dotnet build ClassroomToolkit.sln -c Release`：通过，0 warning / 0 error
-- full Release stable tests（排除核心契约，包含性能预算）：通过，3022/3022
+- full Release stable tests（排除核心契约，包含性能预算）：通过，3024/3024
 - contract / invariant：通过，29/29
 - `latest-all` analyzer：0 diagnostics；依赖漏洞：0
 - 当前代码阻断项：无
