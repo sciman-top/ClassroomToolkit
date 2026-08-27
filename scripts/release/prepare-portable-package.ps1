@@ -4,7 +4,8 @@ param(
     [string]$Version,
     [string]$OutputRoot = "artifacts/release",
     [string]$AppExecutableName = "sciman Classroom Toolkit.exe",
-    [string]$RepositoryUrl = "https://github.com/sciman-top/ClassroomToolkit"
+    [string]$RepositoryUrl = "https://github.com/sciman-top/ClassroomToolkit",
+    [string]$SourceRef = "HEAD"
 )
 
 Set-StrictMode -Version Latest
@@ -70,11 +71,15 @@ foreach ($item in Get-ChildItem -LiteralPath $offlineApp -Force) {
 Set-Content -LiteralPath (Join-Path $portableRoot "portable.mode") -Value "mode=portable" -Encoding ASCII
 $launcher = "@echo off`r`nsetlocal`r`nstart `"`" `"%~dp0app\$AppExecutableName`"`r`n"
 Set-Content -LiteralPath (Join-Path $portableRoot "启动.bat") -Value $launcher -Encoding ASCII
-$sourceCommit = (& git rev-parse --verify HEAD).Trim()
+$sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
+if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
+    throw "SourceRef does not resolve to a commit: $SourceRef"
+}
 $repositoryPath = $repositoryUri.AbsolutePath.Trim('/').TrimEnd('/')
 $apiUrl = "https://api.github.com/repos/$repositoryPath/releases/latest"
 $metadata = [ordered]@{
     version = $Version
+    sourceRef = $SourceRef
     source_commit = $sourceCommit
     latestReleaseApiUrl = $apiUrl
     releasesPageUrl = ($RepositoryUrl.TrimEnd('/') + "/releases/latest")
@@ -94,6 +99,7 @@ Invoke-Step -Name "zip-portable" -Action {
 
 $manifest = [ordered]@{
     version = $Version
+    source_ref = $SourceRef
     package = "portable"
     source_commit = $sourceCommit
     artifact = Split-Path -Leaf $portableZip

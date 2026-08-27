@@ -33,7 +33,7 @@ Out of scope:
 - `.NET 10 SDK` for development
 - Optional hardware: touch display, pen tablet, presentation remote, projector, or external monitor
 
-## Current Status (2026-08-17)
+## Current Status (2026-08-27)
 
 Recent work has focused on high-frequency classroom flows and touch-first stability:
 
@@ -51,11 +51,13 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Legacy INI files are now backed up once, by content hash, immediately before a migration is persisted. Read-only loads no longer create duplicate backups, and backup failure blocks overwrite.
 - Four one-expression Paint policies and their implementation-mirroring tests were inlined and removed. Wall-clock brush microbenchmarks now run in full/focused verification instead of standard.
 - The dependency graph no longer carries the unused SourceGear native SQLite implementation or duplicate test pins; .NET 10 packages are on 10.0.11 and the Test SDK is on 18.9.0.
+- The release chain now produces four explicit deliverables: standard installer, offline installer, green portable package, and public source archive. The portable package only checks official GitHub releases and opens the download page; it never replaces files automatically.
+- The aggregate release entry point builds under `.staging/<version>` and leaves only installers, the portable ZIP, the source ZIP, and manifests in the final version directory. Superseded candidates and historical validation output are archived under `artifacts/release/archive/`.
 
 Local verification after the current closeout:
 
 - `dotnet build ClassroomToolkit.sln -c Release`: passed, 0 warnings / 0 errors
-- full Release stable tests (excluding core contracts and including 9 performance budgets): passed, 3009/3009
+- full Release stable tests (excluding core contracts and including performance budgets): passed, 3021/3021
 - contract / invariant: passed, 29/29
 - `latest-all` analyzer: 0 diagnostics; dependency vulnerabilities: 0
 - Current code blocker: none
@@ -72,13 +74,15 @@ For more context:
 
 ### For Teachers
 
-1. Download a `ClassroomToolkit-*-Setup.exe` installer from GitHub Releases.
+1. Download the required deliverable from [GitHub Releases](https://github.com/sciman-top/ClassroomToolkit/releases).
 2. Choose `standard` for connected classroom PCs; choose `offline` for restricted networks, bulk installation, or PCs without the required runtime; choose the `portable` green package for temporary devices, USB drives, or computers where you do not want to install anything.
-3. After installation, confirm that the floating launcher appears, then verify roll call, image / PDF viewing, board entry, and PPT / WPS annotation.
+3. After installing `standard` / `offline`, confirm that the floating launcher appears, then verify roll call, image / PDF viewing, board entry, and PPT / WPS annotation. For `portable`, extract the ZIP and run the root `启动.bat`.
 
 Both installers provide the same classroom features. `standard` is framework-dependent and installs the .NET Desktop Runtime when needed; `offline` is self-contained. They use separate update channels and apply a downloaded update on the next launch. The `portable` package is self-contained: extract it, run the root `启动.bat`, and keep data beside it in `data/`. It checks official GitHub releases and opens the download page when a newer version is found, but never replaces files automatically. The matching `ClassroomToolkit-Source-<version>.zip` is published separately and is not installed on teacher PCs.
 
 Daily classroom usage is documented in the [Teacher Guide](./使用指南.md).
+
+GitHub Release naming: `*-Setup.exe` files are installers, `ClassroomToolkit-<version>-portable.zip` is the green portable package, and `ClassroomToolkit-Source-<version>.zip` is the public source archive. Private migration packages are never published in public Releases.
 
 ### For Developers
 
@@ -94,6 +98,8 @@ To prepare release packages, prefer the built-in scripts:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <version> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
+
+After the aggregate script succeeds, `artifacts/release/<version>/` is the upload-ready directory. `.staging/` is retained only after a failure for diagnosis and is cleaned after success. Superseded candidates, old logs, and old performance reports live under `artifacts/release/archive/` and are not public Release assets.
 
 ## Local Data
 

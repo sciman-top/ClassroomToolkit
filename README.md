@@ -33,7 +33,7 @@
 - 开发需要 `.NET 10 SDK`
 - 可选硬件：触屏一体机、手写屏、数位板、翻页笔、投影仪或外接显示器
 
-## 最新状态（2026-08-17）
+## 最新状态（2026-08-27）
 
 最近几批工作集中在课堂高频链路的稳定性与触控体验：
 
@@ -51,11 +51,13 @@
 - 旧版 INI 只在真正持久化迁移前生成按内容哈希去重的备份；只读加载不再制造重复备份，备份失败会阻止覆盖。
 - 4 个单表达式 Paint policy 及其逐字复述测试已内联删除；墙钟画笔微基准改为 full/focused 运行，standard 不再受机器争用误报影响。
 - 依赖闭包删除未使用的 SourceGear native SQLite 与测试重复固定，.NET 10 包更新到 10.0.11，Test SDK 更新到 18.9.0。
+- 发布链已固定为标准安装版、离线安装版、绿色便携版和公开源码包四类交付物；绿色版只检查 GitHub 正式 Release 并打开下载页，不自动替换文件。
+- 发布聚合入口使用 `.staging/<version>` 临时目录，成功后最终版本目录只保留安装器、绿色 ZIP、源码 ZIP 和 manifest；旧候选与历史验证输出归档到 `artifacts/release/archive/`。
 
 本轮收口后的本地验证快照：
 
 - `dotnet build ClassroomToolkit.sln -c Release`：通过，0 warning / 0 error
-- full Release stable tests（排除核心契约，包含 9 个性能预算）：通过，3009/3009
+- full Release stable tests（排除核心契约，包含性能预算）：通过，3021/3021
 - contract / invariant：通过，29/29
 - `latest-all` analyzer：0 diagnostics；依赖漏洞：0
 - 当前代码阻断项：无
@@ -72,13 +74,15 @@
 
 ### 教师使用
 
-1. 从 GitHub Releases 下载 `ClassroomToolkit-*-Setup.exe` 安装包。
+1. 从 [GitHub Releases](https://github.com/sciman-top/ClassroomToolkit/releases) 下载所需交付物。
 2. 普通联网教室选择 `standard`；校园内网隔离、批量装机或缺少运行时的电脑选择 `offline`；临时设备、U 盘或不希望安装的电脑选择 `portable` 绿色便携版。
-3. 安装后确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注。
+3. `standard` / `offline` 安装后确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注；`portable` 解压后运行根目录 `启动.bat`。
 
 两类安装包功能相同：`standard` 为 framework-dependent 安装版，首次安装会按需安装 .NET Desktop Runtime；`offline` 为 self-contained 安装版。它们通过独立更新通道下载更新，已下载更新会在下次启动时应用。`portable` 为 self-contained 绿色版，解压后运行根目录 `启动.bat`，数据保存在同级 `data/`，启动时只检查 GitHub 正式版本并在发现更新时打开下载页，不自动替换文件。公开源码以同一版本的 `ClassroomToolkit-Source-<版本号>.zip` 单独提供，不进入教师安装目录。
 
 教师日常操作请优先看 [使用指南](./使用指南.md)。
+
+GitHub Release 附件命名约定：`*-Setup.exe` 是安装器，`ClassroomToolkit-<version>-portable.zip` 是绿色版，`ClassroomToolkit-Source-<version>.zip` 是公开源码包。私用开发迁移包不随公开 Release 发布。
 
 ### 开发者使用
 
@@ -94,6 +98,8 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
+
+发布聚合脚本成功后，`artifacts/release/<版本号>/` 是可上传目录；`.staging/` 只在失败时保留用于诊断，成功会自动清理。历史候选、旧日志和旧性能报告位于 `artifacts/release/archive/`，不属于公开 Release。
 
 ## 本地数据
 

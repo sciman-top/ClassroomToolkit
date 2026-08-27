@@ -73,6 +73,19 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("data/");
     }
 
+    [Fact]
+    public void AggregateReleaseScript_ShouldCleanStagingAndLeaveFinalDeliveryPaths()
+    {
+        var source = ReadScript("prepare-release-artifacts.ps1");
+
+        source.Should().Contain(".staging");
+        source.Should().Contain("staging_cleaned = $true");
+        source.Should().Contain("Remove-Item -LiteralPath $stagingReleaseRoot -Recurse -Force");
+        source.Should().Contain("standard_installer");
+        source.Should().Contain("offline_installer");
+        source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
+    }
+
     private static string ReadScript(string name)
     {
         return File.ReadAllText(TestPathHelper.ResolveRepoPath("scripts", "release", name));

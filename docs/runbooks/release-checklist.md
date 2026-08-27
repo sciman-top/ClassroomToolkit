@@ -5,6 +5,7 @@
 - 标准安装版（FDD + 自动更新）
 - 离线安装版（SCD + 独立更新通道）
 - 与发布版本同一提交的公开源码包
+- 绿色便携版（通知式更新检查）
 
 ## 1. 工作区
 
@@ -31,7 +32,7 @@
 1. 预检：
    - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full`
 2. 打包：
-   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
+   - `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
 
 ## 5. 产物要求
 
@@ -51,6 +52,8 @@
 - 公开源码包：`ClassroomToolkit-Source-<version>.zip`
   - 由固定 Git commit 的 `git archive` 生成，不包含未跟踪的课堂数据
 - 根目录：`release-manifest.json`、`user-installers-manifest.json`、`portable-package-manifest.json`、`source-package-manifest.json`
+- 聚合入口会在 `artifacts/release/.staging/<version>/` 构建；成功后 `.staging/<version>/` 自动清理，最终版本目录不保留 `standard/`、`offline/`、`portable/` 或 `_runtime-cache/` staging 目录。
+- `artifacts/release/archive/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
 
 ## 6. GitHub 发布
 
@@ -66,7 +69,7 @@
 1. 清理工作区
 2. 跑 `preflight-check.ps1`
 3. 跑 `prepare-distribution.ps1`
-4. 核查 `SHA256SUMS.txt`、三个发布 manifest、标准/离线更新 channel 及源码 SHA
+4. 核查 `SHA256SUMS.txt`、四个发布 manifest、标准/离线更新 channel、绿色版元数据及源码 SHA
 5. 触发 `release-package.yml` 或创建 tag 发布
 
 ## 8. 私用开发迁移包
