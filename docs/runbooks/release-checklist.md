@@ -53,7 +53,7 @@
   - 由固定 Git commit 的 `git archive` 生成，不包含未跟踪的课堂数据
 - 根目录：`release-manifest.json`、`user-installers-manifest.json`、`portable-package-manifest.json`、`source-package-manifest.json`
 - 聚合入口会在 `artifacts/release/.staging/<version>/` 构建；成功后 `.staging/<version>/` 自动清理，最终版本目录不保留 `standard/`、`offline/`、`portable/` 或 `_runtime-cache/` staging 目录。
-- `artifacts/release/archive/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
+- `artifacts/archive/legacy-outputs/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
 
 ## 6. GitHub 发布
 

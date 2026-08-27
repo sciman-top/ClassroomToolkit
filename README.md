@@ -52,7 +52,7 @@
 - 4 个单表达式 Paint policy 及其逐字复述测试已内联删除；墙钟画笔微基准改为 full/focused 运行，standard 不再受机器争用误报影响。
 - 依赖闭包删除未使用的 SourceGear native SQLite 与测试重复固定，.NET 10 包更新到 10.0.11，Test SDK 更新到 18.9.0。
 - 发布链已固定为标准安装版、离线安装版、绿色便携版和公开源码包四类交付物；绿色版只检查 GitHub 正式 Release 并打开下载页，不自动替换文件。
-- 发布聚合入口使用 `.staging/<version>` 临时目录，成功后最终版本目录只保留安装器、绿色 ZIP、源码 ZIP 和 manifest；旧候选与历史验证输出归档到 `artifacts/release/archive/`。
+- 发布聚合入口使用 `.staging/<version>` 临时目录，成功后最终版本目录只保留安装器、绿色 ZIP、源码 ZIP 和 manifest；旧候选与历史验证输出归档到 `artifacts/archive/legacy-outputs/`。
 
 本轮收口后的本地验证快照：
 
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-ch
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
-发布聚合脚本成功后，`artifacts/release/<版本号>/` 是可上传目录；`.staging/` 只在失败时保留用于诊断，成功会自动清理。历史候选、旧日志和旧性能报告位于 `artifacts/release/archive/`，不属于公开 Release。
+发布聚合脚本成功后，`artifacts/release/<版本号>/` 是可上传目录；`.staging/` 只在失败时保留用于诊断，成功会自动清理。历史候选、旧日志和旧性能报告位于 `artifacts/archive/legacy-outputs/`，不属于公开 Release。
 
 ## 本地数据
 

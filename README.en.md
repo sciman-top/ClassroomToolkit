@@ -52,7 +52,7 @@ Recent work has focused on high-frequency classroom flows and touch-first stabil
 - Four one-expression Paint policies and their implementation-mirroring tests were inlined and removed. Wall-clock brush microbenchmarks now run in full/focused verification instead of standard.
 - The dependency graph no longer carries the unused SourceGear native SQLite implementation or duplicate test pins; .NET 10 packages are on 10.0.11 and the Test SDK is on 18.9.0.
 - The release chain now produces four explicit deliverables: standard installer, offline installer, green portable package, and public source archive. The portable package only checks official GitHub releases and opens the download page; it never replaces files automatically.
-- The aggregate release entry point builds under `.staging/<version>` and leaves only installers, the portable ZIP, the source ZIP, and manifests in the final version directory. Superseded candidates and historical validation output are archived under `artifacts/release/archive/`.
+- The aggregate release entry point builds under `.staging/<version>` and leaves only installers, the portable ZIP, the source ZIP, and manifests in the final version directory. Superseded candidates and historical validation output are archived under `artifacts/archive/legacy-outputs/`.
 
 Local verification after the current closeout:
 
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-ch
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <version> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
-After the aggregate script succeeds, `artifacts/release/<version>/` is the upload-ready directory. `.staging/` is retained only after a failure for diagnosis and is cleaned after success. Superseded candidates, old logs, and old performance reports live under `artifacts/release/archive/` and are not public Release assets.
+After the aggregate script succeeds, `artifacts/release/<version>/` is the upload-ready directory. `.staging/` is retained only after a failure for diagnosis and is cleaned after success. Superseded candidates, old logs, and old performance reports live under `artifacts/archive/legacy-outputs/` and are not public Release assets.
 
 ## Local Data
 
