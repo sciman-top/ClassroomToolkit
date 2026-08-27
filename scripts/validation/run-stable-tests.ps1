@@ -6,11 +6,17 @@ param(
     [string]$TestProject = "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",
     [switch]$SkipBuild,
     [switch]$DryRun,
-    [string]$SummaryPath = "artifacts/TestResults/stable-tests-summary.json"
+    [string]$SummaryPath = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($SummaryPath)) {
+    $SummaryPath = Join-Path (Get-ClassroomToolkitArtifactPath -Name EvidenceTestsCurrent) "stable-tests-summary.json"
+}
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {

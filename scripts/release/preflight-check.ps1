@@ -8,11 +8,17 @@ param(
     [switch]$SkipCompatibilityReport,
     [switch]$SkipUiPerformanceSampling,
     [switch]$SkipSettingsLoadPerformanceSampling,
-    [string]$OutputRoot = "artifacts/release"
+    [string]$OutputRoot = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name EvidenceReleasePreflightCurrent
+}
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {
@@ -81,8 +87,8 @@ else {
 
 if (-not $SkipCompatibilityReport) {
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $reportMd = Join-Path $outputRootPath ("preflight-compatibility-report-{0}.md" -f $stamp)
-    $reportJson = Join-Path $outputRootPath ("preflight-compatibility-report-{0}.json" -f $stamp)
+    $reportMd = Join-Path $outputRootPath "preflight-compatibility-report.md"
+    $reportJson = Join-Path $outputRootPath "preflight-compatibility-report.json"
 
     Invoke-Step -Name "compatibility-report" -FilePath $powerShellExe -Arguments @(
         "-NoProfile",
@@ -110,7 +116,7 @@ if (-not $SkipUiPerformanceSampling) {
         "-File",
         "scripts/validation/collect-ui-performance-samples.ps1",
         "-OutputRoot",
-        (Join-Path $outputRootPath "validation")
+        (Join-Path $outputRootPath "performance")
     )
 }
 
@@ -124,7 +130,7 @@ if (-not $SkipSettingsLoadPerformanceSampling) {
         "-Configuration",
         $Configuration,
         "-OutputRoot",
-        (Join-Path $outputRootPath "validation")
+        (Join-Path $outputRootPath "performance")
     )
 }
 

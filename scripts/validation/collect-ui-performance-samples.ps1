@@ -2,11 +2,17 @@
 param(
     [string]$LogRoot = "logs",
     [int]$WindowHours = 24,
-    [string]$OutputRoot = "artifacts/validation"
+    [string]$OutputRoot = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name EvidenceValidationCurrent
+}
 
 function Resolve-Percentile {
     param(
@@ -129,9 +135,8 @@ $summary = [ordered]@{
     dropped_log_alert = $droppedStats
 }
 
-$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$jsonPath = Join-Path $OutputRoot "ui-performance-samples-$stamp.json"
-$mdPath = Join-Path $OutputRoot "ui-performance-samples-$stamp.md"
+$jsonPath = Join-Path $OutputRoot "ui-performance-samples.json"
+$mdPath = Join-Path $OutputRoot "ui-performance-samples.md"
 
 $summary | ConvertTo-Json -Depth 8 | Set-Content -Path $jsonPath -Encoding UTF8
 

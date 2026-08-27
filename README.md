@@ -101,6 +101,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-rele
 
 发布聚合脚本成功后，`artifacts/release/<版本号>/` 是可上传目录；`.staging/` 只在失败时保留用于诊断，成功会自动清理。历史候选、旧日志和旧性能报告位于 `artifacts/archive/legacy-outputs/`，不属于公开 Release。
 
+本地 `artifacts/` 路径已固定：`release/<版本号>/` 只放最终交付物，`evidence/quality/current/`、`evidence/tests/current/`、`evidence/validation/current/` 和 `evidence/release-preflight/current/` 只保留最新门禁证据，`private-migration/` 只放私用迁移包，`archive/legacy-outputs/` 只放可恢复历史副产物。重复运行门禁会覆盖 `current` 文件，不再按时间戳堆积；失败的发布 staging 只保留在 `release/.staging/<版本号>/` 供诊断。
+
 ## 本地数据
 
 应用主要读取三类本地资源：

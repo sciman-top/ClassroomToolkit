@@ -5,7 +5,7 @@ param(
     [ValidateSet("all", "standard", "offline")]
     [string]$PackageMode = "all",
     [string]$Configuration = "Release",
-    [string]$OutputRoot = "artifacts/release",
+    [string]$OutputRoot = "",
     [string]$ConfigPath = "scripts/release/release-config.json",
     [switch]$EnsureLatestRuntime,
     [switch]$AllowOverwriteVersion
@@ -13,6 +13,12 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
+}
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {

@@ -101,6 +101,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-rele
 
 After the aggregate script succeeds, `artifacts/release/<version>/` is the upload-ready directory. `.staging/` is retained only after a failure for diagnosis and is cleaned after success. Superseded candidates, old logs, and old performance reports live under `artifacts/archive/legacy-outputs/` and are not public Release assets.
 
+The local `artifacts/` layout is fixed: `release/<version>/` contains final delivery only; `evidence/quality/current/`, `evidence/tests/current/`, `evidence/validation/current/`, and `evidence/release-preflight/current/` contain the latest gate evidence; `private-migration/` is reserved for private migration packages; and `archive/legacy-outputs/` contains recoverable historical byproducts. Repeated gates overwrite stable `current` filenames instead of accumulating timestamped files. Failed release staging is retained only under `release/.staging/<version>/` for diagnosis.
+
 ## Local Data
 
 The app primarily reads three local resources:

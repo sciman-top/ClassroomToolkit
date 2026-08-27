@@ -4,11 +4,17 @@ param(
     [string]$Configuration = "Debug",
     [int]$ColdIterations = 20,
     [int]$HotIterations = 200,
-    [string]$OutputRoot = "artifacts/validation"
+    [string]$OutputRoot = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name EvidenceValidationCurrent
+}
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {
@@ -60,7 +66,6 @@ function New-SampleSettingsFile {
     $json | Set-Content -Path $Path -Encoding UTF8
 }
 
-$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputDir = if ([System.IO.Path]::IsPathRooted($OutputRoot)) {
     $OutputRoot
 }
@@ -78,8 +83,8 @@ try {
     New-SampleSettingsFile -Path $smallPath -PayloadBytes 4096
     New-SampleSettingsFile -Path $mediumPath -PayloadBytes 524288
 
-    $smallOutput = Join-Path $outputDir ("settings-load-performance-small-{0}.json" -f $stamp)
-    $mediumOutput = Join-Path $outputDir ("settings-load-performance-medium-{0}.json" -f $stamp)
+    $smallOutput = Join-Path $outputDir "settings-load-performance-small.json"
+    $mediumOutput = Join-Path $outputDir "settings-load-performance-medium.json"
 
     Invoke-Probe -Label "small" -SettingsPath $smallPath -OutputPath $smallOutput
     Invoke-Probe -Label "medium" -SettingsPath $mediumPath -OutputPath $mediumOutput
@@ -98,8 +103,8 @@ try {
         )
     }
 
-    $summaryJsonPath = Join-Path $outputDir ("settings-load-performance-summary-{0}.json" -f $stamp)
-    $summaryMdPath = Join-Path $outputDir ("settings-load-performance-summary-{0}.md" -f $stamp)
+    $summaryJsonPath = Join-Path $outputDir "settings-load-performance-summary.json"
+    $summaryMdPath = Join-Path $outputDir "settings-load-performance-summary.md"
     $summary | ConvertTo-Json -Depth 8 | Set-Content -Path $summaryJsonPath -Encoding UTF8
 
     $mdLines = @(

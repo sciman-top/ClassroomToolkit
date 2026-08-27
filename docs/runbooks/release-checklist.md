@@ -54,6 +54,8 @@
 - 根目录：`release-manifest.json`、`user-installers-manifest.json`、`portable-package-manifest.json`、`source-package-manifest.json`
 - 聚合入口会在 `artifacts/release/.staging/<version>/` 构建；成功后 `.staging/<version>/` 自动清理，最终版本目录不保留 `standard/`、`offline/`、`portable/` 或 `_runtime-cache/` staging 目录。
 - `artifacts/archive/legacy-outputs/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
+- 当前门禁证据固定写入 `artifacts/evidence/{quality,tests,validation,release-preflight}/current/`；重复运行覆盖 current 文件，不在活动目录按时间戳累积。
+- `artifacts/private-migration/` 仅用于私用开发迁移包，禁止上传到公开 Release。
 
 ## 6. GitHub 发布
 

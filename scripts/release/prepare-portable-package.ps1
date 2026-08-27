@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
-    [string]$OutputRoot = "artifacts/release",
+    [string]$OutputRoot = "",
     [string]$AppExecutableName = "sciman Classroom Toolkit.exe",
     [string]$RepositoryUrl = "https://github.com/sciman-top/ClassroomToolkit",
     [string]$SourceRef = "HEAD"
@@ -10,6 +10,12 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
+}
 
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)

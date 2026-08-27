@@ -2,11 +2,17 @@
 param(
     [string]$Configuration = "Debug",
     [string]$BaselinePath = "scripts/quality/analyzer-backlog-baseline.json",
-    [string]$ReportPath = "artifacts/quality/analyzer-backlog-report.json"
+    [string]$ReportPath = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($ReportPath)) {
+    $ReportPath = Join-Path (Get-ClassroomToolkitArtifactPath -Name EvidenceQualityCurrent) "analyzer-backlog-report.json"
+}
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {

@@ -6,12 +6,18 @@ param(
     [string]$SourceRoot,
     [Parameter(Mandatory = $true)]
     [string]$MigrationId,
-    [string]$OutputRoot = "artifacts/private-migration",
+    [string]$OutputRoot = "",
     [switch]$AllowOverwrite
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name PrivateMigrationRoot
+}
 
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)

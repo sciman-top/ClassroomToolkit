@@ -3,12 +3,18 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     [string]$SourceRef = "HEAD",
-    [string]$OutputRoot = "artifacts/release",
+    [string]$OutputRoot = "",
     [switch]$AllowOverwriteVersion
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
+Import-Module -Name $artifactLayoutModule -Force
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
+}
 
 function Resolve-AbsolutePath {
     param([Parameter(Mandatory = $true)][string]$Path)

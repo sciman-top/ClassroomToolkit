@@ -86,8 +86,42 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
     }
 
+    [Fact]
+    public void ArtifactLayout_ShouldKeepDeliveryEvidenceHistoryAndPrivateRootsSeparate()
+    {
+        var layout = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "scripts",
+            "artifacts",
+            "ArtifactLayout.psm1"));
+
+        layout.Should().Contain("artifacts/release");
+        layout.Should().Contain("artifacts/private-migration");
+        layout.Should().Contain("artifacts/evidence/quality/current");
+        layout.Should().Contain("artifacts/evidence/tests/current");
+        layout.Should().Contain("artifacts/evidence/validation/current");
+        layout.Should().Contain("artifacts/evidence/release-preflight/current");
+        layout.Should().Contain("artifacts/archive/legacy-outputs");
+        layout.Should().Contain("Export-ModuleMember -Function Get-ClassroomToolkitArtifactPath");
+    }
+
+    [Fact]
+    public void EvidenceScripts_ShouldUseStableCurrentFilenames()
+    {
+        ReadRepoFile("scripts", "validation", "run-stable-tests.ps1").Should().Contain("EvidenceTestsCurrent");
+        ReadRepoFile("scripts", "validation", "collect-ui-performance-samples.ps1").Should().Contain("ui-performance-samples.json");
+        ReadRepoFile("scripts", "validation", "collect-settings-load-performance-samples.ps1").Should().Contain("settings-load-performance-summary.json");
+        ReadRepoFile("scripts", "quality", "check-analyzer-backlog-baseline.ps1").Should().Contain("EvidenceQualityCurrent");
+        ReadRepoFile("scripts", "release", "preflight-check.ps1").Should().Contain("EvidenceReleasePreflightCurrent");
+        ReadRepoFile("scripts", "release", "preflight-check.ps1").Should().Contain("preflight-compatibility-report.json");
+    }
+
     private static string ReadScript(string name)
     {
-        return File.ReadAllText(TestPathHelper.ResolveRepoPath("scripts", "release", name));
+        return ReadRepoFile("scripts", "release", name);
+    }
+
+    private static string ReadRepoFile(params string[] pathParts)
+    {
+        return File.ReadAllText(TestPathHelper.ResolveRepoPath(pathParts));
     }
 }
