@@ -72,9 +72,11 @@ For more context:
 
 ### For Teachers
 
-1. Download a packaged release from GitHub Releases.
-2. Extract it to a stable folder and run `sciman Classroom Toolkit.exe`.
-3. Confirm that the floating launcher appears, then verify roll call, image / PDF viewing, board entry, and PPT / WPS annotation.
+1. Download a `ClassroomToolkit-*-Setup.exe` installer from GitHub Releases.
+2. Choose `standard` for connected classroom PCs; choose `offline` for restricted networks, bulk installation, or PCs without the required runtime.
+3. After installation, confirm that the floating launcher appears, then verify roll call, image / PDF viewing, board entry, and PPT / WPS annotation.
+
+Both installers provide the same classroom features. `standard` is framework-dependent and installs the .NET Desktop Runtime when needed; `offline` is self-contained. They use separate update channels and apply a downloaded update on the next launch. The matching `ClassroomToolkit-Source-<version>.zip` is published separately and is not installed on teacher PCs.
 
 Daily classroom usage is documented in the [Teacher Guide](./使用指南.md).
 
@@ -90,7 +92,7 @@ To prepare release packages, prefer the built-in scripts:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <version> -PackageMode all -Configuration Release -EnsureLatestRuntime
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <version> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
 ## Local Data
@@ -120,6 +122,7 @@ Data conventions:
 - Supported formats: `.jpg`, `.jpeg`, `.png`, `.bmp`
 - The app can generate a template when `students.xlsx` is missing; an existing corrupt file is preserved and reported as a load failure
 - Any format change must preserve compatibility with existing classroom machines and files
+- Development runs continue to use solution-root data. Installed builds use `%LOCALAPPDATA%\ClassroomToolkit\data`; on first launch they copy legacy roster/photos only when the persistent target does not exist, so an update cannot replace classroom data.
 
 ## Repository Layout
 

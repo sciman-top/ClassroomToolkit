@@ -42,6 +42,10 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Restore release tools
+        shell: pwsh
+        run: dotnet tool restore
+
       - name: Resolve release variables
         id: release_vars
         shell: pwsh
@@ -75,10 +79,10 @@ jobs:
         run: |
           pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
 
-      - name: Build distribution packages
+      - name: Build release artifacts
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 `
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 `
             -Version "${{ steps.release_vars.outputs.version }}" `
             -PackageMode "${{ steps.release_vars.outputs.package_mode }}" `
             -Configuration Release `
@@ -97,6 +101,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/release/${{ steps.release_vars.outputs.version }}/*.zip
+            artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.exe
+            artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.nupkg
+            artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.json
+            artifacts/release/${{ steps.release_vars.outputs.version }}/ClassroomToolkit-Source-*.zip
             artifacts/release/${{ steps.release_vars.outputs.version }}/release-manifest.json
+            artifacts/release/${{ steps.release_vars.outputs.version }}/user-installers-manifest.json
+            artifacts/release/${{ steps.release_vars.outputs.version }}/source-package-manifest.json
           fail_on_unmatched_files: true

@@ -70,6 +70,7 @@ public partial class App : WpfApplication
         MainWindow = mainWindow;
         mainWindow.Show();
         ShutdownMode = ShutdownMode.OnMainWindowClose;
+        AutoUpdateBootstrapper.Schedule();
 
         // 在启动时立即修复所有 BorderBrush 问题
         try

@@ -10,6 +10,12 @@
       "fileName": "windowsdesktop-runtime-10-latest-win-x64.exe",
       "requiredMajor": "10",
       "downloadUrl": "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
+    },
+    "velopack": {
+      "toolVersion": "1.2.0",
+      "packageId": "ClassroomToolkit",
+      "repositoryUrl": "https://github.com/sciman-top/ClassroomToolkit",
+      "standardFramework": "net10-x64-desktop"
     }
   }
 }

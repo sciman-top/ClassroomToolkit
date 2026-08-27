@@ -72,9 +72,11 @@
 
 ### 教师使用
 
-1. 从 GitHub Releases 下载发布包。
-2. 解压到固定目录，运行 `sciman Classroom Toolkit.exe`。
-3. 确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注。
+1. 从 GitHub Releases 下载 `ClassroomToolkit-*-Setup.exe` 安装包。
+2. 普通联网教室选择 `standard`；校园内网隔离、批量装机或缺少运行时的电脑选择 `offline`。
+3. 安装后确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注。
+
+两类安装包功能相同：`standard` 为 framework-dependent 安装版，首次安装会按需安装 .NET Desktop Runtime；`offline` 为 self-contained 安装版。它们通过独立更新通道下载更新，已下载更新会在下次启动时应用。公开源码以同一版本的 `ClassroomToolkit-Source-<版本号>.zip` 单独提供，不进入教师安装目录。
 
 教师日常操作请优先看 [使用指南](./使用指南.md)。
 
@@ -90,7 +92,7 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-distribution.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime
 ```
 
 ## 本地数据
@@ -120,6 +122,7 @@ student_photos/
 - 支持 `.jpg`、`.jpeg`、`.png`、`.bmp`
 - `students.xlsx` 不存在时，应用可以生成模板；文件已存在但损坏时会保留原件并提示读取失败
 - 修改数据格式前必须考虑旧课堂电脑和已有文件的兼容性
+- 开发态继续使用解决方案根目录的数据；已安装版本将课堂数据保存在 `%LOCALAPPDATA%\ClassroomToolkit\data`，首次启动时仅在目标不存在时复制旧安装目录中的名册和照片，避免自动更新覆盖数据。
 
 ## 仓库结构
 

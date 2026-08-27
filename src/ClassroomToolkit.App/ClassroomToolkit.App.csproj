@@ -4,6 +4,7 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <StartupObject>ClassroomToolkit.App.Program</StartupObject>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -30,16 +31,22 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
     <PackageReference Include="System.Speech" Version="10.0.11" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
-  <ItemGroup Condition="Exists('..\..\students.xlsx')">
+  <ItemGroup Condition="'$(IncludeLocalClassroomData)' == 'true' And Exists('..\..\students.xlsx')">
     <Content Include="..\..\students.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup Condition="Exists('..\..\student_photos')">
+  <ItemGroup Condition="'$(IncludeLocalClassroomData)' == 'true' And Exists('..\..\student_photos')">
     <Content Include="..\..\student_photos\**\*">
       <Link>student_photos\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <TargetPath>student_photos\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="update-feed.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
