@@ -7,6 +7,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using ClassroomToolkit.App;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -154,6 +155,11 @@ internal static class RegionScreenCaptureWorkflow
 
     internal static string GetPersistentCaptureRootDirectory()
     {
+        if (PortableRuntimeContext.DataDirectory is { } portableDataRoot)
+        {
+            return Path.Combine(portableDataRoot, CaptureDirectoryName);
+        }
+
         var picturesRoot = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
         if (string.IsNullOrWhiteSpace(picturesRoot))
         {
@@ -165,6 +171,11 @@ internal static class RegionScreenCaptureWorkflow
 
     internal static string GetSessionCaptureRootDirectory()
     {
+        if (PortableRuntimeContext.DataDirectory is { } portableDataRoot)
+        {
+            return Path.Combine(portableDataRoot, SessionCaptureDirectoryName);
+        }
+
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrWhiteSpace(localAppData))
         {

@@ -67,6 +67,10 @@ public sealed class AutoUpdateReleaseContractTests
         updater.Should().Contain("ReleasesPageUrl");
         updater.Should().Contain("GetStringAsync");
         updater.Should().Contain("TimeSpan.FromSeconds(5)");
+
+        var capture = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src", "ClassroomToolkit.App", "Paint", "RegionScreenCaptureWorkflow.cs"));
+        capture.Should().Contain("PortableRuntimeContext.DataDirectory");
     }
 
     [Theory]
