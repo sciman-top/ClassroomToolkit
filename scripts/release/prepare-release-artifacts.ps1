@@ -73,26 +73,6 @@ try {
         )
     }
 
-    $stagingItems = @(
-        "installer",
-        "user-installers-manifest.json",
-        "ClassroomToolkit-{0}-portable.zip" -f $Version,
-        "portable-package-manifest.json",
-        "ClassroomToolkit-Source-{0}.zip" -f $Version,
-        "source-package-manifest.json"
-    )
-    New-Item -ItemType Directory -Path (Join-Path $outputRootPath $Version) -Force | Out-Null
-    $releaseRoot = Join-Path $outputRootPath $Version
-    foreach ($relativePath in $stagingItems) {
-        $sourcePath = Join-Path $stagingReleaseRoot $relativePath
-        if (Test-Path -LiteralPath $sourcePath) {
-            $destinationPath = Join-Path $releaseRoot $relativePath
-            $destinationParent = Split-Path -Parent $destinationPath
-            New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
-            Move-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
-        }
-    }
-
     $sourceArguments = @(
         "-Version", $Version,
         "-SourceRef", $SourceRef,
@@ -102,6 +82,33 @@ try {
         $sourceArguments += "-AllowOverwriteVersion"
     }
     Invoke-ReleaseScript -Name "public-source" -ScriptPath (Join-Path $PSScriptRoot "prepare-source-package.ps1") -Arguments $sourceArguments
+
+    $stagingItems = @(
+        "installer",
+        "user-installers-manifest.json",
+        "ClassroomToolkit-Source-{0}.zip" -f $Version,
+        "source-package-manifest.json"
+    )
+    if ($PackageMode -in @("all", "offline")) {
+        $stagingItems += @(
+            "ClassroomToolkit-{0}-portable.zip" -f $Version,
+            "portable-package-manifest.json"
+        )
+    }
+    $missingItems = @($stagingItems | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stagingReleaseRoot $_)) })
+    if ($missingItems.Count -gt 0) {
+        throw "Release staging is missing required delivery items: $($missingItems -join ', ')"
+    }
+
+    New-Item -ItemType Directory -Path (Join-Path $outputRootPath $Version) -Force | Out-Null
+    $releaseRoot = Join-Path $outputRootPath $Version
+    foreach ($relativePath in $stagingItems) {
+        $sourcePath = Join-Path $stagingReleaseRoot $relativePath
+        $destinationPath = Join-Path $releaseRoot $relativePath
+        $destinationParent = Split-Path -Parent $destinationPath
+        New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
+        Move-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
+    }
 
     $sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
     $manifest = [ordered]@{
