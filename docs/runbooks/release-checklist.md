@@ -43,9 +43,14 @@
   - `Setup.exe`、完整更新包和 `releases.*.json`
   - SCD 应用；功能与标准版一致
   - Velopack channel=`offline`
+- 绿色便携版：`ClassroomToolkit-<version>-portable.zip`
+  - SCD 应用，解压后由根目录 `启动.bat` 启动
+  - 根目录 `portable.mode` 启用便携数据模式，数据写入同级 `data/`
+  - 启动时每 24 小时检查 GitHub 正式 Release；发现更新只提示并打开下载页，不自动替换文件
+  - 不包含课堂数据；整包替换时保留原 `data/` 目录
 - 公开源码包：`ClassroomToolkit-Source-<version>.zip`
   - 由固定 Git commit 的 `git archive` 生成，不包含未跟踪的课堂数据
-- 根目录：`release-manifest.json`、`user-installers-manifest.json`、`source-package-manifest.json`
+- 根目录：`release-manifest.json`、`user-installers-manifest.json`、`portable-package-manifest.json`、`source-package-manifest.json`
 
 ## 6. GitHub 发布
 

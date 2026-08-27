@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using FluentAssertions;
+using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.Tests;
 
@@ -49,5 +50,31 @@ public sealed class AutoUpdateReleaseContractTests
             "AutoUpdateBootstrapper.cs"));
         bootstrapper.Should().Contain("PropertyNameCaseInsensitive = true");
         bootstrapper.Should().Contain("new GithubSource(configuration.RepositoryUrl");
+    }
+
+    [Fact]
+    public void PortableRuntime_ShouldUseAnExplicitMarkerAndPortableDataRoot()
+    {
+        var context = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src", "ClassroomToolkit.App", "Helpers", "PortableRuntimeContext.cs"));
+        var updater = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src", "ClassroomToolkit.App", "Startup", "PortableUpdateBootstrapper.cs"));
+
+        context.Should().Contain("portable.mode");
+        context.Should().Contain("Path.Combine(root, DataFolderName)");
+        updater.Should().NotContain("api.github.com");
+        updater.Should().NotContain("notify-and-open-download-page");
+        updater.Should().Contain("ReleasesPageUrl");
+        updater.Should().Contain("GetStringAsync");
+        updater.Should().Contain("TimeSpan.FromSeconds(5)");
+    }
+
+    [Theory]
+    [InlineData("1.0.8", "v1.0.9", true)]
+    [InlineData("1.0.9", "v1.0.9", false)]
+    [InlineData("1.0.9", "draft-1.0.10", false)]
+    public void PortableReleaseVersion_ShouldCompareReleaseTagsSafely(string current, string candidate, bool expected)
+    {
+        PortableReleaseVersion.IsNewer(current, candidate).Should().Be(expected);
     }
 }

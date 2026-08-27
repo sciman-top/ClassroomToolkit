@@ -73,10 +73,10 @@
 ### 教师使用
 
 1. 从 GitHub Releases 下载 `ClassroomToolkit-*-Setup.exe` 安装包。
-2. 普通联网教室选择 `standard`；校园内网隔离、批量装机或缺少运行时的电脑选择 `offline`。
+2. 普通联网教室选择 `standard`；校园内网隔离、批量装机或缺少运行时的电脑选择 `offline`；临时设备、U 盘或不希望安装的电脑选择 `portable` 绿色便携版。
 3. 安装后确认悬浮启动器出现，再检查点名、图片 / PDF 查看、白板入口和 PPT / WPS 批注。
 
-两类安装包功能相同：`standard` 为 framework-dependent 安装版，首次安装会按需安装 .NET Desktop Runtime；`offline` 为 self-contained 安装版。它们通过独立更新通道下载更新，已下载更新会在下次启动时应用。公开源码以同一版本的 `ClassroomToolkit-Source-<版本号>.zip` 单独提供，不进入教师安装目录。
+两类安装包功能相同：`standard` 为 framework-dependent 安装版，首次安装会按需安装 .NET Desktop Runtime；`offline` 为 self-contained 安装版。它们通过独立更新通道下载更新，已下载更新会在下次启动时应用。`portable` 为 self-contained 绿色版，解压后运行根目录 `启动.bat`，数据保存在同级 `data/`，启动时只检查 GitHub 正式版本并在发现更新时打开下载页，不自动替换文件。公开源码以同一版本的 `ClassroomToolkit-Source-<版本号>.zip` 单独提供，不进入教师安装目录。
 
 教师日常操作请优先看 [使用指南](./使用指南.md)。
 

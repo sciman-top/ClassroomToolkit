@@ -60,6 +60,19 @@ public sealed class ReleaseArtifactContractTests
         restore.Should().Contain("Move-Item -LiteralPath $resolvedTargetRoot -Destination $backupRoot");
     }
 
+    [Fact]
+    public void PortablePackageScript_ShouldCreateADataSeparatedNotifyOnlyArtifact()
+    {
+        var source = ReadScript("prepare-portable-package.ps1");
+
+        source.Should().Contain("portable.mode");
+        source.Should().Contain("portable-release.json");
+        source.Should().Contain("api.github.com/repos");
+        source.Should().Contain("notify-and-open-download-page");
+        source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
+        source.Should().Contain("data/");
+    }
+
     private static string ReadScript(string name)
     {
         return File.ReadAllText(TestPathHelper.ResolveRepoPath("scripts", "release", name));

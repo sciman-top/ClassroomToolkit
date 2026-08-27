@@ -73,10 +73,10 @@ For more context:
 ### For Teachers
 
 1. Download a `ClassroomToolkit-*-Setup.exe` installer from GitHub Releases.
-2. Choose `standard` for connected classroom PCs; choose `offline` for restricted networks, bulk installation, or PCs without the required runtime.
+2. Choose `standard` for connected classroom PCs; choose `offline` for restricted networks, bulk installation, or PCs without the required runtime; choose the `portable` green package for temporary devices, USB drives, or computers where you do not want to install anything.
 3. After installation, confirm that the floating launcher appears, then verify roll call, image / PDF viewing, board entry, and PPT / WPS annotation.
 
-Both installers provide the same classroom features. `standard` is framework-dependent and installs the .NET Desktop Runtime when needed; `offline` is self-contained. They use separate update channels and apply a downloaded update on the next launch. The matching `ClassroomToolkit-Source-<version>.zip` is published separately and is not installed on teacher PCs.
+Both installers provide the same classroom features. `standard` is framework-dependent and installs the .NET Desktop Runtime when needed; `offline` is self-contained. They use separate update channels and apply a downloaded update on the next launch. The `portable` package is self-contained: extract it, run the root `启动.bat`, and keep data beside it in `data/`. It checks official GitHub releases and opens the download page when a newer version is found, but never replaces files automatically. The matching `ClassroomToolkit-Source-<version>.zip` is published separately and is not installed on teacher PCs.
 
 Daily classroom usage is documented in the [Teacher Guide](./使用指南.md).
 

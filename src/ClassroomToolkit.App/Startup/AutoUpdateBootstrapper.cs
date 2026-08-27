@@ -20,6 +20,12 @@ internal static class AutoUpdateBootstrapper
 
     internal static void Schedule()
     {
+        if (Helpers.PortableRuntimeContext.IsEnabled)
+        {
+            PortableUpdateBootstrapper.Schedule();
+            return;
+        }
+
         var configuration = TryLoadConfiguration();
         if (configuration is null || !configuration.Enabled || string.IsNullOrWhiteSpace(configuration.RepositoryUrl))
         {

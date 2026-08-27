@@ -30,6 +30,11 @@ internal static class StudentResourceLocator
 
     private static string ResolveResourceRoot()
     {
+        if (PortableRuntimeContext.DataDirectory is { } portableDataRoot)
+        {
+            return portableDataRoot;
+        }
+
         var solutionDir = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory);
         if (!string.IsNullOrWhiteSpace(solutionDir))
         {

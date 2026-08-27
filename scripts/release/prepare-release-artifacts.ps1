@@ -46,6 +46,14 @@ if ($AllowOverwriteVersion) {
 }
 Invoke-ReleaseScript -Name "user-installers" -ScriptPath (Join-Path $PSScriptRoot "prepare-user-installers.ps1") -Arguments $installerArguments
 
+if ($PackageMode -in @("all", "offline")) {
+    Invoke-ReleaseScript -Name "portable-package" -ScriptPath (Join-Path $PSScriptRoot "prepare-portable-package.ps1") -Arguments @(
+        "-Version", $Version,
+        "-OutputRoot", $OutputRoot,
+        "-RepositoryUrl", "https://github.com/sciman-top/ClassroomToolkit"
+    )
+}
+
 $sourceArguments = @(
     "-Version", $Version,
     "-SourceRef", $SourceRef,

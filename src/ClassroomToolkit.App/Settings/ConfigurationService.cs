@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Settings;
 
@@ -241,6 +242,11 @@ internal sealed class ConfigurationService : IConfigurationService
 
     private static string ResolveDefaultSettingsRoot(string? requestedBaseDirectory, string appRootDirectory)
     {
+        if (PortableRuntimeContext.TryResolveRoot(appRootDirectory, out var portableRoot))
+        {
+            return Path.Combine(portableRoot, PortableRuntimeContext.DataFolderName);
+        }
+
         if (HasValidExplicitBaseDirectory(requestedBaseDirectory))
         {
             return appRootDirectory;
