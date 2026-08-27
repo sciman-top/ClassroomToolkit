@@ -3,6 +3,8 @@ bin/
 obj/
 artifacts/
 **/artifacts/
+!scripts/artifacts/
+!scripts/artifacts/**
 
 # Visual Studio
 .vs/
