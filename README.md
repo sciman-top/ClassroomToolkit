@@ -46,6 +46,7 @@
 
 - `students.xlsx`：学生名册，一个工作表对应一个班级（字段建议：学号、姓名、分组）
 - `student_photos/`：学生照片，按班级分文件夹，文件名用学号，支持 `.jpg` / `.jpeg` / `.png` / `.bmp`
+- 绿色便携版的 `data/` 目录自带一份范例名册和照片目录说明，可直接改成自己的数据
 - 已安装版本的数据保存在 `%LOCALAPPDATA%\ClassroomToolkit\data`，自动更新不会覆盖课堂数据
 
 ## 面向开发者

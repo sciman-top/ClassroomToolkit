@@ -96,6 +96,19 @@ $metadata = [ordered]@{
 $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $portableRoot "portable-release.json") -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $portableData ".keep") -Value "Portable classroom data is created here." -Encoding UTF8
 
+$templateRoot = Join-Path $PSScriptRoot "templates"
+$sampleWorkbook = Join-Path $templateRoot "students-sample.xlsx"
+if (Test-Path -LiteralPath $sampleWorkbook) {
+    Copy-Item -LiteralPath $sampleWorkbook -Destination (Join-Path $portableData "students.xlsx")
+    $photoHintRoot = Join-Path $portableData "student_photos"
+    New-Item -ItemType Directory -Path $photoHintRoot -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $photoHintRoot "照片存放说明.txt") -Value @(
+        "把学生照片放在这里：按班级建文件夹，文件夹名要和 students.xlsx 的工作表名一致。",
+        "照片文件名用学号，例如 student_photos/1班/001.jpg；支持 jpg/jpeg/png/bmp。",
+        "不放照片也可以正常点名，只是不显示头像。"
+    ) -Encoding UTF8
+}
+
 if (Test-Path -LiteralPath $portableZip) {
     Remove-Item -LiteralPath $portableZip -Force
 }

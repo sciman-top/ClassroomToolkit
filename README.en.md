@@ -46,6 +46,7 @@ The [Teacher Guide](./使用指南.md) is written in Chinese and covers daily cl
 
 - `students.xlsx`: roster workbook — one worksheet per class (recommended columns: student ID, name, group)
 - `student_photos/`: photos grouped by class folders, file names by student ID; `.jpg` / `.jpeg` / `.png` / `.bmp`
+- The portable build ships a sample roster and a photo-folder hint inside its `data/` directory — just replace them with your own data
 - Installed builds keep data under `%LOCALAPPDATA%\ClassroomToolkit\data`; updates never overwrite classroom data
 
 ## For developers
