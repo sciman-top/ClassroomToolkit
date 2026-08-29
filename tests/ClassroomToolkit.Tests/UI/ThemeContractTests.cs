@@ -74,7 +74,7 @@ public sealed class ThemeContractTests
     [InlineData("Light")]
     public void ColorDictionary_ShouldExposeTheSameSemanticContract(string theme)
     {
-        RunSta(() =>
+        WpfStaTestRunner.Run(() =>
         {
             var dictionary = LoadColorDictionary(theme);
 
@@ -88,17 +88,10 @@ public sealed class ThemeContractTests
     [Fact]
     public void ThemeManager_ShouldReplaceOnlyNestedColorDictionary()
     {
-        RunSta(() =>
+        WpfStaTestRunner.Run(() =>
         {
-            var application = WpfApplication.Current as ClassroomToolkit.App.App;
-            if (application is null)
-            {
-                application = new ClassroomToolkit.App.App
-                {
-                    ShutdownMode = ShutdownMode.OnExplicitShutdown
-                };
-                application.InitializeComponent();
-            }
+            WpfStaTestRunner.EnsureApplication();
+            var application = (ClassroomToolkit.App.App)WpfApplication.Current;
 
             void AssertThemeSwitching()
             {
@@ -137,26 +130,5 @@ public sealed class ThemeContractTests
     {
         var assemblyName = Uri.EscapeDataString(typeof(AppSettings).Assembly.GetName().Name ?? "ClassroomToolkit.App");
         return $"/{assemblyName};component/{resourcePath}";
-    }
-
-    private static void RunSta(Action action)
-    {
-        Exception? failure = null;
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception ex)
-            {
-                failure = ex;
-            }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-
-        failure.Should().BeNull();
     }
 }

@@ -1,21 +1,19 @@
-using ClassroomToolkit.App.Paint;
-using ClassroomToolkit.App.Settings;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
 
 [Collection("WPF UI")]
-public sealed class PaintSettingsDialogConstructionTests
+public sealed class AppearanceDialogConstructionTests
 {
     [Fact]
-    public void Constructor_ShouldNotThrow_WithDefaultSettings()
+    public void Constructor_ShouldNotThrow_WithDefaultTheme()
     {
-        PaintSettingsDialog? captured = null;
+        ClassroomToolkit.App.AppearanceDialog? captured = null;
 
         WpfStaTestRunner.Run(() =>
         {
             WpfStaTestRunner.EnsureApplication();
-            var dialog = new PaintSettingsDialog(new AppSettings());
+            var dialog = new ClassroomToolkit.App.AppearanceDialog();
             dialog.Close();
             captured = dialog;
         });

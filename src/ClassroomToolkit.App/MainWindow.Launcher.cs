@@ -102,10 +102,37 @@ public partial class MainWindow
         OpenAutoExitDialog();
     }
 
+    private void OnAppearanceClick(object sender, RoutedEventArgs e)
+    {
+        OpenAppearanceDialog();
+    }
+
+    private void OpenAppearanceDialog()
+    {
+        var dialog = new AppearanceDialog(_themeManager.CurrentTheme.ToString())
+        {
+            Owner = this
+        };
+        dialog.ThemeSelected += theme =>
+        {
+            if (theme == _themeManager.CurrentTheme || !_themeManager.Apply(theme))
+            {
+                return;
+            }
+
+            _settings.UiTheme = theme.ToString();
+            SaveSettings();
+        };
+
+        TryFixWindowBorders(this, "launcher-appearance", "main-window");
+        TryFixWindowBorders(dialog, "launcher-appearance", "appearance-dialog");
+        _ = TryShowDialogWithDiagnostics(dialog, nameof(AppearanceDialog));
+    }
+
     private void OpenAutoExitDialog()
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / MainWindowRuntimeDefaults.LauncherMinutesToSeconds);
-        var dialog = new AutoExitDialog(currentMinutes, _themeManager.CurrentTheme.ToString())
+        var dialog = new AutoExitDialog(currentMinutes)
         {
             Owner = this
         };
@@ -118,11 +145,6 @@ public partial class MainWindow
             return;
         }
         _settings.LauncherAutoExitSeconds = Math.Max(0, dialog.Minutes) * MainWindowRuntimeDefaults.LauncherMinutesToSeconds;
-        var requestedTheme = ThemePreferenceService.Parse(dialog.SelectedTheme);
-        if (_themeManager.Apply(requestedTheme))
-        {
-            _settings.UiTheme = requestedTheme.ToString();
-        }
         ScheduleAutoExitTimer();
         SaveLauncherSettings();
     }
