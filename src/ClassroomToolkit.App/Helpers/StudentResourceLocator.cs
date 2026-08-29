@@ -35,49 +35,57 @@ internal static class StudentResourceLocator
             return portableDataRoot;
         }
 
-        var solutionDir = FindSolutionDirectory(AppDomain.CurrentDomain.BaseDirectory);
+        var baseDirectory = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+        var solutionDir = FindSolutionDirectory(baseDirectory);
         if (!string.IsNullOrWhiteSpace(solutionDir))
         {
-            return solutionDir;
+            return ResolveDevelopmentDataRoot(solutionDir);
         }
 
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrWhiteSpace(localAppData))
         {
-            return Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+            return baseDirectory;
         }
 
         var persistentRoot = Path.Combine(localAppData, AppDataFolderName, DataFolderName);
-        TryMigrateLegacyPackageData(persistentRoot);
+        TryCopyLegacyClassroomData(baseDirectory, persistentRoot);
         return persistentRoot;
     }
 
+    // Development runs share the deployed data/ layout; legacy solution-root files are copied in on first run.
+    internal static string ResolveDevelopmentDataRoot(string solutionDir)
+    {
+        var devDataRoot = Path.Combine(solutionDir, DataFolderName);
+        TryCopyLegacyClassroomData(solutionDir, devDataRoot);
+        return devDataRoot;
+    }
+
     // Package updates replace application directories, so classroom data must live outside them.
-    private static void TryMigrateLegacyPackageData(string persistentRoot)
+    private static void TryCopyLegacyClassroomData(string legacyRoot, string targetRoot)
     {
         try
         {
-            var legacyRoot = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
             if (string.Equals(
                 legacyRoot.TrimEnd(Path.DirectorySeparatorChar),
-                persistentRoot.TrimEnd(Path.DirectorySeparatorChar),
+                targetRoot.TrimEnd(Path.DirectorySeparatorChar),
                 StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
             var legacyWorkbook = Path.Combine(legacyRoot, WorkbookFileName);
-            var persistentWorkbook = Path.Combine(persistentRoot, WorkbookFileName);
+            var persistentWorkbook = Path.Combine(targetRoot, WorkbookFileName);
             if (File.Exists(legacyWorkbook) && !File.Exists(persistentWorkbook))
             {
-                Directory.CreateDirectory(persistentRoot);
+                Directory.CreateDirectory(targetRoot);
                 var pendingWorkbook = persistentWorkbook + ".migration-pending";
                 File.Copy(legacyWorkbook, pendingWorkbook, overwrite: true);
                 File.Move(pendingWorkbook, persistentWorkbook);
             }
 
             var legacyPhotos = Path.Combine(legacyRoot, PhotoFolderName);
-            var persistentPhotos = Path.Combine(persistentRoot, PhotoFolderName);
+            var persistentPhotos = Path.Combine(targetRoot, PhotoFolderName);
             if (Directory.Exists(legacyPhotos) && !Directory.Exists(persistentPhotos))
             {
                 CopyDirectory(legacyPhotos, persistentPhotos);

@@ -46,8 +46,9 @@ The [Teacher Guide](./使用指南.md) is written in Chinese and covers daily cl
 
 - `students.xlsx`: roster workbook — one worksheet per class (recommended columns: student ID, name, group)
 - `student_photos/`: photos grouped by class folders, file names by student ID; `.jpg` / `.jpeg` / `.png` / `.bmp`
+- All run modes share one layout: data lives in the `data/` folder of the run root (solution-root `data/` for development, `%LOCALAPPDATA%\ClassroomToolkit\data` for installed builds, a side-by-side `data/` for the portable build)
+- Rosters and photos found in legacy locations (solution root, old install directories) are copied into `data/` on first run; the originals stay untouched
 - The portable build ships a sample roster and a photo-folder hint inside its `data/` directory — just replace them with your own data
-- Installed builds keep data under `%LOCALAPPDATA%\ClassroomToolkit\data`; updates never overwrite classroom data
 
 ## For developers
 

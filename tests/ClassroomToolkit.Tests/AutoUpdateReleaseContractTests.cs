@@ -27,7 +27,8 @@ public sealed class AutoUpdateReleaseContractTests
         project.Should().Contain("'$(IncludeLocalClassroomData)' == 'true'");
         project.Should().Contain("PackageReference Include=\"Velopack\" Version=\"1.2.0\"");
         locator.Should().Contain("Environment.SpecialFolder.LocalApplicationData");
-        locator.Should().Contain("TryMigrateLegacyPackageData");
+        locator.Should().Contain("TryCopyLegacyClassroomData");
+        locator.Should().Contain("ResolveDevelopmentDataRoot");
         locator.Should().Contain(".migration-pending");
     }
 

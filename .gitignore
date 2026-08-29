@@ -46,6 +46,7 @@ students.bak-normalize-*.xlsx
 backups/*.bak-normalize-*.xlsx
 .~lock.*#
 student_photos/
+data/
 logs/*.log
 msbuild*.log
 *~

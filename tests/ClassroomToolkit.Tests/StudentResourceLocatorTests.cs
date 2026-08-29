@@ -62,6 +62,58 @@ public sealed class StudentResourceLocatorTests
         Directory.Exists(defaultClassFolder).Should().BeTrue();
     }
 
+    [Fact]
+    public void ResolveDevelopmentDataRoot_ShouldPreferDataFolderOverLegacyRoot()
+    {
+        var root = CreateTempDirectory();
+        File.WriteAllText(Path.Combine(root, "ClassroomToolkit.sln"), "mock-sln");
+        File.WriteAllText(Path.Combine(root, "students.xlsx"), "legacy");
+        Directory.CreateDirectory(Path.Combine(root, "student_photos"));
+        Directory.CreateDirectory(Path.Combine(root, "data", "student_photos"));
+        File.WriteAllText(Path.Combine(root, "data", "students.xlsx"), "current");
+
+        try
+        {
+            var result = StudentResourceLocator.ResolveDevelopmentDataRoot(root);
+
+            Path.GetFileName(result).Should().Be("data");
+            File.ReadAllText(Path.Combine(result, "students.xlsx")).Should().Be("current");
+            File.ReadAllText(Path.Combine(root, "students.xlsx")).Should().Be("legacy");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveDevelopmentDataRoot_ShouldCopyLegacyRootDataIntoDataFolderOnce()
+    {
+        var root = CreateTempDirectory();
+        File.WriteAllText(Path.Combine(root, "ClassroomToolkit.sln"), "mock-sln");
+        File.WriteAllText(Path.Combine(root, "students.xlsx"), "legacy-workbook");
+        Directory.CreateDirectory(Path.Combine(root, "student_photos", "1班"));
+        File.WriteAllText(Path.Combine(root, "student_photos", "1班", "001.jpg"), "photo-bytes");
+
+        try
+        {
+            var result = StudentResourceLocator.ResolveDevelopmentDataRoot(root);
+
+            File.ReadAllText(Path.Combine(result, "students.xlsx")).Should().Be("legacy-workbook");
+            File.ReadAllText(Path.Combine(result, "student_photos", "1班", "001.jpg")).Should().Be("photo-bytes");
+            File.Exists(Path.Combine(root, "students.xlsx")).Should().BeTrue();
+
+            // A second resolution must not overwrite classroom data that has since changed.
+            File.WriteAllText(Path.Combine(result, "students.xlsx"), "edited-in-data");
+            StudentResourceLocator.ResolveDevelopmentDataRoot(root);
+            File.ReadAllText(Path.Combine(result, "students.xlsx")).Should().Be("edited-in-data");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         return TestPathHelper.CreateDirectory("ctool_locator");
