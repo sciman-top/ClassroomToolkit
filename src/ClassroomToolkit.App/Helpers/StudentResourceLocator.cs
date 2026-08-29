@@ -21,7 +21,11 @@ internal static class StudentResourceLocator
 
     public static string ResolveStudentPhotoRoot()
     {
-        var root = ResolveResourceRoot();
+        return PrepareStudentPhotoRoot(ResolveResourceRoot());
+    }
+
+    internal static string PrepareStudentPhotoRoot(string root)
+    {
         var path = Path.Combine(root, PhotoFolderName);
         TryEnsureDirectory(path);
         TryEnsureDirectory(Path.Combine(path, DefaultPhotoClassFolderName));
@@ -86,7 +90,7 @@ internal static class StudentResourceLocator
 
             var legacyPhotos = Path.Combine(legacyRoot, PhotoFolderName);
             var persistentPhotos = Path.Combine(targetRoot, PhotoFolderName);
-            if (Directory.Exists(legacyPhotos) && !Directory.Exists(persistentPhotos))
+            if (Directory.Exists(legacyPhotos))
             {
                 CopyDirectory(legacyPhotos, persistentPhotos);
             }
@@ -106,7 +110,11 @@ internal static class StudentResourceLocator
         Directory.CreateDirectory(destination);
         foreach (var file in Directory.EnumerateFiles(source))
         {
-            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: false);
+            var destinationFile = Path.Combine(destination, Path.GetFileName(file));
+            if (!File.Exists(destinationFile))
+            {
+                File.Copy(file, destinationFile, overwrite: false);
+            }
         }
 
         foreach (var directory in Directory.EnumerateDirectories(source))

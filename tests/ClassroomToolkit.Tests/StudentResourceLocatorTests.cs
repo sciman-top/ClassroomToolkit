@@ -55,11 +55,20 @@ public sealed class StudentResourceLocatorTests
     [Fact]
     public void ResolveStudentPhotoRoot_ShouldEnsureDefaultClassFolderExists()
     {
-        var photoRoot = StudentResourceLocator.ResolveStudentPhotoRoot();
-        var defaultClassFolder = Path.Combine(photoRoot, "1班");
+        var root = CreateTempDirectory();
 
-        Directory.Exists(photoRoot).Should().BeTrue();
-        Directory.Exists(defaultClassFolder).Should().BeTrue();
+        try
+        {
+            var photoRoot = StudentResourceLocator.PrepareStudentPhotoRoot(root);
+            var defaultClassFolder = Path.Combine(photoRoot, "1班");
+
+            Directory.Exists(photoRoot).Should().BeTrue();
+            Directory.Exists(defaultClassFolder).Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]
@@ -107,6 +116,30 @@ public sealed class StudentResourceLocatorTests
             File.WriteAllText(Path.Combine(result, "students.xlsx"), "edited-in-data");
             StudentResourceLocator.ResolveDevelopmentDataRoot(root);
             File.ReadAllText(Path.Combine(result, "students.xlsx")).Should().Be("edited-in-data");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveDevelopmentDataRoot_ShouldMergeMissingLegacyPhotosWithoutOverwritingDataFolder()
+    {
+        var root = CreateTempDirectory();
+        File.WriteAllText(Path.Combine(root, "ClassroomToolkit.sln"), "mock-sln");
+        Directory.CreateDirectory(Path.Combine(root, "student_photos", "1班"));
+        File.WriteAllText(Path.Combine(root, "student_photos", "1班", "001.jpg"), "legacy-photo");
+        File.WriteAllText(Path.Combine(root, "student_photos", "1班", "002.jpg"), "missing-photo");
+        Directory.CreateDirectory(Path.Combine(root, "data", "student_photos", "1班"));
+        File.WriteAllText(Path.Combine(root, "data", "student_photos", "1班", "001.jpg"), "current-photo");
+
+        try
+        {
+            var result = StudentResourceLocator.ResolveDevelopmentDataRoot(root);
+
+            File.ReadAllText(Path.Combine(result, "student_photos", "1班", "001.jpg")).Should().Be("current-photo");
+            File.ReadAllText(Path.Combine(result, "student_photos", "1班", "002.jpg")).Should().Be("missing-photo");
         }
         finally
         {
