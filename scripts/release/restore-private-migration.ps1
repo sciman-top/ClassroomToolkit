@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$TargetRoot,
+    [string]$TargetRoot = "",
     [string]$PackageRoot = $PSScriptRoot,
     [switch]$BackupExisting
 )
@@ -43,6 +42,10 @@ function Assert-PackageIntegrity {
 }
 
 $resolvedPackageRoot = Resolve-AbsolutePath -Path $PackageRoot
+if ([string]::IsNullOrWhiteSpace($TargetRoot)) {
+    $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
+    $TargetRoot = Join-Path $localAppData "ClassroomToolkit"
+}
 $manifestPath = Join-Path $resolvedPackageRoot "migration-manifest.json"
 $payloadRoot = Join-Path $resolvedPackageRoot "payload"
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf) -or -not (Test-Path -LiteralPath $payloadRoot -PathType Container)) {
