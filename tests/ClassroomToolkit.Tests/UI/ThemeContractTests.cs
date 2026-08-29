@@ -113,7 +113,7 @@ public sealed class ThemeContractTests
                 themeResources.MergedDictionaries.Should().HaveCount(2);
                 themeResources.MergedDictionaries[1].Should().BeSameAs(semanticBrushes);
                 ((Color)themeResources.MergedDictionaries[0]["CTK.Color.Primary"])
-                    .Should().Be(Color.FromRgb(0x16, 0x8C, 0x7A));
+                    .Should().Be(Color.FromRgb(0x0F, 0x76, 0x67));
             }
 
             AssertThemeSwitching();

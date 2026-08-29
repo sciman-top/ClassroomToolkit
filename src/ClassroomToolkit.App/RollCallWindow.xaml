@@ -288,9 +288,10 @@
 
                         <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnResetClick">
                             <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{DynamicResource CTK.Brush.Text.OnPrimary}"
+                            <Path Data="{StaticResource Icon_Reset}"
+                                      Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}" Foreground="{DynamicResource CTK.Brush.Text.OnPrimary}"/>
+                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnListClick">
@@ -326,9 +327,10 @@
 
                         <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnTimerResetClick" MinWidth="64">
                             <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Reset}" Fill="{DynamicResource CTK.Brush.Text.OnPrimary}"
+                            <Path Data="{StaticResource Icon_Reset}"
+                                      Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}" Foreground="{DynamicResource CTK.Brush.Text.OnPrimary}"/>
+                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnTimerSetClick" MinWidth="64"

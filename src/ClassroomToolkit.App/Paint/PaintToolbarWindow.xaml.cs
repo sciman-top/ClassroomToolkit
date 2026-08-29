@@ -222,8 +222,8 @@ public partial class PaintToolbarWindow : Window
     private void ApplyToolbarTouchMetrics()
     {
         var scale = Math.Max(_uiScale, ToolbarScaleDefaults.Min);
-        var minimumHitTarget = Math.Ceiling(44.0 / scale);
-        var minimumColorHitTarget = Math.Ceiling(44.0 / scale);
+        var minimumHitTarget = Math.Ceiling(40.0 / scale);
+        var minimumColorHitTarget = Math.Ceiling(40.0 / scale);
         var dragHandleHitWidth = Math.Ceiling(36.0 / scale);
 
         ApplyToolbarButtonMetrics(CursorButton, visualSize: 30, minimumHitTarget);

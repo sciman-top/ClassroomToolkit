@@ -47,7 +47,7 @@
                 <!-- Global TabControl style applied automatically -->
 
                 <!-- 标签页 1: 显示/照片 -->
-                <TabItem Header="显示" Style="{StaticResource CTK.TabItem}">
+                <TabItem Header="显示">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="调整姓名、学号和照片。"
                                    Margin="0,0,0,10"
@@ -98,7 +98,7 @@
                 </TabItem>
 
                 <!-- 标签页 2: 语音播报 -->
-                <TabItem Header="语音" Style="{StaticResource CTK.TabItem}">
+                <TabItem Header="语音">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="控制朗读、发音人和输出设备。"
                                    Margin="0,0,0,10"
@@ -142,7 +142,7 @@
                 </TabItem>
 
                 <!-- 标签页 3: 遥控控制 -->
-                <TabItem Header="遥控" Style="{StaticResource CTK.TabItem}">
+                <TabItem Header="遥控">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="设置翻页笔遥控。"
                                    Margin="0,0,0,10"
@@ -188,7 +188,7 @@
                 </TabItem>
 
                 <!-- 标签页 4: 倒计时提示 -->
-                <TabItem Header="提醒" Style="{StaticResource CTK.TabItem}">
+                <TabItem Header="提醒">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="设置结束音和中途提醒。"
                                    Margin="0,0,0,10"

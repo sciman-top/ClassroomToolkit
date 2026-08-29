@@ -1352,6 +1352,10 @@
                             <Setter TargetName="SelectedBadge" Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{DynamicResource Brush_Primary_Light}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -1405,6 +1409,10 @@
                             <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
                             <Setter TargetName="SelectedBadge" Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{DynamicResource Brush_Primary_Light}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Brush_Border_Focus}"/>
+                            <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1932,7 +1940,7 @@
     </Style>
 
     <Style TargetType="Slider">
-        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Focusable" Value="True"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -2123,4 +2131,3 @@
     </Style>
 
 </ResourceDictionary>
-

@@ -100,6 +100,14 @@
     <Style x:Key="CTK.Button.Ghost" TargetType="Button" BasedOn="{StaticResource CTK.Button.Base}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource CTK.Brush.Hover}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource CTK.Brush.Pressed}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
     <Style x:Key="CTK.Button.Warning" TargetType="Button" BasedOn="{StaticResource CTK.Button.Base}">
         <Setter Property="Background" Value="{DynamicResource CTK.Brush.Warning.Soft}"/>
@@ -271,10 +279,8 @@
     </Style>
     <Style x:Key="CTK.Slider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
         <Setter Property="MinHeight" Value="32"/>
-    </Style>
-    <Style x:Key="CTK.TabItem" TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
-        <Setter Property="MinHeight" Value="{StaticResource CTK.Size.Control.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Text.Secondary}"/>
+        <Setter Property="Focusable" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource CTK.FocusVisual}"/>
     </Style>
 
     <Style x:Key="CTK.SurfaceSection" TargetType="Border">
@@ -285,12 +291,12 @@
         <Setter Property="Padding" Value="{StaticResource CTK.Spacing.4}"/>
     </Style>
     <Style x:Key="CTK.FloatingToolbar" TargetType="Border">
-        <Setter Property="Height" Value="{StaticResource CTK.Size.Toolbar}"/>
+        <Setter Property="MinHeight" Value="{StaticResource CTK.Size.Toolbar}"/>
+        <Setter Property="Padding" Value="5,4"/>
         <Setter Property="Background" Value="{DynamicResource CTK.Brush.OverlayToolbar}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource CTK.Radius.Toolbar}"/>
-        <Setter Property="Padding" Value="6"/>
     </Style>
 
     <Style x:Key="CTK.ToolTip" TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">

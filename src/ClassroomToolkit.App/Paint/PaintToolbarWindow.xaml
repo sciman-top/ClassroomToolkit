@@ -97,7 +97,7 @@
                 BorderThickness="1"
                 CornerRadius="{StaticResource CTK.Radius.Toolbar}"
                 MinHeight="{StaticResource CTK.Size.Toolbar}"
-                Padding="5"
+                Padding="5,4"
                 MouseLeftButtonDown="OnToolbarDragStart"
                 PreviewTouchDown="OnToolbarTouchDragStart"
                 TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
@@ -130,7 +130,7 @@
 
             <Rectangle Width="6" Fill="Transparent"/>
 
-            <Border Background="{DynamicResource Brush_Surface_Secondary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4,3" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
+            <Border Background="{DynamicResource Brush_Surface_Secondary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4,0" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="QuickColor1Button" Background="{DynamicResource Brush_Text_Black}" Tag="0"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
@@ -158,7 +158,7 @@
 
             <Rectangle Width="6" Fill="Transparent"/>
 
-            <Border Background="{DynamicResource Brush_Surface_Secondary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4,2" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
+            <Border Background="{DynamicResource Brush_Surface_Secondary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4,0" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="EraserButton" Style="{StaticResource Style_ToolbarIconToggleButton}" Click="OnModeButtonClick" ToolTip="橡皮擦" Foreground="{DynamicResource Brush_Warning}">
                         <Path Data="{StaticResource Icon_Eraser}" Fill="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}"/>
