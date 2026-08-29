@@ -45,8 +45,16 @@ public sealed class SettingsRepository
         {
             EnsureMigrationBackup();
         }
-        // 在副本上注入元数据，避免突改调用方传入的字典（调用方不应察觉 Meta/Version 被写入自己的数据）。
-        var dataToSave = new Dictionary<string, Dictionary<string, string>>(data, StringComparer.OrdinalIgnoreCase);
+        // 深复制后注入元数据：外层与每个非空 section 都必须拷贝，否则调用方已包含
+        // _meta 时版本号仍会写进调用方的内层字典，写盘失败后内存对象就与磁盘状态不一致。
+        // null section 保持 null 原样传递，兼容“空 section”的既有语义。
+        var dataToSave = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in data)
+        {
+            dataToSave[pair.Key] = pair.Value == null
+                ? pair.Value!
+                : new Dictionary<string, string>(pair.Value, StringComparer.OrdinalIgnoreCase);
+        }
         if (!dataToSave.TryGetValue(SettingsMigrator.MetaSection, out var meta))
         {
             meta = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

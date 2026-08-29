@@ -166,6 +166,63 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         }
     }
 
+
+    [Fact]
+    public void Remove_ShouldRetainTombstoneOnWriteFailure_AndNotResurrectPersistedStrokes()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_tombstone.png");
+        File.WriteAllText(sourcePath, "x");
+        var persistedStrokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M5,5 L9,9",
+                ColorHex = "#FFFFFF",
+                Opacity = 255,
+                BrushSize = 3
+            }
+        };
+        // 场景前置：页面墨迹已成功持久化到 sidecar，WAL 中仍残留旧笔画记录。
+        _persistence.SaveInkForFile(sourcePath, 1, persistedStrokes);
+        var staleStrokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M0,0 L1,1",
+                ColorHex = "#000000",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        _wal.Upsert(sourcePath, 1, staleStrokes, ComputeInkHash(staleStrokes));
+        _wal.FlushPending();
+
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        File.Exists(walPath).Should().BeTrue();
+
+        using (var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            // WAL 被占用时 Remove 的合并写回失败：tombstone 必须留在内存等待重试，
+            // 不能被静默丢弃后把旧笔画留在磁盘 WAL 里。
+            var act = () => _wal.Remove(sourcePath, 1);
+
+            act.Should().NotThrow();
+        }
+
+        // 解锁后重试成功：旧条目随空映射一起删除。
+        _wal.FlushPending();
+        File.Exists(walPath).Should().BeFalse();
+
+        // 恢复流程不得回放旧笔画，也不得覆盖已持久化的新墨迹。
+        var recovered = _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash);
+        recovered.Should().Be(0);
+        var persisted = _persistence.LoadInkPageForFile(sourcePath, 1);
+        persisted.Should().NotBeNull();
+        ComputeInkHash(persisted!).Should().Be(ComputeInkHash(persistedStrokes));
+    }
+
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
     {
         if (strokes == null || strokes.Count == 0)

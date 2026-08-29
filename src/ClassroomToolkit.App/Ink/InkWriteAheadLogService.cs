@@ -95,7 +95,13 @@ internal sealed class InkWriteAheadLogService : IDisposable
         var walPath = GetWalPathInDirectory(directoryPath);
         lock (GetWalFileLock(walPath))
         {
-            var map = LoadMap(walPath);
+            // 读失败（如文件被占用）按“本次不恢复”处理：WAL 条目保留在磁盘，
+            // 由下一次启动的重试继续，绝不能把读失败当空文件把 WAL 清掉。
+            if (!TryLoadMap(walPath, out var map))
+            {
+                return 0;
+            }
+
             if (map.Count == 0)
             {
                 return 0;
@@ -147,7 +153,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
             {
                 map.Remove(key);
             }
-            SaveMap(walPath, map);
+            _ = SaveMap(walPath, map);
             return recovered;
         }
     }
@@ -157,30 +163,25 @@ internal sealed class InkWriteAheadLogService : IDisposable
     /// </summary>
     public void FlushPending()
     {
-        while (true)
+        // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
+        // 重新调度按防抖间隔延后重试，不做紧密循环。
+        string[] paths;
+        lock (_pendingGate)
         {
-            string[] paths;
+            paths = _pendingByWalPath.Keys.ToArray();
+        }
+
+        foreach (var walPath in paths)
+        {
             lock (_pendingGate)
             {
-                if (_pendingByWalPath.Count == 0)
-                {
-                    break;
-                }
-
-                paths = _pendingByWalPath.Keys.ToArray();
-            }
-
-            foreach (var walPath in paths)
-            {
-                lock (_pendingGate)
-                {
-                    MergePendingToDiskCore(walPath);
-                }
+                MergePendingToDiskCore(walPath);
             }
         }
 
-        // 先清标志再复查 pending：若在最后一轮合并与清标志之间有新 Upsert 进来，
+        // 先清标志再复查 pending：若在合并与清标志之间有新 Upsert 进来，
         // 它的 ScheduleFlush 会因标志仍为 1 而跳过定时器，这里复查避免条目滞留内存。
+        // 合并失败的路径也会在这里获得下一次重试机会。
         Volatile.Write(ref _flushScheduled, 0);
         lock (_pendingGate)
         {
@@ -210,6 +211,9 @@ internal sealed class InkWriteAheadLogService : IDisposable
 
     /// <summary>
     /// 把单个 WAL 路径的 pending 合并写入磁盘。调用方必须持有 _pendingGate。
+    /// 只有加载、合并与落盘全部成功才丢弃 pending；任一步失败都保留 pending
+    /// 等待延后重试——否则 tombstone 被内存丢弃、旧 WAL 残留磁盘，异常退出后的
+    /// 恢复流程会把已持久化覆盖/清除的旧墨迹重新回放。
     /// </summary>
     private void MergePendingToDiskCore(string walPath)
     {
@@ -218,28 +222,34 @@ internal sealed class InkWriteAheadLogService : IDisposable
             return;
         }
 
+        bool merged;
         try
         {
-            var map = LoadMap(walPath);
-            foreach (var pair in pending)
+            merged = TryLoadMap(walPath, out var map);
+            if (merged)
             {
-                if (pair.Value == null)
+                foreach (var pair in pending)
                 {
-                    map.Remove(pair.Key);
+                    if (pair.Value == null)
+                    {
+                        map.Remove(pair.Key);
+                    }
+                    else
+                    {
+                        map[pair.Key] = pair.Value;
+                    }
                 }
-                else
-                {
-                    map[pair.Key] = pair.Value;
-                }
-            }
 
-            SaveMap(walPath, map);
+                merged = SaveMap(walPath, map);
+            }
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] merge pending failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
+            merged = false;
         }
-        finally
+
+        if (merged)
         {
             _pendingByWalPath.Remove(walPath);
         }
@@ -277,29 +287,36 @@ internal sealed class InkWriteAheadLogService : IDisposable
         return WalFileLocks.GetOrAdd(walPath, static _ => new object());
     }
 
-    private Dictionary<string, InkWalEntry> LoadMap(string walPath)
+    /// <summary>
+    /// 尝试加载 WAL 映射。文件不存在视为成功（空映射）；读取或解析失败返回 false，
+    /// 由调用方决定保留待重试，而不是把读失败当成空文件覆盖磁盘内容。
+    /// </summary>
+    private bool TryLoadMap(string walPath, out Dictionary<string, InkWalEntry> map)
     {
         if (!File.Exists(walPath))
         {
-            return new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
+            map = new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
+            return true;
         }
 
         try
         {
             var json = File.ReadAllText(walPath);
             var parsed = JsonSerializer.Deserialize<Dictionary<string, InkWalEntry>>(json, _options);
-            return parsed != null
+            map = parsed != null
                 ? new Dictionary<string, InkWalEntry>(parsed, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
+            return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] failed to load wal path={walPath} ex={ex.GetType().Name} msg={ex.Message}");
-            return new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
+            map = new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
+            return false;
         }
     }
 
-    private void SaveMap(string walPath, Dictionary<string, InkWalEntry> map)
+    private bool SaveMap(string walPath, Dictionary<string, InkWalEntry> map)
     {
         try
         {
@@ -309,16 +326,17 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 {
                     File.Delete(walPath);
                 }
-                return;
+                return true;
             }
 
             var json = JsonSerializer.Serialize(map, _options);
             InkAtomicFileWriter.WriteAllText(walPath, json, "[InkWAL]");
+            return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] save failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
-            // Ignore WAL persistence errors.
+            return false;
         }
     }
 

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using ClassroomToolkit.Infra.Migration;
 using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
 
@@ -273,6 +274,100 @@ public sealed class SettingsRepositoryTests
             {
                 File.Delete(path);
             }
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldNotMutateCallerData_WhenDataAlreadyContainsMetaSection()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_settings_meta_no_mutation", ".ini");
+        try
+        {
+            var repo = new SettingsRepository(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["General"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["theme"] = "dark"
+                },
+                [SettingsMigrator.MetaSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["custom_marker"] = "keep-me"
+                }
+            };
+            // 快照保存前的逐项内容，用于断言原对象完全未被突变。
+            var snapshot = data.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value == null
+                    ? null
+                    : (IReadOnlyDictionary<string, string>)new Dictionary<string, string>(pair.Value),
+                StringComparer.OrdinalIgnoreCase);
+
+            repo.Save(data);
+
+            // 调用方对象逐项保持不变：_meta 不被写入版本号，section 引用内容不变。
+            data.Should().HaveSameCount(snapshot);
+            foreach (var pair in snapshot)
+            {
+                if (pair.Value == null)
+                {
+                    data[pair.Key].Should().BeNull();
+                    continue;
+                }
+
+                data[pair.Key].Should().NotBeNull();
+                data[pair.Key]!.Should().Equal(pair.Value!);
+            }
+
+            // 磁盘上的 _meta 才包含版本号。
+            var reloaded = new SettingsRepository(path).Load();
+            reloaded[SettingsMigrator.MetaSection][SettingsMigrator.VersionKey].Should().Be(SettingsMigrator.CurrentVersion);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldNotMutateCallerData_WhenPersistenceFails()
+    {
+        var directory = TestPathHelper.CreateDirectory("ctool_settings_meta_fail");
+        // 目标路径是一个目录：EnsureExistingFileStateValidated 视为“文件不存在”放行，
+        // 写盘阶段 File.Move 到目录上抛 IOException，构造“元数据注入之后才失败”的分支。
+        var path = Path.Combine(directory, "settings.ini");
+        Directory.CreateDirectory(path);
+
+        try
+        {
+            var repo = new SettingsRepository(path);
+            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["General"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["theme"] = "dark"
+                },
+                [SettingsMigrator.MetaSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["custom_marker"] = "keep-me"
+                }
+            };
+
+            var act = () => repo.Save(data);
+
+            act.Should().Throw<Exception>();
+            data["General"].Should().HaveCount(1);
+            data["General"]["theme"].Should().Be("dark");
+            data[SettingsMigrator.MetaSection].Should().HaveCount(1);
+            data[SettingsMigrator.MetaSection]["custom_marker"].Should().Be("keep-me");
+            data[SettingsMigrator.MetaSection].Should().NotContainKey(SettingsMigrator.VersionKey);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
         }
     }
 }
