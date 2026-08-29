@@ -45,13 +45,15 @@ public sealed class SettingsRepository
         {
             EnsureMigrationBackup();
         }
-        if (!data.TryGetValue(SettingsMigrator.MetaSection, out var meta))
+        // 在副本上注入元数据，避免突改调用方传入的字典（调用方不应察觉 Meta/Version 被写入自己的数据）。
+        var dataToSave = new Dictionary<string, Dictionary<string, string>>(data, StringComparer.OrdinalIgnoreCase);
+        if (!dataToSave.TryGetValue(SettingsMigrator.MetaSection, out var meta))
         {
             meta = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            data[SettingsMigrator.MetaSection] = meta;
+            dataToSave[SettingsMigrator.MetaSection] = meta;
         }
         meta[SettingsMigrator.VersionKey] = SettingsMigrator.CurrentVersion;
-        _store.Save(data);
+        _store.Save(dataToSave);
         LastLoadSucceeded = true;
         _migrationBackupRequired = false;
         _hasValidatedExistingFileState = true;

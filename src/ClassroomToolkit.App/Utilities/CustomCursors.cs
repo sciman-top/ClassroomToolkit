@@ -26,6 +26,7 @@ internal static class CustomCursors
     private static readonly Dictionary<int, WpfCursor> EraserCursorCache = new();
     private static WpfCursor? _regionEraseCursor;
     private static readonly List<string> TempCursorFiles = new();
+    private static readonly Dictionary<WpfCursor, string> TempCursorFileByCursor = new();
     private static readonly object TempCursorLock = new();
 
     static CustomCursors()
@@ -47,9 +48,55 @@ internal static class CustomCursors
         if (_brushCursor == null || !AreColorsEqual(_currentBrushColor, color))
         {
             _currentBrushColor = color;
+            var previous = _brushCursor;
             _brushCursor = CreateColoredBrushCursor(color);
+            ReleaseTempCursor(previous);
         }
         return _brushCursor;
+    }
+
+    /// <summary>
+    /// 释放被替换的光标：销毁原生句柄并删除其临时 .cur 文件，
+    /// 避免长课堂频繁换色累积 GDI 句柄与临时文件。
+    /// </summary>
+    private static void ReleaseTempCursor(WpfCursor? cursor)
+    {
+        if (cursor == null)
+        {
+            return;
+        }
+
+        string? tempPath;
+        lock (TempCursorLock)
+        {
+            TempCursorFileByCursor.Remove(cursor, out tempPath);
+        }
+
+        try
+        {
+            cursor.Dispose();
+        }
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        {
+            // Ignore release failures.
+        }
+
+        if (string.IsNullOrWhiteSpace(tempPath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        {
+            // Ignore cleanup failures; process-exit sweep will retry.
+        }
     }
 
     /// <summary>
@@ -417,10 +464,11 @@ internal static class CustomCursors
             $"{name}_{Guid.NewGuid():N}.cur");
 
         CreateCursorFile(renderBitmap, hotSpotX, hotSpotY, cursorPath);
-        TrackTempCursorFile(cursorPath);
+        var cursor = new WpfCursor(cursorPath);
+        TrackTempCursorFile(cursor, cursorPath);
 
         // 加载光标
-        return new WpfCursor(cursorPath);
+        return cursor;
     }
 
     /// <summary>
@@ -431,7 +479,7 @@ internal static class CustomCursors
         return a.A == b.A && a.R == b.R && a.G == b.G && a.B == b.B;
     }
 
-    private static void TrackTempCursorFile(string path)
+    private static void TrackTempCursorFile(WpfCursor cursor, string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -440,6 +488,7 @@ internal static class CustomCursors
         lock (TempCursorLock)
         {
             TempCursorFiles.Add(path);
+            TempCursorFileByCursor[cursor] = path;
         }
     }
 

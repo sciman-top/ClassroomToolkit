@@ -54,10 +54,4 @@ public sealed class SessionCoordinatorTests
         }
     }
 
-    private sealed class NoopEffectRunner : IUiSessionEffectRunner
-    {
-        public void Run(UiSessionTransition transition)
-        {
-        }
-    }
 }

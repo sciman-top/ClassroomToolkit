@@ -527,12 +527,6 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Controls.SafeBorder")]
-[assembly: SuppressMessage(
-    "Design",
-    "CA1515:Consider making public types internal",
-    Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
-    Scope = "type",
     Target = "~T:ClassroomToolkit.App.Converters.InverseBooleanToVisibilityConverter")]
 [assembly: SuppressMessage(
     "Design",

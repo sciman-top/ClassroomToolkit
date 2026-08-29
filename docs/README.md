@@ -10,7 +10,6 @@
 - [current architecture](./architecture/README.md)：当前技术栈、依赖方向、模块 seam 与演进边界。
 - [governance truth source](./governance/truth-source.md)：唯一门禁入口与 profile 分层。
 - [release checklist](./runbooks/release-checklist.md)：发布前检查。
-- [classroom pilot runbook](./runbooks/classroom-pilot-validation-runbook.md)：现场验收。
 - [change-evidence](./change-evidence/)：仅保留仍被现行规则或 waiver 消费的高风险证据。
 
 ## 长期文档

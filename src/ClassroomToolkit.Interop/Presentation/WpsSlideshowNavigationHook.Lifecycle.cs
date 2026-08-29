@@ -18,6 +18,7 @@ public sealed partial class WpsSlideshowNavigationHook
         }
 
         var moduleHandle = GetModuleHandle(null);
+        var lastInstallError = 0;
         for (var attempt = 0; attempt < MaxHookRetries; attempt++)
         {
             if (_disposed)
@@ -29,10 +30,20 @@ public sealed partial class WpsSlideshowNavigationHook
             if (_keyboardHook == IntPtr.Zero)
             {
                 _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, moduleHandle, 0);
+                if (_keyboardHook == IntPtr.Zero)
+                {
+                    // GetLastWin32Error 是 per-thread 的，必须在安装失败的同步点立即取值，
+                    // await 之后线程可能已切换，读到的是错误线程上的陈旧值。
+                    lastInstallError = Marshal.GetLastWin32Error();
+                }
             }
             if (_mouseHook == IntPtr.Zero)
             {
                 _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, moduleHandle, 0);
+                if (_mouseHook == IntPtr.Zero)
+                {
+                    lastInstallError = Marshal.GetLastWin32Error();
+                }
             }
             if (_keyboardHook != IntPtr.Zero && _mouseHook != IntPtr.Zero)
             {
@@ -42,15 +53,16 @@ public sealed partial class WpsSlideshowNavigationHook
             if (attempt < MaxHookRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff.
-                await Task.Delay(delayMs).ConfigureAwait(false);
+                // 不用 ConfigureAwait(false)：LL 钩子要求安装线程持续泵消息，
+                // 回到调用方上下文（UI 线程）安装才能收到回调。
+                await Task.Delay(delayMs);
             }
         }
 
-        var startLastError = Marshal.GetLastWin32Error();
-        LastError = startLastError;
-        Debug.WriteLine($"[WpsNavHook] Start failed with error={startLastError}");
+        LastError = lastInstallError;
+        Debug.WriteLine($"[WpsNavHook] Start failed with error={lastInstallError}");
         Stop();
-        LastError = startLastError;
+        LastError = lastInstallError;
         return false;
     }
 
@@ -73,9 +85,12 @@ public sealed partial class WpsSlideshowNavigationHook
                 unhookFailed = true;
                 lastUnhookError = Marshal.GetLastWin32Error();
                 Debug.WriteLine($"[WpsNavHook] Keyboard unhook failed with error={lastUnhookError}");
+                // unhook 失败意味着系统级钩子仍在位：保留句柄，让残留状态可见且可重试。
             }
-
-            _keyboardHook = IntPtr.Zero;
+            else
+            {
+                _keyboardHook = IntPtr.Zero;
+            }
         }
         if (_mouseHook != IntPtr.Zero)
         {
@@ -85,8 +100,10 @@ public sealed partial class WpsSlideshowNavigationHook
                 lastUnhookError = Marshal.GetLastWin32Error();
                 Debug.WriteLine($"[WpsNavHook] Mouse unhook failed with error={lastUnhookError}");
             }
-
-            _mouseHook = IntPtr.Zero;
+            else
+            {
+                _mouseHook = IntPtr.Zero;
+            }
         }
 
         LastError = unhookFailed ? lastUnhookError : 0;

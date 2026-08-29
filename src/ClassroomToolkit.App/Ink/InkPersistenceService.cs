@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -28,6 +29,10 @@ public sealed class InkPersistenceService
     private readonly JsonSerializerOptions _options;
     private readonly object _cacheLock = new();
     private readonly Dictionary<string, CachedInkDocument> _documentCache = new(StringComparer.OrdinalIgnoreCase);
+
+    // 按文档路径的写锁：Save 是“读 sidecar→改→整文件重写”，UI 同步持久化与后台自动保存
+    // 可能并发对同一文档做读改写，后写会覆盖前写导致丢页，必须串行化。
+    private static readonly ConcurrentDictionary<string, object> DocumentWriteGates = new(StringComparer.OrdinalIgnoreCase);
 
     public InkPersistenceService()
     {
@@ -61,46 +66,49 @@ public sealed class InkPersistenceService
             return;
         }
 
-        var doc = LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
+        lock (GetDocumentWriteGate(jsonPath))
         {
-            SourcePath = sourceFilePath
-        };
-
-        // Find or create page entry
-        var page = doc.Pages.FirstOrDefault(p => p.PageIndex == pageIndex);
-        if (page == null)
-        {
-            page = new InkPageData
+            var doc = LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
             {
-                PageIndex = pageIndex,
-                SourcePath = sourceFilePath,
-                DocumentName = Path.GetFileNameWithoutExtension(sourceFilePath)
+                SourcePath = sourceFilePath
             };
-            doc.Pages.Add(page);
+
+            // Find or create page entry
+            var page = doc.Pages.FirstOrDefault(p => p.PageIndex == pageIndex);
+            if (page == null)
+            {
+                page = new InkPageData
+                {
+                    PageIndex = pageIndex,
+                    SourcePath = sourceFilePath,
+                    DocumentName = Path.GetFileNameWithoutExtension(sourceFilePath)
+                };
+                doc.Pages.Add(page);
+            }
+
+            page.Strokes = strokes ?? new List<InkStrokeData>();
+            page.UpdatedAt = DateTime.UtcNow;
+
+            // Remove pages that have no strokes
+            doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
+
+            if (doc.Pages.Count == 0)
+            {
+                // No strokes left — delete the sidecar file
+                DeleteJsonFileLocked(jsonPath);
+                InvalidateCache(jsonPath);
+                return;
+            }
+
+            if (!TryEnsureInkFolder(sourceFilePath, out _))
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(doc, _options);
+            WriteAllTextAtomically(jsonPath, json);
+            RefreshCacheFromDisk(jsonPath, doc);
         }
-
-        page.Strokes = strokes ?? new List<InkStrokeData>();
-        page.UpdatedAt = DateTime.UtcNow;
-
-        // Remove pages that have no strokes
-        doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
-
-        if (doc.Pages.Count == 0)
-        {
-            // No strokes left — delete the sidecar file
-            DeleteJsonFile(jsonPath);
-            InvalidateCache(jsonPath);
-            return;
-        }
-
-        if (!TryEnsureInkFolder(sourceFilePath, out _))
-        {
-            return;
-        }
-
-        var json = JsonSerializer.Serialize(doc, _options);
-        WriteAllTextAtomically(jsonPath, json);
-        RefreshCacheFromDisk(jsonPath, doc);
     }
 
     /// <summary>
@@ -113,29 +121,31 @@ public sealed class InkPersistenceService
             return;
         }
 
-        doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
-
-        if (doc.Pages.Count == 0)
+        if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
         {
-            if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
+            return;
+        }
+
+        lock (GetDocumentWriteGate(jsonPath))
+        {
+            doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
+
+            if (doc.Pages.Count == 0)
+            {
+                DeleteJsonFileLocked(jsonPath);
+                InvalidateCache(jsonPath);
+                return;
+            }
+
+            if (!TryEnsureInkFolder(sourceFilePath, out _))
             {
                 return;
             }
 
-            DeleteJsonFile(jsonPath);
-            InvalidateCache(jsonPath);
-            return;
+            var json = JsonSerializer.Serialize(doc, _options);
+            WriteAllTextAtomically(jsonPath, json);
+            RefreshCacheFromDisk(jsonPath, doc);
         }
-
-        if (!TryEnsureInkFolder(sourceFilePath, out _)
-            || !TryGetJsonPath(sourceFilePath, out var path))
-        {
-            return;
-        }
-
-        var json = JsonSerializer.Serialize(doc, _options);
-        WriteAllTextAtomically(path, json);
-        RefreshCacheFromDisk(path, doc);
     }
 
     /// <summary>
@@ -208,8 +218,11 @@ public sealed class InkPersistenceService
             return;
         }
 
-        DeleteJsonFile(jsonPath);
-        InvalidateCache(jsonPath);
+        lock (GetDocumentWriteGate(jsonPath))
+        {
+            DeleteJsonFileLocked(jsonPath);
+            InvalidateCache(jsonPath);
+        }
     }
 
     /// <summary>
@@ -427,6 +440,19 @@ public sealed class InkPersistenceService
         {
             _ = TryDeleteFileSafe(jsonPath);
         }
+    }
+
+    private static void DeleteJsonFileLocked(string jsonPath)
+    {
+        // 注意：删除文档时不能把锁对象从 DocumentWriteGates 移除——移除后并发方会
+        // GetOrAdd 出新锁对象，与新旧两把锁并行进入临界区，重新引入写覆盖。
+        // 锁对象按路径常驻，单个对象开销可忽略。
+        DeleteJsonFile(jsonPath);
+    }
+
+    private static object GetDocumentWriteGate(string jsonPath)
+    {
+        return DocumentWriteGates.GetOrAdd(jsonPath, static _ => new object());
     }
 
     private static void WriteAllTextAtomically(string path, string content)

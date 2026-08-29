@@ -54,10 +54,4 @@ public sealed class UiSessionInvariantTests
         violations.Any(v => v.Contains("INV-007")).Should().BeTrue();
     }
 
-    private sealed class NoopEffectRunner : IUiSessionEffectRunner
-    {
-        public void Run(UiSessionTransition transition)
-        {
-        }
-    }
 }

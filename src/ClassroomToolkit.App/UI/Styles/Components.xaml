@@ -97,18 +97,6 @@
             </Trigger>
         </Style.Triggers>
     </Style>
-    <Style x:Key="CTK.Button.Ghost" TargetType="Button" BasedOn="{StaticResource CTK.Button.Base}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource CTK.Brush.Hover}"/>
-            </Trigger>
-            <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{DynamicResource CTK.Brush.Pressed}"/>
-            </Trigger>
-        </Style.Triggers>
-    </Style>
     <Style x:Key="CTK.Button.Warning" TargetType="Button" BasedOn="{StaticResource CTK.Button.Base}">
         <Setter Property="Background" Value="{DynamicResource CTK.Brush.Warning.Soft}"/>
         <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Warning}"/>
@@ -283,13 +271,6 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource CTK.FocusVisual}"/>
     </Style>
 
-    <Style x:Key="CTK.SurfaceSection" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource CTK.Brush.Surface}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Subtle}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource CTK.Radius.Panel}"/>
-        <Setter Property="Padding" Value="{StaticResource CTK.Spacing.4}"/>
-    </Style>
     <Style x:Key="CTK.FloatingToolbar" TargetType="Border">
         <Setter Property="MinHeight" Value="{StaticResource CTK.Size.Toolbar}"/>
         <Setter Property="Padding" Value="5,4"/>
@@ -297,14 +278,6 @@
         <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Toolbar}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource CTK.Radius.Toolbar}"/>
-    </Style>
-
-    <Style x:Key="CTK.ToolTip" TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
-        <Setter Property="Background" Value="{DynamicResource CTK.Brush.SurfaceElevated}"/>
-        <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Text.Primary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
-        <Setter Property="Padding" Value="8,6"/>
-        <Setter Property="FontSize" Value="{StaticResource CTK.FontSize.Caption}"/>
     </Style>
 
     <Style x:Key="CTK.ContextMenu" TargetType="ContextMenu" BasedOn="{StaticResource {x:Type ContextMenu}}">
@@ -318,13 +291,6 @@
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="12,6"/>
         <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Text.Primary}"/>
-    </Style>
-
-    <Style x:Key="CTK.DialogFooter" TargetType="StackPanel">
-        <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="MinHeight" Value="64"/>
-        <Setter Property="Margin" Value="{StaticResource CTK.Spacing.6}"/>
     </Style>
 
     <!-- Compatibility seam: legacy style keys now resolve to the shared CTK component interface. -->

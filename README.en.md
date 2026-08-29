@@ -69,7 +69,6 @@ Issues and PRs are welcome — see [CONTRIBUTING](./CONTRIBUTING.md).
 - [Current handover](./docs/handover.md)
 - [Tech debt and stability backlog](./docs/tech-debt-backlog.md)
 - [Release checklist](./docs/runbooks/release-checklist.md)
-- [Classroom pilot validation runbook](./docs/runbooks/classroom-pilot-validation-runbook.md)
 - [Security policy](./SECURITY.md) · [Contributing](./CONTRIBUTING.md)
 
 ## Repository Layout

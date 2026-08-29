@@ -96,11 +96,6 @@ public static class KeyBindingParser
         return true;
     }
 
-    public static KeyBinding ParseOrDefault(string? value, KeyBinding fallback)
-    {
-        return TryParse(value, out var binding) ? binding! : fallback;
-    }
-
     private static bool TryParseAlphaNumeric(string token, out VirtualKey key)
     {
         key = default;

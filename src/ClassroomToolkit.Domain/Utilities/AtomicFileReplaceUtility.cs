@@ -2,7 +2,7 @@ namespace ClassroomToolkit.Domain.Utilities;
 
 public static class AtomicFileReplaceUtility
 {
-    private const int TransientReplaceRetryCount = 3;
+    private const int TransientReplaceRetryCount = 5;
     private const int TransientReplaceRetryDelayMilliseconds = 50;
 
     public static void ReplaceOrOverwrite(string tempPath, string targetPath)

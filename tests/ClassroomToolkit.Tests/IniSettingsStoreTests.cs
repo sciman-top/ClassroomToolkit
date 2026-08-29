@@ -7,6 +7,33 @@ namespace ClassroomToolkit.Tests;
 public sealed class IniSettingsStoreTests
 {
     [Fact]
+    public void TryLoad_ShouldDecodeLegacyGbAnsiFile()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_gbk", ".ini");
+        try
+        {
+            // 旧版 settings.ini 为 ANSI/GBK 编码且无 BOM；按 UTF-16 裸解会得到乱码，
+            // 按本实现必须回退到 GB18030 正确解码。
+            Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            var content = "[General]\r\n教师姓名=张老师\r\n";
+            File.WriteAllBytes(path, Encoding.GetEncoding("GB18030").GetBytes(content));
+            var store = new IniSettingsStore(path);
+
+            var loaded = store.TryLoad(out var data);
+
+            loaded.Should().BeTrue();
+            data["General"]["教师姓名"].Should().Be("张老师");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldThrow_WhenPathIsBlank()
     {
         Action act = () => _ = new IniSettingsStore(" ");

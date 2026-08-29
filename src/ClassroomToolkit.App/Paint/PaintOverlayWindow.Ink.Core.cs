@@ -110,12 +110,8 @@ public partial class PaintOverlayWindow
     private const int HistoryLimit = InkCacheRuntimeDefaults.HistoryLimit;
     private const long MaxHistoryMemoryBytes = InkCacheRuntimeDefaults.MaxHistoryMemoryBytes;
     private long _currentHistoryMemoryBytes;
-    private const int InkNoiseTileCacheLimit = InkCacheRuntimeDefaults.NoiseTileCacheLimit;
     private const int InkSolidBrushCacheLimit = InkCacheRuntimeDefaults.SolidBrushCacheLimit;
     private const int InkPenCacheLimit = InkCacheRuntimeDefaults.PenCacheLimit;
-    private static readonly object InkNoiseTileCacheLock = new();
-    private static readonly Dictionary<InkNoiseTileKey, InkNoiseTileEntry> InkNoiseTileCache = new();
-    private static readonly LinkedList<InkNoiseTileKey> InkNoiseTileOrder = new();
     private readonly Dictionary<int, SolidColorBrush> _inkSolidBrushCache = new();
     private readonly Dictionary<InkPenCacheKey, MediaPen> _inkPenCache = new();
     private byte[]? _clearSurfaceBuffer;

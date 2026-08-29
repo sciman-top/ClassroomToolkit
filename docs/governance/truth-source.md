@@ -8,7 +8,6 @@ Status: active
 - Local gate chain: `scripts/quality/run-local-quality-gates.ps1`
 - Analyzer backlog guard: `scripts/quality/check-analyzer-backlog-baseline.ps1`
 - Dependency vulnerability guard: `scripts/quality/check-dependency-vulnerabilities.ps1`
-- Runtime logging diagnostic (operator-run, not a code gate): `scripts/quality/check-logging-alert-threshold.ps1`
 - Analyzer backlog baseline: `scripts/quality/analyzer-backlog-baseline.json`
 - Active CI: `.github/workflows/locked-restore.yml` and `.github/workflows/release-package.yml`
 
@@ -48,5 +47,4 @@ Retired governance snapshots remain available from Git history; they are not act
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Release
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-logging-alert-threshold.ps1
 ```

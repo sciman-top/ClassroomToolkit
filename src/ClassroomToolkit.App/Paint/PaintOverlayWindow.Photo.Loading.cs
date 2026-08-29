@@ -10,6 +10,7 @@ using System.IO;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Utilities;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -106,7 +107,7 @@ public partial class PaintOverlayWindow
         }, fallback: 0);
     }
 
-    private bool TrySetPhotoBackground(string imagePath)
+    private bool TryBeginPhotoBackgroundOpenAsync(string imagePath)
     {
         if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
@@ -114,30 +115,50 @@ public partial class PaintOverlayWindow
             RefreshPhotoBackgroundVisibility();
             return false;
         }
-        return PaintActionInvoker.TryInvoke(() =>
-        {
-            var bitmap = TryLoadBitmapSource(imagePath, downsampleToMonitor: IsCrossPageDisplayActive());
-            if (bitmap == null)
+
+        // 解码参数在 UI 线程预取（依赖窗口/显示器信息），整张照片的解码放到后台线程，
+        // 避免大图在进入照片模式/换页时冻结 UI（与 PDF 路径的 StartPdfOpenAsync 同构）。
+        var decodeDownsample = IsCrossPageDisplayActive();
+        var decodeTargetWidth = decodeDownsample ? ResolvePhotoDownsampleDecodeWidth() : 0;
+        var token = Interlocked.Increment(ref _photoLoadToken);
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
+
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.PhotoBackgroundOpen",
+            cancellationToken =>
             {
-                PhotoBackground.Source = null;
-                RefreshPhotoBackgroundVisibility();
-                return false;
-            }
-            PhotoBackground.Source = bitmap;
-            RefreshPhotoBackgroundVisibility();
-            UpdateCurrentPageWidthNormalization(bitmap);
-            if (IsCrossPageDisplayActive())
-            {
-                ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: true);
-                return true;
-            }
-            ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
-            return true;
-        }, fallback: false, onFailure: _ =>
-        {
-            PhotoBackground.Source = null;
-            RefreshPhotoBackgroundVisibility();
-        });
+                cancellationToken.ThrowIfCancellationRequested();
+                var bitmap = TryLoadBitmapSource(
+                    imagePath,
+                    downsampleToMonitor: decodeDownsample,
+                    targetDecodeWidth: decodeTargetWidth);
+
+                TryBeginInvoke(() =>
+                {
+                    if (token != _photoLoadToken || !_photoModeActive)
+                    {
+                        return;
+                    }
+
+                    if (bitmap == null)
+                    {
+                        PhotoBackground.Source = null;
+                        RefreshPhotoBackgroundVisibility();
+                        ExitPhotoMode();
+                        return;
+                    }
+
+                    PhotoBackground.Source = bitmap;
+                    RefreshPhotoBackgroundVisibility();
+                    UpdateCurrentPageWidthNormalization(bitmap);
+                    ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: IsCrossPageDisplayActive());
+                }, DispatcherPriority.Render);
+            },
+            lifecycleToken,
+            onError: ex => Debug.WriteLine(
+                $"[PhotoOpen] async-open failed: {ex.GetType().Name} - {ex.Message}"));
+
+        return true;
     }
 
     private void ShowPhotoLoadingOverlay(string message)

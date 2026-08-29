@@ -96,7 +96,8 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
             _preloadedResult = null;
         }
 
-        _disposeCancellation.Dispose();
+        // 不释放 _disposeCancellation：在途的 LoadDataAsync/预热仍持有该 Token，
+        // 释放后访问 Token 属性会抛 ObjectDisposedException 且异常未被观察。
     }
 
     private void OnTimerCompletedInternal()

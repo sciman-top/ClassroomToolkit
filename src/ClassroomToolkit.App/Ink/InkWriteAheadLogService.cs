@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -13,13 +14,23 @@ namespace ClassroomToolkit.App.Ink;
 /// Minimal write-ahead log for in-session ink snapshots.
 /// Used to recover unsaved page edits after abnormal process termination.
 /// </summary>
-internal sealed class InkWriteAheadLogService
+/// <remarks>
+/// 每笔画一次 Upsert 曾直接触发整本 WAL 的读+序列化+原子写，快速书写时 UI 线程每秒
+/// 执行多次全量 IO。现在 Upsert 只更新内存 pending 并防抖（≤400ms）合并为一次落盘；
+/// Remove（页面已持久化）保持同步，避免残留 WAL 条目在下次会话复活旧墨迹。
+/// </remarks>
+internal sealed class InkWriteAheadLogService : IDisposable
 {
     private const string InkFolderName = ".ctk-ink";
     private const string WalFileName = ".ink-wal.json";
+    private const int FlushDelayMilliseconds = 400;
     private static readonly ConcurrentDictionary<string, object> WalFileLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly JsonSerializerOptions _options;
+    private readonly System.Threading.Timer _flushTimer;
+    private readonly object _pendingGate = new();
+    private readonly Dictionary<string, Dictionary<string, InkWalEntry?>> _pendingByWalPath = new(StringComparer.OrdinalIgnoreCase);
+    private int _flushScheduled;
 
     public InkWriteAheadLogService()
     {
@@ -29,6 +40,7 @@ internal sealed class InkWriteAheadLogService
             WriteIndented = true
         };
         _options.Converters.Add(new JsonStringEnumConverter());
+        _flushTimer = new System.Threading.Timer(static state => ((InkWriteAheadLogService)state!).FlushPending(), this, Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Upsert(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes, string hash)
@@ -39,10 +51,9 @@ internal sealed class InkWriteAheadLogService
         }
 
         var walPath = GetWalPath(sourcePath);
-        lock (GetWalFileLock(walPath))
+        lock (_pendingGate)
         {
-            var map = LoadMap(walPath);
-            map[BuildKey(sourcePath, pageIndex)] = new InkWalEntry
+            GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = new InkWalEntry
             {
                 SourcePath = sourcePath,
                 PageIndex = pageIndex,
@@ -50,8 +61,9 @@ internal sealed class InkWriteAheadLogService
                 UpdatedAt = DateTime.UtcNow,
                 Strokes = strokes?.ToList() ?? new List<InkStrokeData>()
             };
-            SaveMap(walPath, map);
         }
+
+        ScheduleFlush();
     }
 
     public void Remove(string sourcePath, int pageIndex)
@@ -62,14 +74,12 @@ internal sealed class InkWriteAheadLogService
         }
 
         var walPath = GetWalPath(sourcePath);
-        lock (GetWalFileLock(walPath))
+        lock (_pendingGate)
         {
-            var map = LoadMap(walPath);
-            if (!map.Remove(BuildKey(sourcePath, pageIndex)))
-            {
-                return;
-            }
-            SaveMap(walPath, map);
+            // tombstone（null）优先于尚未落盘的同键 Upsert，同步合并保证持久化过的页面
+            // 不会在 WAL 里留下会在下次会话复活旧墨迹的条目。
+            GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = null;
+            MergePendingToDiskCore(walPath);
         }
     }
 
@@ -79,6 +89,8 @@ internal sealed class InkWriteAheadLogService
         {
             return 0;
         }
+
+        FlushPending();
 
         var walPath = GetWalPathInDirectory(directoryPath);
         lock (GetWalFileLock(walPath))
@@ -138,6 +150,110 @@ internal sealed class InkWriteAheadLogService
             SaveMap(walPath, map);
             return recovered;
         }
+    }
+
+    /// <summary>
+    /// 把内存中尚未落盘的 pending 条目合并写入 WAL 文件。可在任意线程调用，幂等。
+    /// </summary>
+    public void FlushPending()
+    {
+        while (true)
+        {
+            string[] paths;
+            lock (_pendingGate)
+            {
+                if (_pendingByWalPath.Count == 0)
+                {
+                    break;
+                }
+
+                paths = _pendingByWalPath.Keys.ToArray();
+            }
+
+            foreach (var walPath in paths)
+            {
+                lock (_pendingGate)
+                {
+                    MergePendingToDiskCore(walPath);
+                }
+            }
+        }
+
+        // 先清标志再复查 pending：若在最后一轮合并与清标志之间有新 Upsert 进来，
+        // 它的 ScheduleFlush 会因标志仍为 1 而跳过定时器，这里复查避免条目滞留内存。
+        Volatile.Write(ref _flushScheduled, 0);
+        lock (_pendingGate)
+        {
+            if (_pendingByWalPath.Count > 0)
+            {
+                ScheduleFlush();
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        FlushPending();
+        _flushTimer.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void ScheduleFlush()
+    {
+        if (Interlocked.Exchange(ref _flushScheduled, 1) == 1)
+        {
+            return;
+        }
+
+        _flushTimer.Change(FlushDelayMilliseconds, Timeout.Infinite);
+    }
+
+    /// <summary>
+    /// 把单个 WAL 路径的 pending 合并写入磁盘。调用方必须持有 _pendingGate。
+    /// </summary>
+    private void MergePendingToDiskCore(string walPath)
+    {
+        if (!_pendingByWalPath.TryGetValue(walPath, out var pending))
+        {
+            return;
+        }
+
+        try
+        {
+            var map = LoadMap(walPath);
+            foreach (var pair in pending)
+            {
+                if (pair.Value == null)
+                {
+                    map.Remove(pair.Key);
+                }
+                else
+                {
+                    map[pair.Key] = pair.Value;
+                }
+            }
+
+            SaveMap(walPath, map);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkWAL] merge pending failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
+        }
+        finally
+        {
+            _pendingByWalPath.Remove(walPath);
+        }
+    }
+
+    private Dictionary<string, InkWalEntry?> GetOrAddPending(string walPath)
+    {
+        if (!_pendingByWalPath.TryGetValue(walPath, out var pending))
+        {
+            pending = new Dictionary<string, InkWalEntry?>(StringComparer.OrdinalIgnoreCase);
+            _pendingByWalPath[walPath] = pending;
+        }
+
+        return pending;
     }
 
     private static string BuildKey(string sourcePath, int pageIndex)

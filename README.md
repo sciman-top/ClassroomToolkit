@@ -69,7 +69,6 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 - [当前接手说明](./docs/handover.md)
 - [技术债与稳定性清单](./docs/tech-debt-backlog.md)
 - [发布检查清单](./docs/runbooks/release-checklist.md)
-- [课堂试点验收手册](./docs/runbooks/classroom-pilot-validation-runbook.md)
 - [安全策略](./SECURITY.md) · [贡献指南](./CONTRIBUTING.md)
 
 ## 仓库结构

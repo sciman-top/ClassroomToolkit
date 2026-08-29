@@ -133,6 +133,7 @@ public partial class PaintOverlayWindow
         _inkSidecarAutoSaveTimer?.Tick -= OnInkSidecarAutoSaveTimerTick;
         _inkSidecarAutoSaveTimer?.Stop();
         _inkSidecarAutoSaveGate.NextGeneration();
+        _inkWal.Dispose();
         _wpsNavHookStateGate.NextGeneration();
         StopWpsNavHook();
         if (_wpsNavHook != null && _wpsNavHook.Available)

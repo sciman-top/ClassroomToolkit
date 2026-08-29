@@ -43,6 +43,7 @@ settings.ini
 settings.json
 students.xlsx
 students.bak-normalize-*.xlsx
+backups/*.bak-normalize-*.xlsx
 .~lock.*#
 student_photos/
 logs/*.log
@@ -64,9 +65,6 @@ msbuild*.log
 **/bin-agent/
 
 # Assistant and local tooling metadata
-AGENTS.md
-CLAUDE.md
-GEMINI.md
 GlobalUser/
 .codex/
 .claude/
@@ -97,3 +95,6 @@ Thumbs.db
 .worktrees/
 worktrees/
 
+
+# .NET CLI 运行态遥测/哨兵（会话本地缓存，不属仓库）
+.dotnet-home/

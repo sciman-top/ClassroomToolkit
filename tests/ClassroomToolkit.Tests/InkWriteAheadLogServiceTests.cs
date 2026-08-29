@@ -99,14 +99,26 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
             }
         };
         var hash = ComputeInkHash(strokes);
-        _wal.Upsert(sourcePath, 1, strokes, hash);
-
         var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
-        using var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Directory.CreateDirectory(Path.GetDirectoryName(walPath)!);
+        File.WriteAllText(walPath, "{}");
 
-        Action act = () => _wal.Upsert(sourcePath, 1, strokes, hash);
+        using (var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            // WAL 文件被占用时 Upsert + 强制落盘不得抛出，也不得残留临时文件。
+            Action act = () =>
+            {
+                _wal.Upsert(sourcePath, 1, strokes, hash);
+                _wal.FlushPending();
+            };
 
-        act.Should().NotThrow();
+            act.Should().NotThrow();
+        }
+
+        // 锁释放后的下一次落盘恢复正常。
+        _wal.Upsert(sourcePath, 1, strokes, hash);
+        _wal.FlushPending();
+        File.Exists(walPath).Should().BeTrue();
         Directory.GetFiles(Path.GetDirectoryName(walPath)!, $"{Path.GetFileName(walPath)}.*.tmp").Should().BeEmpty();
     }
 

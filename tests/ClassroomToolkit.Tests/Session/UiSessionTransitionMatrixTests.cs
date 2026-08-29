@@ -188,10 +188,4 @@ public sealed class UiSessionTransitionMatrixTests
         coordinator.LastViolations.Should().BeEmpty();
     }
 
-    private sealed class NoopEffectRunner : IUiSessionEffectRunner
-    {
-        public void Run(UiSessionTransition transition)
-        {
-        }
-    }
 }

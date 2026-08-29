@@ -165,7 +165,8 @@ public partial class MainWindow
         }
 
         ExecuteLifecycleSafe(phase, "reset-toolbar-retouch-runtime", () => ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason.RequestExit));
-        ExecuteLifecycleSafe(phase, "trigger-ink-cleanup", TriggerInkCleanup);
+        // 孤儿 sidecar 清理要枚举多个目录，放后台执行；退出不等它，未完成的清理由下次启动兜底。
+        _ = Task.Run(TriggerInkCleanup);
         ExecuteLifecycleSafe(phase, "capture-toolbar-position", () => CapturePaintToolbarPosition(save: true));
         ExecuteLifecycleSafe(phase, "save-launcher-settings", SaveLauncherSettings);
         if (exitPlan.ShouldCloseBubbleWindow && _bubbleWindow != null)

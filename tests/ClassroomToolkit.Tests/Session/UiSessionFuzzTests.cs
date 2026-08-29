@@ -58,10 +58,4 @@ public sealed class UiSessionFuzzTests
         };
     }
 
-    private sealed class NoopEffectRunner : IUiSessionEffectRunner
-    {
-        public void Run(UiSessionTransition transition)
-        {
-        }
-    }
 }

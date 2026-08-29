@@ -779,7 +779,9 @@ public partial class PhotoOverlayWindow : Window
             return Task.FromResult<BitmapImage?>(null);
         }
 
-        return Task.FromResult(LoadBitmap(path));
+        // 解码必须离开调用方线程：假异步（Task.FromResult(LoadBitmap(path))）一旦被
+        // UI 线程直接 await 就会整卡一帧大图解码。
+        return Task.Run(() => LoadBitmap(path));
     }
 
 }

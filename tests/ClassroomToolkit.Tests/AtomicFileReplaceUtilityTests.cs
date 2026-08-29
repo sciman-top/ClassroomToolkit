@@ -124,7 +124,7 @@ public sealed class AtomicFileReplaceUtilityTests
         var lockStream = new FileStream(targetPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         var releaseLock = Task.Run(async () =>
         {
-            await Task.Delay(75, TestContext.Current.CancellationToken);
+            await Task.Delay(25, TestContext.Current.CancellationToken);
             lockStream.Dispose();
         }, TestContext.Current.CancellationToken);
 

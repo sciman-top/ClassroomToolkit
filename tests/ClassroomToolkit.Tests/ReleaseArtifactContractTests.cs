@@ -112,7 +112,6 @@ public sealed class ReleaseArtifactContractTests
         ReadRepoFile("scripts", "validation", "collect-settings-load-performance-samples.ps1").Should().Contain("settings-load-performance-summary.json");
         ReadRepoFile("scripts", "quality", "check-analyzer-backlog-baseline.ps1").Should().Contain("EvidenceQualityCurrent");
         ReadRepoFile("scripts", "release", "preflight-check.ps1").Should().Contain("EvidenceReleasePreflightCurrent");
-        ReadRepoFile("scripts", "release", "preflight-check.ps1").Should().Contain("preflight-compatibility-report.json");
     }
 
     private static string ReadScript(string name)

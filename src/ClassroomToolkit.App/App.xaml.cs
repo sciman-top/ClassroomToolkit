@@ -77,17 +77,7 @@ public partial class App : WpfApplication
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         AutoUpdateBootstrapper.Schedule();
 
-        // 在启动时立即修复所有 BorderBrush 问题
-        try
-        {
-            GlobalBorderFixer.FixAllBordersImmediately();
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            LogException(ex, "GlobalBorderFixer Initial Fix");
-        }
-
-        // 注册全局 Border 修复
+        // 注册全局 Border 修复（内部会立即修复已存在的主窗口，无需再单独全树遍历一次）
         BorderFixHelper.RegisterGlobalFix();
     }
 

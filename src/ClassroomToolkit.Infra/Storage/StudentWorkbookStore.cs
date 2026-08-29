@@ -147,6 +147,9 @@ public sealed class StudentWorkbookStore
         }
     }
 
+    private const string BackupFolderName = "backups";
+    private const int MaxNormalizationBackups = 10;
+
     private static void EnsureNormalizationBackup(string path)
     {
         var fullPath = Path.GetFullPath(path);
@@ -159,16 +162,43 @@ public sealed class StudentWorkbookStore
         var extension = Path.GetExtension(fullPath);
         var fileName = Path.GetFileNameWithoutExtension(fullPath);
         var contentHash = ComputeFileHash(fullPath);
-        var backupPath = Path.Combine(directory, $"{fileName}.bak-normalize-{contentHash}{extension}");
+
+        // 备份集中写入 backups/ 子目录（兼容旧版散落在数据文件旁的 *.bak-normalize-*.xlsx），
+        // 并滚动保留最近 N 份；否则每次规范化前内容都已变化，按哈希去重会失效、备份无限增长。
+        var backupDirectory = Path.Combine(directory, BackupFolderName);
+        Directory.CreateDirectory(backupDirectory);
+        var backupPath = Path.Combine(backupDirectory, $"{fileName}.bak-normalize-{contentHash}{extension}");
         if (!File.Exists(backupPath))
         {
             File.Copy(fullPath, backupPath, overwrite: false);
+            PruneNormalizationBackups(backupDirectory, fileName, extension);
         }
 
         var backupHash = ComputeFileHash(backupPath);
         if (!string.Equals(contentHash, backupHash, StringComparison.Ordinal))
         {
             throw new IOException($"学生工作簿迁移备份校验失败：{backupPath}");
+        }
+    }
+
+    private static void PruneNormalizationBackups(string backupDirectory, string fileNameWithoutExtension, string extension)
+    {
+        try
+        {
+            var pattern = $"{fileNameWithoutExtension}.bak-normalize-*{extension}";
+            var outdated = Directory.EnumerateFiles(backupDirectory, pattern)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .Skip(MaxNormalizationBackups)
+                .ToList();
+            foreach (var outdatedPath in outdated)
+            {
+                File.Delete(outdatedPath);
+            }
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[StudentWorkbookStore] backup prune failed dir={backupDirectory} ex={ex.GetType().Name} msg={ex.Message}");
         }
     }
 

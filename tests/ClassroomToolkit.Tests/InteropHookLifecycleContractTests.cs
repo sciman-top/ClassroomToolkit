@@ -114,8 +114,10 @@ public sealed class InteropHookLifecycleContractTests
     {
         var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
 
-        source.Should().Contain("var startLastError = Marshal.GetLastWin32Error();");
-        source.Should().Contain("LastError = startLastError;");
+        // LastError 必须在 SetWindowsHookEx 失败的同步点捕获（per-thread），await 后读取会跨线程失真。
+        source.Should().Contain("var lastInstallError = 0;");
+        source.Should().Contain("lastInstallError = Marshal.GetLastWin32Error();");
+        source.Should().Contain("LastError = lastInstallError;");
         source.Should().Contain("Stop();");
     }
 

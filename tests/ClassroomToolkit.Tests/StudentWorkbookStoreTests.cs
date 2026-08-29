@@ -228,7 +228,7 @@ public sealed class StudentWorkbookStoreTests
             repairedWorkbook.Worksheet(StudentWorkbookStore.RollStateSheetName).Cell(1, 1).GetString().Should().Be(StudentWorkbookStore.RollStateColumn);
             loaded.RollStateJson.Should().NotBeNullOrWhiteSpace();
 
-            var backups = Directory.GetFiles(Path.GetDirectoryName(tempPath)!, backupPattern);
+            var backups = Directory.GetFiles(Path.Combine(Path.GetDirectoryName(tempPath)!, "backups"), backupPattern);
             backups.Should().ContainSingle();
             File.ReadAllBytes(backups[0]).Should().Equal(originalBytes);
             using var backupWorkbook = new XLWorkbook(backups[0]);
@@ -246,7 +246,7 @@ public sealed class StudentWorkbookStoreTests
                 {
                 }
             }
-            foreach (var backup in Directory.GetFiles(Path.GetDirectoryName(tempPath)!, backupPattern))
+            foreach (var backup in Directory.GetFiles(Path.Combine(Path.GetDirectoryName(tempPath)!, "backups"), backupPattern))
             {
                 File.Delete(backup);
             }

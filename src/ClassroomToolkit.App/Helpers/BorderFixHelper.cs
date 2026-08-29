@@ -148,15 +148,9 @@ namespace ClassroomToolkit.App.Helpers
                         }
                     }
 
-                    var scheduled = false;
                     window.Dispatcher.BeginInvoke(
                         new Action(ApplyDeferredBorderFix),
                         System.Windows.Threading.DispatcherPriority.Loaded);
-                    scheduled = true;
-                    if (!scheduled && window.Dispatcher.CheckAccess())
-                    {
-                        ApplyDeferredBorderFix();
-                    }
                 }
                 catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {

@@ -1,14 +1,8 @@
-﻿param(
-    [string]$CommitMessage = "模块迁移：本地自动提交",
-    [switch]$SkipCommit,
+﻿﻿param(
     [switch]$SkipTests,
     [switch]$BrushBaseline,
-    [switch]$SmokeZOrder,
-    [switch]$SmokeZOrderAuto,
-    [switch]$SmokeNonInteractive,
     [ValidateSet("quick", "standard", "full")]
-    [string]$StableTestProfile = "standard",
-    [switch]$LegacyTestRunner
+    [string]$StableTestProfile = "standard"
 )
 
 Set-StrictMode -Version Latest
@@ -102,7 +96,15 @@ Invoke-DotnetWithRetry -Arguments @("build", ".\ClassroomToolkit.sln", "-c", "De
 
 if (-not $SkipTests) {
     Write-Host "==> 测试" -ForegroundColor Cyan
-    if ($LegacyTestRunner) {
+    $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
+    if (Test-Path -LiteralPath $stableTestsScript) {
+        & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
+        if ($LASTEXITCODE -ne 0) {
+            throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"
+        }
+    }
+    else {
+        Write-Host "未检测到稳定测试脚本，回退到 dotnet test。" -ForegroundColor Yellow
         Invoke-DotnetWithRetry -Arguments @(
             "test",
             ".\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj",
@@ -111,26 +113,6 @@ if (-not $SkipTests) {
             "--no-build",
             "-m:1"
         )
-    }
-    else {
-        $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
-        if (Test-Path -LiteralPath $stableTestsScript) {
-            & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
-            if ($LASTEXITCODE -ne 0) {
-                throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"
-            }
-        }
-        else {
-            Write-Host "未检测到稳定测试脚本，回退到 dotnet test。" -ForegroundColor Yellow
-            Invoke-DotnetWithRetry -Arguments @(
-                "test",
-                ".\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj",
-                "-c",
-                "Debug",
-                "--no-build",
-                "-m:1"
-            )
-        }
     }
 }
 
@@ -144,62 +126,6 @@ if ($BrushBaseline) {
     & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $baselineScript -Configuration Debug -SkipRestore -SkipBuild
     if ($LASTEXITCODE -ne 0) {
         throw "画笔质量基线采集失败，退出码: $LASTEXITCODE"
-    }
-}
-
-if ($SmokeZOrder) {
-    Write-Host "==> Z-Order 冒烟" -ForegroundColor Cyan
-    $smokeScript = Join-Path $PSScriptRoot "smoke-zorder.ps1"
-    if (-not (Test-Path $smokeScript)) {
-        throw "未找到冒烟脚本: $smokeScript"
-    }
-
-    $smokeArgs = @(
-        "-ExecutionPolicy", "Bypass",
-        "-File", $smokeScript,
-        "-SkipBuild",
-        "-SkipTests"
-    )
-
-    if ($SmokeNonInteractive) {
-        $smokeArgs += "-NonInteractive"
-    }
-
-    & $powerShellExe @smokeArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Z-Order 冒烟脚本执行失败，退出码: $LASTEXITCODE"
-    }
-}
-
-if ($SmokeZOrderAuto) {
-    Write-Host "==> Z-Order 自动冒烟" -ForegroundColor Cyan
-    $smokeScript = Join-Path $PSScriptRoot "smoke-zorder-auto.ps1"
-    if (-not (Test-Path $smokeScript)) {
-        throw "未找到自动冒烟脚本: $smokeScript"
-    }
-
-    $smokeArgs = @(
-        "-ExecutionPolicy", "Bypass",
-        "-File", $smokeScript,
-        "-SkipBuild",
-        "-SkipTests"
-    )
-
-    & $powerShellExe @smokeArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Z-Order 自动冒烟脚本执行失败，退出码: $LASTEXITCODE"
-    }
-}
-
-if (-not $SkipCommit) {
-    Write-Host "==> 自动提交" -ForegroundColor Cyan
-    $status = git status --porcelain
-    if ([string]::IsNullOrWhiteSpace($status)) {
-        Write-Host "没有变更需要提交。" -ForegroundColor Yellow
-    }
-    else {
-        git add -A
-        git commit -m $CommitMessage
     }
 }
 

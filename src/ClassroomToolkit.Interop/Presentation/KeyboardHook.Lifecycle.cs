@@ -44,7 +44,9 @@ public sealed partial class KeyboardHook
             if (attempt < maxRetries - 1)
             {
                 var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200 ms.
-                await Task.Delay(delayMs).ConfigureAwait(false);
+                // 不用 ConfigureAwait(false)：WH_KEYBOARD_LL 要求安装线程持续泵消息，
+                // 回到调用方上下文（UI 线程）安装才能收到回调；线程池线程会静默失效。
+                await Task.Delay(delayMs);
             }
         }
 
@@ -102,12 +104,12 @@ public sealed partial class KeyboardHook
         {
             LastError = Marshal.GetLastWin32Error();
             Debug.WriteLine($"[KeyboardHook] Unhook failed with error={LastError}");
-        }
-        else
-        {
-            LastError = 0;
+            // unhook 失败意味着系统级钩子仍在位：保留句柄，让残留状态可见且可重试；
+            // 置零会让钩子残留到进程退出且无人再尝试摘除。
+            return;
         }
 
+        LastError = 0;
         _hookId = IntPtr.Zero;
         _pendingSuppressedKey = null;
     }

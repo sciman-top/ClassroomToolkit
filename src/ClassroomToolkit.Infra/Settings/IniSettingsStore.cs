@@ -120,34 +120,83 @@ public sealed class IniSettingsStore
 
     private static bool TryReadAllLinesWithFallback(string path, out string[] lines)
     {
-        static bool TryRead(string sourcePath, Encoding encoding, out string[] content)
+        lines = Array.Empty<string>();
+        byte[] bytes;
+        try
         {
-            try
-            {
-                content = File.ReadAllLines(sourcePath, encoding);
-                return true;
-            }
-            catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-            {
-                content = Array.Empty<string>();
-                return false;
-            }
+            bytes = File.ReadAllBytes(path);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[IniSettingsStore] read bytes failed path={path}");
+            return false;
+        }
+
+        // 解码顺序：BOM 显式判定 → UTF-8 严格（现代/ASCII 文件）→ GB18030（旧版中文 ANSI）→
+        // UTF-8 宽松兜底。不能直接用 Encoding.Unicode 裸解：ANSI 字节按 UTF-16 解码几乎
+        // 永不抛错，会把旧版 GBK 文件“成功”读成乱码并覆盖用户设置。
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            return TryDecodeLines(bytes, Encoding.Unicode, out lines);
+        }
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            return TryDecodeLines(bytes, Encoding.BigEndianUnicode, out lines);
+        }
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            return TryDecodeLines(bytes, Encoding.UTF8, out lines);
         }
 
         var utf8Strict = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
-        if (TryRead(path, utf8Strict, out lines))
+        if (TryDecodeLines(bytes, utf8Strict, out lines))
         {
             return true;
         }
-        if (TryRead(path, Encoding.Unicode, out lines))
+
+        var legacyAnsi = TryGetLegacyChineseEncoding();
+        if (legacyAnsi != null && TryDecodeLines(bytes, legacyAnsi, out lines))
         {
             return true;
         }
-        if (TryRead(path, Encoding.BigEndianUnicode, out lines))
+
+        return TryDecodeLines(bytes, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), out lines);
+    }
+
+    private static bool TryDecodeLines(byte[] bytes, Encoding encoding, out string[] lines)
+    {
+        lines = Array.Empty<string>();
+        try
         {
+            using var reader = new StreamReader(new MemoryStream(bytes), encoding);
+            var result = new List<string>(bytes.Length / 32 + 1);
+            while (reader.ReadLine() is { } line)
+            {
+                result.Add(line);
+            }
+
+            lines = result.ToArray();
             return true;
         }
-        return TryRead(path, Encoding.Default, out lines);
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[IniSettingsStore] decode failed encoding={encoding.WebName} ex={ex.GetType().Name}");
+            return false;
+        }
+    }
+
+    private static Encoding? TryGetLegacyChineseEncoding()
+    {
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding("GB18030");
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[IniSettingsStore] GB18030 encoding unavailable: {ex.Message}");
+            return null;
+        }
     }
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)

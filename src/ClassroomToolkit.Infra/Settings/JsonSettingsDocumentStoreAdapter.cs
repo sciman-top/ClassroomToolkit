@@ -15,7 +15,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     private int _hasValidatedExistingFileState;
     private int _overwriteBlockedAfterLoadFailure;
     private long _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
-    private string? _lastValidatedContentHash;
+    private volatile string? _lastValidatedContentHash;
 
     public JsonSettingsDocumentStoreAdapter(string path)
     {

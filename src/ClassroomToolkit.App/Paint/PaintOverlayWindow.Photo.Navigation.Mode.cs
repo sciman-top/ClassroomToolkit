@@ -152,7 +152,7 @@ public partial class PaintOverlayWindow
         }
         else
         {
-            if (!TrySetPhotoBackground(sourcePath))
+            if (!TryBeginPhotoBackgroundOpenAsync(sourcePath))
             {
                 HidePhotoLoadingOverlay();
                 ExitPhotoMode();

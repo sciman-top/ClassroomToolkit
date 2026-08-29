@@ -104,6 +104,9 @@ internal sealed class PdfDocumentHost : IPdfDocumentHost
 
     public void Dispose()
     {
+        // Windows.Data.Pdf.PdfDocument 的 SDK 投影（10.0.19041.57）未暴露 Close/Dispose
+        //（同文件 PdfPage/IRandomAccessStream 均可实现 using）。置空引用后由投影对象的
+        // 终结器释放原生引用；翻阅大量 PDF 时回收会略有延迟，属可接受权衡。
         _document = null;
     }
 

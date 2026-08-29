@@ -5,7 +5,6 @@ param(
     [ValidateSet("quick", "standard", "full")]
     [string]$Profile = "standard",
     [switch]$SkipTests,
-    [switch]$SkipCompatibilityReport,
     [switch]$SkipUiPerformanceSampling,
     [switch]$SkipSettingsLoadPerformanceSampling,
     [string]$OutputRoot = ""
@@ -82,29 +81,6 @@ else {
         $Profile,
         "-Configuration",
         $Configuration
-    )
-}
-
-if (-not $SkipCompatibilityReport) {
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $reportMd = Join-Path $outputRootPath "preflight-compatibility-report.md"
-    $reportJson = Join-Path $outputRootPath "preflight-compatibility-report.json"
-
-    Invoke-Step -Name "compatibility-report" -FilePath $powerShellExe -Arguments @(
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "scripts/validation/run-compatibility-matrix-report.ps1",
-        "-Configuration",
-        $Configuration,
-        "-MatrixId",
-        ("PRE-{0}" -f $stamp),
-        "-EmitJson",
-        "-OutputPath",
-        $reportMd,
-        "-OutputJsonPath",
-        $reportJson
     )
 }
 

@@ -1,6 +1,17 @@
-# 项目状态快照（2026-08-27）
+# 项目状态快照（2026-08-29）
 
 本页承接 README 精简前的“最新状态”清单，作为面向开发者的当前状态快照；README 只保留概要并链接到这里。
+
+## 2026-08-29 全仓审计与减负轮
+
+- 修复基线红测试：`AtomicFileReplaceUtility` 瞬时锁重试预算放宽到 5×50ms；`Thread.Sleep` 契约测试引入与阻塞等待契约同构的显式豁免清单（唯一豁免：原子替换的有界重试）。
+- 健壮性：墨迹脏页协调器与 sidecar 持久化加文档级锁（后台自动保存与 UI 同步保存不再互覆盖丢页）；点名 ViewModel 释放不再提前销毁在途任务持有的取消令牌；settings.ini 解码改为“BOM → UTF-8 严格 → GB18030 → 宽松兜底”（旧版 GBK/ANSI 文件不再被读成乱码）；键盘/WPS 全局钩子在 unhook 失败时保留句柄可重试，且不再把 LL 钩子安装到无消息泵的线程池线程。
+- 性能：照片模式进入/换页改为后台解码（与 PDF 路径同构）；每笔画的墨迹 WAL 落盘改为 400ms 防抖合并（页面持久化仍同步清条目）；点名照片悬浮层解码真正异步；退出时的墨迹孤儿清理移到后台；启动期去掉一次全可视树边框修复遍历；画笔换色不再累积临时 .cur 文件与 GDI 光标句柄。
+- 删减：零引用的 Application 抽象（IStudentRepository/ISettingsStore/ITelemetrySink/IInkStorageGateway）、Presentation 网关三件套、IHandleValidator、ComObjectManager 及其源码形状测试、400 行无人引用的 RollCallSqliteStoreAdapter、SafeBorder/GlobalBorderFixer、两份重复的墨迹噪点瓷砖缓存（合并为 `InkNoiseTileCache`）、18 个零引用资源键、4 份重复的 NoopEffectRunner。
+- 治理：退役 2026Q2 兼容矩阵工具链（5 个 validation 脚本、git-acl-guard、logging 阈值检查及配套 runbook/报告文档）；`ctoolkit.ps1` 移除指向不存在脚本的死参数与 `git add -A` 自动提交；`.dotnet-home/` 运行态缓存退出 git 跟踪；学生簿规范化备份改写入 `backups/` 子目录并滚动保留 10 份（存量已迁移）。
+- 已核实无需修改：诊断探针的约 4 秒等待仅在后台线程执行；点集合更新均有 dispatcher 编组；全部关键写入（INI/JSON/xlsx/WAL）保持临时文件+原子替换。
+
+## 2026-08-27 及之前
 
 最近几批工作集中在课堂高频链路的稳定性与触控体验：
 
