@@ -5,6 +5,7 @@
 ## 当前入口
 
 - [handover](./handover.md)：当前开发边界、验证选择和剩余精简方向。
+- [project-status](./project-status.md)：面向开发者的最新状态快照（2026-08-27）。
 - [tech-debt-backlog](./tech-debt-backlog.md)：尚未关闭的工程问题。
 - [current architecture](./architecture/README.md)：当前技术栈、依赖方向、模块 seam 与演进边界。
 - [governance truth source](./governance/truth-source.md)：唯一门禁入口与 profile 分层。

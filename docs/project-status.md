@@ -1,0 +1,34 @@
+# 项目状态快照（2026-08-27）
+
+本页承接 README 精简前的“最新状态”清单，作为面向开发者的当前状态快照；README 只保留概要并链接到这里。
+
+最近几批工作集中在课堂高频链路的稳定性与触控体验：
+
+- 图片 / PDF 全屏下，白板按钮会先给出“截图入白板 / 纯白板 / 底色白板”入口，而不是直接跳进白板。
+- 3 个快捷画笔现在支持各自独立的粗细；再次点击同一快捷画笔，会弹出颜色和 3 档粗细选择。
+- 图片 / PDF 批注的撤销链路已补到运行态历史、缓存和持久化状态，避免“撤销后移动一下又消失”。
+- 悬浮学生照片、工具条、点名窗口、启动器之间的窗口层级做了首帧与复显加固，尽量避免课堂中首帧遮挡和抢焦点。
+- 画笔设置对话框补了构造期空引用防护，避免设置按钮在 XAML 初始化阶段偶发崩溃。
+- JSON 设置现在把 schema 损坏、文件锁和短暂 IO 失败统一视为不可安全覆盖；只有显式成功重载后才恢复保存，未知 section/key 会继续保留。
+- 损坏的 `students.xlsx` 不再被示例模板覆盖，后续状态保存也会被阻断；合法旧格式规范化前会生成按 SHA-256 去重的原字节备份。
+- PDF 渲染已从 `PdfiumViewer.Core 1.0.4` 和 2018 native PDFium 迁移到 Windows 原生 `Windows.Data.Pdf`；损坏文件降级、大页面内存预算、128 页元数据、黑白视觉内容及 96/144 DPI 像素尺寸均有自动化保护。
+- 共享原子写入不再降级为 `File.Copy(overwrite: true)`；不支持 `File.Replace` 时改用同目录覆盖移动，并移除了只有一个调用者的 fallback policy。
+- 墨迹诊断文本和工作簿原子写的实现字符串断言已退役；损坏读取、锁文件、WAL 恢复与临时文件清理由现有行为测试继续保护。
+- WPS hook 的停止/释放、拦截门禁与订阅者异常隔离已改用可控后台队列的行为测试，4 个源码字符串断言退役。
+- 旧版 INI 只在真正持久化迁移前生成按内容哈希去重的备份；只读加载不再制造重复备份，备份失败会阻止覆盖。
+- 4 个单表达式 Paint policy 及其逐字复述测试已内联删除；墙钟画笔微基准改为 full/focused 运行，standard 不再受机器争用误报影响。
+- 依赖闭包删除未使用的 SourceGear native SQLite 与测试重复固定，.NET 10 包更新到 10.0.11，Test SDK 更新到 18.9.0。
+- 发布链已固定为标准安装版、离线安装版、绿色便携版和公开源码包四类交付物；绿色版只检查 GitHub 正式 Release 并打开下载页，不自动替换文件。
+- 发布聚合入口使用 `.staging/<version>` 临时目录，成功后最终版本目录只保留安装器、绿色 ZIP、源码 ZIP 和 manifest；旧候选与历史验证输出归档到 `artifacts/archive/legacy-outputs/`。
+
+本轮收口后的本地验证快照：
+
+- `dotnet build ClassroomToolkit.sln -c Release`：通过，0 warning / 0 error
+- full Release stable tests（排除核心契约，包含性能预算）：通过，3024/3024
+- contract / invariant：通过，29/29
+- `latest-all` analyzer：0 diagnostics；依赖漏洞：0
+- 当前代码阻断项：无
+  - 学生工作簿和 JSON 设置读取失败均 fail-closed，原文件不会被模板或默认值覆盖
+  - PDF 渲染不再携带第三方 native 引擎；仓库验证不外推为真实课件、DPI、投影或课堂视觉验收
+
+相关入口：[handover](./handover.md)、[高风险变更证据](./change-evidence/)、[发布检查清单](./runbooks/release-checklist.md)。
