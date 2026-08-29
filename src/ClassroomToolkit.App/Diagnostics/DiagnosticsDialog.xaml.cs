@@ -2,6 +2,7 @@ using System.Windows;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
@@ -66,7 +67,7 @@ public partial class DiagnosticsDialog : Window
         var export = DiagnosticsBundleExportService.Export(_result);
         if (export.Success)
         {
-            System.Windows.MessageBox.Show(
+            TopmostMessageBox.Show(
                 this,
                 $"诊断包已导出：{export.BundlePath}",
                 "导出完成",
@@ -75,7 +76,7 @@ public partial class DiagnosticsDialog : Window
             return;
         }
 
-        System.Windows.MessageBox.Show(
+        TopmostMessageBox.Show(
             this,
             $"导出诊断包失败：{export.Error}",
             "导出失败",
@@ -94,7 +95,7 @@ public partial class DiagnosticsDialog : Window
     {
         if (_settingsService == null || _settings == null)
         {
-            System.Windows.MessageBox.Show(
+            TopmostMessageBox.Show(
                 this,
                 "当前窗口未接入设置服务，无法重置启动提示。",
                 "提示",
@@ -105,7 +106,7 @@ public partial class DiagnosticsDialog : Window
 
         _settings.StartupCompatibilitySuppressedIssueCodes.Clear();
         _settingsService.Save(_settings);
-        System.Windows.MessageBox.Show(
+        TopmostMessageBox.Show(
             this,
             "已重新启用启动兼容性提示。下次启动会再次检测。",
             "已恢复",

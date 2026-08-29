@@ -1,5 +1,6 @@
 using System.Windows;
 using ClassroomToolkit.Services.Presentation;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -8,7 +9,7 @@ public partial class PaintSettingsDialog
     private void ShowClassifierPackageWarning(string title, string message)
     {
         RefreshPresentationClassifierPackageStatusText($"规则包状态：{message}");
-        System.Windows.MessageBox.Show(this, message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        TopmostMessageBox.Show(this, message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void RefreshPresentationClassifierPackageStatusText(string statusText)

@@ -2,6 +2,7 @@ using System.Windows;
 using ClassroomToolkit.App.Helpers;
 using System.Diagnostics;
 using System.IO;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
@@ -65,7 +66,8 @@ public partial class StartupCompatibilityWarningDialog : Window
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            System.Windows.MessageBox.Show(
+            TopmostMessageBox.Show(
+                this,
                 $"打开诊断报告失败：{ex.Message}",
                 "兼容提示",
                 MessageBoxButton.OK,
@@ -86,7 +88,8 @@ public partial class StartupCompatibilityWarningDialog : Window
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            System.Windows.MessageBox.Show(
+            TopmostMessageBox.Show(
+                this,
                 $"复制诊断信息失败：{ex.Message}",
                 "兼容提示",
                 MessageBoxButton.OK,

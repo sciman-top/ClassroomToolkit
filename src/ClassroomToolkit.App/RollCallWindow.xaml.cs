@@ -235,7 +235,7 @@ public partial class RollCallWindow : Window
     private void ShowRollCallInfoMessageSafe(string operation, string message, Window? owner = null)
     {
         SafeActionExecutionExecutor.TryExecute(
-            () => System.Windows.MessageBox.Show(
+            () => TopmostMessageBox.Show(
                 owner ?? this,
                 message,
                 "提示",
@@ -254,7 +254,7 @@ public partial class RollCallWindow : Window
         SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                var result = System.Windows.MessageBox.Show(
+                var result = TopmostMessageBox.Show(
                     this,
                     prompt,
                     "提示",

@@ -202,7 +202,7 @@ public partial class ImageManagerWindow
             return;
         }
 
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = TopmostMessageBox.Show(
             this,
             $"确定删除已选中的 {selectedFiles.Count} 个文件吗？",
             "删除文件",
@@ -237,7 +237,7 @@ public partial class ImageManagerWindow
 
         if (failedCount > 0)
         {
-            System.Windows.MessageBox.Show(
+            TopmostMessageBox.Show(
                 this,
                 $"已删除 {deletedCount} 个文件，另有 {failedCount} 个文件删除失败（可能被占用或无权限）。",
                 "删除结果",

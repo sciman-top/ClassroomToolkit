@@ -1,4 +1,5 @@
 using WpfWindow = System.Windows.Window;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -10,6 +11,6 @@ internal static class MessageBoxWpsHookUnavailableNotifier
     internal static void Notify(WpfWindow fallbackOwner)
     {
         var owner = System.Windows.Application.Current?.MainWindow;
-        System.Windows.MessageBox.Show(owner ?? fallbackOwner, Message, Title, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        TopmostMessageBox.Show(owner ?? fallbackOwner, Message, Title, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 }

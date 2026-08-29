@@ -2,6 +2,7 @@ using System.Windows;
 using ClassroomToolkit.App.Settings;
 using System.Linq;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Services.Input;
 
 namespace ClassroomToolkit.App;
@@ -421,7 +422,7 @@ public partial class RollCallSettingsDialog : Window
         {
             if (!KeyBindingTokenParser.TryNormalize(keyText, out var normalizedKey))
             {
-                System.Windows.MessageBox.Show("请输入有效的点名按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                TopmostMessageBox.Show(this, "请输入有效的点名按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
             keyText = normalizedKey;
@@ -431,7 +432,7 @@ public partial class RollCallSettingsDialog : Window
         {
             if (!KeyBindingTokenParser.TryNormalize(groupKeyText, out var normalizedGroupKey))
             {
-                System.Windows.MessageBox.Show("请输入有效的分组切换按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                TopmostMessageBox.Show(this, "请输入有效的分组切换按键组合。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
             groupKeyText = normalizedGroupKey;
@@ -440,7 +441,7 @@ public partial class RollCallSettingsDialog : Window
         if (RemoteEnabledCheck.IsChecked == true && RemoteGroupSwitchCheck.IsChecked == true &&
             string.Equals(keyText, groupKeyText, StringComparison.OrdinalIgnoreCase))
         {
-            System.Windows.MessageBox.Show("点名按键和分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            TopmostMessageBox.Show(this, "点名按键和分组切换按键不能相同，请重新选择。", "冲突", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
 
@@ -477,7 +478,8 @@ public partial class RollCallSettingsDialog : Window
 
     private void OnRestoreAllDefaultsClick(object sender, RoutedEventArgs e)
     {
-        var result = System.Windows.MessageBox.Show(
+        var result = TopmostMessageBox.Show(
+            this,
             "恢复点名设置为默认值，是否继续？",
             "重置全部设置",
             System.Windows.MessageBoxButton.YesNo,

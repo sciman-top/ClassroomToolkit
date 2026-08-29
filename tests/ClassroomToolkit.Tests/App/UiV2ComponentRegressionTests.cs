@@ -59,6 +59,32 @@ public sealed class UiV2ComponentRegressionTests
             IsSetter(setter, "FocusVisualStyle", "{StaticResource CTK.FocusVisual}"));
     }
 
+    [Fact]
+    public void SliderThumb_ShouldUseAnUnclippedCircularVisualAcrossInteractionStates()
+    {
+        var widgetStyles = Load("src/ClassroomToolkit.App/Assets/Styles/WidgetStyles.xaml");
+        var thumb = widgetStyles.Descendants()
+            .Single(element =>
+                string.Equals(element.Name.LocalName, "Thumb", StringComparison.Ordinal) &&
+                string.Equals(element.Attributes().SingleOrDefault(attribute =>
+                    string.Equals(attribute.Name.LocalName, "Name", StringComparison.Ordinal))?.Value, "Thumb", StringComparison.Ordinal));
+
+        thumb.Attribute("Width")!.Value.Should().Be("18");
+        thumb.Attribute("Height")!.Value.Should().Be("18");
+        var visual = thumb.Descendants().Single(element =>
+            string.Equals(element.Name.LocalName, "Ellipse", StringComparison.Ordinal) &&
+            string.Equals(element.Attributes().SingleOrDefault(attribute =>
+                string.Equals(attribute.Name.LocalName, "Name", StringComparison.Ordinal))?.Value, "ThumbVisual", StringComparison.Ordinal));
+        visual.Attribute("Width")!.Value.Should().Be("14");
+        visual.Attribute("Height")!.Value.Should().Be("14");
+
+        var states = thumb.Descendants()
+            .Where(element => string.Equals(element.Name.LocalName, "Trigger", StringComparison.Ordinal))
+            .Select(element => (string?)element.Attribute("Property"))
+            .ToArray();
+        states.Should().Contain(["IsMouseOver", "IsKeyboardFocused", "IsDragging"]);
+    }
+
     [Theory]
     [InlineData("Style_ManagementThumbnailListViewItem")]
     [InlineData("Style_ManagementFileListViewItem")]

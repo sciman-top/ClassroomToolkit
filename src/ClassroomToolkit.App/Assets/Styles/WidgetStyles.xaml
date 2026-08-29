@@ -1967,28 +1967,37 @@
                                 <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Opacity="0"/>
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb x:Name="Thumb" Width="14" Height="14" VerticalAlignment="Center" OverridesDefaultStyle="True">
+                                <!-- Keep an 18 DIP layout slot so the 14 DIP circular thumb and its
+                                     16 DIP hover/focus state are never clipped by the Track. -->
+                                <Thumb x:Name="Thumb" Width="18" Height="18" VerticalAlignment="Center" OverridesDefaultStyle="True">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Grid>
-                                                <!-- Gradient Thumb -->
-                                                <Border x:Name="b1" Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Gradient_Primary}" BorderThickness="2" BorderBrush="{DynamicResource Brush_Text_Primary}">
-                                                    <Border.Effect>
+                                            <Grid SnapsToDevicePixels="False">
+                                                <Ellipse x:Name="ThumbVisual" Width="14" Height="14" Fill="{DynamicResource Gradient_Primary}" StrokeThickness="2" Stroke="{DynamicResource Brush_Text_Primary}">
+                                                    <Ellipse.Effect>
                                                         <StaticResource ResourceKey="Shadow_Card_Subtle"/>
-                                                    </Border.Effect>
-                                                </Border>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
                                             </Grid>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="b1" Property="RenderTransform">
+                                                    <Setter TargetName="ThumbVisual" Property="RenderTransform">
                                                         <Setter.Value>
-                                                            <ScaleTransform ScaleX="1.2" ScaleY="1.2" CenterX="8" CenterY="8"/>
+                                                            <ScaleTransform ScaleX="1.142857" ScaleY="1.142857" CenterX="7" CenterY="7"/>
                                                         </Setter.Value>
                                                     </Setter>
-                                                    <Setter TargetName="b1" Property="Background" Value="{DynamicResource Gradient_Primary_Hover}"/>
+                                                    <Setter TargetName="ThumbVisual" Property="Fill" Value="{DynamicResource Gradient_Primary_Hover}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                                    <Setter TargetName="ThumbVisual" Property="RenderTransform">
+                                                        <Setter.Value>
+                                                            <ScaleTransform ScaleX="1.142857" ScaleY="1.142857" CenterX="7" CenterY="7"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Setter TargetName="ThumbVisual" Property="Stroke" Value="{DynamicResource Brush_Border_Focus}"/>
                                                 </Trigger>
                                                 <Trigger Property="IsDragging" Value="True">
-                                                    <Setter TargetName="b1" Property="Background" Value="{DynamicResource Brush_Primary_Light}"/>
+                                                    <Setter TargetName="ThumbVisual" Property="Fill" Value="{DynamicResource Brush_Primary_Light}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>

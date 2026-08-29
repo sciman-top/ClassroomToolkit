@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using ClassroomToolkit.Services.Presentation;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -40,7 +41,7 @@ public partial class PaintSettingsDialog
 
         var normalizedImported = NormalizePresentationClassifierOverridesJson(importedOverridesJson);
         var confirmationMessage = BuildClassifierImportConfirmationMessage(normalizedImported, importDetail);
-        if (System.Windows.MessageBox.Show(
+        if (TopmostMessageBox.Show(
                 this,
                 confirmationMessage,
                 sourceTitle,

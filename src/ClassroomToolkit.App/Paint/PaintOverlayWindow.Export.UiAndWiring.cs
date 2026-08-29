@@ -4,7 +4,6 @@ using System.Windows;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Windowing;
-using MessageBox = System.Windows.MessageBox;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -17,7 +16,7 @@ public partial class PaintOverlayWindow
         MessageBoxImage image)
     {
         SafeActionExecutionExecutor.TryExecute(
-            () => MessageBox.Show(this, message, title, MessageBoxButton.OK, image),
+            () => TopmostMessageBox.Show(this, message, title, MessageBoxButton.OK, image),
             ex => System.Diagnostics.Debug.WriteLine(
                 $"[InkExport][{operation}] messagebox failed: {ex.GetType().Name} - {ex.Message}"));
     }
@@ -32,7 +31,7 @@ public partial class PaintOverlayWindow
     {
         var result = fallback;
         SafeActionExecutionExecutor.TryExecute(
-            () => result = MessageBox.Show(this, message, title, buttons, image),
+            () => result = TopmostMessageBox.Show(this, message, title, buttons, image),
             ex => System.Diagnostics.Debug.WriteLine(
                 $"[InkExport][{operation}] confirm failed: {ex.GetType().Name} - {ex.Message}"));
         return result;

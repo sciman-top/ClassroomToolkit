@@ -1,6 +1,7 @@
 using System.Windows;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -10,7 +11,8 @@ public partial class PaintSettingsDialog
     {
         if ((SettingsTabControl?.SelectedIndex ?? 0) == 0)
         {
-            var result = System.Windows.MessageBox.Show(
+            var result = TopmostMessageBox.Show(
+                this,
                 "重置“笔触与预设”会同时恢复部分场景参数（如 WPS 策略、抬笔后刷新、缩放灵敏度）。是否继续？",
                 "仅重置当前页",
                 System.Windows.MessageBoxButton.YesNo,
@@ -26,7 +28,8 @@ public partial class PaintSettingsDialog
 
     private void OnRestoreAllDefaultsClick(object sender, RoutedEventArgs e)
     {
-        var result = System.Windows.MessageBox.Show(
+        var result = TopmostMessageBox.Show(
+            this,
             "将恢复画笔设置窗口中的全部默认参数，是否继续？",
             "重置全部设置",
             System.Windows.MessageBoxButton.YesNo,

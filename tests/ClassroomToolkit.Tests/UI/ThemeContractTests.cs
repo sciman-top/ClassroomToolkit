@@ -86,7 +86,7 @@ public sealed class ThemeContractTests
     }
 
     [Fact]
-    public void ThemeManager_ShouldReplaceOnlyNestedColorDictionary()
+    public void ThemeManager_ShouldRefreshSemanticAndLegacyBrushesForExistingDynamicResourceConsumers()
     {
         WpfStaTestRunner.Run(() =>
         {
@@ -95,29 +95,37 @@ public sealed class ThemeContractTests
 
             void AssertThemeSwitching()
             {
-                var themeResources = application!.Resources.MergedDictionaries
-                    .Single(dictionary => dictionary.Source?.OriginalString.Contains("ThemeResources.xaml", StringComparison.OrdinalIgnoreCase) == true);
-                var semanticBrushes = themeResources.MergedDictionaries[1];
-
                 var manager = new ThemeManager(application);
+                var canvas = new System.Windows.Controls.Border();
+                canvas.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "CTK.Brush.Canvas");
 
                 manager.Apply(AppTheme.Blackboard).Should().BeTrue();
                 manager.CurrentTheme.Should().Be(AppTheme.Blackboard);
-                themeResources.MergedDictionaries.Should().HaveCount(2);
-                themeResources.MergedDictionaries[1].Should().BeSameAs(semanticBrushes);
-                ((Color)themeResources.MergedDictionaries[0]["CTK.Color.Primary"])
-                    .Should().Be(Color.FromRgb(0x69, 0xC8, 0x9A));
+                AssertActiveTheme(application!, canvas, Color.FromRgb(0x0F, 0x17, 0x14), Color.FromRgb(0x69, 0xC8, 0x9A));
 
                 manager.Apply(AppTheme.Light).Should().BeTrue();
                 manager.CurrentTheme.Should().Be(AppTheme.Light);
-                themeResources.MergedDictionaries.Should().HaveCount(2);
-                themeResources.MergedDictionaries[1].Should().BeSameAs(semanticBrushes);
-                ((Color)themeResources.MergedDictionaries[0]["CTK.Color.Primary"])
-                    .Should().Be(Color.FromRgb(0x0F, 0x76, 0x67));
+                AssertActiveTheme(application!, canvas, Color.FromRgb(0xF3, 0xF6, 0xF7), Color.FromRgb(0x0F, 0x76, 0x67));
+
+                manager.Apply(AppTheme.MidnightTeal).Should().BeTrue();
+                manager.CurrentTheme.Should().Be(AppTheme.MidnightTeal);
+                AssertActiveTheme(application!, canvas, Color.FromRgb(0x0E, 0x14, 0x18), Color.FromRgb(0x35, 0xC7, 0xB0));
             }
 
             AssertThemeSwitching();
         });
+    }
+
+    private static void AssertActiveTheme(
+        WpfApplication application,
+        System.Windows.Controls.Border canvas,
+        Color expectedCanvas,
+        Color expectedPrimary)
+    {
+        ((SolidColorBrush)application.Resources["CTK.Brush.Canvas"]).Color.Should().Be(expectedCanvas);
+        ((SolidColorBrush)application.Resources["Brush_AppBackground"]).Color.Should().Be(expectedCanvas);
+        ((SolidColorBrush)canvas.Background).Color.Should().Be(expectedCanvas);
+        ((LinearGradientBrush)application.Resources["Gradient_Primary"]).GradientStops[0].Color.Should().Be(expectedPrimary);
     }
 
     private static ResourceDictionary LoadColorDictionary(string theme)

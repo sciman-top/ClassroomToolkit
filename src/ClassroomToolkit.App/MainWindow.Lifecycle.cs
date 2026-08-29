@@ -250,7 +250,7 @@ public partial class MainWindow
         ExecuteLifecycleSafe(
             "main-message",
             operation,
-            () => System.Windows.MessageBox.Show(
+            () => TopmostMessageBox.Show(
                 this,
                 message,
                 "提示",
