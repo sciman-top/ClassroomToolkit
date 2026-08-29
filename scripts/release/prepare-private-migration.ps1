@@ -79,7 +79,7 @@ foreach ($relativePath in $candidates) {
     }
 }
 
-$payloadFiles = Get-ChildItem -LiteralPath $payloadRoot -Recurse -File | Sort-Object FullName
+$payloadFiles = @(Get-ChildItem -LiteralPath $payloadRoot -Recurse -File | Sort-Object FullName)
 if ($payloadFiles.Count -eq 0) {
     throw "No supported classroom data was found under: $resolvedSourceRoot"
 }
