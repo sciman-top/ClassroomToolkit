@@ -223,6 +223,73 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         ComputeInkHash(persisted!).Should().Be(ComputeInkHash(persistedStrokes));
     }
 
+    [Fact]
+    public void RecoverDirectory_ShouldPersistAcknowledgement_WhenWalCleanupIsLocked()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_recovery_ack.png");
+        File.WriteAllText(sourcePath, "x");
+        var staleStrokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M0,0 L1,1",
+                ColorHex = "#000000",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        _wal.Upsert(sourcePath, 1, staleStrokes, ComputeInkHash(staleStrokes));
+        _wal.FlushPending();
+
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        var acknowledgementPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal-ack.json");
+        using (var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var recovered = _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash);
+            recovered.Should().Be(1);
+            File.Exists(acknowledgementPath).Should().BeTrue();
+
+            var newerStrokes = new List<InkStrokeData>
+            {
+                new()
+                {
+                    Type = InkStrokeType.Shape,
+                    GeometryPath = "M8,8 L9,9",
+                    ColorHex = "#FF0000",
+                    Opacity = 255,
+                    BrushSize = 4
+                }
+            };
+            _persistence.SaveInkForFile(sourcePath, 1, newerStrokes);
+
+            using var restartedWhileLocked = new InkWriteAheadLogService();
+            restartedWhileLocked.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(0);
+            ComputeInkHash(_persistence.LoadInkPageForFile(sourcePath, 1)!)
+                .Should().Be(ComputeInkHash(newerStrokes));
+        }
+
+        using (var restartedAfterUnlock = new InkWriteAheadLogService())
+        {
+            restartedAfterUnlock.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(0);
+        }
+
+        File.Exists(walPath).Should().BeFalse();
+        File.Exists(acknowledgementPath).Should().BeFalse();
+        ComputeInkHash(_persistence.LoadInkPageForFile(sourcePath, 1)!)
+            .Should().Be(ComputeInkHash(new List<InkStrokeData>
+            {
+                new()
+                {
+                    Type = InkStrokeType.Shape,
+                    GeometryPath = "M8,8 L9,9",
+                    ColorHex = "#FF0000",
+                    Opacity = 255,
+                    BrushSize = 4
+                }
+            }));
+    }
+
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)
     {
         if (strokes == null || strokes.Count == 0)

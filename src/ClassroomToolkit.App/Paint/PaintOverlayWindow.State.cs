@@ -158,12 +158,12 @@ public partial class PaintOverlayWindow : Window
     private readonly Dictionary<int, BitmapSource> _pdfPageCache = new();
     private readonly LinkedList<int> _pdfPageOrder = new();
     private readonly object _pdfRenderLock = new();
-    private int _pdfPrefetchInFlight;
-    private int _pdfPrefetchToken;
+    private readonly LatestRequestCoordinator<PdfPrefetchRequest> _pdfPrefetchRequests = new();
     private readonly HashSet<int> _pdfPinnedPages = new();
-    private int _pdfVisiblePrefetchInFlight;
-    private int _pdfVisiblePrefetchToken;
+    private readonly LatestRequestCoordinator<int[]> _pdfVisiblePrefetchRequests = new();
     private int _photoLoadToken;
+
+    private readonly record struct PdfPrefetchRequest(int PageIndex, int Direction);
     private double _photoWheelZoomBase = PhotoWheelZoomBaseDefault;
     private double _photoGestureZoomSensitivity = PhotoZoomInputDefaults.GestureSensitivityDefault;
     private readonly HashSet<string> _neighborInkRenderPending = new(StringComparer.OrdinalIgnoreCase);

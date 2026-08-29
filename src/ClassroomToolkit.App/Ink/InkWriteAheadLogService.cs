@@ -23,6 +23,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
 {
     private const string InkFolderName = ".ctk-ink";
     private const string WalFileName = ".ink-wal.json";
+    private const string AcknowledgementFileName = ".ink-wal-ack.json";
     private const int FlushDelayMilliseconds = 400;
     private static readonly ConcurrentDictionary<string, object> WalFileLocks = new(StringComparer.OrdinalIgnoreCase);
 
@@ -107,14 +108,31 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 return 0;
             }
 
+            // An acknowledgement is written only after a sidecar has been saved but
+            // the WAL cannot be replaced/deleted (for example, a reader denied
+            // FileShare.Delete). It prevents a later process from replaying that
+            // already-applied entry over newer ink.
+            if (!TryLoadAcknowledgements(walPath, out var acknowledgements))
+            {
+                return 0;
+            }
+
             var recovered = 0;
             var keysToRemove = new List<string>();
+            var removedEntries = new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in map)
             {
                 var entry = pair.Value;
                 if (entry == null || string.IsNullOrWhiteSpace(entry.SourcePath) || entry.PageIndex <= 0)
                 {
                     keysToRemove.Add(pair.Key);
+                    continue;
+                }
+
+                if (IsAcknowledged(acknowledgements, pair.Key, entry))
+                {
+                    keysToRemove.Add(pair.Key);
+                    removedEntries[pair.Key] = entry;
                     continue;
                 }
 
@@ -140,6 +158,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
                     if (string.Equals(hashProvider(strokes), hashProvider(persisted), StringComparison.Ordinal))
                     {
                         keysToRemove.Add(pair.Key);
+                        removedEntries[pair.Key] = entry;
                         recovered++;
                     }
                 }
@@ -153,7 +172,14 @@ internal sealed class InkWriteAheadLogService : IDisposable
             {
                 map.Remove(key);
             }
-            _ = SaveMap(walPath, map);
+            if (SaveMap(walPath, map))
+            {
+                RemoveAcknowledgements(walPath, removedEntries);
+            }
+            else
+            {
+                PersistAcknowledgements(walPath, removedEntries);
+            }
             return recovered;
         }
     }
@@ -223,24 +249,43 @@ internal sealed class InkWriteAheadLogService : IDisposable
         }
 
         bool merged;
+        var removedEntries = new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            merged = TryLoadMap(walPath, out var map);
-            if (merged)
+            // Multiple overlay instances can target the same document directory.
+            // Keep their read-modify-write cycles under the shared path gate so a
+            // later writer cannot erase entries read by an earlier writer.
+            lock (GetWalFileLock(walPath))
             {
-                foreach (var pair in pending)
+                merged = TryLoadMap(walPath, out var map);
+                if (merged)
                 {
-                    if (pair.Value == null)
+                    foreach (var pair in pending)
                     {
-                        map.Remove(pair.Key);
+                        if (pair.Value == null)
+                        {
+                            if (map.TryGetValue(pair.Key, out var existing) && existing != null)
+                            {
+                                removedEntries[pair.Key] = existing;
+                            }
+                            map.Remove(pair.Key);
+                        }
+                        else
+                        {
+                            map[pair.Key] = pair.Value;
+                        }
+                    }
+
+                    merged = SaveMap(walPath, map);
+                    if (merged)
+                    {
+                        RemoveAcknowledgements(walPath, pending.Keys);
                     }
                     else
                     {
-                        map[pair.Key] = pair.Value;
+                        PersistAcknowledgements(walPath, removedEntries);
                     }
                 }
-
-                merged = SaveMap(walPath, map);
             }
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -280,6 +325,13 @@ internal sealed class InkWriteAheadLogService : IDisposable
     private static string GetWalPathInDirectory(string directory)
     {
         return Path.Combine(directory, InkFolderName, WalFileName);
+    }
+
+    private static string GetAcknowledgementPath(string walPath)
+    {
+        return Path.Combine(
+            Path.GetDirectoryName(walPath) ?? string.Empty,
+            AcknowledgementFileName);
     }
 
     private static object GetWalFileLock(string walPath)
@@ -340,6 +392,118 @@ internal sealed class InkWriteAheadLogService : IDisposable
         }
     }
 
+    private bool TryLoadAcknowledgements(
+        string walPath,
+        out Dictionary<string, InkWalAcknowledgement> acknowledgements)
+    {
+        var acknowledgementPath = GetAcknowledgementPath(walPath);
+        if (!File.Exists(acknowledgementPath))
+        {
+            acknowledgements = new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
+            return true;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(acknowledgementPath);
+            var parsed = JsonSerializer.Deserialize<Dictionary<string, InkWalAcknowledgement>>(json, _options);
+            acknowledgements = parsed != null
+                ? new Dictionary<string, InkWalAcknowledgement>(parsed, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
+            return true;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkWAL] failed to load acknowledgement path={acknowledgementPath} ex={ex.GetType().Name} msg={ex.Message}");
+            acknowledgements = new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
+            return false;
+        }
+    }
+
+    private bool SaveAcknowledgements(
+        string walPath,
+        Dictionary<string, InkWalAcknowledgement> acknowledgements)
+    {
+        var acknowledgementPath = GetAcknowledgementPath(walPath);
+        try
+        {
+            if (acknowledgements.Count == 0)
+            {
+                if (File.Exists(acknowledgementPath))
+                {
+                    File.Delete(acknowledgementPath);
+                }
+                return true;
+            }
+
+            var json = JsonSerializer.Serialize(acknowledgements, _options);
+            InkAtomicFileWriter.WriteAllText(acknowledgementPath, json, "[InkWAL]");
+            return true;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkWAL] failed to save acknowledgement path={acknowledgementPath} ex={ex.GetType().Name} msg={ex.Message}");
+            return false;
+        }
+    }
+
+    private static bool IsAcknowledged(
+        IReadOnlyDictionary<string, InkWalAcknowledgement> acknowledgements,
+        string key,
+        InkWalEntry entry)
+    {
+        return acknowledgements.TryGetValue(key, out var acknowledgement)
+            && string.Equals(acknowledgement.Hash, entry.Hash, StringComparison.Ordinal)
+            && acknowledgement.UpdatedAt == entry.UpdatedAt;
+    }
+
+    private void PersistAcknowledgements(
+        string walPath,
+        IReadOnlyDictionary<string, InkWalEntry> entries)
+    {
+        if (entries.Count == 0 || !TryLoadAcknowledgements(walPath, out var acknowledgements))
+        {
+            return;
+        }
+
+        foreach (var pair in entries)
+        {
+            acknowledgements[pair.Key] = new InkWalAcknowledgement
+            {
+                Hash = pair.Value.Hash,
+                UpdatedAt = pair.Value.UpdatedAt
+            };
+        }
+
+        _ = SaveAcknowledgements(walPath, acknowledgements);
+    }
+
+    private void RemoveAcknowledgements(
+        string walPath,
+        IReadOnlyDictionary<string, InkWalEntry> entries)
+    {
+        RemoveAcknowledgements(walPath, entries.Keys);
+    }
+
+    private void RemoveAcknowledgements(string walPath, IEnumerable<string> keys)
+    {
+        if (!TryLoadAcknowledgements(walPath, out var acknowledgements))
+        {
+            return;
+        }
+
+        var removed = false;
+        foreach (var key in keys)
+        {
+            removed |= acknowledgements.Remove(key);
+        }
+
+        if (removed)
+        {
+            _ = SaveAcknowledgements(walPath, acknowledgements);
+        }
+    }
+
     private sealed class InkWalEntry
     {
         public string SourcePath { get; set; } = string.Empty;
@@ -347,5 +511,11 @@ internal sealed class InkWriteAheadLogService : IDisposable
         public string Hash { get; set; } = string.Empty;
         public DateTime UpdatedAt { get; set; }
         public List<InkStrokeData> Strokes { get; set; } = new();
+    }
+
+    private sealed class InkWalAcknowledgement
+    {
+        public string Hash { get; set; } = string.Empty;
+        public DateTime UpdatedAt { get; set; }
     }
 }

@@ -144,10 +144,8 @@ public partial class PaintOverlayWindow
             _pdfCacheCurrentBytes = 0;
             _pdfPageOrder.Clear();
             _pdfPinnedPages.Clear();
-            Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
-            Interlocked.Increment(ref _pdfPrefetchToken);
-            Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
-            Interlocked.Increment(ref _pdfVisiblePrefetchToken);
+            _pdfPrefetchRequests.Invalidate();
+            _pdfVisiblePrefetchRequests.Invalidate();
         }
     }
 
@@ -162,10 +160,8 @@ public partial class PaintOverlayWindow
             _pdfCacheCurrentBytes = 0;
             _pdfPageOrder.Clear();
             _pdfPinnedPages.Clear();
-            Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
-            Interlocked.Increment(ref _pdfPrefetchToken);
-            Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
-            Interlocked.Increment(ref _pdfVisiblePrefetchToken);
+            _pdfPrefetchRequests.Invalidate();
+            _pdfVisiblePrefetchRequests.Invalidate();
         }
     }
 
@@ -372,13 +368,30 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (Interlocked.Exchange(ref _pdfPrefetchInFlight, 1) == 1)
+        if (!_pdfPrefetchRequests.TryBegin(
+                new PdfPrefetchRequest(pageIndex, direction),
+                out var ticket))
         {
-            Interlocked.Increment(ref _pdfPrefetchToken);
             return;
         }
-        var token = _pdfPrefetchToken;
+
+        StartPdfPrefetch(ticket);
+    }
+
+    private void StartPdfPrefetch(LatestRequestTicket<PdfPrefetchRequest> ticket)
+    {
+        if (!CanUsePdfDocument() || !_pdfPrefetchRequests.IsCurrent(ticket))
+        {
+            OnPdfPrefetchCompleted(ticket);
+            return;
+        }
+
         var lifecycleToken = _overlayLifecycleCancellation.Token;
+        if (lifecycleToken.IsCancellationRequested)
+        {
+            _pdfPrefetchRequests.Invalidate();
+            return;
+        }
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePdfPrefetch",
             async cancellationToken =>
@@ -393,15 +406,15 @@ public partial class PaintOverlayWindow
                         await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                     }
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (token != _pdfPrefetchToken || !IsPdfModeActive())
+                    if (!_pdfPrefetchRequests.IsCurrent(ticket) || !IsPdfModeActive())
                     {
                         return;
                     }
-                    PrefetchPdfNeighbors(pageIndex, direction, token);
+                    PrefetchPdfNeighbors(ticket.Request.PageIndex, ticket.Request.Direction, ticket);
                 }
                 finally
                 {
-                    OnPdfPrefetchCompleted(token);
+                    OnPdfPrefetchCompleted(ticket);
                 }
             },
             lifecycleToken,
@@ -427,12 +440,28 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var token = Interlocked.Increment(ref _pdfVisiblePrefetchToken);
-        if (Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 1) == 1)
+        if (!_pdfVisiblePrefetchRequests.TryBegin(unique, out var ticket))
         {
             return;
         }
+
+        StartPdfVisiblePrefetch(ticket);
+    }
+
+    private void StartPdfVisiblePrefetch(LatestRequestTicket<int[]> ticket)
+    {
+        if (!CanUsePdfDocument() || !_pdfVisiblePrefetchRequests.IsCurrent(ticket))
+        {
+            OnPdfVisiblePrefetchCompleted(ticket);
+            return;
+        }
+
         var lifecycleToken = _overlayLifecycleCancellation.Token;
+        if (lifecycleToken.IsCancellationRequested)
+        {
+            _pdfVisiblePrefetchRequests.Invalidate();
+            return;
+        }
         _ = SafeTaskRunner.Run(
             "PaintOverlayWindow.SchedulePdfVisiblePrefetch",
             cancellationToken =>
@@ -440,10 +469,10 @@ public partial class PaintOverlayWindow
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    foreach (var pageIndex in unique)
+                    foreach (var pageIndex in ticket.Request)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (token != _pdfVisiblePrefetchToken)
+                        if (!_pdfVisiblePrefetchRequests.IsCurrent(ticket))
                         {
                             return;
                         }
@@ -456,7 +485,7 @@ public partial class PaintOverlayWindow
                 }
                 finally
                 {
-                    OnPdfVisiblePrefetchCompleted(token);
+                    OnPdfVisiblePrefetchCompleted(ticket);
                 }
             },
             lifecycleToken,
@@ -464,52 +493,84 @@ public partial class PaintOverlayWindow
                 $"[PdfPrefetch] visible-prefetch failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
-    private void OnPdfPrefetchCompleted(int token)
+    private void OnPdfPrefetchCompleted(LatestRequestTicket<PdfPrefetchRequest> ticket)
     {
-        Interlocked.Exchange(ref _pdfPrefetchInFlight, 0);
-    }
-
-    private void OnPdfVisiblePrefetchCompleted(int token)
-    {
-        Interlocked.Exchange(ref _pdfVisiblePrefetchInFlight, 0);
-        if (token == _pdfVisiblePrefetchToken)
+        if (_pdfPrefetchRequests.TryComplete(ticket, out var nextTicket))
         {
-            var scheduled = TryBeginInvoke(() =>
-            {
-                if (ShouldRefreshCrossPagePdfDisplay())
-                {
-                    UpdateCrossPageDisplay();
-                }
-            }, DispatcherPriority.Background);
-            if (!scheduled && Dispatcher.CheckAccess())
-            {
-                if (ShouldRefreshCrossPagePdfDisplay())
-                {
-                    UpdateCrossPageDisplay();
-                }
-            }
+            DispatchPdfPrefetch(nextTicket);
         }
     }
 
-    private void PrefetchPdfNeighbors(int pageIndex, int direction, int token)
+    private void DispatchPdfPrefetch(LatestRequestTicket<PdfPrefetchRequest> ticket)
+    {
+        var scheduled = TryBeginInvoke(
+            () => StartPdfPrefetch(ticket),
+            DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            StartPdfPrefetch(ticket);
+        }
+    }
+
+    private void OnPdfVisiblePrefetchCompleted(LatestRequestTicket<int[]> ticket)
+    {
+        if (_pdfVisiblePrefetchRequests.TryComplete(ticket, out var nextTicket))
+        {
+            DispatchPdfVisiblePrefetch(nextTicket);
+            return;
+        }
+
+        if (!_pdfVisiblePrefetchRequests.IsCurrent(ticket))
+        {
+            return;
+        }
+
+        var scheduled = TryBeginInvoke(() =>
+        {
+            if (ShouldRefreshCrossPagePdfDisplay())
+            {
+                UpdateCrossPageDisplay();
+            }
+        }, DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess() && ShouldRefreshCrossPagePdfDisplay())
+        {
+            UpdateCrossPageDisplay();
+        }
+    }
+
+    private void DispatchPdfVisiblePrefetch(LatestRequestTicket<int[]> ticket)
+    {
+        var scheduled = TryBeginInvoke(
+            () => StartPdfVisiblePrefetch(ticket),
+            DispatcherPriority.Background);
+        if (!scheduled && Dispatcher.CheckAccess())
+        {
+            StartPdfVisiblePrefetch(ticket);
+        }
+    }
+
+    private void PrefetchPdfNeighbors(
+        int pageIndex,
+        int direction,
+        LatestRequestTicket<PdfPrefetchRequest> ticket)
     {
         var next = pageIndex + 1;
         var prev = pageIndex - 1;
         if (direction < 0)
         {
-            if (!PrefetchPdfPage(prev, token))
+            if (!PrefetchPdfPage(prev, ticket))
             {
-                PrefetchPdfPage(next, token);
+                PrefetchPdfPage(next, ticket);
             }
             return;
         }
-        if (!PrefetchPdfPage(next, token))
+        if (!PrefetchPdfPage(next, ticket))
         {
-            PrefetchPdfPage(prev, token);
+            PrefetchPdfPage(prev, ticket);
         }
     }
 
-    private bool PrefetchPdfPage(int pageIndex, int token)
+    private bool PrefetchPdfPage(int pageIndex, LatestRequestTicket<PdfPrefetchRequest> ticket)
     {
         if (pageIndex < 1 || pageIndex > _pdfPageCount)
         {
@@ -525,7 +586,7 @@ public partial class PaintOverlayWindow
         }
         try
         {
-            if (token != _pdfPrefetchToken || _pdfDocument == null || _pdfPageCount <= 0)
+            if (!_pdfPrefetchRequests.IsCurrent(ticket) || _pdfDocument == null || _pdfPageCount <= 0)
             {
                 return false;
             }
