@@ -2,11 +2,34 @@ namespace ClassroomToolkit.Domain.Utilities;
 
 public static class AtomicFileReplaceUtility
 {
+    private const int TransientReplaceRetryCount = 3;
+    private const int TransientReplaceRetryDelayMilliseconds = 50;
+
     public static void ReplaceOrOverwrite(string tempPath, string targetPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tempPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
 
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                ReplaceOrOverwriteCore(tempPath, targetPath);
+                return;
+            }
+            catch (IOException) when (attempt < TransientReplaceRetryCount)
+            {
+                Thread.Sleep(TransientReplaceRetryDelayMilliseconds);
+            }
+            catch (UnauthorizedAccessException) when (attempt < TransientReplaceRetryCount)
+            {
+                Thread.Sleep(TransientReplaceRetryDelayMilliseconds);
+            }
+        }
+    }
+
+    private static void ReplaceOrOverwriteCore(string tempPath, string targetPath)
+    {
         try
         {
             File.Replace(tempPath, targetPath, null);

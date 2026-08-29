@@ -114,4 +114,38 @@ public sealed class AtomicFileReplaceUtilityTests
             }
         }
     }
+
+    [Fact]
+    public async Task WriteAtomically_ShouldRetryWhenTargetLockIsReleasedQuickly()
+    {
+        var targetPath = TestPathHelper.CreateFilePath("ctool_atomic_write_retry", ".json");
+        var rootPath = Path.GetDirectoryName(targetPath)!;
+        File.WriteAllText(targetPath, "old");
+        var lockStream = new FileStream(targetPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var releaseLock = Task.Run(async () =>
+        {
+            await Task.Delay(75, TestContext.Current.CancellationToken);
+            lockStream.Dispose();
+        }, TestContext.Current.CancellationToken);
+
+        try
+        {
+            AtomicFileReplaceUtility.WriteAtomically(
+                targetPath,
+                tempPath => File.WriteAllText(tempPath, "new"));
+
+            await releaseLock;
+            File.ReadAllText(targetPath).Should().Be("new");
+            Directory.GetFiles(rootPath, $"{Path.GetFileName(targetPath)}.*.tmp").Should().BeEmpty();
+        }
+        finally
+        {
+            lockStream.Dispose();
+            await releaseLock;
+            if (File.Exists(targetPath))
+            {
+                File.Delete(targetPath);
+            }
+        }
+    }
 }
