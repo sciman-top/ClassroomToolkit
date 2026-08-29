@@ -1,10 +1,44 @@
 {
-  "generated_at_utc": "2026-06-24T13:04:42.3065016Z",
-  "configuration": "Debug",
+  "generated_at_utc": "2026-08-29T11:40:51.8526518Z",
+  "configuration": "Release",
   "scope": "src-projects",
   "analysis_level": "latest-all",
-  "diagnostics_total": 0,
-  "project_counts": [],
-  "rule_counts": [],
+  "diagnostics_total": 16,
+  "project_counts": [
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "count": 12
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "count": 2
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "count": 2
+    }
+  ],
+  "rule_counts": [
+    {
+      "rule": "CA1003",
+      "count": 1
+    },
+    {
+      "rule": "CA1515",
+      "count": 4
+    },
+    {
+      "rule": "CA2007",
+      "count": 6
+    },
+    {
+      "rule": "CA2213",
+      "count": 1
+    },
+    {
+      "rule": "CA5394",
+      "count": 4
+    }
+  ],
   "diagnostics": []
 }
