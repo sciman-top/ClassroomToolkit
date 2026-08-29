@@ -116,6 +116,68 @@ public sealed class ThemeContractTests
         });
     }
 
+    [Fact]
+    public void AppearanceDialog_ShouldApplyTheSelectedThemeToItsVisibleShell()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var application = (ClassroomToolkit.App.App)WpfApplication.Current;
+            var manager = new ThemeManager(application);
+            manager.Apply(AppTheme.MidnightTeal).Should().BeTrue();
+
+            var dialog = new ClassroomToolkit.App.AppearanceDialog(AppTheme.MidnightTeal.ToString());
+            dialog.ThemeSelected += theme => manager.Apply(theme);
+
+            try
+            {
+                dialog.Show();
+                application.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render,
+                    static () => { });
+
+                var shell = dialog.Content.Should().BeOfType<System.Windows.Controls.Border>().Subject;
+                ((SolidColorBrush)shell.Background).Color.Should().Be(Color.FromRgb(0x11, 0x1A, 0x1F));
+
+                var lightRadio = dialog.FindName("LightRadio")
+                    .Should().BeOfType<System.Windows.Controls.RadioButton>().Subject;
+                var blackboardRadio = dialog.FindName("BlackboardRadio")
+                    .Should().BeOfType<System.Windows.Controls.RadioButton>().Subject;
+                var midnightTealRadio = dialog.FindName("MidnightTealRadio")
+                    .Should().BeOfType<System.Windows.Controls.RadioButton>().Subject;
+
+                blackboardRadio.IsChecked = true;
+                application.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render,
+                    static () => { });
+                manager.CurrentTheme.Should().Be(AppTheme.Blackboard);
+                ((SolidColorBrush)shell.Background).Color.Should().Be(Color.FromRgb(0x13, 0x1E, 0x1A));
+
+                lightRadio.IsChecked = true;
+                application.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render,
+                    static () => { });
+
+                manager.CurrentTheme.Should().Be(AppTheme.Light);
+                ((SolidColorBrush)application.Resources["CTK.Brush.Window"]).Color
+                    .Should().Be(Color.FromRgb(0xFA, 0xFC, 0xFC));
+                ((SolidColorBrush)shell.Background).Color.Should().Be(Color.FromRgb(0xFA, 0xFC, 0xFC));
+
+                midnightTealRadio.IsChecked = true;
+                application.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render,
+                    static () => { });
+                manager.CurrentTheme.Should().Be(AppTheme.MidnightTeal);
+                ((SolidColorBrush)shell.Background).Color.Should().Be(Color.FromRgb(0x11, 0x1A, 0x1F));
+            }
+            finally
+            {
+                dialog.Close();
+                manager.Apply(AppTheme.MidnightTeal).Should().BeTrue();
+            }
+        });
+    }
+
     private static void AssertActiveTheme(
         WpfApplication application,
         System.Windows.Controls.Border canvas,

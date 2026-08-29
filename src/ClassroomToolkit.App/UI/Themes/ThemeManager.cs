@@ -4,14 +4,15 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using WpfApplication = System.Windows.Application;
-using WpfColor = System.Windows.Media.Color;
 
 namespace ClassroomToolkit.App.UI.Themes;
 
 public sealed class ThemeManager
 {
+    private static readonly string ResourceAssemblyName =
+        Uri.EscapeDataString(typeof(ThemeManager).Assembly.GetName().Name ?? "ClassroomToolkit.App");
     private static readonly string ThemeResourceName =
-        $"{Uri.EscapeDataString(typeof(ThemeManager).Assembly.GetName().Name ?? "ClassroomToolkit.App")};component/UI/Themes/Colors.";
+        $"{ResourceAssemblyName};component/UI/Themes/Colors.";
     private readonly WpfApplication _application;
     private ResourceDictionary? _activeColorDictionary;
 
@@ -26,29 +27,27 @@ public sealed class ThemeManager
     public bool Apply(AppTheme theme)
     {
         var normalized = Enum.IsDefined(theme) ? theme : ThemePreferenceService.DefaultTheme;
-        var nextDictionary = new ResourceDictionary
+        var nextColors = new ResourceDictionary
         {
-            Source = new Uri(
-                $"/{ThemeResourceName}{normalized}.xaml",
-                UriKind.Relative)
+            Source = new Uri($"/{ThemeResourceName}{normalized}.xaml", UriKind.Relative)
         };
 
-        if (!TryReplaceColorDictionary(nextDictionary, out var previousDictionary))
+        if (!TryReplaceColorDictionary(nextColors))
         {
             Debug.WriteLine($"[Theme] color dictionary not found; theme={normalized}");
             return false;
         }
 
-        RefreshExistingThemeResources(previousDictionary, nextDictionary);
+        RefreshDynamicThemeDictionaries(_application.Resources, new HashSet<ResourceDictionary>());
         CurrentTheme = normalized;
         return true;
     }
 
-    private bool TryReplaceColorDictionary(ResourceDictionary nextDictionary, out ResourceDictionary previousDictionary)
+    private bool TryReplaceColorDictionary(ResourceDictionary nextColors)
     {
         foreach (var dictionary in _application.Resources.MergedDictionaries)
         {
-            if (TryReplaceNestedDictionary(dictionary, nextDictionary, out previousDictionary))
+            if (TryReplaceNestedColorDictionary(dictionary, nextColors))
             {
                 return true;
             }
@@ -59,78 +58,38 @@ public sealed class ThemeManager
             var index = _application.Resources.MergedDictionaries.IndexOf(_activeColorDictionary);
             if (index >= 0)
             {
-                previousDictionary = _activeColorDictionary;
-                _application.Resources.MergedDictionaries[index] = nextDictionary;
-                _activeColorDictionary = nextDictionary;
+                _application.Resources.MergedDictionaries[index] = nextColors;
+                _activeColorDictionary = nextColors;
                 return true;
             }
         }
 
-        previousDictionary = null!;
         return false;
     }
 
-    private bool TryReplaceNestedDictionary(
-        ResourceDictionary owner,
-        ResourceDictionary nextDictionary,
-        out ResourceDictionary previousDictionary)
+    private bool TryReplaceNestedColorDictionary(ResourceDictionary owner, ResourceDictionary nextColors)
     {
         for (var index = 0; index < owner.MergedDictionaries.Count; index++)
         {
             var candidate = owner.MergedDictionaries[index];
-            if (IsThemeDictionary(candidate))
+            if (IsColorDictionary(candidate))
             {
-                previousDictionary = candidate;
-                owner.MergedDictionaries[index] = nextDictionary;
-                _activeColorDictionary = nextDictionary;
+                owner.MergedDictionaries[index] = nextColors;
+                _activeColorDictionary = nextColors;
                 return true;
             }
 
-            if (TryReplaceNestedDictionary(candidate, nextDictionary, out previousDictionary))
+            if (TryReplaceNestedColorDictionary(candidate, nextColors))
             {
                 return true;
             }
         }
 
-        previousDictionary = null!;
         return false;
     }
 
-    private void RefreshExistingThemeResources(
-        ResourceDictionary previousColors,
-        ResourceDictionary nextColors)
-    {
-        var replacements = BuildColorReplacements(previousColors, nextColors);
-        if (replacements.Count == 0)
-        {
-            return;
-        }
-
-        var visited = new HashSet<ResourceDictionary>();
-        RefreshDictionary(_application.Resources, replacements, visited);
-    }
-
-    private static Dictionary<WpfColor, WpfColor> BuildColorReplacements(
-        ResourceDictionary previousColors,
-        ResourceDictionary nextColors)
-    {
-        var replacements = new Dictionary<WpfColor, WpfColor>();
-        foreach (DictionaryEntry entry in previousColors)
-        {
-            if (entry.Key is not string key || entry.Value is not WpfColor previous || nextColors[key] is not WpfColor next)
-            {
-                continue;
-            }
-
-            replacements[previous] = next;
-        }
-
-        return replacements;
-    }
-
-    private static void RefreshDictionary(
+    private static void RefreshDynamicThemeDictionaries(
         ResourceDictionary dictionary,
-        IReadOnlyDictionary<WpfColor, WpfColor> replacements,
         ISet<ResourceDictionary> visited)
     {
         if (!visited.Add(dictionary))
@@ -138,59 +97,79 @@ public sealed class ThemeManager
             return;
         }
 
-        if (IsDynamicThemeResourceDictionary(dictionary))
-        {
-            foreach (DictionaryEntry entry in dictionary)
-            {
-                switch (entry.Value)
-                {
-                    case SolidColorBrush brush when !brush.IsFrozen:
-                        RefreshBrushColor(brush, replacements);
-                        break;
-                    case GradientBrush gradient when !gradient.IsFrozen:
-                        foreach (var stop in gradient.GradientStops)
-                        {
-                            RefreshGradientStopColor(stop, replacements);
-                        }
-                        break;
-                    case DropShadowEffect shadow when !shadow.IsFrozen:
-                        RefreshShadowColor(shadow, replacements);
-                        break;
-                }
-            }
-        }
-
         foreach (var child in dictionary.MergedDictionaries)
         {
-            RefreshDictionary(child, replacements, visited);
+            if (IsDynamicThemeResourceDictionary(child))
+            {
+                RefreshDynamicThemeResources(child);
+                continue;
+            }
+
+            RefreshDynamicThemeDictionaries(child, visited);
         }
     }
 
-    private static void RefreshBrushColor(SolidColorBrush brush, IReadOnlyDictionary<WpfColor, WpfColor> replacements)
+    private static void RefreshDynamicThemeResources(ResourceDictionary dictionary)
     {
-        if (replacements.TryGetValue(brush.Color, out var replacement))
+        var refreshed = CreateDynamicThemeResourceDictionary(dictionary);
+        var entries = dictionary.Cast<DictionaryEntry>().ToArray();
+
+        foreach (var entry in entries)
         {
-            brush.Color = replacement;
+            if (!refreshed.Contains(entry.Key))
+            {
+                continue;
+            }
+
+            ApplyThemeResource(dictionary, entry.Key, entry.Value, refreshed[entry.Key]);
         }
     }
 
-    private static void RefreshGradientStopColor(GradientStop stop, IReadOnlyDictionary<WpfColor, WpfColor> replacements)
+    private static void ApplyThemeResource(
+        ResourceDictionary owner,
+        object key,
+        object? current,
+        object? refreshed)
     {
-        if (replacements.TryGetValue(stop.Color, out var replacement))
+        switch (current)
         {
-            stop.Color = replacement;
+            case SolidColorBrush currentBrush when refreshed is SolidColorBrush refreshedBrush:
+                if (currentBrush.IsFrozen)
+                {
+                    owner[key] = refreshedBrush;
+                }
+                else
+                {
+                    currentBrush.Color = refreshedBrush.Color;
+                }
+                break;
+            case GradientBrush currentGradient when refreshed is GradientBrush refreshedGradient:
+                if (currentGradient.IsFrozen || currentGradient.GradientStops.Count != refreshedGradient.GradientStops.Count)
+                {
+                    owner[key] = refreshedGradient;
+                }
+                else
+                {
+                    for (var index = 0; index < currentGradient.GradientStops.Count; index++)
+                    {
+                        currentGradient.GradientStops[index].Color = refreshedGradient.GradientStops[index].Color;
+                    }
+                }
+                break;
+            case DropShadowEffect currentShadow when refreshed is DropShadowEffect refreshedShadow:
+                if (currentShadow.IsFrozen)
+                {
+                    owner[key] = refreshedShadow;
+                }
+                else
+                {
+                    currentShadow.Color = refreshedShadow.Color;
+                }
+                break;
         }
     }
 
-    private static void RefreshShadowColor(DropShadowEffect shadow, IReadOnlyDictionary<WpfColor, WpfColor> replacements)
-    {
-        if (replacements.TryGetValue(shadow.Color, out var replacement))
-        {
-            shadow.Color = replacement;
-        }
-    }
-
-    private static bool IsThemeDictionary(ResourceDictionary dictionary)
+    private static bool IsColorDictionary(ResourceDictionary dictionary)
     {
         return dictionary.Source?.OriginalString.Contains("Colors.", StringComparison.OrdinalIgnoreCase) == true;
     }
@@ -200,5 +179,16 @@ public sealed class ThemeManager
         return dictionary.Keys.Cast<object>().Any(key =>
             string.Equals(key as string, "CTK.Brush.Canvas", StringComparison.Ordinal) ||
             string.Equals(key as string, "Brush_AppBackground", StringComparison.Ordinal));
+    }
+
+    private static ResourceDictionary CreateDynamicThemeResourceDictionary(ResourceDictionary dictionary)
+    {
+        var resourcePath = dictionary.Contains("CTK.Brush.Canvas")
+            ? "UI/Themes/SemanticBrushes.xaml"
+            : "Assets/Styles/LegacyAliases.xaml";
+        return new ResourceDictionary
+        {
+            Source = new Uri($"/{ResourceAssemblyName};component/{resourcePath}", UriKind.Relative)
+        };
     }
 }
