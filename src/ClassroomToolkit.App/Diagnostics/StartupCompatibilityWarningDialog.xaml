@@ -11,7 +11,7 @@
         Background="{x:Null}"
         Topmost="True">
 
-    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+    <Border Style="{StaticResource Style_ManagementShellWindowBorder}" TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -22,13 +22,13 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_ManagementShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Warning}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Info}" Fill="{DynamicResource Brush_Warning}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="兼容提示" Style="{StaticResource Style_ManagementShellTitleText}" Margin="0"/>
                     <TextBlock Text="兼容优先" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_ManagementShellCloseButton}" Click="OnContinueClick" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
@@ -45,34 +45,34 @@
                         <TextBlock x:Name="SummaryText"
                                    FontWeight="SemiBold"
                                    FontSize="{StaticResource FontSize_Title_Dialog}"
-                                   Foreground="{StaticResource Brush_Text_Primary}"
+                                   Foreground="{DynamicResource Brush_Text_Primary}"
                                    TextWrapping="Wrap"/>
                     </Border>
 
                     <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
-                        <TabItem Header="详情">
+                        <TabItem Header="详情" Style="{StaticResource CTK.TabItem}">
                             <TextBox x:Name="DetailBox"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
                                      Padding="10"
-                                     Background="{StaticResource Brush_InputBackground}"
-                                     Foreground="{StaticResource Brush_Text_Primary}"
+                                     Background="{DynamicResource Brush_InputBackground}"
+                                     Foreground="{DynamicResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
                                      FontSize="{StaticResource FontSize_Body_S}"
                                      Margin="0,8,0,0"
                                      BorderThickness="0"/>
                         </TabItem>
-                        <TabItem Header="建议">
+                        <TabItem Header="建议" Style="{StaticResource CTK.TabItem}">
                             <TextBox x:Name="SuggestionBox"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
                                      Padding="10"
-                                     Background="{StaticResource Brush_InputBackground}"
-                                     Foreground="{StaticResource Brush_Text_Primary}"
+                                     Background="{DynamicResource Brush_InputBackground}"
+                                     Foreground="{DynamicResource Brush_Text_Primary}"
                                      FontFamily="Consolas"
                                      FontSize="{StaticResource FontSize_Body_S}"
                                      Margin="0,8,0,0"
@@ -82,7 +82,7 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0,0,14,14">
+            <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="{StaticResource CTK.Radius.Footer}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -90,6 +90,7 @@
                     </Grid.RowDefinitions>
 
                     <CheckBox x:Name="SuppressCheckBox"
+                              Style="{StaticResource CTK.CheckBox}"
                               Grid.Row="0"
                               Content="本问题不再提示"
                               VerticalAlignment="Center"
@@ -110,20 +111,20 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="OpenReportButton"
                                     Content="诊断报告"
-                                    Style="{StaticResource Style_SecondaryButton}"
+                                    Style="{StaticResource CTK.Button.Secondary}"
                                     Width="96"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     Margin="0,0,8,0"
                                     Click="OnOpenReportClick"/>
                             <Button x:Name="CopyDiagnosticsButton"
                                     Content="复制诊断"
-                                    Style="{StaticResource Style_SecondaryButton}"
+                                    Style="{StaticResource CTK.Button.Secondary}"
                                     Width="96"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     Margin="0,0,8,0"
                                     Click="OnCopyDiagnosticsClick"/>
                             <Button Content="继续启动"
-                                    Style="{StaticResource Style_PrimaryButton}"
+                                    Style="{StaticResource CTK.Button.Primary}"
                                     Width="92"
                                     Height="{StaticResource Size_Button_Action_Height_Compact}"
                                     Click="OnContinueClick"/>

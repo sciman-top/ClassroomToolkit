@@ -11,7 +11,7 @@
         Background="{x:Null}">
 
     <Border Style="{StaticResource Style_DialogShellWindowBorder}"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+            TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -22,12 +22,12 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_List}" Fill="{DynamicResource Brush_Primary}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="选择班级" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
             <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>

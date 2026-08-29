@@ -17,14 +17,14 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
 
-        <Style x:Key="Style_RollCallBottomBarTextButton" TargetType="Button" BasedOn="{StaticResource Style_SecondaryButton}">
+        <Style x:Key="Style_RollCallBottomBarTextButton" TargetType="Button" BasedOn="{StaticResource CTK.Button.Secondary}">
             <Setter Property="Height" Value="32"/>
             <Setter Property="MinWidth" Value="60"/>
             <Setter Property="Margin" Value="3,0"/>
             <Setter Property="Padding" Value="10,5"/>
         </Style>
 
-        <Style x:Key="Style_RollCallBottomBarAccentButton" TargetType="Button" BasedOn="{StaticResource Style_Button_Amber}">
+        <Style x:Key="Style_RollCallBottomBarAccentButton" TargetType="Button" BasedOn="{StaticResource CTK.Button.Warning}">
             <Setter Property="Height" Value="32"/>
             <Setter Property="MinWidth" Value="60"/>
             <Setter Property="Margin" Value="3,0"/>
@@ -40,14 +40,14 @@
 
     <!-- 1. 主容器：圆角+深邃阴影 -->
     <Border Style="{StaticResource Style_WorkShellWindowBorder}"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+            TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Dialog"/>
         </Border.Effect>
 
         <Grid x:Name="RootGrid" MouseLeftButtonDown="OnBackgroundDrag" Background="Transparent">
             <Grid.RowDefinitions>
-                <RowDefinition Height="48"/>
+                <RowDefinition Height="{StaticResource CTK.GridLength.TitleBar}"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -63,17 +63,17 @@
                 <!-- 左侧：模式切换与班级 -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="18,0,0,0">
                     <!-- 模式切换按钮 (胶囊型) -->
-                    <Button Style="{StaticResource Style_SecondaryButton}"
+                    <Button Style="{StaticResource CTK.Button.Secondary}"
                             Click="OnToggleModeClick"
                             Padding="12,5"
                             Margin="0,0,8,0"
                             Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="102"
                             ToolTip="切换模式"
-                            Background="{StaticResource Brush_InputBackground}"
+                            Background="{DynamicResource Brush_InputBackground}"
                             BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <Path Fill="{StaticResource Brush_Primary}" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Stretch="Uniform" Margin="0,0,7,0">
+                            <Path Fill="{DynamicResource Brush_Primary}" Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Stretch="Uniform" Margin="0,0,7,0">
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Data" Value="{StaticResource Icon_RollCall}"/>
@@ -85,23 +85,23 @@
                                     </Style>
                                 </Path.Style>
                             </Path>
-                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                            <TextBlock Text="{Binding ModeToggleLabel}" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Primary}"/>
                         </StackPanel>
                     </Button>
 
                     <!-- 班级选择 -->
-                    <Button Style="{StaticResource Style_SecondaryButton}"
+                    <Button Style="{StaticResource CTK.Button.Secondary}"
                             Click="OnClassSelectClick"
                             Padding="12,5"
                             Height="{StaticResource Size_Button_Action_Height_Compact}"
                             MinWidth="108"
-                            Background="{StaticResource Brush_InputBackground}"
+                            Background="{DynamicResource Brush_InputBackground}"
                             BorderThickness="1"
                             Visibility="{Binding IsRollCallMode, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding ClassButtonLabel}"
                                    FontWeight="SemiBold"
                                    FontSize="{StaticResource FontSize_Body_S}"
-                                   Foreground="{StaticResource Brush_Text_Primary}"
+                                   Foreground="{DynamicResource Brush_Text_Primary}"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="144"/>
                     </Button>
@@ -109,18 +109,18 @@
 
                 <!-- 右侧：窗口控制 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnSettingsClick" ToolTip="点名设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform"
+                    <Button Style="{StaticResource CTK.IconButton}" Click="OnSettingsClick" ToolTip="点名设置">
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource Brush_Teaching}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
 
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnMinimizeClick" ToolTip="最小化并继续" Margin="4,0,0,0">
-                        <Path Data="{StaticResource Icon_Minimize}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Button Style="{StaticResource CTK.IconButton}" Click="OnMinimizeClick" ToolTip="最小化并继续" Margin="4,0,0,0">
+                        <Path Data="{StaticResource Icon_Minimize}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
                     
-                    <Button Style="{StaticResource Style_IconButton}" Click="OnCloseClick" ToolTip="关闭" Margin="4,0,0,0">
-                        <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Button Style="{StaticResource CTK.IconButton}" Click="OnCloseClick" ToolTip="关闭" Margin="4,0,0,0">
+                        <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
                 </StackPanel>
@@ -138,7 +138,7 @@
                     <!-- 左侧：名字卡片 (重点展示) -->
                     <Border x:Name="RollNameCard" Grid.Column="0" 
                             CornerRadius="{StaticResource Radius_Shell_Work}"
-                            BorderBrush="{StaticResource Brush_Border_Strong}"
+                            BorderBrush="{DynamicResource Brush_Border_Strong}"
                             BorderThickness="1"
                             MouseLeftButtonUp="OnRollClick"
                             Cursor="Hand"
@@ -147,7 +147,7 @@
                            <StaticResource ResourceKey="Gradient_RollCall_Card"/>
                         </Border.Background>
                         <Border.Effect>
-                            <StaticResource ResourceKey="Shadow_Glow_Teaching"/>
+                            <StaticResource ResourceKey="Shadow_Card"/>
                         </Border.Effect>
 
                         <!-- 名字展示 -->
@@ -157,11 +157,10 @@
                                 <TextBlock x:Name="BigNameText"
                                            Text="{Binding CurrentStudentName}"
                                            Visibility="{Binding ShowName, Converter={StaticResource BoolToVis}}"
-                                           FontSize="68"
-                                           FontWeight="Heavy"
-                                           FontFamily="Microsoft YaHei UI"
-                                           FontStretch="Expanded"
-                                           Foreground="{StaticResource Brush_Text_Primary}"
+                                           FontSize="{StaticResource CTK.FontSize.DisplayName}"
+                                           FontWeight="{StaticResource CTK.FontWeight.Strong}"
+                                           FontFamily="{StaticResource CTK.Font.UI}"
+                                           Foreground="{DynamicResource Brush_Text_Primary}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
                                            Margin="0">
@@ -173,9 +172,9 @@
                                 <!-- 学号 -->
                                 <TextBlock Text="{Binding CurrentStudentId}"
                                            Visibility="{Binding ShowId, Converter={StaticResource BoolToVis}}"
-                                           FontSize="{StaticResource FontSize_Title_Management}"
-                                           Foreground="{StaticResource Brush_Text_Secondary}"
-                                           FontWeight="Bold"
+                                           FontSize="{StaticResource CTK.FontSize.DisplayId}"
+                                           Foreground="{DynamicResource Brush_Text_Secondary}"
+                                           FontWeight="{StaticResource CTK.FontWeight.Emphasis}"
                                            TextAlignment="Center"
                                            HorizontalAlignment="Center"
                                Margin="0,-4,0,0"/>
@@ -188,7 +187,7 @@
                           VerticalAlignment="Center"
                           Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
                         <!-- 照片容器 -->
-                        <Border CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" ClipToBounds="True" Background="{StaticResource Brush_Surface_Primary}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+                        <Border CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" ClipToBounds="True" Background="{DynamicResource Brush_Surface_Primary}" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card"/>
                             </Border.Effect>
@@ -196,17 +195,17 @@
                         </Border>
                         
                         <!-- 姓名覆盖 (底部渐变遮罩) -->
-                        <Border VerticalAlignment="Bottom" Height="54" CornerRadius="0,0,14,14">
+                        <Border VerticalAlignment="Bottom" Height="54" CornerRadius="{StaticResource CTK.Radius.Footer}">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <GradientStop Color="Transparent" Offset="0"/>
-                                    <GradientStop Color="{StaticResource Color_Bg_Overlay}" Offset="1"/>
+                                    <GradientStop Color="{DynamicResource CTK.Color.Overlay}" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
                             <TextBlock Text="{Binding CurrentStudentName}"
                                        FontSize="{StaticResource FontSize_Title_Management}"
                                        FontWeight="Bold"
-                                       Foreground="{StaticResource Brush_Text_Primary}"
+                                       Foreground="{DynamicResource Brush_Text_Primary}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Margin="0,8,0,0"/>
@@ -217,23 +216,24 @@
                 <!-- B. 计时视图 -->
                 <Grid Visibility="{Binding IsRollCallMode, Converter={StaticResource InverseBoolToVis}}">
                     <Border x:Name="TimerCard" 
-                            Background="{StaticResource Brush_Surface_Primary}" 
+                            Background="{DynamicResource Brush_Surface_Primary}"
                             CornerRadius="{StaticResource Radius_Shell_Work}"
-                            BorderBrush="{StaticResource Brush_Border_Focus}" BorderThickness="1">
+                            BorderBrush="{DynamicResource Brush_Border_Focus}" BorderThickness="1">
                         <Border.Effect>
-                            <StaticResource ResourceKey="Shadow_Glow_Primary"/>
+                            <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                         </Border.Effect>
                         <Grid>
                             <!-- 装饰线条 -->
-                            <Border BorderBrush="{StaticResource Brush_Border_Strong}" BorderThickness="1" Margin="10" CornerRadius="8" Opacity="0.18"/>
+                            <Border BorderBrush="{DynamicResource Brush_Border_Strong}" BorderThickness="1" Margin="10" CornerRadius="{StaticResource CTK.Radius.Panel}" Opacity="0.18"/>
                             
                             <Viewbox Margin="20" Stretch="Uniform">
                                 <TextBlock Text="{Binding TimeDisplay}"
-                                           Foreground="{StaticResource Gradient_Timer_Display}"
-                                           FontFamily="Consolas, Courier New"
-                                           FontWeight="Black">
+                                           Foreground="{DynamicResource CTK.Brush.Primary}"
+                                           FontFamily="{StaticResource CTK.Font.Numeric}"
+                                           FontSize="{StaticResource CTK.FontSize.DisplayTimer}"
+                                           FontWeight="{StaticResource CTK.FontWeight.Strong}">
                                      <TextBlock.Effect>
-                                         <StaticResource ResourceKey="Shadow_Glow_Primary"/>
+                                         <StaticResource ResourceKey="Shadow_Card_Subtle"/>
                                      </TextBlock.Effect>
                                 </TextBlock>
                             </Viewbox>
@@ -248,7 +248,7 @@
                     <StaticResource ResourceKey="Shadow_Floating"/>
                 </Border.Effect>
                 <Grid>
-                    <Border BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" Margin="-1"/>
+                    <Border BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" Margin="-1"/>
 
                     <Grid>
                     <!-- 点名操作 -->
@@ -271,9 +271,9 @@
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource Brush_Primary}"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource Brush_Text_Black}"/>
-                                                        <Setter Property="BorderBrush" Value="{StaticResource Brush_Primary}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource Brush_Primary}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Text.OnPrimary}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource Brush_Primary}"/>
                                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -284,18 +284,18 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Rectangle Width="1" Height="16" Fill="{StaticResource Brush_Border_Strong}" Margin="10,0" Opacity="1"/>
+                        <Rectangle Width="1" Height="16" Fill="{DynamicResource Brush_Border_Strong}" Margin="10,0" Opacity="1"/>
 
                         <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnResetClick">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
+                            <Path Data="{StaticResource Icon_Reset}" Fill="{DynamicResource CTK.Brush.Text.OnPrimary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
+                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}" Foreground="{DynamicResource CTK.Brush.Text.OnPrimary}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnListClick">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon_List}" Fill="{StaticResource Brush_Text_Secondary}"
+                                <Path Data="{StaticResource Icon_List}" Fill="{DynamicResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
                                 <TextBlock Text="名单" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
@@ -309,8 +309,8 @@
                         </Button>
 
                         <!-- 播放/暂停按钮 -->
-                        <Button Style="{StaticResource Style_Button_Teal}" Margin="10,0" MinWidth="54" Height="{StaticResource Size_Button_Icon_Regular}" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
-                            <Path Fill="{StaticResource Brush_Text_Black}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
+                        <Button Style="{StaticResource CTK.Button.Primary}" Margin="10,0" MinWidth="54" Height="{StaticResource Size_Button_Icon_Regular}" Click="OnTimerStartPauseClick" ToolTip="开始/暂停">
+                            <Path Fill="{DynamicResource CTK.Brush.Text.OnPrimary}" Width="{StaticResource Size_Icon_Glyph_LG}" Height="{StaticResource Size_Icon_Glyph_LG}" Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="Path">
                                         <Setter Property="Data" Value="{StaticResource Icon_Play}"/>
@@ -326,15 +326,15 @@
 
                         <Button Style="{StaticResource Style_RollCallBottomBarAccentButton}" Click="OnTimerResetClick" MinWidth="64">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon_Reset}" Fill="{StaticResource Brush_Text_Black}"
+                            <Path Data="{StaticResource Icon_Reset}" Fill="{DynamicResource CTK.Brush.Text.OnPrimary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
-                                <TextBlock Text="重置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}" Foreground="{StaticResource Brush_Text_Black}"/>
+                                <TextBlock Text="重置" FontWeight="{StaticResource CTK.FontWeight.Emphasis}" FontSize="{StaticResource FontSize_Body_S}" Foreground="{DynamicResource CTK.Brush.Text.OnPrimary}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Style_RollCallBottomBarTextButton}" Click="OnTimerSetClick" MinWidth="64"
-                                Background="{StaticResource Brush_Surface_Secondary}">
+                                Background="{DynamicResource Brush_Surface_Secondary}">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Text_Secondary}"
+                                <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource Brush_Text_Secondary}"
                                       Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}" Margin="0,0,6,0" Stretch="Uniform"/>
                                 <TextBlock Text="设置" FontWeight="SemiBold" FontSize="{StaticResource FontSize_Body_S}"/>
                             </StackPanel>
@@ -347,13 +347,13 @@
             <!-- 5. 加载占位（旋转圆弧指示器） -->
             <Grid Grid.RowSpan="3"
                   Panel.ZIndex="100"
-                  Background="{StaticResource Brush_OverlayMask}"
+                  Background="{DynamicResource Brush_OverlayMask}"
                   Visibility="{Binding IsDataLoaded, ElementName=NameWindow, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- 旋转圆弧 -->
                     <Border Width="48" Height="48" HorizontalAlignment="Center">
                         <Ellipse Width="48" Height="48"
-                                 Stroke="{StaticResource Brush_Primary}"
+                                 Stroke="{DynamicResource Brush_Primary}"
                                  StrokeThickness="3"
                                  StrokeDashArray="20 10"
                                  Opacity="0.85"/>
@@ -361,7 +361,7 @@
                     <TextBlock Text="加载名单..."
                                FontSize="{StaticResource FontSize_Body_M}"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource Brush_Text_Secondary}"
+                               Foreground="{DynamicResource Brush_Text_Secondary}"
                                HorizontalAlignment="Center"
                                Margin="0,10,0,0"/>
                 </StackPanel>

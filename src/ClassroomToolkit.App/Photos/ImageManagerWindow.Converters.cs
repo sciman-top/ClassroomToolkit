@@ -36,7 +36,8 @@ public sealed class PdfBackgroundConverter : System.Windows.Data.IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is bool b && b
-            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 0, 0))
+            ? System.Windows.Application.Current?.TryFindResource("CTK.Brush.Warning.Soft") as System.Windows.Media.Brush
+                ?? System.Windows.SystemColors.HighlightBrush
             : System.Windows.Media.Brushes.Transparent;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

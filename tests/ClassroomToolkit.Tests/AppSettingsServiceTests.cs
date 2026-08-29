@@ -11,6 +11,120 @@ namespace ClassroomToolkit.Tests;
 public sealed class AppSettingsServiceTests
 {
     [Fact]
+    public void Load_ShouldReadThemeFromIniUiSection()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_theme");
+        try
+        {
+            File.WriteAllText(path, "[UI]\ntheme=Blackboard\n");
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.UiTheme.Should().Be("Blackboard");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistThemeForIniStore()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_theme");
+        try
+        {
+            var service = CreateService(path);
+            var settings = service.Load();
+            settings.UiTheme = "Light";
+
+            service.Save(settings);
+
+            service.Load().UiTheme.Should().Be("Light");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldFallbackToDefaultTheme_WhenIniThemeIsUnknown()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_theme");
+        try
+        {
+            File.WriteAllText(path, "[UI]\ntheme=999\n");
+            var service = CreateService(path);
+
+            service.Load().UiTheme.Should().Be("MidnightTeal");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveAndLoad_ShouldPersistThemeForJsonStore()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_theme_json");
+        try
+        {
+            File.WriteAllText(path, "{\"UI\":{\"theme\":\"Blackboard\"}}");
+            var service = CreateJsonService(path);
+
+            var settings = service.Load();
+            settings.UiTheme.Should().Be("Blackboard");
+            settings.UiTheme = "Light";
+
+            service.Save(settings);
+
+            service.Load().UiTheme.Should().Be("Light");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldKeepLegacyDefaults_WhenUiSectionIsMissing()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_legacy");
+        try
+        {
+            File.WriteAllText(path, "[Paint]\nbrush_base_size=12\n");
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.UiTheme.Should().Be("MidnightTeal");
+            settings.BrushSize.Should().Be(12);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldThrow_WhenStoreIsNull()
     {
         Action act = () => new AppSettingsService((SettingsDocumentStoreAdapter)null!);

@@ -180,8 +180,8 @@ public partial class ImageManagerWindow
         return new TextBlock
         {
             Text = text,
-            Foreground = System.Windows.Application.Current?.TryFindResource("Brush_Text_Primary") as System.Windows.Media.Brush
-                ?? System.Windows.Media.Brushes.White,
+            Foreground = System.Windows.Application.Current?.TryFindResource("CTK.Brush.Text.Primary") as System.Windows.Media.Brush
+                ?? System.Windows.SystemColors.WindowTextBrush,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
     }

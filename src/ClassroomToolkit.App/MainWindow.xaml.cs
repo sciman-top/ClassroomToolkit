@@ -16,6 +16,7 @@ using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.UI.Themes;
 
 namespace ClassroomToolkit.App;
 
@@ -70,6 +71,7 @@ public partial class MainWindow : Window
     private readonly Services.IPaintWindowOrchestrator _paintWindowOrchestrator;
     private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
     private readonly IWindowOrchestrator _windowOrchestrator;
+    private readonly ThemeManager _themeManager;
     private bool _paintOrchestratorEventsWired;
     private Paint.PaintOverlayWindow? _lifecycleWiredOverlayWindow;
     private Paint.PaintToolbarWindow? _lifecycleWiredToolbarWindow;
@@ -84,7 +86,8 @@ public partial class MainWindow : Window
         IRollCallWindowFactory rollCallWindowFactory,
         Services.IPaintWindowOrchestrator paintWindowOrchestrator,
         Photos.IImageManagerWindowFactory imageManagerWindowFactory,
-        IWindowOrchestrator windowOrchestrator)
+        IWindowOrchestrator windowOrchestrator,
+        ThemeManager themeManager)
     {
         ArgumentNullException.ThrowIfNull(settingsService);
         ArgumentNullException.ThrowIfNull(settings);
@@ -97,6 +100,7 @@ public partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(paintWindowOrchestrator);
         ArgumentNullException.ThrowIfNull(imageManagerWindowFactory);
         ArgumentNullException.ThrowIfNull(windowOrchestrator);
+        ArgumentNullException.ThrowIfNull(themeManager);
 
         InitializeComponent();
         _settingsService = settingsService;
@@ -112,6 +116,7 @@ public partial class MainWindow : Window
         _paintWindowOrchestrator = paintWindowOrchestrator;
         _imageManagerWindowFactory = imageManagerWindowFactory;
         _windowOrchestrator = windowOrchestrator;
+        _themeManager = themeManager;
         _autoExitTimer = new DispatcherTimer();
         _autoExitTimer.Tick += OnAutoExitTimerTick;
         _presentationForegroundSuppressionTimer = new DispatcherTimer();

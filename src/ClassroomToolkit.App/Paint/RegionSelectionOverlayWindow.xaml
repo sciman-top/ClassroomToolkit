@@ -6,7 +6,7 @@
         ShowInTaskbar="False"
         Topmost="True"
         AllowsTransparency="True"
-        Background="{StaticResource Brush_OverlayMask}"
+        Background="{DynamicResource Brush_OverlayMask}"
         Focusable="True"
         Cursor="Cross"
         PreviewKeyDown="OnPreviewKeyDown"
@@ -19,15 +19,15 @@
     <Canvas x:Name="RootCanvas">
         <TextBlock x:Name="HintText"
                    Text="拖选区域，Enter 确认，Esc 取消"
-                   Foreground="White"
+                   Foreground="{DynamicResource CTK.Brush.Text.Primary}"
                    FontSize="{StaticResource FontSize_Title_Management}"
                    FontWeight="SemiBold"
                    Canvas.Left="20"
                    Canvas.Top="20"/>
         <Rectangle x:Name="SelectionRect"
                    Visibility="Collapsed"
-                   Stroke="{StaticResource Brush_Border_Focus}"
+                   Stroke="{DynamicResource Brush_Border_Focus}"
                    StrokeThickness="2"
-                   Fill="{StaticResource Brush_White_Translucent}"/>
+                   Fill="{DynamicResource CTK.Brush.SelectionOverlay}"/>
     </Canvas>
 </Window>

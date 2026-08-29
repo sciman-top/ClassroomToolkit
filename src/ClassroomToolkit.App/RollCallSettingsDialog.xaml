@@ -12,7 +12,7 @@
         Topmost="True">
 
     <Border Style="{StaticResource Style_DialogShellWindowBorder}"
-            Background="{StaticResource Brush_Window_Atmosphere}">
+            Background="{DynamicResource Brush_Window_Atmosphere}">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -25,12 +25,12 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource Brush_Teaching}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="点名设置" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
@@ -47,11 +47,11 @@
                 <!-- Global TabControl style applied automatically -->
 
                 <!-- 标签页 1: 显示/照片 -->
-                <TabItem Header="显示">
+                <TabItem Header="显示" Style="{StaticResource CTK.TabItem}">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="调整姓名、学号和照片。"
                                    Margin="0,0,0,10"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
@@ -67,42 +67,42 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="学生信息" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="学生信息" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,16">
-                                    <CheckBox x:Name="ShowIdCheck" Content="显示学号（按需）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="0,0,24,0"/>
-                                    <CheckBox x:Name="ShowNameCheck" Content="显示姓名（推荐）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="ShowIdCheck" Style="{StaticResource CTK.CheckBox}" Content="显示学号（按需）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                                    <CheckBox x:Name="ShowNameCheck" Style="{StaticResource CTK.CheckBox}" Content="显示姓名（推荐）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"/>
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="照片显示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                                <CheckBox x:Name="ShowPhotoCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="照片显示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                                <CheckBox x:Name="ShowPhotoCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                           Content="显示学生照片"
                                           Checked="OnShowPhotoChanged" Unchecked="OnShowPhotoChanged" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="照片时长" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="照片时长" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
                                 <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,16">
-                                    <Slider x:Name="PhotoDurationSlider" Width="160" Minimum="0" Maximum="10"
+                                    <Slider x:Name="PhotoDurationSlider" Style="{StaticResource CTK.Slider}" Width="160" Minimum="0" Maximum="10"
                                             ValueChanged="OnPhotoDurationChanged" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="PhotoDurationLabel" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                                    <TextBlock x:Name="PhotoDurationLabel" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Primary}"/>
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="照片来源" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                                <ComboBox x:Name="PhotoSharedCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="照片来源" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                                <ComboBox x:Name="PhotoSharedCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}"/>
                             </Grid>
                         </Border>
                         <TextBlock Text="建议默认只显示姓名，其它按需开启。"
                                    Margin="4,8,4,0"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 2: 语音播报 -->
-                <TabItem Header="语音">
+                <TabItem Header="语音" Style="{StaticResource CTK.TabItem}">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="控制朗读、发音人和输出设备。"
                                    Margin="0,0,0,10"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
@@ -118,35 +118,35 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="语音播报" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="SpeechCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名读姓名（按需）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="语音播报" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <CheckBox x:Name="SpeechCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="点名读姓名（按需）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnSpeechToggleChanged" Unchecked="OnSpeechToggleChanged"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="播报引擎" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="SpeechEngineCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="播报引擎" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="SpeechEngineCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"
                                       SelectionChanged="OnSpeechEngineChanged" />
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="发音人" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="SpeechVoiceCombo" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="发音人" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="SpeechVoiceCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="播报设备" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="SpeechOutputCombo" Grid.Row="3" Grid.Column="1" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="播报设备" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="SpeechOutputCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="3" Grid.Column="1" Height="{StaticResource Size_Button_Icon_Regular}"/>
                         </Grid>
                         </Border>
                         <TextBlock Text="默认关闭；播报设备仍跟随系统。"
                                    Margin="4,8,4,0"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 3: 遥控控制 -->
-                <TabItem Header="遥控">
+                <TabItem Header="遥控" Style="{StaticResource CTK.TabItem}">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="设置翻页笔遥控。"
                                    Margin="0,0,0,10"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
@@ -163,36 +163,36 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- 点名按键 -->
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="遥控点名" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteEnabledCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="用翻页笔点名（按需）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="遥控点名" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <CheckBox x:Name="RemoteEnabledCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="用翻页笔点名（按需）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteEnabledChanged" Unchecked="OnRemoteEnabledChanged" />
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="点名按键" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="RemoteKeyCombo" Grid.Row="1" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}" Margin="0,0,0,16"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="点名按键" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="RemoteKeyCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="1" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}" Margin="0,0,0,16"/>
 
                             <!-- 分组切换 -->
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="分组切换" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="RemoteGroupSwitchCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="用翻页笔切组（按需）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="分组切换" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <CheckBox x:Name="RemoteGroupSwitchCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="用翻页笔切组（按需）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnRemoteGroupSwitchChanged" Unchecked="OnRemoteGroupSwitchChanged" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="分组按键" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="RemoteGroupSwitchKeyCombo" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="分组按键" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="RemoteGroupSwitchKeyCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="3" Grid.Column="1" IsEditable="False" Height="{StaticResource Size_Button_Icon_Regular}"/>
                         </Grid>
                         </Border>
                         <TextBlock Text="默认关闭；启用时优先 Tab 点名、Enter 切组。"
                                    Margin="4,8,4,0"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- 标签页 4: 倒计时提示 -->
-                <TabItem Header="提醒">
+                <TabItem Header="提醒" Style="{StaticResource CTK.TabItem}">
                     <StackPanel Margin="4,12,4,8">
                         <TextBlock Text="设置结束音和中途提醒。"
                                    Margin="0,0,0,10"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                         <Border Style="{StaticResource Style_SettingCardBorder}" Padding="14">
@@ -209,31 +209,31 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="结束提示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="TimerSoundCheck" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="结束播放音效（推荐）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="结束提示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <CheckBox x:Name="TimerSoundCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,16" Content="结束播放音效（推荐）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="结束音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="TimerSoundCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="结束音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="TimerSoundCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="中途提示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <CheckBox x:Name="ReminderSoundCheck" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="中途提醒（按需）" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="中途提示" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <CheckBox x:Name="ReminderSoundCheck" Style="{StaticResource CTK.CheckBox}" Grid.Row="2" Grid.Column="1" Margin="0,0,0,16" Content="中途提醒（按需）" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"
                                       Checked="OnTimerControlChanged" Unchecked="OnTimerControlChanged" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="提醒音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                            <ComboBox x:Name="ReminderSoundCombo" Grid.Row="3" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="提醒音效" Margin="0,0,16,16" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                            <ComboBox x:Name="ReminderSoundCombo" Style="{StaticResource CTK.ComboBox}" Grid.Row="3" Grid.Column="1" Margin="0,0,0,16" Height="{StaticResource Size_Button_Icon_Regular}"/>
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="提示间隔" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="提示间隔" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}"/>
                             <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
-                                <Slider x:Name="ReminderIntervalSlider" Width="160" Minimum="1" Maximum="20"
+                                <Slider x:Name="ReminderIntervalSlider" Style="{StaticResource CTK.Slider}" Width="160" Minimum="1" Maximum="20"
                                         ValueChanged="OnReminderIntervalChanged" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="ReminderIntervalLabel" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Primary}"/>
+                                <TextBlock x:Name="ReminderIntervalLabel" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Primary}"/>
                             </StackPanel>
                         </Grid>
                         </Border>
                         <TextBlock Text="默认保留结束提示，中途提醒按需开启。"
                                    Margin="4,8,4,0"
-                                   Foreground="{StaticResource Brush_Text_Tertiary}"
+                                   Foreground="{DynamicResource Brush_Text_Tertiary}"
                                    FontSize="{StaticResource FontSize_Body_S}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
@@ -243,7 +243,7 @@
                 <TextBlock x:Name="ChangeSummaryText"
                            Grid.Row="1"
                            Margin="4,10,4,0"
-                           Foreground="{StaticResource Brush_Text_Tertiary}"
+                           Foreground="{DynamicResource Brush_Text_Tertiary}"
                            FontSize="{StaticResource FontSize_Body_S}"
                            TextWrapping="Wrap"/>
             </Grid>

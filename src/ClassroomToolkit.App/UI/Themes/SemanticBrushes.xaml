@@ -1,0 +1,38 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="CTK.Brush.Canvas" Color="{DynamicResource CTK.Color.Canvas}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Window" Color="{DynamicResource CTK.Color.Window}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Surface" Color="{DynamicResource CTK.Color.Surface}"/>
+    <SolidColorBrush x:Key="CTK.Brush.SurfaceAlt" Color="{DynamicResource CTK.Color.SurfaceAlt}"/>
+    <SolidColorBrush x:Key="CTK.Brush.SurfaceElevated" Color="{DynamicResource CTK.Color.SurfaceElevated}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Hover" Color="{DynamicResource CTK.Color.Hover}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Pressed" Color="{DynamicResource CTK.Color.Pressed}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Border.Subtle" Color="{DynamicResource CTK.Color.BorderSubtle}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Border.Default" Color="{DynamicResource CTK.Color.BorderDefault}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Border.Focus" Color="{DynamicResource CTK.Color.BorderFocus}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Text.Primary" Color="{DynamicResource CTK.Color.TextPrimary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Text.Secondary" Color="{DynamicResource CTK.Color.TextSecondary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Text.Tertiary" Color="{DynamicResource CTK.Color.TextTertiary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Text.Disabled" Color="{DynamicResource CTK.Color.TextDisabled}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Text.OnPrimary" Color="{DynamicResource CTK.Color.TextOnPrimary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Primary" Color="{DynamicResource CTK.Color.Primary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Primary.Hover" Color="{DynamicResource CTK.Color.PrimaryHover}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Primary.Pressed" Color="{DynamicResource CTK.Color.PrimaryPressed}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Primary.Soft" Color="{DynamicResource CTK.Color.PrimarySoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Info" Color="{DynamicResource CTK.Color.Info}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Info.Soft" Color="{DynamicResource CTK.Color.InfoSoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Success" Color="{DynamicResource CTK.Color.Success}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Success.Soft" Color="{DynamicResource CTK.Color.SuccessSoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Warning" Color="{DynamicResource CTK.Color.Warning}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Warning.Soft" Color="{DynamicResource CTK.Color.WarningSoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Danger" Color="{DynamicResource CTK.Color.Danger}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Danger.Pressed" Color="{DynamicResource CTK.Color.DangerPressed}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Danger.Soft" Color="{DynamicResource CTK.Color.DangerSoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Selection" Color="{DynamicResource CTK.Color.Selection}"/>
+    <SolidColorBrush x:Key="CTK.Brush.SelectionOverlay" Color="{DynamicResource CTK.Color.SelectionOverlay}"/>
+    <SolidColorBrush x:Key="CTK.Brush.SelectionOverlaySoft" Color="{DynamicResource CTK.Color.SelectionOverlaySoft}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Overlay" Color="{DynamicResource CTK.Color.Overlay}"/>
+    <SolidColorBrush x:Key="CTK.Brush.OverlayToolbar" Color="{DynamicResource CTK.Color.OverlayToolbar}"/>
+    <SolidColorBrush x:Key="CTK.Brush.ToolActive" Color="{DynamicResource CTK.Color.Primary}"/>
+    <SolidColorBrush x:Key="CTK.Brush.ToolActiveSoft" Color="{DynamicResource CTK.Color.PrimarySoft}"/>
+</ResourceDictionary>

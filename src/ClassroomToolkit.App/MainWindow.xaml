@@ -29,17 +29,17 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Height="42" Style="{StaticResource Style_WorkShellTitleBar}">
+            <Grid Grid.Row="0" Height="{StaticResource CTK.Size.TitleBar}" Style="{StaticResource Style_WorkShellTitleBar}">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
                         <Path Data="{StaticResource Icon_Apps}"
-                              Fill="{StaticResource Brush_Primary}"
+                              Fill="{DynamicResource Brush_Primary}"
                               Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="课堂工具箱"
                                FontSize="{StaticResource FontSize_Title_Management}"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource Brush_Primary_Hover}"
+                               Foreground="{DynamicResource Brush_Primary_Hover}"
                                TextAlignment="Center"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -85,7 +85,7 @@
                             Click="OnMinimizeClick"
                             ToolTip="最小化"/>
 
-                    <Rectangle Grid.Column="1" Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
+                    <Rectangle Grid.Column="1" Width="1" Height="14" Fill="{DynamicResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                         <Button x:Name="DiagnosticsButton"
@@ -106,7 +106,7 @@
                                 Click="OnLauncherMoreClick"
                                 ToolTip="更多设置"/>
 
-                        <Rectangle Width="1" Height="14" Fill="{StaticResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
+                        <Rectangle Width="1" Height="14" Fill="{DynamicResource Brush_Border_Strong}" Margin="4,0" Opacity="0.45"/>
 
                         <Button x:Name="ExitButton"
                                 Style="{StaticResource Style_WorkShellMiniDangerButton}"

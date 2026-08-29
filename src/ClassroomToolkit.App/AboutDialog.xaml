@@ -23,12 +23,12 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Info}" Fill="{DynamicResource Brush_Primary}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="关于" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCloseClick" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
@@ -37,20 +37,20 @@
             <Border Grid.Row="1" Margin="16,12,16,10" Style="{StaticResource Style_SettingCardBorder}" Padding="16">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                        <Border Width="50" Height="50" CornerRadius="10" Background="{StaticResource Brush_Primary}" Margin="0,0,14,0">
+                        <Border Width="50" Height="50" CornerRadius="{StaticResource CTK.Radius.Dialog}" Background="{DynamicResource Brush_Primary}" Margin="0,0,14,0">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_Apps}" Fill="{StaticResource Brush_Text_Black}" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_Apps}" Fill="{DynamicResource Brush_Text_Black}" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="{StaticResource FontSize_Title_Management}" FontWeight="Bold"/>
-                            <TextBlock x:Name="VersionText" Text="版本 -" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{StaticResource Brush_Primary}" FontWeight="SemiBold"/>
-                            <TextBlock Text="课堂批注、点名与计时" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{StaticResource Brush_Text_Tertiary}"/>
+                            <TextBlock x:Name="VersionText" Text="版本 -" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{DynamicResource Brush_Primary}" FontWeight="SemiBold"/>
+                            <TextBlock Text="课堂批注、点名与计时" FontSize="{StaticResource FontSize_Body_S}" Margin="0,3,0,0" Foreground="{DynamicResource Brush_Text_Tertiary}"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{StaticResource Brush_Surface_Secondary}" Margin="0,0,0,10">
+                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{DynamicResource Brush_Surface_Secondary}" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="66"/>
@@ -62,30 +62,30 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="作者" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}"/>
+                            <TextBlock Text="作者" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}"/>
                             <TextBlock Grid.Column="1" Text="广州番禺王耀强" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold"/>
 
-                            <TextBlock Grid.Row="1" Text="公众号" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="1" Text="公众号" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,8,0,0"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="sciman逸居" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Margin="0,8,0,0"/>
 
-                            <TextBlock Grid.Row="2" Text="交流群" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="2" Text="交流群" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,8,0,0"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="初中物理教研群（323728546）" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap"/>
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{StaticResource Brush_Surface_Secondary}">
+                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{DynamicResource Brush_Surface_Secondary}">
                         <StackPanel>
-                            <TextBlock Text="链接" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,8"/>
+                            <TextBlock Text="链接" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,8"/>
                             <WrapPanel>
-                                <TextBlock Text="知乎：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}"/>
+                                <TextBlock Text="知乎：" Foreground="{DynamicResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 <TextBlock>
-                                    <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman</Hyperlink>
+                                    <Hyperlink NavigateUri="https://www.zhihu.com/people/sciman/columns" RequestNavigate="OnRequestNavigate" Foreground="{DynamicResource Brush_Primary}">sciman</Hyperlink>
                                 </TextBlock>
                             </WrapPanel>
                             <WrapPanel Margin="0,4,0,0">
-                                <TextBlock Text="GitHub：" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}"/>
+                                <TextBlock Text="GitHub：" Foreground="{DynamicResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}"/>
                                 <TextBlock>
-                                    <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomToolkit" RequestNavigate="OnRequestNavigate" Foreground="{StaticResource Brush_Primary}">sciman-top/ClassroomToolkit</Hyperlink>
+                                    <Hyperlink NavigateUri="https://github.com/sciman-top/ClassroomToolkit" RequestNavigate="OnRequestNavigate" Foreground="{DynamicResource Brush_Primary}">sciman-top/ClassroomToolkit</Hyperlink>
                                 </TextBlock>
                             </WrapPanel>
                         </StackPanel>

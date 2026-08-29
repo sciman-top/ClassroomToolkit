@@ -14,15 +14,15 @@
         <Border x:Name="BubbleBorder"
                 Style="{StaticResource Style_BubbleShellRoot}"
                 Width="42" Height="42"
-                CornerRadius="21"
-                TextElement.Foreground="{StaticResource Brush_Text_Primary}"
+                CornerRadius="{StaticResource CTK.Radius.Pill}"
+                TextElement.Foreground="{DynamicResource Brush_Text_Primary}"
                 RenderTransformOrigin="0.5,0.5">
             <Border.RenderTransform>
                 <TranslateTransform x:Name="BubbleTranslate" Y="0"/>
             </Border.RenderTransform>
             <Grid>
                  <Path Data="{StaticResource Icon_Apps}" 
-                       Fill="{StaticResource Brush_Primary}" 
+                       Fill="{DynamicResource Brush_Primary}"
                        Stretch="Uniform" 
                        Width="16" Height="16"
                        HorizontalAlignment="Center" 
@@ -37,9 +37,9 @@
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="46" Duration="0:0:0.12"/>
                             <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Border_Focus}" Duration="0:0:0.14"/>
+                                            To="{DynamicResource CTK.Color.BorderFocus}" Duration="0:0:0.14"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Bg_Input}" Duration="0:0:0.14"/>
+                                            To="{DynamicResource CTK.Color.SurfaceElevated}" Duration="0:0:0.14"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
@@ -50,9 +50,9 @@
                             <DoubleAnimation Storyboard.TargetProperty="Height" To="42" Duration="0:0:0.18"/>
                             <DoubleAnimation Storyboard.TargetName="BubbleTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.22"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Border_Strong}" Duration="0:0:0.22"/>
+                                            To="{DynamicResource CTK.Color.BorderDefault}" Duration="0:0:0.22"/>
                             <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource Color_Bg_Surface_1}" Duration="0:0:0.22"/>
+                                            To="{DynamicResource CTK.Color.Surface}" Duration="0:0:0.22"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>

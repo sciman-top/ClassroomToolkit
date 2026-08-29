@@ -73,6 +73,12 @@ public sealed partial class AppSettingsService
                 string.Empty));
     }
 
+    private static void ApplyUiSettings(Dictionary<string, string> ui, AppSettings settings)
+    {
+        settings.UiTheme = UI.Themes.ThemePreferenceService.Normalize(
+            GetString(ui, "theme", settings.UiTheme));
+    }
+
     private static void SaveRollCallSettings(
         Dictionary<string, Dictionary<string, string>> data,
         AppSettings settings)
@@ -139,5 +145,13 @@ public sealed partial class AppSettingsService
         var diagnostics = GetOrCreate(data, "Diagnostics");
         diagnostics["startup_compatibility_suppressed_issue_codes"] =
             JoinList(settings.StartupCompatibilitySuppressedIssueCodes);
+    }
+
+    private static void SaveUiSettings(
+        Dictionary<string, Dictionary<string, string>> data,
+        AppSettings settings)
+    {
+        var ui = GetOrCreate(data, "UI");
+        ui["theme"] = UI.Themes.ThemePreferenceService.Normalize(settings.UiTheme);
     }
 }

@@ -10,18 +10,18 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
-    <Border Background="{StaticResource Gradient_Shell_Surface}" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="8" Padding="5,5"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+    <Border Background="{DynamicResource Gradient_Shell_Surface}" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="5,5"
+            TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
         </Border.Effect>
         <StackPanel>
-            <TextBlock Text="颜色" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,0,0,4"/>
-            <Border Background="{StaticResource Brush_Surface_Primary}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+            <TextBlock Text="颜色" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{DynamicResource Brush_Text_Tertiary}" Margin="4,0,0,4"/>
+            <Border Background="{DynamicResource Brush_Surface_Primary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel x:Name="OptionsPanel" Orientation="Horizontal" />
             </Border>
-            <TextBlock Text="粗细" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Tertiary}" Margin="4,8,0,4"/>
-            <Border Background="{StaticResource Brush_Surface_Primary}" CornerRadius="8" Padding="4" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1">
+            <TextBlock Text="粗细" FontSize="{StaticResource FontSize_Body_S}" FontWeight="SemiBold" Foreground="{DynamicResource Brush_Text_Tertiary}" Margin="4,8,0,4"/>
+            <Border Background="{DynamicResource Brush_Surface_Primary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel x:Name="BrushSizeOptionsPanel" Orientation="Horizontal" />
             </Border>
         </StackPanel>

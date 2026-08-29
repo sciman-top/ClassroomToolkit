@@ -7,6 +7,7 @@ using WpfApplication = System.Windows.Application;
 
 namespace ClassroomToolkit.Tests;
 
+[Collection("WPF UI")]
 public sealed class PaintSettingsDialogConstructionTests
 {
     [Fact]
@@ -16,25 +17,24 @@ public sealed class PaintSettingsDialogConstructionTests
 
         var thread = new Thread(() =>
         {
-            WpfApplication? app = null;
-            PaintSettingsDialog? dialog = null;
             try
             {
-                app = new WpfApplication
+                var app = WpfApplication.Current as ClassroomToolkit.App.App;
+                if (app is null)
                 {
-                    ShutdownMode = ShutdownMode.OnExplicitShutdown
-                };
-                AddThemeResources(app.Resources);
-                dialog = new PaintSettingsDialog(new AppSettings());
+                    app = new ClassroomToolkit.App.App
+                    {
+                        ShutdownMode = ShutdownMode.OnExplicitShutdown
+                    };
+                    app.InitializeComponent();
+                }
+
+                var dialog = new PaintSettingsDialog(new AppSettings());
+                dialog.Close();
             }
             catch (Exception ex)
             {
                 exception = ex;
-            }
-            finally
-            {
-                dialog?.Close();
-                app?.Shutdown();
             }
         });
 
@@ -45,19 +45,4 @@ public sealed class PaintSettingsDialogConstructionTests
         exception.Should().BeNull();
     }
 
-    private static void AddThemeResources(ResourceDictionary resources)
-    {
-        resources.MergedDictionaries.Add(new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/sciman Classroom Toolkit;component/Assets/Styles/Colors.xaml", UriKind.Absolute)
-        });
-        resources.MergedDictionaries.Add(new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/sciman Classroom Toolkit;component/Assets/Styles/Icons.xaml", UriKind.Absolute)
-        });
-        resources.MergedDictionaries.Add(new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/sciman Classroom Toolkit;component/Assets/Styles/WidgetStyles.xaml", UriKind.Absolute)
-        });
-    }
 }

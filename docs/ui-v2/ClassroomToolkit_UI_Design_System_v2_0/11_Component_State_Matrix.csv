@@ -1,0 +1,19 @@
+﻿Component,State,Background,Foreground/Icon,Border,Notes
+PrimaryButton,Normal,Primary,TextOnPrimary,None,Main action
+PrimaryButton,Hover,PrimaryHover,TextOnPrimary,None,120-160ms
+PrimaryButton,Pressed,PrimaryPressed,TextOnPrimary,None,80-120ms
+PrimaryButton,Disabled,SurfaceAlt,TextDisabled,BorderSubtle,No glow
+SecondaryButton,Normal,SurfaceAlt,TextPrimary,BorderDefault,Secondary action
+SecondaryButton,Hover,Hover,TextPrimary,BorderDefault,
+WarningButton,Normal,WarningSoft,Warning,BorderSubtle,Reset/reconfigure
+DangerButton,Normal,DangerSoft,Danger,BorderSubtle,Delete/clear only
+IconButton,Normal,Transparent,TextSecondary,None,40x40 hit area
+IconButton,Hover,Hover,TextPrimary,None,
+ToolButton,Active,PrimarySoft,Primary,None,Optional 2px indicator
+Tab,Normal,Transparent,TextSecondary,None,Height 36
+Tab,Active,PrimarySoft,Primary,None,2px indicator optional
+Slider,Normal,Track: BorderDefault,Fill: Primary,None,"Track 4, thumb 14"
+ComboBox,Normal,SurfaceAlt,TextPrimary,BorderDefault,Height 36-40
+Dialog,Normal,Window,TextPrimary,BorderDefault,Radius 10
+Toolbar,Normal,OverlayToolbar,TextSecondary,BorderDefault,Height ~52
+Toolbar,ActiveTool,PrimarySoft,Primary,None,No continuous glow

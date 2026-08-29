@@ -16,6 +16,8 @@ public sealed class AppSettings
 {
     public const int UnsetPosition = int.MinValue;
 
+    public string UiTheme { get; set; } = "MidnightTeal";
+
     public bool RollCallShowId { get; set; }
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; }

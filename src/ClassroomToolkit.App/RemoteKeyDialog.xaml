@@ -19,12 +19,12 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{StaticResource Brush_Teaching}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource Brush_Teaching}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="遥控键位" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
@@ -42,10 +42,10 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="预设键位" VerticalAlignment="Center" Margin="0,0,12,14" Foreground="{StaticResource Brush_Text_Secondary}"/>
-                    <ComboBox Grid.Row="0" Grid.Column="1" x:Name="PresetCombo" Margin="0,0,0,14" SelectionChanged="OnPresetChanged" Height="{StaticResource Size_Button_Icon_Regular}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="预设键位" VerticalAlignment="Center" Margin="0,0,12,14" Foreground="{DynamicResource Brush_Text_Secondary}"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" x:Name="PresetCombo" Style="{StaticResource CTK.ComboBox}" Margin="0,0,0,14" SelectionChanged="OnPresetChanged" Height="{StaticResource Size_Button_Icon_Regular}"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="自定义" VerticalAlignment="Center" Margin="0,0,12,14" Foreground="{StaticResource Brush_Text_Secondary}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="自定义" VerticalAlignment="Center" Margin="0,0,12,14" Foreground="{DynamicResource Brush_Text_Secondary}"/>
                     <TextBox Grid.Row="1" Grid.Column="1" x:Name="CustomBox" Margin="0,0,0,14" Height="{StaticResource Size_Button_Icon_Regular}" VerticalContentAlignment="Center"/>
 
                     <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource Style_DialogShellActionBar}" Margin="0,2,0,0">

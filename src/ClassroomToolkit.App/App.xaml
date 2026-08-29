@@ -4,9 +4,13 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Colors.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/Icons.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Assets/Styles/WidgetStyles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/UI/Themes/Metrics.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/UI/Themes/Typography.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/UI/Themes/ThemeResources.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/Assets/Styles/LegacyAliases.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/Assets/Styles/Icons.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/Assets/Styles/WidgetStyles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/sciman%20Classroom%20Toolkit;component/UI/Styles/Components.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!-- 全局样式：优化字体渲染 -->
@@ -15,9 +19,9 @@
                 <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
                 <Setter Property="UseLayoutRounding" Value="True"/>
                 <Setter Property="SnapsToDevicePixels" Value="True"/>
-                <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+                <Setter Property="FontFamily" Value="{StaticResource CTK.Font.UI}"/>
+                <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Text.Primary}"/>
             </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
-

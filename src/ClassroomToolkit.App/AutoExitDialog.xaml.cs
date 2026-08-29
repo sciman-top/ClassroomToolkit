@@ -2,21 +2,25 @@ using System.Globalization;
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.UI.Themes;
 
 namespace ClassroomToolkit.App;
 
 public partial class AutoExitDialog : Window
 {
-    public AutoExitDialog(int minutes)
+    public AutoExitDialog(int minutes, string? theme = null)
     {
         InitializeComponent();
         MinutesBox.Text = Math.Max(0, minutes).ToString(CultureInfo.InvariantCulture);
+        ThemeCombo.SelectedValue = ThemePreferenceService.Parse(theme).ToString();
         MinutesBox.SelectAll();
         Loaded += OnDialogLoaded;
         Closed += OnDialogClosed;
     }
 
     public int Minutes { get; private set; }
+
+    public string SelectedTheme { get; private set; } = ThemePreferenceService.DefaultTheme.ToString();
 
     private void OnDialogLoaded(object sender, RoutedEventArgs e)
     {
@@ -38,6 +42,7 @@ public partial class AutoExitDialog : Window
             return;
         }
         Minutes = minutes;
+        SelectedTheme = ThemePreferenceService.Normalize(ThemeCombo.SelectedValue as string);
         DialogResult = true;
     }
 

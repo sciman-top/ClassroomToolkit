@@ -11,7 +11,7 @@
         AllowsTransparency="True"
         Background="{x:Null}">
 
-    <Border Background="{StaticResource Gradient_Shell_Surface}" CornerRadius="10" Margin="10" BorderBrush="{StaticResource Brush_Border_Subtle}" BorderThickness="1"
+    <Border Background="{DynamicResource Gradient_Shell_Surface}" CornerRadius="{StaticResource CTK.Radius.Dialog}" Margin="10" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1"
             MouseLeftButtonDown="OnTitleBarDrag">
         <Border.Effect>
             <StaticResource ResourceKey="Shadow_Popup_Light"/>
@@ -21,12 +21,12 @@
             <Grid Margin="0,0,0,10">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Width="24" Height="24" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Board}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Board}" Fill="{DynamicResource Brush_Primary}" Stretch="Uniform"/>
                     </Border>
-                    <TextBlock Text="白板底色" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Foreground="{StaticResource Brush_Text_Primary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="白板底色" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold" Foreground="{DynamicResource Brush_Text_Primary}" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Button Style="{StaticResource Style_IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                <Button Style="{StaticResource CTK.IconButton}" Click="OnCancelFromButton" x:Name="CloseButton" HorizontalAlignment="Right" ToolTip="关闭">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>

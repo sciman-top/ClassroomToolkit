@@ -12,7 +12,7 @@
         Topmost="True">
 
     <Border Style="{StaticResource Style_DialogShellWindowBorder}"
-            TextElement.Foreground="{StaticResource Brush_Text_Primary}">
+            TextElement.Foreground="{DynamicResource Brush_Text_Primary}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -23,12 +23,12 @@
             <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                     <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
-                        <Path Data="{StaticResource Icon_Pen}" Fill="{StaticResource Brush_Primary}" Stretch="Uniform"/>
+                        <Path Data="{StaticResource Icon_Pen}" Fill="{DynamicResource Brush_Primary}" Stretch="Uniform"/>
                     </Border>
                     <TextBlock Text="笔迹记录" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
                 </StackPanel>
                 <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnCancel" ToolTip="关闭">
-                    <Path Data="{StaticResource Icon_Close}" Fill="{StaticResource Brush_Text_Secondary}" Stretch="Uniform"
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
                           Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                 </Button>
             </Grid>
@@ -36,19 +36,19 @@
 
             <Border Grid.Row="1" Margin="16,14,16,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
                 <StackPanel>
-                    <CheckBox x:Name="InkRecordCheck" Content="启用笔迹记录" Margin="0,0,0,10"/>
-                    <CheckBox x:Name="InkReplayPreviousCheck" Content="显示上次笔迹" Margin="0,0,0,12"/>
+                    <CheckBox x:Name="InkRecordCheck" Style="{StaticResource CTK.CheckBox}" Content="启用笔迹记录" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="InkReplayPreviousCheck" Style="{StaticResource CTK.CheckBox}" Content="显示上次笔迹" Margin="0,0,0,12"/>
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="64"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,8,0"/>
+                        <TextBlock Text="自动清理（天）" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,8,0"/>
                         <TextBox x:Name="InkRetentionDaysBox" Grid.Column="1" Height="{StaticResource Size_Button_Action_Height_Compact}" VerticalContentAlignment="Center" Padding="4,0"/>
-                        <TextBlock Grid.Column="2" Text="0 = 不清理" VerticalAlignment="Center" Foreground="{StaticResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="8,0,0,0"/>
+                        <TextBlock Grid.Column="2" Text="0 = 不清理" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="8,0,0,0"/>
                     </Grid>
-                    <TextBlock Text="笔迹保存路径" Foreground="{StaticResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,6,0,4"/>
+                    <TextBlock Text="笔迹保存路径" Foreground="{DynamicResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,6,0,4"/>
                     <TextBox x:Name="InkPhotoPathBox" Height="{StaticResource Size_Button_Action_Height_Compact}"/>
                 </StackPanel>
             </Border>

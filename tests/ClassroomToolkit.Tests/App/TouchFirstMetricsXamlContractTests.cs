@@ -38,6 +38,33 @@ public sealed class TouchFirstMetricsXamlContractTests
         TargetTypeStyleHasSetter(document, "ScrollBar", "MinHeight").Should().BeFalse();
     }
 
+    [Fact]
+    public void RollCallWindow_ShouldUseGridLengthTokenForTitleBarTrack()
+    {
+        var metrics = XDocument.Load(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "UI",
+            "Themes",
+            "Metrics.xaml"));
+        var gridLengthToken = GetKeyedElement(metrics, "CTK.GridLength.TitleBar");
+        gridLengthToken.Name.LocalName.Should().Be("GridLength");
+        gridLengthToken.Value.Trim().Should().Be("46");
+
+        var rollCallWindow = XDocument.Load(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "RollCallWindow.xaml"));
+        rollCallWindow
+            .Descendants()
+            .Where(element => string.Equals(element.Name.LocalName, "RowDefinition", StringComparison.Ordinal))
+            .First()
+            .Attribute("Height")!
+            .Value
+            .Should()
+            .Be("{StaticResource CTK.GridLength.TitleBar}");
+    }
+
     private static XDocument LoadWidgetStyles() => XDocument.Load(TestPathHelper.ResolveRepoPath(
         "src",
         "ClassroomToolkit.App",

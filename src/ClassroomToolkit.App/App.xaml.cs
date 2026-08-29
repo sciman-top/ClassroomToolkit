@@ -19,6 +19,7 @@ using ClassroomToolkit.Infra.Storage;
 using ClassroomToolkit.Infra.Logging;
 using Microsoft.Extensions.Logging;
 using ClassroomToolkit.Services.Compatibility;
+using ClassroomToolkit.App.UI.Themes;
 
 namespace ClassroomToolkit.App;
 
@@ -62,6 +63,10 @@ public partial class App : WpfApplication
             Shutdown(-1);
             return;
         }
+
+        var settings = services.GetRequiredService<AppSettings>();
+        var themeManager = services.GetRequiredService<ThemeManager>();
+        themeManager.Apply(ThemePreferenceService.Parse(settings.UiTheme));
 
         if (services.GetService<MainWindow>() is not MainWindow mainWindow)
         {
@@ -124,6 +129,7 @@ public partial class App : WpfApplication
         });
         services.AddSingleton<RollCallWorkbookUseCase>();
         services.AddSingleton<AppSettingsService>();
+        services.AddSingleton<ThemeManager>(_ => new ThemeManager(this));
         services.AddSingleton(provider =>
         {
             var settingsService = provider.GetRequiredService<AppSettingsService>();

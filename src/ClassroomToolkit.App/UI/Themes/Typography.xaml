@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <FontFamily x:Key="CTK.Font.UI">Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="CTK.Font.Numeric">Segoe UI Variable Display</FontFamily>
+    <sys:Double x:Key="CTK.FontSize.Caption">12</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.BodyCompact">13</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.Body">14</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.Button">14</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.ButtonLarge">15</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.Section">16</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.DialogTitle">18</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.WindowTitle">18</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.DisplayName">68</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.DisplayId">18</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.DisplayTimer">76</sys:Double>
+    <sys:Double x:Key="CTK.FontSize.HeroSmall">28</sys:Double>
+    <FontWeight x:Key="CTK.FontWeight.Body">Normal</FontWeight>
+    <FontWeight x:Key="CTK.FontWeight.Emphasis">SemiBold</FontWeight>
+    <FontWeight x:Key="CTK.FontWeight.Strong">Bold</FontWeight>
+</ResourceDictionary>

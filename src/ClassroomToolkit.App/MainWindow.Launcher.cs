@@ -11,6 +11,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.UI.Themes;
 
 namespace ClassroomToolkit.App;
 
@@ -104,7 +105,7 @@ public partial class MainWindow
     private void OpenAutoExitDialog()
     {
         var currentMinutes = Math.Max(0, _settings.LauncherAutoExitSeconds / MainWindowRuntimeDefaults.LauncherMinutesToSeconds);
-        var dialog = new AutoExitDialog(currentMinutes)
+        var dialog = new AutoExitDialog(currentMinutes, _themeManager.CurrentTheme.ToString())
         {
             Owner = this
         };
@@ -117,6 +118,11 @@ public partial class MainWindow
             return;
         }
         _settings.LauncherAutoExitSeconds = Math.Max(0, dialog.Minutes) * MainWindowRuntimeDefaults.LauncherMinutesToSeconds;
+        var requestedTheme = ThemePreferenceService.Parse(dialog.SelectedTheme);
+        if (_themeManager.Apply(requestedTheme))
+        {
+            _settings.UiTheme = requestedTheme.ToString();
+        }
         ScheduleAutoExitTimer();
         SaveLauncherSettings();
     }

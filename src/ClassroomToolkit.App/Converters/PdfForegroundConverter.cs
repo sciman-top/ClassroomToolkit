@@ -9,11 +9,16 @@ public sealed class PdfForegroundConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        // PDF: Amber/Warning color (#F59E0B) - 醒目的琥珀色
-        // 其他: Slate 100 (#F1F5F9) - 浅色文字
-        return value is bool isPdf && isPdf
-            ? new Media.SolidColorBrush(Media.Color.FromRgb(245, 158, 11))  // #F59E0B
-            : new Media.SolidColorBrush(Media.Color.FromRgb(241, 245, 249)); // #F1F5F9
+        var resourceKey = value is bool isPdf && isPdf
+            ? "CTK.Brush.Warning"
+            : "CTK.Brush.Text.Primary";
+
+        // Return the shared semantic brush so an in-place theme switch updates
+        // existing PDF/file labels without rebuilding the image manager view.
+        return System.Windows.Application.Current?.TryFindResource(resourceKey) as Media.Brush
+            ?? (value is bool isPdfFallback && isPdfFallback
+                ? System.Windows.SystemColors.HighlightBrush
+                : System.Windows.SystemColors.ControlTextBrush);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
