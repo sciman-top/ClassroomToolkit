@@ -42,6 +42,8 @@ logs/
 settings.ini
 settings.json
 students.xlsx
+students.bak-normalize-*.xlsx
+.~lock.*#
 student_photos/
 logs/*.log
 msbuild*.log
