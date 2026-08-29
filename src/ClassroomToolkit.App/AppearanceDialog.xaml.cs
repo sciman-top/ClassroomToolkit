@@ -13,6 +13,7 @@ public partial class AppearanceDialog : Window
     public AppearanceDialog(string? theme = null)
     {
         InitializeComponent();
+        PopulateThemePreviews();
         SelectRadio(ThemePreferenceService.Parse(theme));
         Loaded += OnDialogLoaded;
         Closed += OnDialogClosed;
@@ -65,6 +66,24 @@ public partial class AppearanceDialog : Window
     private void OnDialogLoaded(object sender, RoutedEventArgs e)
     {
         WindowPlacementHelper.EnsureVisible(this);
+    }
+
+    /// <summary>Previews read each option's real palette from its color dictionary so they stay in sync with the themes.</summary>
+    private void PopulateThemePreviews()
+    {
+        ApplyThemePreview(MidnightTealPreviewCanvas, MidnightTealPreviewPrimary, AppTheme.MidnightTeal);
+        ApplyThemePreview(BlackboardPreviewCanvas, BlackboardPreviewPrimary, AppTheme.Blackboard);
+        ApplyThemePreview(LightPreviewCanvas, LightPreviewPrimary, AppTheme.Light);
+    }
+
+    private static void ApplyThemePreview(Border canvas, Border accent, AppTheme theme)
+    {
+        var assemblyName = Uri.EscapeDataString(typeof(AppearanceDialog).Assembly.GetName().Name ?? "ClassroomToolkit.App");
+        var dictionary = (ResourceDictionary)System.Windows.Application.LoadComponent(
+            new Uri($"/{assemblyName};component/UI/Themes/Colors.{theme}.xaml", UriKind.Relative));
+
+        canvas.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)dictionary["CTK.Color.Canvas"]);
+        accent.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)dictionary["CTK.Color.Primary"]);
     }
 
     private void OnDialogClosed(object? sender, EventArgs e)

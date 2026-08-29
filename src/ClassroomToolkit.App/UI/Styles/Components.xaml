@@ -294,7 +294,7 @@
         <Setter Property="MinHeight" Value="{StaticResource CTK.Size.Toolbar}"/>
         <Setter Property="Padding" Value="5,4"/>
         <Setter Property="Background" Value="{DynamicResource CTK.Brush.OverlayToolbar}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Toolbar}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource CTK.Radius.Toolbar}"/>
     </Style>

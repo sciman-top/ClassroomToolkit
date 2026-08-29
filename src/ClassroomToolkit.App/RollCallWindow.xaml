@@ -110,7 +110,7 @@
                 <!-- 右侧：窗口控制 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0">
                     <Button Style="{StaticResource CTK.IconButton}" Click="OnSettingsClick" ToolTip="点名设置">
-                        <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource Brush_Teaching}" Stretch="Uniform"
+                        <Path Data="{StaticResource Icon_Settings}" Fill="{DynamicResource CTK.Brush.Warning}" Stretch="Uniform"
                               Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
                     </Button>
 

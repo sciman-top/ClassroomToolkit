@@ -10,19 +10,13 @@
     <SolidColorBrush x:Key="Brush_Text_Primary" Color="{DynamicResource CTK.Color.TextPrimary}"/>
     <SolidColorBrush x:Key="Brush_Text_Secondary" Color="{DynamicResource CTK.Color.TextSecondary}"/>
     <SolidColorBrush x:Key="Brush_Text_Tertiary" Color="{DynamicResource CTK.Color.TextTertiary}"/>
-    <SolidColorBrush x:Key="Brush_Text_Black" Color="{DynamicResource CTK.Color.TextOnPrimary}"/>
     <SolidColorBrush x:Key="Brush_Primary" Color="{DynamicResource CTK.Color.Primary}"/>
     <SolidColorBrush x:Key="Brush_Primary_Hover" Color="{DynamicResource CTK.Color.PrimaryHover}"/>
     <SolidColorBrush x:Key="Brush_Primary_Dark" Color="{DynamicResource CTK.Color.PrimaryPressed}"/>
     <SolidColorBrush x:Key="Brush_Primary_Light" Color="{DynamicResource CTK.Color.PrimaryHover}"/>
-    <SolidColorBrush x:Key="Brush_Teaching" Color="{DynamicResource CTK.Color.Warning}"/>
-    <SolidColorBrush x:Key="Brush_Teaching_Deep" Color="{DynamicResource CTK.Color.Warning}"/>
     <SolidColorBrush x:Key="Brush_Success" Color="{DynamicResource CTK.Color.Success}"/>
     <SolidColorBrush x:Key="Brush_Warning" Color="{DynamicResource CTK.Color.Warning}"/>
     <SolidColorBrush x:Key="Brush_Danger" Color="{DynamicResource CTK.Color.Danger}"/>
-    <SolidColorBrush x:Key="Brush_Accent_Teal" Color="{DynamicResource CTK.Color.PrimaryHover}"/>
-    <SolidColorBrush x:Key="Brush_Accent_Violet" Color="{DynamicResource CTK.Color.TextTertiary}"/>
-    <SolidColorBrush x:Key="Brush_Accent_Amber" Color="{DynamicResource CTK.Color.Warning}"/>
     <SolidColorBrush x:Key="Brush_Border_Subtle" Color="{DynamicResource CTK.Color.BorderSubtle}"/>
     <SolidColorBrush x:Key="Brush_Border_Strong" Color="{DynamicResource CTK.Color.BorderDefault}"/>
     <SolidColorBrush x:Key="Brush_Border_Focus" Color="{DynamicResource CTK.Color.BorderFocus}"/>

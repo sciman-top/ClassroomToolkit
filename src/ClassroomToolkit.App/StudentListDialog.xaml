@@ -115,7 +115,7 @@
                                                 </Style>
                                             </Border.Style>
                                             <Path Data="M3,8 L6,11 L13,4"
-                                                  Stroke="{DynamicResource Brush_Text_Black}"
+                                                  Stroke="{DynamicResource CTK.Brush.Text.OnPrimary}"
                                                   StrokeThickness="1.8"
                                                   StrokeStartLineCap="Round"
                                                   StrokeEndLineCap="Round"

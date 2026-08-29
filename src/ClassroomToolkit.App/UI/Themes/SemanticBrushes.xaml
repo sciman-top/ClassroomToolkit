@@ -9,6 +9,7 @@
     <SolidColorBrush x:Key="CTK.Brush.Pressed" Color="{DynamicResource CTK.Color.Pressed}"/>
     <SolidColorBrush x:Key="CTK.Brush.Border.Subtle" Color="{DynamicResource CTK.Color.BorderSubtle}"/>
     <SolidColorBrush x:Key="CTK.Brush.Border.Default" Color="{DynamicResource CTK.Color.BorderDefault}"/>
+    <SolidColorBrush x:Key="CTK.Brush.Border.Toolbar" Color="{DynamicResource CTK.Color.BorderToolbar}"/>
     <SolidColorBrush x:Key="CTK.Brush.Border.Focus" Color="{DynamicResource CTK.Color.BorderFocus}"/>
     <SolidColorBrush x:Key="CTK.Brush.Text.Primary" Color="{DynamicResource CTK.Color.TextPrimary}"/>
     <SolidColorBrush x:Key="CTK.Brush.Text.Secondary" Color="{DynamicResource CTK.Color.TextSecondary}"/>

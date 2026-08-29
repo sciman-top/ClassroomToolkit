@@ -41,7 +41,7 @@
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Glow_Primary"/>
                             </Border.Effect>
-                            <Path Data="{StaticResource Icon_Apps}" Fill="{DynamicResource Brush_Text_Black}" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_Apps}" Fill="{DynamicResource CTK.Brush.Text.OnPrimary}" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="课堂工具箱" FontSize="{StaticResource FontSize_Title_Management}" FontWeight="Bold"/>

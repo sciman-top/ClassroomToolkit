@@ -9,6 +9,7 @@
     <Color x:Key="CTK.Color.Pressed">#2B3B43</Color>
     <Color x:Key="CTK.Color.BorderSubtle">#27353B</Color>
     <Color x:Key="CTK.Color.BorderDefault">#34464E</Color>
+    <Color x:Key="CTK.Color.BorderToolbar">#3B4F58</Color>
     <Color x:Key="CTK.Color.BorderFocus">#55D8C4</Color>
     <Color x:Key="CTK.Color.TextPrimary">#F3F7F6</Color>
     <Color x:Key="CTK.Color.TextSecondary">#AAB9B5</Color>
@@ -27,7 +28,7 @@
     <Color x:Key="CTK.Color.WarningSoft">#3A2C16</Color>
     <Color x:Key="CTK.Color.Danger">#E56570</Color>
     <Color x:Key="CTK.Color.DangerPressed">#C94D59</Color>
-    <Color x:Key="CTK.Color.DangerSoft">#3D2024</Color>
+    <Color x:Key="CTK.Color.DangerSoft">#331A1E</Color>
     <Color x:Key="CTK.Color.Selection">#244D47</Color>
     <Color x:Key="CTK.Color.SelectionOverlay">#28FFFFFF</Color>
     <Color x:Key="CTK.Color.SelectionOverlaySoft">#14FFFFFF</Color>

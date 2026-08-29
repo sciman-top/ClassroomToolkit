@@ -93,7 +93,7 @@
         <Border x:Name="ToolbarContainer"
                 Style="{StaticResource CTK.FloatingToolbar}"
                 Background="{DynamicResource CTK.Brush.OverlayToolbar}"
-                BorderBrush="{DynamicResource CTK.Brush.Border.Default}"
+                BorderBrush="{DynamicResource CTK.Brush.Border.Toolbar}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource CTK.Radius.Toolbar}"
                 MinHeight="{StaticResource CTK.Size.Toolbar}"
@@ -132,7 +132,7 @@
 
             <Border Background="{DynamicResource Brush_Surface_Secondary}" CornerRadius="{StaticResource CTK.Radius.Panel}" Padding="4,0" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="QuickColor1Button" Background="{DynamicResource Brush_Text_Black}" Tag="0"
+                    <ToggleButton x:Name="QuickColor1Button" Background="{DynamicResource CTK.Brush.Text.OnPrimary}" Tag="0"
                                   Style="{StaticResource Style_ToolbarColorBubbleToggle}"
                                   ToolTip="画笔 1：点按使用，再点/长按换色和粗细"
                                   PreviewMouseLeftButtonDown="OnQuickColorPointerDown"

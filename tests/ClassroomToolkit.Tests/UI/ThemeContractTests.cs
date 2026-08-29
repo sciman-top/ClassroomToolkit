@@ -22,6 +22,7 @@ public sealed class ThemeContractTests
         "CTK.Color.Pressed",
         "CTK.Color.BorderSubtle",
         "CTK.Color.BorderDefault",
+        "CTK.Color.BorderToolbar",
         "CTK.Color.BorderFocus",
         "CTK.Color.TextPrimary",
         "CTK.Color.TextSecondary",
@@ -138,6 +139,13 @@ public sealed class ThemeContractTests
 
                 var shell = dialog.Content.Should().BeOfType<System.Windows.Controls.Border>().Subject;
                 ((SolidColorBrush)shell.Background).Color.Should().Be(Color.FromRgb(0x11, 0x1A, 0x1F));
+
+                var midnightCanvas = dialog.FindName("MidnightTealPreviewCanvas")
+                    .Should().BeOfType<System.Windows.Controls.Border>().Subject;
+                ((SolidColorBrush)midnightCanvas.Background).Color.Should().Be(Color.FromRgb(0x0E, 0x14, 0x18));
+                var lightCanvas = dialog.FindName("LightPreviewCanvas")
+                    .Should().BeOfType<System.Windows.Controls.Border>().Subject;
+                ((SolidColorBrush)lightCanvas.Background).Color.Should().Be(Color.FromRgb(0xF3, 0xF6, 0xF7));
 
                 var lightRadio = dialog.FindName("LightRadio")
                     .Should().BeOfType<System.Windows.Controls.RadioButton>().Subject;
