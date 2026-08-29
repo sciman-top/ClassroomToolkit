@@ -51,6 +51,7 @@
 
                     <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
                         <TabItem Header="详情" Style="{StaticResource CTK.TabItem}">
+                            <!-- 例外：诊断明细用等宽字体，非 UI 主题字体 -->
                             <TextBox x:Name="DetailBox"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"
@@ -65,6 +66,7 @@
                                      BorderThickness="0"/>
                         </TabItem>
                         <TabItem Header="建议" Style="{StaticResource CTK.TabItem}">
+                            <!-- 例外：诊断明细用等宽字体，非 UI 主题字体 -->
                             <TextBox x:Name="SuggestionBox"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"

@@ -387,7 +387,7 @@
                                      Background="{DynamicResource Brush_Surface_Primary}"
                                      BorderBrush="{DynamicResource Brush_Border_Strong}"
                                      BorderThickness="1" 
-                                     CornerRadius="6"
+                                     CornerRadius="8"
                                      MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                      MinWidth="{Binding ActualWidth, ElementName=border}">
                                   <Border.Effect>
@@ -430,7 +430,7 @@
                     <StackPanel Orientation="Horizontal" Background="Transparent" SnapsToDevicePixels="True">
                         <Border x:Name="box" Width="18" Height="18" CornerRadius="4" BorderThickness="{StaticResource BorderThickness_Emphasis}" 
                                 BorderBrush="{DynamicResource Brush_Text_Tertiary}" Background="Transparent">
-                            <Path x:Name="check" Data="M3,8 L6,11 L14,3" Stroke="White" StrokeThickness="2" Visibility="Collapsed" Margin="0"
+                            <Path x:Name="check" Data="M3,8 L6,11 L14,3" Stroke="{DynamicResource CTK.Brush.Text.OnPrimary}" StrokeThickness="2" Visibility="Collapsed" Margin="0"
                                   SnapsToDevicePixels="False" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ContentPresenter Margin="{TemplateBinding Padding}" TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
@@ -1333,7 +1333,7 @@
                                 Margin="6"
                                 Visibility="Collapsed">
                             <Path Data="M3,8 L6,11 L13,4"
-                                  Stroke="White"
+                                  Stroke="{DynamicResource CTK.Brush.Text.OnPrimary}"
                                   StrokeThickness="2"
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round"
@@ -1387,7 +1387,7 @@
                                 Margin="6,0,0,0"
                                 Visibility="Collapsed">
                             <Path Data="M3,8 L6,11 L13,4"
-                                  Stroke="White"
+                                  Stroke="{DynamicResource CTK.Brush.Text.OnPrimary}"
                                   StrokeThickness="2"
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round"
@@ -1610,7 +1610,7 @@
                                                    FontWeight="{TemplateBinding FontWeight}"
                                                    Foreground="{TemplateBinding Foreground}"/>
                                     </Border>
-                                    <Border x:Name="ActiveIndicator" Height="2" Background="{DynamicResource Brush_Text_Black}"
+                                    <Border x:Name="ActiveIndicator" Height="2" Background="{DynamicResource CTK.Brush.Primary}"
                                             VerticalAlignment="Bottom" Visibility="Collapsed" Margin="16,0,16,1" CornerRadius="1"/>
                                 </Grid>
                                 <ControlTemplate.Triggers>
@@ -1626,8 +1626,8 @@
                                     <!-- Selected: filled pill -->
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="FontWeight" Value="SemiBold"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush_Text_Black}"/>
-                                        <Setter TargetName="bd" Property="Background" Value="{DynamicResource Brush_Primary}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource CTK.Brush.Primary}"/>
+                                        <Setter TargetName="bd" Property="Background" Value="{DynamicResource CTK.Brush.Primary.Soft}"/>
                                         <Setter TargetName="bd" Property="Effect" Value="{x:Null}"/>
                                         <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible"/>
                                     </Trigger>
@@ -1959,7 +1959,7 @@
                                 <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Opacity="0"/>
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb x:Name="Thumb" Width="16" Height="16" VerticalAlignment="Center" OverridesDefaultStyle="True">
+                                <Thumb x:Name="Thumb" Width="14" Height="14" VerticalAlignment="Center" OverridesDefaultStyle="True">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Grid>

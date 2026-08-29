@@ -13,6 +13,7 @@
         Background="Transparent"
         Topmost="True">
 
+    <!-- 例外：WindowChrome 圆角必须为 0，自绘圆角由外层 Border 承担，否则命中区域与边框失真 -->
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="48"
                             ResizeBorderThickness="8"

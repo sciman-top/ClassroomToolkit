@@ -48,10 +48,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Focus}"/>
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Focus}"/>
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CTK.Brush.SurfaceAlt}"/>
@@ -90,7 +90,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource CTK.Brush.Hover}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Focus}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter Property="Background" Value="{DynamicResource CTK.Brush.Pressed}"/>
@@ -200,7 +200,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CTK.Brush.Hover}"/>
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Focus}"/>
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource CTK.Brush.Border.Default}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource CTK.Brush.Primary.Soft}"/>

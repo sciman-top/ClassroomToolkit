@@ -410,6 +410,7 @@
                 </Border>
             </Grid>
 
+            <!-- 例外：页脚贴合窗口底边，0 圆角避免与外层窗口圆角叠加 -->
             <Border Grid.Row="2" Style="{StaticResource Style_ManagementShellFooterBorder}" CornerRadius="0">
                 <Grid>
                     <TextBlock Text="PDF / 图片 / 笔迹"
