@@ -75,6 +75,11 @@ public partial class PaintSettingsDialog
                     EraserSizeSlider.Value = Clamp(defaults.EraserSize, 6, 60);
                     BrushOpacitySlider.Value = ToPercent(defaults.BrushOpacity);
                     CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
+                    BrushColor = defaults.BrushColor;
+                    BoardColor = defaults.BoardColor;
+                    QuickColor1 = defaults.QuickColor1;
+                    QuickColor2 = defaults.QuickColor2;
+                    QuickColor3 = defaults.QuickColor3;
                     break;
                 case 1:
                     SelectShapeType(defaults.ShapeType);

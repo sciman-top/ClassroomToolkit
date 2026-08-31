@@ -67,6 +67,8 @@ public partial class PaintSettingsDialog
             CalligraphyOverlayThresholdSlider.Value = ToPercent(defaults.CalligraphyOverlayOpacityThreshold);
             SelectShapeType(defaults.ShapeType);
             SelectComboByTag(ToolbarScaleCombo, FindNearestScale(defaults.PaintToolbarScale));
+            BrushColor = defaults.BrushColor;
+            BoardColor = defaults.BoardColor;
             QuickColor1 = defaults.QuickColor1;
             QuickColor2 = defaults.QuickColor2;
             QuickColor3 = defaults.QuickColor3;

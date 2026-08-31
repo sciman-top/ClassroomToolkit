@@ -78,6 +78,7 @@
             </Border>
 
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button x:Name="RestoreDefaultsButton" Content="恢复默认" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
                 <Button Content="完成" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnClose"/>
             </StackPanel>
         </Grid>

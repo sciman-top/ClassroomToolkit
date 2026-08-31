@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Ink;
 
@@ -42,11 +43,37 @@ public partial class InkSettingsDialog : Window
 
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
+        if (!TryNormalizeRetentionDays(InkRetentionDaysBox.Text, out var retentionDays))
+        {
+            TopmostMessageBox.Show(
+                this,
+                "请输入不小于 0 的整数天数。",
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
         InkRecordEnabled = InkRecordCheck.IsChecked == true;
         InkReplayPreviousEnabled = InkReplayPreviousCheck.IsChecked == true;
-        InkRetentionDays = NormalizeRetentionDays(InkRetentionDaysBox.Text);
+        InkRetentionDays = retentionDays;
         InkPhotoRootPath = NormalizePhotoRoot(InkPhotoPathBox.Text);
         DialogResult = true;
+    }
+
+    private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        ApplyDefaultSettings();
+    }
+
+    private void ApplyDefaultSettings()
+    {
+        var defaults = new AppSettings();
+        InkRecordCheck.IsChecked = defaults.InkRecordEnabled;
+        InkReplayPreviousCheck.IsChecked = defaults.InkReplayPreviousEnabled;
+        InkRetentionDaysBox.Text = defaults.InkRetentionDays.ToString(CultureInfo.InvariantCulture);
+        InkPhotoPathBox.Text = defaults.InkPhotoRootPath;
+        UpdateInkRecordState();
     }
 
     private void OnCancel(object sender, RoutedEventArgs e)
@@ -83,16 +110,16 @@ public partial class InkSettingsDialog : Window
         return value.Trim();
     }
 
-    private static int NormalizeRetentionDays(string? value)
+    internal static bool TryNormalizeRetentionDays(string? value, out int days)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value)
+            || !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out days)
+            || days < 0)
         {
-            return 0;
+            days = 0;
+            return false;
         }
-        if (!int.TryParse(value, out var days))
-        {
-            return 0;
-        }
-        return Math.Max(0, days);
+
+        return true;
     }
 }

@@ -133,6 +133,11 @@ public partial class PaintSettingsDialog : Window
 
     private readonly record struct PresetBrushSectionState(
         string PresetScheme,
+        MediaColor BrushColor,
+        MediaColor BoardColor,
+        MediaColor QuickColor1,
+        MediaColor QuickColor2,
+        MediaColor QuickColor3,
         PaintBrushStyle BrushStyle,
         WhiteboardBrushPreset WhiteboardPreset,
         CalligraphyBrushPreset CalligraphyPreset,
@@ -215,6 +220,7 @@ public partial class PaintSettingsDialog : Window
     public double EraserSize { get; private set; }
     public PaintShapeType ShapeType { get; private set; } = PaintShapeType.Line;
     public MediaColor BrushColor { get; private set; }
+    public MediaColor BoardColor { get; private set; } = MediaColors.White;
     public MediaColor QuickColor1 { get; private set; } = MediaColors.Black;
     public MediaColor QuickColor2 { get; private set; } = MediaColors.Red;
     public MediaColor QuickColor3 { get; private set; } = MediaColors.DodgerBlue;

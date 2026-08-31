@@ -499,6 +499,7 @@ public partial class MainWindow
             _settings.BoardOpacity = 255;
             _settings.ShapeType = dialog.ShapeType;
             _settings.BrushColor = dialog.BrushColor;
+            _settings.BoardColor = dialog.BoardColor;
             _settings.PaintToolbarScale = dialog.ToolbarScale;
             _settings.InkSaveEnabled = dialog.InkSaveEnabled;
             _settings.InkExportScope = dialog.InkExportScope;

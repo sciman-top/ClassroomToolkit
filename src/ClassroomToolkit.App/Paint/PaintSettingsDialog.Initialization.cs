@@ -11,6 +11,7 @@ public partial class PaintSettingsDialog
         ControlMsPpt = settings.ControlMsPpt;
         ControlWpsPpt = settings.ControlWpsPpt;
         BrushColor = settings.BrushColor;
+        BoardColor = settings.BoardColor;
         _initialBrushSize = settings.BrushSize;
         QuickColor1 = settings.QuickColor1;
         QuickColor2 = settings.QuickColor2;

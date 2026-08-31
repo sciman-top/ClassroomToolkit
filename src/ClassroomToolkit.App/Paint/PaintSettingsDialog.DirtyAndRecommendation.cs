@@ -25,6 +25,11 @@ public partial class PaintSettingsDialog
         var current = CapturePresetBrushSectionStateFromControls();
         var initial = _initialPresetBrushSectionState;
         return !string.Equals(current.PresetScheme, initial.PresetScheme, StringComparison.OrdinalIgnoreCase)
+            || current.BrushColor != initial.BrushColor
+            || current.BoardColor != initial.BoardColor
+            || current.QuickColor1 != initial.QuickColor1
+            || current.QuickColor2 != initial.QuickColor2
+            || current.QuickColor3 != initial.QuickColor3
             || current.BrushStyle != initial.BrushStyle
             || current.WhiteboardPreset != initial.WhiteboardPreset
             || current.CalligraphyPreset != initial.CalligraphyPreset

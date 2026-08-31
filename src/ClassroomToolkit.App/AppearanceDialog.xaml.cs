@@ -97,6 +97,13 @@ public partial class AppearanceDialog : Window
         DialogResult = true;
     }
 
+    private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        var defaultTheme = ThemePreferenceService.DefaultTheme;
+        SelectRadio(defaultTheme);
+        ThemeSelected?.Invoke(defaultTheme);
+    }
+
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)

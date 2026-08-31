@@ -11,6 +11,11 @@ public partial class PaintSettingsDialog
     {
         return new PresetBrushSectionState(
             PresetScheme: GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom),
+            BrushColor: BrushColor,
+            BoardColor: BoardColor,
+            QuickColor1: QuickColor1,
+            QuickColor2: QuickColor2,
+            QuickColor3: QuickColor3,
             BrushStyle: ResolveBrushStyle(),
             WhiteboardPreset: ResolveWhiteboardPreset(),
             CalligraphyPreset: ResolveCalligraphyPreset(),
@@ -85,6 +90,11 @@ public partial class PaintSettingsDialog
         try
         {
             SelectComboByTag(PresetSchemeCombo, state.PresetScheme, PresetSchemeDefaults.Custom);
+            BrushColor = state.BrushColor;
+            BoardColor = state.BoardColor;
+            QuickColor1 = state.QuickColor1;
+            QuickColor2 = state.QuickColor2;
+            QuickColor3 = state.QuickColor3;
             SelectBrushStyle(state.BrushStyle);
             SelectWhiteboardPreset(state.WhiteboardPreset);
             SelectCalligraphyPreset(state.CalligraphyPreset);
