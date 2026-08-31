@@ -72,7 +72,36 @@ public sealed class MarkerBrushPreviewGeometryTests
         var geometryDrawing = drawing.Children.Should().ContainSingle().Which.Should().BeOfType<GeometryDrawing>().Subject;
         var preview = geometryDrawing.Geometry.Should().BeOfType<GeometryGroup>().Subject;
         preview.Children.Should().HaveCount(2);
-        preview.Children.Should().OnlyContain(geometry => geometry is StreamGeometry);
+        var stableBase = preview.Children[0].Should().BeOfType<GeometryGroup>().Subject;
+        stableBase.Children.Should().NotBeEmpty();
+        stableBase.Children.Should().OnlyContain(geometry => geometry is StreamGeometry);
+        preview.Children[1].Should().BeOfType<StreamGeometry>();
+    }
+
+    [Fact]
+    public void LongRibbonPreview_BaseBuildWork_ShouldGrowLinearly()
+    {
+        const int moveCount = 900;
+        var renderer = new MarkerBrushRenderer(MarkerRenderMode.Ribbon, MarkerBrushConfig.Balanced);
+        renderer.Initialize(Colors.Red, baseSize: 12, opacity: 255);
+        long timestamp = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreatePointer(new Point(10, 40), timestamp));
+        var visual = new DrawingVisual();
+
+        for (int i = 1; i <= moveCount; i++)
+        {
+            timestamp += step;
+            renderer.OnMove(BrushInputSample.CreatePointer(
+                new Point(10 + (i * 2.0), 40 + (Math.Sin(i * 0.08) * 12.0)),
+                timestamp));
+            using var dc = visual.RenderOpen();
+            renderer.Render(dc);
+        }
+
+        renderer.PreviewBaseSourcePointsBuilt.Should().BeLessThanOrEqualTo(
+            moveCount * 2,
+            "stable preview geometry should be appended rather than rebuilt from the stroke origin");
     }
 
     [Theory]

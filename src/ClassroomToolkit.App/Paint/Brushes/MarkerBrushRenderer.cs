@@ -157,8 +157,9 @@ internal class MarkerBrushRenderer : IBrushRenderer
     private Geometry? _cachedGeometry;
     private Geometry? _cachedPreviewGeometry;
     private int _previewGeometryVersion = -1;
-    private Geometry? _previewBaseGeometry;
+    private GeometryGroup? _previewBaseGeometry;
     private int _previewBasePointCount;
+    private int _previewBaseSourcePointsBuilt;
     private SolidColorBrush? _cachedRenderBrush;
     private int _cachedRenderColorKey = int.MinValue;
     private readonly List<WpfPoint> _ribbonLeftBuffer = new();
@@ -167,6 +168,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
     public bool IsActive => _isActive;
     public int GeometryVersion => _geometryVersion;
     public MarkerRenderMode RenderMode => _renderMode;
+    internal int PreviewBaseSourcePointsBuilt => _previewBaseSourcePointsBuilt;
 
     public MarkerBrushRenderer()
         : this(MarkerRenderMode.SegmentUnion, MarkerBrushConfig.Smooth)
@@ -216,6 +218,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
         _points.Add(new MarkerPoint(point, _smoothedWidth));
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewBaseSourcePointsBuilt = 0;
         MarkGeometryDirty();
     }
 
@@ -341,6 +344,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
         _hasRawPoint = false;
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewBaseSourcePointsBuilt = 0;
         MarkGeometryDirty();
     }
 
@@ -376,18 +380,31 @@ internal class MarkerBrushRenderer : IBrushRenderer
         else
         {
             int basePointCount = Math.Max(2, _points.Count - PreviewTailPointWindow);
-            bool shouldRefreshBase = _previewBaseGeometry == null
+            bool shouldResetBase = _previewBaseGeometry == null
                 || _previewBasePointCount <= 0
-                || basePointCount < _previewBasePointCount
-                || (basePointCount - _previewBasePointCount) >= PreviewBaseRefreshStride;
-
-            if (shouldRefreshBase)
+                || basePointCount < _previewBasePointCount;
+            if (shouldResetBase)
             {
+                _previewBaseGeometry = new GeometryGroup { FillRule = FillRule.Nonzero };
+                _previewBasePointCount = 0;
+            }
+
+            if (_previewBasePointCount == 0
+                || (basePointCount - _previewBasePointCount) >= PreviewBaseRefreshStride)
+            {
+                int appendStart = _previewBasePointCount == 0
+                    ? 0
+                    : Math.Max(0, _previewBasePointCount - 3);
+                var stableChunk = BuildPreviewGeometryForRange(appendStart, basePointCount);
+                _previewBaseSourcePointsBuilt += basePointCount - appendStart;
                 _previewBasePointCount = basePointCount;
-                _previewBaseGeometry = BuildPreviewGeometryForRange(0, _previewBasePointCount);
-                if (_previewBaseGeometry?.CanFreeze == true)
+                if (stableChunk != null)
                 {
-                    _previewBaseGeometry.Freeze();
+                    if (stableChunk.CanFreeze)
+                    {
+                        stableChunk.Freeze();
+                    }
+                    _previewBaseGeometry!.Children.Add(stableChunk);
                 }
             }
 
@@ -406,7 +423,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
             }
         }
 
-        if (preview?.CanFreeze == true)
+        if (_previewBaseGeometry == null && preview?.CanFreeze == true)
         {
             preview.Freeze();
         }
