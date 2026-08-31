@@ -163,6 +163,7 @@ public partial class PaintOverlayWindow
             PushHistory();
         }
         ClearSurface();
+        CancelPendingBrushPreview();
         _visualHost.Clear();
         ClearShapePreview();
         ClearRegionSelection();

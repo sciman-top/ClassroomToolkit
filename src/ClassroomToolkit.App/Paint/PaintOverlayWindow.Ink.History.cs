@@ -149,11 +149,13 @@ public partial class PaintOverlayWindow
     {
         _activeRenderer?.Reset();
         _visualHost.Clear();
+        CancelPendingBrushPreview();
         _strokeInProgress = false;
         _isErasing = false;
         _lastEraserPoint = null;
         _lastCalligraphyPreviewPoint = null;
         _lastBrushInputSample = null;
+        _lastBrushPredictionSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _inkStrokes.Clear();
         ResetInkHistory();
@@ -167,10 +169,14 @@ public partial class PaintOverlayWindow
     {
         _activeRenderer?.Reset();
         _visualHost.Clear();
+        CancelPendingBrushPreview();
         _strokeInProgress = false;
         _isErasing = false;
         _lastEraserPoint = null;
         _lastCalligraphyPreviewPoint = null;
+        _lastBrushInputSample = null;
+        _lastBrushPredictionSample = null;
+        _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _inkStrokes.Clear();
         _hasDrawing = false;
         ResetInkHistory();

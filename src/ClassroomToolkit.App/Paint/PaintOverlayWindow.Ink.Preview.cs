@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Paint.Brushes;
@@ -13,28 +12,52 @@ public partial class PaintOverlayWindow
 {
     private void UpdateBrushPrediction(BrushInputSample input)
     {
-        if (!_lastBrushInputSample.HasValue)
+        if (!_lastBrushPredictionSample.HasValue)
         {
-            _lastBrushInputSample = input;
+            _lastBrushPredictionSample = input;
             return;
         }
 
-        var previous = _lastBrushInputSample.Value;
-        var dtMs = (input.TimestampTicks - previous.TimestampTicks) * 1000.0 / Math.Max(Stopwatch.Frequency, 1);
-        if (dtMs < InkInputRuntimeDefaults.PredictionUpdateMinDtMs)
+        var previous = _lastBrushPredictionSample.Value;
+        _lastBrushVelocityDipPerSec = BrushPredictionVelocityPolicy.Resolve(
+            _lastBrushVelocityDipPerSec,
+            previous,
+            input);
+        _lastBrushPredictionSample = input;
+    }
+
+    private void RequestBrushPreviewRender()
+    {
+        if (_brushPreviewRenderingAttached)
         {
-            _lastBrushInputSample = input;
             return;
         }
 
-        var dtSeconds = dtMs / 1000.0;
-        var v = (input.Position - previous.Position) / Math.Max(dtSeconds, BrushPredictionPreviewDefaults.MinPredictionDtSeconds);
-        _lastBrushVelocityDipPerSec = new Vector(
-            (_lastBrushVelocityDipPerSec.X * BrushPredictionPreviewDefaults.VelocitySmoothingKeepFactor)
-            + (v.X * BrushPredictionPreviewDefaults.VelocitySmoothingApplyFactor),
-            (_lastBrushVelocityDipPerSec.Y * BrushPredictionPreviewDefaults.VelocitySmoothingKeepFactor)
-            + (v.Y * BrushPredictionPreviewDefaults.VelocitySmoothingApplyFactor));
-        _lastBrushInputSample = input;
+        _brushPreviewRenderingAttached = true;
+        CompositionTarget.Rendering += OnBrushPreviewRendering;
+    }
+
+    private void OnBrushPreviewRendering(object? sender, EventArgs e)
+    {
+        CompositionTarget.Rendering -= OnBrushPreviewRendering;
+        _brushPreviewRenderingAttached = false;
+        if (!_strokeInProgress || _activeRenderer == null)
+        {
+            return;
+        }
+
+        RenderBrushPreview();
+    }
+
+    private void CancelPendingBrushPreview()
+    {
+        if (!_brushPreviewRenderingAttached)
+        {
+            return;
+        }
+
+        CompositionTarget.Rendering -= OnBrushPreviewRendering;
+        _brushPreviewRenderingAttached = false;
     }
 
     private void RenderBrushPreview()

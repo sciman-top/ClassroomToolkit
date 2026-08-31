@@ -85,6 +85,7 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
+        CancelPendingBrushPreview();
         Interlocked.Exchange(ref _overlayClosed, 1);
         _overlayLifecycleCancellation.Cancel();
         Closed -= OnOverlayClosed;

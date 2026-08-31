@@ -78,11 +78,13 @@ public partial class PaintOverlayWindow
     private readonly StylusDeviceAdaptiveProfiler _stylusDeviceAdaptiveProfiler = new();
     private bool _pendingAdaptiveRendererRefresh;
     private BrushInputSample? _lastBrushInputSample;
+    private BrushInputSample? _lastBrushPredictionSample;
     private BrushInputSample? _pendingCrossPageBrushContinuationSample;
     private bool _pendingCrossPageBrushReplayCurrentInput;
     private bool _activeBrushStrokeUsesCrossPageContinuation;
     private bool _suppressImmediatePhotoInkRedraw;
     private bool _suppressCrossPageVisualSync;
+    private bool _brushPreviewRenderingAttached;
     private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
     private int _brushPredictionHorizonMs = 8;
     private readonly IInkRendererFactory _inkRendererFactory;

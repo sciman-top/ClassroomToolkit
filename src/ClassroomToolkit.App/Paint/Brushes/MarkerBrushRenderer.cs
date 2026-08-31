@@ -143,8 +143,11 @@ internal class MarkerBrushRenderer : IBrushRenderer
     private double _baseSize;
     private bool _isActive;
     private long _lastTimestampTicks;
+    private long _lastRawTimestampTicks;
     private double _smoothedWidth;
     private WpfPoint _smoothedPos;
+    private WpfPoint _lastRawPos;
+    private bool _hasRawPoint;
     private double _velocityPeak;
     private readonly OneEuroPointFilter _positionFilter = new OneEuroPointFilter(1.2, 0.06, 1.0);
     private readonly OneEuroFilter _widthFilter = new OneEuroFilter(1.5, 0.03, 1.0);
@@ -200,8 +203,11 @@ internal class MarkerBrushRenderer : IBrushRenderer
         _lastTimestampTicks = input.TimestampTicks > 0
             ? input.TimestampTicks
             : Stopwatch.GetTimestamp();
+        _lastRawTimestampTicks = _lastTimestampTicks;
         _smoothedWidth = _baseSize;
         _smoothedPos = point;
+        _lastRawPos = point;
+        _hasRawPoint = true;
         _velocityPeak = 0.001;
         _positionFilter.Reset();
         _widthFilter.Reset();
@@ -223,23 +229,31 @@ internal class MarkerBrushRenderer : IBrushRenderer
             : Stopwatch.GetTimestamp();
         var dt = (now - _lastTimestampTicks) * 1000.0 / Stopwatch.Frequency;
         if (dt < 1) dt = 1;
-        double dtSeconds = dt / 1000.0;
+        var rawDt = (now - _lastRawTimestampTicks) * 1000.0 / Stopwatch.Frequency;
+        if (rawDt < 1) rawDt = 1;
+        var rawSpeed = _hasRawPoint ? (point - _lastRawPos).Length / rawDt : 0.0;
+        _lastRawPos = point;
+        _lastRawTimestampTicks = now;
+        _hasRawPoint = true;
 
-        _smoothedPos = _positionFilter.Filter(point, dtSeconds);
+        double dtSeconds = rawDt / 1000.0;
+        var filteredPoint = _positionFilter.Filter(point, dtSeconds);
         var lastPt = _points[_points.Count - 1].Position;
-        double rawDist = (point - lastPt).Length;
-        double rawSpeed = rawDist / dt;
         double followBoost = Math.Clamp((rawSpeed - 1.0) / 2.2, 0, 1);
-        if (dt > 9.0)
+        if (rawDt > 9.0)
         {
-            followBoost = Math.Max(followBoost, Math.Clamp((dt - 9.0) / 20.0, 0, 1));
+            followBoost = Math.Max(followBoost, Math.Clamp((rawDt - 9.0) / 20.0, 0, 1));
         }
-        if (followBoost > 0.001)
-        {
-            _smoothedPos = new WpfPoint(
-                Lerp(_smoothedPos.X, point.X, followBoost * 0.58),
-                Lerp(_smoothedPos.Y, point.Y, followBoost * 0.58));
-        }
+        // Keep slow-hand filtering intact, then converge directly to the input
+        // as speed rises so the tip does not trail the pointer.
+        var maxFollowAlpha = Lerp(
+            0.9,
+            0.98,
+            Math.Clamp(_config.PositionSmoothing, 0.0, 1.0));
+        var followAlpha = Math.Clamp(followBoost * maxFollowAlpha, 0.0, maxFollowAlpha);
+        _smoothedPos = new WpfPoint(
+            Lerp(filteredPoint.X, point.X, followAlpha),
+            Lerp(filteredPoint.Y, point.Y, followAlpha));
 
         var dist = (_smoothedPos - lastPt).Length;
         double minMoveDistance = Lerp(_config.MinMoveDistance, _config.MinMoveDistance * 0.45, followBoost);
@@ -324,6 +338,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
     {
         _points.Clear();
         _isActive = false;
+        _hasRawPoint = false;
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
         MarkGeometryDirty();
@@ -356,7 +371,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
         {
             _previewBaseGeometry = null;
             _previewBasePointCount = 0;
-            preview = BuildSegmentGeometryFromPoints(_points);
+            preview = BuildPreviewGeometryFromPoints(_points);
         }
         else
         {
@@ -369,7 +384,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
             if (shouldRefreshBase)
             {
                 _previewBasePointCount = basePointCount;
-                _previewBaseGeometry = BuildSegmentGeometryForRange(0, _previewBasePointCount);
+                _previewBaseGeometry = BuildPreviewGeometryForRange(0, _previewBasePointCount);
                 if (_previewBaseGeometry?.CanFreeze == true)
                 {
                     _previewBaseGeometry.Freeze();
@@ -377,7 +392,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
             }
 
             int tailStart = Math.Max(0, _previewBasePointCount - 3);
-            var tailGeometry = BuildSegmentGeometryForRange(tailStart, _points.Count);
+            var tailGeometry = BuildPreviewGeometryForRange(tailStart, _points.Count);
             if (_previewBaseGeometry != null && tailGeometry != null)
             {
                 var group = new GeometryGroup { FillRule = FillRule.Nonzero };
@@ -412,7 +427,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
         return BuildSegmentGeometryFromPoints(_points);
     }
 
-    private Geometry? BuildSegmentGeometryForRange(int startInclusive, int endExclusive)
+    private Geometry? BuildPreviewGeometryForRange(int startInclusive, int endExclusive)
     {
         int start = Math.Clamp(startInclusive, 0, _points.Count);
         int end = Math.Clamp(endExclusive, start, _points.Count);
@@ -423,7 +438,14 @@ internal class MarkerBrushRenderer : IBrushRenderer
         }
 
         var source = _points.GetRange(start, count);
-        return BuildSegmentGeometryFromPoints(source);
+        return BuildPreviewGeometryFromPoints(source);
+    }
+
+    private Geometry? BuildPreviewGeometryFromPoints(IReadOnlyList<MarkerPoint> sourcePoints)
+    {
+        return _renderMode == MarkerRenderMode.Ribbon
+            ? BuildRibbonGeometryFromPoints(sourcePoints)
+            : BuildSegmentGeometryFromPoints(sourcePoints);
     }
 
     private Geometry? BuildSegmentGeometryFromPoints(IReadOnlyList<MarkerPoint> sourcePoints)

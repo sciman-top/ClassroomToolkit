@@ -23,6 +23,7 @@ public partial class PaintOverlayWindow
         _activeRenderer.Initialize(color, _brushSize, color.A);
         _activeRenderer.OnDown(input);
         _lastBrushInputSample = input;
+        _lastBrushPredictionSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         RenderBrushPreview();
         _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
@@ -44,6 +45,7 @@ public partial class PaintOverlayWindow
         _activeRenderer.Initialize(color, _brushSize, color.A);
         _activeRenderer.OnDown(input);
         _lastBrushInputSample = input;
+        _lastBrushPredictionSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         if (renderInitialPreview)
         {
@@ -85,7 +87,13 @@ public partial class PaintOverlayWindow
         }
 
         UpdateBrushPrediction(input);
-        RenderBrushPreview();
+        if (_brushStyle == PaintBrushStyle.Calligraphy)
+        {
+            RenderBrushPreview();
+            return;
+        }
+
+        RequestBrushPreviewRender();
     }
 
     private void EndBrushStroke(BrushInputSample input)
@@ -96,6 +104,7 @@ public partial class PaintOverlayWindow
         }
         var position = input.Position;
         _activeRenderer.OnUp(input);
+        CancelPendingBrushPreview();
         var geometry = _activeRenderer.GetLastStrokeGeometry();
         if (geometry != null)
         {
@@ -108,6 +117,7 @@ public partial class PaintOverlayWindow
         var usedCrossPageContinuation = _activeBrushStrokeUsesCrossPageContinuation;
         _activeBrushStrokeUsesCrossPageContinuation = false;
         _lastBrushInputSample = null;
+        _lastBrushPredictionSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
         _lastCalligraphyPreviewPoint = null;
         var photoInkModeActive = IsPhotoInkModeActive();
