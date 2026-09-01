@@ -16,6 +16,8 @@ public partial class PaintSettingsDialog
         {
             SelectComboByTag(OfficeModeCombo, defaults.OfficeInputMode, WpsInputModeDefaults.Auto);
             SelectComboByTag(WpsModeCombo, defaults.WpsInputMode, WpsInputModeDefaults.Auto);
+            ControlMsPptCheck.IsChecked = defaults.ControlMsPpt;
+            ControlWpsPptCheck.IsChecked = defaults.ControlWpsPpt;
             SelectComboByTag(PresetSchemeCombo, defaultPreset, PresetSchemeDefaults.Custom);
             _currentPresetScheme = defaultPreset;
             SelectIntCombo(WpsDebounceCombo, defaults.WpsDebounceMs, fallback: PaintPresetDefaults.WpsDebounceDefaultMs);
@@ -31,17 +33,20 @@ public partial class PaintSettingsDialog
             LockStrategyOnDegradeCheck.IsChecked = defaults.PresentationLockStrategyWhenDegraded;
             PresentationClassifierAutoLearnCheck.IsChecked = defaults.PresentationClassifierAutoLearnEnabled;
             PresentationClassifierClearOverridesCheck.IsChecked = false;
+            // Learned classifier overrides are data, not ordinary preferences.
+            // Keep them intact; the explicit "清除覆盖" action owns deletion.
             _workingPresentationClassifierOverridesJson =
-                NormalizePresentationClassifierOverridesJson(defaults.PresentationClassifierOverridesJson);
+                NormalizePresentationClassifierOverridesJson(_workingPresentationClassifierOverridesJson);
             PresentationClassifierOverridesJson = _workingPresentationClassifierOverridesJson;
             ClearClassifierImportRollback();
             RefreshPresentationClassifierPackageStatusText(
                 BuildClassifierPackageStatusFromOverrides(
                     _workingPresentationClassifierOverridesJson,
-                    importedDetail: "已恢复默认覆盖规则。"));
+                    importedDetail: "已恢复参数默认值，保留现有学习覆盖。"));
             ForceForegroundCheck.IsChecked = defaults.ForcePresentationForegroundOnFullscreen;
 
             InkSaveCheck.IsChecked = defaults.InkSaveEnabled;
+            InkCacheCheck.IsChecked = defaults.InkCacheEnabled;
             SelectInkExportScope(defaults.InkExportScope);
             SelectIntCombo(ExportParallelCombo, defaults.InkExportMaxParallelFiles, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);
             SelectIntCombo(NeighborPrefetchCombo, defaults.PhotoNeighborPrefetchRadiusMax, fallback: PaintSettingsOptionDefaults.PhotoNeighborPrefetchRadiusDefault);

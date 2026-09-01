@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
@@ -44,6 +45,14 @@ public partial class AutoExitDialog : Window
     private void OnCancel(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+    }
+
+    private void OnRestoreDefault(object sender, RoutedEventArgs e)
+    {
+        var defaultMinutes = AppSettings.DefaultLauncherAutoExitSeconds / 60;
+        MinutesBox.Text = defaultMinutes.ToString(CultureInfo.InvariantCulture);
+        MinutesBox.SelectAll();
+        MinutesBox.Focus();
     }
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)

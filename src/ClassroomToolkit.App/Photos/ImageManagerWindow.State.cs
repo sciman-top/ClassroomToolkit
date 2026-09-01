@@ -65,5 +65,7 @@ public partial class ImageManagerWindow : Window
     public event Action<IReadOnlyList<string>>? FavoritesChanged;
     public event Action<IReadOnlyList<string>>? RecentsChanged;
     public event Action<double, int>? LeftPanelLayoutChanged;
+    public event Action? LayoutDefaultsRequested;
+    public event Action? PhotoTransformDefaultsRequested;
 
 }

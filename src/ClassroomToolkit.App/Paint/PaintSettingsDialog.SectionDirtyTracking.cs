@@ -39,6 +39,12 @@ public partial class PaintSettingsDialog
         CalligraphySealCheck.Unchecked += OnSectionDirtyRoutedChanged;
         InkSaveCheck.Checked += OnSectionDirtyRoutedChanged;
         InkSaveCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        InkCacheCheck.Checked += OnSectionDirtyRoutedChanged;
+        InkCacheCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        ControlMsPptCheck.Checked += OnSectionDirtyRoutedChanged;
+        ControlMsPptCheck.Unchecked += OnSectionDirtyRoutedChanged;
+        ControlWpsPptCheck.Checked += OnSectionDirtyRoutedChanged;
+        ControlWpsPptCheck.Unchecked += OnSectionDirtyRoutedChanged;
         PhotoCrossPageDisplayCheck.Checked += OnSectionDirtyRoutedChanged;
         PhotoCrossPageDisplayCheck.Unchecked += OnSectionDirtyRoutedChanged;
         PhotoRememberTransformCheck.Checked += OnSectionDirtyRoutedChanged;
@@ -92,6 +98,12 @@ public partial class PaintSettingsDialog
         CalligraphySealCheck.Unchecked -= OnSectionDirtyRoutedChanged;
         InkSaveCheck.Checked -= OnSectionDirtyRoutedChanged;
         InkSaveCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        InkCacheCheck.Checked -= OnSectionDirtyRoutedChanged;
+        InkCacheCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        ControlMsPptCheck.Checked -= OnSectionDirtyRoutedChanged;
+        ControlMsPptCheck.Unchecked -= OnSectionDirtyRoutedChanged;
+        ControlWpsPptCheck.Checked -= OnSectionDirtyRoutedChanged;
+        ControlWpsPptCheck.Unchecked -= OnSectionDirtyRoutedChanged;
         PhotoCrossPageDisplayCheck.Checked -= OnSectionDirtyRoutedChanged;
         PhotoCrossPageDisplayCheck.Unchecked -= OnSectionDirtyRoutedChanged;
         PhotoRememberTransformCheck.Checked -= OnSectionDirtyRoutedChanged;

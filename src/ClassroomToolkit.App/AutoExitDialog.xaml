@@ -42,6 +42,7 @@
             </Border>
 
             <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button x:Name="RestoreDefaultButton" Content="恢复 40 分钟" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefault"/>
                 <Button Content="取消" Style="{StaticResource Style_DialogShellSecondaryActionButton}" Click="OnCancel"/>
                 <Button Content="确定" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnConfirm"/>
             </StackPanel>

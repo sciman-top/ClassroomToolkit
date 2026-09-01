@@ -162,6 +162,9 @@ public partial class PaintSettingsDialog : Window
         string PhotoInertiaProfile);
 
     private readonly record struct SceneSectionState(
+        bool ControlMsPpt,
+        bool ControlWpsPpt,
+        bool InkCacheEnabled,
         bool InkSaveEnabled,
         InkExportScope InkExportScope,
         int InkExportMaxParallelFiles,
@@ -226,6 +229,7 @@ public partial class PaintSettingsDialog : Window
     public MediaColor QuickColor3 { get; private set; } = MediaColors.DodgerBlue;
     public double ToolbarScale { get; private set; } = ToolbarScaleDefaults.Default;
     public bool InkSaveEnabled { get; private set; }
+    public bool InkCacheEnabled { get; private set; } = true;
     public InkExportScope InkExportScope { get; private set; } = InkExportScope.AllPersistedAndSession;
     public int InkExportMaxParallelFiles { get; private set; } = PaintSettingsOptionDefaults.InkExportMaxParallelDefault;
     public bool PhotoRememberTransform { get; private set; }

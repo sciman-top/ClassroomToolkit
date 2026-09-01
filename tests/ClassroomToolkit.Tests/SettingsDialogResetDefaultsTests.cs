@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.UI.Themes;
 using FluentAssertions;
@@ -103,6 +104,124 @@ public sealed class SettingsDialogResetDefaultsTests
         });
     }
 
+    [Fact]
+    public void AutoExitRestoreDefault_ShouldSetFortyMinutes()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var dialog = new AutoExitDialog(minutes: 5);
+
+            Find<Button>(dialog, "RestoreDefaultButton")
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            Find<TextBox>(dialog, "MinutesBox").Text.Should().Be("40");
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void PaintRestoreDefaults_ShouldRestoreVisibleSceneSettingsAndPreserveClassifierOverrides()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            const string overrides = "{\"office\":\"custom\"}";
+            var dialog = new PaintSettingsDialog(new AppSettings
+            {
+                ControlMsPpt = false,
+                ControlWpsPpt = false,
+                InkCacheEnabled = false,
+                PresentationClassifierOverridesJson = overrides
+            });
+
+            Find<CheckBox>(dialog, "ControlMsPptCheck").IsChecked.Should().BeFalse();
+            Find<CheckBox>(dialog, "ControlWpsPptCheck").IsChecked.Should().BeFalse();
+            Find<CheckBox>(dialog, "InkCacheCheck").IsChecked.Should().BeFalse();
+
+            InvokeParameterless(dialog, "ApplyDefaultSettings");
+
+            var defaults = new AppSettings();
+            Find<CheckBox>(dialog, "ControlMsPptCheck").IsChecked.Should().Be(defaults.ControlMsPpt);
+            Find<CheckBox>(dialog, "ControlWpsPptCheck").IsChecked.Should().Be(defaults.ControlWpsPpt);
+            Find<CheckBox>(dialog, "InkCacheCheck").IsChecked.Should().Be(defaults.InkCacheEnabled);
+            dialog.PresentationClassifierOverridesJson.Should().Contain("office");
+
+            InvokeConfirmIgnoringDialogResult(dialog);
+
+            dialog.ControlMsPpt.Should().Be(defaults.ControlMsPpt);
+            dialog.ControlWpsPpt.Should().Be(defaults.ControlWpsPpt);
+            dialog.InkCacheEnabled.Should().Be(defaults.InkCacheEnabled);
+            dialog.PresentationClassifierOverridesJson.Should().Contain("office");
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void PaintConfirm_ShouldClearClassifierOverridesOnlyWhenExplicitlyRequested()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var dialog = new PaintSettingsDialog(new AppSettings
+            {
+                PresentationClassifierOverridesJson = "{\"wps\":\"custom\"}"
+            });
+            var clearOverrides = Find<CheckBox>(dialog, "PresentationClassifierClearOverridesCheck");
+            clearOverrides.IsChecked = true;
+
+            InvokeConfirmIgnoringDialogResult(dialog);
+
+            dialog.PresentationClassifierOverridesJson.Should().BeEmpty();
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void ImageManagerRestoreViewDefaults_ShouldRestoreViewAndShowInkPreference()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var window = new ImageManagerWindow(Array.Empty<string>(), Array.Empty<string>());
+            window.ViewModel.ShowInkOverlay = false;
+            var layoutDefaultsRaised = 0;
+            var leftPanelChanged = 0;
+            var showInkChanged = 0;
+            window.LayoutDefaultsRequested += () => layoutDefaultsRaised++;
+            window.LeftPanelLayoutChanged += (_, _) => leftPanelChanged++;
+            window.ShowInkOverlayChanged += _ => showInkChanged++;
+
+            Invoke(window, "OnRestoreLayoutDefaultsClick", window, new RoutedEventArgs(Button.ClickEvent));
+
+            var defaults = new AppSettings();
+            window.ViewModel.ShowInkOverlay.Should().Be(defaults.PhotoShowInkOverlay);
+            window.ViewModel.ListMode.Should().Be(defaults.PhotoManagerListMode);
+            Find<Slider>(window, "ThumbnailSizeSlider").Value.Should().Be(defaults.PhotoManagerThumbnailSize);
+            layoutDefaultsRaised.Should().Be(1);
+            leftPanelChanged.Should().Be(1);
+            showInkChanged.Should().Be(1);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void ImageManagerRestorePhotoDefaults_ShouldRaiseTransformResetRequest()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var window = new ImageManagerWindow(Array.Empty<string>(), Array.Empty<string>());
+            var raised = 0;
+            window.PhotoTransformDefaultsRequested += () => raised++;
+
+            Invoke(window, "OnRestorePhotoTransformDefaultsClick", window, new RoutedEventArgs(Button.ClickEvent));
+
+            raised.Should().Be(1);
+            window.Close();
+        });
+    }
+
     private static T Find<T>(FrameworkElement root, string name)
         where T : FrameworkElement
     {
@@ -114,5 +233,24 @@ public sealed class SettingsDialogResetDefaultsTests
         var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
         method.Should().NotBeNull();
         method!.Invoke(target, null);
+    }
+
+    private static void Invoke(object target, string methodName, params object?[] args)
+    {
+        var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+        method!.Invoke(target, args);
+    }
+
+    private static void InvokeConfirmIgnoringDialogResult(PaintSettingsDialog dialog)
+    {
+        try
+        {
+            Invoke(dialog, "OnConfirm", dialog, new RoutedEventArgs(Button.ClickEvent));
+        }
+        catch (TargetInvocationException ex)
+        {
+            ex.InnerException.Should().BeOfType<InvalidOperationException>();
+        }
     }
 }

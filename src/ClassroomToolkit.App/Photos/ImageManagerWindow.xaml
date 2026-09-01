@@ -62,6 +62,10 @@
                     <TextBlock Text="文件夹 / PDF / 图片 / 笔迹" Style="{StaticResource Style_ManagementShellSubtitleText}" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Button x:Name="RestoreViewDefaultsButton" Content="恢复视图" Width="84" Margin="0,0,8,0"
+                            Style="{StaticResource Style_ImageManagerToolbarButton}" Click="OnRestoreLayoutDefaultsClick" ToolTip="恢复图片管理器的窗口和列表视图默认值"/>
+                    <Button x:Name="RestorePhotoDefaultsButton" Content="重置图片" Width="84" Margin="0,0,8,0"
+                            Style="{StaticResource Style_ImageManagerToolbarButton}" Click="OnRestorePhotoTransformDefaultsClick" ToolTip="清除当前图片的缩放和平移记忆"/>
                     <Button x:Name="WindowStateToggleButton" Content="还原" Width="72" Margin="0,0,8,0"
                             Style="{StaticResource Style_ImageManagerToolbarButton}" Click="OnRestoreWindowClick"/>
                     <Button Content="关闭" Width="72"

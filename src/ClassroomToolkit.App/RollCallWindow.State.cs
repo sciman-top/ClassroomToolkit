@@ -129,7 +129,6 @@ public partial class RollCallWindow
         _settings.RollCallTimerSeconds = _viewModel.TimerSeconds;
         _settings.RollCallTimerSecondsLeft = _viewModel.TimerSecondsLeft;
         _settings.RollCallStopwatchSeconds = _viewModel.TimerStopwatchSeconds;
-        _settings.RollCallTimerRunning = _viewModel.TimerRunning;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
         _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
         SaveSettingsSafe();

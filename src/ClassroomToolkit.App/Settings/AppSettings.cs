@@ -15,6 +15,7 @@ namespace ClassroomToolkit.App.Settings;
 public sealed class AppSettings
 {
     public const int UnsetPosition = int.MinValue;
+    public const int DefaultLauncherAutoExitSeconds = 2400;
 
     public string UiTheme { get; set; } = "MidnightTeal";
 
@@ -36,14 +37,10 @@ public sealed class AppSettings
     public int RollCallTimerSeconds { get; set; }
     public int RollCallTimerSecondsLeft { get; set; } = 300;
     public int RollCallStopwatchSeconds { get; set; }
-    public bool RollCallTimerRunning { get; set; }
     public int RollCallWindowX { get; set; } = UnsetPosition;
     public int RollCallWindowY { get; set; } = UnsetPosition;
     public int RollCallWindowWidth { get; set; }
     public int RollCallWindowHeight { get; set; }
-    public int RollCallIdFontSize { get; set; } = 48;
-    public int RollCallNameFontSize { get; set; } = 60;
-    public int RollCallTimerFontSize { get; set; } = 56;
     public bool RollCallSpeechEnabled { get; set; }
     public string RollCallSpeechEngine { get; set; } = "sapi";
     public string RollCallSpeechVoiceId { get; set; } = string.Empty;
@@ -69,15 +66,15 @@ public sealed class AppSettings
     public string PresentationClassifierLastLearnUtc { get; set; } = string.Empty;
     public string PresentationClassifierLastLearnDetail { get; set; } = string.Empty;
     public string PresentationClassifierRecentLearnRecordsJson { get; set; } = string.Empty;
-    public bool PresetRecommendationInitialized { get; set; }
-    public bool UiDefaultsOptimized { get; set; }
+    public int PresetRecommendationVersion { get; set; }
+    public int UiDefaultsVersion { get; set; }
     public List<string> StartupCompatibilitySuppressedIssueCodes { get; set; } = new();
     public int LauncherX { get; set; } = UnsetPosition;
     public int LauncherY { get; set; } = UnsetPosition;
     public int LauncherBubbleX { get; set; } = UnsetPosition;
     public int LauncherBubbleY { get; set; } = UnsetPosition;
     public bool LauncherMinimized { get; set; }
-    public int LauncherAutoExitSeconds { get; set; } = 2400;
+    public int LauncherAutoExitSeconds { get; set; } = DefaultLauncherAutoExitSeconds;
     public int PaintToolbarX { get; set; } = UnsetPosition;
     public int PaintToolbarY { get; set; } = UnsetPosition;
     public double PaintToolbarScale { get; set; } = 1.0;
@@ -118,7 +115,6 @@ public sealed class AppSettings
     public double QuickBrushSize3 { get; set; } = 24;
     public double EraserSize { get; set; } = 24;
     public byte BrushOpacity { get; set; } = 255;
-    public byte BoardOpacity { get; set; } = 255;
     public PaintBrushStyle BrushStyle { get; set; } = PaintBrushStyle.StandardRibbon;
     public WhiteboardBrushPreset WhiteboardPreset { get; set; } = WhiteboardBrushPreset.Smooth;
     public CalligraphyBrushPreset CalligraphyPreset { get; set; } = CalligraphyBrushPreset.Sharp;

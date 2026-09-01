@@ -108,6 +108,34 @@ public partial class PaintOverlayWindow
         }
     }
 
+    public void ResetPhotoTransformToDefault()
+    {
+        CancelPhotoTransformSave();
+        CancelPhotoUnifiedTransformSave();
+        EnsurePhotoTransformsWritable();
+        _photoPageTransforms.Clear();
+        _photoUnifiedTransformReady = false;
+        _photoUserTransformDirty = false;
+        _lastPhotoScaleX = PhotoTransformViewportDefaults.DefaultScale;
+        _lastPhotoScaleY = PhotoTransformViewportDefaults.DefaultScale;
+        _lastPhotoTranslateX = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
+        _lastPhotoTranslateY = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
+
+        if (_photoModeActive && PhotoBackground.Source is BitmapSource bitmap)
+        {
+            ApplyPhotoFitToViewport(bitmap);
+            // Fitting the current bitmap updates the in-memory transform, but a
+            // reset must not publish that fit as a new persisted unified preference.
+            CancelPhotoUnifiedTransformSave();
+            _photoUnifiedTransformReady = false;
+        }
+        else
+        {
+            ApplyIdentityPhotoTransform();
+            RequestPhotoTransformInkRedraw();
+        }
+    }
+
     public void LoadInkPage(int pageIndex)
     {
         _ = _inkShowEnabled;

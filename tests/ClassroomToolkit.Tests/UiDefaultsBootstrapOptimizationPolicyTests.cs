@@ -10,7 +10,7 @@ public sealed class UiDefaultsBootstrapOptimizationPolicyTests
     {
         var settings = new AppSettings
         {
-            UiDefaultsOptimized = true
+            UiDefaultsVersion = UiDefaultsBootstrapOptimizationPolicy.CurrentVersion
         };
 
         var result = UiDefaultsBootstrapOptimizationPolicy.Resolve(settings);
@@ -19,7 +19,6 @@ public sealed class UiDefaultsBootstrapOptimizationPolicyTests
         result.InkPathOptimized.Should().BeFalse();
         result.LauncherPositionReset.Should().BeFalse();
         result.PaintToolbarPositionReset.Should().BeFalse();
-        result.RollCallFontOptimized.Should().BeFalse();
     }
 
     [Fact]
@@ -27,17 +26,14 @@ public sealed class UiDefaultsBootstrapOptimizationPolicyTests
     {
         var settings = new AppSettings
         {
-            UiDefaultsOptimized = false,
+            UiDefaultsVersion = 0,
             InkPhotoRootPath = "   ",
             LauncherX = 120,
             LauncherY = 120,
             LauncherBubbleX = 120,
             LauncherBubbleY = 120,
             PaintToolbarX = 260,
-            PaintToolbarY = 260,
-            RollCallIdFontSize = 50,
-            RollCallNameFontSize = 62,
-            RollCallTimerFontSize = 58
+            PaintToolbarY = 260
         };
 
         var result = UiDefaultsBootstrapOptimizationPolicy.Resolve(settings);
@@ -52,6 +48,6 @@ public sealed class UiDefaultsBootstrapOptimizationPolicyTests
         settings.LauncherBubbleY.Should().Be(AppSettings.UnsetPosition);
         settings.PaintToolbarX.Should().Be(AppSettings.UnsetPosition);
         settings.PaintToolbarY.Should().Be(AppSettings.UnsetPosition);
-        settings.UiDefaultsOptimized.Should().BeTrue();
+        settings.UiDefaultsVersion.Should().Be(UiDefaultsBootstrapOptimizationPolicy.CurrentVersion);
     }
 }

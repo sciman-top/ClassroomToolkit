@@ -496,12 +496,12 @@ public partial class MainWindow
             _settings.CalligraphySealEnabled = dialog.CalligraphySealEnabled;
             _settings.CalligraphyOverlayOpacityThreshold = dialog.CalligraphyOverlayOpacityThreshold;
             _settings.EraserSize = dialog.EraserSize;
-            _settings.BoardOpacity = 255;
             _settings.ShapeType = dialog.ShapeType;
             _settings.BrushColor = dialog.BrushColor;
             _settings.BoardColor = dialog.BoardColor;
             _settings.PaintToolbarScale = dialog.ToolbarScale;
             _settings.InkSaveEnabled = dialog.InkSaveEnabled;
+            _settings.InkCacheEnabled = dialog.InkCacheEnabled;
             _settings.InkExportScope = dialog.InkExportScope;
             _settings.InkExportMaxParallelFiles = dialog.InkExportMaxParallelFiles;
             _settings.PhotoRememberTransform = dialog.PhotoRememberTransform;

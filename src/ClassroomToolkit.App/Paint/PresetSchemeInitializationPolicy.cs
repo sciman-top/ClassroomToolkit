@@ -11,6 +11,8 @@ internal readonly record struct PresetSchemeInitializationResult(
 
 internal static class PresetSchemeInitializationPolicy
 {
+    internal const int CurrentVersion = 1;
+
     internal static PresetSchemeInitializationResult Resolve(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -25,7 +27,7 @@ internal static class PresetSchemeInitializationPolicy
             settings.PresetScheme = currentScheme;
         }
 
-        if (settings.PresetRecommendationInitialized)
+        if (settings.PresetRecommendationVersion >= CurrentVersion)
         {
             return new PresetSchemeInitializationResult(
                 ShouldPersist: schemeNormalized,
@@ -36,7 +38,7 @@ internal static class PresetSchemeInitializationPolicy
 
         if (!ShouldApplyRecommendation(settings, currentScheme))
         {
-            settings.PresetRecommendationInitialized = true;
+            settings.PresetRecommendationVersion = CurrentVersion;
             return new PresetSchemeInitializationResult(
                 ShouldPersist: true,
                 AppliedRecommendation: false,
@@ -47,7 +49,7 @@ internal static class PresetSchemeInitializationPolicy
         var recommendation = PresetSchemePolicy.ResolveRecommendation(settings);
         if (!PresetSchemePolicy.TryResolveManagedParameters(recommendation.Scheme, out var parameters))
         {
-            settings.PresetRecommendationInitialized = true;
+            settings.PresetRecommendationVersion = CurrentVersion;
             return new PresetSchemeInitializationResult(
                 ShouldPersist: true,
                 AppliedRecommendation: false,
@@ -67,7 +69,7 @@ internal static class PresetSchemeInitializationPolicy
         settings.PhotoWheelZoomBase = parameters.PhotoWheelZoomBase;
         settings.PhotoGestureZoomSensitivity = parameters.PhotoGestureZoomSensitivity;
         settings.PresetScheme = recommendation.Scheme;
-        settings.PresetRecommendationInitialized = true;
+        settings.PresetRecommendationVersion = CurrentVersion;
 
         return new PresetSchemeInitializationResult(
             ShouldPersist: true,

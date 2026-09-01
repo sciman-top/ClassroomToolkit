@@ -378,6 +378,7 @@
                                             <TextBlock Text="拖动惯性" VerticalAlignment="Center" Foreground="{DynamicResource Brush_Text_Secondary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                             <ComboBox Grid.Column="1" x:Name="PhotoInertiaProfileCombo" Style="{StaticResource CTK.ComboBox}" Height="{StaticResource Size_Button_Icon_Regular}" FontSize="{StaticResource FontSize_Body_M}"/>
                                         </Grid>
+                                        <CheckBox x:Name="InkCacheCheck" Style="{StaticResource CTK.CheckBox}" Content="启用笔迹缓存" Foreground="{DynamicResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,8"/>
                                         <CheckBox x:Name="PhotoInputTelemetryCheck" Style="{StaticResource CTK.CheckBox}" Content="输入日志" Foreground="{DynamicResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}"/>
                                     </StackPanel>
                                 </Border>
@@ -394,6 +395,8 @@
                             Margin="6,0,0,0">
                         <StackPanel>
                             <TextBlock Text="放映控制策略" FontWeight="Bold" Foreground="{DynamicResource Brush_Text_Primary}" Margin="0,0,0,12" FontSize="{StaticResource FontSize_Body_M}"/>
+                            <CheckBox x:Name="ControlMsPptCheck" Style="{StaticResource CTK.CheckBox}" Content="启用 Office PPT 控制" Foreground="{DynamicResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,8"/>
+                            <CheckBox x:Name="ControlWpsPptCheck" Style="{StaticResource CTK.CheckBox}" Content="启用 WPS 演示文稿控制" Foreground="{DynamicResource Brush_Text_Primary}" FontSize="{StaticResource FontSize_Body_M}" Margin="0,0,0,12"/>
 
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>

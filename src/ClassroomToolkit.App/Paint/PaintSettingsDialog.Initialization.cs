@@ -10,6 +10,8 @@ public partial class PaintSettingsDialog
     {
         ControlMsPpt = settings.ControlMsPpt;
         ControlWpsPpt = settings.ControlWpsPpt;
+        ControlMsPptCheck.IsChecked = settings.ControlMsPpt;
+        ControlWpsPptCheck.IsChecked = settings.ControlWpsPpt;
         BrushColor = settings.BrushColor;
         BoardColor = settings.BoardColor;
         _initialBrushSize = settings.BrushSize;
@@ -94,6 +96,7 @@ public partial class PaintSettingsDialog
                 importedDetail: null));
         ForceForegroundCheck.IsChecked = settings.ForcePresentationForegroundOnFullscreen;
         InkSaveCheck.IsChecked = settings.InkSaveEnabled;
+        InkCacheCheck.IsChecked = settings.InkCacheEnabled;
 
         foreach (var (label, scope) in InkExportScopeChoices)
         {

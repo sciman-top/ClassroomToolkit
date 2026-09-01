@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.App.Settings;
 
@@ -57,7 +58,6 @@ public sealed partial class AppSettingsService
             paint,
             "calligraphy_overlay_opacity_threshold",
             settings.CalligraphyOverlayOpacityThreshold);
-        settings.BoardOpacity = 255;
         settings.BrushColor = AppSettings.ParseColor(GetString(paint, "brush_color", settings.BrushColorHex), settings.BrushColor);
         settings.BoardColor = AppSettings.ParseColor(GetString(paint, "board_color", settings.BoardColorHex), settings.BoardColor);
         settings.QuickColor1 = AppSettings.ParseColor(GetString(paint, "quick_color_1", settings.QuickColor1Hex), settings.QuickColor1);
@@ -111,10 +111,14 @@ public sealed partial class AppSettingsService
             paint,
             "presentation_classifier_recent_learn_records_json",
             settings.PresentationClassifierRecentLearnRecordsJson);
-        settings.PresetRecommendationInitialized = GetBool(
+        var legacyPresetRecommendationInitialized = GetBool(
             paint,
             "preset_recommendation_initialized",
-            settings.PresetRecommendationInitialized);
+            fallback: false);
+        settings.PresetRecommendationVersion = GetInt(
+            paint,
+            "preset_recommendation_version",
+            legacyPresetRecommendationInitialized ? PresetSchemeInitializationPolicy.CurrentVersion : settings.PresetRecommendationVersion);
         settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
         settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
         settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);
@@ -219,7 +223,7 @@ public sealed partial class AppSettingsService
             settings.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture);
         paint["eraser_size"] = settings.EraserSize.ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_opacity"] = settings.BrushOpacity.ToString(CultureInfo.InvariantCulture);
-        paint["board_opacity"] = settings.BoardOpacity.ToString(CultureInfo.InvariantCulture);
+        paint.Remove("board_opacity");
         paint["brush_color"] = settings.BrushColorHex;
         paint["board_color"] = settings.BoardColorHex;
         paint["quick_color_1"] = settings.QuickColor1Hex;
@@ -257,10 +261,8 @@ public sealed partial class AppSettingsService
             settings.PresentationClassifierLastLearnDetail ?? string.Empty;
         paint["presentation_classifier_recent_learn_records_json"] =
             settings.PresentationClassifierRecentLearnRecordsJson ?? string.Empty;
-        SetBool(
-            paint,
-            "preset_recommendation_initialized",
-            settings.PresetRecommendationInitialized);
+        paint["preset_recommendation_version"] = settings.PresetRecommendationVersion.ToString(CultureInfo.InvariantCulture);
+        paint.Remove("preset_recommendation_initialized");
         paint["shape_type"] = settings.ShapeType.ToString();
         paint["x"] = settings.PaintToolbarX.ToString(CultureInfo.InvariantCulture);
         paint["y"] = settings.PaintToolbarY.ToString(CultureInfo.InvariantCulture);

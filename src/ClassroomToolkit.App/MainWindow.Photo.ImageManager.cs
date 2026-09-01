@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
@@ -48,6 +49,8 @@ public partial class MainWindow
         imageManagerWindow.FavoritesChanged += OnPhotoFavoritesChanged;
         imageManagerWindow.RecentsChanged += OnPhotoRecentsChanged;
         imageManagerWindow.LeftPanelLayoutChanged += OnImageManagerLeftPanelLayoutChanged;
+        imageManagerWindow.LayoutDefaultsRequested += OnImageManagerLayoutDefaultsRequested;
+        imageManagerWindow.PhotoTransformDefaultsRequested += OnImageManagerPhotoTransformDefaultsRequested;
         imageManagerWindow.ShowInkOverlayChanged += OnImageManagerShowInkOverlayChanged;
         imageManagerWindow.StateChanged += OnImageManagerStateChanged;
         imageManagerWindow.Activated += OnImageManagerWindowActivated;
@@ -122,6 +125,8 @@ public partial class MainWindow
         closedWindow.FavoritesChanged -= OnPhotoFavoritesChanged;
         closedWindow.RecentsChanged -= OnPhotoRecentsChanged;
         closedWindow.LeftPanelLayoutChanged -= OnImageManagerLeftPanelLayoutChanged;
+        closedWindow.LayoutDefaultsRequested -= OnImageManagerLayoutDefaultsRequested;
+        closedWindow.PhotoTransformDefaultsRequested -= OnImageManagerPhotoTransformDefaultsRequested;
         closedWindow.ShowInkOverlayChanged -= OnImageManagerShowInkOverlayChanged;
         closedWindow.StateChanged -= OnImageManagerStateChanged;
         closedWindow.Activated -= OnImageManagerWindowActivated;
@@ -151,6 +156,30 @@ public partial class MainWindow
         _settings.PhotoManagerLeftPanelRatio = ratio;
         _settings.PhotoManagerLeftPanelWidth = width;
         SaveSettings();
+    }
+
+    private void OnImageManagerLayoutDefaultsRequested()
+    {
+        var defaults = new AppSettings();
+        _settings.PhotoManagerWindowWidth = 0;
+        _settings.PhotoManagerWindowHeight = 0;
+        _settings.PhotoManagerLeftPanelRatio = defaults.PhotoManagerLeftPanelRatio;
+        _settings.PhotoManagerLeftPanelWidth = 0;
+        _settings.PhotoManagerThumbnailSize = defaults.PhotoManagerThumbnailSize;
+        _settings.PhotoManagerListMode = defaults.PhotoManagerListMode;
+        SaveSettings();
+    }
+
+    private void OnImageManagerPhotoTransformDefaultsRequested()
+    {
+        var defaults = new AppSettings();
+        _settings.PhotoUnifiedTransformEnabled = defaults.PhotoUnifiedTransformEnabled;
+        _settings.PhotoUnifiedScaleX = defaults.PhotoUnifiedScaleX;
+        _settings.PhotoUnifiedScaleY = defaults.PhotoUnifiedScaleY;
+        _settings.PhotoUnifiedTranslateX = defaults.PhotoUnifiedTranslateX;
+        _settings.PhotoUnifiedTranslateY = defaults.PhotoUnifiedTranslateY;
+        SaveSettings();
+        _overlayWindow?.ResetPhotoTransformToDefault();
     }
 
     private void OnImageManagerShowInkOverlayChanged(bool enabled)

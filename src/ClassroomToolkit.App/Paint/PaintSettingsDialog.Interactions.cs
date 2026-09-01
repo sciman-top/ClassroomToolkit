@@ -10,8 +10,8 @@ public partial class PaintSettingsDialog : Window
 {
     private void OnConfirm(object sender, RoutedEventArgs e)
     {
-        // The current dialog no longer exposes PPT/WPS control toggles;
-        // keep the existing persisted values instead of forcing them on.
+        ControlMsPpt = ControlMsPptCheck.IsChecked == true;
+        ControlWpsPpt = ControlWpsPptCheck.IsChecked == true;
         OfficeInputMode = GetSelectedTag(OfficeModeCombo, WpsInputModeDefaults.Auto);
         WpsInputMode = GetSelectedTag(WpsModeCombo, WpsInputModeDefaults.Auto);
         PresetScheme = GetSelectedTag(PresetSchemeCombo, PresetSchemeDefaults.Custom);
@@ -46,6 +46,7 @@ public partial class PaintSettingsDialog : Window
         ShapeType = ResolveShapeType();
         ToolbarScale = GetSelectedScale();
         InkSaveEnabled = InkSaveCheck.IsChecked == true;
+        InkCacheEnabled = InkCacheCheck.IsChecked == true;
         InkExportScope = ResolveInkExportScope();
         InkExportMaxParallelFiles = ResolveIntCombo(
             ExportParallelCombo,

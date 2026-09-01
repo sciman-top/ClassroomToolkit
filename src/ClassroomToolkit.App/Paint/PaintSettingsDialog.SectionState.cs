@@ -47,6 +47,9 @@ public partial class PaintSettingsDialog
     private SceneSectionState CaptureSceneSectionStateFromControls()
     {
         return new SceneSectionState(
+            ControlMsPpt: ControlMsPptCheck.IsChecked == true,
+            ControlWpsPpt: ControlWpsPptCheck.IsChecked == true,
+            InkCacheEnabled: InkCacheCheck.IsChecked == true,
             InkSaveEnabled: InkSaveCheck.IsChecked == true,
             InkExportScope: ResolveInkExportScope(),
             InkExportMaxParallelFiles: ResolveIntCombo(ExportParallelCombo, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault),
@@ -150,6 +153,9 @@ public partial class PaintSettingsDialog
         _suppressPresetAutoCustom = true;
         try
         {
+            ControlMsPptCheck.IsChecked = state.ControlMsPpt;
+            ControlWpsPptCheck.IsChecked = state.ControlWpsPpt;
+            InkCacheCheck.IsChecked = state.InkCacheEnabled;
             InkSaveCheck.IsChecked = state.InkSaveEnabled;
             SelectInkExportScope(state.InkExportScope);
             SelectIntCombo(ExportParallelCombo, state.InkExportMaxParallelFiles, fallback: PaintSettingsOptionDefaults.InkExportMaxParallelDefault);

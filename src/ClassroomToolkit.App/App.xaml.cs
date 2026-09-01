@@ -134,7 +134,7 @@ public partial class App : WpfApplication
                     Debug.WriteLine(
                         $"[PresetInit] persisted auto-init applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason}");
                     Debug.WriteLine(
-                        $"[UiDefaultsInit] persisted inkPathOptimized={uiDefaultsInitialization.InkPathOptimized} launcherReset={uiDefaultsInitialization.LauncherPositionReset} toolbarReset={uiDefaultsInitialization.PaintToolbarPositionReset} rollCallFontOptimized={uiDefaultsInitialization.RollCallFontOptimized}");
+                        $"[UiDefaultsInit] persisted inkPathOptimized={uiDefaultsInitialization.InkPathOptimized} launcherReset={uiDefaultsInitialization.LauncherPositionReset} toolbarReset={uiDefaultsInitialization.PaintToolbarPositionReset}");
                 }
                 catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {

@@ -24,10 +24,6 @@ public sealed partial class AppSettingsService
         settings.RollCallTimerSeconds = GetInt(roll, "timer_countdown_seconds", settings.RollCallTimerSeconds);
         settings.RollCallTimerSecondsLeft = GetInt(roll, "timer_seconds_left", settings.RollCallTimerSecondsLeft);
         settings.RollCallStopwatchSeconds = GetInt(roll, "timer_stopwatch_seconds", settings.RollCallStopwatchSeconds);
-        settings.RollCallTimerRunning = GetBool(roll, "timer_running", settings.RollCallTimerRunning);
-        settings.RollCallIdFontSize = GetInt(roll, "id_font_size", settings.RollCallIdFontSize);
-        settings.RollCallNameFontSize = GetInt(roll, "name_font_size", settings.RollCallNameFontSize);
-        settings.RollCallTimerFontSize = GetInt(roll, "timer_font_size", settings.RollCallTimerFontSize);
         settings.RollCallSpeechEnabled = GetBool(roll, "speech_enabled", settings.RollCallSpeechEnabled);
         settings.RollCallSpeechEngine = ResolveSpeechEngine(
             GetString(roll, "speech_engine", settings.RollCallSpeechEngine),
@@ -58,10 +54,11 @@ public sealed partial class AppSettingsService
         settings.LauncherMinimized = GetBool(launcher, "minimized", settings.LauncherMinimized);
         settings.LauncherAutoExitSeconds = GetInt(launcher, "auto_exit_seconds", settings.LauncherAutoExitSeconds);
         settings.LauncherAutoExitSeconds = NormalizeLauncherAutoExitSeconds(settings.LauncherAutoExitSeconds);
-        settings.UiDefaultsOptimized = GetBool(
+        var legacyUiDefaultsOptimized = GetBool(launcher, "ui_defaults_optimized", fallback: false);
+        settings.UiDefaultsVersion = GetInt(
             launcher,
-            "ui_defaults_optimized",
-            settings.UiDefaultsOptimized);
+            "ui_defaults_version",
+            legacyUiDefaultsOptimized ? UiDefaultsBootstrapOptimizationPolicy.CurrentVersion : settings.UiDefaultsVersion);
     }
 
     private static void ApplyDiagnosticsSettings(Dictionary<string, string> diagnostics, AppSettings settings)
@@ -101,10 +98,7 @@ public sealed partial class AppSettingsService
         roll["timer_countdown_seconds"] = settings.RollCallTimerSeconds.ToString(CultureInfo.InvariantCulture);
         roll["timer_seconds_left"] = settings.RollCallTimerSecondsLeft.ToString(CultureInfo.InvariantCulture);
         roll["timer_stopwatch_seconds"] = settings.RollCallStopwatchSeconds.ToString(CultureInfo.InvariantCulture);
-        SetBool(roll, "timer_running", settings.RollCallTimerRunning);
-        roll["id_font_size"] = settings.RollCallIdFontSize.ToString(CultureInfo.InvariantCulture);
-        roll["name_font_size"] = settings.RollCallNameFontSize.ToString(CultureInfo.InvariantCulture);
-        roll["timer_font_size"] = settings.RollCallTimerFontSize.ToString(CultureInfo.InvariantCulture);
+        RemoveLegacyRollCallKeys(data);
         SetBool(roll, "speech_enabled", settings.RollCallSpeechEnabled);
         roll["speech_engine"] = ResolveSpeechEngine(settings.RollCallSpeechEngine, "sapi");
         roll["speech_voice_id"] = settings.RollCallSpeechVoiceId ?? string.Empty;
@@ -124,6 +118,23 @@ public sealed partial class AppSettingsService
         }
     }
 
+    private static void RemoveLegacyRollCallKeys(
+        Dictionary<string, Dictionary<string, string>> data)
+    {
+        foreach (var sectionName in new[] { "RollCallTimer", "RollCall" })
+        {
+            if (!data.TryGetValue(sectionName, out var section) || section == null)
+            {
+                continue;
+            }
+
+            section.Remove("timer_running");
+            section.Remove("id_font_size");
+            section.Remove("name_font_size");
+            section.Remove("timer_font_size");
+        }
+    }
+
     private static void SaveLauncherSettings(
         Dictionary<string, Dictionary<string, string>> data,
         AppSettings settings)
@@ -135,7 +146,8 @@ public sealed partial class AppSettingsService
         launcher["bubble_y"] = settings.LauncherBubbleY.ToString(CultureInfo.InvariantCulture);
         SetBool(launcher, "minimized", settings.LauncherMinimized);
         launcher["auto_exit_seconds"] = NormalizeLauncherAutoExitSeconds(settings.LauncherAutoExitSeconds).ToString(CultureInfo.InvariantCulture);
-        SetBool(launcher, "ui_defaults_optimized", settings.UiDefaultsOptimized);
+        launcher["ui_defaults_version"] = settings.UiDefaultsVersion.ToString(CultureInfo.InvariantCulture);
+        launcher.Remove("ui_defaults_optimized");
     }
 
     private static void SaveDiagnosticsSettings(

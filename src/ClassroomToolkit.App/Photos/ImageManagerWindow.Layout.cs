@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 
@@ -199,6 +200,48 @@ public partial class ImageManagerWindow
         }
 
         WindowState = WindowState.Maximized;
+    }
+
+    private void OnRestoreLayoutDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        var defaults = new AppSettings();
+        var showInkOverlayChanged = ViewModel.ShowInkOverlay != defaults.PhotoShowInkOverlay;
+        _preferredLeftRatio = DefaultLeftRatio;
+        _preferredLeftPanelWidth = 0;
+        _restoredWindowWidth = DefaultWindowWidth;
+        _restoredWindowHeight = DefaultWindowHeight;
+        Width = DefaultWindowWidth;
+        Height = DefaultWindowHeight;
+        if (ThumbnailSizeSlider != null)
+        {
+            ThumbnailSizeSlider.Value = DefaultThumbnailSize;
+        }
+        SetViewMode(listMode: false);
+        ViewModel.ShowInkOverlay = defaults.PhotoShowInkOverlay;
+        if (WindowState != WindowState.Normal)
+        {
+            WindowState = WindowState.Normal;
+        }
+        ApplyAdaptiveLayout();
+        SafeActionExecutionExecutor.TryExecute(
+            () => LayoutDefaultsRequested?.Invoke(),
+            ex => Debug.WriteLine($"ImageManager: layout defaults callback failed: {ex.Message}"));
+        SafeActionExecutionExecutor.TryExecute(
+            () => LeftPanelLayoutChanged?.Invoke(_preferredLeftRatio, _preferredLeftPanelWidth),
+            ex => Debug.WriteLine($"ImageManager: layout defaults persistence callback failed: {ex.Message}"));
+        if (showInkOverlayChanged)
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                () => ShowInkOverlayChanged?.Invoke(ViewModel.ShowInkOverlay),
+                ex => Debug.WriteLine($"ImageManager: layout defaults show-ink callback failed: {ex.Message}"));
+        }
+    }
+
+    private void OnRestorePhotoTransformDefaultsClick(object sender, RoutedEventArgs e)
+    {
+        SafeActionExecutionExecutor.TryExecute(
+            () => PhotoTransformDefaultsRequested?.Invoke(),
+            ex => Debug.WriteLine($"ImageManager: photo transform defaults callback failed: {ex.Message}"));
     }
 
     private void OnCloseWindowClick(object sender, RoutedEventArgs e)

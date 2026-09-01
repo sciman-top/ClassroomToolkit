@@ -12,7 +12,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         var settings = new AppSettings
         {
             PresetScheme = "LEGACY",
-            PresetRecommendationInitialized = true
+            PresetRecommendationVersion = PresetSchemeInitializationPolicy.CurrentVersion
         };
 
         var result = PresetSchemeInitializationPolicy.Resolve(settings);
@@ -30,7 +30,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         var settings = new AppSettings
         {
             PresetScheme = PresetSchemeDefaults.Custom,
-            PresetRecommendationInitialized = false,
+            PresetRecommendationVersion = 0,
             WpsInputMode = WpsInputModeDefaults.Auto,
             WpsWheelForward = true,
             PresentationLockStrategyWhenDegraded = true,
@@ -52,7 +52,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         result.RecommendationHasAdaptiveSignal.Should().BeTrue();
         settings.PresetScheme.Should().Be(PresetSchemeDefaults.Stable);
         settings.WpsInputMode.Should().Be(WpsInputModeDefaults.Message);
-        settings.PresetRecommendationInitialized.Should().BeTrue();
+        settings.PresetRecommendationVersion.Should().Be(PresetSchemeInitializationPolicy.CurrentVersion);
         settings.PresentationAutoFallbackFailureThreshold.Should().Be(2);
         settings.PresentationAutoFallbackProbeIntervalCommands.Should().Be(12);
     }
@@ -63,7 +63,7 @@ public sealed class PresetSchemeInitializationPolicyTests
         var settings = new AppSettings
         {
             PresetScheme = PresetSchemeDefaults.Custom,
-            PresetRecommendationInitialized = false,
+            PresetRecommendationVersion = 0,
             WpsInputMode = WpsInputModeDefaults.Raw
         };
 
@@ -73,6 +73,6 @@ public sealed class PresetSchemeInitializationPolicyTests
         result.AppliedRecommendation.Should().BeFalse();
         result.FinalScheme.Should().Be(PresetSchemeDefaults.Custom);
         result.RecommendationReason.Should().Be("manual_or_nondefault_values");
-        settings.PresetRecommendationInitialized.Should().BeTrue();
+        settings.PresetRecommendationVersion.Should().Be(PresetSchemeInitializationPolicy.CurrentVersion);
     }
 }

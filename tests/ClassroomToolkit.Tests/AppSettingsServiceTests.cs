@@ -363,6 +363,115 @@ public sealed class AppSettingsServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LoadAndSave_ShouldMigrateLegacyInitializationFlagsAndDropEphemeralKeys(bool useJsonStore)
+    {
+        var path = CreateTempIniPath(
+            useJsonStore ? "ctool_app_settings_legacy_flags_json" : "ctool_app_settings_legacy_flags");
+        try
+        {
+            File.WriteAllText(
+                path,
+                useJsonStore
+                    ? """
+                    {
+                      "Launcher": {
+                        "ui_defaults_optimized": "True"
+                      },
+                      "Paint": {
+                        "preset_recommendation_initialized": "True",
+                        "board_opacity": "17"
+                      },
+                      "RollCallTimer": {
+                        "timer_running": "True",
+                        "id_font_size": "48",
+                        "name_font_size": "60",
+                        "timer_font_size": "56"
+                      },
+                      "RollCall": {
+                        "timer_running": "True",
+                        "id_font_size": "48",
+                        "name_font_size": "60",
+                        "timer_font_size": "56"
+                      }
+                    }
+                    """
+                    : """
+                    [Launcher]
+                    ui_defaults_optimized=True
+
+                    [Paint]
+                    preset_recommendation_initialized=True
+                    board_opacity=17
+
+                    [RollCallTimer]
+                    timer_running=True
+                    id_font_size=48
+                    name_font_size=60
+                    timer_font_size=56
+
+                    [RollCall]
+                    timer_running=True
+                    id_font_size=48
+                    name_font_size=60
+                    timer_font_size=56
+                    """);
+
+            var service = useJsonStore ? CreateJsonService(path) : CreateService(path);
+            var settings = service.Load();
+
+            settings.UiDefaultsVersion.Should().Be(UiDefaultsBootstrapOptimizationPolicy.CurrentVersion);
+            settings.PresetRecommendationVersion.Should().Be(PresetSchemeInitializationPolicy.CurrentVersion);
+
+            service.Save(settings);
+
+            if (useJsonStore)
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                var launcher = document.RootElement.GetProperty("Launcher");
+                var paint = document.RootElement.GetProperty("Paint");
+                var roll = document.RootElement.GetProperty("RollCallTimer");
+                var legacyRoll = document.RootElement.GetProperty("RollCall");
+                launcher.GetProperty("ui_defaults_version").GetString()
+                    .Should().Be(UiDefaultsBootstrapOptimizationPolicy.CurrentVersion.ToString());
+                paint.GetProperty("preset_recommendation_version").GetString()
+                    .Should().Be(PresetSchemeInitializationPolicy.CurrentVersion.ToString());
+                launcher.TryGetProperty("ui_defaults_optimized", out _).Should().BeFalse();
+                paint.TryGetProperty("preset_recommendation_initialized", out _).Should().BeFalse();
+                paint.TryGetProperty("board_opacity", out _).Should().BeFalse();
+                roll.TryGetProperty("timer_running", out _).Should().BeFalse();
+                roll.TryGetProperty("id_font_size", out _).Should().BeFalse();
+                roll.TryGetProperty("name_font_size", out _).Should().BeFalse();
+                roll.TryGetProperty("timer_font_size", out _).Should().BeFalse();
+                legacyRoll.TryGetProperty("timer_running", out _).Should().BeFalse();
+                legacyRoll.TryGetProperty("id_font_size", out _).Should().BeFalse();
+                legacyRoll.TryGetProperty("name_font_size", out _).Should().BeFalse();
+                legacyRoll.TryGetProperty("timer_font_size", out _).Should().BeFalse();
+            }
+            else
+            {
+                var saved = File.ReadAllText(path);
+                saved.Should().Contain(
+                    $"ui_defaults_version={UiDefaultsBootstrapOptimizationPolicy.CurrentVersion}");
+                saved.Should().Contain(
+                    $"preset_recommendation_version={PresetSchemeInitializationPolicy.CurrentVersion}");
+                saved.Should().NotContain("ui_defaults_optimized");
+                saved.Should().NotContain("preset_recommendation_initialized");
+                saved.Should().NotContain("board_opacity");
+                saved.Should().NotContain("timer_running");
+                saved.Should().NotContain("id_font_size");
+                saved.Should().NotContain("name_font_size");
+                saved.Should().NotContain("timer_font_size");
+            }
+        }
+        finally
+        {
+            DeleteSettingsArtifacts(path);
+        }
+    }
+
     [Fact]
     public void SaveAndLoad_ShouldPersistInkExportScope()
     {
@@ -859,6 +968,30 @@ public sealed class AppSettingsServiceTests
     private static string CreateTempIniPath(string prefix)
     {
         return TestPathHelper.CreateFilePath(prefix, ".ini");
+    }
+
+    private static void DeleteSettingsArtifacts(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        var fileName = Path.GetFileNameWithoutExtension(path);
+        var extension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(fileName))
+        {
+            return;
+        }
+
+        foreach (var backup in Directory.GetFiles(
+                     directory,
+                     $"{fileName}.bak-v2.0-*{extension}",
+                     SearchOption.TopDirectoryOnly))
+        {
+            File.Delete(backup);
+        }
     }
 
     private sealed class NullReturningSettingsStore : ISettingsDocumentStore

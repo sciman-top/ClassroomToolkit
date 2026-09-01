@@ -204,6 +204,22 @@ public partial class PaintOverlayWindow
         _photoUnifiedTransformSaveTimer.Start();
     }
 
+    private void CancelPhotoTransformSave()
+    {
+        _photoTransformSaveTimer?.Stop();
+        _photoTransformSavePending = false;
+        _photoTransformSaveUserAdjusted = false;
+    }
+
+    private void CancelPhotoUnifiedTransformSave()
+    {
+        _photoUnifiedTransformSaveTimer?.Stop();
+        _pendingUnifiedScaleX = PhotoTransformViewportDefaults.DefaultScale;
+        _pendingUnifiedScaleY = PhotoTransformViewportDefaults.DefaultScale;
+        _pendingUnifiedTranslateX = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
+        _pendingUnifiedTranslateY = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
+    }
+
     private void OnPhotoTransformSaveTimerTick(object? sender, EventArgs e)
     {
         _photoTransformSaveTimer?.Stop();
@@ -221,6 +237,13 @@ public partial class PaintOverlayWindow
     private void OnPhotoUnifiedTransformSaveTimerTick(object? sender, EventArgs e)
     {
         _photoUnifiedTransformSaveTimer?.Stop();
+        if (!_photoUnifiedTransformReady
+            || !_rememberPhotoTransform
+            || !IsCrossPageDisplayActive())
+        {
+            return;
+        }
+
         SafeActionExecutionExecutor.TryExecute(
             () => PhotoUnifiedTransformChanged?.Invoke(
                 _pendingUnifiedScaleX,
