@@ -8,7 +8,7 @@ namespace ClassroomToolkit.Tests;
 public sealed class PaintSettingsDialogConstructionTests
 {
     [Fact]
-    public void Constructor_ShouldNotThrow_WithDefaultSettings()
+    public void Show_ShouldNotThrow_WithDefaultSettings()
     {
         PaintSettingsDialog? captured = null;
 
@@ -16,6 +16,8 @@ public sealed class PaintSettingsDialogConstructionTests
         {
             WpfStaTestRunner.EnsureApplication();
             var dialog = new PaintSettingsDialog(new AppSettings());
+            dialog.Show();
+            dialog.UpdateLayout();
             dialog.Close();
             captured = dialog;
         });

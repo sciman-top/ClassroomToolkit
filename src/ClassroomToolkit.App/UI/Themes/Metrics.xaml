@@ -1,7 +1,9 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:Double x:Key="CTK.Size.Control.Default">36</sys:Double>
     <sys:Double x:Key="CTK.Size.Button.Default">40</sys:Double>
+    <sys:Double x:Key="CTK.Size.Button.Primary">44</sys:Double>
     <sys:Double x:Key="CTK.Size.IconButton">40</sys:Double>
     <sys:Double x:Key="CTK.Size.Toolbar">52</sys:Double>
     <sys:Double x:Key="CTK.Size.TitleBar">46</sys:Double>

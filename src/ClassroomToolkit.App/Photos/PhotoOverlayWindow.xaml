@@ -9,12 +9,14 @@
         ResizeMode="NoResize"
         WindowStartupLocation="Manual">
     
-    <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged">
+    <Canvas x:Name="RootCanvas" SizeChanged="OnCanvasSizeChanged" Background="Transparent">
         <Rectangle x:Name="BackgroundRect" Fill="Transparent"/>
 
         <Image x:Name="PhotoImage"
-               Stretch="Uniform"
-               StretchDirection="DownOnly"
+               Stretch="UniformToFill"
+               StretchDirection="Both"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
                SizeChanged="OnPhotoSizeChanged"
                MouseLeftButtonDown="OnPhotoImageMouseLeftButtonDown">
             <Image.Effect>
@@ -42,6 +44,34 @@
                        TextWrapping="Wrap"
                        TextTrimming="CharacterEllipsis"/>
         </Border>
+
+        <Button x:Name="CloseLeftButton"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Width="48"
+                Height="48"
+                Panel.ZIndex="200"
+                Click="OnCloseButtonClick"
+                ToolTip="关闭">
+            <Path Data="{StaticResource Icon_Close}"
+                  Fill="{DynamicResource Brush_Text_Primary}"
+                  Stretch="Uniform"
+                  Width="24"
+                  Height="24"/>
+        </Button>
+
+        <Button x:Name="CloseRightButton"
+                Style="{StaticResource Style_FullscreenShellCloseButton}"
+                Width="48"
+                Height="48"
+                Panel.ZIndex="200"
+                Click="OnCloseButtonClick"
+                ToolTip="关闭">
+            <Path Data="{StaticResource Icon_Close}"
+                  Fill="{DynamicResource Brush_Text_Primary}"
+                  Stretch="Uniform"
+                  Width="24"
+                  Height="24"/>
+        </Button>
 
     </Canvas>
 </Window>

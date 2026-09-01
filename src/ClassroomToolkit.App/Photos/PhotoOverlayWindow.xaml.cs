@@ -282,6 +282,16 @@ public partial class PhotoOverlayWindow : Window
         LoadingMask.Width = e.NewSize.Width;
         LoadingMask.Height = e.NewSize.Height;
 
+        // Let Uniform calculate one shared scale from the full-screen viewport.
+        PhotoImage.Width = e.NewSize.Width;
+        PhotoImage.Height = e.NewSize.Height;
+        Canvas.SetLeft(PhotoImage, 0);
+        Canvas.SetTop(PhotoImage, 0);
+        Canvas.SetLeft(CloseLeftButton, 16);
+        Canvas.SetTop(CloseLeftButton, Math.Max(0, e.NewSize.Height - CloseLeftButton.Height - 16));
+        Canvas.SetLeft(CloseRightButton, Math.Max(0, e.NewSize.Width - CloseRightButton.Width - 16));
+        Canvas.SetTop(CloseRightButton, Math.Max(0, e.NewSize.Height - CloseRightButton.Height - 16));
+
         // 重新计算布局
         UpdateOverlayPositions();
     }
@@ -357,6 +367,12 @@ public partial class PhotoOverlayWindow : Window
     }
 
     private void OnPhotoImageMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        CloseOverlay();
+    }
+
+    private void OnCloseButtonClick(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
         CloseOverlay();
@@ -697,12 +713,10 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
-        var targetWidth = Math.Clamp(screenWidth * 0.72, 900, 1680);
-        var targetHeight = Math.Clamp(screenHeight * 0.72, 580, 980);
-        Width = Math.Min(targetWidth, screenWidth - 64);
-        Height = Math.Min(targetHeight, screenHeight - 64);
-        Left = SystemParameters.VirtualScreenLeft + (screenWidth - Width) / 2;
-        Top = SystemParameters.VirtualScreenTop + (screenHeight - Height) / 2;
+        Width = screenWidth;
+        Height = screenHeight;
+        Left = SystemParameters.VirtualScreenLeft;
+        Top = SystemParameters.VirtualScreenTop;
     }
 
     private void DeferHideLoadingMaskAfterRender(int requestId)

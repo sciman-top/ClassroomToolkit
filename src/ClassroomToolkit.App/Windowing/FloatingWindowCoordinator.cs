@@ -165,7 +165,9 @@ internal static class FloatingWindowCoordinator
         FloatingTopmostPlan topmostPlan,
         bool enforceZOrder)
     {
-        if (!runtimeSnapshot.PhotoActive || !runtimeSnapshot.OverlayVisible || !enforceZOrder)
+        if ((!runtimeSnapshot.PhotoActive && !runtimeSnapshot.PresentationFullscreen)
+            || !runtimeSnapshot.OverlayVisible
+            || !enforceZOrder)
         {
             return false;
         }

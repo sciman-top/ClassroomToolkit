@@ -668,7 +668,6 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        EnsureOverlayTopmost(enforceZOrder: true);
         SafeActionExecutionExecutor.TryExecute(
             () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(ForceEnforceZOrder: true)),
             ex => Debug.WriteLine($"[PresentationOverlayRetouch] callback failed reason={reason}: {ex.GetType().Name} - {ex.Message}"));

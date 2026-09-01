@@ -29,7 +29,6 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        EnsureOverlayTopmost(enforceZOrder: false);
         if (UiSessionFloatingZOrderRequestPolicy.TryResolveForOverlayTopmost(topmostRequired, out var request))
         {
             SafeActionExecutionExecutor.TryExecute(

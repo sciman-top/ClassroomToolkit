@@ -61,10 +61,60 @@ public class FloatingWindowCoordinatorTests
         nextState.LastTopmostPlan.Should().NotBeNull();
         executedPlan.Should().NotBeNull();
         executedPlan!.Value.TopmostExecutionPlan.EnforceZOrder.Should().BeTrue();
+        executedPlan.Value.ReplayOverlayBelowFloatingUtilities.Should().BeTrue();
         executedPlan.Value.ActivationPlan.ActivateOverlay.Should().BeFalse();
         executedPlan.Value.ActivationPlan.ActivateImageManager.Should().BeFalse();
         executedPlan.Value.OwnerPlan.ToolbarAction.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
         executedPlan.Value.OwnerPlan.RollCallAction.Should().Be(FloatingOwnerBindingAction.None);
+    }
+
+    [Fact]
+    public void Apply_ShouldReplayOverlayBelowFloatingUtilities_DuringPresentationFullscreen()
+    {
+        var surfaceStack = new List<ZOrderSurface> { ZOrderSurface.PresentationFullscreen };
+        var coordination = new FloatingWindowCoordinationSnapshot(
+            Runtime: new FloatingWindowRuntimeSnapshot(
+                OverlayVisible: true,
+                OverlayActive: false,
+                PhotoActive: false,
+                PresentationFullscreen: true,
+                WhiteboardActive: false,
+                ImageManagerVisible: false,
+                LauncherVisible: true),
+            Launcher: new LauncherWindowRuntimeSnapshot(
+                WindowKind: LauncherWindowKind.Main,
+                VisibleForTopmost: true,
+                Active: false,
+                SelectionReason: LauncherWindowRuntimeSelectionReason.PreferMainVisible),
+            TopmostVisibility: new FloatingTopmostVisibilitySnapshot(
+                ToolbarVisible: true,
+                RollCallVisible: true,
+                LauncherVisible: true,
+                ImageManagerVisible: false,
+                OverlayVisible: true),
+            UtilityActivity: new FloatingUtilityActivitySnapshot(
+                ToolbarActive: false,
+                RollCallActive: false,
+                ImageManagerActive: false,
+                LauncherActive: false),
+            Owner: new FloatingOwnerRuntimeSnapshot(
+                OverlayVisible: true,
+                ToolbarOwnerAlreadyOverlay: true,
+                RollCallOwnerAlreadyOverlay: true,
+                ImageManagerOwnerAlreadyOverlay: true));
+        FloatingWindowExecutionPlan? executedPlan = null;
+
+        _ = FloatingWindowCoordinator.Apply(
+            Orchestrator,
+            surfaceStack,
+            coordination,
+            FloatingWindowCoordinationState.Default,
+            forceEnforceZOrder: true,
+            suppressOverlayActivation: false,
+            executePlan: plan => executedPlan = plan);
+
+        executedPlan.Should().NotBeNull();
+        executedPlan!.Value.ReplayOverlayBelowFloatingUtilities.Should().BeTrue();
     }
 
     [Fact]
