@@ -53,8 +53,9 @@ if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
 }
 
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version
-New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
-$zipPath = Join-Path $releaseRoot ("ClassroomToolkit-Source-{0}.zip" -f $Version)
+$sourceDeliveryRoot = Join-Path $releaseRoot "source"
+New-Item -ItemType Directory -Path $sourceDeliveryRoot -Force | Out-Null
+$zipPath = Join-Path $sourceDeliveryRoot ("ClassroomToolkit-Source-{0}.zip" -f $Version)
 if (Test-Path -LiteralPath $zipPath) {
     if (-not $AllowOverwriteVersion) {
         throw "Source package already exists: $zipPath"
@@ -77,5 +78,5 @@ $manifest = [ordered]@{
     sha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
     excludes_local_classroom_data = $true
 }
-$manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $releaseRoot "source-package-manifest.json") -Encoding UTF8
+$manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $sourceDeliveryRoot "source-package-manifest.json") -Encoding UTF8
 Write-Host "[source-package] DONE $zipPath"

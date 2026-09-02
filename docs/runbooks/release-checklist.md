@@ -44,14 +44,15 @@
   - `Setup.exe`、完整更新包和 `releases.*.json`
   - SCD 应用；功能与标准版一致
   - Velopack channel=`offline`
-- 绿色便携版：`ClassroomToolkit-<version>-portable.zip`
+- 绿色便携版：`portable/ClassroomToolkit-<version>-portable.zip`
   - SCD 应用，解压后由根目录 `启动.bat` 启动
   - 根目录 `portable.mode` 启用便携数据模式，数据写入同级 `data/`
   - 启动时每 24 小时检查 GitHub 正式 Release；发现更新只提示并打开下载页，不自动替换文件
   - 不包含课堂数据；整包替换时保留原 `data/` 目录
-- 公开源码包：`ClassroomToolkit-Source-<version>.zip`
+- 公开源码包：`source/ClassroomToolkit-Source-<version>.zip`
   - 由固定 Git commit 的 `git archive` 生成，不包含未跟踪的课堂数据
-- 根目录：`release-manifest.json`、`user-installers-manifest.json`、`portable-package-manifest.json`、`source-package-manifest.json`
+- 各交付物子目录：`installer/user-installers-manifest.json`、`portable/portable-package-manifest.json`、`source/source-package-manifest.json`
+- 版本目录根：`release-manifest.json`
 - 聚合入口会在 `artifacts/release/.staging/<version>/` 构建；成功后 `.staging/<version>/` 自动清理，最终版本目录不保留 `standard/`、`offline/`、`portable/` 或 `_runtime-cache/` staging 目录。
 - `artifacts/archive/legacy-outputs/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
 - 当前门禁证据固定写入 `artifacts/evidence/{quality,tests,validation,release-preflight}/current/`；重复运行覆盖 current 文件，不在活动目录按时间戳累积。

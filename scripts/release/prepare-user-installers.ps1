@@ -156,5 +156,7 @@ $installerManifest = [ordered]@{
         offline = if ($PackageMode -in @("all", "offline")) { "offline" } else { $null }
     }
 }
-$installerManifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $releaseRoot "user-installers-manifest.json") -Encoding UTF8
+$installerDeliveryRoot = Join-Path $releaseRoot "installer"
+New-Item -ItemType Directory -Path $installerDeliveryRoot -Force | Out-Null
+$installerManifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $installerDeliveryRoot "user-installers-manifest.json") -Encoding UTF8
 Write-Host "[user-installer] DONE"

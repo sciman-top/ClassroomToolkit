@@ -58,10 +58,11 @@ if ($repositoryUri.Scheme -ne [Uri]::UriSchemeHttps) {
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version
 $offlineRoot = Join-Path $releaseRoot "offline"
 $offlineApp = Join-Path $offlineRoot "app"
-$portableRoot = Join-Path $releaseRoot "portable"
+$portableRoot = Join-Path $releaseRoot "_portable-build"
 $portableApp = Join-Path $portableRoot "app"
 $portableData = Join-Path $portableRoot "data"
-$portableZip = Join-Path $releaseRoot ("ClassroomToolkit-{0}-portable.zip" -f $Version)
+$portableDeliveryRoot = Join-Path $releaseRoot "portable"
+$portableZip = Join-Path $portableDeliveryRoot ("ClassroomToolkit-{0}-portable.zip" -f $Version)
 
 if (-not (Test-Path -LiteralPath $offlineApp)) {
     throw "Offline publish output is required for the portable package: $offlineApp"
@@ -112,6 +113,11 @@ if (Test-Path -LiteralPath $sampleWorkbook) {
 if (Test-Path -LiteralPath $portableZip) {
     Remove-Item -LiteralPath $portableZip -Force
 }
+New-Item -ItemType Directory -Path $portableDeliveryRoot -Force | Out-Null
+$portableManifestPath = Join-Path $portableDeliveryRoot "portable-package-manifest.json"
+if (Test-Path -LiteralPath $portableManifestPath) {
+    Remove-Item -LiteralPath $portableManifestPath -Force
+}
 Invoke-Step -Name "zip-portable" -Action {
     Compress-Archive -Path (Join-Path $portableRoot "*") -DestinationPath $portableZip
 }
@@ -126,11 +132,11 @@ $manifest = [ordered]@{
     data_directory = "data/"
     excludes_local_classroom_data = $true
 }
-$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $releaseRoot "portable-package-manifest.json") -Encoding UTF8
+$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $portableManifestPath -Encoding UTF8
 $releaseManifestPath = Join-Path $releaseRoot "release-manifest.json"
 if (Test-Path -LiteralPath $releaseManifestPath) {
     $releaseManifest = Get-Content -LiteralPath $releaseManifestPath -Raw | ConvertFrom-Json
-    $releaseManifest.outputs | Add-Member -NotePropertyName portable -NotePropertyValue $portableRoot -Force
+    $releaseManifest.outputs | Add-Member -NotePropertyName portable -NotePropertyValue $portableZip -Force
     $releaseManifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $releaseManifestPath -Encoding UTF8
 }
 Write-Host "[portable-package] DONE $portableZip"

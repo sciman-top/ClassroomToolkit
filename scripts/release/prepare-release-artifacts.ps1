@@ -91,14 +91,14 @@ try {
 
     $stagingItems = @(
         "installer",
-        "user-installers-manifest.json",
-        ("ClassroomToolkit-Source-{0}.zip" -f $Version),
-        "source-package-manifest.json"
+        (Join-Path "installer" "user-installers-manifest.json"),
+        (Join-Path "source" ("ClassroomToolkit-Source-{0}.zip" -f $Version)),
+        (Join-Path "source" "source-package-manifest.json")
     )
     if ($PackageMode -in @("all", "offline")) {
         $stagingItems += @(
-            ("ClassroomToolkit-{0}-portable.zip" -f $Version),
-            "portable-package-manifest.json"
+            (Join-Path "portable" ("ClassroomToolkit-{0}-portable.zip" -f $Version)),
+            (Join-Path "portable" "portable-package-manifest.json")
         )
     }
     $missingItems = @($stagingItems | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stagingReleaseRoot $_)) })
@@ -108,7 +108,11 @@ try {
 
     New-Item -ItemType Directory -Path (Join-Path $outputRootPath $Version) -Force | Out-Null
     $releaseRoot = Join-Path $outputRootPath $Version
-    foreach ($relativePath in $stagingItems) {
+    $deliveryDirectories = @("installer", "source")
+    if ($PackageMode -in @("all", "offline")) {
+        $deliveryDirectories += "portable"
+    }
+    foreach ($relativePath in $deliveryDirectories) {
         $sourcePath = Join-Path $stagingReleaseRoot $relativePath
         $destinationPath = Join-Path $releaseRoot $relativePath
         $destinationParent = Split-Path -Parent $destinationPath
@@ -128,8 +132,8 @@ try {
         outputs = [ordered]@{
             standard_installer = if ($PackageMode -in @("all", "standard")) { "installer/standard" } else { $null }
             offline_installer = if ($PackageMode -in @("all", "offline")) { "installer/offline" } else { $null }
-            portable = if ($PackageMode -in @("all", "offline")) { "ClassroomToolkit-{0}-portable.zip" -f $Version } else { $null }
-            source = "ClassroomToolkit-Source-{0}.zip" -f $Version
+            portable = if ($PackageMode -in @("all", "offline")) { "portable/ClassroomToolkit-{0}-portable.zip" -f $Version } else { $null }
+            source = "source/ClassroomToolkit-Source-{0}.zip" -f $Version
         }
     }
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $releaseRoot "release-manifest.json") -Encoding UTF8

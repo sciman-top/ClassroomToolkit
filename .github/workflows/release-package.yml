@@ -104,10 +104,9 @@ jobs:
             artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.exe
             artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.nupkg
             artifacts/release/${{ steps.release_vars.outputs.version }}/installer/**/*.json
-            artifacts/release/${{ steps.release_vars.outputs.version }}/ClassroomToolkit-Source-*.zip
-            artifacts/release/${{ steps.release_vars.outputs.version }}/ClassroomToolkit-*-portable.zip
+            artifacts/release/${{ steps.release_vars.outputs.version }}/portable/ClassroomToolkit-*-portable.zip
+            artifacts/release/${{ steps.release_vars.outputs.version }}/portable/portable-package-manifest.json
+            artifacts/release/${{ steps.release_vars.outputs.version }}/source/ClassroomToolkit-Source-*.zip
+            artifacts/release/${{ steps.release_vars.outputs.version }}/source/source-package-manifest.json
             artifacts/release/${{ steps.release_vars.outputs.version }}/release-manifest.json
-            artifacts/release/${{ steps.release_vars.outputs.version }}/user-installers-manifest.json
-            artifacts/release/${{ steps.release_vars.outputs.version }}/source-package-manifest.json
-            artifacts/release/${{ steps.release_vars.outputs.version }}/portable-package-manifest.json
           fail_on_unmatched_files: true
