@@ -116,6 +116,9 @@ public partial class PaintOverlayWindow : Window
     private bool _photoUseLowQualityScaling;
     private bool _photoFullscreen;
     private bool _photoLoading;
+    private bool _centerPhotoAtOriginalScaleWhenLoaded;
+    private string _photoBackgroundSourcePath = string.Empty;
+    private string _centerPhotoAtOriginalScalePendingPath = string.Empty;
     private CrossPageDisplayUpdateRuntimeState _crossPageDisplayUpdateState = CrossPageDisplayUpdateRuntimeState.Default;
     private CrossPageReplayRuntimeState _crossPageReplayState = CrossPageReplayRuntimeState.Default;
     private CrossPageDisplayUpdateClockState _crossPageDisplayUpdateClockState = CrossPageDisplayUpdateClockState.Default;

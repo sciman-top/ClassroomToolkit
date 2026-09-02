@@ -118,6 +118,7 @@ public partial class PaintOverlayWindow
                     // Put the target page bitmap in place first, so interactive ink fast-path
                     // can reuse neighbor-rendered bitmap without forcing a full redraw.
                     PhotoBackground.Source = newBitmap;
+                    _photoBackgroundSourcePath = newPath;
                     RefreshPhotoBackgroundVisibility();
                     UpdateCurrentPageWidthNormalization(newBitmap);
                 }

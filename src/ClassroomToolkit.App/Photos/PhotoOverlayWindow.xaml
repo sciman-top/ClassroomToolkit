@@ -13,7 +13,7 @@
         <Rectangle x:Name="BackgroundRect" Fill="Transparent"/>
 
         <Image x:Name="PhotoImage"
-               Stretch="UniformToFill"
+               Stretch="Uniform"
                StretchDirection="Both"
                HorizontalAlignment="Left"
                VerticalAlignment="Top"

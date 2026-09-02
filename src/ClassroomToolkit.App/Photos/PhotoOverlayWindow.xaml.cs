@@ -720,6 +720,16 @@ public partial class PhotoOverlayWindow : Window
             return;
         }
 
+        // Keep WPF's logical layout in sync with the physical HWND placement.
+        // The native path below covers the taskbar in device pixels, but WPF
+        // still measures RootCanvas from Width/Height.  Leaving those values
+        // at the previous work-area size produces a one-sided black strip.
+        var dipBounds = ResolveScreenBoundsInDip(screenBounds);
+        Left = dipBounds.Left;
+        Top = dipBounds.Top;
+        Width = dipBounds.Width;
+        Height = dipBounds.Height;
+
         var hwnd = ResolveOverlayWindowHandle();
         if (hwnd != IntPtr.Zero
             && WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(
@@ -732,7 +742,7 @@ public partial class PhotoOverlayWindow : Window
         {
             PhotoOverlayDiagnostics.Log(
                 "bounds",
-                $"mode=native screen={screenBounds.X},{screenBounds.Y},{screenBounds.Width}x{screenBounds.Height}");
+                $"mode=native screen={screenBounds.X},{screenBounds.Y},{screenBounds.Width}x{screenBounds.Height} dip={dipBounds.Left:0.##},{dipBounds.Top:0.##},{dipBounds.Width:0.##}x{dipBounds.Height:0.##}");
             return;
         }
 
@@ -740,11 +750,6 @@ public partial class PhotoOverlayWindow : Window
         // when Windows rejects a transient placement call.  Keep the WPF
         // fallback DPI-correct; SourceInitialized/EnsureOverlayVisible will
         // retry the physical-pixel path once the HWND is ready.
-        var dipBounds = ResolveScreenBoundsInDip(screenBounds);
-        Left = dipBounds.Left;
-        Top = dipBounds.Top;
-        Width = dipBounds.Width;
-        Height = dipBounds.Height;
         PhotoOverlayDiagnostics.Log(
             "bounds",
             $"mode=dip screen={screenBounds.X},{screenBounds.Y},{screenBounds.Width}x{screenBounds.Height} dip={dipBounds.Left:0.##},{dipBounds.Top:0.##},{dipBounds.Width:0.##}x{dipBounds.Height:0.##}");

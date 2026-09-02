@@ -198,6 +198,7 @@ public partial class PaintOverlayWindow
         }
 
         PhotoBackground.Source = bitmap;
+        _photoBackgroundSourcePath = _currentDocumentPath;
         RefreshPhotoBackgroundVisibility();
         UpdateCurrentPageWidthNormalization(bitmap);
     }

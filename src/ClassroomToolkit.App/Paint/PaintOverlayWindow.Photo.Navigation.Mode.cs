@@ -44,6 +44,11 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        // A center request belongs to one photo entry.  Do not carry it into
+        // a later navigation/load if the previous entry never produced a
+        // bitmap (for example, after a failed decode).
+        _centerPhotoAtOriginalScaleWhenLoaded = false;
+        _centerPhotoAtOriginalScalePendingPath = string.Empty;
         StopPhotoZoomRendering();
         _photoUnboundedInkCanvasEnabled = false;
         ResetCrossPageReplayState();
@@ -198,6 +203,7 @@ public partial class PaintOverlayWindow
             EvictRuntimeInkCacheForClosedPhotoSession();
         }
         PhotoBackground.Source = null;
+        _photoBackgroundSourcePath = string.Empty;
         RefreshPhotoBackgroundVisibility();
         _photoPageScale.ScaleX = 1.0;
         _photoPageScale.ScaleY = 1.0;
@@ -219,6 +225,9 @@ public partial class PaintOverlayWindow
         _photoFullscreen = false;
         _photoRestoreFullscreenPending = false;
         _photoDocumentIsPdf = false;
+        _photoBackgroundSourcePath = string.Empty;
+        _centerPhotoAtOriginalScaleWhenLoaded = false;
+        _centerPhotoAtOriginalScalePendingPath = string.Empty;
         SetPhotoWindowMode(fullscreen: false);
         UpdateWpsNavHookState();
         UpdatePresentationFocusMonitor();

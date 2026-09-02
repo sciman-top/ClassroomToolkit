@@ -18,6 +18,26 @@ public sealed class PhotoOverlayLoadedBitmapDispatchContractTests
         source.Should().Contain("ApplyOverlayLayoutAfterPhotoLoad();");
     }
 
+    [Fact]
+    public void AsyncPhotoLoad_ShouldApplyPendingOriginalScaleCentering_AfterMatchingBitmapArrives()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Loading.cs"));
+
+        var transformIndex = source.IndexOf(
+            "ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: IsCrossPageDisplayActive());",
+            StringComparison.Ordinal);
+        var centerIndex = source.IndexOf("ApplyPendingPhotoCenter(bitmap, imagePath);", StringComparison.Ordinal);
+
+        source.Should().Contain("_photoBackgroundSourcePath = imagePath;");
+        source.Should().Contain("private void ApplyPendingPhotoCenter(BitmapSource bitmap, string sourcePath)");
+        transformIndex.Should().BeGreaterThanOrEqualTo(0);
+        centerIndex.Should().BeGreaterThan(transformIndex);
+    }
+
     private static string GetSourcePath()
     {
         return TestPathHelper.ResolveRepoPath(

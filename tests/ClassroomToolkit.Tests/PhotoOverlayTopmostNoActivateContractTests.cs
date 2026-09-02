@@ -149,6 +149,35 @@ public sealed class PhotoOverlayTopmostNoActivateContractTests
     }
 
     [Fact]
+    public void Xaml_ShouldFitPhotoUniformly_AndKeepAspectRatioWithoutForcedCrop()
+    {
+        var xaml = File.ReadAllText(GetXamlPath());
+
+        xaml.Should().Contain("Stretch=\"Uniform\"");
+        xaml.Should().Contain("StretchDirection=\"Both\"");
+        xaml.Should().NotContain("Stretch=\"UniformToFill\"");
+    }
+
+    [Fact]
+    public void ApplyWindowedBounds_ShouldSyncLogicalLayoutBeforeNativePlacement()
+    {
+        var source = File.ReadAllText(GetSourcePath());
+        var methodStart = source.IndexOf("private void ApplyWindowedBounds()", StringComparison.Ordinal);
+        var methodEnd = source.IndexOf("private IntPtr ResolveOverlayWindowHandle()", methodStart, StringComparison.Ordinal);
+        methodStart.Should().BeGreaterThan(0);
+        methodEnd.Should().BeGreaterThan(methodStart);
+
+        var methodSource = source.Substring(methodStart, methodEnd - methodStart);
+        var dipBoundsIndex = methodSource.IndexOf("var dipBounds = ResolveScreenBoundsInDip(screenBounds);", StringComparison.Ordinal);
+        var widthIndex = methodSource.IndexOf("Width = dipBounds.Width;", StringComparison.Ordinal);
+        var nativePlacementIndex = methodSource.IndexOf("WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(", StringComparison.Ordinal);
+
+        dipBoundsIndex.Should().BeGreaterThanOrEqualTo(0);
+        widthIndex.Should().BeGreaterThan(dipBoundsIndex);
+        nativePlacementIndex.Should().BeGreaterThan(widthIndex);
+    }
+
+    [Fact]
     public void MainWindowZOrder_ShouldRetouchPhotoOverlayBeforeCriticalFloatingUtilities()
     {
         var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(

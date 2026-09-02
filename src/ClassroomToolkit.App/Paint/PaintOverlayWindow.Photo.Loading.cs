@@ -112,6 +112,7 @@ public partial class PaintOverlayWindow
         if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
             PhotoBackground.Source = null;
+            _photoBackgroundSourcePath = string.Empty;
             RefreshPhotoBackgroundVisibility();
             return false;
         }
@@ -143,15 +144,18 @@ public partial class PaintOverlayWindow
                     if (bitmap == null)
                     {
                         PhotoBackground.Source = null;
+                        _photoBackgroundSourcePath = string.Empty;
                         RefreshPhotoBackgroundVisibility();
                         ExitPhotoMode();
                         return;
                     }
 
                     PhotoBackground.Source = bitmap;
+                    _photoBackgroundSourcePath = imagePath;
                     RefreshPhotoBackgroundVisibility();
                     UpdateCurrentPageWidthNormalization(bitmap);
                     ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: IsCrossPageDisplayActive());
+                    ApplyPendingPhotoCenter(bitmap, imagePath);
                 }, DispatcherPriority.Render);
             },
             lifecycleToken,
@@ -159,6 +163,22 @@ public partial class PaintOverlayWindow
                 $"[PhotoOpen] async-open failed: {ex.GetType().Name} - {ex.Message}"));
 
         return true;
+    }
+
+    private void ApplyPendingPhotoCenter(BitmapSource bitmap, string sourcePath)
+    {
+        if (!_centerPhotoAtOriginalScaleWhenLoaded
+            || !string.Equals(
+                _centerPhotoAtOriginalScalePendingPath,
+                sourcePath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _centerPhotoAtOriginalScaleWhenLoaded = false;
+        _centerPhotoAtOriginalScalePendingPath = string.Empty;
+        CenterPhotoAtOriginalScale(bitmap);
     }
 
     private void ShowPhotoLoadingOverlay(string message)

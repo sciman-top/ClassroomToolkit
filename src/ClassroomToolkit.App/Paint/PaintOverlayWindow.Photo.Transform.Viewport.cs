@@ -178,7 +178,33 @@ public partial class PaintOverlayWindow
 
     public void CenterPhotoAtOriginalScale()
     {
-        if (!_photoModeActive || PhotoBackground.Source is not BitmapSource bitmap)
+        if (!_photoModeActive)
+        {
+            return;
+        }
+
+        if (PhotoBackground.Source is not BitmapSource bitmap
+            || !string.Equals(
+                _photoBackgroundSourcePath,
+                _currentDocumentPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            // Region captures are decoded asynchronously.  Remember the
+            // request and apply it after the matching bitmap reaches the UI;
+            // otherwise the initial translate remains at (0,0).
+            _centerPhotoAtOriginalScaleWhenLoaded = true;
+            _centerPhotoAtOriginalScalePendingPath = _currentDocumentPath;
+            return;
+        }
+
+        _centerPhotoAtOriginalScaleWhenLoaded = false;
+        _centerPhotoAtOriginalScalePendingPath = string.Empty;
+        CenterPhotoAtOriginalScale(bitmap);
+    }
+
+    private void CenterPhotoAtOriginalScale(BitmapSource bitmap)
+    {
+        if (!_photoModeActive)
         {
             return;
         }

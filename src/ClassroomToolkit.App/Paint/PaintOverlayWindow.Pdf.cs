@@ -178,10 +178,12 @@ public partial class PaintOverlayWindow
         if (bitmap == null)
         {
             PhotoBackground.Source = null;
+            _photoBackgroundSourcePath = string.Empty;
             RefreshPhotoBackgroundVisibility();
             return false;
         }
         PhotoBackground.Source = bitmap;
+        _photoBackgroundSourcePath = _currentDocumentPath;
         RefreshPhotoBackgroundVisibility();
         UpdateCurrentPageWidthNormalization(bitmap);
         SchedulePdfPrefetch(pageIndex, _lastPdfNavigationDirection);
