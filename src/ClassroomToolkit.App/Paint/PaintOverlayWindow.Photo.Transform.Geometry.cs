@@ -7,6 +7,48 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private WpfPoint ResolvePhotoZoomAnchor()
+    {
+        if (_photoFullscreen)
+        {
+            // Fullscreen HWND bounds are applied in physical pixels.  Prefer
+            // the monitor's DIP extent here so a transient WPF work-area size
+            // cannot move the zoom anchor above the real screen center.
+            var monitor = GetCurrentMonitorRectInDip(useWorkArea: false);
+            if (monitor.Width > PhotoTransformViewportDefaults.MinUsableViewportDip
+                && monitor.Height > PhotoTransformViewportDefaults.MinUsableViewportDip)
+            {
+                return PhotoZoomAnchorPolicy.ResolveViewportCenter(monitor.Width, monitor.Height);
+            }
+        }
+
+        var viewportWidth = OverlayRoot.ActualWidth;
+        var viewportHeight = OverlayRoot.ActualHeight;
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
+        {
+            viewportWidth = PhotoWindowFrame.ActualWidth;
+            viewportHeight = PhotoWindowFrame.ActualHeight;
+        }
+
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
+        {
+            viewportWidth = ActualWidth;
+            viewportHeight = ActualHeight;
+        }
+
+        if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
+            || viewportHeight <= PhotoTransformViewportDefaults.MinUsableViewportDip)
+        {
+            var monitor = GetCurrentMonitorRectInDip(useWorkArea: false);
+            viewportWidth = monitor.Width;
+            viewportHeight = monitor.Height;
+        }
+
+        return PhotoZoomAnchorPolicy.ResolveViewportCenter(viewportWidth, viewportHeight);
+    }
+
     private WpfPoint ToPhotoSpace(WpfPoint point)
     {
         if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(

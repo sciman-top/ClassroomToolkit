@@ -13,6 +13,7 @@ public partial class PaintOverlayWindow
             _photoManipulating = false;
             return;
         }
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         _photoManipulating = true;
         e.ManipulationContainer = OverlayRoot;
@@ -53,7 +54,10 @@ public partial class PaintOverlayWindow
         MarkPhotoGestureInput();
         var scale = e.DeltaManipulation.Scale;
         var factor = (scale.X + scale.Y) / 2.0;
-        ApplyPhotoZoomInput(PhotoZoomInputSource.Gesture, factor, e.ManipulationOrigin);
+        // Keep the product-wide zoom contract consistent: scaling is anchored
+        // to the viewport center.  Gesture translation is still applied below
+        // so a pinch can pan the document without introducing anchor drift.
+        ApplyPhotoZoomInput(PhotoZoomInputSource.Gesture, factor, ResolvePhotoZoomAnchor());
         LogPhotoInputTelemetry("gesture-zoom", $"factor={factor:0.####}");
         var translation = e.DeltaManipulation.Translation;
         var deltaExecutionPlan = PhotoManipulationDeltaExecutionPolicy.Resolve(

@@ -740,7 +740,8 @@ public partial class PaintOverlayWindow
             return;
         }
         _pendingInkRedrawVersionStamp = requestedStamp;
-        var throttleActive = IsPhotoInkModeActive() && IsCrossPagePanOrDragActive();
+        var throttleActive = IsPhotoInkModeActive()
+            && (IsCrossPagePanOrDragActive() || _photoWheelZoomAnimationActive || IsPhotoZoomInteractionActive());
         var elapsedMs = (GetCurrentUtcTimestamp() - _lastInkRedrawUtc).TotalMilliseconds;
         _inkDiagnostics?.OnRedrawRequested(throttleActive && elapsedMs < InkRedrawMinIntervalMs);
         if (throttleActive && elapsedMs < InkRedrawMinIntervalMs)

@@ -132,6 +132,14 @@ public partial class PaintOverlayWindow : Window
     private double _lastPhotoInteractiveRefreshTranslateY;
     private bool _photoPanning;
     private bool _photoManipulating;
+    private bool _photoWheelZoomAnimationActive;
+    private double _photoWheelZoomTargetScale = PhotoTransformViewportDefaults.DefaultScale;
+    private WpfPoint _photoWheelZoomAnchor;
+    private WpfPoint _photoWheelZoomPhotoPoint;
+    private TimeSpan _photoWheelZoomLastRenderingTime = TimeSpan.MinValue;
+    private bool _photoZoomFramePending;
+    private bool _photoZoomRenderingAttached;
+    private double _photoZoomLastNeighborLayoutScale = double.NaN;
     private readonly HashSet<int> _photoActiveTouchIds = new();
     private int? _photoTouchPanDeviceId;
     private PhotoPanPointerKind _photoPanActivePointerKind = PhotoPanPointerKind.Mouse;

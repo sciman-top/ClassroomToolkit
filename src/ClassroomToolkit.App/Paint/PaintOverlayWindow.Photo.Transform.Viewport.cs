@@ -45,6 +45,7 @@ public partial class PaintOverlayWindow
 
     private void FitPhotoWidthAndCenter(BitmapSource bitmap)
     {
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
         var viewportWidth = ResolvePhotoViewportWidth();
         var viewportHeight = ResolvePhotoViewportHeight();
         if (viewportWidth <= PhotoTransformViewportDefaults.MinUsableViewportDip
@@ -114,6 +115,8 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
+
         EnsurePhotoTransformsWritable();
         var viewportWidth = OverlayRoot.ActualWidth;
         var viewportHeight = OverlayRoot.ActualHeight;
@@ -179,6 +182,8 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
 
         var viewportWidth = ResolvePhotoViewportWidth();
         var viewportHeight = ResolvePhotoViewportHeight();

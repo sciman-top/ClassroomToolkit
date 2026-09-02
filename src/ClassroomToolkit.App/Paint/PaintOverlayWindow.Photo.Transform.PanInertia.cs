@@ -26,6 +26,7 @@ public partial class PaintOverlayWindow
 
     private void BeginPhotoPan(WpfPoint position, PhotoPanPointerKind pointerKind, bool captureStylus)
     {
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
         _photoPanActivePointerKind = pointerKind;
         _photoPanning = true;

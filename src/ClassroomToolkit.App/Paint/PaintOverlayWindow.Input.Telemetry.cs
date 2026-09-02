@@ -26,10 +26,11 @@ public partial class PaintOverlayWindow
 
     private bool IsPhotoZoomInteractionActive()
     {
-        return PhotoInputConflictGuard.ShouldSuppressWheelAfterGesture(
-            _lastPhotoZoomInputUtc,
-            PhotoZoomInteractionWindowMs,
-            GetCurrentUtcTimestamp());
+        return _photoWheelZoomAnimationActive
+            || PhotoInputConflictGuard.ShouldSuppressWheelAfterGesture(
+                _lastPhotoZoomInputUtc,
+                PhotoZoomInteractionWindowMs,
+                GetCurrentUtcTimestamp());
     }
 
     private bool ShouldSuppressPhotoWheelFromRecentGesture()

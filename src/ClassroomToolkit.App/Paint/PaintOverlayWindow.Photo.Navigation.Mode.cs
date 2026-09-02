@@ -44,6 +44,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        StopPhotoZoomRendering();
         _photoUnboundedInkCanvasEnabled = false;
         ResetCrossPageReplayState();
         _crossPageUpdateDeferredByInkInput = false;
@@ -184,6 +185,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        StopPhotoZoomRendering();
         ResetCrossPageReplayState();
         _crossPageUpdateDeferredByInkInput = false;
         Interlocked.Increment(ref _photoLoadToken);

@@ -28,7 +28,7 @@ public partial class PaintOverlayWindow
                 e.Handled = true;
                 return;
             }
-            ZoomPhoto(e.Delta, PhotoZoomAnchorPolicy.ResolveViewportCenter(OverlayRoot));
+            ZoomPhoto(e.Delta, ResolvePhotoZoomAnchor());
             LogPhotoInputTelemetry("wheel", $"delta={e.Delta}");
             e.Handled = true;
             return;

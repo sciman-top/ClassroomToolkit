@@ -25,7 +25,10 @@ public partial class PaintOverlayWindow
                 if (i < _neighborInkImages.Count)
                 {
                     var inkImg = _neighborInkImages[i];
-                    var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, scaledBaseTop);
+                    // Resolve the fallback against the pre-scale position.  If a
+                    // newly created ink slot has no tag yet, using scaledBaseTop
+                    // here would multiply that fallback twice in one frame.
+                    var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, baseTop);
                     SetNeighborInkSlotTag(
                         inkImg,
                         CrossPageZoomLayoutScalePolicy.Scale(inkTag.BaseTop, scaleFactor),

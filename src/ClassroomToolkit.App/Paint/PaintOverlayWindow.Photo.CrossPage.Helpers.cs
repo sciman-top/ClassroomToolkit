@@ -104,6 +104,7 @@ public partial class PaintOverlayWindow
         _neighborPageImages.Clear();
         _neighborInkImages.Clear();
         _lastNeighborPagesNonEmptyUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
+        MarkPhotoZoomNeighborLayoutSynchronized();
         _interactiveSwitchPinnedNeighborPage = 0;
         _interactiveSwitchPinnedNeighborInkHoldUntilUtc = CrossPageRuntimeDefaults.UnsetTimestampUtc;
     }

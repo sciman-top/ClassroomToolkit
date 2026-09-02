@@ -24,6 +24,7 @@ public partial class PaintOverlayWindow
         BitmapSource? previousPageBitmapForInteractiveSwitch = null,
         bool clearPreservedNeighborInkFrames = false)
     {
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: true);
         if (IsCrossPageFirstInputTraceActive())
         {
             MarkCrossPageFirstInputStage(

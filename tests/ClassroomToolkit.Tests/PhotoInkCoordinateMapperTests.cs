@@ -115,4 +115,22 @@ public sealed class PhotoInkCoordinateMapperTests
         roundTrip.X.Should().BeApproximately(point.X, 0.0001);
         roundTrip.Y.Should().BeApproximately(point.Y, 0.0001);
     }
+
+    [Fact]
+    public void ResolveZoomAnchoredTranslation_ShouldIncludePageNormalizationScale()
+    {
+        var anchor = new Point(960, 540);
+        var photoPoint = new Point(400, 250);
+
+        var translation = PhotoInkCoordinateMapper.ResolveZoomAnchoredTranslation(
+            anchor,
+            photoPoint,
+            pageScaleX: 1.35,
+            pageScaleY: 0.8,
+            photoScaleX: 1.75,
+            photoScaleY: 1.75);
+
+        translation.X.Should().BeApproximately(anchor.X - photoPoint.X * 1.35 * 1.75, 0.0001);
+        translation.Y.Should().BeApproximately(anchor.Y - photoPoint.Y * 0.8 * 1.75, 0.0001);
+    }
 }

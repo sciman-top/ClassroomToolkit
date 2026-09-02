@@ -62,7 +62,7 @@ public partial class PaintOverlayWindow
             nowUtc);
         var dispatchSnapshot = CrossPageDisplayUpdateDispatchSnapshotPolicy.Resolve(
             pending: _crossPageDisplayUpdateState.Pending,
-            panning: _photoPanning || _photoManipulating,
+            panning: _photoPanning || _photoManipulating || IsPhotoZoomInteractionActive(),
             dragging: _crossPageDragging,
             inkOperationActive: IsInkOperationActive());
         _inkDiagnostics?.OnCrossPageUpdateEvent(

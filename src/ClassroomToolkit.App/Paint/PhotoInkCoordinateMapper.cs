@@ -86,6 +86,19 @@ internal static class PhotoInkCoordinateMapper
         return inverse.Transform(point);
     }
 
+    internal static WpfPoint ResolveZoomAnchoredTranslation(
+        WpfPoint viewportAnchor,
+        WpfPoint photoPoint,
+        double pageScaleX,
+        double pageScaleY,
+        double photoScaleX,
+        double photoScaleY)
+    {
+        return new WpfPoint(
+            viewportAnchor.X - photoPoint.X * pageScaleX * photoScaleX,
+            viewportAnchor.Y - photoPoint.Y * pageScaleY * photoScaleY);
+    }
+
     internal static Geometry ToPhotoGeometry(
         Geometry geometry,
         double pageScaleX,

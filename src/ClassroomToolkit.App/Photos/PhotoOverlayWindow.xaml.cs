@@ -60,6 +60,10 @@ public partial class PhotoOverlayWindow : Window
     private void OnOverlaySourceInitialized(object? sender, EventArgs e)
     {
         _hwnd = new WindowInteropHelper(this).Handle;
+        // WPF's SystemParameters values are DIPs and may describe the work area
+        // on a per-monitor-DPI process.  Reapply the native monitor bounds after
+        // the HWND exists so the overlay also covers the taskbar area.
+        ApplyWindowedBounds();
         SetInputPassthrough(enabled: !IsHitTestVisible || Opacity <= 0.0);
     }
 
@@ -551,6 +555,10 @@ public partial class PhotoOverlayWindow : Window
             WindowTopmostExecutor.PrepareNoActivateBehind(this, _zOrderAnchor);
             Show();
             becameVisible = true;
+            // SourceInitialized normally applies this already, but the second
+            // pass closes the race where WPF restores the previous work-area
+            // placement while the window is being shown.
+            ApplyWindowedBounds();
         }
 
         WindowTopmostExecutor.ApplyNoActivateBehind(this, _zOrderAnchor);
@@ -706,17 +714,99 @@ public partial class PhotoOverlayWindow : Window
 
     private void ApplyWindowedBounds()
     {
-        var screenWidth = SystemParameters.VirtualScreenWidth;
-        var screenHeight = SystemParameters.VirtualScreenHeight;
-        if (screenWidth <= 0 || screenHeight <= 0)
+        var screenBounds = ResolveTargetScreenBounds();
+        if (screenBounds.Width <= 0 || screenBounds.Height <= 0)
         {
             return;
         }
 
-        Width = screenWidth;
-        Height = screenHeight;
-        Left = SystemParameters.VirtualScreenLeft;
-        Top = SystemParameters.VirtualScreenTop;
+        var hwnd = ResolveOverlayWindowHandle();
+        if (hwnd != IntPtr.Zero
+            && WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(
+                hwnd,
+                screenBounds.X,
+                screenBounds.Y,
+                screenBounds.Width,
+                screenBounds.Height,
+                showWindow: IsVisible))
+        {
+            PhotoOverlayDiagnostics.Log(
+                "bounds",
+                $"mode=native screen={screenBounds.X},{screenBounds.Y},{screenBounds.Width}x{screenBounds.Height}");
+            return;
+        }
+
+        // Native positioning is unavailable only before SourceInitialized or
+        // when Windows rejects a transient placement call.  Keep the WPF
+        // fallback DPI-correct; SourceInitialized/EnsureOverlayVisible will
+        // retry the physical-pixel path once the HWND is ready.
+        var dipBounds = ResolveScreenBoundsInDip(screenBounds);
+        Left = dipBounds.Left;
+        Top = dipBounds.Top;
+        Width = dipBounds.Width;
+        Height = dipBounds.Height;
+        PhotoOverlayDiagnostics.Log(
+            "bounds",
+            $"mode=dip screen={screenBounds.X},{screenBounds.Y},{screenBounds.Width}x{screenBounds.Height} dip={dipBounds.Left:0.##},{dipBounds.Top:0.##},{dipBounds.Width:0.##}x{dipBounds.Height:0.##}");
+    }
+
+    private IntPtr ResolveOverlayWindowHandle()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            return _hwnd;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != IntPtr.Zero)
+        {
+            _hwnd = handle;
+        }
+
+        return handle;
+    }
+
+    private System.Drawing.Rectangle ResolveTargetScreenBounds()
+    {
+        var anchorHandle = _zOrderAnchor == null
+            ? IntPtr.Zero
+            : new WindowInteropHelper(_zOrderAnchor).Handle;
+        var handle = anchorHandle != IntPtr.Zero ? anchorHandle : _hwnd;
+        if (handle != IntPtr.Zero)
+        {
+            try
+            {
+                return System.Windows.Forms.Screen.FromHandle(handle).Bounds;
+            }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine(
+                    $"[PhotoOverlayWindow] monitor bounds lookup failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        return System.Windows.Forms.SystemInformation.VirtualScreen;
+    }
+
+    private System.Windows.Rect ResolveScreenBoundsInDip(System.Drawing.Rectangle screenBounds)
+    {
+        var source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget != null)
+        {
+            var matrix = source.CompositionTarget.TransformFromDevice;
+            var topLeft = matrix.Transform(new System.Windows.Point(screenBounds.Left, screenBounds.Top));
+            var bottomRight = matrix.Transform(new System.Windows.Point(screenBounds.Right, screenBounds.Bottom));
+            return new System.Windows.Rect(topLeft, bottomRight);
+        }
+
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+        var scaleX = dpi.DpiScaleX > 0 ? dpi.DpiScaleX : 1.0;
+        var scaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1.0;
+        return new System.Windows.Rect(
+            screenBounds.Left / scaleX,
+            screenBounds.Top / scaleY,
+            screenBounds.Width / scaleX,
+            screenBounds.Height / scaleY);
     }
 
     private void DeferHideLoadingMaskAfterRender(int requestId)

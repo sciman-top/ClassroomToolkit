@@ -591,6 +591,7 @@ public partial class PaintOverlayWindow
         {
             ScheduleCrossPageDisplayUpdateForMissingNeighborPages(missingPageBitmapCount);
         }
+        MarkPhotoZoomNeighborLayoutSynchronized();
     }
 
     private static bool TryResolveNearestPreservedPageFrame(

@@ -113,6 +113,7 @@ public partial class PaintOverlayWindow
 
     private void ApplyIdentityPhotoTransform()
     {
+        StopPhotoWheelZoomAnimation(applyTarget: false, scheduleTransformSave: false);
         _photoScale.ScaleX = 1.0;
         _photoScale.ScaleY = 1.0;
         _photoTranslate.X = 0;

@@ -117,6 +117,7 @@ public partial class PaintOverlayWindow
             CompositionTarget.Rendering -= OnPhotoPanInertiaRendering;
             _photoPanInertiaRenderingAttached = false;
         }
+        StopPhotoZoomRendering();
         OverlayRoot.StylusDown -= OnStylusDown;
         OverlayRoot.StylusMove -= OnStylusMove;
         OverlayRoot.StylusUp -= OnStylusUp;
