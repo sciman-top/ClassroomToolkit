@@ -59,6 +59,11 @@ public static class RollStateSerializer
         var snapshot = new Dictionary<string, ClassRollState>(payload.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in payload)
         {
+            if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null)
+            {
+                continue;
+            }
+
             snapshot[pair.Key] = CloneWithVersion(pair.Value, CurrentVersion);
         }
 
@@ -86,11 +91,11 @@ public static class RollStateSerializer
                 var states = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(
                     statesNode.GetRawText(),
                     Options);
-                return states ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+                return NormalizeDeserializedStates(states);
             }
 
             var result = JsonSerializer.Deserialize<Dictionary<string, ClassRollState>>(json, Options);
-            return result ?? new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+            return NormalizeDeserializedStates(result);
         }
         catch (JsonException)
         {
@@ -158,16 +163,52 @@ public static class RollStateSerializer
             CurrentStudent = state.CurrentStudent,
             PendingStudent = state.PendingStudent
         };
-        foreach (var pair in state.GroupRemaining)
+        foreach (var pair in state.GroupRemaining ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
         {
-            cloned.GroupRemaining[pair.Key] = new List<string>(pair.Value);
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                continue;
+            }
+
+            cloned.GroupRemaining[pair.Key] = pair.Value is null
+                ? new List<string>()
+                : new List<string>(pair.Value);
         }
-        foreach (var pair in state.GroupLast)
+        foreach (var pair in state.GroupLast ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase))
         {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                continue;
+            }
+
             cloned.GroupLast[pair.Key] = pair.Value;
         }
-        cloned.GlobalDrawn = new List<string>(state.GlobalDrawn);
+        cloned.GlobalDrawn = state.GlobalDrawn is null
+            ? new List<string>()
+            : new List<string>(state.GlobalDrawn);
         return cloned;
+    }
+
+    private static Dictionary<string, ClassRollState> NormalizeDeserializedStates(
+        Dictionary<string, ClassRollState>? states)
+    {
+        var normalized = new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase);
+        if (states is null)
+        {
+            return normalized;
+        }
+
+        foreach (var pair in states)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null)
+            {
+                continue;
+            }
+
+            normalized[pair.Key] = pair.Value;
+        }
+
+        return normalized;
     }
 
     private sealed record WorkbookRollStateEnvelope(

@@ -206,7 +206,12 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             }
 
             var snapshot = JsonSerializer.Deserialize<WorkbookSnapshot>(workbookJson, SnapshotJsonOptions);
-            if (snapshot == null)
+            // StudentWorkbook inserts a fallback roster for an empty class map. A corrupted cache
+            // must not therefore masquerade as a successful empty workbook recovery.
+            if (snapshot?.Classes is null
+                || !snapshot.Classes.Any(classSnapshot =>
+                    classSnapshot is not null
+                    && !string.IsNullOrWhiteSpace(classSnapshot.ClassName)))
             {
                 return false;
             }
@@ -336,14 +341,16 @@ public sealed class StudentWorkbookSqliteStoreAdapter
     private static StudentWorkbook ToWorkbook(WorkbookSnapshot snapshot)
     {
         var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
-        foreach (var classSnapshot in snapshot.Classes)
+        foreach (var classSnapshot in snapshot.Classes ?? new List<ClassRosterSnapshot>())
         {
-            if (string.IsNullOrWhiteSpace(classSnapshot.ClassName))
+            if (classSnapshot is null || string.IsNullOrWhiteSpace(classSnapshot.ClassName))
             {
                 continue;
             }
 
-            var students = classSnapshot.Students.Select(student => new StudentRecord(
+            var students = (classSnapshot.Students ?? new List<StudentRecordSnapshot>())
+                .Where(student => student is not null)
+                .Select(student => new StudentRecord(
                     student.StudentId ?? string.Empty,
                     student.Name ?? string.Empty,
                     string.IsNullOrWhiteSpace(student.ClassName) ? classSnapshot.ClassName : student.ClassName,

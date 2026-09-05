@@ -51,6 +51,42 @@ public sealed class RollStateSerializerTests
     }
 
     [Fact]
+    public void SerializeClassState_ShouldNormalizeNullCollections()
+    {
+        var state = new ClassRollState
+        {
+            GroupRemaining = null!,
+            GroupLast = null!,
+            GlobalDrawn = null!
+        };
+
+        var json = RollStateSerializer.SerializeClassState(state);
+        var restored = RollStateSerializer.DeserializeClassState(json);
+
+        restored.Should().NotBeNull();
+        restored!.GroupRemaining.Should().NotBeNull().And.BeEmpty();
+        restored.GroupLast.Should().NotBeNull().And.BeEmpty();
+        restored.GlobalDrawn.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public void SerializeWorkbookStates_ShouldSkipNullValuesAndBlankKeys()
+    {
+        var states = new Dictionary<string, ClassRollState>
+        {
+            ["valid"] = new ClassRollState { CurrentGroup = "一组" },
+            ["null"] = null!,
+            [" "] = new ClassRollState()
+        };
+
+        var restored = RollStateSerializer.DeserializeWorkbookStates(
+            RollStateSerializer.SerializeWorkbookStates(states));
+
+        restored.Keys.Should().Equal("valid");
+        restored["valid"].CurrentGroup.Should().Be("一组");
+    }
+
+    [Fact]
     public void DeserializeInvalid_ShouldReturnNull()
     {
         var restored = RollStateSerializer.DeserializeClassState("{invalid");
@@ -78,5 +114,14 @@ public sealed class RollStateSerializerTests
 
         states.Should().ContainKey("班级1");
         states["班级1"].CurrentGroup.Should().Be("一组");
+    }
+
+    [Fact]
+    public void DeserializeWorkbookStates_ShouldDropNullStateEntries()
+    {
+        var states = RollStateSerializer.DeserializeWorkbookStates(
+            "{\"valid\":{\"currentGroup\":\"一组\"},\"broken\":null}");
+
+        states.Should().ContainSingle().Which.Key.Should().Be("valid");
     }
 }

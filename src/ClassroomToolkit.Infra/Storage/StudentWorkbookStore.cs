@@ -5,6 +5,7 @@ using ClassroomToolkit.Domain.Utilities;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -19,6 +20,10 @@ public sealed class StudentWorkbookStore
     private static readonly string[] DefaultHeaders = { "学号", "姓名", "分组" };
     private static readonly string[] CanonicalColumns = { "学号", "姓名", "分组", ClassRoster.InternalRowIdColumn };
     private const string InternalRowIdColumn = ClassRoster.InternalRowIdColumn;
+
+    /// <summary>表头识别扫描行数：兼容真实表头之上有装饰性标题行的工作簿。</summary>
+    private const int HeaderScanRowCount = 5;
+
     private readonly ConcurrentDictionary<string, byte> _overwriteBlockedPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Dictionary<string, string> HeaderAliases = new(StringComparer.OrdinalIgnoreCase)
@@ -48,7 +53,7 @@ public sealed class StudentWorkbookStore
         {
             _overwriteBlockedPaths.TryRemove(fullPath, out _);
             var template = CreateTemplateWorkbook();
-            TrySaveWorkbook(template.Workbook, fullPath, template.RollStateJson);
+            Save(template.Workbook, fullPath, template.RollStateJson);
             return template with { CreatedTemplate = true };
         }
 
@@ -70,6 +75,7 @@ public sealed class StudentWorkbookStore
         using var workbook = new XLWorkbook(path);
         var rollStateJson = ExtractRollState(workbook, out var rollStateNeedsRepair);
         var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
+        var mergedDuplicateClassSheets = false;
 
         foreach (var sheet in workbook.Worksheets)
         {
@@ -78,15 +84,28 @@ public sealed class StudentWorkbookStore
                 continue;
             }
             var roster = ReadWorksheet(sheet);
-            classes[roster.ClassName] = roster;
+            // ClassRoster 构造时已 Trim 班级名；两个工作表规范化后同名（如仅差首尾空白的表名）
+            // 会命中同一键，必须合并而不是覆盖，避免静默丢掉一整个班。
+            if (classes.TryGetValue(roster.ClassName, out var existing))
+            {
+                classes[roster.ClassName] = MergeClassRosters(existing, roster);
+                mergedDuplicateClassSheets = true;
+            }
+            else
+            {
+                classes[roster.ClassName] = roster;
+            }
         }
 
         var normalizedWorkbook = NormalizeWorkbook(classes, out var workbookNeedsRepair);
         var normalizedRollStateJson = EnsureRollStateJson(rollStateJson);
-        if (rollStateNeedsRepair || workbookNeedsRepair || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
+        if (rollStateNeedsRepair
+            || workbookNeedsRepair
+            || mergedDuplicateClassSheets
+            || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
         {
             EnsureNormalizationBackup(path);
-            TrySaveWorkbook(normalizedWorkbook, path, normalizedRollStateJson);
+            Save(normalizedWorkbook, path, normalizedRollStateJson);
         }
 
         return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
@@ -132,19 +151,6 @@ public sealed class StudentWorkbookStore
                     $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
         _overwriteBlockedPaths.TryRemove(fullPath, out _);
-    }
-
-    private void TrySaveWorkbook(StudentWorkbook workbook, string path, string? rollStateJson)
-    {
-        try
-        {
-            Save(workbook, path, rollStateJson);
-        }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-        {
-            Debug.WriteLine(
-                $"[StudentWorkbookStore] self-heal save failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
-        }
     }
 
     private const string BackupFolderName = "backups";
@@ -241,34 +247,33 @@ public sealed class StudentWorkbookStore
 
     private static ClassRoster ReadWorksheet(IXLWorksheet sheet)
     {
-        var headerRow = sheet.FirstRowUsed();
-        if (headerRow == null)
+        var rowsUsed = sheet.RowsUsed().ToList();
+        if (rowsUsed.Count == 0)
         {
             return new ClassRoster(sheet.Name, Array.Empty<StudentRecord>());
         }
-        var columnOrder = new List<string>();
-        var headerMap = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var cell in headerRow.CellsUsed())
+
+        // 前 HeaderScanRowCount 行内寻找同时含“学号”与“姓名”（含别名）的表头行，
+        // 兼容真实表头之上有装饰性标题行的工作簿。找不到视为无法识别的表头：
+        // 必须按读取失败降级（经 LoadOrCreate 异常通道进入只读+拒绝覆盖），
+        // 绝不能把解析不出学生的空名单当自愈结果回写、覆盖用户原始数据。
+        List<string> columnOrder = new();
+        Dictionary<string, List<int>> headerMap = new(StringComparer.OrdinalIgnoreCase);
+        var headerRowNumber = 0;
+        var headerRecognized = false;
+        foreach (var row in rowsUsed.Take(HeaderScanRowCount))
         {
-            var raw = cell.GetString().Trim();
-            if (string.IsNullOrWhiteSpace(raw))
+            headerRowNumber = row.RowNumber();
+            if (TryBuildHeaderColumns(row, out columnOrder, out headerMap))
             {
-                continue;
+                headerRecognized = true;
+                break;
             }
-            if (HeaderAliases.TryGetValue(raw, out var canonical))
-            {
-                raw = canonical;
-            }
-            if (!columnOrder.Contains(raw, StringComparer.OrdinalIgnoreCase))
-            {
-                columnOrder.Add(raw);
-            }
-            if (!headerMap.TryGetValue(raw, out var list))
-            {
-                list = new List<int>();
-                headerMap[raw] = list;
-            }
-            list.Add(cell.Address.ColumnNumber);
+        }
+        if (!headerRecognized)
+        {
+            throw new InvalidDataException(
+                $"工作表“{sheet.Name}”前 {HeaderScanRowCount} 行内未找到包含“学号”和“姓名”列的表头，无法识别学生名单。");
         }
 
         foreach (var column in DefaultHeaders)
@@ -284,7 +289,7 @@ public sealed class StudentWorkbookStore
         }
 
         var students = new List<StudentRecord>();
-        foreach (var row in sheet.RowsUsed().Where(r => r.RowNumber() > headerRow.RowNumber()))
+        foreach (var row in rowsUsed.Where(r => r.RowNumber() > headerRowNumber))
         {
             var rowCache = new Dictionary<int, string>();
             var studentId = GetCellValue(row, headerMap, "学号", rowCache);
@@ -327,6 +332,40 @@ public sealed class StudentWorkbookStore
             students.Add(record);
         }
         return new ClassRoster(sheet.Name, students, columnOrder);
+    }
+
+    private static bool TryBuildHeaderColumns(
+        IXLRow row,
+        out List<string> columnOrder,
+        out Dictionary<string, List<int>> headerMap)
+    {
+        columnOrder = new List<string>();
+        headerMap = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var cell in row.CellsUsed())
+        {
+            var raw = cell.GetString().Trim();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+            if (HeaderAliases.TryGetValue(raw, out var canonical))
+            {
+                raw = canonical;
+            }
+            if (!columnOrder.Contains(raw, StringComparer.OrdinalIgnoreCase))
+            {
+                columnOrder.Add(raw);
+            }
+            if (!headerMap.TryGetValue(raw, out var list))
+            {
+                list = new List<int>();
+                headerMap[raw] = list;
+            }
+            list.Add(cell.Address.ColumnNumber);
+        }
+
+        // 同时识别出学号与姓名两列才认定是表头行；否则行内容无法解析成学生记录。
+        return headerMap.ContainsKey("学号") && headerMap.ContainsKey("姓名");
     }
 
     private static string GetCellValue(
@@ -564,6 +603,23 @@ public sealed class StudentWorkbookStore
         return new ClassRoster(className, students, columns);
     }
 
+    private static ClassRoster MergeClassRosters(ClassRoster first, ClassRoster second)
+    {
+        var columns = first.ColumnOrder.ToList();
+        foreach (var column in second.ColumnOrder)
+        {
+            if (!columns.Contains(column, StringComparer.OrdinalIgnoreCase))
+            {
+                columns.Add(column);
+            }
+        }
+
+        var students = new List<StudentRecord>(first.Students.Count + second.Students.Count);
+        students.AddRange(first.Students);
+        students.AddRange(second.Students);
+        return new ClassRoster(first.ClassName, students, columns);
+    }
+
     private static string NormalizeClassName(string className)
     {
         var normalized = IdentityUtils.NormalizeText(className);
@@ -596,13 +652,69 @@ public sealed class StudentWorkbookStore
 
     private static string EnsureRollStateJson(string? rollStateJson)
     {
-        if (!string.IsNullOrWhiteSpace(rollStateJson))
+        if (!string.IsNullOrWhiteSpace(rollStateJson) && IsValidRollStateJson(rollStateJson))
         {
             return rollStateJson;
         }
 
         return RollStateSerializer.SerializeWorkbookStates(
             new Dictionary<string, ClassRollState>(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static bool IsValidRollStateJson(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (root.TryGetProperty("states", out var statesNode))
+            {
+                return AreValidClassStateEntries(statesNode);
+            }
+
+            foreach (var property in root.EnumerateObject())
+            {
+                if (property.Value.ValueKind != JsonValueKind.Object
+                    || RollStateSerializer.DeserializeClassState(property.Value.GetRawText()) == null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool AreValidClassStateEntries(JsonElement statesNode)
+    {
+        if (statesNode.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var property in statesNode.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.Object
+                || RollStateSerializer.DeserializeClassState(property.Value.GetRawText()) == null)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void ApplyColumnWidths(IXLWorksheet sheet, List<string> columns)

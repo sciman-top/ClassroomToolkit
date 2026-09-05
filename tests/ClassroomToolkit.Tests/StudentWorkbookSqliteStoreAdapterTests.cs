@@ -245,6 +245,40 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldTreatNullSnapshotCollectionsAsEmpty_WhenBridgeThrows()
+    {
+        var dbPath = CreateTempDbPath();
+        SeedStudentWorkbookSnapshot(
+            dbPath,
+            """
+            {"activeClass":null,"classes":[{"className":"高一1班","columnOrder":null,"students":null}]}
+            """);
+        var adapter = new StudentWorkbookSqliteStoreAdapter(new ThrowingStudentWorkbookStoreBridge(), _ => dbPath);
+
+        var act = () => adapter.LoadOrCreate("students.xlsx");
+
+        var loaded = act.Should().NotThrow().Subject;
+        loaded.Workbook.ClassNames.Should().ContainSingle().Which.Should().Be("高一1班");
+        loaded.Workbook.GetActiveRoster().Students.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldRethrow_WhenSnapshotHasNoViableClass_WhenBridgeThrows()
+    {
+        var dbPath = CreateTempDbPath();
+        SeedStudentWorkbookSnapshot(
+            dbPath,
+            """
+            {"activeClass":"高一1班","classes":null}
+            """);
+        var adapter = new StudentWorkbookSqliteStoreAdapter(new ThrowingStudentWorkbookStoreBridge(), _ => dbPath);
+
+        Action act = () => _ = adapter.LoadOrCreate("students.xlsx");
+
+        act.Should().Throw<IOException>().WithMessage("bridge-failure");
+    }
+
+    [Fact]
     public void Save_ShouldFallbackToDefaultPath_WhenResolverReturnsBlank()
     {
         var workbook = CreateWorkbook();

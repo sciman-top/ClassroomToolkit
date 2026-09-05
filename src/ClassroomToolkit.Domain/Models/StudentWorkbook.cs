@@ -5,6 +5,9 @@ namespace ClassroomToolkit.Domain.Models;
 
 public sealed class StudentWorkbook
 {
+    /// <summary>空工作簿/加载失败时的兜底班级名；Application 与 Infra 共用，避免跨层漂移。</summary>
+    public const string FallbackClassName = "班级1";
+
     private readonly Dictionary<string, ClassRoster> _classes;
 
     public StudentWorkbook(IDictionary<string, ClassRoster> classes, string? activeClass)
@@ -25,7 +28,7 @@ public sealed class StudentWorkbook
         }
         if (_classes.Count == 0)
         {
-            _classes["班级1"] = new ClassRoster("班级1", Array.Empty<StudentRecord>());
+            _classes[FallbackClassName] = new ClassRoster(FallbackClassName, Array.Empty<StudentRecord>());
         }
         ActiveClass = ResolveActiveClass(activeClass);
     }
