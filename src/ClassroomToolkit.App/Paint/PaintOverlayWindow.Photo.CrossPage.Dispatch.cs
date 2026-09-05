@@ -60,11 +60,11 @@ public partial class PaintOverlayWindow
             ref _crossPageUpdateRequestState,
             request,
             nowUtc);
-        var dispatchSnapshot = CrossPageDisplayUpdateDispatchSnapshotPolicy.Resolve(
-            pending: _crossPageDisplayUpdateState.Pending,
-            panning: _photoPanning || _photoManipulating || IsPhotoZoomInteractionActive(),
-            dragging: _crossPageDragging,
-            inkOperationActive: IsInkOperationActive());
+        var dispatchSnapshot = new CrossPageDisplayUpdateDispatchSnapshot(
+            Pending: _crossPageDisplayUpdateState.Pending,
+            Panning: _photoPanning || _photoManipulating || IsPhotoZoomInteractionActive(),
+            Dragging: _crossPageDragging,
+            InkOperationActive: IsInkOperationActive());
         _inkDiagnostics?.OnCrossPageUpdateEvent(
             "request",
             source,
@@ -74,7 +74,7 @@ public partial class PaintOverlayWindow
             MarkCrossPageFirstInputStage("crosspage-update-enter");
         }
         var elapsedMs = (nowUtc - _crossPageDisplayUpdateClockState.LastUpdateUtc).TotalMilliseconds;
-        var dispatchDecision = CrossPageDisplayUpdateDispatchDecisionPolicy.Resolve(
+        var dispatchDecision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
             dispatchSnapshot,
             elapsedMs,
             draggingMinIntervalMs: CrossPageRuntimeDefaults.DraggingUpdateMinIntervalMs,

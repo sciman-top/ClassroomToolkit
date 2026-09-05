@@ -3,6 +3,7 @@ using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
 
+
 public sealed class CrossPageDisplayUpdateClockStateUpdaterTests
 {
     [Fact]

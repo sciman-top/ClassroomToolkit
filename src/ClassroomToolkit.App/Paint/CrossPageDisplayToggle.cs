@@ -1,6 +1,52 @@
-using System;
-
 namespace ClassroomToolkit.App.Paint;
+
+internal readonly record struct CrossPageDisplayToggleFlagUpdateDecision(
+    bool ShouldApply,
+    bool NextCrossPageDisplayEnabled);
+
+internal static class CrossPageDisplayToggleFlagUpdatePolicy
+{
+    internal static CrossPageDisplayToggleFlagUpdateDecision Resolve(
+        bool currentCrossPageDisplayEnabled,
+        bool requestedEnabled)
+    {
+        var unchanged = currentCrossPageDisplayEnabled == requestedEnabled;
+        if (unchanged)
+        {
+            return new CrossPageDisplayToggleFlagUpdateDecision(
+                ShouldApply: false,
+                NextCrossPageDisplayEnabled: currentCrossPageDisplayEnabled);
+        }
+
+        return new CrossPageDisplayToggleFlagUpdateDecision(
+            ShouldApply: true,
+            NextCrossPageDisplayEnabled: requestedEnabled);
+    }
+}
+
+internal readonly record struct CrossPageDisplayToggleRuntimePlan(
+    bool ShouldRestoreUnifiedTransformAndRedraw,
+    bool ShouldSaveUnifiedTransformState,
+    bool ShouldResetReplayAndClearNeighbors,
+    bool ShouldRefreshImageSequenceSource,
+    bool ShouldReloadPdfInkCache);
+
+internal static class CrossPageDisplayToggleRuntimePlanPolicy
+{
+    internal static CrossPageDisplayToggleRuntimePlan Resolve(
+        bool photoInkModeActive,
+        bool crossPageDisplayEnabled,
+        bool photoDocumentIsPdf,
+        bool photoUnifiedTransformReady)
+    {
+        return new CrossPageDisplayToggleRuntimePlan(
+            ShouldRestoreUnifiedTransformAndRedraw: photoInkModeActive && crossPageDisplayEnabled && photoUnifiedTransformReady,
+            ShouldSaveUnifiedTransformState: photoInkModeActive && crossPageDisplayEnabled && !photoUnifiedTransformReady,
+            ShouldResetReplayAndClearNeighbors: !crossPageDisplayEnabled,
+            ShouldRefreshImageSequenceSource: photoInkModeActive && !photoDocumentIsPdf,
+            ShouldReloadPdfInkCache: photoInkModeActive && photoDocumentIsPdf);
+    }
+}
 
 internal readonly record struct CrossPageDisplayToggleTransitionExecutionResult(
     bool AppliedFlagUpdate,
@@ -94,5 +140,4 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
             RefreshedImageSequenceSource: togglePlan.ShouldRefreshImageSequenceSource,
             ReloadedPdfInkCache: togglePlan.ShouldReloadPdfInkCache);
     }
-
 }

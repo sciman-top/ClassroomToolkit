@@ -1,8 +1,8 @@
-using System;
 using ClassroomToolkit.App.Paint;
 using FluentAssertions;
 
 namespace ClassroomToolkit.Tests;
+
 
 public class CrossPageDisplayUpdatePendingStateUpdaterTests
 {

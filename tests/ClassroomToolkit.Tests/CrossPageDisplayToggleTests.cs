@@ -1,8 +1,99 @@
 using ClassroomToolkit.App.Paint;
 using FluentAssertions;
-using Xunit;
 
 namespace ClassroomToolkit.Tests;
+
+
+public sealed class CrossPageDisplayToggleFlagUpdatePolicyTests
+{
+    [Fact]
+    public void Resolve_ShouldSkip_WhenBothFlagsAlreadyMatchRequested()
+    {
+        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+            currentCrossPageDisplayEnabled: true,
+            requestedEnabled: true);
+
+        decision.ShouldApply.Should().BeFalse();
+        decision.NextCrossPageDisplayEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ShouldSkip_WhenCurrentFlagMatchesRequested()
+    {
+        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+            currentCrossPageDisplayEnabled: true,
+            requestedEnabled: true);
+
+        decision.ShouldApply.Should().BeFalse();
+        decision.NextCrossPageDisplayEnabled.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Resolve_ShouldSetBothFlagsToRequested_WhenApplyRequired(bool requested)
+    {
+        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+            currentCrossPageDisplayEnabled: !requested,
+            requestedEnabled: requested);
+
+        decision.ShouldApply.Should().BeTrue();
+        decision.NextCrossPageDisplayEnabled.Should().Be(requested);
+    }
+}
+
+
+public sealed class CrossPageDisplayToggleRuntimePlanPolicyTests
+{
+    [Fact]
+    public void Resolve_ShouldEnableUnifiedRestore_WhenPhotoInkCrossPageAndUnifiedReady()
+    {
+        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+            photoInkModeActive: true,
+            crossPageDisplayEnabled: true,
+            photoDocumentIsPdf: false,
+            photoUnifiedTransformReady: true);
+
+        plan.ShouldRestoreUnifiedTransformAndRedraw.Should().BeTrue();
+        plan.ShouldSaveUnifiedTransformState.Should().BeFalse();
+        plan.ShouldResetReplayAndClearNeighbors.Should().BeFalse();
+        plan.ShouldRefreshImageSequenceSource.Should().BeTrue();
+        plan.ShouldReloadPdfInkCache.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Resolve_ShouldEnableUnifiedSave_WhenPhotoInkCrossPageAndUnifiedNotReady()
+    {
+        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+            photoInkModeActive: true,
+            crossPageDisplayEnabled: true,
+            photoDocumentIsPdf: true,
+            photoUnifiedTransformReady: false);
+
+        plan.ShouldRestoreUnifiedTransformAndRedraw.Should().BeFalse();
+        plan.ShouldSaveUnifiedTransformState.Should().BeTrue();
+        plan.ShouldResetReplayAndClearNeighbors.Should().BeFalse();
+        plan.ShouldRefreshImageSequenceSource.Should().BeFalse();
+        plan.ShouldReloadPdfInkCache.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ShouldResetArtifacts_WhenCrossPageDisabled()
+    {
+        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+            photoInkModeActive: true,
+            crossPageDisplayEnabled: false,
+            photoDocumentIsPdf: false,
+            photoUnifiedTransformReady: true);
+
+        plan.ShouldRestoreUnifiedTransformAndRedraw.Should().BeFalse();
+        plan.ShouldSaveUnifiedTransformState.Should().BeFalse();
+        plan.ShouldResetReplayAndClearNeighbors.Should().BeTrue();
+        plan.ShouldRefreshImageSequenceSource.Should().BeTrue();
+        plan.ShouldReloadPdfInkCache.Should().BeFalse();
+    }
+}
+
 
 public sealed class CrossPageDisplayToggleTransitionCoordinatorTests
 {
