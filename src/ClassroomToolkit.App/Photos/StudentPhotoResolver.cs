@@ -118,20 +118,36 @@ internal sealed class StudentPhotoResolver : IDisposable
         var key = normalizedStudentId;
         if (TryGetFreshIndex(directory, out var freshCache))
         {
+            var now = DateTime.UtcNow;
+            var hasDirectoryWriteTime = TryGetDirectoryWriteTimeUtc(directory, out var writeTimeUtc);
             if (freshCache.Index.TryGetValue(key, out var cachedPath))
             {
                 if (File.Exists(cachedPath))
                 {
-                    return cachedPath;
+                    if (!hasDirectoryWriteTime || writeTimeUtc <= freshCache.DirectoryWriteTimeUtc)
+                    {
+                        return cachedPath;
+                    }
+
+                    // A newly added photo can outrank the cached extension (for example,
+                    // a teacher replaces 1001.png with 1001.jpg while roll call is open).
+                    // Reuse the cold-path policy only after a directory change is observed.
+                    var updatedDirectPath = ResolveByPreferredExtensions(directory, normalizedStudentId);
+                    if (string.IsNullOrWhiteSpace(updatedDirectPath))
+                    {
+                        return cachedPath;
+                    }
+
+                    TryPromoteDirectHitCacheEntry(directory, key, updatedDirectPath, freshCache, now);
+                    return updatedDirectPath;
                 }
 
                 _cache.TryRemove(directory, out _);
             }
 
-            var now = DateTime.UtcNow;
             // Skip direct probes only for a short interval. This avoids repeated misses
             // paying 4x File.Exists checks while still detecting new files promptly.
-            if (TryGetDirectoryWriteTimeUtc(directory, out var writeTimeUtc)
+            if (hasDirectoryWriteTime
                 && writeTimeUtc <= freshCache.DirectoryWriteTimeUtc
                 && StudentPhotoCachePolicy.ShouldSkipMissProbe(now, freshCache.LastMissProbeUtc, MissProbeInterval))
             {
@@ -325,7 +341,14 @@ internal sealed class StudentPhotoResolver : IDisposable
                         continue;
                     }
                     var baseName = Path.GetFileNameWithoutExtension(file);
-                    index.TryAdd(baseName, file);
+                    if (!index.TryGetValue(baseName, out var existingPath)
+                        || ShouldReplaceIndexedPhoto(existingPath, file))
+                    {
+                        // Directory enumeration order is not a photo-selection policy.
+                        // Preserve the same extension preference for warm-cache hits as
+                        // ResolveByPreferredExtensions uses on the cold/direct path.
+                        index[baseName] = file;
+                    }
                 }
             }
             catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -432,6 +455,28 @@ internal sealed class StudentPhotoResolver : IDisposable
         }
 
         return null;
+    }
+
+    private static bool ShouldReplaceIndexedPhoto(string existingPath, string candidatePath)
+    {
+        var existingPriority = GetPreferredExtensionPriority(Path.GetExtension(existingPath));
+        var candidatePriority = GetPreferredExtensionPriority(Path.GetExtension(candidatePath));
+        return candidatePriority < existingPriority
+            || (candidatePriority == existingPriority
+                && string.Compare(candidatePath, existingPath, StringComparison.OrdinalIgnoreCase) < 0);
+    }
+
+    private static int GetPreferredExtensionPriority(string extension)
+    {
+        for (var index = 0; index < PreferredExtensions.Length; index++)
+        {
+            if (string.Equals(PreferredExtensions[index], extension, StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return int.MaxValue;
     }
 
     private object GetIndexLock(string directory)

@@ -130,6 +130,72 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void ResolvePhotoPath_ShouldPreferJpeg_WhenWarmCacheIndexesMultiplePhotoFormats()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_preferred_format");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        var studentId = "1006";
+        var pngPath = Path.Combine(classDirectory, $"{studentId}.png");
+        var jpegPath = Path.Combine(classDirectory, $"{studentId}.jpg");
+        Directory.CreateDirectory(classDirectory);
+
+        try
+        {
+            // Create the lower-priority file first so the cache cannot rely on
+            // filesystem enumeration order to preserve PreferredExtensions.
+            File.WriteAllBytes(pngPath, new byte[] { 0x01, 0x02, 0x03 });
+            File.WriteAllBytes(jpegPath, new byte[] { 0x04, 0x05, 0x06 });
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+
+            resolver.ResolvePhotoPath(className, studentId).Should().Be(jpegPath);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ResolvePhotoPath_ShouldPromoteNewHigherPriorityPhoto_WhenCachedPhotoStillExists()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_promote_preferred_format");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        var studentId = "1007";
+        var pngPath = Path.Combine(classDirectory, $"{studentId}.png");
+        var jpegPath = Path.Combine(classDirectory, $"{studentId}.jpg");
+        Directory.CreateDirectory(classDirectory);
+
+        try
+        {
+            File.WriteAllBytes(pngPath, new byte[] { 0x01, 0x02, 0x03 });
+            var resolver = new StudentPhotoResolver(rootPath);
+
+            // A miss builds the directory cache; the existing image is then a cache hit.
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+            resolver.ResolvePhotoPath(className, studentId).Should().Be(pngPath);
+
+            File.WriteAllBytes(jpegPath, new byte[] { 0x04, 0x05, 0x06 });
+            Directory.SetLastWriteTimeUtc(classDirectory, DateTime.UtcNow.AddMinutes(1));
+
+            resolver.ResolvePhotoPath(className, studentId).Should().Be(jpegPath);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ResolvePhotoPath_ShouldResolve_WhenClassNameAndStudentIdUseValidEdgeUnderscores()
     {
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_edge_underscore");
