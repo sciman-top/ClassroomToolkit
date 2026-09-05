@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Paint;
 

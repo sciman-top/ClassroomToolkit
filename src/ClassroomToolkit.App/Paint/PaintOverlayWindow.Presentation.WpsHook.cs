@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -130,7 +131,8 @@ public partial class PaintOverlayWindow
     private void UpdateWpsNavHookState()
     {
         var generation = _wpsNavHookStateGate.NextGeneration();
-        _ = _wpsNavHookStateGate.RunAsync(generation, UpdateWpsNavHookStateCoreAsync);
+        // 协程体读取 IsVisible/IsBoardActive 等 UI 状态且最终安装 LL 钩子，必须保持在 UI 线程。
+        _ = _wpsNavHookStateGate.RunAsync(generation, UpdateWpsNavHookStateCoreAsync, continueOnCapturedContext: true);
     }
 
     private async Task UpdateWpsNavHookStateCoreAsync(Func<bool> isCurrent)
@@ -191,9 +193,17 @@ public partial class PaintOverlayWindow
                 decision,
                 _wpsNavHookActive);
             ApplyWpsHookRuntimeState(runtimeState);
+            if (!runtimeState.ConfigurationApplied)
+            {
+                MarkWpsHookUnavailable(target.IsValid);
+                LogPresentationState("wps-hook-configuration-failed");
+                return;
+            }
             if (!_wpsNavHookActive)
             {
-                _wpsNavHookActive = await _wpsHookOrchestrator.TryStartSafeAsync(_wpsNavHookClient).ConfigureAwait(false);
+                // 不用 ConfigureAwait(false)：StartAsync 内部重试依赖调用方上下文，
+                // LL 钩子必须回到 UI 线程安装；后续 Stop/状态回写也读取 UI 状态。
+                _wpsNavHookActive = await _wpsHookOrchestrator.TryStartSafeAsync(_wpsNavHookClient);
             }
             if (!isCurrent())
             {

@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using ClassroomToolkit.Services.Presentation;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Paint;
 

@@ -39,7 +39,9 @@ internal static class PresentationClassifierLearnHistoryPolicy
             }
 
             return data
-                .Where(static item => !string.IsNullOrWhiteSpace(item.Utc) && !string.IsNullOrWhiteSpace(item.Detail))
+                .Where(static item => item is not null
+                    && !string.IsNullOrWhiteSpace(item.Utc)
+                    && !string.IsNullOrWhiteSpace(item.Detail))
                 .ToArray();
         }
         catch (JsonException)

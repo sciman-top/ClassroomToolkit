@@ -31,4 +31,14 @@ public sealed class PresentationClassifierLearnHistoryPolicyTests
 
         records.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Parse_ShouldIgnoreNullArrayEntries()
+    {
+        var records = PresentationClassifierLearnHistoryPolicy.Parse(
+            "[null,{\"Utc\":\"2026-09-05T00:00:00Z\",\"Detail\":\"ok\"}]");
+
+        records.Should().ContainSingle();
+        records[0].Detail.Should().Be("ok");
+    }
 }

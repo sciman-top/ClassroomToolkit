@@ -31,6 +31,32 @@ public sealed class WpsHookOrchestratorTests
     }
 
     [Fact]
+    public void ApplyEnabled_ShouldFailClosed_WhenHookConfigurationThrowsNonFatal()
+    {
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient
+        {
+            ConfigurationException = new InvalidOperationException("set-failed")
+        };
+        var decision = new WpsHookInterceptDecision(
+            InterceptKeyboard: false,
+            InterceptWheel: true,
+            BlockOnly: true,
+            EmitWheelOnBlock: false);
+
+        var state = default(WpsHookRuntimeState);
+        var act = () => state = orchestrator.ApplyEnabled(hook, decision, currentActive: true);
+
+        act.Should().NotThrow();
+        state.IsActive.Should().BeFalse();
+        state.BlockOnly.Should().BeFalse();
+        state.InterceptKeyboard.Should().BeTrue();
+        state.InterceptWheel.Should().BeTrue();
+        state.ConfigurationApplied.Should().BeFalse();
+        hook.StopCalled.Should().BeTrue();
+    }
+
+    [Fact]
     public void ApplyDisabled_ShouldResetHookState()
     {
         var orchestrator = new WpsHookOrchestrator();
@@ -141,15 +167,44 @@ public sealed class WpsHookOrchestratorTests
         public bool StartCalled { get; private set; }
         public bool StartResult { get; set; } = true;
         public Exception? StartException { get; set; }
+        public Exception? ConfigurationException { get; set; }
         public IReadOnlyList<VirtualKey> SuppressedKeyboardKeys { get; private set; } = [VirtualKey.Enter];
 
-        public void SetInterceptEnabled(bool enabled) => InterceptEnabled = enabled;
-        public void SetBlockOnly(bool enabled) => BlockOnly = enabled;
-        public void SetInterceptKeyboard(bool enabled) => InterceptKeyboard = enabled;
-        public void SetInterceptWheel(bool enabled) => InterceptWheel = enabled;
-        public void SetEmitWheelOnBlock(bool enabled) => EmitWheelOnBlock = enabled;
-        public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys) =>
+        public void SetInterceptEnabled(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            InterceptEnabled = enabled;
+        }
+
+        public void SetBlockOnly(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            BlockOnly = enabled;
+        }
+
+        public void SetInterceptKeyboard(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            InterceptKeyboard = enabled;
+        }
+
+        public void SetInterceptWheel(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            InterceptWheel = enabled;
+        }
+
+        public void SetEmitWheelOnBlock(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            EmitWheelOnBlock = enabled;
+        }
+
+        public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys)
+        {
+            ThrowIfConfigurationRequested();
             SuppressedKeyboardKeys = keys.ToArray();
+        }
 
         public Task<bool> StartAsync()
         {
@@ -165,6 +220,14 @@ public sealed class WpsHookOrchestratorTests
         public void Stop()
         {
             StopCalled = true;
+        }
+
+        private void ThrowIfConfigurationRequested()
+        {
+            if (ConfigurationException is not null)
+            {
+                throw ConfigurationException;
+            }
         }
     }
 }

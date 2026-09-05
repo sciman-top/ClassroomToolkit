@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Paint;
 

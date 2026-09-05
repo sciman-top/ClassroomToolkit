@@ -7,7 +7,8 @@ internal readonly record struct WpsHookRuntimeState(
     bool IsActive,
     bool BlockOnly,
     bool InterceptKeyboard,
-    bool InterceptWheel);
+    bool InterceptWheel,
+    bool ConfigurationApplied = true);
 
 internal sealed class WpsHookOrchestrator
 {
@@ -26,11 +27,20 @@ internal sealed class WpsHookOrchestrator
                 InterceptWheel: decision.InterceptWheel);
         }
 
-        hookClient.SetInterceptEnabled(true);
-        hookClient.SetBlockOnly(decision.BlockOnly);
-        hookClient.SetInterceptKeyboard(decision.InterceptKeyboard);
-        hookClient.SetInterceptWheel(decision.InterceptWheel);
-        hookClient.SetEmitWheelOnBlock(decision.EmitWheelOnBlock);
+        try
+        {
+            hookClient.SetInterceptEnabled(true);
+            hookClient.SetBlockOnly(decision.BlockOnly);
+            hookClient.SetInterceptKeyboard(decision.InterceptKeyboard);
+            hookClient.SetInterceptWheel(decision.InterceptWheel);
+            hookClient.SetEmitWheelOnBlock(decision.EmitWheelOnBlock);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[PaintOverlay] Failed to configure WPS hook: {ex.Message}");
+            var disabledState = ApplyDisabled(hookClient);
+            return disabledState with { ConfigurationApplied = false };
+        }
 
         return new WpsHookRuntimeState(
             IsActive: currentActive,
@@ -51,19 +61,22 @@ internal sealed class WpsHookOrchestrator
                 InterceptWheel: true);
         }
 
-        hookClient.SetInterceptEnabled(false);
-        hookClient.SetBlockOnly(false);
-        hookClient.SetInterceptKeyboard(true);
-        hookClient.SetInterceptWheel(true);
-        hookClient.SetEmitWheelOnBlock(true);
-        hookClient.SetSuppressedKeyboardKeys([]);
-        hookClient.Stop();
+        // Use non-short-circuit '&' so one failed reset does not prevent the final Stop attempt.
+        var configurationApplied =
+            TryApply(() => hookClient.SetInterceptEnabled(false), "disable-intercept")
+            & TryApply(() => hookClient.SetBlockOnly(false), "disable-block-only")
+            & TryApply(() => hookClient.SetInterceptKeyboard(true), "reset-keyboard-intercept")
+            & TryApply(() => hookClient.SetInterceptWheel(true), "reset-wheel-intercept")
+            & TryApply(() => hookClient.SetEmitWheelOnBlock(true), "reset-wheel-emission")
+            & TryApply(() => hookClient.SetSuppressedKeyboardKeys([]), "clear-suppressed-keys")
+            & TryApply(hookClient.Stop, "stop");
 
         return new WpsHookRuntimeState(
             IsActive: false,
             BlockOnly: false,
             InterceptKeyboard: true,
-            InterceptWheel: true);
+            InterceptWheel: true,
+            ConfigurationApplied: configurationApplied);
     }
 
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance API kept for compatibility with existing tests and call sites.")]
@@ -81,6 +94,20 @@ internal sealed class WpsHookOrchestrator
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static bool TryApply(Action operation, string operationName)
+    {
+        try
+        {
+            operation();
+            return true;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[PaintOverlay] Failed to {operationName} WPS hook: {ex.Message}");
             return false;
         }
     }

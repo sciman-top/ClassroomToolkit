@@ -88,7 +88,9 @@ public class GlobalHookService : IDisposable
 
                 try
                 {
-                    await hook.StartAsync().ConfigureAwait(false);
+                    // 不用 ConfigureAwait(false)：多绑定循环时第二个钩子的 StartAsync 必须
+                    // 仍在调用方上下文（UI 线程）安装，WH_KEYBOARD_LL 才能收到回调。
+                    await hook.StartAsync();
                 }
                 catch (Exception ex) when (IsNonFatal(ex))
                 {
