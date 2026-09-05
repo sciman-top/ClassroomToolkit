@@ -88,6 +88,68 @@ public sealed class InkPersistenceServiceTests : IDisposable
     }
 
     [Fact]
+    public void SaveInkForFile_ShouldNormalizeStructurallyValidSidecarCollections()
+    {
+        var filePath = CreateTempFile("nullable-collections.pdf");
+        var jsonPath = InkPersistenceService.GetJsonPath(filePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
+        File.WriteAllText(
+            jsonPath,
+            """
+            {
+              "version": 1,
+              "sourcePath": "nullable-collections.pdf",
+              "pages": [
+                null,
+                {
+                  "pageIndex": 2,
+                  "strokes": [
+                    null,
+                    {
+                      "geometryPath": "M 0 0 L 10 10",
+                      "colorHex": "#FF0000",
+                      "ribbons": null,
+                      "blooms": null
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        _service.SaveInkForFile(
+            filePath,
+            1,
+            new List<InkStrokeData>
+            {
+                new() { GeometryPath = "M 1 1 L 20 20", ColorHex = "#0000FF" }
+            });
+
+        var document = _service.LoadInkForFile(filePath);
+
+        document.Should().NotBeNull();
+        document!.Pages.Should().HaveCount(2);
+        var existingStroke = document.Pages.Single(page => page.PageIndex == 2).Strokes.Single();
+        existingStroke.Ribbons.Should().BeEmpty();
+        existingStroke.Blooms.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SaveDocument_ShouldTreatNullPagesAsEmpty()
+    {
+        var filePath = CreateTempFile("null-pages.pdf");
+        var document = new InkDocumentData
+        {
+            Pages = null!
+        };
+
+        Action save = () => _service.SaveDocument(filePath, document);
+
+        save.Should().NotThrow();
+        File.Exists(InkPersistenceService.GetJsonPath(filePath)).Should().BeFalse();
+    }
+
+    [Fact]
     public void HasInk_ShouldReturnTrue_WhenInkExists()
     {
         var filePath = CreateTempFile();

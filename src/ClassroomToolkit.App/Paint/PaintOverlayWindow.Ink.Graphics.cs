@@ -112,31 +112,6 @@ public partial class PaintOverlayWindow
                 if (coreGeometry != null)
                 {
                     var strokeGeometry = NormalizeInteractiveInkGeometry(coreGeometry);
-                    List<(Geometry Geometry, double Opacity)>? ribbonLayers = null;
-                    IEnumerable<(Geometry Geometry, double Opacity)>? blooms = null;
-                    if (!CalligraphySinglePassCompositeEnabled)
-                    {
-                        var ribbons = calligraphyRenderer.GetLastRibbonGeometries();
-                        if (ribbons != null && ribbons.Count > 0)
-                        {
-                            ribbonLayers = new List<(Geometry Geometry, double Opacity)>(ribbons.Count);
-                            foreach (var ribbon in ribbons)
-                            {
-                                var ribbonGeometry = NormalizeInteractiveInkGeometry(ribbon.Geometry);
-                                if (ribbonGeometry == null || ribbonGeometry.Bounds.IsEmpty)
-                                {
-                                    continue;
-                                }
-                                ribbonLayers.Add((
-                                    ribbonGeometry,
-                                    calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT)));
-                            }
-                        }
-                        blooms = _calligraphyInkBloomEnabled
-                            ? calligraphyRenderer.GetInkBloomGeometries()
-                                ?.Select(bloom => (NormalizeInteractiveInkGeometry(bloom.Geometry), bloom.Opacity))
-                            : null;
-                    }
                     RenderCalligraphyComposite(
                         strokeGeometry,
                         color,
@@ -144,10 +119,6 @@ public partial class PaintOverlayWindow
                         inkFlow,
                         strokeDirection,
                         _calligraphyRenderMode,
-                        _calligraphySealEnabled,
-                        _calligraphyInkBloomEnabled,
-                        ribbonLayers,
-                        blooms,
                         suppressOverlays,
                         maskSeed: null);
                     return;
@@ -156,7 +127,15 @@ public partial class PaintOverlayWindow
         }
         if (isCalligraphy)
         {
-            RenderInkLayers(renderGeometry, color, inkFlow, 1.0, strokeDirection);
+            RenderCalligraphyComposite(
+                renderGeometry,
+                color,
+                _brushSize,
+                inkFlow,
+                strokeDirection,
+                _calligraphyRenderMode,
+                suppressOverlays,
+                maskSeed: null);
             return;
         }
         RenderAndBlend(renderGeometry, brush, null, erase: false, null);

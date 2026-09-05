@@ -4,4 +4,5 @@ public sealed record InkHistoryLoadResult(
     string SourcePath,
     int PageIndex,
     string? StrokesJson,
-    bool CreatedTemplate);
+    bool CreatedTemplate,
+    DateTime? UpdatedAtUtc = null);

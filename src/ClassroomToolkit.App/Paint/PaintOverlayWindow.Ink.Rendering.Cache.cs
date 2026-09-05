@@ -1,5 +1,7 @@
 using System;
+using System.Windows;
 using System.Windows.Media;
+using ClassroomToolkit.App.Ink;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaColor = System.Windows.Media.Color;
 using MediaPen = System.Windows.Media.Pen;
@@ -61,6 +63,49 @@ public partial class PaintOverlayWindow
         {
             return HashCode.Combine(ColorKey, WidthMilli, (int)LineJoin, (int)StartCap, (int)EndCap);
         }
+    }
+
+    private DrawingBrush? GetCachedInkOpacityMask(
+        Rect bounds,
+        double inkFlow,
+        Vector? strokeDirection,
+        double brushSize,
+        int seed)
+    {
+        return _inkOpacityMaskCache.GetOrCreate(
+            bounds,
+            inkFlow,
+            strokeDirection,
+            brushSize,
+            seed,
+            InkOpacityMaskCache.PaintTextureVariant,
+            () => BuildInkOpacityMask(bounds, inkFlow, strokeDirection, brushSize, seed));
+    }
+
+    private bool TryGetCachedStrokeColor(string? colorHex, out MediaColor color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(colorHex))
+        {
+            return false;
+        }
+
+        if (_inkStrokeColorCache.TryGetValue(colorHex, out color))
+        {
+            return true;
+        }
+
+        if (!TryParseStrokeColor(colorHex, out color))
+        {
+            return false;
+        }
+
+        if (_inkStrokeColorCache.Count >= InkStrokeColorCacheLimit)
+        {
+            _inkStrokeColorCache.Clear();
+        }
+        _inkStrokeColorCache[colorHex] = color;
+        return true;
     }
 
     private SolidColorBrush GetCachedSolidBrush(MediaColor baseColor, double opacity = 1.0)
@@ -130,12 +175,4 @@ public partial class PaintOverlayWindow
         return (color.A << 24) | (color.R << 16) | (color.G << 8) | color.B;
     }
 
-    private static int ResolveLayerStep(int layerCount, int maxLayers)
-    {
-        if (layerCount <= 0 || maxLayers <= 0 || layerCount <= maxLayers)
-        {
-            return 1;
-        }
-        return Math.Max(1, (int)Math.Ceiling(layerCount / (double)maxLayers));
-    }
 }

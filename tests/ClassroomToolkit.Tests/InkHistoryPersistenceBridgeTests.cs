@@ -37,6 +37,8 @@ public sealed class InkHistoryPersistenceBridgeTests
         result.SourcePath.Should().Be(sourcePath);
         result.PageIndex.Should().Be(2);
         result.CreatedTemplate.Should().BeFalse();
+        result.UpdatedAtUtc.Should().Be(
+            persistence.LoadInkForFile(sourcePath)!.Pages.Single(page => page.PageIndex == 2).UpdatedAt.ToUniversalTime());
         loadedStrokes.Should().HaveCount(1);
         loadedStrokes[0].GeometryPath.Should().Be("M0,0 L10,10");
     }

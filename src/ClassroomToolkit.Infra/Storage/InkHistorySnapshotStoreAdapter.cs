@@ -18,7 +18,8 @@ public sealed class InkHistorySnapshotStoreAdapter : IInkHistorySnapshotStore
             result.SourcePath,
             result.PageIndex,
             result.StrokesJson,
-            result.CreatedTemplate);
+            result.CreatedTemplate,
+            result.UpdatedAtUtc);
     }
 
     public void Save(string sourcePath, int pageIndex, string? strokesJson)

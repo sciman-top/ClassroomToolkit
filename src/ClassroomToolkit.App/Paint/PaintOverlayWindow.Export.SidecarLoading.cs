@@ -145,12 +145,13 @@ public partial class PaintOverlayWindow
 
     private static string? SerializeInkStrokes(List<InkStrokeData> strokes)
     {
-        if (strokes == null || strokes.Count == 0)
+        var normalizedStrokes = InkPayloadNormalizer.NormalizeStrokes(strokes);
+        if (normalizedStrokes.Count == 0)
         {
             return null;
         }
 
-        return JsonSerializer.Serialize(strokes, InkHistoryJsonOptions);
+        return JsonSerializer.Serialize(normalizedStrokes, InkHistoryJsonOptions);
     }
 
     private static List<InkStrokeData> DeserializeInkStrokes(string? strokesJson)
@@ -162,7 +163,8 @@ public partial class PaintOverlayWindow
 
         try
         {
-            return JsonSerializer.Deserialize<List<InkStrokeData>>(strokesJson, InkHistoryJsonOptions) ?? new List<InkStrokeData>();
+            var strokes = JsonSerializer.Deserialize<List<InkStrokeData>>(strokesJson, InkHistoryJsonOptions);
+            return InkPayloadNormalizer.NormalizeStrokes(strokes);
         }
         catch (JsonException)
         {

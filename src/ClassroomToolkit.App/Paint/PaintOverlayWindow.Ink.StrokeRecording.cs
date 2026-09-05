@@ -43,27 +43,6 @@ public partial class PaintOverlayWindow
         {
             var core = calligraphyRenderer.GetLastCoreGeometry();
             var strokeGeometry = core ?? geometry;
-            if (!CalligraphySinglePassCompositeEnabled)
-            {
-                var ribbons = calligraphyRenderer.GetLastRibbonGeometries();
-                if (ribbons != null && ribbons.Count > 0)
-                {
-                    foreach (var ribbon in ribbons)
-                    {
-                        var ribbonGeometry = photoInkModeActive ? ToPhotoGeometry(ribbon.Geometry) : ribbon.Geometry;
-                        if (ribbonGeometry == null)
-                        {
-                            continue;
-                        }
-                        stroke.Ribbons.Add(new InkRibbonData
-                        {
-                            GeometryPath = InkGeometrySerializer.Serialize(ribbonGeometry),
-                            Opacity = calligraphyRenderer.GetRibbonOpacity(ribbon.RibbonT),
-                            RibbonT = ribbon.RibbonT
-                        });
-                    }
-                }
-            }
             var storeGeometry = photoInkModeActive ? ToPhotoGeometry(strokeGeometry) : strokeGeometry;
             if (storeGeometry == null)
             {
@@ -73,26 +52,6 @@ public partial class PaintOverlayWindow
             stroke.InkFlow = calligraphyRenderer.LastInkFlow;
             stroke.StrokeDirectionX = calligraphyRenderer.LastStrokeDirection.X;
             stroke.StrokeDirectionY = calligraphyRenderer.LastStrokeDirection.Y;
-            if (!CalligraphySinglePassCompositeEnabled)
-            {
-                var blooms = calligraphyRenderer.GetInkBloomGeometries();
-                if (blooms != null)
-                {
-                    foreach (var bloom in blooms)
-                    {
-                        var bloomGeometry = photoInkModeActive ? ToPhotoGeometry(bloom.Geometry) : bloom.Geometry;
-                        if (bloomGeometry == null)
-                        {
-                            continue;
-                        }
-                        stroke.Blooms.Add(new InkBloomData
-                        {
-                            GeometryPath = InkGeometrySerializer.Serialize(bloomGeometry),
-                            Opacity = bloom.Opacity
-                        });
-                    }
-                }
-            }
         }
         else
         {
@@ -216,4 +175,3 @@ public partial class PaintOverlayWindow
         return (int)Math.Round(value * scale);
     }
 }
-

@@ -151,7 +151,7 @@ public partial class PaintOverlayWindow
         return true;
     }
 
-    private static void DrawPredictedBrushSegment(
+    private void DrawPredictedBrushSegment(
         DrawingContext dc,
         MediaColor color,
         WpfPoint p0,
@@ -178,37 +178,15 @@ public partial class PaintOverlayWindow
         var c1 = MediaColor.FromArgb(a1, color.R, color.G, color.B);
         var c2 = MediaColor.FromArgb(a2, color.R, color.G, color.B);
 
-        var pen0 = new MediaPen(new SolidColorBrush(c0), w0)
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-        if (pen0.CanFreeze)
-        {
-            pen0.Freeze();
-        }
+        var pen0 = GetCachedPen(c0, w0);
 
         dc.DrawLine(pen0, p0, p1);
 
-        var pen1 = new MediaPen(new SolidColorBrush(c1), w1)
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
-        };
-        if (pen1.CanFreeze)
-        {
-            pen1.Freeze();
-        }
+        var pen1 = GetCachedPen(c1, w1);
 
         dc.DrawLine(pen1, p1, p2);
 
-        var tipBrush = new SolidColorBrush(c2);
-        if (tipBrush.CanFreeze)
-        {
-            tipBrush.Freeze();
-        }
+        var tipBrush = GetCachedSolidBrush(c2);
 
         dc.DrawEllipse(
             tipBrush,

@@ -99,6 +99,11 @@ public sealed partial class InkExportService
 
         try
         {
+            if (inkDoc is not null)
+            {
+                InkPayloadNormalizer.NormalizeDocument(inkDoc);
+            }
+
             if (IsPdf(sourcePath))
             {
                 ExportPdfFile(sourcePath, inkDoc, options, result);
@@ -167,6 +172,5 @@ public sealed partial class InkExportService
         return Path.Combine(sourceDir, ExportFolderName);
     }
 }
-
 
 

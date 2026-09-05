@@ -12,6 +12,40 @@ namespace ClassroomToolkit.Tests;
 public sealed class InkStrokeRendererCompositeTests
 {
     [Fact]
+    public void RenderPage_ShouldGracefullyHandleNullCollectionsAndInvalidColors()
+    {
+        var renderer = new InkStrokeRenderer();
+        var geometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(40, 40, 120, 120)));
+        var invalidColorPage = new InkPageData
+        {
+            PageIndex = 1,
+            Strokes = new List<InkStrokeData>
+            {
+                new()
+                {
+                    GeometryPath = geometryPath,
+                    ColorHex = "not-a-wpf-color",
+                    Ribbons = null!,
+                    Blooms = null!
+                }
+            }
+        };
+        var nullCollectionPage = new InkPageData
+        {
+            PageIndex = 2,
+            Strokes = null!
+        };
+
+        Action render = () =>
+        {
+            renderer.RenderPage(nullCollectionPage, 220, 220, 96, 96);
+            renderer.RenderPage(invalidColorPage, 220, 220, 96, 96);
+        };
+
+        render.Should().NotThrow();
+    }
+
+    [Fact]
     public void RenderPage_CalligraphyStroke_ShouldNotDarkenWhenRibbonOverlaysOverlap()
     {
         var withoutOverlays = RenderCalligraphyStroke(includeOverlays: false, mode: CalligraphyRenderMode.Clarity);

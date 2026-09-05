@@ -56,7 +56,7 @@ public sealed class InkPersistenceService
     /// </summary>
     public void SaveInkForFile(string sourceFilePath, int pageIndex, List<InkStrokeData> strokes)
     {
-        if (string.IsNullOrWhiteSpace(sourceFilePath))
+        if (string.IsNullOrWhiteSpace(sourceFilePath) || pageIndex <= 0)
         {
             return;
         }
@@ -68,10 +68,11 @@ public sealed class InkPersistenceService
 
         lock (GetDocumentWriteGate(jsonPath))
         {
-            var doc = LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
-            {
-                SourcePath = sourceFilePath
-            };
+            var doc = InkPayloadNormalizer.NormalizeDocument(
+                LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
+                {
+                    SourcePath = sourceFilePath
+                });
 
             // Find or create page entry
             var page = doc.Pages.FirstOrDefault(p => p.PageIndex == pageIndex);
@@ -86,7 +87,7 @@ public sealed class InkPersistenceService
                 doc.Pages.Add(page);
             }
 
-            page.Strokes = strokes ?? new List<InkStrokeData>();
+            page.Strokes = InkPayloadNormalizer.NormalizeStrokes(strokes);
             page.UpdatedAt = DateTime.UtcNow;
 
             // Remove pages that have no strokes
@@ -128,6 +129,7 @@ public sealed class InkPersistenceService
 
         lock (GetDocumentWriteGate(jsonPath))
         {
+            InkPayloadNormalizer.NormalizeDocument(doc);
             doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
 
             if (doc.Pages.Count == 0)
@@ -396,7 +398,8 @@ public sealed class InkPersistenceService
         try
         {
             var json = File.ReadAllText(jsonPath);
-            return JsonSerializer.Deserialize<InkDocumentData>(json, _options);
+            var document = JsonSerializer.Deserialize<InkDocumentData>(json, _options);
+            return document is null ? null : InkPayloadNormalizer.NormalizeDocument(document);
         }
         catch (JsonException)
         {
@@ -533,6 +536,7 @@ public sealed class InkPersistenceService
 
     private static InkDocumentData CloneDocument(InkDocumentData source)
     {
+        InkPayloadNormalizer.NormalizeDocument(source);
         var clone = new InkDocumentData
         {
             Version = source.Version,
@@ -558,7 +562,8 @@ public sealed class InkPersistenceService
 
     private static List<InkStrokeData> CloneStrokes(List<InkStrokeData>? source)
     {
-        if (source == null || source.Count == 0)
+        source = InkPayloadNormalizer.NormalizeStrokes(source);
+        if (source.Count == 0)
         {
             return new List<InkStrokeData>();
         }

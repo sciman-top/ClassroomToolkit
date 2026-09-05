@@ -26,7 +26,7 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow
 {
 
-    private void RenderStoredStroke(InkStrokeData stroke)
+    private void RenderStoredStroke(InkStrokeData stroke, List<DrawCommand> simpleStrokeBatch)
     {
         var photoInkModeActive = IsPhotoInkModeActive();
         var geometry = stroke.CachedGeometry;
@@ -81,77 +81,30 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (!TryParseStrokeColor(stroke.ColorHex, out var color))
+        if (!TryGetCachedStrokeColor(stroke.ColorHex, out var color))
         {
             color = Colors.Red;
         }
         color.A = stroke.Opacity;
         if (stroke.Type == InkStrokeType.Shape || stroke.BrushStyle != PaintBrushStyle.Calligraphy)
         {
-            var brush = new SolidColorBrush(color);
-            brush.Freeze();
-            RenderAndBlend(renderGeometry, brush, null, erase: false, null);
+            var brush = GetCachedSolidBrush(color);
+            simpleStrokeBatch.Add(new DrawCommand(renderGeometry, brush, null, null, null));
+            if (simpleStrokeBatch.Count >= 24)
+            {
+                RenderAndBlendBatch(simpleStrokeBatch);
+                simpleStrokeBatch.Clear();
+            }
             return;
+        }
+        if (simpleStrokeBatch.Count > 0)
+        {
+            RenderAndBlendBatch(simpleStrokeBatch);
+            simpleStrokeBatch.Clear();
         }
         var inkFlow = stroke.InkFlow;
         var strokeDirection = new Vector(stroke.StrokeDirectionX, stroke.StrokeDirectionY);
         bool suppressOverlays = stroke.Opacity < stroke.CalligraphyOverlayOpacityThreshold;
-        if (CalligraphySinglePassCompositeEnabled)
-        {
-            RenderCalligraphyComposite(
-                renderGeometry,
-                color,
-                stroke.BrushSize,
-                inkFlow,
-                strokeDirection,
-                stroke.CalligraphyRenderMode,
-                stroke.CalligraphySealEnabled,
-                stroke.CalligraphyInkBloomEnabled,
-                ribbonLayers: null,
-                blooms: null,
-                suppressOverlays,
-                stroke.MaskSeed);
-            return;
-        }
-
-        List<(Geometry Geometry, double Opacity)>? ribbons = null;
-        if (!suppressOverlays && stroke.Ribbons.Count > 0)
-        {
-            ribbons = new List<(Geometry Geometry, double Opacity)>();
-            foreach (var ribbon in stroke.Ribbons)
-            {
-                var ribbonGeometry = InkGeometrySerializer.Deserialize(ribbon.GeometryPath);
-                if (ribbonGeometry == null)
-                {
-                    continue;
-                }
-                var renderRibbon = ResolveStoredInkRenderGeometry(ribbonGeometry, photoInkModeActive, usePhotoTransform);
-                if (renderRibbon == null)
-                {
-                    continue;
-                }
-                ribbons.Add((renderRibbon, ribbon.Opacity));
-            }
-        }
-        List<(Geometry Geometry, double Opacity)>? blooms = null;
-        if (stroke.CalligraphyInkBloomEnabled && stroke.Blooms.Count > 0 && !suppressOverlays)
-        {
-            blooms = new List<(Geometry Geometry, double Opacity)>();
-            foreach (var bloom in stroke.Blooms)
-            {
-                var bloomGeometry = InkGeometrySerializer.Deserialize(bloom.GeometryPath);
-                if (bloomGeometry == null)
-                {
-                    continue;
-                }
-                var renderBloom = ResolveStoredInkRenderGeometry(bloomGeometry, photoInkModeActive, usePhotoTransform);
-                if (renderBloom == null)
-                {
-                    continue;
-                }
-                blooms.Add((renderBloom, bloom.Opacity));
-            }
-        }
         RenderCalligraphyComposite(
             renderGeometry,
             color,
@@ -159,10 +112,6 @@ public partial class PaintOverlayWindow
             inkFlow,
             strokeDirection,
             stroke.CalligraphyRenderMode,
-            stroke.CalligraphySealEnabled,
-            stroke.CalligraphyInkBloomEnabled,
-            ribbons,
-            blooms,
             suppressOverlays,
             stroke.MaskSeed);
     }
@@ -178,16 +127,6 @@ public partial class PaintOverlayWindow
         }
 
         return photoInkModeActive ? ToScreenGeometry(geometry) : geometry;
-    }
-
-
-    private void RenderInkLayers(Geometry geometry, MediaColor color, double inkFlow, double ribbonOpacity, Vector? strokeDirection)
-    {
-        var solidBrush = GetCachedSolidBrush(color, Math.Clamp(ribbonOpacity, 0.1, 1.0));
-        var mask = IsInkMaskEligible(geometry)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection)
-            : null;
-        RenderAndBlend(geometry, solidBrush, null, erase: false, mask);
     }
 
     private Rect ResolveInkViewportBoundsDip()
@@ -224,74 +163,6 @@ public partial class PaintOverlayWindow
         return new Rect(0, 0, width, height);
     }
 
-    private void RenderInkCore(Geometry geometry, MediaColor color, bool enableSeal)
-    {
-        var brush = GetCachedSolidBrush(color);
-        RenderAndBlend(geometry, brush, null, erase: false, null);
-        if (!enableSeal || !_calligraphySealEnabled)
-        {
-            return;
-        }
-        double sealWidth = Math.Max(_brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-        if (sealWidth <= 0)
-        {
-            return;
-        }
-        var pen = GetCachedPen(color, sealWidth);
-        RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void RenderInkSeal(Geometry geometry, MediaColor color)
-    {
-        if (!_calligraphySealEnabled)
-        {
-            return;
-        }
-        double sealWidth = Math.Max(_brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-        if (sealWidth <= 0)
-        {
-            return;
-        }
-        var pen = GetCachedPen(color, sealWidth);
-        RenderAndBlend(geometry, null, pen, erase: false, null);
-    }
-
-    private void RenderInkEdge(Geometry coreGeometry, MediaColor color, double inkFlow, Vector? strokeDirection)
-    {
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
-        double edgeOpacity = Math.Clamp(Lerp(0.14, 0.3, dryFactor), 0.08, 0.45);
-        double edgeWidth = Math.Max(_brushSize * Lerp(0.04, 0.09, dryFactor), 0.55);
-        var pen = GetCachedPen(color, edgeWidth, edgeOpacity, PenLineJoin.Round, PenLineCap.Round, PenLineCap.Round);
-        var mask = IsInkMaskEligible(coreGeometry)
-            ? BuildInkOpacityMask(coreGeometry.Bounds, inkFlow, strokeDirection)
-            : null;
-        RenderAndBlend(coreGeometry, null, pen, erase: false, mask);
-    }
-
-    private void UpdateCalligraphyAdaptiveLevel(double batchElapsedMs)
-    {
-        _calligraphyBatchCostEmaMs = _calligraphyBatchCostEmaMs * (1.0 - CalligraphyAdaptiveCostEmaAlpha)
-            + batchElapsedMs * CalligraphyAdaptiveCostEmaAlpha;
-
-        var nowUtc = GetCurrentUtcTimestamp();
-        if ((nowUtc - _lastCalligraphyAdaptiveAdjustUtc).TotalMilliseconds < CalligraphyAdaptiveAdjustMinIntervalMs)
-        {
-            return;
-        }
-
-        _lastCalligraphyAdaptiveAdjustUtc = nowUtc;
-        if (_calligraphyBatchCostEmaMs > CalligraphyAdaptiveHighCostMs)
-        {
-            _calligraphyAdaptiveLevel = Math.Min(CalligraphyAdaptiveLevelMax, _calligraphyAdaptiveLevel + 1);
-            return;
-        }
-
-        if (_calligraphyBatchCostEmaMs < CalligraphyAdaptiveLowCostMs)
-        {
-            _calligraphyAdaptiveLevel = Math.Max(0, _calligraphyAdaptiveLevel - 1);
-        }
-    }
-
     private void RenderCalligraphyComposite(
         Geometry geometry,
         MediaColor color,
@@ -299,204 +170,37 @@ public partial class PaintOverlayWindow
         double inkFlow,
         Vector? strokeDirection,
         CalligraphyRenderMode renderMode,
-        bool sealEnabled,
-        bool bloomEnabled,
-        List<(Geometry Geometry, double Opacity)>? ribbonLayers,
-        IEnumerable<(Geometry Geometry, double Opacity)>? blooms,
         bool suppressOverlays,
         int? maskSeed)
     {
-        List<(Geometry Geometry, double Opacity)>? bloomLayers = null;
-        if (!suppressOverlays && bloomEnabled && blooms != null)
-        {
-            bloomLayers = new List<(Geometry Geometry, double Opacity)>();
-            foreach (var bloom in blooms)
-            {
-                if (bloom.Geometry == null || bloom.Geometry.Bounds.IsEmpty)
-                {
-                    continue;
-                }
-                bloomLayers.Add(bloom);
-            }
-        }
-
         bool inkMode = renderMode == CalligraphyRenderMode.Ink;
         bool overlaysEnabled = !suppressOverlays && inkMode;
-        if (CalligraphySinglePassCompositeEnabled)
-        {
-            int singlePassSeededMaskValue = maskSeed ?? ResolveDeterministicMaskSeed(geometry, color, brushSize, renderMode);
-            bool singlePassMaskEligible = (inkMode || CalligraphySinglePassTextureMaskEnabled)
-                && IsInkMaskEligible(geometry, brushSize);
-            MediaBrush? coreMask = null;
-            if (singlePassMaskEligible)
-            {
-                coreMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, singlePassSeededMaskValue);
-            }
-
-            int singlePassCommandCapacity = 1;
-            if (overlaysEnabled)
-            {
-                singlePassCommandCapacity++;
-            }
-            if (overlaysEnabled && sealEnabled && CalligraphySinglePassSealEnabled)
-            {
-                singlePassCommandCapacity++;
-            }
-
-            var singlePassCommands = new List<DrawCommand>(singlePassCommandCapacity);
-            var singlePassCoreBrush = GetCachedSolidBrush(color, opacity: 1.0);
-            singlePassCommands.Add(new DrawCommand(geometry, singlePassCoreBrush, null, coreMask, null));
-
-            if (overlaysEnabled)
-            {
-                double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
-                var accumulationBrush = GetCachedSolidBrush(color, opacity: accumulationOpacity);
-                singlePassCommands.Add(new DrawCommand(geometry, accumulationBrush, null, coreMask, null));
-            }
-
-            if (overlaysEnabled && sealEnabled && CalligraphySinglePassSealEnabled)
-            {
-                double sealWidth = Math.Max(brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-                if (sealWidth > 0)
-                {
-                    var sealPen = GetCachedPen(
-                        color,
-                        sealWidth,
-                        opacity: 0.14,
-                        lineJoin: PenLineJoin.Round,
-                        startCap: PenLineCap.Round,
-                        endCap: PenLineCap.Round);
-                    singlePassCommands.Add(new DrawCommand(geometry, null, sealPen, null, null));
-                }
-            }
-
-            var renderSwSinglePass = Stopwatch.StartNew();
-            RenderAndBlendBatch(singlePassCommands);
-            UpdateCalligraphyAdaptiveLevel(renderSwSinglePass.Elapsed.TotalMilliseconds);
-            return;
-        }
-
-        suppressOverlays = suppressOverlays || !inkMode;
-        int ribbonLayerCount = suppressOverlays ? 0 : (ribbonLayers?.Count ?? 0);
-        int bloomLayerCount = suppressOverlays ? 0 : (bloomLayers?.Count ?? 0);
-        double geometryArea = geometry.Bounds.IsEmpty ? 0.0 : geometry.Bounds.Width * geometry.Bounds.Height;
-        double adaptiveAreaThreshold = Math.Max(60000.0, CalligraphyDegradeAreaThreshold - _calligraphyAdaptiveLevel * CalligraphyAdaptiveAreaThresholdStep);
-        int adaptiveLayerThreshold = Math.Max(8, CalligraphyDegradeLayerThreshold - _calligraphyAdaptiveLevel * CalligraphyAdaptiveLayerThresholdStep);
-        bool degradeQuality = !suppressOverlays
-            && (geometryArea >= adaptiveAreaThreshold
-                || (ribbonLayerCount + bloomLayerCount) >= adaptiveLayerThreshold);
-
-        int maxRibbonLayers = degradeQuality
-            ? Math.Max(4, CalligraphyMaxRibbonLayersDegraded - _calligraphyAdaptiveLevel * 2)
-            : CalligraphyMaxRibbonLayersNormal;
-        int maxBloomLayers = degradeQuality
-            ? Math.Max(0, CalligraphyMaxBloomLayersDegraded - _calligraphyAdaptiveLevel * 2)
-            : CalligraphyMaxBloomLayersNormal;
-        int ribbonStep = ResolveLayerStep(ribbonLayerCount, maxRibbonLayers);
-        int bloomStep = ResolveLayerStep(bloomLayerCount, maxBloomLayers);
-
-        int estimatedCommands = 2; // core + edge
-        if (!suppressOverlays && sealEnabled)
-        {
-            estimatedCommands++;
-        }
-        if (!suppressOverlays && maxBloomLayers > 0 && bloomLayerCount > 0)
-        {
-            estimatedCommands += Math.Max(1, bloomLayerCount / bloomStep);
-        }
-        if (!suppressOverlays)
-        {
-            estimatedCommands += Math.Max(1, ribbonLayerCount > 0 ? ribbonLayerCount / ribbonStep : 1);
-        }
-        var commands = new List<DrawCommand>(Math.Max(estimatedCommands, 4));
-
-        if (!suppressOverlays && maxBloomLayers > 0 && bloomLayers != null && bloomLayers.Count > 0)
-        {
-            for (int i = 0; i < bloomLayers.Count; i += bloomStep)
-            {
-                var bloom = bloomLayers[i];
-                var bloomBrush = GetCachedSolidBrush(color, bloom.Opacity);
-                commands.Add(new DrawCommand(bloom.Geometry, bloomBrush, null, null, geometry));
-            }
-        }
-
-        // Speed->ink tone coupling (via inkFlow): faster strokes are slightly drier/lighter,
-        // slower strokes are wetter/darker.
-        double coreOpacity = Math.Clamp(Lerp(0.84, 1.0, Math.Clamp(inkFlow, 0.0, 1.0)), 0.78, 1.0);
-        var coreBrush = GetCachedSolidBrush(color, coreOpacity);
-        commands.Add(new DrawCommand(geometry, coreBrush, null, null, null));
-
-        if (!suppressOverlays && sealEnabled)
-        {
-            double sealWidth = Math.Max(brushSize * CalligraphySealStrokeWidthFactor, 0.6);
-            if (sealWidth > 0)
-            {
-                var sealPen = GetCachedPen(color, sealWidth);
-                commands.Add(new DrawCommand(geometry, null, sealPen, null, null));
-            }
-        }
-
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
-        double edgeOpacity = Math.Clamp(Lerp(0.14, 0.3, dryFactor), 0.08, 0.45);
-        double edgeWidth = Math.Max(brushSize * Lerp(0.04, 0.09, dryFactor), 0.55);
-        var edgePen = GetCachedPen(color, edgeWidth, edgeOpacity, PenLineJoin.Round, PenLineCap.Round, PenLineCap.Round);
         int seededMaskValue = maskSeed ?? ResolveDeterministicMaskSeed(geometry, color, brushSize, renderMode);
-        bool maskEligible = IsInkMaskEligible(geometry, brushSize);
-        MediaBrush? sharedMask = null;
-        if (maskEligible)
+        bool maskEligible = inkMode && IsInkMaskEligible(geometry, brushSize);
+        MediaBrush? coreMask = maskEligible
+            ? GetCachedInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, seededMaskValue)
+            : null;
+        var commands = new List<DrawCommand>(overlaysEnabled ? 2 : 1)
         {
-            sharedMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, seededMaskValue);
-        }
-
-        var edgeMask = sharedMask;
-        commands.Add(new DrawCommand(geometry, null, edgePen, edgeMask, null));
-
-        if (!suppressOverlays)
+            new(geometry, GetCachedSolidBrush(color, opacity: 1.0), null, coreMask, null)
+        };
+        if (overlaysEnabled)
         {
-            var ribbonMask = sharedMask;
-
-            if (ribbonLayers != null && ribbonLayers.Count > 0)
-            {
-                for (int i = 0; i < ribbonLayers.Count; i += ribbonStep)
-                {
-                    var ribbon = ribbonLayers[i];
-                    if (ribbon.Geometry == null || ribbon.Geometry.Bounds.IsEmpty)
-                    {
-                        continue;
-                    }
-                    var ribbonFlowFactor = Math.Clamp(Lerp(0.86, 1.06, Math.Clamp(inkFlow, 0.0, 1.0)), 0.78, 1.12);
-                    var ribbonOpacity = Math.Clamp(ribbon.Opacity * 0.35 * ribbonFlowFactor, 0.06, 0.45);
-                    var ribbonBrush = GetCachedSolidBrush(color, ribbonOpacity);
-                    commands.Add(new DrawCommand(ribbon.Geometry, ribbonBrush, null, ribbonMask, null));
-                }
-            }
-            else
-            {
-                var ribbonBrush = GetCachedSolidBrush(color, Math.Clamp(0.28, 0.1, 1.0));
-                commands.Add(new DrawCommand(geometry, ribbonBrush, null, ribbonMask, null));
-            }
+            double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
+            commands.Add(new DrawCommand(
+                geometry,
+                GetCachedSolidBrush(color, opacity: accumulationOpacity),
+                null,
+                coreMask,
+                null));
         }
-
-        var renderSw = Stopwatch.StartNew();
         RenderAndBlendBatch(commands);
-        UpdateCalligraphyAdaptiveLevel(renderSw.Elapsed.TotalMilliseconds);
     }
 
     private bool ShouldSuppressCalligraphyOverlays()
     {
         // In photo/PDF mode prioritize stroke stability and latency over decorative overlays.
         return IsPhotoInkModeActive() || _brushOpacity < _calligraphyOverlayOpacityThreshold;
-    }
-
-    private bool IsInkMaskEligible(Geometry geometry)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(_brushSize * 1.0, 14.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
     private static int ResolveDeterministicMaskSeed(
@@ -652,9 +356,14 @@ public partial class PaintOverlayWindow
             ClearSurface();
         }
 
+        var simpleStrokeBatch = new List<DrawCommand>(Math.Min(_inkStrokes.Count, 24));
         foreach (var stroke in _inkStrokes)
         {
-            RenderStoredStroke(stroke);
+            RenderStoredStroke(stroke, simpleStrokeBatch);
+        }
+        if (simpleStrokeBatch.Count > 0)
+        {
+            RenderAndBlendBatch(simpleStrokeBatch);
         }
         _activeInkRedrawClipBoundsDip = null;
         _lastInkRedrawClipPixelRect = usePartialClear

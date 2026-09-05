@@ -57,6 +57,17 @@ public sealed class InkHistorySqliteStoreAdapterTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldThrowArgumentOutOfRangeException_WhenPageIndexIsZero()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-a.pptx", 1, null, CreatedTemplate: false)));
+
+        var act = () => adapter.LoadOrCreate("lesson-a.pptx", 0);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void Save_ShouldDelegateAndPersist_ToSqlite()
     {
         var bridge = new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-b.pptx", 2, null, CreatedTemplate: false));
@@ -92,6 +103,85 @@ public sealed class InkHistorySqliteStoreAdapterTests
         var act = () => adapter.Save("lesson-b.pptx", -1, "[{\"state\":1}]");
 
         act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Save_ShouldThrowArgumentOutOfRangeException_WhenPageIndexIsZero()
+    {
+        var adapter = new InkHistorySqliteStoreAdapter(
+            new FakeInkHistoryStoreBridge(new InkHistoryLoadResult("lesson-b.pptx", 2, null, CreatedTemplate: false)));
+
+        var act = () => adapter.Save("lesson-b.pptx", 0, "[{\"state\":1}]");
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferBridgeSnapshot_WhenSidecarIsNewer()
+    {
+        var bridgeUpdatedAt = new DateTime(2026, 9, 5, 10, 0, 0, DateTimeKind.Utc);
+        var bridge = new FakeInkHistoryStoreBridge(
+            new InkHistoryLoadResult(
+                "lesson-new-sidecar.pptx",
+                1,
+                "[{\"from\":\"sidecar\"}]",
+                CreatedTemplate: false,
+                UpdatedAtUtc: bridgeUpdatedAt));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteSnapshot(
+            dbPath,
+            "lesson-new-sidecar.pptx",
+            1,
+            "[{\"from\":\"sqlite\"}]",
+            bridgeUpdatedAt.AddMinutes(-1));
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate("lesson-new-sidecar.pptx", 1);
+
+        actual.StrokesJson.Should().Be("[{\"from\":\"sidecar\"}]");
+        actual.UpdatedAtUtc.Should().Be(bridgeUpdatedAt);
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreferSqliteSnapshot_WhenSqliteIsNewer()
+    {
+        var sidecarUpdatedAt = new DateTime(2026, 9, 5, 10, 0, 0, DateTimeKind.Utc);
+        var sqliteUpdatedAt = sidecarUpdatedAt.AddMinutes(1);
+        var bridge = new FakeInkHistoryStoreBridge(
+            new InkHistoryLoadResult(
+                "lesson-new-sqlite.pptx",
+                1,
+                "[{\"from\":\"sidecar\"}]",
+                CreatedTemplate: false,
+                UpdatedAtUtc: sidecarUpdatedAt));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteSnapshot(
+            dbPath,
+            "lesson-new-sqlite.pptx",
+            1,
+            "[{\"from\":\"sqlite\"}]",
+            sqliteUpdatedAt);
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate("lesson-new-sqlite.pptx", 1);
+
+        actual.StrokesJson.Should().Be("[{\"from\":\"sqlite\"}]");
+        actual.UpdatedAtUtc.Should().Be(sqliteUpdatedAt);
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldNotResurrectSqliteSnapshot_WhenSidecarIsEmpty()
+    {
+        var bridge = new FakeInkHistoryStoreBridge(
+            new InkHistoryLoadResult("lesson-cleared.pptx", 1, null, CreatedTemplate: true));
+        var dbPath = CreateTempDbPath();
+        SeedSqliteSnapshot(dbPath, "lesson-cleared.pptx", 1, "[{\"stale\":true}]");
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => dbPath);
+
+        var actual = adapter.LoadOrCreate("lesson-cleared.pptx", 1);
+
+        actual.StrokesJson.Should().BeNull();
+        ReadSqliteSnapshot(dbPath, "lesson-cleared.pptx", 1).Should().BeNull();
     }
 
     [Fact]
@@ -205,7 +295,12 @@ public sealed class InkHistorySqliteStoreAdapterTests
         return Path.Combine(dir, "inkhistory.sqlite3");
     }
 
-    private static void SeedSqliteSnapshot(string dbPath, string sourcePath, int pageIndex, string strokesJson)
+    private static void SeedSqliteSnapshot(
+        string dbPath,
+        string sourcePath,
+        int pageIndex,
+        string strokesJson,
+        DateTime? updatedAtUtc = null)
     {
         using var connection = new SqliteConnection(BuildSqliteConnectionString(dbPath));
         connection.Open();
@@ -238,7 +333,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
         insert.Parameters.AddWithValue("$sourcePath", sourcePath);
         insert.Parameters.AddWithValue("$pageIndex", pageIndex);
         insert.Parameters.AddWithValue("$strokes", strokesJson);
-        insert.Parameters.AddWithValue("$updatedAtUtc", DateTime.UtcNow.ToString("O"));
+        insert.Parameters.AddWithValue("$updatedAtUtc", (updatedAtUtc ?? DateTime.UtcNow).ToString("O"));
         insert.ExecuteNonQuery();
     }
 

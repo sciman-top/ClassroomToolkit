@@ -65,23 +65,27 @@ internal sealed class InkStorageService
 
     public string GetPageJsonPath(DateTime date, string documentName, int pageIndex)
     {
-        var docFolder = EnsureDocumentFolder(date, documentName);
+        ThrowIfInvalidPageIndex(pageIndex);
+        var pagesFolder = GetPagesFolderPath(date, documentName);
         var fileName = $"slide_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}.json";
-        return Path.Combine(docFolder, PagesFolderName, fileName);
+        return Path.Combine(pagesFolder, fileName);
     }
 
     public string GetPageImagePath(DateTime date, string documentName, int pageIndex)
     {
-        var docFolder = EnsureDocumentFolder(date, documentName);
+        ThrowIfInvalidPageIndex(pageIndex);
+        var pagesFolder = GetPagesFolderPath(date, documentName);
         var fileName = $"slide_{pageIndex.ToString("D3", CultureInfo.InvariantCulture)}.png";
-        return Path.Combine(docFolder, PagesFolderName, fileName);
+        return Path.Combine(pagesFolder, fileName);
     }
 
     public void SavePage(DateTime date, InkPageData page)
     {
         ArgumentNullException.ThrowIfNull(page);
+        InkPayloadNormalizer.NormalizePage(page);
 
         var jsonPath = GetPageJsonPath(date, page.DocumentName, page.PageIndex);
+        EnsureDocumentFolder(date, page.DocumentName);
         var json = JsonSerializer.Serialize(page, _options);
         WriteAllTextAtomically(jsonPath, json);
     }
@@ -98,7 +102,8 @@ internal sealed class InkStorageService
             }
 
             var json = File.ReadAllText(jsonPath);
-            return JsonSerializer.Deserialize<InkPageData>(json, _options);
+            var page = JsonSerializer.Deserialize<InkPageData>(json, _options);
+            return page is null ? null : InkPayloadNormalizer.NormalizePage(page);
         }
         catch (JsonException)
         {
@@ -185,9 +190,9 @@ internal sealed class InkStorageService
             {
                 var json = File.ReadAllText(file);
                 var page = JsonSerializer.Deserialize<InkPageData>(json, _options);
-                if (page != null)
+                if (page != null && page.PageIndex > 0)
                 {
-                    result.Add(page);
+                    result.Add(InkPayloadNormalizer.NormalizePage(page));
                 }
             }
             catch (JsonException)
@@ -209,6 +214,10 @@ internal sealed class InkStorageService
         {
             throw new ArgumentException("Invalid photo path.", nameof(sourcePath));
         }
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("Photo source file was not found.", sourcePath);
+        }
         EnsureRoot();
         var dateFolder = Path.Combine(_photoRootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
         Directory.CreateDirectory(dateFolder);
@@ -217,23 +226,32 @@ internal sealed class InkStorageService
         {
             fileName = Guid.NewGuid().ToString("N");
         }
-        var targetPath = Path.Combine(dateFolder, fileName);
-        if (File.Exists(targetPath))
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        for (var suffix = 0; suffix <= 999; suffix++)
         {
-            var name = Path.GetFileNameWithoutExtension(fileName);
-            var ext = Path.GetExtension(fileName);
-            for (var i = 1; i < 1000; i++)
+            var candidate = suffix == 0
+                ? Path.Combine(dateFolder, fileName)
+                : Path.Combine(dateFolder, $"{name}_{suffix}{ext}");
+            if (File.Exists(candidate) || Directory.Exists(candidate))
             {
-                var candidate = Path.Combine(dateFolder, $"{name}_{i}{ext}");
-                if (!File.Exists(candidate))
-                {
-                    targetPath = candidate;
-                    break;
-                }
+                continue;
+            }
+
+            try
+            {
+                File.Copy(sourcePath, candidate, overwrite: false);
+                return candidate;
+            }
+            catch (IOException) when (File.Exists(candidate) || Directory.Exists(candidate))
+            {
+                // Another process claimed the candidate between the existence
+                // check and File.Copy. Continue with the next deterministic name.
             }
         }
-        File.Copy(sourcePath, targetPath, overwrite: false);
-        return targetPath;
+
+        throw new IOException(
+            $"No available photo name remains in '{dateFolder}' for source '{fileName}'.");
     }
 
     public DateTime? FindLatestDateWithDocument(string documentName, DateTime maxDate)
@@ -306,7 +324,8 @@ internal sealed class InkStorageService
             return "unknown";
         }
         var invalid = Path.GetInvalidFileNameChars();
-        var safe = new string(name.Where(ch => !invalid.Contains(ch)).ToArray());
+        var safe = new string(name.Where(ch => !invalid.Contains(ch)).ToArray())
+            .TrimEnd(' ', '.');
         if (safe is "." or "..")
         {
             return "unknown";
@@ -318,6 +337,21 @@ internal sealed class InkStorageService
     private static void WriteAllTextAtomically(string path, string content)
     {
         InkAtomicFileWriter.WriteAllText(path, content, "[InkStorage]");
+    }
+
+    private string GetPagesFolderPath(DateTime date, string documentName)
+    {
+        var dateFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+        var docFolder = Path.Combine(dateFolder, SanitizeName(documentName));
+        return Path.Combine(docFolder, PagesFolderName);
+    }
+
+    private static void ThrowIfInvalidPageIndex(int pageIndex)
+    {
+        if (pageIndex <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pageIndex), pageIndex, "Page index must be greater than zero.");
+        }
     }
 
     private static string ResolveDefaultRootPath()

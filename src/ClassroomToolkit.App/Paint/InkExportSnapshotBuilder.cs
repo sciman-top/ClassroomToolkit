@@ -17,7 +17,7 @@ internal static class InkExportSnapshotBuilder
 
         foreach (var page in inkDoc.Pages)
         {
-            if (page.Strokes?.Count > 0)
+            if (page?.Strokes?.Count > 0)
             {
                 return true;
             }
@@ -31,6 +31,7 @@ internal static class InkExportSnapshotBuilder
         InkExportScope scope,
         Func<InkPageData, bool> keepPage)
     {
+        InkPayloadNormalizer.NormalizeDocument(inkDoc);
         if (scope != InkExportScope.SessionChangesOnly)
         {
             return;
@@ -49,6 +50,8 @@ internal static class InkExportSnapshotBuilder
         int pageIndex,
         List<InkStrokeData> strokes)
     {
+        InkPayloadNormalizer.NormalizeDocument(inkDoc);
+        strokes = InkPayloadNormalizer.NormalizeStrokes(strokes);
         var currentPage = inkDoc.Pages.Find(p => p.PageIndex == pageIndex);
         if (strokes.Count == 0)
         {
@@ -103,6 +106,7 @@ internal static class InkExportSnapshotBuilder
             return null;
         }
 
+        InkPayloadNormalizer.NormalizeDocument(source);
         var clone = new InkDocumentData
         {
             Version = source.Version,

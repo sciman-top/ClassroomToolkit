@@ -154,6 +154,43 @@ public sealed class InkExportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ExportAllPagesForFile_ShouldNormalizeStructurallyNullInkCollections()
+    {
+        var sourcePath = Path.Combine(_tempDir, "nullable-source.png");
+        SaveSolidPng(sourcePath, 80, 80, Colors.White);
+        var inkDoc = new InkDocumentData
+        {
+            SourcePath = sourcePath,
+            Pages = new List<InkPageData>
+            {
+                null!,
+                new()
+                {
+                    PageIndex = 1,
+                    Strokes = new List<InkStrokeData>
+                    {
+                        null!,
+                        new()
+                        {
+                            Type = InkStrokeType.Shape,
+                            GeometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(10, 10, 20, 20))),
+                            ColorHex = "#FF0000",
+                            Opacity = 255,
+                            BrushSize = 1
+                        }
+                    }
+                }
+            }
+        };
+
+        var act = () => _service.ExportAllPagesForFile(sourcePath, inkDoc, new InkExportOptions());
+
+        var outputs = act.Should().NotThrow().Subject;
+        outputs.Should().ContainSingle();
+        File.Exists(outputs[0]).Should().BeTrue();
+    }
+
+    [Fact]
     public void ExportAllPagesForFile_ImageHighDpi_ShouldKeepBackgroundContentWithoutCropping()
     {
         var sourcePath = Path.Combine(_tempDir, "highdpi.png");

@@ -4,7 +4,8 @@ public sealed record InkHistorySnapshotLoadResult(
     string SourcePath,
     int PageIndex,
     string? StrokesJson,
-    bool CreatedTemplate);
+    bool CreatedTemplate,
+    DateTime? UpdatedAtUtc = null);
 
 public interface IInkHistorySnapshotStore
 {

@@ -22,7 +22,50 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
 
     public void Dispose()
     {
+        _wal.Dispose();
         try { Directory.Delete(_tempDir, recursive: true); } catch { }
+    }
+
+    [Fact]
+    public void DisposedService_ShouldIgnoreFurtherMutations()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_disposed.png");
+        File.WriteAllText(sourcePath, "x");
+        using var wal = new InkWriteAheadLogService();
+        wal.Dispose();
+
+        var act = () =>
+        {
+            wal.Upsert(sourcePath, 1, Array.Empty<InkStrokeData>(), "hash");
+            wal.Remove(sourcePath, 1);
+            wal.FlushPending();
+        };
+
+        act.Should().NotThrow();
+        Directory.Exists(Path.Combine(_tempDir, ".ctk-ink")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldNotRaceWithConcurrentUpserts()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_dispose_race.png");
+        File.WriteAllText(sourcePath, "x");
+        using var wal = new InkWriteAheadLogService();
+        var strokes = Array.Empty<InkStrokeData>();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var writer = Task.Run(() =>
+        {
+            for (var i = 0; i < 200; i++)
+            {
+                wal.Upsert(sourcePath, 1, strokes, "hash");
+            }
+        }, cancellationToken);
+        var disposer = Task.Run(wal.Dispose, cancellationToken);
+
+        var act = async () => await Task.WhenAll(writer, disposer);
+
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -54,6 +97,69 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
         persisted.Should().NotBeNull();
         persisted!.Count.Should().Be(1);
         ComputeInkHash(persisted).Should().Be(hash);
+    }
+
+    [Fact]
+    public void RecoverDirectory_ShouldNormalizeNullStrokeEntriesBeforeHashing()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_nullable_strokes.png");
+        File.WriteAllText(sourcePath, "x");
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(walPath)!);
+        File.WriteAllText(
+            walPath,
+            """
+            {
+              "lesson_nullable_strokes.png|1": {
+                "sourcePath": "__SOURCE_PATH__",
+                "pageIndex": 1,
+                "hash": "empty",
+                "updatedAt": "2026-09-05T00:00:00.0000000Z",
+                "strokes": [null]
+              }
+            }
+            """.Replace("__SOURCE_PATH__", sourcePath.Replace('\\', '/'), StringComparison.Ordinal));
+
+        var recovered = _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash);
+
+        recovered.Should().Be(1);
+        _persistence.LoadInkPageForFile(sourcePath, 1).Should().BeNull();
+        File.Exists(walPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public void RecoverDirectory_ShouldIgnoreNullAcknowledgementEntry()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_null_acknowledgement.png");
+        File.WriteAllText(sourcePath, "x");
+        var strokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M0,0 L1,1",
+                ColorHex = "#FF0000",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        _wal.Upsert(sourcePath, 1, strokes, ComputeInkHash(strokes));
+        _wal.FlushPending();
+
+        var acknowledgementPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal-ack.json");
+        File.WriteAllText(
+            acknowledgementPath,
+            System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [$"{sourcePath}|1"] = null
+            }));
+
+        var recovered = _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash);
+
+        recovered.Should().Be(1);
+        _persistence.LoadInkPageForFile(sourcePath, 1).Should().ContainSingle();
+        File.Exists(Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json")).Should().BeFalse();
+        File.Exists(acknowledgementPath).Should().BeFalse();
     }
 
     [Fact]

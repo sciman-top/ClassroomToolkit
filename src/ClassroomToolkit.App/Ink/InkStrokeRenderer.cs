@@ -7,7 +7,6 @@ using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Paint;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
-using MediaPen = System.Windows.Media.Pen;
 using MediaBrushes = System.Windows.Media.Brushes;
 using WpfPoint = System.Windows.Point;
 
@@ -15,10 +14,11 @@ namespace ClassroomToolkit.App.Ink;
 
 internal sealed class InkStrokeRenderer
 {
-    [SuppressMessage("Performance", "CA1802:Use literals where appropriate", Justification = "Keep the feature flag non-const so fallback branches remain compile-checked and easy to re-enable.")]
-    private static readonly bool CalligraphySinglePassCompositeEnabled = true;
-    private const bool CalligraphySinglePassTextureMaskEnabled = false;
-    private const bool CalligraphySinglePassSealEnabled = false;
+    private static readonly MediaColor DefaultStrokeColor = MediaColor.FromRgb(255, 0, 0);
+    private readonly Dictionary<string, MediaColor> _strokeColorCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<int, SolidColorBrush> _solidBrushCache = new();
+    private readonly InkOpacityMaskCache _opacityMaskCache = new(
+        InkRenderingCacheDefaults.OpacityMaskCacheLimit);
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Keep instance API for compatibility with existing render-call sites.")]
     public RenderTargetBitmap RenderPage(
         InkPageData page,
@@ -29,6 +29,7 @@ internal sealed class InkStrokeRenderer
         double horizontalOffsetDip = 0)
     {
         ArgumentNullException.ThrowIfNull(page);
+        InkPayloadNormalizer.NormalizePage(page);
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
@@ -53,7 +54,66 @@ internal sealed class InkStrokeRenderer
         return bitmap;
     }
 
-    private static void RenderStroke(DrawingContext dc, InkStrokeData stroke)
+    private MediaColor ResolveStrokeColor(string? colorHex)
+    {
+        if (string.IsNullOrWhiteSpace(colorHex))
+        {
+            return DefaultStrokeColor;
+        }
+
+        if (_strokeColorCache.TryGetValue(colorHex, out var cached))
+        {
+            return cached;
+        }
+
+        MediaColor color;
+        try
+        {
+            if (MediaColorConverter.ConvertFromString(colorHex) is not MediaColor parsed)
+            {
+                return DefaultStrokeColor;
+            }
+
+            color = parsed;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            return DefaultStrokeColor;
+        }
+
+        if (_strokeColorCache.Count >= InkRenderingCacheDefaults.StrokeColorCacheLimit)
+        {
+            _strokeColorCache.Clear();
+        }
+        _strokeColorCache[colorHex] = color;
+        return color;
+    }
+
+    private SolidColorBrush GetCachedSolidBrush(MediaColor color)
+    {
+        int key = PackColorKey(color);
+        if (_solidBrushCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        if (_solidBrushCache.Count >= InkCacheRuntimeDefaults.SolidBrushCacheLimit)
+        {
+            _solidBrushCache.Clear();
+        }
+
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        _solidBrushCache[key] = brush;
+        return brush;
+    }
+
+    private static int PackColorKey(MediaColor color)
+    {
+        return (color.A << 24) | (color.R << 16) | (color.G << 8) | color.B;
+    }
+
+    private void RenderStroke(DrawingContext dc, InkStrokeData stroke)
     {
         var geometry = stroke.CachedGeometry;
         if (geometry == null)
@@ -66,13 +126,12 @@ internal sealed class InkStrokeRenderer
             geometry.Freeze();
             stroke.CachedGeometry = geometry;
         }
-        var color = (MediaColor)MediaColorConverter.ConvertFromString(stroke.ColorHex);
+        var color = ResolveStrokeColor(stroke.ColorHex);
         color.A = stroke.Opacity;
 
         if (stroke.Type == InkStrokeType.Shape || stroke.BrushStyle != PaintBrushStyle.Calligraphy)
         {
-            var brush = new SolidColorBrush(color);
-            brush.Freeze();
+            var brush = GetCachedSolidBrush(color);
             dc.DrawGeometry(brush, null, geometry);
             return;
         }
@@ -81,274 +140,49 @@ internal sealed class InkStrokeRenderer
         var strokeDirection = new Vector(stroke.StrokeDirectionX, stroke.StrokeDirectionY);
         bool inkMode = stroke.CalligraphyRenderMode == CalligraphyRenderMode.Ink;
         var suppressOverlays = stroke.Opacity < stroke.CalligraphyOverlayOpacityThreshold;
-        if (CalligraphySinglePassCompositeEnabled)
+        var coreBrush = GetCachedSolidBrush(color);
+        DrawingBrush? coreMask = null;
+        if (inkMode && IsInkMaskEligible(geometry, stroke.BrushSize))
         {
-            var coreBrush = new SolidColorBrush(color)
-            {
-                Opacity = 1.0
-            };
-            coreBrush.Freeze();
-            DrawingBrush? coreMask = null;
-            if ((inkMode || CalligraphySinglePassTextureMaskEnabled) && IsInkMaskEligible(geometry, stroke.BrushSize))
-            {
-                coreMask = BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
-            }
+            coreMask = _opacityMaskCache.GetOrCreate(
+                geometry.Bounds,
+                inkFlow,
+                strokeDirection,
+                stroke.BrushSize,
+                stroke.MaskSeed,
+                InkOpacityMaskCache.ExportTextureVariant,
+                () => BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed));
+        }
 
+        if (coreMask != null)
+        {
+            dc.PushOpacityMask(coreMask);
+            dc.DrawGeometry(coreBrush, null, geometry);
+            dc.Pop();
+        }
+        else
+        {
+            dc.DrawGeometry(coreBrush, null, geometry);
+        }
+
+        if (!suppressOverlays && inkMode)
+        {
+            var accumulationBrush = new SolidColorBrush(color)
+            {
+                Opacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11)
+            };
+            accumulationBrush.Freeze();
             if (coreMask != null)
             {
                 dc.PushOpacityMask(coreMask);
-                dc.DrawGeometry(coreBrush, null, geometry);
+                dc.DrawGeometry(accumulationBrush, null, geometry);
                 dc.Pop();
             }
             else
             {
-                dc.DrawGeometry(coreBrush, null, geometry);
-            }
-
-            if (!suppressOverlays && inkMode)
-            {
-                var accumulationBrush = new SolidColorBrush(color)
-                {
-                    Opacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11)
-                };
-                accumulationBrush.Freeze();
-                if (coreMask != null)
-                {
-                    dc.PushOpacityMask(coreMask);
-                    dc.DrawGeometry(accumulationBrush, null, geometry);
-                    dc.Pop();
-                }
-                else
-                {
-                    dc.DrawGeometry(accumulationBrush, null, geometry);
-                }
-            }
-
-            if (!suppressOverlays && inkMode && stroke.CalligraphySealEnabled && CalligraphySinglePassSealEnabled)
-            {
-                var sealColor = color;
-                sealColor.A = (byte)Math.Clamp(Math.Round(color.A * 0.14), 0, 255);
-                double sealWidth = Math.Max(stroke.BrushSize * 0.08, 0.6);
-                var sealBrush = new SolidColorBrush(sealColor);
-                sealBrush.Freeze();
-                var sealPen = new MediaPen(sealBrush, sealWidth)
-                {
-                    LineJoin = PenLineJoin.Round,
-                    StartLineCap = PenLineCap.Round,
-                    EndLineCap = PenLineCap.Round,
-                    MiterLimit = 2.4
-                };
-                sealPen.Freeze();
-                dc.DrawGeometry(null, sealPen, geometry);
-            }
-
-            return;
-        }
-
-        if (!inkMode)
-        {
-            suppressOverlays = true;
-        }
-        if (suppressOverlays)
-        {
-            RenderInkCore(dc, geometry, color, stroke.BrushSize, stroke.CalligraphySealEnabled);
-            RenderInkEdge(dc, geometry, color, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
-            return;
-        }
-        if (stroke.CalligraphyInkBloomEnabled && stroke.Blooms.Count > 0)
-        {
-            foreach (var bloom in stroke.Blooms)
-            {
-                var bloomGeometry = InkGeometrySerializer.Deserialize(bloom.GeometryPath);
-                if (bloomGeometry == null)
-                {
-                    continue;
-                }
-                var bloomBrush = new SolidColorBrush(color)
-                {
-                    Opacity = bloom.Opacity
-                };
-                bloomBrush.Freeze();
-                dc.DrawGeometry(bloomBrush, null, bloomGeometry);
+                dc.DrawGeometry(accumulationBrush, null, geometry);
             }
         }
-        RenderInkCore(dc, geometry, color, stroke.BrushSize, stroke.CalligraphySealEnabled);
-        RenderInkEdge(dc, geometry, color, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
-        var ribbonLayers = ResolveRibbonLayers(stroke);
-        if (ribbonLayers.Count > 0)
-        {
-            RenderRibbonLayers(dc, geometry, ribbonLayers, color, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
-        }
-        else
-        {
-            RenderInkLayers(dc, geometry, color, inkFlow, 0.28, strokeDirection, stroke.BrushSize, stroke.MaskSeed);
-        }
-    }
-
-    private static void RenderInkLayers(
-        DrawingContext dc,
-        Geometry geometry,
-        MediaColor color,
-        double inkFlow,
-        double ribbonOpacity,
-        Vector strokeDirection,
-        double brushSize,
-        int maskSeed)
-    {
-        var solidBrush = new SolidColorBrush(color)
-        {
-            Opacity = Math.Clamp(ribbonOpacity, 0.1, 1.0)
-        };
-        solidBrush.Freeze();
-        var mask = IsInkMaskEligible(geometry, brushSize)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, maskSeed)
-            : null;
-        if (mask == null)
-        {
-            dc.DrawGeometry(solidBrush, null, geometry);
-            return;
-        }
-        dc.PushOpacityMask(mask);
-        dc.DrawGeometry(solidBrush, null, geometry);
-        dc.Pop();
-    }
-
-    private static IReadOnlyList<(Geometry Geometry, double Opacity)> ResolveRibbonLayers(InkStrokeData stroke)
-    {
-        if (stroke.Ribbons.Count == 0)
-        {
-            return Array.Empty<(Geometry Geometry, double Opacity)>();
-        }
-
-        if (stroke.CachedRibbonGeometries == null || stroke.CachedRibbonGeometries.Count != stroke.Ribbons.Count)
-        {
-            var cached = new List<Geometry>(stroke.Ribbons.Count);
-            foreach (var ribbon in stroke.Ribbons)
-            {
-                Geometry geometry = Geometry.Empty;
-                if (!string.IsNullOrWhiteSpace(ribbon.GeometryPath))
-                {
-                    var parsed = InkGeometrySerializer.Deserialize(ribbon.GeometryPath);
-                    if (parsed != null)
-                    {
-                        if (parsed.CanFreeze)
-                        {
-                            parsed.Freeze();
-                        }
-                        geometry = parsed;
-                    }
-                }
-                cached.Add(geometry);
-            }
-            stroke.CachedRibbonGeometries = cached;
-        }
-
-        var layers = new List<(Geometry Geometry, double Opacity)>(stroke.Ribbons.Count);
-        for (int i = 0; i < stroke.Ribbons.Count; i++)
-        {
-            var geometry = stroke.CachedRibbonGeometries[i];
-            if (geometry.Bounds.IsEmpty)
-            {
-                continue;
-            }
-            layers.Add((geometry, stroke.Ribbons[i].Opacity));
-        }
-        return layers;
-    }
-
-    private static void RenderRibbonLayers(
-        DrawingContext dc,
-        Geometry coreGeometry,
-        IReadOnlyList<(Geometry Geometry, double Opacity)> ribbonLayers,
-        MediaColor color,
-        double inkFlow,
-        Vector strokeDirection,
-        double brushSize,
-        int maskSeed)
-    {
-        var mask = IsInkMaskEligible(coreGeometry, brushSize)
-            ? BuildInkOpacityMask(coreGeometry.Bounds, inkFlow, strokeDirection, brushSize, maskSeed)
-            : null;
-
-        foreach (var ribbon in ribbonLayers)
-        {
-            var ribbonBrush = new SolidColorBrush(color)
-            {
-                Opacity = Math.Clamp(ribbon.Opacity * 0.35, 0.06, 0.45)
-            };
-            ribbonBrush.Freeze();
-            if (mask == null)
-            {
-                dc.DrawGeometry(ribbonBrush, null, ribbon.Geometry);
-                continue;
-            }
-            dc.PushOpacityMask(mask);
-            dc.DrawGeometry(ribbonBrush, null, ribbon.Geometry);
-            dc.Pop();
-        }
-    }
-
-    private static void RenderInkCore(DrawingContext dc, Geometry geometry, MediaColor color, double brushSize, bool enableSeal)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        dc.DrawGeometry(brush, null, geometry);
-        if (!enableSeal)
-        {
-            return;
-        }
-        double sealWidth = Math.Max(brushSize * 0.08, 0.6);
-        if (sealWidth <= 0)
-        {
-            return;
-        }
-        var pen = new MediaPen(brush, sealWidth)
-        {
-            LineJoin = PenLineJoin.Round,
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            MiterLimit = 2.4
-        };
-        pen.Freeze();
-        dc.DrawGeometry(null, pen, geometry);
-    }
-
-    private static void RenderInkEdge(
-        DrawingContext dc,
-        Geometry geometry,
-        MediaColor color,
-        double inkFlow,
-        Vector strokeDirection,
-        double brushSize,
-        int maskSeed)
-    {
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
-        double edgeOpacity = Math.Clamp(Lerp(0.14, 0.3, dryFactor), 0.08, 0.45);
-        double edgeWidth = Math.Max(brushSize * Lerp(0.04, 0.09, dryFactor), 0.55);
-        var edgeBrush = new SolidColorBrush(color)
-        {
-            Opacity = edgeOpacity
-        };
-        edgeBrush.Freeze();
-        var pen = new MediaPen(edgeBrush, edgeWidth)
-        {
-            LineJoin = PenLineJoin.Round,
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            MiterLimit = 2.4
-        };
-        pen.Freeze();
-        var mask = IsInkMaskEligible(geometry, brushSize)
-            ? BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, maskSeed)
-            : null;
-        if (mask == null)
-        {
-            dc.DrawGeometry(null, pen, geometry);
-            return;
-        }
-        dc.PushOpacityMask(mask);
-        dc.DrawGeometry(null, pen, geometry);
-        dc.Pop();
     }
 
     private static double Lerp(double a, double b, double t)

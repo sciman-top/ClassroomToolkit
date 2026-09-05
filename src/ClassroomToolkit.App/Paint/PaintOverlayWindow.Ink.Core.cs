@@ -87,7 +87,6 @@ public partial class PaintOverlayWindow
     private bool _brushPreviewRenderingAttached;
     private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
     private int _brushPredictionHorizonMs = 8;
-    private readonly IInkRendererFactory _inkRendererFactory;
     private const double BrushPredictionMaxDistanceDip = InkPredictionDefaults.MaxDistanceDip;
 
     // Ink History & Cache
@@ -114,8 +113,12 @@ public partial class PaintOverlayWindow
     private long _currentHistoryMemoryBytes;
     private const int InkSolidBrushCacheLimit = InkCacheRuntimeDefaults.SolidBrushCacheLimit;
     private const int InkPenCacheLimit = InkCacheRuntimeDefaults.PenCacheLimit;
+    private const int InkOpacityMaskCacheLimit = InkRenderingCacheDefaults.OpacityMaskCacheLimit;
+    private const int InkStrokeColorCacheLimit = InkRenderingCacheDefaults.StrokeColorCacheLimit;
     private readonly Dictionary<int, SolidColorBrush> _inkSolidBrushCache = new();
     private readonly Dictionary<InkPenCacheKey, MediaPen> _inkPenCache = new();
+    private readonly InkOpacityMaskCache _inkOpacityMaskCache = new(InkOpacityMaskCacheLimit);
+    private readonly Dictionary<string, MediaColor> _inkStrokeColorCache = new(StringComparer.Ordinal);
     private byte[]? _clearSurfaceBuffer;
     private int _clearSurfaceBufferSize;
     private byte[]? _compositeSurfaceBuffer;
@@ -144,7 +147,6 @@ public partial class PaintOverlayWindow
     private int _neighborPrefetchRadiusMaxSetting = CrossPageNeighborPrefetchRadiusMax;
 
     // Constants
-    private const double CalligraphySealStrokeWidthFactor = CalligraphyRenderingDefaults.SealStrokeWidthFactor;
     private const int CalligraphyPreviewMinIntervalMs = InkRuntimeTimingDefaults.CalligraphyPreviewMinIntervalMs;
     private const double CalligraphyPreviewMinDistanceDefault = ClassroomWritingModeTuner.DefaultCalligraphyPreviewMinDistance;
     private const double StylusPseudoPressureLowThresholdDefault = ClassroomWritingModeTuner.DefaultPseudoPressureLowThreshold;
@@ -165,27 +167,6 @@ public partial class PaintOverlayWindow
     private const int CrossPageNeighborPrefetchRadiusMin = CrossPageNeighborPrefetchDefaults.RadiusMin;
     private const int CrossPageNeighborPrefetchRadiusMax = CrossPageNeighborPrefetchDefaults.RadiusMax;
     private const int NeighborInkCacheLimit = CrossPageNeighborPrefetchDefaults.NeighborInkCacheLimit;
-    private const double CalligraphyDegradeAreaThreshold = CalligraphyRenderingDefaults.DegradeAreaThreshold;
-    private const int CalligraphyDegradeLayerThreshold = CalligraphyRenderingDefaults.DegradeLayerThreshold;
-    private const int CalligraphyMaxRibbonLayersNormal = CalligraphyRenderingDefaults.MaxRibbonLayersNormal;
-    private const int CalligraphyMaxRibbonLayersDegraded = CalligraphyRenderingDefaults.MaxRibbonLayersDegraded;
-    private const int CalligraphyMaxBloomLayersNormal = CalligraphyRenderingDefaults.MaxBloomLayersNormal;
-    private const int CalligraphyMaxBloomLayersDegraded = CalligraphyRenderingDefaults.MaxBloomLayersDegraded;
-    private const int CalligraphyAdaptiveLevelMax = CalligraphyRenderingDefaults.AdaptiveLevelMax;
-    private const double CalligraphyAdaptiveHighCostMs = CalligraphyRenderingDefaults.AdaptiveHighCostMs;
-    private const double CalligraphyAdaptiveLowCostMs = CalligraphyRenderingDefaults.AdaptiveLowCostMs;
-    private const double CalligraphyAdaptiveCostEmaAlpha = CalligraphyRenderingDefaults.AdaptiveCostEmaAlpha;
-    private const int CalligraphyAdaptiveAdjustMinIntervalMs = InkRuntimeTimingDefaults.CalligraphyAdaptiveAdjustMinIntervalMs;
-    private const int CalligraphyAdaptiveAreaThresholdStep = CalligraphyRenderingDefaults.AdaptiveAreaThresholdStep;
-    private const int CalligraphyAdaptiveLayerThresholdStep = CalligraphyRenderingDefaults.AdaptiveLayerThresholdStep;
-    private static readonly bool CalligraphySinglePassCompositeEnabled = true;
-    private const bool CalligraphySinglePassTextureMaskEnabled = false;
-    private const bool CalligraphySinglePassSealEnabled = false;
-
-    private double _calligraphyBatchCostEmaMs = 4.0;
-    private int _calligraphyAdaptiveLevel;
-    private DateTime _lastCalligraphyAdaptiveAdjustUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
-
     private void EnsureRasterSurface()
     {
         if (!IsLoaded)

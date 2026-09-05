@@ -32,6 +32,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
     private readonly object _pendingGate = new();
     private readonly Dictionary<string, Dictionary<string, InkWalEntry?>> _pendingByWalPath = new(StringComparer.OrdinalIgnoreCase);
     private int _flushScheduled;
+    private int _disposed;
 
     public InkWriteAheadLogService()
     {
@@ -54,17 +55,22 @@ internal sealed class InkWriteAheadLogService : IDisposable
         var walPath = GetWalPath(sourcePath);
         lock (_pendingGate)
         {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            var normalizedStrokes = InkPayloadNormalizer.NormalizeStrokes(strokes?.ToList());
             GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = new InkWalEntry
             {
                 SourcePath = sourcePath,
                 PageIndex = pageIndex,
                 Hash = hash ?? string.Empty,
                 UpdatedAt = DateTime.UtcNow,
-                Strokes = strokes?.ToList() ?? new List<InkStrokeData>()
+                Strokes = normalizedStrokes
             };
+            ScheduleFlush();
         }
-
-        ScheduleFlush();
     }
 
     public void Remove(string sourcePath, int pageIndex)
@@ -77,6 +83,11 @@ internal sealed class InkWriteAheadLogService : IDisposable
         var walPath = GetWalPath(sourcePath);
         lock (_pendingGate)
         {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
             // tombstone（null）优先于尚未落盘的同键 Upsert，同步合并保证持久化过的页面
             // 不会在 WAL 里留下会在下次会话复活旧墨迹的条目。
             GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = null;
@@ -152,7 +163,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
 
                 try
                 {
-                    var strokes = entry.Strokes ?? new List<InkStrokeData>();
+                    var strokes = InkPayloadNormalizer.NormalizeStrokes(entry.Strokes);
                     persistence.SaveInkForFile(entry.SourcePath, entry.PageIndex, strokes.ToList());
                     var persisted = persistence.LoadInkPageForFile(entry.SourcePath, entry.PageIndex) ?? new List<InkStrokeData>();
                     if (string.Equals(hashProvider(strokes), hashProvider(persisted), StringComparison.Ordinal))
@@ -189,28 +200,25 @@ internal sealed class InkWriteAheadLogService : IDisposable
     /// </summary>
     public void FlushPending()
     {
-        // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
-        // 重新调度按防抖间隔延后重试，不做紧密循环。
-        string[] paths;
         lock (_pendingGate)
         {
-            paths = _pendingByWalPath.Keys.ToArray();
-        }
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
 
-        foreach (var walPath in paths)
-        {
-            lock (_pendingGate)
+            // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
+            // 重新调度按防抖间隔延后重试，不做紧密循环。整个遍历持有生命周期锁，
+            // 使 Dispose 不会在刷盘尾部与新的调度交错。
+            var paths = _pendingByWalPath.Keys.ToArray();
+            foreach (var walPath in paths)
             {
                 MergePendingToDiskCore(walPath);
             }
-        }
 
-        // 先清标志再复查 pending：若在合并与清标志之间有新 Upsert 进来，
-        // 它的 ScheduleFlush 会因标志仍为 1 而跳过定时器，这里复查避免条目滞留内存。
-        // 合并失败的路径也会在这里获得下一次重试机会。
-        Volatile.Write(ref _flushScheduled, 0);
-        lock (_pendingGate)
-        {
+            // 合并失败的路径也会在这里获得下一次重试机会。由于整个过程持锁，
+            // 不再存在“清标志与新 Upsert 交错”而漏调度的窗口。
+            Volatile.Write(ref _flushScheduled, 0);
             if (_pendingByWalPath.Count > 0)
             {
                 ScheduleFlush();
@@ -220,13 +228,28 @@ internal sealed class InkWriteAheadLogService : IDisposable
 
     public void Dispose()
     {
-        FlushPending();
+        lock (_pendingGate)
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            FlushPending();
+            Volatile.Write(ref _disposed, 1);
+        }
+
         _flushTimer.Dispose();
         GC.SuppressFinalize(this);
     }
 
     private void ScheduleFlush()
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
         if (Interlocked.Exchange(ref _flushScheduled, 1) == 1)
         {
             return;
@@ -406,10 +429,18 @@ internal sealed class InkWriteAheadLogService : IDisposable
         try
         {
             var json = File.ReadAllText(acknowledgementPath);
-            var parsed = JsonSerializer.Deserialize<Dictionary<string, InkWalAcknowledgement>>(json, _options);
-            acknowledgements = parsed != null
-                ? new Dictionary<string, InkWalAcknowledgement>(parsed, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
+            var parsed = JsonSerializer.Deserialize<Dictionary<string, InkWalAcknowledgement?>>(json, _options);
+            acknowledgements = new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
+            if (parsed != null)
+            {
+                foreach (var pair in parsed)
+                {
+                    if (pair.Value != null)
+                    {
+                        acknowledgements[pair.Key] = pair.Value;
+                    }
+                }
+            }
             return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -498,7 +529,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
             removed |= acknowledgements.Remove(key);
         }
 
-        if (removed)
+        if (removed || acknowledgements.Count == 0)
         {
             _ = SaveAcknowledgements(walPath, acknowledgements);
         }

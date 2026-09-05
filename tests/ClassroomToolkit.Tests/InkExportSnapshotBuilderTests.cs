@@ -43,6 +43,29 @@ public sealed class InkExportSnapshotBuilderTests
     }
 
     [Fact]
+    public void ApplyScopeFilter_ShouldNormalizeStructurallyNullPages()
+    {
+        var doc = new InkDocumentData
+        {
+            SourcePath = "x.pdf",
+            Pages = new List<InkPageData>
+            {
+                null!,
+                new() { PageIndex = 1, Strokes = null! }
+            }
+        };
+
+        Action apply = () => InkExportSnapshotBuilder.ApplyScopeFilter(
+            doc,
+            InkExportScope.SessionChangesOnly,
+            page => page.PageIndex == 1);
+
+        apply.Should().NotThrow();
+        doc.Pages.Should().ContainSingle();
+        doc.Pages[0].Strokes.Should().BeEmpty();
+    }
+
+    [Fact]
     public void MergeCachedPages_ShouldUpsertMatchingSourceOnly()
     {
         var doc = new InkDocumentData { SourcePath = "E:\\a.pdf" };

@@ -37,7 +37,22 @@ public partial class PaintOverlayWindow
         var currentPage = GetCurrentPageIndexForCrossPage();
         var targetPage = ResolveCrossPageTargetForInput(position.Y, currentPage, resolvedBitmap);
         var boundedTargetPage = CrossPageInputSwitchTargetPolicy.ResolveNeighborTargetPage(currentPage, targetPage);
-        return SwitchToImagePageForInput(currentPage, boundedTargetPage, resolvedBitmap, preloadedBitmap: null, input);
+        BitmapSource? preloadedBitmap = null;
+        if (TryResolveVisibleImagePageFromPointer(
+                position,
+                currentPage,
+                out var visiblePage,
+                out var visibleBitmap)
+            && visiblePage == boundedTargetPage)
+        {
+            preloadedBitmap = visibleBitmap;
+        }
+        else if (_neighborImageCache.TryGetValue(boundedTargetPage, out var cachedBitmap))
+        {
+            preloadedBitmap = cachedBitmap;
+        }
+
+        return SwitchToImagePageForInput(currentPage, boundedTargetPage, resolvedBitmap, preloadedBitmap, input);
     }
 
     private bool SwitchToImagePageForInput(
