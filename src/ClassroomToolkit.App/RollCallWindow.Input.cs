@@ -30,7 +30,7 @@ public partial class RollCallWindow
             {
                 _viewModel.SetCurrentGroup(item.Label);
                 UpdatePhotoDisplay(forceHide: true);
-                PersistSettings();
+                PersistSettingsDebounced();
             }
         }
     }
@@ -254,19 +254,25 @@ public partial class RollCallWindow
 
     private void EnqueueRemoteHookUiAction(string operation, Action action)
     {
-        if (!RollCallRemoteHookDispatchPolicy.CanDispatch(
+        if (_closingCleanupStarted || !RollCallRemoteHookDispatchPolicy.CanDispatch(
                 Dispatcher.HasShutdownStarted,
                 Dispatcher.HasShutdownFinished))
         {
             System.Diagnostics.Debug.WriteLine(
                 RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchSkippedMessage(
                     operation,
-                    "dispatcher-unavailable"));
+                    _closingCleanupStarted ? "window-closed" : "dispatcher-unavailable"));
             return;
         }
 
         void ExecuteOnUi()
         {
+            // Hook 回调可能晚于 OnClosing 入队执行；此时窗口资源已清理，
+            // 继续执行会重建已关闭的组名浮窗或使用已释放的取消源。
+            if (_closingCleanupStarted)
+            {
+                return;
+            }
             SafeActionExecutionExecutor.TryExecute(
                 action,
                 ex => System.Diagnostics.Debug.WriteLine(
@@ -344,8 +350,10 @@ public partial class RollCallWindow
     {
         var generation = _remoteHookStartGate.NextGeneration();
         StopKeyboardHook();
-        _ = _remoteHookStartGate.RunAsync(generation, StartKeyboardHookCoreAsync);
-        _ = _remoteHookStartGate.RunAsync(generation, StartGroupSwitchHookCoreAsync);
+        // 钩子安装必须留在 UI 线程（LL 钩子要求安装线程泵消息），第二个协程与第一个
+        // 共用 gate，竞争等待后若不续接回调用方上下文会落到线程池导致钩子静默失效。
+        _ = _remoteHookStartGate.RunAsync(generation, StartKeyboardHookCoreAsync, continueOnCapturedContext: true);
+        _ = _remoteHookStartGate.RunAsync(generation, StartGroupSwitchHookCoreAsync, continueOnCapturedContext: true);
     }
 
     private bool ShouldEnableRemotePresenterHook() => _viewModel.RemotePresenterEnabled && _viewModel.IsRollCallMode;

@@ -117,6 +117,7 @@ public partial class RollCallWindow
         _stopwatch.Stop();
         _rollStateSaveTimer.Stop();
         _windowBoundsSaveTimer.Stop();
+        _settingsSaveTimer.Stop();
         _hoverCheckTimer.Stop();
         _rollStateDirty = false;
         Loaded -= OnLoaded;
@@ -131,6 +132,7 @@ public partial class RollCallWindow
         _timer.Tick -= OnTimerTick;
         _rollStateSaveTimer.Tick -= OnRollStateSaveTick;
         _windowBoundsSaveTimer.Tick -= OnWindowBoundsSaveTick;
+        _settingsSaveTimer.Tick -= OnSettingsSaveTick;
         _hoverCheckTimer.Tick -= OnHoverCheckTimerTick;
         SizeChanged -= OnWindowSizeChanged;
         LocationChanged -= OnWindowLocationChanged;

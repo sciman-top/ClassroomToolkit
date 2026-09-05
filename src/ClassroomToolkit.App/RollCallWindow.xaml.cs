@@ -50,6 +50,7 @@ public partial class RollCallWindow : Window
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _rollStateSaveTimer;
     private readonly DispatcherTimer _windowBoundsSaveTimer;
+    private readonly DispatcherTimer _settingsSaveTimer;
     private readonly Stopwatch _stopwatch;
     private Photos.RollCallGroupOverlayWindow? _groupOverlay;
     private readonly LatestOnlyAsyncGate _remoteHookStartGate = new();
@@ -58,6 +59,7 @@ public partial class RollCallWindow : Window
     private bool _allowClose;
     private bool _timerStateApplied;
     private bool _rollStateDirty;
+    private bool _settingsSaveDirty;
     private int _speechUnavailableNotifiedState;
     private int _remoteHookUnavailableNotifiedState;
     private bool _initialized;
@@ -140,6 +142,12 @@ public partial class RollCallWindow : Window
             Interval = TimeSpan.FromMilliseconds(240)
         };
         _windowBoundsSaveTimer.Tick += OnWindowBoundsSaveTick;
+
+        _settingsSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(400)
+        };
+        _settingsSaveTimer.Tick += OnSettingsSaveTick;
 
         _hoverCheckTimer = new DispatcherTimer
         {

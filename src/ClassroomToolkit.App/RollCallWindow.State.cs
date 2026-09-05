@@ -107,6 +107,25 @@ public partial class RollCallWindow
         _settingsSnapshotApplied = true;
     }
 
+    // 换组等连续点击每次同步写盘（读盘+解析+原子替换）会造成可感知卡顿，
+    // 改为 trailing debounce；同步 PersistSettings 会吞并未落盘的 pending。
+    private void PersistSettingsDebounced()
+    {
+        if (!_settingsSnapshotApplied)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "RollCallWindow: Skip PersistSettingsDebounced because settings snapshot has not been applied yet.");
+            return;
+        }
+
+        CaptureWindowBounds();
+        RollCallSettingsApplier.Apply(_settings, BuildPatchFromViewModel());
+        ApplyTransientRollSettings();
+        _settingsSaveDirty = true;
+        _settingsSaveTimer.Stop();
+        _settingsSaveTimer.Start();
+    }
+
     private void PersistSettings()
     {
         if (!_settingsSnapshotApplied)
@@ -116,8 +135,16 @@ public partial class RollCallWindow
             return;
         }
 
+        _settingsSaveTimer.Stop();
+        _settingsSaveDirty = false;
         CaptureWindowBounds();
         RollCallSettingsApplier.Apply(_settings, BuildPatchFromViewModel());
+        ApplyTransientRollSettings();
+        SaveSettingsSafe();
+    }
+
+    private void ApplyTransientRollSettings()
+    {
         _settings.RollCallMode = _viewModel.IsRollCallMode ? "roll_call" : "timer";
         _settings.RollCallTimerMode = _viewModel.CurrentTimerMode switch
         {
@@ -131,6 +158,16 @@ public partial class RollCallWindow
         _settings.RollCallStopwatchSeconds = _viewModel.TimerStopwatchSeconds;
         _settings.RollCallCurrentClass = _viewModel.ActiveClassName;
         _settings.RollCallCurrentGroup = _viewModel.CurrentGroup;
+    }
+
+    private void OnSettingsSaveTick(object? sender, EventArgs e)
+    {
+        _settingsSaveTimer.Stop();
+        if (!_settingsSaveDirty)
+        {
+            return;
+        }
+        _settingsSaveDirty = false;
         SaveSettingsSafe();
     }
 
