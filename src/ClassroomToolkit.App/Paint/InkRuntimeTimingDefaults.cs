@@ -15,6 +15,5 @@ internal static class InkRuntimeTimingDefaults
     internal const int SidecarAutoSaveDelayMs = 600;
     internal const int SidecarAutoSaveRetryMax = 3;
     internal const int SidecarAutoSaveRetryDelayMs = 900;
-    internal const int CalligraphyAdaptiveAdjustMinIntervalMs = 200;
     internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
 }
