@@ -13,7 +13,7 @@
 
 - 课堂阻断故障：崩溃、卡死、放映控制失效、输入链路失效。
 - 高风险主链出现无法在当前批次内自愈的窗口层级 / 激活 / 焦点回归。
-- SQLite 或 GPU 实验开关导致主路径不稳定。
+- SQLite 实验开关导致主路径不稳定。
 
 ## 3. 回滚手段优先级
 
@@ -31,10 +31,6 @@
 - 业务存储：
   - `CTOOLKIT_USE_SQLITE_BUSINESS_STORE=0`
   - `CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND=0`
-- GPU Ink：
-  - `CTOOLKIT_USE_GPU_INK_RENDERER=0`
-  - `CTOOLKIT_ENABLE_EXPERIMENTAL_GPU_INK=0`
-
 说明：
 
 - 以上开关当前仍有实际作用。

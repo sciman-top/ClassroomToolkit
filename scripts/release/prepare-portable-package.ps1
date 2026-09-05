@@ -5,7 +5,8 @@ param(
     [string]$OutputRoot = "",
     [string]$AppExecutableName = "sciman Classroom Toolkit.exe",
     [string]$RepositoryUrl = "https://github.com/sciman-top/ClassroomToolkit",
-    [string]$SourceRef = "HEAD"
+    [string]$SourceRef = "HEAD",
+    [string]$ResolvedSourceCommit = ""
 )
 
 Set-StrictMode -Version Latest
@@ -78,9 +79,15 @@ foreach ($item in Get-ChildItem -LiteralPath $offlineApp -Force) {
 Set-Content -LiteralPath (Join-Path $portableRoot "portable.mode") -Value "mode=portable" -Encoding ASCII
 $launcher = "@echo off`r`nsetlocal`r`nstart `"`" `"%~dp0app\$AppExecutableName`"`r`n"
 Set-Content -LiteralPath (Join-Path $portableRoot "启动.bat") -Value $launcher -Encoding ASCII
-$sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
+$commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
+    "$SourceRef^{commit}"
+}
+else {
+    "$ResolvedSourceCommit^{commit}"
+}
+$sourceCommit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw "SourceRef does not resolve to a commit: $SourceRef"
+    throw "Source reference does not resolve to a commit: $commitRef"
 }
 $repositoryPath = $repositoryUri.AbsolutePath.Trim('/').TrimEnd('/')
 $apiUrl = "https://api.github.com/repos/$repositoryPath/releases/latest"
@@ -136,7 +143,7 @@ $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $portableManifest
 $releaseManifestPath = Join-Path $releaseRoot "release-manifest.json"
 if (Test-Path -LiteralPath $releaseManifestPath) {
     $releaseManifest = Get-Content -LiteralPath $releaseManifestPath -Raw | ConvertFrom-Json
-    $releaseManifest.outputs | Add-Member -NotePropertyName portable -NotePropertyValue $portableZip -Force
+    $releaseManifest.outputs | Add-Member -NotePropertyName portable -NotePropertyValue ("portable/{0}" -f (Split-Path -Leaf $portableZip)) -Force
     $releaseManifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $releaseManifestPath -Encoding UTF8
 }
 Write-Host "[portable-package] DONE $portableZip"

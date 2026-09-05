@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     [string]$SourceRef = "HEAD",
+    [string]$ResolvedSourceCommit = "",
     [string]$OutputRoot = "",
     [switch]$AllowOverwriteVersion
 )
@@ -47,9 +48,15 @@ if (-not [string]::IsNullOrWhiteSpace(($trackedChanges -join "`n"))) {
     throw "Source package requires a clean tracked worktree so the installer and source archive resolve to the same commit."
 }
 
-$commit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
+$commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
+    "$SourceRef^{commit}"
+}
+else {
+    "$ResolvedSourceCommit^{commit}"
+}
+$commit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
 if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
-    throw "SourceRef does not resolve to a commit: $SourceRef"
+    throw "Source reference does not resolve to a commit: $commitRef"
 }
 
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version

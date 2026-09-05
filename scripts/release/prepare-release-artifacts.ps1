@@ -53,6 +53,10 @@ if ($AllowOverwriteVersion) {
 $outputRootPath = if ([System.IO.Path]::IsPathRooted($OutputRoot)) { $OutputRoot } else { Join-Path (Get-Location) $OutputRoot }
 $stagingOutputRoot = Join-Path $outputRootPath ".staging"
 $stagingReleaseRoot = Join-Path $stagingOutputRoot $Version
+$sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
+if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
+    throw "SourceRef does not resolve to a commit: $SourceRef"
+}
 
 if (Test-Path -LiteralPath (Join-Path $outputRootPath $Version)) {
     if (-not $AllowOverwriteVersion) {
@@ -75,13 +79,15 @@ try {
             "-Version", $Version,
             "-OutputRoot", (Join-Path $OutputRoot ".staging"),
             "-RepositoryUrl", "https://github.com/sciman-top/ClassroomToolkit",
-            "-SourceRef", $SourceRef
+            "-SourceRef", $SourceRef,
+            "-ResolvedSourceCommit", $sourceCommit
         )
     }
 
     $sourceArguments = @(
         "-Version", $Version,
         "-SourceRef", $SourceRef,
+        "-ResolvedSourceCommit", $sourceCommit,
         "-OutputRoot", (Join-Path $OutputRoot ".staging")
     )
     if ($AllowOverwriteVersion) {
@@ -120,7 +126,6 @@ try {
         Move-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
     }
 
-    $sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
     $manifest = [ordered]@{
         version = $Version
         generated_at_utc = [DateTimeOffset]::UtcNow.ToString("o")

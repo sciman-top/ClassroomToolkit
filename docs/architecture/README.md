@@ -13,7 +13,7 @@
 - `Infra`：配置、工作簿、SQLite、日志等 adapter，依赖 `Application/Domain`。
 - `Interop`：Win32/COM/WPS 等高风险外部接入，保持独立。
 - `Services`：Presentation、Input、Speech 等运行时 adapter，依赖 `Application/Domain/Interop`。
-- `App`：WPF、组合根、Session 与 Windowing；仅组合根接入 Infra，只有 `Windowing` 可直连 Interop。
+- `App`：WPF 生命周期、Session 与 Windowing；`App.xaml.cs` 与 `Startup/AppCompositionRoot.cs` 共同构成组合根，只有组合根接入 Infra。`Windowing` 负责系统窗口 Interop，`Paint` 仅在 Presentation seam 显式消费 Presentation Interop；`PaintPresentationRuntimeFactory` 集中装配 Paint 的 Presentation 运行时。
 
 ## 模块与 seam
 
@@ -21,8 +21,10 @@
 - 生产 adapter 与测试 adapter 共同存在时，外部 seam 有真实价值；不得仅因“只有一个生产实现”删除 Interop 测试 seam。
 - 单表达式 `*Policy`、仅转发参数的 wrapper、只被一个调用点和逐字复述测试使用的类型不是有效模块，应内联到所属行为。
 - 新功能优先扩展已有高内聚模块。只有行为确实变化、需要替换或能集中多个调用者复杂性时，才增加 interface、adapter 或独立文件。
+- 组合根按功能注册组维护；窗口生命周期只调用组合根入口，不复制 adapter 选择、设置迁移或 DI 注册细节。
+- 窗口内部的高风险运行时也要有单一构造入口：`PaintOverlayWindow` 消费 `PaintPresentationRuntimeFactory` 的装配结果，行为仍由既有 Service/Policy 承担。
+- Interop 依赖必须使用文件级显式 using；禁止用 `global using` 把高风险类型隐式传播到整个 App 编译单元。
 - 大型 WPF 窗口允许用 `partial` 文件按职责组织，但不能把业务规则、持久化或 Interop 细节继续散落到事件处理器。
-- 功能增/删的固定触点见 [feature-template.md](feature-template.md)；新建决策类文件受碎片化门禁约束（`scripts/quality/check-hotspot-line-budgets.ps1`，≥15 行，例外仅限基线存量）。
 
 ## 演进顺序
 

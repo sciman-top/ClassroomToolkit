@@ -41,6 +41,7 @@ public sealed class ReleaseArtifactContractTests
 
         source.Should().Contain("git archive --format=zip");
         source.Should().Contain("git rev-parse --verify --end-of-options");
+        source.Should().Contain("ResolvedSourceCommit");
         source.Should().Contain("git status --porcelain --untracked-files=no");
         source.Should().Contain("clean tracked worktree");
         source.Should().Contain("excludes_local_classroom_data = $true");
@@ -70,6 +71,8 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("api.github.com/repos");
         source.Should().Contain("notify-and-open-download-page");
         source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
+        source.Should().Contain("ResolvedSourceCommit");
+        source.Should().Contain("portable/{0}");
         source.Should().Contain("data/");
     }
 
@@ -84,6 +87,8 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("standard_installer");
         source.Should().Contain("offline_installer");
         source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
+        source.Should().Contain("ResolvedSourceCommit");
+        source.Should().Contain("$sourceCommit = (& git rev-parse");
     }
 
     [Fact]
