@@ -22,6 +22,7 @@
 - 单表达式 `*Policy`、仅转发参数的 wrapper、只被一个调用点和逐字复述测试使用的类型不是有效模块，应内联到所属行为。
 - 新功能优先扩展已有高内聚模块。只有行为确实变化、需要替换或能集中多个调用者复杂性时，才增加 interface、adapter 或独立文件。
 - 大型 WPF 窗口允许用 `partial` 文件按职责组织，但不能把业务规则、持久化或 Interop 细节继续散落到事件处理器。
+- 功能增/删的固定触点见 [feature-template.md](feature-template.md)；新建决策类文件受碎片化门禁约束（`scripts/quality/check-hotspot-line-budgets.ps1`，≥15 行，例外仅限基线存量）。
 
 ## 演进顺序
 
