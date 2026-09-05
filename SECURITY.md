@@ -6,9 +6,9 @@
 | latest | yes |
 
 ## Reporting a Vulnerability
-- Contact: <security email>
+- Contact: 使用 GitHub 私有漏洞报告（仓库页 Security → Report a vulnerability）
 - Include: impact, steps to reproduce, expected risk
-- SLA: initial response within <N> business days
+- SLA: 个人维护者 best effort，无固定响应时限
 
 ## Security expectations for contributors
 - Do not paste secrets into issues, PRs, examples, or screenshots.

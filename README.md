@@ -67,8 +67,7 @@ dotnet run --project src/ClassroomToolkit.App/ClassroomToolkit.App.csproj
 - [English README](./README.en.md)
 - [教师使用指南](./使用指南.md)
 - [文档目录](./docs/README.md)
-- [项目状态快照](./docs/project-status.md)
-- [当前接手说明](./docs/handover.md)
+- [项目状态与当前主线](./docs/project-status.md)
 - [技术债与稳定性清单](./docs/tech-debt-backlog.md)
 - [发布检查清单](./docs/runbooks/release-checklist.md)
 - [安全策略](./SECURITY.md) · [贡献指南](./CONTRIBUTING.md)
@@ -100,7 +99,7 @@ powershell -File scripts/quality/check-hotspot-line-budgets.ps1
 
 也可使用聚合门禁 `scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`。`quick` 只做快速反馈；`standard` 用于共享或高风险 seam 的阶段收口；发布前或依赖变化使用 `-Profile full`（含性能预算、漏洞与 `latest-all` analyzer 审计）。文档改动至少运行 `git diff --check`。
 
-如果你是基于当前主分支继续开发，请先查看 [docs/handover.md](./docs/handover.md)；本地门禁通过不代表完成课堂现场验收。
+如果你是基于当前主分支继续开发，请先查看 [docs/project-status.md](./docs/project-status.md)；本地门禁通过不代表完成课堂现场验收。
 
 ## 已知限制与发布边界
 

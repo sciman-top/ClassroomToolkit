@@ -68,4 +68,4 @@
 
 - `ArchitectureDependencyTests` 不新增违规。
 - App -> Interop 文件数未上升。
-- 主方案 / 主进度 / handover 的状态描述仍然成立；若不成立，必须同步更新文档。
+- [project-status](../project-status.md) 与 [architecture](../architecture/README.md) 的状态描述仍然成立；若不成立，必须同步更新文档。

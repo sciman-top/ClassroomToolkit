@@ -15,7 +15,7 @@
 
 - App 层普通 UI / 场景文件不得直接依赖 `ClassroomToolkit.Interop`。
 - Windowing Adapter / Executor 是唯一允许的 App -> Interop 目录 seam。
-- 文档口径与守卫口径必须一致：主方案、主进度、handover 中写明的边界，应与守卫保持同步。
+- 文档口径与守卫口径必须一致：architecture 与 project-status 中写明的边界，应与守卫保持同步。
 
 ## 说明
 

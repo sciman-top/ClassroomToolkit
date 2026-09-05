@@ -34,13 +34,11 @@ UI 改版必须服务于“课堂中一眼可见、一点即用、低干扰、�
 - `03_Theme_Tokens_v2.json`：三套主题的语义颜色 Token
 - `04_WPF_ResourceDictionary_Template.xaml`：WPF 资源字典骨架
 - `05_Theme_Architecture_and_Switching.md`：主题切换架构
-- `06_UI_Refactor_Implementation_Plan.md`：改版实施计划
 - `07_UI_QA_Acceptance_Checklist.md`：视觉/交互/课堂验收清单
-- `08_Codex_Production_Prompt.md`：已废弃，未随本包交付；Codex 生产提示词职责由 `09` 覆盖
-- `09_Zcode_GLM53Flash_Production_Prompt.md`：给 zcode/GLM-5.3-Flash 的更强约束提示词
-- `10_Review_Repair_Prompt.md`：第二轮审查/修复提示词
 - `11_Component_State_Matrix.csv`：核心组件状态矩阵
 - `12_Implementation_Decisions.md`：必须遵守/禁止事项的简版决策记录
+
+一次性执行文件（改版实施计划、Codex/Zcode 生产提示词、审查修复提示词）已随改版落地退役，需要时从 Git 历史查询。
 
 ## 推荐使用方式
 

@@ -28,6 +28,6 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-
 
 ## 结果
 
-- 使用 `docs/validation/templates/classroom-pilot-acceptance-template.md`。
+- 现场记录最小字段（直接写在本清单附录）：日期 / 教室设备与投影参数 / 观察窗口；功能一致性、错误率与阻断故障、输入延迟 p95 与 GC 峰值；结论（是否 <10% 劣化、是否回退）。
 - 任何崩溃、卡死、输入失效、数据破坏或无法恢复均阻断发布。
 - 代码门禁通过只证明 `repo_verified`；完成现场清单后才可报告 `live_accepted`。

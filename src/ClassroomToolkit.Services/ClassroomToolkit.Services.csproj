@@ -3,7 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ClassroomToolkit.Domain\ClassroomToolkit.Domain.csproj" />
     <ProjectReference Include="..\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
-    <ProjectReference Include="..\ClassroomToolkit.Application\ClassroomToolkit.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

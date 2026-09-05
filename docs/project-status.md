@@ -1,6 +1,18 @@
 # 项目状态快照（2026-08-29）
 
-本页承接 README 精简前的“最新状态”清单，作为面向开发者的当前状态快照；README 只保留概要并链接到这里。
+本页是面向开发者的唯一当前状态入口（承接原 handover 与 README 精简前的“最新状态”清单）；README 只保留概要并链接到这里。
+
+## 当前主线
+
+- 产品主链：启动 -> 名单/配置加载 -> 课堂操作 -> Interop 降级 -> 可观察结果与恢复。
+- 代码侧没有已知 P0 阻断；发布仍需真实教室的多显示器、DPI、投影、PPT/WPS、触控和学生照片悬浮层验收。
+- 历史重构任务图、自动循环和治理快照已退役；不要从 Git 历史恢复为日常门禁。
+
+## 真值边界
+
+- 代码、当前配置与 fresh 测试结果优先于历史文档；`repo_verified` 不等于课堂现场 `live_accepted`。
+- PDF 自动化只证明当前 Windows 主机上的尺寸、损坏/大页面降级、基础黑白视觉与渲染预算；真实课件、密码/特殊字体、DPI、多屏和投影效果仍需现场验收。
+- 普通变更由 Git diff 和测试输出留痕；只有数据迁移、Interop 生命周期、发布或不可逆修复才新增 change-evidence。
 
 ## 2026-08-29 全仓审计与减负轮
 
@@ -42,4 +54,4 @@
   - 学生工作簿和 JSON 设置读取失败均 fail-closed，原文件不会被模板或默认值覆盖
   - PDF 渲染不再携带第三方 native 引擎；仓库验证不外推为真实课件、DPI、投影或课堂视觉验收
 
-相关入口：[handover](./handover.md)、[高风险变更证据](./change-evidence/)、[发布检查清单](./runbooks/release-checklist.md)。
+相关入口：[高风险变更证据](./change-evidence/)、[发布检查清单](./runbooks/release-checklist.md)、[技术债清单](./tech-debt-backlog.md)。

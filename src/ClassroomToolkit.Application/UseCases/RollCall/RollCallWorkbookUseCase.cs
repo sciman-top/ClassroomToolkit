@@ -1,4 +1,5 @@
 using ClassroomToolkit.Application.Abstractions;
+using ClassroomToolkit.Domain;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 
@@ -33,7 +34,7 @@ public sealed class RollCallWorkbookUseCase
 
             return new RollCallWorkbookLoadResult(result.Workbook, states, null);
         }
-        catch (Exception ex) when (ApplicationExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
         {
             var fallbackRoster = new ClassRoster("班级1", Array.Empty<StudentRecord>());
             var fallbackWorkbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["班级1"] = fallbackRoster }, "班级1");

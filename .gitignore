@@ -43,7 +43,7 @@ settings.ini
 settings.json
 students.xlsx
 students.bak-normalize-*.xlsx
-backups/*.bak-normalize-*.xlsx
+backups/
 .~lock.*#
 student_photos/
 data/

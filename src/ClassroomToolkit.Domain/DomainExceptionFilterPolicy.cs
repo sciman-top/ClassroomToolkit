@@ -1,8 +1,8 @@
 namespace ClassroomToolkit.Domain;
 
-internal static class DomainExceptionFilterPolicy
+public static class DomainExceptionFilterPolicy
 {
-    internal static bool IsNonFatal(Exception ex)
+    public static bool IsNonFatal(Exception ex)
     {
         ArgumentNullException.ThrowIfNull(ex);
 
