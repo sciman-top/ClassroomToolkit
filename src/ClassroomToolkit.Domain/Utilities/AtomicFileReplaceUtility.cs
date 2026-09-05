@@ -38,6 +38,28 @@ public static class AtomicFileReplaceUtility
         {
             File.Move(tempPath, targetPath, overwrite: true);
         }
+        catch (FileNotFoundException) when (File.Exists(tempPath) && !File.Exists(targetPath))
+        {
+            // File.Replace requires an existing destination on platforms that support it.
+            // If the destination is absent, move the completed temp file without overwrite;
+            // a destination that appears concurrently is handled by the outer retry loop.
+            File.Move(tempPath, targetPath);
+        }
+    }
+
+    // 断电/强杀场景：仅 Close 不保证数据离开 OS 缓存，File.Replace 可能替换成功而
+    // 目标内容仍是未冲刷的截断数据。替换前对临时文件强制 flush-to-disk。
+    private static void FlushTempFileToDisk(string tempPath)
+    {
+        try
+        {
+            using var stream = new FileStream(tempPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            stream.Flush(flushToDisk: true);
+        }
+        catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // 冲刷失败不阻断替换；最坏情形等同旧行为（崩溃窗口内内容依赖 OS 缓存）。
+        }
     }
 
     public static void WriteAtomically(
@@ -75,14 +97,8 @@ public static class AtomicFileReplaceUtility
         try
         {
             writeTempFile(tempPath);
-            if (File.Exists(targetPath))
-            {
-                ReplaceOrOverwrite(tempPath, targetPath);
-            }
-            else
-            {
-                File.Move(tempPath, targetPath);
-            }
+            FlushTempFileToDisk(tempPath);
+            ReplaceOrOverwrite(tempPath, targetPath);
         }
         finally
         {

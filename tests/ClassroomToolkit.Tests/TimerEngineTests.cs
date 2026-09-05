@@ -33,6 +33,32 @@ public sealed class TimerEngineTests
     }
 
     [Fact]
+    public void ZeroCountdown_ShouldRemainStopped_WhenStartedOrToggled()
+    {
+        var engine = new TimerEngine();
+        engine.SetCountdown(0, 0);
+
+        engine.Start();
+        engine.Toggle();
+        engine.Tick(TimeSpan.MaxValue);
+
+        engine.Running.Should().BeFalse();
+        engine.SecondsLeft.Should().Be(0);
+    }
+
+    [Fact]
+    public void SetState_ShouldNotResumeCompletedCountdown()
+    {
+        var engine = new TimerEngine();
+
+        engine.SetState(TimerMode.Countdown, countdownSeconds: 10, secondsLeft: 0, stopwatchSeconds: 0, running: true);
+
+        engine.Running.Should().BeFalse();
+        engine.Start();
+        engine.Running.Should().BeFalse();
+    }
+
+    [Fact]
     public void Stopwatch_ShouldIncrement()
     {
         var engine = new TimerEngine();
@@ -55,6 +81,36 @@ public sealed class TimerEngineTests
         engine.Tick(TimeSpan.FromMilliseconds(600));
 
         engine.StopwatchSeconds.Should().Be(1);
+    }
+
+    [Fact]
+    public void Stopwatch_ShouldSaturateOnMaximumElapsedWithoutThrowing()
+    {
+        var engine = new TimerEngine();
+        engine.SetMode(TimerMode.Stopwatch);
+        engine.Start();
+
+        var act = () => engine.Tick(TimeSpan.MaxValue);
+
+        act.Should().NotThrow();
+        engine.StopwatchSeconds.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
+    public void Reminder_ShouldHandleMaximumElapsedWithoutIntegerOverflow()
+    {
+        var engine = new TimerEngine();
+        engine.SetCountdown(int.MaxValue / 60, int.MaxValue % 60);
+        engine.ReminderIntervalSeconds = int.MaxValue - 1;
+        var reminders = 0;
+        engine.ReminderTriggered += () => reminders++;
+
+        engine.Start();
+        var act = () => engine.Tick(TimeSpan.FromSeconds(int.MaxValue));
+
+        act.Should().NotThrow();
+        engine.Running.Should().BeFalse();
+        reminders.Should().BeLessThanOrEqualTo(3);
     }
 
     [Fact]

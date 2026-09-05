@@ -89,12 +89,15 @@ public sealed class TimerEngine
         _stopwatchSeconds = Math.Max(0, stopwatchSeconds);
         _reminderCounter = 0;
         _pendingElapsed = TimeSpan.Zero;
-        Running = mode != TimerMode.Clock && running;
+        Running = mode != TimerMode.Clock
+            && running
+            && (mode != TimerMode.Countdown || _secondsLeft > 0);
     }
 
     public void Start()
     {
-        if (Mode == TimerMode.Clock)
+        if (Mode == TimerMode.Clock
+            || (Mode == TimerMode.Countdown && _secondsLeft <= 0))
         {
             Running = false;
             return;
@@ -109,7 +112,8 @@ public sealed class TimerEngine
 
     public void Toggle()
     {
-        if (Mode == TimerMode.Clock)
+        if (Mode == TimerMode.Clock
+            || (Mode == TimerMode.Countdown && _secondsLeft <= 0))
         {
             Running = false;
             return;
@@ -143,7 +147,7 @@ public sealed class TimerEngine
             return;
         }
 
-        _pendingElapsed += elapsed;
+        _pendingElapsed = AddElapsedSaturating(_pendingElapsed, elapsed);
         var totalSeconds = (int)Math.Floor(Math.Min(_pendingElapsed.TotalSeconds, int.MaxValue));
         if (totalSeconds <= 0)
         {
@@ -155,6 +159,10 @@ public sealed class TimerEngine
         {
             var next = (long)_stopwatchSeconds + totalSeconds;
             _stopwatchSeconds = next >= int.MaxValue ? int.MaxValue : (int)Math.Max(0, next);
+            if (_stopwatchSeconds == int.MaxValue)
+            {
+                _pendingElapsed = TimeSpan.Zero;
+            }
             return;
         }
         if (Mode == TimerMode.Countdown)
@@ -162,6 +170,8 @@ public sealed class TimerEngine
             var tickSeconds = Math.Min(totalSeconds, _secondsLeft);
             if (tickSeconds <= 0)
             {
+                Running = false;
+                _pendingElapsed = TimeSpan.Zero;
                 return;
             }
             _secondsLeft -= tickSeconds;
@@ -169,6 +179,7 @@ public sealed class TimerEngine
             if (_secondsLeft == 0)
             {
                 Running = false;
+                _pendingElapsed = TimeSpan.Zero;
                 InvokeEventSafely(TimerCompleted, "TimerCompleted");
             }
         }
@@ -180,9 +191,10 @@ public sealed class TimerEngine
         {
             return;
         }
-        var total = _reminderCounter + elapsedSeconds;
-        var triggers = total / _reminderSeconds;
-        _reminderCounter = total % _reminderSeconds;
+        var total = (long)_reminderCounter + elapsedSeconds;
+        var triggerCount = total / _reminderSeconds;
+        _reminderCounter = (int)(total % _reminderSeconds);
+        var triggers = (int)Math.Min(triggerCount, 3);
         if (triggers <= 0)
         {
             return;
@@ -204,12 +216,18 @@ public sealed class TimerEngine
             return;
         }
 
-        // Cap triggers to avoid sound storm on large elapsed jumps
-        triggers = Math.Min(triggers, 3);
         for (var i = 0; i < triggers; i++)
         {
             InvokeEventSafely(ReminderTriggered, "ReminderTriggered");
         }
+    }
+
+    private static TimeSpan AddElapsedSaturating(TimeSpan current, TimeSpan elapsed)
+    {
+        var remaining = TimeSpan.MaxValue - current;
+        return elapsed >= remaining
+            ? TimeSpan.MaxValue
+            : current + elapsed;
     }
 
     private static void InvokeEventSafely(Action? callback, string callbackName)

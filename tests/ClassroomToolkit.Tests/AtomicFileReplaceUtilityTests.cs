@@ -56,6 +56,30 @@ public sealed class AtomicFileReplaceUtilityTests
     }
 
     [Fact]
+    public void WriteAtomically_ShouldCreateTargetWhenItDoesNotExist()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_atomic_write_new");
+        var targetPath = Path.Combine(rootPath, "settings.json");
+
+        try
+        {
+            AtomicFileReplaceUtility.WriteAtomically(
+                targetPath,
+                tempPath => File.WriteAllText(tempPath, "new"));
+
+            File.ReadAllText(targetPath).Should().Be("new");
+            Directory.GetFiles(rootPath, $"{Path.GetFileName(targetPath)}.*.tmp").Should().BeEmpty();
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void WriteAtomically_ShouldPreserveRequestedTempFileExtension()
     {
         var rootPath = TestPathHelper.CreateDirectory("ctool_atomic_write_ext");
@@ -122,11 +146,27 @@ public sealed class AtomicFileReplaceUtilityTests
         var rootPath = Path.GetDirectoryName(targetPath)!;
         File.WriteAllText(targetPath, "old");
         var lockStream = new FileStream(targetPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        var releaseLock = Task.Run(async () =>
+        using var releaseStarted = new ManualResetEventSlim();
+        var releaseComplete = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseThread = new Thread(() =>
         {
-            await Task.Delay(25, TestContext.Current.CancellationToken);
-            lockStream.Dispose();
-        }, TestContext.Current.CancellationToken);
+            try
+            {
+                releaseStarted.Set();
+                Thread.Sleep(25);
+                lockStream.Dispose();
+                releaseComplete.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                releaseComplete.TrySetException(ex);
+            }
+        })
+        {
+            IsBackground = true
+        };
+        releaseThread.Start();
+        releaseStarted.Wait(TestContext.Current.CancellationToken);
 
         try
         {
@@ -134,14 +174,14 @@ public sealed class AtomicFileReplaceUtilityTests
                 targetPath,
                 tempPath => File.WriteAllText(tempPath, "new"));
 
-            await releaseLock;
+            await releaseComplete.Task;
             File.ReadAllText(targetPath).Should().Be("new");
             Directory.GetFiles(rootPath, $"{Path.GetFileName(targetPath)}.*.tmp").Should().BeEmpty();
         }
         finally
         {
             lockStream.Dispose();
-            await releaseLock;
+            await releaseComplete.Task;
             if (File.Exists(targetPath))
             {
                 File.Delete(targetPath);

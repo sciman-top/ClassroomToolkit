@@ -106,6 +106,41 @@ public sealed class LatestOnlyAsyncGateTests
     }
 
     [Fact]
+    public async Task Dispose_ShouldCompleteQueuedOperationWithoutRunningIt()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var gate = new LatestOnlyAsyncGate();
+        var generation = gate.NextGeneration();
+        var actionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseAction = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var queuedActionRan = false;
+        var actionStillCurrentAfterDispose = true;
+
+        var active = gate.RunAsync(generation, async isCurrent =>
+        {
+            actionStarted.SetResult(true);
+            await releaseAction.Task;
+            actionStillCurrentAfterDispose = isCurrent();
+        });
+        await actionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+
+        var queued = gate.RunAsync(generation, _ =>
+        {
+            queuedActionRan = true;
+            return Task.CompletedTask;
+        });
+
+        gate.Dispose();
+        releaseAction.SetResult(true);
+
+        await active.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        await queued.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
+
+        queuedActionRan.Should().BeFalse();
+        actionStillCurrentAfterDispose.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task RunAsync_ShouldThrowArgumentNullException_WhenActionIsNull()
     {
         var gate = new LatestOnlyAsyncGate();
