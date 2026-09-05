@@ -73,6 +73,20 @@
                         </Grid>
                     </Border>
 
+                    <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{DynamicResource Brush_Surface_Secondary}" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="自动检测更新" FontSize="{StaticResource FontSize_Body_M}" FontWeight="SemiBold"/>
+                                <TextBlock Text="启动时检查新版本；安装版将自动下载，便携版仅提醒" FontSize="{StaticResource FontSize_Body_S}" Foreground="{DynamicResource Brush_Text_Tertiary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <CheckBox x:Name="UpdateAutoCheckCheck" Grid.Column="1" Style="{StaticResource CTK.CheckBox}" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="关闭后启动时不再检查更新"/>
+                        </Grid>
+                    </Border>
+
                     <Border Style="{StaticResource Style_SurfaceSectionBorder}" Background="{DynamicResource Brush_Surface_Secondary}">
                         <StackPanel>
                             <TextBlock Text="链接" Foreground="{DynamicResource Brush_Text_Tertiary}" FontSize="{StaticResource FontSize_Body_S}" Margin="0,0,0,8"/>

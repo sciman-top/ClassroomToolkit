@@ -125,6 +125,77 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void SaveAndLoad_ShouldPersistUpdateAutoCheckEnabled()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_update");
+        try
+        {
+            var service = CreateService(path);
+            var initial = service.Load();
+            initial.UpdateAutoCheckEnabled.Should().BeTrue();
+            initial.UpdateAutoCheckEnabled = false;
+
+            service.Save(initial);
+            var reloaded = service.Load();
+
+            reloaded.UpdateAutoCheckEnabled.Should().BeFalse();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Load_ShouldRespectPersistedUpdateAutoCheckEnabled(bool persistedValue)
+    {
+        var path = CreateTempIniPath("ctool_app_settings_update_read");
+        try
+        {
+            File.WriteAllText(path, $"[Update]\nauto_check_enabled={(persistedValue ? "True" : "False")}\n");
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.UpdateAutoCheckEnabled.Should().Be(persistedValue);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldFallbackToUpdateAutoCheckDefault_WhenUpdateSectionIsMissingOrInvalid()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_update_invalid");
+        try
+        {
+            File.WriteAllText(path, "[Update]\nauto_check_enabled=NOT_A_BOOL\n");
+            var service = CreateService(path);
+
+            var settings = service.Load();
+
+            settings.UpdateAutoCheckEnabled.Should().BeTrue();
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldThrow_WhenStoreIsNull()
     {
         Action act = () => new AppSettingsService((SettingsDocumentStoreAdapter)null!);

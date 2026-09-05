@@ -28,7 +28,13 @@ public partial class MainWindow
 
     private void OnAboutClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new AboutDialog
+        var dialog = new AboutDialog(
+            _settings.UpdateAutoCheckEnabled,
+            enabled =>
+            {
+                _settings.UpdateAutoCheckEnabled = enabled;
+                SaveSettings();
+            })
         {
             Owner = this
         };

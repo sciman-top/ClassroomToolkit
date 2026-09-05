@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using FluentAssertions;
+using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.Tests;
@@ -15,7 +16,14 @@ public sealed class AutoUpdateReleaseContractTests
 
         program.Should().Contain("VelopackApp.Build().Run();");
         program.Should().Contain("application.InitializeComponent();");
-        app.Should().Contain("AutoUpdateBootstrapper.Schedule();");
+        app.Should().Contain("AutoUpdateBootstrapper.Schedule(settings);");
+
+        var bootstrapper = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Startup",
+            "AutoUpdateBootstrapper.cs"));
+        bootstrapper.Should().Contain("settings.UpdateAutoCheckEnabled");
     }
 
     [Fact]
@@ -79,5 +87,55 @@ public sealed class AutoUpdateReleaseContractTests
     public void PortableReleaseVersion_ShouldCompareReleaseTagsSafely(string current, string candidate, bool expected)
     {
         PortableReleaseVersion.IsNewer(current, candidate).Should().Be(expected);
+    }
+
+    [Fact]
+    public void Schedule_ShouldThrowArgumentNullException_WhenSettingsIsNull()
+    {
+        var act = () => AutoUpdateBootstrapper.Schedule(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Schedule_WhenAutoCheckDisabled_ShouldNotTouchCheckStateFile()
+    {
+        var statePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ClassroomToolkit",
+            "last-update-check-utc.txt");
+        var existedBefore = File.Exists(statePath);
+        var timestampBefore = existedBefore ? File.GetLastWriteTimeUtc(statePath) : DateTime.MinValue;
+
+        AutoUpdateBootstrapper.Schedule(new AppSettings { UpdateAutoCheckEnabled = false });
+
+        File.Exists(statePath).Should().Be(existedBefore);
+        if (existedBefore)
+        {
+            File.GetLastWriteTimeUtc(statePath).Should().Be(timestampBefore);
+        }
+    }
+
+    [Fact]
+    public void Schedule_WhenNotInstalledByVelopack_ShouldNotTouchCheckStateFile()
+    {
+        // 测试 bin 因项目引用带入了 enabled=true 的 update-feed.json；
+        // 宿主并非 Velopack 安装，CheckAndDownloadAsync 必须在 MarkCheckStarted 与网络之前短路。
+        File.Exists(Path.Combine(AppContext.BaseDirectory, "update-feed.json")).Should().BeTrue();
+
+        var statePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ClassroomToolkit",
+            "last-update-check-utc.txt");
+        var existedBefore = File.Exists(statePath);
+        var timestampBefore = existedBefore ? File.GetLastWriteTimeUtc(statePath) : DateTime.MinValue;
+
+        AutoUpdateBootstrapper.Schedule(new AppSettings { UpdateAutoCheckEnabled = true });
+
+        File.Exists(statePath).Should().Be(existedBefore);
+        if (existedBefore)
+        {
+            File.GetLastWriteTimeUtc(statePath).Should().Be(timestampBefore);
+        }
     }
 }

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Velopack;
 using Velopack.Sources;
+using ClassroomToolkit.App.Settings;
 
 namespace ClassroomToolkit.App.Startup;
 
@@ -18,8 +19,14 @@ internal static class AutoUpdateBootstrapper
         PropertyNameCaseInsensitive = true
     };
 
-    internal static void Schedule()
+    internal static void Schedule(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.UpdateAutoCheckEnabled)
+        {
+            return;
+        }
+
         if (Helpers.PortableRuntimeContext.IsEnabled)
         {
             PortableUpdateBootstrapper.Schedule();

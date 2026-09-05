@@ -76,6 +76,11 @@ public sealed partial class AppSettingsService
             GetString(ui, "theme", settings.UiTheme));
     }
 
+    private static void ApplyUpdateSettings(Dictionary<string, string> update, AppSettings settings)
+    {
+        settings.UpdateAutoCheckEnabled = GetBool(update, "auto_check_enabled", settings.UpdateAutoCheckEnabled);
+    }
+
     private static void SaveRollCallSettings(
         Dictionary<string, Dictionary<string, string>> data,
         AppSettings settings)
@@ -165,5 +170,13 @@ public sealed partial class AppSettingsService
     {
         var ui = GetOrCreate(data, "UI");
         ui["theme"] = UI.Themes.ThemePreferenceService.Normalize(settings.UiTheme);
+    }
+
+    private static void SaveUpdateSettings(
+        Dictionary<string, Dictionary<string, string>> data,
+        AppSettings settings)
+    {
+        var update = GetOrCreate(data, "Update");
+        SetBool(update, "auto_check_enabled", settings.UpdateAutoCheckEnabled);
     }
 }

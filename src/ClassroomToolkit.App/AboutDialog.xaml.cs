@@ -8,11 +8,22 @@ namespace ClassroomToolkit.App;
 
 public partial class AboutDialog : Window
 {
-    public AboutDialog()
+    private readonly Action<bool>? _updateAutoCheckChanged;
+
+    public AboutDialog(bool updateAutoCheckEnabled = true, Action<bool>? updateAutoCheckChanged = null)
     {
         InitializeComponent();
+        _updateAutoCheckChanged = updateAutoCheckChanged;
+        UpdateAutoCheckCheck.IsChecked = updateAutoCheckEnabled;
+        UpdateAutoCheckCheck.Checked += OnUpdateAutoCheckChanged;
+        UpdateAutoCheckCheck.Unchecked += OnUpdateAutoCheckChanged;
         Loaded += OnDialogLoaded;
         Closed += OnDialogClosed;
+    }
+
+    private void OnUpdateAutoCheckChanged(object sender, RoutedEventArgs e)
+    {
+        _updateAutoCheckChanged?.Invoke(UpdateAutoCheckCheck.IsChecked == true);
     }
 
     private void OnDialogLoaded(object sender, RoutedEventArgs e)

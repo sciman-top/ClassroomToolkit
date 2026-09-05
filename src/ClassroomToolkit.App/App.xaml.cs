@@ -75,7 +75,7 @@ public partial class App : WpfApplication
         MainWindow = mainWindow;
         mainWindow.Show();
         ShutdownMode = ShutdownMode.OnMainWindowClose;
-        AutoUpdateBootstrapper.Schedule();
+        AutoUpdateBootstrapper.Schedule(settings);
 
         // 注册全局 Border 修复（内部会立即修复已存在的主窗口，无需再单独全树遍历一次）
         BorderFixHelper.RegisterGlobalFix();

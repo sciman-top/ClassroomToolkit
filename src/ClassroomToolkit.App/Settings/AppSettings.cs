@@ -19,6 +19,8 @@ public sealed class AppSettings
 
     public string UiTheme { get; set; } = "MidnightTeal";
 
+    public bool UpdateAutoCheckEnabled { get; set; } = true;
+
     public bool RollCallShowId { get; set; }
     public bool RollCallShowName { get; set; } = true;
     public bool RollCallRemoteEnabled { get; set; }

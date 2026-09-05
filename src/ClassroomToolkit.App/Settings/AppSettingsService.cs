@@ -46,6 +46,10 @@ public sealed partial class AppSettingsService
         {
             ApplyUiSettings(ui, settings);
         }
+        if (data.TryGetValue("Update", out var update))
+        {
+            ApplyUpdateSettings(update, settings);
+        }
 
         return settings;
     }
@@ -63,6 +67,7 @@ public sealed partial class AppSettingsService
         SaveLauncherSettings(data, settings);
         SaveDiagnosticsSettings(data, settings);
         SaveUiSettings(data, settings);
+        SaveUpdateSettings(data, settings);
 
         _store.Save(data);
     }
