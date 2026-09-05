@@ -99,6 +99,48 @@ public sealed class ConfigurationServiceTests
     }
 
     [Fact]
+    public void Constructor_ShouldFallbackToDefault_WhenAppSettingsHasNonObjectJsonRoot()
+    {
+        var baseDirectory = CreateTempDirectory();
+        try
+        {
+            File.WriteAllText(Path.Combine(baseDirectory, "appsettings.json"), "[]");
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Json);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.json"));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Constructor_ShouldIgnoreNonObjectPathsNode()
+    {
+        var baseDirectory = CreateTempDirectory();
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(baseDirectory, "appsettings.json"),
+                "{\"Paths\":[]}");
+
+            var service = new ConfigurationService(baseDirectory);
+
+            service.SettingsIniPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+            service.SettingsDocumentFormat.Should().Be(SettingsDocumentFormat.Ini);
+            service.SettingsDocumentPath.Should().Be(Path.Combine(baseDirectory, "settings.ini"));
+        }
+        finally
+        {
+            Directory.Delete(baseDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldFallbackToDefault_WhenAppSettingsIsUnreadable()
     {
         var baseDirectory = CreateTempDirectory();

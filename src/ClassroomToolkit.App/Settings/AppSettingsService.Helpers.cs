@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.App.Settings;
 
@@ -48,7 +49,10 @@ public sealed partial class AppSettingsService
         {
             return fallback;
         }
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : fallback;
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
+            && double.IsFinite(result)
+            ? result
+            : fallback;
     }
 
     private static byte GetByte(Dictionary<string, string> section, string key, byte fallback)
@@ -325,6 +329,25 @@ public sealed partial class AppSettingsService
         return Math.Clamp(size, 1.0, 50.0);
     }
 
+    private static double NormalizeEraserSize(double size, double fallback)
+    {
+        var safeFallback = double.IsFinite(fallback)
+            ? fallback
+            : PaintSettingsOptionDefaults.EraserSizeDefault;
+        if (!double.IsFinite(size))
+        {
+            return Math.Clamp(
+                safeFallback,
+                PaintSettingsOptionDefaults.EraserSizeMin,
+                PaintSettingsOptionDefaults.EraserSizeMax);
+        }
+
+        return Math.Clamp(
+            size,
+            PaintSettingsOptionDefaults.EraserSizeMin,
+            PaintSettingsOptionDefaults.EraserSizeMax);
+    }
+
     private static int NormalizePresentationAutoFallbackFailureThreshold(int threshold)
     {
         return Math.Clamp(
@@ -343,6 +366,11 @@ public sealed partial class AppSettingsService
 
     private static double NormalizePaintToolbarScale(double scale)
     {
+        if (!double.IsFinite(scale))
+        {
+            return ToolbarScaleDefaults.Default;
+        }
+
         return Math.Clamp(scale, ToolbarScaleDefaults.Min, ToolbarScaleDefaults.Max);
     }
 
@@ -381,6 +409,11 @@ public sealed partial class AppSettingsService
 
     private static double NormalizePhotoWheelZoomBase(double wheelZoomBase)
     {
+        if (!double.IsFinite(wheelZoomBase))
+        {
+            return PhotoZoomInputDefaults.WheelZoomBaseDefault;
+        }
+
         return Math.Clamp(
             wheelZoomBase,
             PhotoZoomInputDefaults.WheelZoomBaseMin,
@@ -389,10 +422,67 @@ public sealed partial class AppSettingsService
 
     private static double NormalizePhotoGestureZoomSensitivity(double sensitivity)
     {
+        if (!double.IsFinite(sensitivity))
+        {
+            return PhotoZoomInputDefaults.GestureSensitivityDefault;
+        }
+
         return Math.Clamp(
             sensitivity,
             PhotoZoomInputDefaults.GestureSensitivityMin,
             PhotoZoomInputDefaults.GestureSensitivityMax);
+    }
+
+    private static double NormalizePhotoManagerLeftPanelRatio(double ratio)
+    {
+        if (!double.IsFinite(ratio) || ratio <= 0)
+        {
+            return ImageManagerWindow.DefaultLeftRatio;
+        }
+
+        return Math.Clamp(
+            ratio,
+            ImageManagerWindow.MinLeftRatio,
+            ImageManagerWindow.MaxLeftRatio);
+    }
+
+    private static double NormalizePhotoManagerThumbnailSize(double size)
+    {
+        if (!double.IsFinite(size) || size <= 0)
+        {
+            return ImageManagerWindow.DefaultThumbnailSize;
+        }
+
+        return Math.Clamp(
+            size,
+            ImageManagerWindow.MinThumbnailSize,
+            ImageManagerWindow.MaxThumbnailSize);
+    }
+
+    private static double NormalizePhotoUnifiedScale(double scale, double fallback)
+    {
+        var safeFallback = double.IsFinite(fallback)
+            ? fallback
+            : PhotoTransformViewportDefaults.DefaultScale;
+        if (!double.IsFinite(scale))
+        {
+            return Math.Clamp(
+                safeFallback,
+                PhotoTransformViewportDefaults.MinScale,
+                PhotoTransformViewportDefaults.MaxScale);
+        }
+
+        return Math.Clamp(
+            scale,
+            PhotoTransformViewportDefaults.MinScale,
+            PhotoTransformViewportDefaults.MaxScale);
+    }
+
+    private static double NormalizePhotoUnifiedTranslation(double value)
+    {
+        return double.IsFinite(value)
+            ? value
+            : PhotoUnifiedTransformDefaults.DefaultTranslateDip;
     }
 
     private static string NormalizePhotoInertiaProfile(string? profile)

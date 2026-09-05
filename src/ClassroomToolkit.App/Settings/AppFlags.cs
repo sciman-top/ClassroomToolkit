@@ -4,7 +4,6 @@ internal static class AppFlags
 {
     public static bool UseSqliteBusinessStore { get; } = ReadFlag("CTOOLKIT_USE_SQLITE_BUSINESS_STORE", false);
     public static bool EnableExperimentalSqliteBackend { get; } = ReadFlag("CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND", false);
-    public static bool UseGpuInkRenderer { get; } = ReadFlag("CTOOLKIT_USE_GPU_INK_RENDERER", false);
 
     private static bool ReadFlag(string key, bool defaultValue)
     {

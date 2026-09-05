@@ -12,7 +12,9 @@ public sealed partial class AppSettingsService
         settings.QuickBrushSize1 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_1", settings.QuickBrushSize1), settings.QuickBrushSize1);
         settings.QuickBrushSize2 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_2", settings.QuickBrushSize2), settings.QuickBrushSize2);
         settings.QuickBrushSize3 = NormalizeBrushSize(GetDouble(paint, "quick_brush_size_3", settings.QuickBrushSize3), settings.QuickBrushSize3);
-        settings.EraserSize = GetDouble(paint, "eraser_size", settings.EraserSize);
+        settings.EraserSize = NormalizeEraserSize(
+            GetDouble(paint, "eraser_size", settings.EraserSize),
+            settings.EraserSize);
         settings.BrushOpacity = GetByte(paint, "brush_opacity", settings.BrushOpacity);
         settings.BrushStyle = GetBrushStyle(GetString(paint, "brush_style", settings.BrushStyle.ToString()));
         settings.WhiteboardPreset = ResolveWhiteboardPreset(paint, settings.WhiteboardPreset);
@@ -160,14 +162,22 @@ public sealed partial class AppSettingsService
                 "photo_inertia_profile",
                 settings.PhotoInertiaProfile));
         settings.PhotoShowInkOverlay = GetBool(paint, "photo_show_ink_overlay", settings.PhotoShowInkOverlay);
-        settings.PhotoManagerWindowWidth = GetInt(paint, "photo_manager_window_width", settings.PhotoManagerWindowWidth);
-        settings.PhotoManagerWindowHeight = GetInt(paint, "photo_manager_window_height", settings.PhotoManagerWindowHeight);
-        settings.PhotoManagerLeftPanelRatio = GetDouble(paint, "photo_manager_left_panel_ratio", settings.PhotoManagerLeftPanelRatio);
-        settings.PhotoManagerLeftPanelWidth = GetInt(paint, "photo_manager_left_panel_width", settings.PhotoManagerLeftPanelWidth);
-        settings.PhotoManagerThumbnailSize = GetDouble(
-            paint,
-            "photo_manager_thumbnail_size",
-            settings.PhotoManagerThumbnailSize);
+        settings.PhotoManagerWindowWidth = Math.Max(
+            0,
+            GetInt(paint, "photo_manager_window_width", settings.PhotoManagerWindowWidth));
+        settings.PhotoManagerWindowHeight = Math.Max(
+            0,
+            GetInt(paint, "photo_manager_window_height", settings.PhotoManagerWindowHeight));
+        settings.PhotoManagerLeftPanelRatio = NormalizePhotoManagerLeftPanelRatio(
+            GetDouble(paint, "photo_manager_left_panel_ratio", settings.PhotoManagerLeftPanelRatio));
+        settings.PhotoManagerLeftPanelWidth = Math.Max(
+            0,
+            GetInt(paint, "photo_manager_left_panel_width", settings.PhotoManagerLeftPanelWidth));
+        settings.PhotoManagerThumbnailSize = NormalizePhotoManagerThumbnailSize(
+            GetDouble(
+                paint,
+                "photo_manager_thumbnail_size",
+                settings.PhotoManagerThumbnailSize));
         settings.PhotoManagerListMode = GetBool(
             paint,
             "photo_manager_list_mode",
@@ -176,22 +186,28 @@ public sealed partial class AppSettingsService
             paint,
             "photo_unified_transform_enabled",
             settings.PhotoUnifiedTransformEnabled);
-        settings.PhotoUnifiedScaleX = GetDouble(
-            paint,
-            "photo_unified_scale_x",
+        settings.PhotoUnifiedScaleX = NormalizePhotoUnifiedScale(
+            GetDouble(
+                paint,
+                "photo_unified_scale_x",
+                settings.PhotoUnifiedScaleX),
             settings.PhotoUnifiedScaleX);
-        settings.PhotoUnifiedScaleY = GetDouble(
-            paint,
-            "photo_unified_scale_y",
+        settings.PhotoUnifiedScaleY = NormalizePhotoUnifiedScale(
+            GetDouble(
+                paint,
+                "photo_unified_scale_y",
+                settings.PhotoUnifiedScaleY),
             settings.PhotoUnifiedScaleY);
-        settings.PhotoUnifiedTranslateX = GetDouble(
-            paint,
-            "photo_unified_translate_x",
-            settings.PhotoUnifiedTranslateX);
-        settings.PhotoUnifiedTranslateY = GetDouble(
-            paint,
-            "photo_unified_translate_y",
-            settings.PhotoUnifiedTranslateY);
+        settings.PhotoUnifiedTranslateX = NormalizePhotoUnifiedTranslation(
+            GetDouble(
+                paint,
+                "photo_unified_translate_x",
+                settings.PhotoUnifiedTranslateX));
+        settings.PhotoUnifiedTranslateY = NormalizePhotoUnifiedTranslation(
+            GetDouble(
+                paint,
+                "photo_unified_translate_y",
+                settings.PhotoUnifiedTranslateY));
     }
 
     private static void SavePaintSettings(
@@ -221,7 +237,9 @@ public sealed partial class AppSettingsService
         SetBool(paint, "calligraphy_seal_enabled", settings.CalligraphySealEnabled);
         paint["calligraphy_overlay_opacity_threshold"] =
             settings.CalligraphyOverlayOpacityThreshold.ToString(CultureInfo.InvariantCulture);
-        paint["eraser_size"] = settings.EraserSize.ToString("0.##", CultureInfo.InvariantCulture);
+        paint["eraser_size"] = NormalizeEraserSize(
+            settings.EraserSize,
+            defaults.EraserSize).ToString("0.##", CultureInfo.InvariantCulture);
         paint["brush_opacity"] = settings.BrushOpacity.ToString(CultureInfo.InvariantCulture);
         paint.Remove("board_opacity");
         paint["brush_color"] = settings.BrushColorHex;
@@ -286,17 +304,23 @@ public sealed partial class AppSettingsService
         paint["photo_gesture_zoom_sensitivity"] = NormalizePhotoGestureZoomSensitivity(settings.PhotoGestureZoomSensitivity).ToString("0.###", CultureInfo.InvariantCulture);
         paint["photo_inertia_profile"] = NormalizePhotoInertiaProfile(settings.PhotoInertiaProfile);
         SetBool(paint, "photo_show_ink_overlay", settings.PhotoShowInkOverlay);
-        paint["photo_manager_window_width"] = settings.PhotoManagerWindowWidth.ToString(CultureInfo.InvariantCulture);
-        paint["photo_manager_window_height"] = settings.PhotoManagerWindowHeight.ToString(CultureInfo.InvariantCulture);
-        paint["photo_manager_left_panel_ratio"] = settings.PhotoManagerLeftPanelRatio.ToString("0.####", CultureInfo.InvariantCulture);
-        paint["photo_manager_left_panel_width"] = settings.PhotoManagerLeftPanelWidth.ToString(CultureInfo.InvariantCulture);
-        paint["photo_manager_thumbnail_size"] = settings.PhotoManagerThumbnailSize.ToString("0.##", CultureInfo.InvariantCulture);
+        paint["photo_manager_window_width"] = Math.Max(0, settings.PhotoManagerWindowWidth).ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_window_height"] = Math.Max(0, settings.PhotoManagerWindowHeight).ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_left_panel_ratio"] = NormalizePhotoManagerLeftPanelRatio(settings.PhotoManagerLeftPanelRatio).ToString("0.####", CultureInfo.InvariantCulture);
+        paint["photo_manager_left_panel_width"] = Math.Max(0, settings.PhotoManagerLeftPanelWidth).ToString(CultureInfo.InvariantCulture);
+        paint["photo_manager_thumbnail_size"] = NormalizePhotoManagerThumbnailSize(settings.PhotoManagerThumbnailSize).ToString("0.##", CultureInfo.InvariantCulture);
         SetBool(paint, "photo_manager_list_mode", settings.PhotoManagerListMode);
         SetBool(paint, "photo_unified_transform_enabled", settings.PhotoUnifiedTransformEnabled);
-        paint["photo_unified_scale_x"] = settings.PhotoUnifiedScaleX.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_scale_y"] = settings.PhotoUnifiedScaleY.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_translate_x"] = settings.PhotoUnifiedTranslateX.ToString(CultureInfo.InvariantCulture);
-        paint["photo_unified_translate_y"] = settings.PhotoUnifiedTranslateY.ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_scale_x"] = NormalizePhotoUnifiedScale(
+            settings.PhotoUnifiedScaleX,
+            defaults.PhotoUnifiedScaleX).ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_scale_y"] = NormalizePhotoUnifiedScale(
+            settings.PhotoUnifiedScaleY,
+            defaults.PhotoUnifiedScaleY).ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_x"] = NormalizePhotoUnifiedTranslation(
+            settings.PhotoUnifiedTranslateX).ToString(CultureInfo.InvariantCulture);
+        paint["photo_unified_translate_y"] = NormalizePhotoUnifiedTranslation(
+            settings.PhotoUnifiedTranslateY).ToString(CultureInfo.InvariantCulture);
         paint.Remove("ink_sidebar_x");
         paint.Remove("ink_sidebar_y");
         paint.Remove("ink_sidebar_enabled");

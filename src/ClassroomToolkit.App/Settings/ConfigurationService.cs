@@ -48,6 +48,10 @@ internal sealed class ConfigurationService : IConfigurationService
             using var stream = File.OpenRead(appSettingsPath);
             using var document = JsonDocument.Parse(stream);
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return GetDefaultSettingsIniPath();
+            }
 
             if (TryReadSettingPath(root, "SettingsIniPath", out var direct))
             {
@@ -79,7 +83,9 @@ internal sealed class ConfigurationService : IConfigurationService
     private bool TryReadSettingPath(JsonElement element, string key, out string resolvedPath)
     {
         resolvedPath = string.Empty;
-        if (!element.TryGetProperty(key, out var node) || node.ValueKind != JsonValueKind.String)
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty(key, out var node)
+            || node.ValueKind != JsonValueKind.String)
         {
             return false;
         }
@@ -134,6 +140,10 @@ internal sealed class ConfigurationService : IConfigurationService
             using var stream = File.OpenRead(appSettingsPath);
             using var document = JsonDocument.Parse(stream);
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
+            }
             var hasPathsNode = root.TryGetProperty("Paths", out var pathsNode);
 
             var configuredFormat = TryReadDocumentFormat(root, "SettingsDocumentFormat")
@@ -188,7 +198,9 @@ internal sealed class ConfigurationService : IConfigurationService
 
     private static SettingsDocumentFormat? TryReadDocumentFormat(JsonElement element, string key)
     {
-        if (!element.TryGetProperty(key, out var node) || node.ValueKind != JsonValueKind.String)
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty(key, out var node)
+            || node.ValueKind != JsonValueKind.String)
         {
             return null;
         }

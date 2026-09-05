@@ -41,9 +41,17 @@ public class FileLoggerProvider : ILoggerProvider
         _resetExistingLogsOnStartup = resetExistingLogsOnStartup;
         _retentionOptions = retentionOptions ?? new LogRetentionOptions();
         _retentionNow = retentionNow;
-        if (!Directory.Exists(_logDirectory))
+        try
         {
-            Directory.CreateDirectory(_logDirectory);
+            if (!Directory.Exists(_logDirectory))
+            {
+                Directory.CreateDirectory(_logDirectory);
+            }
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // 日志目录不可用（权限/只读盘/杀软锁定）时降级为无文件日志，不阻断依赖注入与启动。
+            Debug.WriteLine($"[FileLoggerProvider] log directory unavailable: {ex.Message}");
         }
         TryResetSessionLogs();
         TryApplyRetention();

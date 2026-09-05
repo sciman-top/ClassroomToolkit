@@ -1,9 +1,11 @@
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Settings;
 using FluentAssertions;
+using System.Globalization;
 using System.Text.Json;
 
 namespace ClassroomToolkit.Tests;
@@ -407,6 +409,123 @@ public sealed class AppSettingsServiceTests
             {
                 File.Delete(path);
             }
+        }
+    }
+
+    [Fact]
+    public void Load_ShouldNormalizeNonFinitePhotoAndEraserSettings()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_non_finite_photo");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                [Paint]
+                eraser_size=Infinity
+                toolbar_scale=NaN
+                photo_wheel_zoom_base=NaN
+                photo_gesture_zoom_sensitivity=Infinity
+                photo_manager_window_width=-1
+                photo_manager_window_height=-2
+                photo_manager_left_panel_ratio=NaN
+                photo_manager_left_panel_width=-3
+                photo_manager_thumbnail_size=-Infinity
+                photo_unified_scale_x=Infinity
+                photo_unified_scale_y=NaN
+                photo_unified_translate_x=Infinity
+                photo_unified_translate_y=-Infinity
+                """);
+
+            var settings = CreateService(path).Load();
+
+            settings.EraserSize.Should().Be(PaintSettingsOptionDefaults.EraserSizeDefault);
+            settings.PaintToolbarScale.Should().Be(ToolbarScaleDefaults.Default);
+            settings.PhotoWheelZoomBase.Should().Be(PhotoZoomInputDefaults.WheelZoomBaseDefault);
+            settings.PhotoGestureZoomSensitivity.Should().Be(PhotoZoomInputDefaults.GestureSensitivityDefault);
+            settings.PhotoManagerWindowWidth.Should().Be(0);
+            settings.PhotoManagerWindowHeight.Should().Be(0);
+            settings.PhotoManagerLeftPanelRatio.Should().Be(ImageManagerWindow.DefaultLeftRatio);
+            settings.PhotoManagerLeftPanelWidth.Should().Be(0);
+            settings.PhotoManagerThumbnailSize.Should().Be(ImageManagerWindow.DefaultThumbnailSize);
+            settings.PhotoUnifiedScaleX.Should().Be(PhotoTransformViewportDefaults.DefaultScale);
+            settings.PhotoUnifiedScaleY.Should().Be(PhotoTransformViewportDefaults.DefaultScale);
+            settings.PhotoUnifiedTranslateX.Should().Be(PhotoUnifiedTransformDefaults.DefaultTranslateDip);
+            settings.PhotoUnifiedTranslateY.Should().Be(PhotoUnifiedTransformDefaults.DefaultTranslateDip);
+        }
+        finally
+        {
+            DeleteSettingsArtifacts(path);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldNotPersistNonFinitePhotoAndEraserSettings_ForJsonStore()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_non_finite_photo_json");
+        try
+        {
+            var service = CreateJsonService(path);
+            var settings = service.Load();
+            settings.EraserSize = double.NaN;
+            settings.PaintToolbarScale = double.PositiveInfinity;
+            settings.PhotoWheelZoomBase = double.NaN;
+            settings.PhotoGestureZoomSensitivity = double.NegativeInfinity;
+            settings.PhotoManagerWindowWidth = -1;
+            settings.PhotoManagerWindowHeight = -2;
+            settings.PhotoManagerLeftPanelRatio = double.NaN;
+            settings.PhotoManagerLeftPanelWidth = -3;
+            settings.PhotoManagerThumbnailSize = double.PositiveInfinity;
+            settings.PhotoUnifiedScaleX = double.PositiveInfinity;
+            settings.PhotoUnifiedScaleY = double.NaN;
+            settings.PhotoUnifiedTranslateX = double.PositiveInfinity;
+            settings.PhotoUnifiedTranslateY = double.NegativeInfinity;
+
+            service.Save(settings);
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var paint = document.RootElement.GetProperty("Paint");
+            var eraser = double.Parse(paint.GetProperty("eraser_size").GetString()!, CultureInfo.InvariantCulture);
+            var toolbarScale = double.Parse(paint.GetProperty("toolbar_scale").GetString()!, CultureInfo.InvariantCulture);
+            var wheelZoomBase = double.Parse(paint.GetProperty("photo_wheel_zoom_base").GetString()!, CultureInfo.InvariantCulture);
+            var gestureSensitivity = double.Parse(paint.GetProperty("photo_gesture_zoom_sensitivity").GetString()!, CultureInfo.InvariantCulture);
+            var leftRatio = double.Parse(paint.GetProperty("photo_manager_left_panel_ratio").GetString()!, CultureInfo.InvariantCulture);
+            var thumbnailSize = double.Parse(paint.GetProperty("photo_manager_thumbnail_size").GetString()!, CultureInfo.InvariantCulture);
+            var scaleX = double.Parse(paint.GetProperty("photo_unified_scale_x").GetString()!, CultureInfo.InvariantCulture);
+            var scaleY = double.Parse(paint.GetProperty("photo_unified_scale_y").GetString()!, CultureInfo.InvariantCulture);
+            var translateX = double.Parse(paint.GetProperty("photo_unified_translate_x").GetString()!, CultureInfo.InvariantCulture);
+            var translateY = double.Parse(paint.GetProperty("photo_unified_translate_y").GetString()!, CultureInfo.InvariantCulture);
+
+            new[]
+            {
+                eraser,
+                toolbarScale,
+                wheelZoomBase,
+                gestureSensitivity,
+                leftRatio,
+                thumbnailSize,
+                scaleX,
+                scaleY,
+                translateX,
+                translateY
+            }.Should().AllSatisfy(value => double.IsFinite(value).Should().BeTrue());
+            eraser.Should().Be(PaintSettingsOptionDefaults.EraserSizeDefault);
+            toolbarScale.Should().Be(ToolbarScaleDefaults.Default);
+            wheelZoomBase.Should().Be(PhotoZoomInputDefaults.WheelZoomBaseDefault);
+            gestureSensitivity.Should().Be(PhotoZoomInputDefaults.GestureSensitivityDefault);
+            leftRatio.Should().BeApproximately(ImageManagerWindow.DefaultLeftRatio, 0.0001);
+            thumbnailSize.Should().Be(ImageManagerWindow.DefaultThumbnailSize);
+            scaleX.Should().Be(PhotoTransformViewportDefaults.DefaultScale);
+            scaleY.Should().Be(PhotoTransformViewportDefaults.DefaultScale);
+            translateX.Should().Be(PhotoUnifiedTransformDefaults.DefaultTranslateDip);
+            translateY.Should().Be(PhotoUnifiedTransformDefaults.DefaultTranslateDip);
+            paint.GetProperty("photo_manager_window_width").GetString().Should().Be("0");
+            paint.GetProperty("photo_manager_window_height").GetString().Should().Be("0");
+            paint.GetProperty("photo_manager_left_panel_width").GetString().Should().Be("0");
+        }
+        finally
+        {
+            DeleteSettingsArtifacts(path);
         }
     }
 

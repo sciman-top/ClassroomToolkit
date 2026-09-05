@@ -199,6 +199,18 @@ public sealed class IniSettingsStore
         }
     }
 
+    // INI 行结构不支持值内换行；值来自自由文本字段（路径列表、JSON 片段等）时
+    // 剥离 CR/LF，避免读回被截断并随下次保存固化。
+    private static string SanitizeIniValue(string value)
+    {
+        if (string.IsNullOrEmpty(value) || !(value.Contains('\r') || value.Contains('\n')))
+        {
+            return value;
+        }
+
+        return value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+    }
+
     public void Save(Dictionary<string, Dictionary<string, string>> data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -210,7 +222,7 @@ public sealed class IniSettingsStore
             var sectionData = section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in sectionData)
             {
-                builder.Append(pair.Key).Append('=').Append(pair.Value).AppendLine();
+                builder.Append(pair.Key).Append('=').Append(SanitizeIniValue(pair.Value)).AppendLine();
             }
             builder.AppendLine();
         }
