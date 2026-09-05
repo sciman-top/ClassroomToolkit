@@ -17,12 +17,6 @@ internal partial class VariableWidthBrushRenderer
         return geometry;
     }
 
-    public IReadOnlyList<RibbonGeometry>? GetLastRibbonGeometries()
-    {
-        EnsureGeometryCache();
-        return _cachedRibbons == null || _cachedRibbons.Count == 0 ? null : _cachedRibbons;
-    }
-
     public Geometry? GetLastCoreGeometry()
     {
         EnsureGeometryCache();
@@ -121,23 +115,6 @@ internal partial class VariableWidthBrushRenderer
             _previewSliceBuffer.Add(_points[i]);
         }
         return _previewSliceBuffer;
-    }
-
-    public IReadOnlyList<InkBloomGeometry>? GetInkBloomGeometries()
-    {
-        EnsureGeometryCache();
-        if (_cachedBlooms == null)
-        {
-            _cachedBlooms = BuildInkBloomGeometries();
-        }
-        return _cachedBlooms.Count == 0 ? null : _cachedBlooms;
-    }
-
-    public double GetRibbonOpacity(double ribbonT)
-    {
-        double baseOpacity = Lerp(1.0, 0.38, ribbonT);
-        double inkOpacity = Lerp(0.55, 1.0, _lastInkFlow);
-        return Math.Clamp(baseOpacity * inkOpacity, 0.18, 1.0);
     }
 
     private Geometry? GenerateGeometry()

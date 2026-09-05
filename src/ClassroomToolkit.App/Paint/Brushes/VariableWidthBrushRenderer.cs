@@ -94,7 +94,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private List<RibbonGeometry>? _cachedRibbons;
     private Geometry? _cachedCoreGeometry;
     private Geometry? _cachedPreviewGeometry;
-    private List<InkBloomGeometry>? _cachedBlooms;
     private Geometry? _previewBaseGeometry;
     private int _previewBasePointCount;
     private readonly List<StrokePoint> _previewSliceBuffer = new();

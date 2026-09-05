@@ -1,10 +1,8 @@
 namespace ClassroomToolkit.App.Paint.Brushes;
 
-internal sealed class CpuInkRendererFactory : IInkRendererFactory
+internal static class CpuInkRendererFactory
 {
-    public string BackendId => "cpu";
-
-    public bool CanReuse(PaintBrushStyle brushStyle, IBrushRenderer renderer)
+    public static bool CanReuse(PaintBrushStyle brushStyle, IBrushRenderer renderer)
     {
         return brushStyle switch
         {
@@ -16,7 +14,7 @@ internal sealed class CpuInkRendererFactory : IInkRendererFactory
         };
     }
 
-    public IBrushRenderer Create(
+    public static IBrushRenderer Create(
         PaintBrushStyle brushStyle,
         MarkerBrushConfig markerConfig,
         BrushPhysicsConfig calligraphyConfig)

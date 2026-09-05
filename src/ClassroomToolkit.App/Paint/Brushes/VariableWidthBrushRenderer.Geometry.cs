@@ -29,18 +29,6 @@ internal partial class VariableWidthBrushRenderer
         public double RibbonT { get; }
     }
 
-    internal sealed class InkBloomGeometry
-    {
-        public InkBloomGeometry(Geometry geometry, double opacity)
-        {
-            Geometry = geometry;
-            Opacity = opacity;
-        }
-
-        public Geometry Geometry { get; }
-        public double Opacity { get; }
-    }
-
     private struct CapData
     {
         public WpfPoint TipPoint;
@@ -55,63 +43,6 @@ internal partial class VariableWidthBrushRenderer
         }
     }
 
-    private List<InkBloomGeometry> BuildInkBloomGeometries()
-    {
-        var result = new List<InkBloomGeometry>();
-        if (!_config.InkBloomEnabled || _points.Count < 2)
-        {
-            return result;
-        }
-
-        double maxSpeed = Math.Max(_maxVelocity, 0.001);
-        double minSpacing = Math.Max(_baseSize * _config.InkBloomMinSpacingFactor, 1.5);
-        WpfPoint? lastPos = null;
-
-        for (int i = 0; i < _points.Count; i++)
-        {
-            var point = _points[i];
-            double normSpeed = Math.Clamp(point.Speed / maxSpeed, 0, 1);
-            if (normSpeed > _config.DunBiSpeedThreshold)
-            {
-                continue;
-            }
-
-            if (lastPos.HasValue && (point.Position - lastPos.Value).Length < minSpacing)
-            {
-                continue;
-            }
-
-            var direction = ResolvePointDirection(i);
-            var normal = new Vector(-direction.Y, direction.X);
-            double normalRadius = Math.Max(point.Width * _config.InkBloomRadiusFactor, _baseSize * 0.25);
-            double tangentRadius = normalRadius * _config.InkBloomTangentFactor;
-            double accumulation = Math.Clamp(point.AccumulatedWidth / Math.Max(_baseSize, 0.001), 0, 1);
-            double wetness = Math.Clamp(point.Wetness, 0.0, 1.0);
-            double absorption = Math.Clamp(_config.PaperAbsorption, 0.0, 1.0);
-            double spread = 1.0 + (accumulation * (0.25 + wetness * 0.22)) * (1.0 - absorption * 0.28);
-
-            var ellipse = new EllipseGeometry(point.Position, normalRadius * spread, tangentRadius * spread);
-            double angle = Math.Atan2(normal.Y, normal.X) * 180.0 / Math.PI;
-            ellipse.Transform = new RotateTransform(angle, point.Position.X, point.Position.Y);
-            ellipse.Freeze();
-
-            double strength = 1.0 - Math.Clamp(normSpeed / Math.Max(_config.DunBiSpeedThreshold, 0.001), 0, 1);
-            double opacity = _config.InkBloomOpacity * strength * Math.Clamp(_lastInkFlow + 0.15, 0.4, 1.0);
-            opacity *= 0.78 + wetness * 0.35;
-            opacity = Math.Clamp(opacity, 0.05, 0.6);
-
-            result.Add(new InkBloomGeometry(ellipse, opacity));
-            lastPos = point.Position;
-
-            if (result.Count >= _config.InkBloomMaxCount)
-            {
-                break;
-            }
-        }
-
-        return result;
-    }
-
     private void EnsureGeometryCache()
     {
         if (!_cacheDirty)
@@ -123,7 +54,6 @@ internal partial class VariableWidthBrushRenderer
         _cachedRibbons = null;
         _cachedCoreGeometry = null;
         _cachedPreviewGeometry = null;
-        _cachedBlooms = null;
 
         if (_points.Count < 2)
         {
@@ -158,7 +88,6 @@ internal partial class VariableWidthBrushRenderer
         _cachedRibbons = null;
         _cachedCoreGeometry = null;
         _cachedPreviewGeometry = null;
-        _cachedBlooms = null;
         _geometryVersion++;
     }
 

@@ -146,14 +146,14 @@ public partial class PaintOverlayWindow
     private void EnsureActiveRenderer(bool force = false)
     {
         ApplyClassroomRuntimeProfile();
-        if (!force && _activeRenderer != null && _inkRendererFactory.CanReuse(_brushStyle, _activeRenderer))
+        if (!force && _activeRenderer != null && CpuInkRendererFactory.CanReuse(_brushStyle, _activeRenderer))
         {
             return;
         }
 
         var markerConfig = BuildMarkerConfig();
         var calligraphyConfig = BuildCalligraphyConfig();
-        _activeRenderer = _inkRendererFactory.Create(_brushStyle, markerConfig, calligraphyConfig);
+        _activeRenderer = CpuInkRendererFactory.Create(_brushStyle, markerConfig, calligraphyConfig);
     }
 
     private MediaColor EffectiveBrushColor()

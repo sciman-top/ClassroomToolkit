@@ -10,9 +10,7 @@ public sealed class CpuInkRendererFactoryTests
     [Fact]
     public void Create_ShouldReturnCalligraphyRenderer_ForCalligraphyStyle()
     {
-        var factory = new CpuInkRendererFactory();
-
-        var renderer = factory.Create(
+        var renderer = CpuInkRendererFactory.Create(
             PaintBrushStyle.Calligraphy,
             MarkerBrushConfig.Balanced,
             BrushPhysicsConfig.CreateCalligraphyBalanced());
@@ -23,9 +21,7 @@ public sealed class CpuInkRendererFactoryTests
     [Fact]
     public void Create_ShouldReturnRibbonMarkerRenderer_ForStandardRibbonStyle()
     {
-        var factory = new CpuInkRendererFactory();
-
-        var renderer = factory.Create(
+        var renderer = CpuInkRendererFactory.Create(
             PaintBrushStyle.StandardRibbon,
             MarkerBrushConfig.Balanced,
             BrushPhysicsConfig.CreateCalligraphyBalanced());
@@ -37,10 +33,9 @@ public sealed class CpuInkRendererFactoryTests
     [Fact]
     public void CanReuse_ShouldRejectMismatchedRendererType()
     {
-        var factory = new CpuInkRendererFactory();
         IBrushRenderer renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyBalanced());
 
-        var canReuse = factory.CanReuse(PaintBrushStyle.StandardRibbon, renderer);
+        var canReuse = CpuInkRendererFactory.CanReuse(PaintBrushStyle.StandardRibbon, renderer);
 
         canReuse.Should().BeFalse();
     }

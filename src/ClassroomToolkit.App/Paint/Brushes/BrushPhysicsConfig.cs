@@ -112,14 +112,6 @@ internal class BrushPhysicsConfig
     public double MultiRibbonWidthJitter { get; set; } = 0.04;
     public double MultiRibbonWidthFalloff { get; set; } = 0.25;
 
-    // 顿笔墨团参数
-    public bool InkBloomEnabled { get; set; } = true;
-    public double InkBloomOpacity { get; set; } = 0.24;
-    public double InkBloomRadiusFactor { get; set; } = 0.7;
-    public double InkBloomTangentFactor { get; set; } = 0.55;
-    public double InkBloomMinSpacingFactor { get; set; } = 0.35;
-    public int InkBloomMaxCount { get; set; } = 12;
-
     // 简化物理模型（含水量 + 纸张吸收）
     public double InitialInkWetness { get; set; } = 0.62;
     public double WetnessResponse { get; set; } = 0.22;

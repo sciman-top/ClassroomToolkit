@@ -67,12 +67,6 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "type",
     Target = "~T:ClassroomToolkit.App.RollCall.RollCallRemoteHookCoordinator")]
 [assembly: SuppressMessage(
-    "Performance",
-    "CA1802:Use literals where appropriate",
-    Justification = "Keep the feature flag non-const so fallback branches remain compile-checked and easy to re-enable.",
-    Scope = "member",
-    Target = "~F:ClassroomToolkit.App.Paint.PaintOverlayWindow.CalligraphySinglePassCompositeEnabled")]
-[assembly: SuppressMessage(
     "Naming",
     "CA1724:Type names should not match namespaces",
     Justification = "WPF App is the framework conventional application class name and is referenced by generated XAML startup code.",
@@ -96,12 +90,6 @@ using System.Diagnostics.CodeAnalysis;
     Justification = "Geometry DTOs are intentionally nested under the renderer to avoid broadening the brush API surface.",
     Scope = "type",
     Target = "~T:ClassroomToolkit.App.Paint.Brushes.VariableWidthBrushRenderer.RibbonGeometry")]
-[assembly: SuppressMessage(
-    "Design",
-    "CA1034:Nested types should not be visible",
-    Justification = "Geometry DTOs are intentionally nested under the renderer to avoid broadening the brush API surface.",
-    Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Paint.Brushes.VariableWidthBrushRenderer.InkBloomGeometry")]
 [assembly: SuppressMessage(
     "Globalization",
     "CA1303:Do not pass literals as localized parameters",

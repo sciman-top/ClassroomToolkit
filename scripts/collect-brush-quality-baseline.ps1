@@ -127,7 +127,7 @@ if (-not $SkipBuild) {
 $batches = @(
     @{
         Name = "quality-regression"
-        Filter = "FullyQualifiedName~BrushQualityRegressionTests|FullyQualifiedName~InkStrokeQualityMetricsTests"
+        Filter = "FullyQualifiedName~BrushQualityRegressionTests"
     },
     @{
         Name = "stylus-replay"
@@ -135,7 +135,7 @@ $batches = @(
     },
     @{
         Name = "performance-guard"
-        Filter = "FullyQualifiedName~BrushPerformanceGuardTests|FullyQualifiedName~VariableWidthBrushCornerPreserveTests|FullyQualifiedName~VariableWidthBrushRendererRibbonTests"
+        Filter = "FullyQualifiedName~BrushPerformanceGuardTests|FullyQualifiedName~VariableWidthBrushCornerPreserveTests"
     }
 )
 
