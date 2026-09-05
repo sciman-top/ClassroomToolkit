@@ -173,9 +173,7 @@ public partial class MainWindow
         if (!this.SafeDragMove(ex =>
         {
             System.Diagnostics.Debug.WriteLine(
-                LauncherDragDiagnosticsPolicy.FormatDragMoveFailureMessage(
-                    ex.GetType().Name,
-                    ex.Message));
+                $"[LauncherDrag] drag-move-failed ex={ex.GetType().Name} msg={ex.Message}");
         }))
         {
             return;

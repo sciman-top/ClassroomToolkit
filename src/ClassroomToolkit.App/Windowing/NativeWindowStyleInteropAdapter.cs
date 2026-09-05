@@ -1,10 +1,6 @@
-global using ClassroomToolkit.Interop.Presentation;
-global using ClassroomToolkit.Interop;
-global using NativeMethods = ClassroomToolkit.Interop.NativeMethods;
-global using MonitorInfo = ClassroomToolkit.Interop.NativeMethods.MonitorInfo;
-
 using System;
 using System.Runtime.InteropServices;
+using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Windowing;
 

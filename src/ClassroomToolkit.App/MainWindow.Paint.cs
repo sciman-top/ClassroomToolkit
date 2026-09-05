@@ -564,7 +564,7 @@ public partial class MainWindow
             transition.Id);
 
         var violations = _paintWindowOrchestrator.CurrentOverlaySessionViolations;
-        if (SessionTransitionViolationLogPolicy.ShouldLog(violations.Count))
+        if (violations.Count > 0)
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[UiSession][Violation] #{transition.Id} {string.Join(" | ", violations)}");

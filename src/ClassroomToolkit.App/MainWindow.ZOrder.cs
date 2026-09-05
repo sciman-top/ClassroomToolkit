@@ -58,8 +58,7 @@ public partial class MainWindow
         if (!dedupDecision.ShouldApply)
         {
             System.Diagnostics.Debug.WriteLine(
-                SurfaceZOrderDecisionDiagnosticsPolicy.FormatDedupSkipMessage(
-                    dedupDecision.Reason));
+                $"[SurfaceZOrder][Dedup] skip reason={dedupDecision.Reason}");
             return;
         }
 
@@ -307,7 +306,7 @@ public partial class MainWindow
         if (LauncherWindowRuntimeSelectionLogPolicy.ShouldLog(snapshot.SelectionReason))
         {
             System.Diagnostics.Debug.WriteLine(
-                LauncherWindowRuntimeDiagnosticsPolicy.FormatSelectionMessage(snapshot.SelectionReason));
+                $"[Launcher][Snapshot] selection={snapshot.SelectionReason}");
         }
 
         return snapshot;

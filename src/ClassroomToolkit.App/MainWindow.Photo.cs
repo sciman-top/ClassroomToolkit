@@ -408,9 +408,7 @@ public partial class MainWindow
         if (!result.Applied)
         {
             System.Diagnostics.Debug.WriteLine(
-                ForegroundExplicitRetouchDiagnosticsPolicy.FormatThrottleSkipMessage(
-                    surface,
-                    result.Reason));
+                $"[ExplicitForeground][Throttle] skip surface={surface} reason={result.Reason}");
         }
     }
 

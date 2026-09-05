@@ -224,11 +224,7 @@ public partial class MainWindow
                 catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine(
-                        BorderFixDiagnosticsPolicy.FormatFailureMessage(
-                            phase,
-                            target,
-                            ex.GetType().Name,
-                            ex.Message));
+                        $"[BorderFix] failed phase={phase} target={target} ex={ex.GetType().Name} msg={ex.Message}");
                 }
             });
     }
