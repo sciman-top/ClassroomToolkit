@@ -7,6 +7,7 @@ using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Services.Presentation;
 using MediaColor = System.Windows.Media.Color;
 
@@ -124,7 +125,7 @@ public partial class PaintOverlayWindow
     public void SetBrush(MediaColor color, double size, byte opacity)
     {
         _brushColor = color;
-        _brushSize = Math.Max(1.0, size);
+        _brushSize = PaintToolSizePolicy.NormalizeBrushSize(size, _brushSize);
         _brushOpacity = opacity;
         if (_mode == PaintToolMode.Brush)
         {
@@ -134,7 +135,7 @@ public partial class PaintOverlayWindow
 
     public void SetEraserSize(double size)
     {
-        _eraserSize = Math.Max(4.0, size);
+        _eraserSize = PaintToolSizePolicy.NormalizeEraserSize(size, _eraserSize);
         if (_mode == PaintToolMode.Eraser)
         {
             UpdateCursor(PaintToolMode.Eraser);

@@ -48,6 +48,12 @@ public partial class PaintOverlayWindow
 
     public void UpdatePhotoZoomTuning(double wheelBase, double gestureSensitivity)
     {
+        wheelBase = double.IsFinite(wheelBase)
+            ? wheelBase
+            : PhotoZoomInputDefaults.WheelZoomBaseDefault;
+        gestureSensitivity = double.IsFinite(gestureSensitivity)
+            ? gestureSensitivity
+            : PhotoZoomInputDefaults.GestureSensitivityDefault;
         _photoWheelZoomBase = Math.Clamp(
             wheelBase,
             PhotoZoomInputDefaults.WheelZoomBaseMin,

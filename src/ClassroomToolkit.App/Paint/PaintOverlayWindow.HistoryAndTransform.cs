@@ -153,10 +153,10 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        _lastPhotoScaleX = scaleX;
-        _lastPhotoScaleY = scaleY;
-        _lastPhotoTranslateX = translateX;
-        _lastPhotoTranslateY = translateY;
+        _lastPhotoScaleX = PhotoUnifiedTransformDefaults.NormalizeScale(scaleX);
+        _lastPhotoScaleY = PhotoUnifiedTransformDefaults.NormalizeScale(scaleY);
+        _lastPhotoTranslateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(translateX);
+        _lastPhotoTranslateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(translateY);
         _photoUserTransformDirty = true;
         if (PhotoUnifiedTransformApplyPolicy.ShouldApplyRuntimeTransform(
                 _rememberPhotoTransform,
@@ -179,10 +179,10 @@ public partial class PaintOverlayWindow
             translateY = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
             return false;
         }
-        scaleX = _lastPhotoScaleX;
-        scaleY = _lastPhotoScaleY;
-        translateX = _lastPhotoTranslateX;
-        translateY = _lastPhotoTranslateY;
+        scaleX = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleX);
+        scaleY = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleY);
+        translateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateX);
+        translateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateY);
         return true;
     }
 }

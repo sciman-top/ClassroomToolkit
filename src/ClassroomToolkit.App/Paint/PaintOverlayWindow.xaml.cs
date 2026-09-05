@@ -18,10 +18,8 @@ using IoPath = System.IO.Path;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Photos;
-using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.Utilities;
-using ClassroomToolkit.Services.Presentation;
 using MediaColor = System.Windows.Media.Color;
 using MediaBrushes = System.Windows.Media.Brushes;
 using MediaBrush = System.Windows.Media.Brush;
@@ -57,9 +55,6 @@ public partial class PaintOverlayWindow : Window
     {
         _logger = logger;
         InitializeComponent();
-        _inkRendererFactory = InkRendererFactoryResolver.Resolve(
-            AppFlags.UseGpuInkRenderer,
-            out _);
         _neighborPagesCanvas = FindName("NeighborPagesCanvas") as System.Windows.Controls.Canvas;
         _visualHost = new DrawingVisualHost();
         CustomDrawHost.Child = _visualHost;
@@ -130,36 +125,21 @@ public partial class PaintOverlayWindow : Window
         UpdateBoardBackground();
         ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
 
-        _presentationClassifier = new PresentationClassifier();
-        var planner = new ClassroomToolkit.Services.Presentation.PresentationControlPlanner(_presentationClassifier);
-        var mapper = new ClassroomToolkit.Services.Presentation.PresentationCommandMapper();
-        var sender = new Win32InputSender();
-        _presentationResolver = new Win32PresentationResolver();
-        _presentationService = new ClassroomToolkit.Services.Presentation.PresentationControlService(planner, mapper, sender, _presentationResolver, new ClassroomToolkit.Services.Presentation.Win32PresentationWindowValidator());
-        _presentationOptions = new ClassroomToolkit.Services.Presentation.PresentationControlOptions
-        {
-            Strategy = InputStrategy.Auto,
-            WheelAsKey = false,
-            WpsDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs,
-            LockStrategyWhenDegraded = true,
-            AutoFallbackFailureThreshold = ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackFailureThresholdDefault,
-            AutoFallbackProbeIntervalCommands = ClassroomToolkit.Services.Presentation.PresentationControlOptions.AutoFallbackProbeIntervalCommandsDefault,
-            AllowOffice = true,
-            AllowWps = true
-        };
-        _presentationInputPipeline = new PresentationInputPipeline(
-            _presentationService,
-            _presentationOptions.Strategy,
-            InputStrategy.Auto);
-        _presentationTargetSnapshotProvider = new OverlayPresentationTargetSnapshotProvider(
-            _presentationResolver,
+        _presentationClassifier = new ClassroomToolkit.Interop.Presentation.PresentationClassifier();
+        var presentationRuntime = PaintPresentationRuntimeFactory.Create(
+            _presentationClassifier,
             () => _presentationClassifier,
             IsFullscreenWindow,
             _currentProcessId);
-        _presentationDispatchCoordinator = new OverlayPresentationDispatchCoordinator(_presentationTargetSnapshotProvider);
-        _wpsNavHook = new WpsSlideshowNavigationHook();
+        _presentationResolver = presentationRuntime.Resolver;
+        _presentationService = presentationRuntime.Service;
+        _presentationOptions = presentationRuntime.Options;
+        _presentationInputPipeline = presentationRuntime.InputPipeline;
+        _presentationTargetSnapshotProvider = presentationRuntime.TargetSnapshotProvider;
+        _presentationDispatchCoordinator = presentationRuntime.DispatchCoordinator;
+        _wpsNavHook = presentationRuntime.WpsNavHook;
         var navHook = _wpsNavHook;
-        _wpsNavHookClient = new WpsNavHookClient(navHook);
+        _wpsNavHookClient = presentationRuntime.WpsNavHookClient;
         if (navHook.Available)
         {
             navHook.NavigationRequested += OnWpsNavHookRequested;

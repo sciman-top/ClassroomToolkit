@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Ink;
+using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Photos;
@@ -76,7 +77,7 @@ public partial class PaintOverlayWindow : Window
     private PresentationClassifier _presentationClassifier;
     private readonly Win32PresentationResolver _presentationResolver;
     private readonly WpsSlideshowNavigationHook? _wpsNavHook;
-    private readonly WpsNavHookClient? _wpsNavHookClient;
+    private readonly IWpsNavHookClient? _wpsNavHookClient;
     private readonly WpsHookOrchestrator _wpsHookOrchestrator = new();
     private readonly LatestOnlyAsyncGate _wpsNavHookStateGate = new();
     private bool _wpsNavHookActive;

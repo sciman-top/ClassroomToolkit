@@ -110,20 +110,24 @@ public partial class PaintOverlayWindow
             return false;
         }
         EnsurePhotoTransformsWritable();
-        _photoScale.ScaleX = state.ScaleX;
-        _photoScale.ScaleY = state.ScaleY;
-        _photoTranslate.X = state.TranslateX;
-        _photoTranslate.Y = state.TranslateY;
+        _photoScale.ScaleX = PhotoUnifiedTransformDefaults.NormalizeScale(state.ScaleX);
+        _photoScale.ScaleY = PhotoUnifiedTransformDefaults.NormalizeScale(state.ScaleY);
+        _photoTranslate.X = PhotoUnifiedTransformDefaults.NormalizeTranslation(state.TranslateX);
+        _photoTranslate.Y = PhotoUnifiedTransformDefaults.NormalizeTranslation(state.TranslateY);
         _photoUserTransformDirty = state.UserAdjusted;
         return true;
     }
 
     private void SavePhotoTransformState(bool userAdjusted)
     {
-        _lastPhotoScaleX = _photoScale.ScaleX;
-        _lastPhotoScaleY = _photoScale.ScaleY;
-        _lastPhotoTranslateX = _photoTranslate.X;
-        _lastPhotoTranslateY = _photoTranslate.Y;
+        _lastPhotoScaleX = PhotoUnifiedTransformDefaults.NormalizeScale(_photoScale.ScaleX);
+        _lastPhotoScaleY = PhotoUnifiedTransformDefaults.NormalizeScale(_photoScale.ScaleY);
+        _lastPhotoTranslateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(_photoTranslate.X);
+        _lastPhotoTranslateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(_photoTranslate.Y);
+        _photoScale.ScaleX = _lastPhotoScaleX;
+        _photoScale.ScaleY = _lastPhotoScaleY;
+        _photoTranslate.X = _lastPhotoTranslateX;
+        _photoTranslate.Y = _lastPhotoTranslateY;
         _photoUserTransformDirty = userAdjusted;
         if (_rememberPhotoTransform && IsCrossPageDisplayActive())
         {
@@ -137,10 +141,10 @@ public partial class PaintOverlayWindow
             if (!string.IsNullOrWhiteSpace(key))
             {
                 _photoPageTransforms[key] = new PhotoTransformState(
-                    _photoScale.ScaleX,
-                    _photoScale.ScaleY,
-                    _photoTranslate.X,
-                    _photoTranslate.Y,
+                    _lastPhotoScaleX,
+                    _lastPhotoScaleY,
+                    _lastPhotoTranslateX,
+                    _lastPhotoTranslateY,
                     userAdjusted);
             }
         }

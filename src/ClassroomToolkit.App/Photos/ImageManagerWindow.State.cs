@@ -19,13 +19,13 @@ namespace ClassroomToolkit.App.Photos;
 [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing image manager window contract.")]
 public partial class ImageManagerWindow : Window
 {
-    private const double DefaultLeftRatio = 2.0 / 7.0;
-    private const double MinLeftRatio = 0.05;
-    private const double MaxLeftRatio = 0.95;
+    internal const double DefaultLeftRatio = 2.0 / 7.0;
+    internal const double MinLeftRatio = 0.05;
+    internal const double MaxLeftRatio = 0.95;
     private const double NarrowWindowThreshold = 1100.0;
-    private const double DefaultThumbnailSize = 120.0;
-    private const double MinThumbnailSize = 90.0;
-    private const double MaxThumbnailSize = 420.0;
+    internal const double DefaultThumbnailSize = 120.0;
+    internal const double MinThumbnailSize = 90.0;
+    internal const double MaxThumbnailSize = 420.0;
     private const double DefaultWindowWidth = 1100.0;
     private const double DefaultWindowHeight = 700.0;
     private const int MultiSelectLongPressMilliseconds = 650;

@@ -173,6 +173,10 @@ public partial class PaintOverlayWindow
     private void ApplyLastUnifiedPhotoTransform(bool markUserDirty)
     {
         EnsurePhotoTransformsWritable();
+        _lastPhotoScaleX = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleX);
+        _lastPhotoScaleY = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleY);
+        _lastPhotoTranslateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateX);
+        _lastPhotoTranslateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateY);
         _photoScale.ScaleX = _lastPhotoScaleX;
         _photoScale.ScaleY = _lastPhotoScaleY;
         _photoTranslate.X = _lastPhotoTranslateX;

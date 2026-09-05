@@ -32,27 +32,39 @@ public partial class PaintOverlayWindow
         }
         return PaintActionInvoker.TryInvoke<BitmapSource?>(() =>
         {
+            using var stream = File.Open(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            var effectiveDecodeWidth = 0;
+            if (downsampleToMonitor)
+            {
+                effectiveDecodeWidth = targetDecodeWidth > 0
+                    ? targetDecodeWidth
+                    : ResolvePhotoDownsampleDecodeWidth();
+            }
+            var sourcePixelWidth = effectiveDecodeWidth > 0
+                ? TryReadImagePixelWidth(stream)
+                : 0;
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.StreamSource = stream;
             bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
 
             // Limit decoding resolution to prevent OOM in cross-page mode.
             // Important: decode width must only downsample large sources, never upscale.
-            if (downsampleToMonitor)
+            if (effectiveDecodeWidth > 0)
             {
-                var effectiveDecodeWidth = targetDecodeWidth > 0
-                    ? targetDecodeWidth
-                    : ResolvePhotoDownsampleDecodeWidth();
-                if (effectiveDecodeWidth > 0)
+                if (sourcePixelWidth > effectiveDecodeWidth)
                 {
-                    var sourcePixelWidth = TryReadImagePixelWidth(path);
-                    if (sourcePixelWidth > 0
-                        && sourcePixelWidth > effectiveDecodeWidth)
-                    {
-                        bitmap.DecodePixelWidth = effectiveDecodeWidth;
-                    }
+                    bitmap.DecodePixelWidth = effectiveDecodeWidth;
                 }
             }
 
@@ -93,11 +105,14 @@ public partial class PaintOverlayWindow
                || format == PixelFormats.Gray8;
     }
 
-    private static int TryReadImagePixelWidth(string path)
+    private static int TryReadImagePixelWidth(Stream stream)
     {
         return PaintActionInvoker.TryInvoke(() =>
         {
-            using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
             var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
             if (decoder.Frames.Count == 0)
             {
@@ -143,10 +158,17 @@ public partial class PaintOverlayWindow
 
                     if (bitmap == null)
                     {
+                        var hadDisplayedPhoto = !string.IsNullOrEmpty(_photoBackgroundSourcePath);
                         PhotoBackground.Source = null;
                         _photoBackgroundSourcePath = string.Empty;
                         RefreshPhotoBackgroundVisibility();
-                        ExitPhotoMode();
+                        if (!hadDisplayedPhoto)
+                        {
+                            // 首图即失败：没有可展示内容，退出照片模式回到画板。
+                            ExitPhotoMode();
+                        }
+                        // 翻页中单图损坏/被占用：保留照片模式（屏上可能还有墨迹批注），
+                        // 仅清空背景，教师可继续翻页或手动退出；与缩略图路径降级粒度一致。
                         return;
                     }
 
