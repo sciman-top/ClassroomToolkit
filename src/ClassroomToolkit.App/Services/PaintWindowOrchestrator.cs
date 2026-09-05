@@ -72,10 +72,17 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
             new EventId(4, nameof(LogPresentationClassifierAutoLearnApplied)),
             "Presentation classifier auto-learn applied. {Reason}");
 
+    private static readonly Action<ILogger, Exception, Exception?> LogSettingsSaveFailed =
+        LoggerMessage.Define<Exception>(
+            LogLevel.Warning,
+            new EventId(5, nameof(LogSettingsSaveFailed)),
+            "Paint settings save failed: {Exception}");
+
     private readonly IPaintWindowFactory _paintWindowFactory;
     private readonly AppSettingsService _appSettingsService;
     private readonly ILogger<PaintWindowOrchestrator> _logger;
     private AppSettings? _currentSettings;
+    private bool _settingsSaveFailedNotified;
 
     public PaintOverlayWindow? OverlayWindow { get; private set; }
     public PaintToolbarWindow? ToolbarWindow { get; private set; }
@@ -351,7 +358,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         _currentSettings.BrushColor = color;
         _currentSettings.BrushSize = ToolbarWindow.BrushSize;
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
     }
 
     private void OnToolbarBoardColorChanged(System.Windows.Media.Color color)
@@ -362,7 +369,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         _currentSettings.BoardColor = color;
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
         if (!ToolbarWindow.HasOverlay)
         {
             OverlayWindow.SetBoardColor(color);
@@ -399,7 +406,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         _currentSettings.BrushColor = color;
         _currentSettings.BrushSize = ToolbarWindow?.BrushSize ?? _currentSettings.BrushSize;
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
     }
 
     private void OnToolbarQuickBrushSizeSlotChanged(int index, double brushSize)
@@ -417,7 +424,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         _currentSettings.BrushSize = ToolbarWindow?.BrushSize ?? brushSize;
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
     }
 
     private void OnToolbarShapeTypeChanged(PaintShapeType type)
@@ -428,7 +435,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         _currentSettings.ShapeType = type;
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
         OverlayWindow?.SetShapeType(type);
     }
 
@@ -460,6 +467,51 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         SafeActionExecutionExecutor.TryExecute(
             callback,
             ex => LogEventCallbackFailed(_logger, eventName, ex));
+    }
+
+    /// <summary>
+    /// 工具条各事件回调与工具条窗口 Closed 路径统一走这里保存设置：
+    /// 失败时一次性提示，避免事件路径静默吞掉、Closed 路径裸抛进全局错误弹窗。
+    /// </summary>
+    private void SaveSettingsSafe()
+    {
+        if (_currentSettings == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _appSettingsService.Save(_currentSettings);
+            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            LogSettingsSaveFailed(_logger, ex, null);
+            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
+                ref _settingsSaveFailedNotified,
+                notificationPlan);
+            if (!notificationPlan.ShouldNotify)
+            {
+                return;
+            }
+
+            var owner = System.Windows.Application.Current?.MainWindow;
+            if (owner == null)
+            {
+                return;
+            }
+
+            SafeActionExecutionExecutor.TryExecute(
+                () => TopmostMessageBox.Show(
+                    owner,
+                    $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。",
+                    "提示",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning),
+                ex2 => LogEventCallbackFailed(_logger, "settings-save-failed-notify", ex2));
+        }
     }
 
     private PaintToolMode ResolvePreferredPrimaryToolMode()
@@ -565,7 +617,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
                 _currentSettings.PresentationClassifierRecentLearnRecordsJson,
                 learnedAtUtc,
                 reason);
-        _appSettingsService.Save(_currentSettings);
+        SaveSettingsSafe();
         OverlayWindow.UpdatePresentationClassifierOverrides(mergedOverridesJson);
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -667,7 +719,8 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         settings.PaintToolbarY = (int)Math.Round(ToolbarWindow.Top);
         if (save)
         {
-            _appSettingsService.Save(settings);
+            // 调用方传入的 settings 与 EnsureWindows 注入的 _currentSettings 是同一 DI 单例。
+            SaveSettingsSafe();
         }
     }
 

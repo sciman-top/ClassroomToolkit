@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -261,12 +262,12 @@ public partial class TimerSetDialog : Window
     {
         if (!int.TryParse(MinutesBox.Text, out var minutes) || minutes < 0 || minutes > MaxMinutes)
         {
-            System.Windows.MessageBox.Show($"请输入 0-{MaxMinutes} 的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TopmostMessageBox.Show(this, $"请输入 0-{MaxMinutes} 的分钟数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!int.TryParse(SecondsBox.Text, out var seconds) || seconds < 0 || seconds > 59)
         {
-            System.Windows.MessageBox.Show("请输入 0-59 的秒数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TopmostMessageBox.Show(this, "请输入 0-59 的秒数。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         Minutes = minutes;

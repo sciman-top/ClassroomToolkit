@@ -59,7 +59,20 @@ public partial class DiagnosticsDialog : Window
         {
             text += $"{Environment.NewLine}{Environment.NewLine}{_result.Suggestion}";
         }
-        System.Windows.Clipboard.SetText(text);
+        try
+        {
+            System.Windows.Clipboard.SetText(text);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            // 剪贴板常被远控/输入法/剪贴板工具占用，降级提示而不是抛进全局错误弹窗。
+            TopmostMessageBox.Show(
+                this,
+                "复制失败：剪贴板被其他程序占用，请稍后重试。",
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private void OnExportBundleClick(object sender, RoutedEventArgs e)
@@ -105,7 +118,20 @@ public partial class DiagnosticsDialog : Window
         }
 
         _settings.StartupCompatibilitySuppressedIssueCodes.Clear();
-        _settingsService.Save(_settings);
+        try
+        {
+            _settingsService.Save(_settings);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            TopmostMessageBox.Show(
+                this,
+                $"保存设置失败：{ex.Message}\n请检查设置文件权限或磁盘状态。",
+                "提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
         TopmostMessageBox.Show(
             this,
             "已重新启用启动兼容性提示。下次启动会再次检测。",

@@ -66,11 +66,21 @@ internal static class PortableUpdateBootstrapper
 
     private static void NotifyNewRelease(PortableReleaseConfiguration configuration, string tagName)
     {
-        var result = System.Windows.MessageBox.Show(
-            $"发现绿色便携版新版本 {tagName}。\n\n是否打开 GitHub 下载页面？",
-            "课堂工具箱更新",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Information);
+        // 主窗口与启动器气泡都是 Topmost；无 owner 的消息框会被压在下面，
+        // 表现为“点了没反应”，必须经 TopmostMessageBox 抑制父窗置顶。
+        var owner = System.Windows.Application.Current?.MainWindow;
+        var result = owner != null
+            ? Windowing.TopmostMessageBox.Show(
+                owner,
+                $"发现绿色便携版新版本 {tagName}。\n\n是否打开 GitHub 下载页面？",
+                "课堂工具箱更新",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Information)
+            : System.Windows.MessageBox.Show(
+                $"发现绿色便携版新版本 {tagName}。\n\n是否打开 GitHub 下载页面？",
+                "课堂工具箱更新",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Information);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;

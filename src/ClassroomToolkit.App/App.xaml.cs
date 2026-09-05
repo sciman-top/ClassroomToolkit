@@ -12,13 +12,7 @@ using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Startup;
-using ClassroomToolkit.Application.Abstractions;
-using ClassroomToolkit.Application.UseCases.RollCall;
-using ClassroomToolkit.Infra.Settings;
-using ClassroomToolkit.Infra.Storage;
 using ClassroomToolkit.Infra.Logging;
-using Microsoft.Extensions.Logging;
-using ClassroomToolkit.Services.Compatibility;
 using ClassroomToolkit.App.UI.Themes;
 
 namespace ClassroomToolkit.App;
@@ -40,6 +34,35 @@ public partial class App : WpfApplication
     {
         // 注册全局异常处理
         RegisterGlobalExceptionHandlers();
+
+        // OnStartup 中途抛出的非致命异常会被全局处理器标记 Handled 并吞掉：
+        // OnStartup 剩余步骤被中止但 Run() 继续泵消息，主窗口永不创建，
+        // 进程以"无窗口僵尸"驻留。启动失败必须在此收口并显式退出。
+        try
+        {
+            RunStartupSequence(e);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            LogException(ex, "App.OnStartup");
+            try
+            {
+                System.Windows.MessageBox.Show(
+                    $"程序启动失败：{ex.Message}\n\n详细错误已记录到日志文件。",
+                    "启动错误",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch (Exception showEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(showEx))
+            {
+                // 连错误弹窗都无法显示时，直接退出仍优于僵尸驻留
+            }
+            Environment.Exit(-1);
+        }
+    }
+
+    private void RunStartupSequence(StartupEventArgs e)
+    {
         TryApplyErrorLogRetention();
         PhotoOverlayDiagnostics.InitializeSession(Path.Combine(AppDataDirectory, "logs"));
         ConfigureServices();
@@ -91,130 +114,7 @@ public partial class App : WpfApplication
 
     private void ConfigureServices()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton<IConfigurationService, ConfigurationService>();
-        services.AddSingleton<ISettingsDocumentStore>(provider =>
-        {
-            var configuration = provider.GetRequiredService<IConfigurationService>();
-            var fallbackToIni = TryBootstrapSettingsDocumentMigration(configuration);
-            if (fallbackToIni)
-            {
-                return new SettingsDocumentStoreAdapter(configuration.SettingsIniPath);
-            }
-            return configuration.SettingsDocumentFormat switch
-            {
-                SettingsDocumentFormat.Json => new JsonSettingsDocumentStoreAdapter(configuration.SettingsDocumentPath),
-                _ => new SettingsDocumentStoreAdapter(configuration.SettingsDocumentPath)
-            };
-        });
-        services.AddSingleton<IRollCallWorkbookStore>(_ =>
-        {
-            var store = RollCallWorkbookStoreResolver.Create(
-                AppFlags.UseSqliteBusinessStore,
-                AppFlags.EnableExperimentalSqliteBackend,
-                out var selectedBackend);
-            Debug.WriteLine(
-                $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
-            return store;
-        });
-        services.AddSingleton<RollCallWorkbookUseCase>();
-        services.AddSingleton<AppSettingsService>();
-        services.AddSingleton<ThemeManager>(_ => new ThemeManager(this));
-        services.AddSingleton(provider =>
-        {
-            var settingsService = provider.GetRequiredService<AppSettingsService>();
-            var settings = settingsService.Load();
-            var presetInitialization = Paint.PresetSchemeInitializationPolicy.Resolve(settings);
-            var uiDefaultsInitialization = Settings.UiDefaultsBootstrapOptimizationPolicy.Resolve(settings);
-            if (presetInitialization.ShouldPersist || uiDefaultsInitialization.ShouldPersist)
-            {
-                try
-                {
-                    settingsService.Save(settings);
-                    Debug.WriteLine(
-                        $"[PresetInit] persisted auto-init applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason}");
-                    Debug.WriteLine(
-                        $"[UiDefaultsInit] persisted inkPathOptimized={uiDefaultsInitialization.InkPathOptimized} launcherReset={uiDefaultsInitialization.LauncherPositionReset} toolbarReset={uiDefaultsInitialization.PaintToolbarPositionReset}");
-                }
-                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-                {
-                    Debug.WriteLine(
-                        $"[PresetInit] persist failed applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason} error={ex.Message}");
-                }
-            }
-
-            return settings;
-        });
-        services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
-        services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
-        services.AddSingleton<Paint.IPaintWindowFactory, Paint.PaintWindowFactory>();
-        services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
-        services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
-        services.AddSingleton<Services.IPaintWindowOrchestrator, Services.PaintWindowOrchestrator>();
-        services.AddSingleton<MainWindow>();
-        services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
-        services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
-        services.AddSingleton<Ink.InkPersistenceService>();
-        var useInkHistorySqlite = AppFlags.UseSqliteBusinessStore
-            && BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(AppFlags.EnableExperimentalSqliteBackend);
-        Debug.WriteLine(
-            $"[Storage] InkHistory backend selected={(useInkHistorySqlite ? "Sqlite" : "Sidecar")}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
-        if (useInkHistorySqlite)
-        {
-            services.AddSingleton<IInkHistorySnapshotStore>(provider =>
-            {
-                var persistence = provider.GetRequiredService<Ink.InkPersistenceService>();
-                var bridge = new Ink.InkHistoryPersistenceBridge(persistence);
-                var sqliteAdapter = new InkHistorySqliteStoreAdapter(bridge);
-                return new InkHistorySnapshotStoreAdapter(sqliteAdapter);
-            });
-        }
-        services.AddSingleton<Ink.InkExportOptions>();
-        services.AddSingleton<Ink.InkExportService>();
-
-        // Logging
-        services.AddLogging(builder =>
-        {
-#if DEBUG
-            builder.SetMinimumLevel(LogLevel.Debug);
-#else
-            builder.SetMinimumLevel(LogLevel.Information);
-#endif
-            // Console logger for development
-            builder.AddConsole();
-
-            // File logger for production/persistence
-            var logPath = Path.Combine(AppDataDirectory, "logs");
-            builder.AddProvider(new ClassroomToolkit.Infra.Logging.FileLoggerProvider(
-                logPath,
-                resetExistingLogsOnStartup: false));
-        });
-
-        _services = services.BuildServiceProvider();
-    }
-
-    private static bool TryBootstrapSettingsDocumentMigration(IConfigurationService configuration)
-    {
-        var decision = SettingsDocumentBootstrapMigrationPolicy.Resolve(
-            configuration.SettingsDocumentFormat,
-            File.Exists(configuration.SettingsDocumentPath),
-            File.Exists(configuration.SettingsIniPath));
-        var migrated = SettingsDocumentBootstrapMigrationExecutor.TryMigrate(
-            decision,
-            configuration.SettingsIniPath,
-            configuration.SettingsDocumentPath,
-            (iniPath, jsonPath, overwriteJson) =>
-                new SettingsDocumentMigrationService().MigrateIniToJson(iniPath, jsonPath, overwriteJson).Migrated,
-            message => Debug.WriteLine(message));
-
-        var fallbackToIni = decision.ShouldMigrate && !migrated;
-        if (fallbackToIni)
-        {
-            Debug.WriteLine(
-                $"[SettingsMigration] bootstrap migration failed; fallback to INI source={configuration.SettingsIniPath}");
-        }
-
-        return fallbackToIni;
+        _services = AppCompositionRoot.Build(this, AppDataDirectory);
     }
 
     private void RegisterGlobalExceptionHandlers()

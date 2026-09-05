@@ -71,6 +71,13 @@ internal static class RegionScreenCaptureWorkflow
             passthroughRegions,
             deferInitialPassthroughCancelUntilPointerLeaves ? cursorPosition : null);
         var accepted = ShowSelectionOverlay(selector);
+        // PushFrame 嵌套消息泵期间定时器照常触发，应用可能已在框选中被自动退出/关停；
+        // 关停后不得继续执行窗口续接逻辑（进入照片模式/操作已关闭的工具条）。
+        if (System.Windows.Application.Current?.Dispatcher is { } dispatcher
+            && (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished))
+        {
+            return new RegionScreenCaptureResult(false, null, RegionScreenCaptureCancelReason.UserCanceled);
+        }
         if (!accepted || !selector.TryGetSelection(out var selection))
         {
             var cancelReason = selector.CanceledByPassthrough
