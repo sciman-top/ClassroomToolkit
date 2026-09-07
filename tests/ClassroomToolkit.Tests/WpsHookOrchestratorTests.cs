@@ -88,6 +88,82 @@ public sealed class WpsHookOrchestratorTests
     }
 
     [Fact]
+    public void ApplyEnabled_ShouldReapplyReservedKeys_AfterDisableEnableCycle()
+    {
+        // 回归：保留键只由点名侧事件写入；overlay 显隐/模式切换会走 ApplyDisabled→ApplyEnabled，
+        // 若重启用不回填，Enter 会同时切换点名分组并注入 WPS 翻页。
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient();
+        orchestrator.SetReservedPresentationKeys([VirtualKey.Enter]);
+        orchestrator.ApplyEnabled(
+            hook,
+            new WpsHookInterceptDecision(InterceptKeyboard: false, InterceptWheel: true, BlockOnly: false, EmitWheelOnBlock: false),
+            currentActive: false);
+        hook.SuppressedKeyboardKeys.Should().Equal(VirtualKey.Enter);
+
+        orchestrator.ApplyDisabled(hook);
+        hook.SuppressedKeyboardKeys.Should().BeEmpty();
+
+        orchestrator.ApplyEnabled(
+            hook,
+            new WpsHookInterceptDecision(InterceptKeyboard: false, InterceptWheel: true, BlockOnly: false, EmitWheelOnBlock: false),
+            currentActive: false);
+
+        hook.SuppressedKeyboardKeys.Should().Equal(VirtualKey.Enter);
+    }
+
+    [Fact]
+    public void ApplyEnabled_ShouldKeepReservedKeys_WhenCycleRepeats()
+    {
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient();
+        orchestrator.SetReservedPresentationKeys([VirtualKey.Enter, VirtualKey.Space]);
+
+        for (var cycle = 0; cycle < 3; cycle++)
+        {
+            orchestrator.ApplyDisabled(hook);
+            orchestrator.ApplyEnabled(
+                hook,
+                new WpsHookInterceptDecision(InterceptKeyboard: false, InterceptWheel: true, BlockOnly: false, EmitWheelOnBlock: false),
+                currentActive: false);
+            hook.SuppressedKeyboardKeys.Should().Equal(VirtualKey.Enter, VirtualKey.Space);
+        }
+    }
+
+    [Fact]
+    public void ApplyEnabled_ShouldNotWriteReservedKeys_WhenNoReservationsConfigured()
+    {
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient();
+        orchestrator.ApplyDisabled(hook);
+        hook.SuppressedKeyboardKeys.Should().BeEmpty();
+
+        orchestrator.ApplyEnabled(
+            hook,
+            new WpsHookInterceptDecision(InterceptKeyboard: false, InterceptWheel: true, BlockOnly: false, EmitWheelOnBlock: false),
+            currentActive: false);
+
+        hook.SuppressedKeyboardKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SetReservedPresentationKeys_ShouldClearCache_WhenCalledWithEmptyOrNull()
+    {
+        var orchestrator = new WpsHookOrchestrator();
+        var hook = new FakeWpsNavHookClient();
+        orchestrator.SetReservedPresentationKeys([VirtualKey.Enter]);
+        orchestrator.SetReservedPresentationKeys([]);
+
+        orchestrator.ApplyDisabled(hook);
+        orchestrator.ApplyEnabled(
+            hook,
+            new WpsHookInterceptDecision(InterceptKeyboard: false, InterceptWheel: true, BlockOnly: false, EmitWheelOnBlock: false),
+            currentActive: false);
+
+        hook.SuppressedKeyboardKeys.Should().BeEmpty();
+    }
+
+    [Fact]
     public void ApplyDisabled_ShouldReturnDefaultState_WhenHookIsNull()
     {
         var orchestrator = new WpsHookOrchestrator();

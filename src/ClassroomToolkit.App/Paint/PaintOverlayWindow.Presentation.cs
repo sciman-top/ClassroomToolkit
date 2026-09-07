@@ -681,6 +681,9 @@ public partial class PaintOverlayWindow
         var reservedKeys = PresentationReservedNavigationKeyPolicy.ResolveRollCallGroupSwitchKeys(
             rollCallGroupSwitchEnabled,
             rollCallGroupSwitchKey);
+        // orchestrator 缓存保留键，供禁用→重启用循环后回填；这里同时立即写入钩子侧，
+        // 覆盖钩子当前已启用（无需重启）的场景。
+        _wpsHookOrchestrator.SetReservedPresentationKeys(reservedKeys);
         _wpsNavHookClient?.SetSuppressedKeyboardKeys(reservedKeys);
     }
 
