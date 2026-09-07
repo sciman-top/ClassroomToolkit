@@ -410,6 +410,139 @@ public sealed class StudentWorkbookStoreTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldBackupBeforeRewrite_WhenRowIsHalfFilled()
+    {
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_half_row", ".xlsx");
+        var backupPattern = $"{Path.GetFileNameWithoutExtension(tempPath)}.bak-normalize-*{Path.GetExtension(tempPath)}";
+        try
+        {
+            using (var workbook = new XLWorkbook())
+            {
+                var sheet = workbook.Worksheets.Add("1班");
+                sheet.Cell(1, 1).Value = "学号";
+                sheet.Cell(1, 2).Value = "姓名";
+                sheet.Cell(2, 1).Value = "01";
+                sheet.Cell(2, 2).Value = "张三";
+                // 半录入行：只缺学号 / 只缺姓名。绝不允许在无备份的情况下被点名保存整册回写删除。
+                sheet.Cell(3, 2).Value = "张四";
+                sheet.Cell(4, 1).Value = "03";
+                workbook.SaveAs(tempPath);
+            }
+            var originalBytes = File.ReadAllBytes(tempPath);
+            var store = new StudentWorkbookStore();
+
+            var loaded = store.LoadOrCreate(tempPath);
+
+            loaded.Workbook.GetActiveRoster().Students.Should().ContainSingle()
+                .Which.StudentId.Should().Be("01");
+            var backups = Directory.GetFiles(
+                Path.Combine(Path.GetDirectoryName(tempPath)!, "backups"),
+                backupPattern);
+            backups.Should().ContainSingle();
+            File.ReadAllBytes(backups[0]).Should().Equal(originalBytes);
+            using (var backupWorkbook = new XLWorkbook(backups[0]))
+            {
+                backupWorkbook.Worksheet("1班").Cell(3, 2).GetString().Should().Be("张四");
+                backupWorkbook.Worksheet("1班").Cell(4, 1).GetString().Should().Be("03");
+            }
+
+            // 规范化回写后半录入行已不在主文件中：再次加载不得重复触发修复与备份。
+            store.LoadOrCreate(tempPath);
+            Directory.GetFiles(
+                Path.Combine(Path.GetDirectoryName(tempPath)!, "backups"),
+                backupPattern).Should().ContainSingle();
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+            var backupDirectory = Path.Combine(Path.GetDirectoryName(tempPath)!, "backups");
+            if (Directory.Exists(backupDirectory))
+            {
+                foreach (var backup in Directory.GetFiles(backupDirectory, backupPattern))
+                {
+                    File.Delete(backup);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldRejectOverwrite_WhenFileModifiedExternallyAfterLoad()
+    {
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_external_edit", ".xlsx");
+        try
+        {
+            var students = new List<StudentRecord>
+            {
+                StudentRecord.Create("1001", "张三", "A班", "一组"),
+            };
+            var roster = new ClassRoster("A班", students);
+            var workbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["A班"] = roster }, "A班");
+            var store = new StudentWorkbookStore();
+            store.Save(workbook, tempPath, rollStateJson: null);
+            store.LoadOrCreate(tempPath);
+
+            // 模拟老师在 Excel 中加了一名学生并保存。
+            using (var external = new XLWorkbook(tempPath))
+            {
+                var sheet = external.Worksheet("A班");
+                sheet.Cell(3, 1).Value = "1002";
+                sheet.Cell(3, 2).Value = "李四";
+                external.Save();
+            }
+
+            var staleSave = () => store.Save(workbook, tempPath, rollStateJson: null);
+            staleSave.Should().Throw<InvalidOperationException>()
+                .WithMessage("*外部修改*重新加载*");
+
+            // 重新加载后以新内容为基线，保存恢复可用。
+            var reloaded = store.LoadOrCreate(tempPath);
+            reloaded.Workbook.GetActiveRoster().Students.Select(s => s.Name).Should().Contain("李四");
+            store.Save(reloaded.Workbook, tempPath, reloaded.RollStateJson);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldAllowOverwrite_WhenOnlyMtimeChangedButContentIdentical()
+    {
+        var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_mtime_touch", ".xlsx");
+        try
+        {
+            var students = new List<StudentRecord>
+            {
+                StudentRecord.Create("1001", "张三", "A班", "一组"),
+            };
+            var roster = new ClassRoster("A班", students);
+            var workbook = new StudentWorkbook(new Dictionary<string, ClassRoster> { ["A班"] = roster }, "A班");
+            var store = new StudentWorkbookStore();
+            store.Save(workbook, tempPath, rollStateJson: null);
+            store.LoadOrCreate(tempPath);
+            File.SetLastWriteTimeUtc(tempPath, File.GetLastWriteTimeUtc(tempPath).AddHours(1));
+
+            var save = () => store.Save(workbook, tempPath, rollStateJson: null);
+
+            save.Should().NotThrow();
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
     public void LoadOrCreate_ShouldRepairColumnsAndRollStateSheet_WhenWorkbookFormatIsInvalid()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_repair", ".xlsx");

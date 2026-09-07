@@ -25,6 +25,9 @@ public sealed class StudentWorkbookStore
     private const int HeaderScanRowCount = 5;
 
     private readonly ConcurrentDictionary<string, byte> _overwriteBlockedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ValidatedFileState> _lastValidatedFileStates = new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed record ValidatedFileState(long WriteTimeUtcTicks, string ContentHash);
 
     private static readonly Dictionary<string, string> HeaderAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -73,6 +76,9 @@ public sealed class StudentWorkbookStore
     private StudentWorkbookLoadResult LoadExistingWorkbook(string path)
     {
         using var workbook = new XLWorkbook(path);
+        // 基线必须取"本次读入内存"的内容：即便文件在加载前被外部改过，
+        // 后续规范化回写也是基于当前内容且有备份前置，不得被外部变更护栏误拦。
+        RecordFileState(path);
         var rollStateJson = ExtractRollState(workbook, out var rollStateNeedsRepair);
         var classes = new Dictionary<string, ClassRoster>(StringComparer.OrdinalIgnoreCase);
         var mergedDuplicateClassSheets = false;
@@ -121,6 +127,7 @@ public sealed class StudentWorkbookStore
             throw new InvalidOperationException(
                 $"学生工作簿此前读取失败；拒绝覆盖原文件，需先恢复或替换后重新加载：{fullPath}");
         }
+        EnsureNoExternalModification(fullPath);
 
         var extension = System.IO.Path.GetExtension(fullPath);
         if (string.IsNullOrWhiteSpace(extension))
@@ -151,6 +158,75 @@ public sealed class StudentWorkbookStore
                     $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
         _overwriteBlockedPaths.TryRemove(fullPath, out _);
+        RecordFileState(fullPath);
+    }
+
+    /// <summary>
+    /// 写前外部变更检测：加载后若文件被外部（如 Excel）修改，拒绝用内存旧快照整册覆盖。
+    /// mtime 一致时直接放行（免读盘）；mtime 变化但内容哈希一致视为仅时间戳触碰，放行并刷新基线；
+    /// 读不出当前内容（被占用/无权限）时不误判为外部修改，把真实 IO 错误留给写入路径暴露。
+    /// </summary>
+    private void EnsureNoExternalModification(string fullPath)
+    {
+        if (!File.Exists(fullPath))
+        {
+            _lastValidatedFileStates.TryRemove(fullPath, out _);
+            return;
+        }
+
+        var currentWriteTimeUtcTicks = File.GetLastWriteTimeUtc(fullPath).Ticks;
+        if (_lastValidatedFileStates.TryGetValue(fullPath, out var validated)
+            && validated.WriteTimeUtcTicks == currentWriteTimeUtcTicks)
+        {
+            return;
+        }
+
+        var currentContentHash = TryComputeFileHash(fullPath);
+        if (currentContentHash == null)
+        {
+            return;
+        }
+        if (validated == null)
+        {
+            // 无基线（未经加载的存量文件写入）：以当前内容为基线，保持既有可写行为。
+            _lastValidatedFileStates[fullPath] = new ValidatedFileState(currentWriteTimeUtcTicks, currentContentHash);
+            return;
+        }
+        if (!string.Equals(validated.ContentHash, currentContentHash, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"学生工作簿在加载后被外部修改；拒绝覆盖以避免丢失外部改动，请先重新加载名册或合并外部修改：{fullPath}");
+        }
+
+        _lastValidatedFileStates[fullPath] = validated with { WriteTimeUtcTicks = currentWriteTimeUtcTicks };
+    }
+
+    private void RecordFileState(string fullPath)
+    {
+        try
+        {
+            var writeTimeUtcTicks = File.GetLastWriteTimeUtc(fullPath).Ticks;
+            var contentHash = ComputeFileHash(fullPath);
+            _lastValidatedFileStates[fullPath] = new ValidatedFileState(writeTimeUtcTicks, contentHash);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[StudentWorkbookStore] record file state failed path={fullPath} ex={ex.GetType().Name} msg={ex.Message}");
+            _lastValidatedFileStates.TryRemove(fullPath, out _);
+        }
+    }
+
+    private static string? TryComputeFileHash(string fullPath)
+    {
+        try
+        {
+            return ComputeFileHash(fullPath);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            return null;
+        }
     }
 
     private const string BackupFolderName = "backups";
@@ -294,8 +370,11 @@ public sealed class StudentWorkbookStore
             var rowCache = new Dictionary<int, string>();
             var studentId = GetCellValue(row, headerMap, "学号", rowCache);
             var name = GetCellValue(row, headerMap, "姓名", rowCache);
-            if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(studentId) && string.IsNullOrWhiteSpace(name))
             {
+                // 两列皆空的行不是学生数据，跳过；半录入行（只缺学号或只缺姓名）必须继续传递：
+                // NormalizeRoster 会剔除并置 repaired，触发规范化备份，
+                // 避免点名保存整册回写时把老师未录完的行无备份地永久删除。
                 continue;
             }
             var className = GetCellValue(row, headerMap, "班级", rowCache);
@@ -528,7 +607,9 @@ public sealed class StudentWorkbookStore
             }
             if (normalizedColumn.Equals("班级", StringComparison.OrdinalIgnoreCase))
             {
-                repaired = true;
+                // 班级语义由工作表名承载：ClassRoster 会给缺少“班级”表头的工作簿补虚拟班级列
+                // （DefaultColumns），不能据此判修复，否则每次加载都会永远触发规范化回写。
+                // 真实“班级”列的值若与表名不符，由逐行 student.ClassName 检查兜底置 repaired。
                 continue;
             }
             if (!IsCanonicalColumn(normalizedColumn) && !discoveredColumns.Contains(normalizedColumn, StringComparer.OrdinalIgnoreCase))
@@ -595,7 +676,18 @@ public sealed class StudentWorkbookStore
             }
         }
 
-        if (!SequenceEqualIgnoreCase(roster.ColumnOrder, columns))
+        // 班级列（真实或虚拟补齐）从不写回工作簿，列序比对必须在两侧同时剔除。
+        var sourceColumns = new List<string>();
+        foreach (var column in roster.ColumnOrder)
+        {
+            if (column.Equals("班级", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            sourceColumns.Add(column);
+        }
+
+        if (!SequenceEqualIgnoreCase(sourceColumns, columns))
         {
             repaired = true;
         }
@@ -627,7 +719,7 @@ public sealed class StudentWorkbookStore
     }
 
     private static bool SequenceEqualIgnoreCase(
-        IReadOnlyList<string> source,
+        List<string> source,
         List<string> target)
     {
         if (source.Count != target.Count)
