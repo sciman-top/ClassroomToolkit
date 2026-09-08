@@ -20,7 +20,7 @@ public sealed class StudentWorkbookSqliteRollCallStoreAdapter : IRollCallWorkboo
     public RollCallWorkbookStoreLoadData LoadOrCreate(string path)
     {
         var result = _adapter.LoadOrCreate(path);
-        return new RollCallWorkbookStoreLoadData(result.Workbook, result.CreatedTemplate, result.RollStateJson);
+        return new RollCallWorkbookStoreLoadData(result.Workbook, result.CreatedTemplate, result.RollStateJson, result.OverwriteBlocked);
     }
 
     public void Save(Domain.Models.StudentWorkbook workbook, string path, string? rollStateJson)

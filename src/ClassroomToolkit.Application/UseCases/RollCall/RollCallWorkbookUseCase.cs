@@ -8,7 +8,9 @@ namespace ClassroomToolkit.Application.UseCases.RollCall;
 public sealed record RollCallWorkbookLoadResult(
     StudentWorkbook Workbook,
     Dictionary<string, ClassRollState> ClassStates,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    // 备份写失败导致的只读降级：加载成功但保存被抑制，需在进入课堂前告知教师。
+    bool OverwriteBlocked = false);
 
 public sealed class RollCallWorkbookUseCase
 {
@@ -32,7 +34,7 @@ public sealed class RollCallWorkbookUseCase
                 states[pair.Key] = pair.Value;
             }
 
-            return new RollCallWorkbookLoadResult(result.Workbook, states, null);
+            return new RollCallWorkbookLoadResult(result.Workbook, states, null, result.OverwriteBlocked);
         }
         catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
         {

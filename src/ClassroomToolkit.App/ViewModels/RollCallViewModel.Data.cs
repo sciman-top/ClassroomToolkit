@@ -234,7 +234,7 @@ public sealed partial class RollCallViewModel
     private RollCallLoadResult LoadDataFromPath(string path)
     {
         var result = _workbookUseCase.Load(path);
-        return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage);
+        return new RollCallLoadResult(result.Workbook, result.ClassStates, result.ErrorMessage, result.OverwriteBlocked);
     }
 
     private void CompletePreloadTask(
@@ -362,7 +362,7 @@ public sealed partial class RollCallViewModel
 
         _workbook = result.Workbook;
         _isDataReady = true;
-        _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage);
+        _canPersistWorkbook = string.IsNullOrWhiteSpace(result.ErrorMessage) && !result.OverwriteBlocked;
         _classStates.Clear();
         foreach (var pair in result.ClassStates)
         {
@@ -396,9 +396,15 @@ public sealed partial class RollCallViewModel
                 () => DataLoadFailed?.Invoke(result.ErrorMessage),
                 ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: data load failed callback failed: {ex.Message}"));
         }
+        else if (result.OverwriteBlocked)
+        {
+            SafeActionExecutionExecutor.TryExecute(
+                () => DataLoadFailed?.Invoke("学生名册已进入只读模式（规范化备份写入失败，文件可能被占用或目录只读）：本节课点名结果不会写入文件。"),
+                ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: read-only notice callback failed: {ex.Message}"));
+        }
     }
 
     private readonly record struct FileFingerprint(long Length, DateTime WriteTimeUtc, string ContentHash);
 
-    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates, string? ErrorMessage);
+    private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates, string? ErrorMessage, bool OverwriteBlocked = false);
 }

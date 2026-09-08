@@ -5,7 +5,9 @@ namespace ClassroomToolkit.Application.Abstractions;
 public sealed record RollCallWorkbookStoreLoadData(
     StudentWorkbook Workbook,
     bool CreatedTemplate,
-    string? RollStateJson);
+    string? RollStateJson,
+    // 加载时规范化备份写失败即进入只读降级：数据可用，但保存必须被抑制并提前告知。
+    bool OverwriteBlocked = false);
 
 public interface IRollCallWorkbookStore
 {

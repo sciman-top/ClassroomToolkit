@@ -11,7 +11,7 @@ public sealed class RollCallWorkbookStoreAdapter : IRollCallWorkbookStore
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var result = _store.LoadOrCreate(path);
-        return new RollCallWorkbookStoreLoadData(result.Workbook, result.CreatedTemplate, result.RollStateJson);
+        return new RollCallWorkbookStoreLoadData(result.Workbook, result.CreatedTemplate, result.RollStateJson, result.OverwriteBlocked);
     }
 
     public void Save(ClassroomToolkit.Domain.Models.StudentWorkbook workbook, string path, string? rollStateJson)
