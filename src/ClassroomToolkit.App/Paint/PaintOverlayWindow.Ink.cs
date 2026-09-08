@@ -47,6 +47,16 @@ public partial class PaintOverlayWindow
             var geometryPathChanged = false;
             var bloomGeometryChanged = false;
             var ribbonGeometryChanged = false;
+            // 缓存边界与 GeometryPath 同空间且随笔画变更即失效；
+            // 与橡皮明显不相交的笔画跳过反序列化，整板擦除不再随笔画数线性反序列化。
+            var cachedBounds = stroke.CachedBounds;
+            if (cachedBounds.HasValue
+                && !cachedBounds.Value.IsEmpty
+                && !cachedBounds.Value.IntersectsWith(erasePrimary.Bounds)
+                && (eraseFallback == null || !cachedBounds.Value.IntersectsWith(eraseFallback.Bounds)))
+            {
+                continue;
+            }
             var updatedPath = ExcludeGeometryWithFallback(stroke.GeometryPath, erasePrimary, eraseFallback);
             if (!InkStrokeEraseUpdater.TryApplyUpdatedGeometryPath(stroke, updatedPath, out var strokeRemoved))
             {
