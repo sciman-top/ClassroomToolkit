@@ -174,25 +174,42 @@ public partial class PaintOverlayWindow
         int? maskSeed)
     {
         bool inkMode = renderMode == CalligraphyRenderMode.Ink;
-        bool overlaysEnabled = !suppressOverlays && inkMode;
+        bool overlaysEnabled = !suppressOverlays
+            && inkMode
+            && (_calligraphyInkBloomEnabled || _calligraphySealEnabled);
         int seededMaskValue = maskSeed ?? ResolveDeterministicMaskSeed(geometry, color, brushSize, renderMode);
         bool maskEligible = inkMode && IsInkMaskEligible(geometry, brushSize);
         MediaBrush? coreMask = maskEligible
             ? GetCachedInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, seededMaskValue)
             : null;
-        var commands = new List<DrawCommand>(overlaysEnabled ? 2 : 1)
+        var commands = new List<DrawCommand>(overlaysEnabled ? 3 : 1)
         {
             new(geometry, GetCachedSolidBrush(color, opacity: 1.0), null, coreMask, null)
         };
         if (overlaysEnabled)
         {
-            double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
-            commands.Add(new DrawCommand(
-                geometry,
-                GetCachedSolidBrush(color, opacity: accumulationOpacity),
-                null,
-                coreMask,
-                null));
+            if (_calligraphyInkBloomEnabled)
+            {
+                double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
+                commands.Add(new DrawCommand(
+                    geometry,
+                    GetCachedSolidBrush(color, opacity: accumulationOpacity),
+                    null,
+                    coreMask,
+                    null));
+            }
+
+            if (_calligraphySealEnabled)
+            {
+                // Seal is a final low-opacity source-over pass: it preserves a crisp
+                // deposited edge while remaining independently switchable from bloom.
+                commands.Add(new DrawCommand(
+                    geometry,
+                    GetCachedSolidBrush(color, opacity: 0.035),
+                    null,
+                    coreMask,
+                    null));
+            }
         }
         RenderAndBlendBatch(commands);
     }

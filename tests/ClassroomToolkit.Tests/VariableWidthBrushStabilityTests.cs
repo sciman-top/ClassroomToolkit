@@ -168,6 +168,72 @@ public sealed class VariableWidthBrushStabilityTests
     }
 
     [Fact]
+    public void OnUp_ShouldKeepRawEndpointAtActualReleasePosition()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyBalanced();
+        config.EnableRdpSimplify = false;
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        var release = new Point(168, 76);
+
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(32, 40), now, 0.82));
+        for (int i = 1; i <= 20; i++)
+        {
+            now += step;
+            renderer.OnMove(BrushInputSample.CreateStylus(
+                new Point(32 + (i * 6.0), 40 + (i * 1.8)), now, 0.82));
+        }
+
+        now += step;
+        renderer.OnUp(BrushInputSample.CreateStylus(release, now, 0.82));
+
+        var points = renderer.GetLastStrokePoints();
+        points.Should().NotBeNull();
+        points!.Last().Position.Should().Be(release);
+    }
+
+    [Fact]
+    public void InkFlow_ShouldBeStableWhenSameSlowTraceUsesDifferentInputCadence()
+    {
+        var config60 = BrushPhysicsConfig.CreateCalligraphyBalanced();
+        config60.EnableRdpSimplify = false;
+        var config240 = BrushPhysicsConfig.CreateCalligraphyBalanced();
+        config240.EnableRdpSimplify = false;
+
+        var renderer60 = new VariableWidthBrushRenderer(config60);
+        var renderer240 = new VariableWidthBrushRenderer(config240);
+        renderer60.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+        renderer240.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        ReplaySlowLine(renderer60, 60);
+        ReplaySlowLine(renderer240, 240);
+
+        Math.Abs(renderer60.LastInkFlow - renderer240.LastInkFlow).Should().BeLessThan(0.12);
+    }
+
+    private static void ReplaySlowLine(VariableWidthBrushRenderer renderer, int hz)
+    {
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / hz);
+        const int durationMs = 900;
+        int count = Math.Max(2, (durationMs * hz) / 1000);
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(40, 140), now, 0.86));
+        for (int i = 1; i <= count; i++)
+        {
+            now += step;
+            double t = i / (double)count;
+            renderer.OnMove(BrushInputSample.CreateStylus(
+                new Point(40 + (t * 220), 140 + (Math.Sin(t * 2.1) * 9)), now, 0.86));
+        }
+
+        now += step;
+        renderer.OnUp(BrushInputSample.CreateStylus(new Point(260, 140), now, 0.86));
+    }
+
+    [Fact]
     public void OnMove_ShouldCapRawAndResampledPoints_ForLongStroke()
     {
         var config = BrushPhysicsConfig.CreateCalligraphyBalanced();

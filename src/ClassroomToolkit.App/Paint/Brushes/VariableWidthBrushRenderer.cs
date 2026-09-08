@@ -97,6 +97,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private Geometry? _cachedPreviewGeometry;
     private Geometry? _previewBaseGeometry;
     private int _previewBasePointCount;
+    private double _previewBaseGlobalTotalLength;
     private readonly List<StrokePoint> _previewSliceBuffer = new();
     private int _geometryVersion;
     private int _lastResampledPointCount;
@@ -166,6 +167,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewBaseGlobalTotalLength = 0.0;
         _previewSliceBuffer.Clear();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
@@ -481,10 +483,19 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         var last = _points.Last();
         var dir = point - last.Position;
         if (dir.Length > 0.1) dir.Normalize();
-        else dir = new Vector(1, 0);
+        else dir = _lastStrokeDirection;
+        if (dir.LengthSquared < 0.0001)
+        {
+            dir = new Vector(1, 0);
+        }
+        else
+        {
+            dir.Normalize();
+        }
 
-        var extension = _baseSize * 0.2;
-        var endPos = point + dir * extension;
+        // 保留真实抬笔位置。笔锋的外延只由唯一的 cap builder 负责，
+        // 避免 raw endpoint、采样 taper 和 cap 三处重复外延/收锋。
+        var endPos = point;
         UpdateStrokeDirection(last.Position, endPos);
         _strokeNoisePhase += (endPos - last.Position).Length / Math.Max(_baseSize * 0.2, 0.2);
 
@@ -536,6 +547,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewBaseGlobalTotalLength = 0.0;
         _previewSliceBuffer.Clear();
         MarkGeometryDirty();
     }
@@ -654,7 +666,9 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         double avgSpeed = speedSum / sampledCount;
-        double avgAccumulation = accumulationSum / Math.Max(_baseSize, 0.001);
+        double avgAccumulation = accumulationSum /
+            Math.Max(1, sampledCount) /
+            Math.Max(_baseSize, 0.001);
         double avgWetness = wetnessSum / Math.Max(1, sampledCount);
         double flow = 1.0 - avgSpeed;
         flow += Math.Clamp(avgAccumulation * 0.35, 0, 0.4);
@@ -900,12 +914,39 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
         int keepTail = Math.Max(64, (int)Math.Round(maxRawPoints * 0.62));
         int tailStart = Math.Max(1, _points.Count - keepTail);
-        var compacted = new List<StrokePoint>(maxRawPoints);
-        compacted.Add(_points[0]);
-
-        for (int i = 1; i < tailStart; i += 2)
+        int headTarget = Math.Max(2, maxRawPoints - keepTail);
+        var headCandidates = new List<(int Index, double Importance)>(Math.Max(0, tailStart - 2));
+        for (int i = 1; i < tailStart - 1; i++)
         {
-            compacted.Add(_points[i]);
+            headCandidates.Add((i, ResolveDecimationImportance(i)));
+        }
+
+        var selectedHead = new SortedSet<int> { 0, Math.Max(0, tailStart - 1) };
+        int protectedBudget = Math.Max(0, headTarget - selectedHead.Count);
+        foreach (var candidate in headCandidates
+            .OrderByDescending(item => item.Importance)
+            .ThenBy(item => item.Index)
+            .Take(protectedBudget))
+        {
+            selectedHead.Add(candidate.Index);
+        }
+
+        // Fill the remaining head budget at even arc positions. Important corners,
+        // width changes and speed changes are already selected above.
+        int remaining = headTarget - selectedHead.Count;
+        for (int slot = 1; slot <= remaining; slot++)
+        {
+            int index = (int)Math.Round(slot * (tailStart - 1) / (double)(remaining + 1));
+            if ((uint)index < (uint)tailStart)
+            {
+                selectedHead.Add(index);
+            }
+        }
+
+        var compacted = new List<StrokePoint>(maxRawPoints);
+        foreach (int index in selectedHead)
+        {
+            compacted.Add(_points[index]);
         }
 
         for (int i = tailStart; i < _points.Count; i++)
@@ -920,6 +961,30 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
         _points.Clear();
         _points.AddRange(compacted);
+    }
+
+    private double ResolveDecimationImportance(int index)
+    {
+        if (index <= 0 || index >= _points.Count - 1)
+        {
+            return double.MaxValue;
+        }
+
+        var previous = _points[index - 1];
+        var current = _points[index];
+        var next = _points[index + 1];
+        var incoming = current.Position - previous.Position;
+        var outgoing = next.Position - current.Position;
+        double corner = ResolveCornerAngleDegrees(incoming, outgoing) / 180.0;
+        double widthDelta = Math.Abs(current.Width - ((previous.Width + next.Width) * 0.5)) /
+            Math.Max(_baseSize, 0.001);
+        double speedDelta = Math.Abs(current.Speed - ((previous.Speed + next.Speed) * 0.5)) /
+            Math.Max(_maxVelocity, 0.001);
+        double accumulationDelta = Math.Abs(current.AccumulatedWidth -
+            ((previous.AccumulatedWidth + next.AccumulatedWidth) * 0.5)) /
+            Math.Max(_baseSize, 0.001);
+
+        return (corner * 2.2) + (widthDelta * 1.4) + (speedDelta * 0.7) + (accumulationDelta * 0.8);
     }
 
     private double ResolveDeterministicNoiseSeed(WpfPoint startPoint)

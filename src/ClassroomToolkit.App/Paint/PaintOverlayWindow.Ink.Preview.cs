@@ -181,6 +181,16 @@ public partial class PaintOverlayWindow
         var c1 = MediaColor.FromArgb(a1, color.R, color.G, color.B);
         var c2 = MediaColor.FromArgb(a2, color.R, color.G, color.B);
 
+        if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
+        {
+            var predictionGeometry = calligraphyRenderer.BuildPredictionGeometry(p0, p1, p2, w0, w1, w2);
+            if (predictionGeometry != null)
+            {
+                dc.DrawGeometry(GetCachedSolidBrush(c0), null, predictionGeometry);
+                return;
+            }
+        }
+
         var pen0 = GetCachedPen(c0, w0);
 
         dc.DrawLine(pen0, p0, p1);

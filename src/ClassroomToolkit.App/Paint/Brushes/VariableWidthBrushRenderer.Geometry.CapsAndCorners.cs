@@ -10,20 +10,40 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 
 internal partial class VariableWidthBrushRenderer
 {
-    private void BuildStrokePathV10(StreamGeometryContext ctx, List<WpfPoint> leftEdge, List<WpfPoint> rightEdge, List<StrokePoint> samples)
+    private void BuildStrokePathV10(
+        StreamGeometryContext ctx,
+        List<WpfPoint> leftEdge,
+        List<WpfPoint> rightEdge,
+        List<StrokePoint> samples,
+        bool includeStartCap,
+        bool includeEndCap)
     {
         ctx.BeginFigure(leftEdge[0], true, true);
 
         AddBezierPath(ctx, leftEdge);
 
-        var endCap = BuildCapData(samples, true);
-        AddCapV13(ctx, leftEdge.Last(), rightEdge.Last(), endCap);
+        if (includeEndCap)
+        {
+            var endCap = BuildCapData(samples, true);
+            AddCapV13(ctx, leftEdge.Last(), rightEdge.Last(), endCap);
+        }
+        else
+        {
+            ctx.LineTo(rightEdge.Last(), true, true);
+        }
 
         var rightEdgeReversed = rightEdge.AsEnumerable().Reverse().ToList();
         AddBezierPath(ctx, rightEdgeReversed);
 
-        var startCap = BuildCapData(samples, false);
-        AddCapV13(ctx, rightEdge[0], leftEdge[0], startCap);
+        if (includeStartCap)
+        {
+            var startCap = BuildCapData(samples, false);
+            AddCapV13(ctx, rightEdge[0], leftEdge[0], startCap);
+        }
+        else
+        {
+            ctx.LineTo(leftEdge[0], true, true);
+        }
     }
 
     private CapData BuildCapData(List<StrokePoint> samples, bool isEnd)
@@ -43,7 +63,15 @@ internal partial class VariableWidthBrushRenderer
         var dir = isEnd ? (basePoint - refPoint) : (refPoint - basePoint);
         if (dir.LengthSquared < 0.0001)
         {
-            dir = new Vector(1, 0);
+            dir = _lastStrokeDirection;
+            if (dir.LengthSquared < 0.0001)
+            {
+                dir = new Vector(1, 0);
+            }
+            else
+            {
+                dir.Normalize();
+            }
         }
         else
         {

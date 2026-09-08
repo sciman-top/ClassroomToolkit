@@ -66,7 +66,7 @@ internal partial class VariableWidthBrushRenderer
             return;
         }
 
-        _cachedRibbons = BuildRibbonGeometries(samples);
+        _cachedRibbons = BuildRibbonGeometries(samples, includeStartCap: true, includeEndCap: true);
         if (_cachedRibbons != null && _cachedRibbons.Count > 0)
         {
             var group = new GeometryGroup
@@ -91,7 +91,12 @@ internal partial class VariableWidthBrushRenderer
         _geometryVersion++;
     }
 
-    private StreamGeometry? BuildRibbonGeometry(List<StrokePoint> samples, double ribbonT, double noiseSeedOffset)
+    private StreamGeometry? BuildRibbonGeometry(
+        List<StrokePoint> samples,
+        double ribbonT,
+        double noiseSeedOffset,
+        bool includeStartCap,
+        bool includeEndCap)
     {
         if (samples.Count < 2) return null;
 
@@ -111,7 +116,7 @@ internal partial class VariableWidthBrushRenderer
 
             if (leftEdge.Count > 1 && rightEdge.Count > 1)
             {
-                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples);
+                BuildStrokePathV10(ctx, leftEdge, rightEdge, samples, includeStartCap, includeEndCap);
             }
             else
             {
@@ -213,9 +218,12 @@ internal partial class VariableWidthBrushRenderer
                     double cornerAngle = Math.Abs(Vector.AngleBetween(dirPrevCorner, dirNextCorner));
                     if (cornerAngle < CornerAngleThreshold && cornerAngle > CornerMinAngle)
                     {
-                        cornerSharpness = Math.Clamp(
-                            (CornerAngleThreshold - cornerAngle) / (CornerAngleThreshold - CornerMinAngle),
+                        // AngleBetween 返回的是切线转角：直线接近 0°，急转接近 90°。
+                        // sharpness 必须随转角增大而增大，否则真正的急转会被当成最平滑。
+                        double cornerT = Math.Clamp(
+                            (cornerAngle - CornerMinAngle) / (CornerAngleThreshold - CornerMinAngle),
                             0.0, 1.0);
+                        cornerSharpness = cornerT * cornerT * (3.0 - (2.0 * cornerT));
                         var bisector = dirPrevCorner + dirNextCorner;
                         if (bisector.LengthSquared > 0.0001)
                         {

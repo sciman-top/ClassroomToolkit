@@ -46,13 +46,13 @@ public sealed class InkStrokeRendererCompositeTests
     }
 
     [Fact]
-    public void RenderPage_CalligraphyStroke_ShouldNotDarkenWhenRibbonOverlaysOverlap()
+    public void RenderPage_CalligraphyStroke_ShouldApplyPersistedBloomOverlay()
     {
-        var withoutOverlays = RenderCalligraphyStroke(includeOverlays: false, mode: CalligraphyRenderMode.Clarity);
-        var withOverlays = RenderCalligraphyStroke(includeOverlays: true, mode: CalligraphyRenderMode.Clarity);
+        var withoutOverlays = RenderCalligraphyStroke(includeOverlays: false, mode: CalligraphyRenderMode.Ink, strokeOpacity: 140);
+        var withOverlays = RenderCalligraphyStroke(includeOverlays: true, mode: CalligraphyRenderMode.Ink, strokeOpacity: 140);
 
-        ReadPixel(withoutOverlays, 90, 90).Should().Equal(ReadPixel(withOverlays, 90, 90));
-        ReadPixel(withoutOverlays, 120, 120).Should().Equal(ReadPixel(withOverlays, 120, 120));
+        ReadPixel(withoutOverlays, 90, 90).Should().NotEqual(ReadPixel(withOverlays, 90, 90));
+        ReadPixel(withoutOverlays, 120, 120).Should().NotEqual(ReadPixel(withOverlays, 120, 120));
     }
 
     [Fact]
@@ -72,7 +72,10 @@ public sealed class InkStrokeRendererCompositeTests
         ReadPixel(inkA, 96, 96)[3].Should().BeGreaterThan((byte)170);
     }
 
-    private static RenderTargetBitmap RenderCalligraphyStroke(bool includeOverlays, CalligraphyRenderMode mode)
+    private static RenderTargetBitmap RenderCalligraphyStroke(
+        bool includeOverlays,
+        CalligraphyRenderMode mode,
+        byte strokeOpacity = 255)
     {
         var renderer = new InkStrokeRenderer();
         var geometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(40, 40, 120, 120)));
@@ -82,7 +85,7 @@ public sealed class InkStrokeRendererCompositeTests
             BrushStyle = PaintBrushStyle.Calligraphy,
             GeometryPath = geometryPath,
             ColorHex = "#000000",
-            Opacity = 255,
+            Opacity = strokeOpacity,
             BrushSize = 16.0,
             MaskSeed = 12345,
             CalligraphyRenderMode = mode,

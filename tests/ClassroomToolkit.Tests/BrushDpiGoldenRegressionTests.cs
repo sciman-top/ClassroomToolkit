@@ -29,7 +29,7 @@ public sealed class BrushDpiGoldenRegressionTests
             Directory.CreateDirectory(Path.GetDirectoryName(baselinePath)!);
             var updatedBaseline = new DpiGoldenBaseline
             {
-                Version = 1,
+                Version = 2,
                 UpdatedAtUtc = DateTime.UtcNow,
                 Hashes = current
             };

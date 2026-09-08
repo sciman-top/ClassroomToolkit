@@ -9,10 +9,23 @@ internal partial class VariableWidthBrushRenderer
 {
     private List<StrokePoint> BuildCenterlineSamplesFinal()
     {
-        return BuildCenterlineSamplesFinal(_points, previewFastPath: false);
+        return BuildCenterlineSamplesFinal(_points, previewFastPath: false, globalStartLength: 0.0, globalTotalLength: ComputePolylineLength(_points));
     }
 
     private List<StrokePoint> BuildCenterlineSamplesFinal(IReadOnlyList<StrokePoint> sourcePoints, bool previewFastPath)
+    {
+        return BuildCenterlineSamplesFinal(
+            sourcePoints,
+            previewFastPath,
+            globalStartLength: 0.0,
+            globalTotalLength: ComputePolylineLength(sourcePoints));
+    }
+
+    private List<StrokePoint> BuildCenterlineSamplesFinal(
+        IReadOnlyList<StrokePoint> sourcePoints,
+        bool previewFastPath,
+        double globalStartLength,
+        double globalTotalLength)
     {
         var samples = new List<StrokePoint>();
         if (sourcePoints.Count == 0)
@@ -38,11 +51,12 @@ internal partial class VariableWidthBrushRenderer
             return samples;
         }
 
-        double totalLength = 0;
+        double sourceLength = 0;
         for (int i = 1; i < sourcePoints.Count; i++)
         {
-            totalLength += (sourcePoints[i].Position - sourcePoints[i - 1].Position).Length;
+            sourceLength += (sourcePoints[i].Position - sourcePoints[i - 1].Position).Length;
         }
+        double totalLength = Math.Max(globalTotalLength, globalStartLength + sourceLength);
 
         double maxSpeed = Math.Max(_maxVelocity, 0.001);
         for (int i = 0; i < sourcePoints.Count; i++)
@@ -52,7 +66,7 @@ internal partial class VariableWidthBrushRenderer
                 maxSpeed = sourcePoints[i].Speed;
             }
         }
-        double accumulatedLength = 0;
+        double accumulatedLength = Math.Max(0.0, globalStartLength);
 
         for (int i = 0; i < sourcePoints.Count - 1; i++)
         {
@@ -66,13 +80,16 @@ internal partial class VariableWidthBrushRenderer
             for (int step = startStep; step <= upsampleSteps; step++)
             {
                 double t = step / (double)upsampleSteps;
-                var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
+                // 位置使用 centripetal spline，降低不均匀点距、急转和回折时的过冲；
+                // 宽度/速度/湿度等标量只做有界插值，不能因 spline overshoot 产生
+                // 负宽度、虚假高速或湿度越界。
+                var pos = CentripetalCatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
 
-                double speed = CatmullRomValue(p0.Speed, p1.Speed, p2.Speed, p3.Speed, t);
-                double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
-                double width = CatmullRomValue(p0.Width, p1.Width, p2.Width, p3.Width, t);
-                double noisePhase = CatmullRomValue(p0.NoisePhase, p1.NoisePhase, p2.NoisePhase, p3.NoisePhase, t);
-                double wetness = CatmullRomValue(p0.Wetness, p1.Wetness, p2.Wetness, p3.Wetness, t);
+                double speed = InterpolateBounded(p1.Speed, p2.Speed, t);
+                double accumulatedWidth = InterpolateBounded(p1.AccumulatedWidth, p2.AccumulatedWidth, t);
+                double width = InterpolateBounded(p1.Width, p2.Width, t);
+                double noisePhase = InterpolateBounded(p1.NoisePhase, p2.NoisePhase, t);
+                double wetness = InterpolateBounded(p1.Wetness, p2.Wetness, t);
                 double nibAngle = LerpAngle(p1.NibAngleRadians, p2.NibAngleRadians, t);
                 double nibStrength = Lerp(p1.NibStrength, p2.NibStrength, t);
 
@@ -126,7 +143,7 @@ internal partial class VariableWidthBrushRenderer
         var resampled = ResampleByArcLength(samples, previewFastPath);
         if (_config.EnableEndpointTaperPostResample)
         {
-            ApplyEndpointTaper(resampled);
+            ApplyEndpointTaper(resampled, globalStartLength, totalLength);
         }
         _lastResampledPointCount = resampled.Count;
         return resampled;
@@ -206,7 +223,7 @@ internal partial class VariableWidthBrushRenderer
             Lerp(a.NibStrength, b.NibStrength, t));
     }
 
-    private void ApplyEndpointTaper(List<StrokePoint> samples)
+    private void ApplyEndpointTaper(List<StrokePoint> samples, double globalStartLength, double globalTotalLength)
     {
         if (samples.Count < 2)
         {
@@ -229,13 +246,13 @@ internal partial class VariableWidthBrushRenderer
         }
 
         var cumulative = new double[samples.Count];
-        cumulative[0] = 0.0;
+        cumulative[0] = Math.Max(0.0, globalStartLength);
         for (int i = 1; i < samples.Count; i++)
         {
             cumulative[i] = cumulative[i - 1] + (samples[i].Position - samples[i - 1].Position).Length;
         }
 
-        double totalLength = cumulative[^1];
+        double totalLength = Math.Max(cumulative[^1], globalTotalLength);
         if (totalLength <= 0.001)
         {
             return;
@@ -299,7 +316,9 @@ internal partial class VariableWidthBrushRenderer
                 double headWeight = Math.Clamp(arcT / 0.6, 0.0, 1.0);
                 headWeight = headWeight * headWeight * (3.0 - (2.0 * headWeight));
                 double headMixCap = Math.Clamp(_config.DotLikeHeadMixCap, 0.1, 0.7);
-                double headMix = Lerp(0.22, headMixCap, headWeight);
+                // 点画的起笔应保留着纸宽度；短笔画取消真实端点外延后，
+                // 不能再用过强的 head taper 把首段压成中段以下。
+                double headMix = Lerp(0.10, headMixCap, headWeight);
                 startFactor = Lerp(1.0, startFactor, headMix);
 
                 double tailWeight = Math.Clamp((arcT - 0.45) / 0.55, 0.0, 1.0);
@@ -335,6 +354,18 @@ internal partial class VariableWidthBrushRenderer
                 sample.NibAngleRadians,
                 sample.NibStrength);
         }
+    }
+
+    private static double ComputePolylineLength(IReadOnlyList<StrokePoint> points, int endExclusive = -1)
+    {
+        int end = endExclusive < 0 ? points.Count : Math.Min(endExclusive, points.Count);
+        double length = 0.0;
+        for (int i = 1; i < end; i++)
+        {
+            length += (points[i].Position - points[i - 1].Position).Length;
+        }
+
+        return length;
     }
 
     private static double ResolveTaperFactor(TaperCapStyle style, double normalizedDistance, double strength, double easePower)

@@ -8,6 +8,7 @@ using ClassroomToolkit.App.Paint;
 using MediaColor = System.Windows.Media.Color;
 using MediaColorConverter = System.Windows.Media.ColorConverter;
 using MediaBrushes = System.Windows.Media.Brushes;
+using MediaBrush = System.Windows.Media.Brush;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Ink;
@@ -167,21 +168,81 @@ internal sealed class InkStrokeRenderer
 
         if (!suppressOverlays && inkMode)
         {
-            var accumulationBrush = new SolidColorBrush(color)
+            if (stroke.CalligraphyInkBloomEnabled)
             {
-                Opacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11)
-            };
-            accumulationBrush.Freeze();
-            if (coreMask != null)
-            {
-                dc.PushOpacityMask(coreMask);
-                dc.DrawGeometry(accumulationBrush, null, geometry);
-                dc.Pop();
+                var accumulationBrush = new SolidColorBrush(color)
+                {
+                    Opacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11)
+                };
+                accumulationBrush.Freeze();
+                DrawMaskedGeometry(dc, accumulationBrush, geometry, coreMask);
             }
-            else
+
+            if (stroke.CalligraphySealEnabled)
             {
-                dc.DrawGeometry(accumulationBrush, null, geometry);
+                var sealBrush = CreateOverlayBrush(color, 0.035);
+                DrawMaskedGeometry(dc, sealBrush, geometry, coreMask);
             }
+
+            // Ribbon/bloom geometry is persisted separately so overlapping source-over
+            // layers can actually deepen the stroke instead of collapsing to a union.
+            if (stroke.CalligraphySealEnabled)
+            {
+                foreach (var ribbon in stroke.Ribbons)
+                {
+                    var ribbonGeometry = InkGeometrySerializer.Deserialize(ribbon.GeometryPath);
+                    if (ribbonGeometry == null || ribbonGeometry.Bounds.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    var ribbonBrush = CreateOverlayBrush(color, ribbon.Opacity);
+                    DrawMaskedGeometry(dc, ribbonBrush, ribbonGeometry, coreMask);
+                }
+            }
+
+            if (stroke.CalligraphyInkBloomEnabled)
+            {
+                foreach (var bloom in stroke.Blooms)
+                {
+                    var bloomGeometry = InkGeometrySerializer.Deserialize(bloom.GeometryPath);
+                    if (bloomGeometry == null || bloomGeometry.Bounds.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    var bloomBrush = CreateOverlayBrush(color, bloom.Opacity);
+                    DrawMaskedGeometry(dc, bloomBrush, bloomGeometry, coreMask);
+                }
+            }
+        }
+    }
+
+    private static SolidColorBrush CreateOverlayBrush(MediaColor color, double opacity)
+    {
+        var brush = new SolidColorBrush(color)
+        {
+            Opacity = Math.Clamp(opacity, 0.0, 1.0)
+        };
+        brush.Freeze();
+        return brush;
+    }
+
+    private static void DrawMaskedGeometry(
+        DrawingContext dc,
+        MediaBrush brush,
+        Geometry geometry,
+        DrawingBrush? mask)
+    {
+        if (mask != null)
+        {
+            dc.PushOpacityMask(mask);
+            dc.DrawGeometry(brush, null, geometry);
+            dc.Pop();
+        }
+        else
+        {
+            dc.DrawGeometry(brush, null, geometry);
         }
     }
 

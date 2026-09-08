@@ -8,30 +8,46 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 
 internal partial class VariableWidthBrushRenderer
 {
-    private static WpfPoint CatmullRomPoint(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3, double t)
+    private static WpfPoint CentripetalCatmullRomPoint(WpfPoint p0, WpfPoint p1, WpfPoint p2, WpfPoint p3, double t)
     {
-        double t2 = t * t;
-        double t3 = t2 * t;
+        t = Math.Clamp(t, 0.0, 1.0);
+        if (t <= 0.0) return p1;
+        if (t >= 1.0) return p2;
 
-        double x = 0.5 * ((2 * p1.X) + (-p0.X + p2.X) * t +
-                          (2 * p0.X - 5 * p1.X + 4 * p2.X - p3.X) * t2 +
-                          (-p0.X + 3 * p1.X - 3 * p2.X + p3.X) * t3);
+        double t0 = 0.0;
+        double t1 = t0 + Math.Sqrt(Math.Max((p1 - p0).Length, 0.0));
+        double t2 = t1 + Math.Sqrt(Math.Max((p2 - p1).Length, 0.0));
+        double t3 = t2 + Math.Sqrt(Math.Max((p3 - p2).Length, 0.0));
+        if (t1 - t0 < 1e-6 || t2 - t1 < 1e-6 || t3 - t2 < 1e-6)
+        {
+            return new WpfPoint(Lerp(p1.X, p2.X, t), Lerp(p1.Y, p2.Y, t));
+        }
 
-        double y = 0.5 * ((2 * p1.Y) + (-p0.Y + p2.Y) * t +
-                          (2 * p0.Y - 5 * p1.Y + 4 * p2.Y - p3.Y) * t2 +
-                          (-p0.Y + 3 * p1.Y - 3 * p2.Y + p3.Y) * t3);
-
-        return new WpfPoint(x, y);
+        double u = Lerp(t1, t2, t);
+        var a1 = InterpolatePoint(p0, p1, t0, t1, u);
+        var a2 = InterpolatePoint(p1, p2, t1, t2, u);
+        var a3 = InterpolatePoint(p2, p3, t2, t3, u);
+        var b1 = InterpolatePoint(a1, a2, t0, t2, u);
+        var b2 = InterpolatePoint(a2, a3, t1, t3, u);
+        return InterpolatePoint(b1, b2, t1, t2, u);
     }
 
-    private static double CatmullRomValue(double v0, double v1, double v2, double v3, double t)
+    private static WpfPoint InterpolatePoint(WpfPoint a, WpfPoint b, double ta, double tb, double t)
     {
-        double t2 = t * t;
-        double t3 = t2 * t;
+        double denominator = tb - ta;
+        if (Math.Abs(denominator) < 1e-6)
+        {
+            return a;
+        }
 
-        return 0.5 * ((2 * v1) + (-v0 + v2) * t +
-                      (2 * v0 - 5 * v1 + 4 * v2 - v3) * t2 +
-                      (-v0 + 3 * v1 - 3 * v2 + v3) * t3);
+        double amount = Math.Clamp((t - ta) / denominator, 0.0, 1.0);
+        return new WpfPoint(Lerp(a.X, b.X, amount), Lerp(a.Y, b.Y, amount));
+    }
+
+    private static double InterpolateBounded(double a, double b, double t)
+    {
+        double value = Lerp(a, b, Math.Clamp(t, 0.0, 1.0));
+        return Math.Clamp(value, Math.Min(a, b), Math.Max(a, b));
     }
 
     private static double Lerp(double a, double b, double t)
