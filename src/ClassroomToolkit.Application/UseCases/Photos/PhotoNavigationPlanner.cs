@@ -107,7 +107,7 @@ public static class PhotoNavigationPlanner
             || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
-            || path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+            // .webp 同 ImageManagerWindow：WIC 无内置解码器，不作为可展示图片导航。
             || path.EndsWith(".tif", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
         {

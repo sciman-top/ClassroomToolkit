@@ -10,6 +10,9 @@ public sealed class BlockingSleepUsageContractTests
         // 有界重试（5 次 × 50ms）。这是唯一豁免的阻塞等待：替代方案要么把整条同步保存链
         // 异步化，要么在 UI 线程忙等，代价更高。新增豁免必须在此登记并说明理由。
         "src/ClassroomToolkit.Domain/Utilities/AtomicFileReplaceUtility.cs|Thread.Sleep(TransientReplaceRetryDelayMilliseconds);",
+        // FileLoggerProvider 的日志写盘队列专用后台线程：对杀软/备份工具短暂持锁导致的
+        // 失败批次做单次 100ms 退避重试，避免整批日志丢失。有界、低频、不涉及 UI 线程。
+        "src/ClassroomToolkit.Infra/Logging/FileLoggerProvider.cs|Thread.Sleep(LogAppendRetryDelayMs);",
     };
 
     [Fact]

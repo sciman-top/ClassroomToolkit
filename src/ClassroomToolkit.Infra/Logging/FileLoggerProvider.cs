@@ -14,6 +14,8 @@ public class FileLoggerProvider : ILoggerProvider
     private const int QueueBatchSize = 64;
     private const int QueueDrainTimeoutMs = 3000;
     private const int QueueCancelGraceTimeoutMs = 1000;
+    private const int LogAppendRetryCount = 1;
+    private const int LogAppendRetryDelayMs = 100;
 
     private readonly string _logDirectory;
     private readonly Func<DateTime> _nowProvider;
@@ -180,13 +182,30 @@ public class FileLoggerProvider : ILoggerProvider
 
         foreach (var entry in groupedLines)
         {
+            TryAppendWithSingleRetry(entry.Key, entry.Value.ToString());
+        }
+    }
+
+    private static void TryAppendWithSingleRetry(string path, string content)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
             try
             {
-                File.AppendAllText(entry.Key, entry.Value.ToString(), Encoding.UTF8);
+                File.AppendAllText(path, content, Encoding.UTF8);
+                return;
+            }
+            catch (Exception ex) when (attempt < LogAppendRetryCount && InfraExceptionFilterPolicy.IsNonFatal(ex))
+            {
+                // 杀软扫描/备份工具/跨会话双开对日志文件的短暂持锁很常见：
+                // 单次短退避重试，避免整批（≤64 条）日志一次丢弃。运行在队列专用线程，不阻塞 UI。
+                Debug.WriteLine($"[FileLoggerProvider] Append failed (attempt {attempt + 1}): {ex.Message}");
+                Thread.Sleep(LogAppendRetryDelayMs);
             }
             catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
             {
-                Debug.WriteLine($"[FileLoggerProvider] Append failed: {ex.GetType().Name} - {ex.Message}");
+                Debug.WriteLine($"[FileLoggerProvider] Append failed permanently: {ex.GetType().Name} - {ex.Message}");
+                return;
             }
         }
     }

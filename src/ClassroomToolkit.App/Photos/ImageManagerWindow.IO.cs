@@ -47,12 +47,13 @@ public partial class ImageManagerWindow
             return MediaFileKind.Pdf;
         }
 
+        // .webp 不入列：目标平台 WIC 无内置 WebP 解码器（Store 可选扩展在锁定机房
+        // 普遍缺失），列入会产生"看得到、打不开"的死条目。
         if (extension.Equals(".png".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".jpg".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".jpeg".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".bmp".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".gif".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".webp".AsSpan(), StringComparison.OrdinalIgnoreCase))
+            extension.Equals(".gif".AsSpan(), StringComparison.OrdinalIgnoreCase))
         {
             return MediaFileKind.Image;
         }

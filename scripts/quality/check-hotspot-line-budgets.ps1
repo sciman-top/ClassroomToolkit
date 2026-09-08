@@ -15,7 +15,8 @@ $files = Get-ChildItem -Path $srcRoot -Recurse -Filter *.cs | Where-Object {
 }
 
 foreach ($file in $files) {
-    $lineCount = (Get-Content -LiteralPath $file.FullName | Measure-Object -Line).Lines
+    # 物理行数（含空行）：Measure-Object -Line 会跳过空行，系统性放松预算。
+    $lineCount = [System.IO.File]::ReadAllLines($file.FullName).Count
     if ($lineCount -gt $MaxLines) {
         $relative = $file.FullName.Substring($repoRoot.Path.Length + 1).Replace('\', '/')
         $violations += "${relative}:$lineCount"
