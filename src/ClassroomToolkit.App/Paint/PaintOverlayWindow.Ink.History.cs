@@ -61,6 +61,14 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        var trackVectorSnapshot = InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive());
+        if (trackVectorSnapshot && HasDuplicateVectorSnapshot())
+        {
+            // 状态与上一条向量快照一致：原先会推入整页位图快照后再弹出，
+            // 现在直接跳过，省掉一次全屏 CopyPixels 与全部笔画克隆。
+            return;
+        }
+
         var stride = _surfacePixelWidth * 4;
         var bytesRequired = stride * _surfacePixelHeight;
 
@@ -80,25 +88,12 @@ public partial class PaintOverlayWindow
         _history.Add(snapshot);
         _currentHistoryMemoryBytes += pixels.Length;
 
-        if (InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive()))
+        if (trackVectorSnapshot)
         {
             var strokeSnapshot = CloneInkStrokes(_inkStrokes);
-            var snapshotHash = ComputeInkHash(strokeSnapshot);
+            var snapshotHash = GetOrComputeInkStateHash();
             var sourcePath = _currentDocumentPath ?? string.Empty;
             var pageIndex = _currentPageIndex;
-            if (_inkHistory.Count > 0)
-            {
-                var last = _inkHistory[^1];
-                if (string.Equals(last.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase)
-                    && last.PageIndex == pageIndex
-                    && string.Equals(last.Hash, snapshotHash, StringComparison.Ordinal))
-                {
-                    _currentHistoryMemoryBytes -= snapshot.Pixels.Length;
-                    snapshot.Dispose();
-                    _history.RemoveAt(_history.Count - 1);
-                    return;
-                }
-            }
             _inkHistory.Add(new InkSnapshot(sourcePath, pageIndex, snapshotHash, strokeSnapshot));
             if (_inkHistory.Count > HistoryLimit)
             {
@@ -118,6 +113,59 @@ public partial class PaintOverlayWindow
                 }
             }
         }
+    }
+
+    private bool HasDuplicateVectorSnapshot()
+    {
+        if (_inkHistory.Count == 0)
+        {
+            return false;
+        }
+
+        var last = _inkHistory[^1];
+        var sourcePath = _currentDocumentPath ?? string.Empty;
+        if (!string.Equals(last.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase)
+            || last.PageIndex != _currentPageIndex)
+        {
+            return false;
+        }
+
+        // 文档/照片页：脏页跟踪器哈希即当前内容指纹（每条变更路径收尾都会刷新）。
+        if (TryGetRuntimeInkHash(out var runtimeHash))
+        {
+            return string.Equals(last.Hash, runtimeHash, StringComparison.Ordinal);
+        }
+
+        // 白板页：跟踪器不维护，保持原有现算比对路径。
+        return string.Equals(last.Hash, ComputeInkHash(_inkStrokes), StringComparison.Ordinal);
+    }
+
+    private string GetOrComputeInkStateHash()
+    {
+        if (TryGetRuntimeInkHash(out var runtimeHash))
+        {
+            return runtimeHash;
+        }
+
+        return ComputeInkHash(_inkStrokes);
+    }
+
+    private bool TryGetRuntimeInkHash(out string runtimeHash)
+    {
+        // 与 MarkCurrentInkPageModified 的守卫保持镜像：跟踪器只在这类页面上维护，
+        // 其余情况（白板无文档等）一律现算，避免读到从未刷新的陈旧哈希。
+        runtimeHash = string.Empty;
+        if (string.IsNullOrWhiteSpace(_currentDocumentPath) || _currentPageIndex <= 0)
+        {
+            return false;
+        }
+
+        return _inkDirtyPages.TryGetRuntimeState(
+            _currentDocumentPath,
+            _currentPageIndex,
+            out _,
+            out runtimeHash,
+            out _);
     }
 
     private void RestoreSnapshot(RasterSnapshot snapshot)
