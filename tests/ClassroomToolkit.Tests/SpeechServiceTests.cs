@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassroomToolkit.Services.Speech;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

@@ -1,6 +1,6 @@
 using System.Threading;
 using ClassroomToolkit.Services.Speech;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Tests;

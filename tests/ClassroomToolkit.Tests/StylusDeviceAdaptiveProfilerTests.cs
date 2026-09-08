@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Paint.Brushes;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

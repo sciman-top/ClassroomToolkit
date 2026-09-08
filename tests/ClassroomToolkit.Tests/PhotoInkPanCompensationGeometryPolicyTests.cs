@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Paint;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassroomToolkit.App.Ink;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;

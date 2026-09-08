@@ -1,6 +1,6 @@
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

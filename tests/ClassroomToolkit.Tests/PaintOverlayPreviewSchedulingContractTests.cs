@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Diagnostics;
 using System.Windows;
 using ClassroomToolkit.App.Paint;

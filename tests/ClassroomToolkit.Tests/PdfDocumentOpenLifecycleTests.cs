@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Photos;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

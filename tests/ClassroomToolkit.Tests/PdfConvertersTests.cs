@@ -1,6 +1,6 @@
 using System.Globalization;
 using ClassroomToolkit.App.Converters;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

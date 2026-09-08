@@ -1,6 +1,6 @@
 using System.Linq;
 using ClassroomToolkit.App.Session;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests.Session;

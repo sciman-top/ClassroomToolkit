@@ -1,7 +1,7 @@
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests;

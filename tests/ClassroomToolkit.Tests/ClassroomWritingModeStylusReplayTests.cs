@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Paint.Brushes;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

@@ -1,5 +1,5 @@
 using ClassroomToolkit.App.Settings;
-using FluentAssertions;
+using AwesomeAssertions;
 using MediaColors = System.Windows.Media.Colors;
 
 namespace ClassroomToolkit.Tests;

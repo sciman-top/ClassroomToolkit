@@ -1,6 +1,6 @@
 using System.Windows.Input;
 using ClassroomToolkit.App.Paint;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

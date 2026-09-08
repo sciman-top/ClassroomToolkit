@@ -1,5 +1,5 @@
 using ClassroomToolkit.Services.Compatibility;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Text.Json;
 
 namespace ClassroomToolkit.Tests;

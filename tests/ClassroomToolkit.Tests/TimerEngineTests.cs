@@ -1,5 +1,5 @@
 using ClassroomToolkit.Domain.Timers;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

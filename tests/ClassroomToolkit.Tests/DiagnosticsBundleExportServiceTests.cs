@@ -1,6 +1,6 @@
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Settings;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.IO.Compression;
 
 namespace ClassroomToolkit.Tests;

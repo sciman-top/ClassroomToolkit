@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using ClassroomToolkit.Infra.Migration;
 using ClassroomToolkit.Infra.Settings;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

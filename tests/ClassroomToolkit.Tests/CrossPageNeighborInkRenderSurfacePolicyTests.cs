@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.Tests;

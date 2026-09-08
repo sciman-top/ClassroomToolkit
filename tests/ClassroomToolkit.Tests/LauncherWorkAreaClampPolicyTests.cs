@@ -1,6 +1,6 @@
 using System.Windows;
 using ClassroomToolkit.App;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

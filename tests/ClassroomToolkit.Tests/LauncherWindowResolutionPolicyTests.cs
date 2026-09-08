@@ -1,6 +1,6 @@
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Windowing;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests;

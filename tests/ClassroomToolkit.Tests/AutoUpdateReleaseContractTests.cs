@@ -1,6 +1,6 @@
 using System.IO;
 using System.Text.Json;
-using FluentAssertions;
+using AwesomeAssertions;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Startup;
 

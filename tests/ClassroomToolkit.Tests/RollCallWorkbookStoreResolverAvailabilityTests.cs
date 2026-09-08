@@ -1,5 +1,5 @@
 using ClassroomToolkit.Infra.Storage;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests;

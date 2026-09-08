@@ -1,6 +1,6 @@
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

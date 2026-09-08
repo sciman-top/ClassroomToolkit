@@ -1,5 +1,5 @@
 using ClassroomToolkit.Services.Input;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

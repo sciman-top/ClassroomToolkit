@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using ClassroomToolkit.Infra.Logging;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 

@@ -2,7 +2,7 @@ using System.IO;
 using System.Reflection;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Storage;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Xunit;
 

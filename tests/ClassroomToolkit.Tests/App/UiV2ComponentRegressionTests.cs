@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests.App;
 

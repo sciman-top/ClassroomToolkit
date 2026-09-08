@@ -1,5 +1,5 @@
 using ClassroomToolkit.App.Windowing;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Threading;
 using Xunit;
 

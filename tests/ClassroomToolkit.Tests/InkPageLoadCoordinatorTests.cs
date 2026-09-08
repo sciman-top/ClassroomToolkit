@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests;

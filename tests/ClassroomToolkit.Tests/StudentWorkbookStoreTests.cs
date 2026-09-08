@@ -1,7 +1,7 @@
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Infra.Storage;
-using FluentAssertions;
+using AwesomeAssertions;
 using ClosedXML.Excel;
 
 namespace ClassroomToolkit.Tests;

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using ClassroomToolkit.App.Photos;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

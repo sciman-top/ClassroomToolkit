@@ -1,5 +1,5 @@
 using ClassroomToolkit.App.Ink;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Globalization;
 
 namespace ClassroomToolkit.Tests;

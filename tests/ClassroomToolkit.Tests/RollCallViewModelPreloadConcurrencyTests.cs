@@ -3,7 +3,7 @@ using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

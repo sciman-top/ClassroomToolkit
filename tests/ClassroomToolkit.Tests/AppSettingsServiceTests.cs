@@ -4,7 +4,7 @@ using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Settings;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Globalization;
 using System.Text.Json;
 

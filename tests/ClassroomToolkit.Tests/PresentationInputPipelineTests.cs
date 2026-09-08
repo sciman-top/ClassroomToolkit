@@ -2,7 +2,7 @@ using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Services.Presentation;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

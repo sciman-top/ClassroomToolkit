@@ -1,6 +1,6 @@
 using ClassroomToolkit.Services.Input;
 using ClassroomToolkit.Interop.Presentation;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Reflection;
 
 namespace ClassroomToolkit.Tests;

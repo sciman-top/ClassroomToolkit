@@ -1,5 +1,5 @@
 using ClassroomToolkit.Application.UseCases.Photos;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

@@ -1,5 +1,5 @@
 using ClassroomToolkit.App.Paint;
-using FluentAssertions;
+using AwesomeAssertions;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.Tests;

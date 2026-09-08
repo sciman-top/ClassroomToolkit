@@ -1,5 +1,5 @@
 using ClassroomToolkit.Infra.Migration;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

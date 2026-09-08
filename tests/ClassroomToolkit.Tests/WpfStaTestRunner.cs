@@ -1,5 +1,5 @@
 using System.Threading;
-using FluentAssertions;
+using AwesomeAssertions;
 using WpfApplication = System.Windows.Application;
 using WpfApp = ClassroomToolkit.App.App;
 

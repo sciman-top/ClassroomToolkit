@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.UI.Themes;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 using WpfApplication = System.Windows.Application;
 

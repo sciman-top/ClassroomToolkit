@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using ClassroomToolkit.App.Windowing;
-using FluentAssertions;
+using AwesomeAssertions;
 using Xunit;
 
 namespace ClassroomToolkit.Tests.App;

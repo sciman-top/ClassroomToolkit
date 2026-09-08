@@ -1,5 +1,5 @@
 using ClassroomToolkit.App.RollCall;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

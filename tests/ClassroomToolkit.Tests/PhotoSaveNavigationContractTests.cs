@@ -1,6 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 

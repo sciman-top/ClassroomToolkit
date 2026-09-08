@@ -1,6 +1,6 @@
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.Services.Compatibility;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;
 
