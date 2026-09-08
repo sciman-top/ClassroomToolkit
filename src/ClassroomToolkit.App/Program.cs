@@ -46,6 +46,8 @@ internal static class Program
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+        Justification = "互斥体所有权按设计转移给 _singleInstanceMutex 并持有整个进程生命周期；提前 Dispose 会释放单实例锁。")]
     private static bool AcquireSingleInstance()
     {
         var outcome = Startup.SingleInstanceGate.AcquireWithFallback(
