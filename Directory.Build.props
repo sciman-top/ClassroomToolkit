@@ -2,6 +2,8 @@
   <PropertyGroup>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- 所有项目生成 packages.lock.json，使 CI 的 locked-mode 还原真实锁定依赖版本。 -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ClassroomToolkit.App' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Domain' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Application' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Infra' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Interop' Or '$(MSBuildProjectName)' == 'ClassroomToolkit.Services'">
