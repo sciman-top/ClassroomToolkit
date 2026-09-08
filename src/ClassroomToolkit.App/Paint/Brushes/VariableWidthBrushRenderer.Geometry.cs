@@ -54,6 +54,8 @@ internal partial class VariableWidthBrushRenderer
         _cachedRibbons = null;
         _cachedCoreGeometry = null;
         _cachedPreviewGeometry = null;
+        _previewGeometryVersion = -1;
+        _previewCachedRawPositionValid = false;
 
         if (_points.Count < 2)
         {
@@ -88,6 +90,8 @@ internal partial class VariableWidthBrushRenderer
         _cachedRibbons = null;
         _cachedCoreGeometry = null;
         _cachedPreviewGeometry = null;
+        _previewGeometryVersion = -1;
+        _previewCachedRawPositionValid = false;
         _geometryVersion++;
     }
 

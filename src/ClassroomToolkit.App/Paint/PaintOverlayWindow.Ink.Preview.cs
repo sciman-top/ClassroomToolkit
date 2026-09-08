@@ -183,10 +183,36 @@ public partial class PaintOverlayWindow
 
         if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
         {
-            var predictionGeometry = calligraphyRenderer.BuildPredictionGeometry(p0, p1, p2, w0, w1, w2);
+            // 毛笔预测沿用同一轮廓生成器，但按“主体 / 尾段 / 尖端”分层
+            // 绘制；否则 c1、c2 会被计算后完全丢弃，预测段只有一种透明度。
+            var predictionGeometry = calligraphyRenderer.BuildPredictionGeometry(
+                p0,
+                p1,
+                p2,
+                w0,
+                w1,
+                w2,
+                includeEndCap: false);
             if (predictionGeometry != null)
             {
                 dc.DrawGeometry(GetCachedSolidBrush(c0), null, predictionGeometry);
+                var tailGeometry = calligraphyRenderer.BuildPredictionSegmentGeometry(
+                    p1,
+                    p2,
+                    w1,
+                    w2,
+                    includeEndCap: true);
+                if (tailGeometry != null)
+                {
+                    dc.DrawGeometry(GetCachedSolidBrush(c1), null, tailGeometry);
+                }
+
+                dc.DrawEllipse(
+                    GetCachedSolidBrush(c2),
+                    null,
+                    p2,
+                    Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w2 * BrushPredictionPreviewDefaults.TipRadiusRatio),
+                    Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w2 * BrushPredictionPreviewDefaults.TipRadiusRatio));
                 return;
             }
         }

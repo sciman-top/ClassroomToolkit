@@ -169,7 +169,10 @@ internal class BrushPhysicsConfig
             AnisotropyStrength = 0.045,
             OrientationAnisotropyMix = 0.78,
             OrientationStrengthMin = 0.4,
-            OrientationStrengthMax = 1.45
+            OrientationStrengthMax = 1.45,
+            // 清晰模式只保留一个核心 silhouette；纹理 ribbon 留给 InkFeel。
+            EnableMultiRibbon = false,
+            MultiRibbonCount = 1
         };
     }
 
@@ -275,7 +278,10 @@ internal class BrushPhysicsConfig
             AnisotropyStrength = 0.045,
             OrientationAnisotropyMix = 0.65,
             OrientationStrengthMin = 0.35,
-            OrientationStrengthMax = 1.35
+            OrientationStrengthMax = 1.35,
+            // 清晰模式只保留一个核心 silhouette；纹理 ribbon 留给 InkFeel。
+            EnableMultiRibbon = false,
+            MultiRibbonCount = 1
         };
     }
 

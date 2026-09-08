@@ -11,12 +11,10 @@ internal partial class VariableWidthBrushRenderer
     public Geometry? GetLastStrokeGeometry()
     {
         if (_points.Count < 2) return null;
-        var geometry = GenerateGeometry();
-        if (geometry != null)
-        {
-            geometry.Freeze();
-        }
-        return geometry;
+        // 抬笔链先经此取最终几何，再由核心几何消费方取同一缓存；
+        // 避免同一笔几何全量构建两次（EnsureGeometryCache 结果已冻结）。
+        EnsureGeometryCache();
+        return _cachedCoreGeometry;
     }
 
     public Geometry? GetLastCoreGeometry()
@@ -27,7 +25,11 @@ internal partial class VariableWidthBrushRenderer
 
     public Geometry? GetPreviewCoreGeometry()
     {
-        if (!_cacheDirty && _cachedPreviewGeometry != null)
+        bool rawPreviewInputUnchanged = !_isActive
+            || (_previewCachedRawPositionValid && _previewCachedRawPosition == _lastRawPos);
+        if (_cachedPreviewGeometry != null
+            && _previewGeometryVersion == _geometryVersion
+            && rawPreviewInputUnchanged)
         {
             return _cachedPreviewGeometry;
         }
@@ -35,39 +37,69 @@ internal partial class VariableWidthBrushRenderer
         if (_points.Count < 2)
         {
             _cachedPreviewGeometry = null;
+            _previewGeometryVersion = -1;
+            _previewCachedRawPositionValid = false;
             return null;
         }
 
+        bool hasPreviewReleasePoint = TryBuildPreviewReleasePoint(out var previewReleasePoint);
+        int previewPointCount = _points.Count + (hasPreviewReleasePoint ? 1 : 0);
+        double previewTotalLength = GetCachedPolylineTotalLength();
+        if (hasPreviewReleasePoint)
+        {
+            previewTotalLength += (previewReleasePoint.Position - _points[^1].Position).Length;
+        }
+
         Geometry? preview;
-        if (_points.Count <= PreviewTailPointWindow + 4)
+        if (previewPointCount <= PreviewTailPointWindow + 4)
         {
             _previewBaseGeometry = null;
             _previewBasePointCount = 0;
-            _previewBaseGlobalTotalLength = 0.0;
-            var samples = BuildCenterlineSamplesFinal(_points, previewFastPath: true);
+            _previewTailStartGlobalLength = 0.0;
+            var source = CopyRangeToPreviewSliceBuffer(
+                0,
+                previewPointCount,
+                hasPreviewReleasePoint,
+                previewReleasePoint);
+            var samples = BuildCenterlineSamplesFinal(
+                source,
+                previewFastPath: true,
+                globalStartLength: 0.0,
+                globalTotalLength: previewTotalLength);
             preview = BuildPreviewCompositeGeometry(samples, includeStartCap: true, includeEndCap: true);
         }
         else
         {
-            int basePointCount = Math.Max(2, _points.Count - PreviewTailPointWindow);
-            double globalTotalLength = ComputePolylineLength(_points);
-            double totalLengthDelta = Math.Abs(globalTotalLength - _previewBaseGlobalTotalLength);
-            double refreshLengthThreshold = Math.Max(2.0, _baseSize * 0.4);
+            int basePointCount = Math.Max(2, previewPointCount - PreviewTailPointWindow);
+            // 基座只按点数 stride 刷新（与 Marker 一致）；每次 move 仅构建尾窗，
+            // 全局长度走缓存，避免每帧 O(n) 全线长计算与全前缀重建。
             bool shouldRefreshBase = _previewBaseGeometry == null
                 || _previewBasePointCount <= 0
                 || basePointCount < _previewBasePointCount
                 || (basePointCount - _previewBasePointCount) >= PreviewBaseRefreshStride
-                || totalLengthDelta >= refreshLengthThreshold;
+                || Math.Abs(previewTotalLength - _previewBaseGlobalTotalLength)
+                    >= Math.Max(2.0, _baseSize * 0.4);
 
             if (shouldRefreshBase)
             {
                 _previewBasePointCount = basePointCount;
-                _previewBaseGlobalTotalLength = globalTotalLength;
+                int previewTailStart = Math.Max(0, basePointCount - 3);
+                // ComputePolylineLength 的 endExclusive 表示“包含到前一索引”，
+                // 因而要得到 source[tailStart] 的弧长，必须把 tailStart+1
+                // 个点纳入累计；少一个边段会让尾窗的 progress/taper 滞后一格。
+                _previewTailStartGlobalLength = ComputePolylineLength(
+                    _points,
+                    Math.Min(_points.Count, previewTailStart + 1));
+                _previewBaseGlobalTotalLength = previewTotalLength;
                 _previewBaseGeometry = BuildPreviewGeometryForRange(
                     0,
                     _previewBasePointCount,
                     includeStartCap: true,
-                    includeEndCap: false);
+                    includeEndCap: false,
+                    globalStartLength: 0.0,
+                    globalTotalLength: previewTotalLength,
+                    includePreviewReleasePoint: false,
+                    previewReleasePoint: default);
                 if (_previewBaseGeometry?.CanFreeze == true)
                 {
                     _previewBaseGeometry.Freeze();
@@ -77,9 +109,13 @@ internal partial class VariableWidthBrushRenderer
             int tailStart = Math.Max(0, _previewBasePointCount - 3);
             var tailGeometry = BuildPreviewGeometryForRange(
                 tailStart,
-                _points.Count,
+                previewPointCount,
                 includeStartCap: false,
-                includeEndCap: true);
+                includeEndCap: true,
+                globalStartLength: _previewTailStartGlobalLength,
+                globalTotalLength: previewTotalLength,
+                includePreviewReleasePoint: hasPreviewReleasePoint,
+                previewReleasePoint: previewReleasePoint);
             if (_previewBaseGeometry != null && tailGeometry != null)
             {
                 var group = new GeometryGroup { FillRule = FillRule.Nonzero };
@@ -98,6 +134,9 @@ internal partial class VariableWidthBrushRenderer
             preview.Freeze();
         }
         _cachedPreviewGeometry = preview;
+        _previewGeometryVersion = _geometryVersion;
+        _previewCachedRawPosition = _lastRawPos;
+        _previewCachedRawPositionValid = _isActive && _hasRawPoint;
         return _cachedPreviewGeometry;
     }
 
@@ -107,7 +146,8 @@ internal partial class VariableWidthBrushRenderer
         WpfPoint p2,
         double w0,
         double w1,
-        double w2)
+        double w2,
+        bool includeEndCap = true)
     {
         var samples = new List<StrokePoint>(3)
         {
@@ -115,7 +155,28 @@ internal partial class VariableWidthBrushRenderer
             new(p1, ClampWidth(w1), progress: 0.5, wetness: _inkWetness),
             new(p2, ClampWidth(w2), progress: 1.0, wetness: _inkWetness)
         };
-        var ribbons = BuildRibbonGeometries(samples, includeStartCap: false, includeEndCap: true);
+        var ribbons = BuildRibbonGeometries(samples, includeStartCap: false, includeEndCap: includeEndCap);
+        return CombineRibbonGeometries(ribbons);
+    }
+
+    internal Geometry? BuildPredictionSegmentGeometry(
+        WpfPoint p0,
+        WpfPoint p1,
+        double w0,
+        double w1,
+        bool includeEndCap)
+    {
+        var samples = new List<StrokePoint>(2)
+        {
+            new(p0, ClampWidth(w0), progress: 0.0, wetness: _inkWetness),
+            new(p1, ClampWidth(w1), progress: 1.0, wetness: _inkWetness)
+        };
+        var ribbons = BuildRibbonGeometries(samples, includeStartCap: false, includeEndCap: includeEndCap);
+        return CombineRibbonGeometries(ribbons);
+    }
+
+    private static Geometry? CombineRibbonGeometries(List<RibbonGeometry> ribbons)
+    {
         if (ribbons.Count == 0)
         {
             return null;
@@ -141,19 +202,32 @@ internal partial class VariableWidthBrushRenderer
         int startInclusive,
         int endExclusive,
         bool includeStartCap,
-        bool includeEndCap)
+        bool includeEndCap,
+        double globalStartLength,
+        double globalTotalLength,
+        bool includePreviewReleasePoint,
+        StrokePoint previewReleasePoint)
     {
         int start = Math.Max(0, startInclusive);
         int end = Math.Min(_points.Count, endExclusive);
+        bool appendPreviewReleasePoint = includePreviewReleasePoint
+            && endExclusive > _points.Count
+            && end == _points.Count;
         int count = end - start;
+        if (appendPreviewReleasePoint)
+        {
+            count++;
+        }
         if (count < 2)
         {
             return null;
         }
 
-        var source = CopyRangeToPreviewSliceBuffer(start, end);
-        double globalStartLength = ComputePolylineLength(_points, start);
-        double globalTotalLength = ComputePolylineLength(_points);
+        var source = CopyRangeToPreviewSliceBuffer(
+            start,
+            end,
+            appendPreviewReleasePoint,
+            previewReleasePoint);
         var samples = BuildCenterlineSamplesFinal(
             source,
             previewFastPath: true,
@@ -165,6 +239,34 @@ internal partial class VariableWidthBrushRenderer
         }
 
         return BuildPreviewCompositeGeometry(samples, includeStartCap, includeEndCap);
+    }
+
+    private double GetCachedPolylineTotalLength()
+    {
+        if (!_previewPolylineLengthValid)
+        {
+            _previewPolylineTotalLength = ComputePolylineLength(_points);
+            _previewPolylineLengthValid = true;
+        }
+
+        return _previewPolylineTotalLength;
+    }
+
+    private void TrackAppendedPointLength()
+    {
+        if (!_previewPolylineLengthValid || _points.Count < 2)
+        {
+            return;
+        }
+
+        var previous = _points[_points.Count - 2].Position;
+        var current = _points[_points.Count - 1].Position;
+        _previewPolylineTotalLength += (current - previous).Length;
+    }
+
+    private void InvalidatePolylineLengthCache()
+    {
+        _previewPolylineLengthValid = false;
     }
 
     /// <summary>
@@ -199,7 +301,11 @@ internal partial class VariableWidthBrushRenderer
         return group;
     }
 
-    private List<StrokePoint> CopyRangeToPreviewSliceBuffer(int startInclusive, int endExclusive)
+    private List<StrokePoint> CopyRangeToPreviewSliceBuffer(
+        int startInclusive,
+        int endExclusive,
+        bool appendPreviewReleasePoint = false,
+        StrokePoint previewReleasePoint = default)
     {
         _previewSliceBuffer.Clear();
         int start = Math.Max(0, startInclusive);
@@ -208,28 +314,48 @@ internal partial class VariableWidthBrushRenderer
         {
             _previewSliceBuffer.Add(_points[i]);
         }
+        if (appendPreviewReleasePoint && end == _points.Count)
+        {
+            _previewSliceBuffer.Add(previewReleasePoint);
+        }
         return _previewSliceBuffer;
     }
 
-    private Geometry? GenerateGeometry()
+    private bool TryBuildPreviewReleasePoint(out StrokePoint previewReleasePoint)
     {
-        if (_points.Count < 2) return null;
-        var samples = BuildCenterlineSamplesFinal();
-        if (samples.Count < 2) return null;
-
-        var geometries = BuildRibbonGeometries(samples, includeStartCap: true, includeEndCap: true);
-        if (geometries.Count == 0) return null;
-        if (geometries.Count == 1) return geometries[0].Geometry;
-
-        var group = new GeometryGroup
+        previewReleasePoint = default;
+        if (!_isActive || _points.Count == 0)
         {
-            FillRule = FillRule.Nonzero
-        };
-        foreach (var item in geometries)
-        {
-            group.Children.Add(item.Geometry);
+            return false;
         }
-        return group;
+
+        var last = _points[^1];
+        var delta = _lastRawPos - last.Position;
+        if (delta.Length <= Math.Max(0.25, _baseSize * 0.02))
+        {
+            return false;
+        }
+
+        double tailFactor = _config.EndTaperStyle == TaperCapStyle.Exposed
+            ? Math.Max(0.05, _config.TaperMinWidthFactor * 0.18)
+            : Math.Max(0.08, _config.TaperMinWidthFactor * 0.28);
+        double minWidth = Math.Clamp(
+            _baseSize * tailFactor,
+            Math.Max(0.14, _baseSize * 0.015),
+            _baseSize * _config.MaxStrokeWidthMultiplier);
+        double noisePhase = last.NoisePhase + delta.Length / Math.Max(_baseSize * 0.2, 0.2);
+        previewReleasePoint = new StrokePoint(
+            _lastRawPos,
+            minWidth,
+            0,
+            0,
+            1,
+            0,
+            noisePhase,
+            last.Wetness,
+            last.NibAngleRadians,
+            last.NibStrength);
+        return true;
     }
 
     private List<RibbonGeometry> BuildRibbonGeometries(
@@ -251,12 +377,15 @@ internal partial class VariableWidthBrushRenderer
         {
             double ribbonT = centerIndex > 0 ? Math.Abs(i - centerIndex) / centerIndex : 0;
             var ribbonSamples = BuildRibbonSamples(samples, i, ribbonCount);
+            // 只有核心 ribbon 拥有端点 cap。纹理 ribbon 仍参与墨感，
+            // 但不能各自生成尖锋，否则尾端会出现多个分叉/毛刺。
+            bool ownsEndpointCaps = i == (ribbonCount / 2);
             var ribbonGeometry = BuildRibbonGeometry(
                 ribbonSamples,
                 ribbonT,
                 i * 17.7,
-                includeStartCap,
-                includeEndCap);
+                includeStartCap && ownsEndpointCaps,
+                includeEndCap && ownsEndpointCaps);
             if (ribbonGeometry != null)
             {
                 result.Add(new RibbonGeometry(ribbonGeometry, ribbonT));

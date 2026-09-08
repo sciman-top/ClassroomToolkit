@@ -136,6 +136,7 @@ internal partial class VariableWidthBrushRenderer
         {
             _points.Clear();
             _points.AddRange(simplified);
+            InvalidatePolylineLengthCache();
         }
 
         static void MarkAnchor(bool[] mask, int index)

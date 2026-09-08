@@ -332,6 +332,196 @@ public sealed class VariableWidthBrushStabilityTests
     }
 
     [Fact]
+    public void ExposedTaper_ShouldReachARealOutlineTip_BeyondReleasePoint()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        config.EnableMultiRibbon = true;
+        config.MultiRibbonCount = 3;
+
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(24, 120), now, 0.82));
+        for (int i = 1; i <= 48; i++)
+        {
+            now += step;
+            renderer.OnMove(BrushInputSample.CreateStylus(new Point(24 + (i * 4.5), 120), now, 0.74));
+        }
+
+        var release = new Point(252, 120);
+        now += step;
+        renderer.OnUp(BrushInputSample.CreateStylus(release, now, 0.68));
+
+        var geometry = renderer.GetLastCoreGeometry();
+        geometry.Should().NotBeNull();
+
+        // Rounded caps are bounded by the very narrow release width. An exposed
+        // taper must put the actual tip into the final flattened outline.
+        var extension = geometry!.Bounds.Right - release.X;
+        extension.Should().BeGreaterThan(2.5, "the final silhouette must contain a visible pointed tail");
+    }
+
+    [Fact]
+    public void MultiRibbonExposedTaper_ShouldHaveOneForwardmostTip()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        config.EnableMultiRibbon = true;
+        config.MultiRibbonCount = 3;
+
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(24, 120), now, 0.82));
+        for (int i = 1; i <= 48; i++)
+        {
+            now += step;
+            renderer.OnMove(BrushInputSample.CreateStylus(new Point(24 + (i * 4.5), 120), now, 0.74));
+        }
+
+        var release = new Point(252, 120);
+        now += step;
+        renderer.OnUp(BrushInputSample.CreateStylus(release, now, 0.68));
+
+        var geometry = renderer.GetLastCoreGeometry();
+        geometry.Should().NotBeNull();
+
+        var flattened = geometry!.GetFlattenedPathGeometry(0.08, ToleranceType.Absolute);
+        var figureMaxima = flattened.Figures
+            .Select(figure => EnumerateFigurePoints(figure).Max(point => point.X))
+            .ToList();
+        figureMaxima.Should().NotBeEmpty();
+
+        double forwardmost = figureMaxima.Max();
+        figureMaxima.Count(maximum => maximum >= forwardmost - 0.7)
+            .Should().Be(1, "only the core ribbon should own the exposed forward tip");
+    }
+
+    [Fact]
+    public void PreviewGeometry_ShouldStayCloseToFinalGeometry_WhenStrokeIsReleased()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyClarity();
+        config.EnableRdpSimplify = false;
+
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(24, 120), now, 0.76));
+        Point last = new Point(24, 120);
+        for (int i = 1; i <= 120; i++)
+        {
+            now += step;
+            last = new Point(24 + (i * 3.2), 120 + (Math.Sin(i * 0.12) * 12.0));
+            renderer.OnMove(BrushInputSample.CreateStylus(last, now, 0.72));
+        }
+
+        var preview = renderer.GetPreviewCoreGeometry();
+        preview.Should().NotBeNull();
+
+        now += step;
+        renderer.OnUp(BrushInputSample.CreateStylus(last, now, 0.72));
+        var final = renderer.GetLastCoreGeometry();
+        final.Should().NotBeNull();
+
+        var previewBounds = preview!.Bounds;
+        var finalBounds = final!.Bounds;
+        var maxDelta = new[]
+        {
+            Math.Abs(previewBounds.Left - finalBounds.Left),
+            Math.Abs(previewBounds.Top - finalBounds.Top),
+            Math.Abs(previewBounds.Right - finalBounds.Right),
+            Math.Abs(previewBounds.Bottom - finalBounds.Bottom)
+        }.Max();
+
+        maxDelta.Should().BeLessThan(
+            3.5,
+            "preview={0} final={1} preview and committed outlines should share endpoint and taper semantics",
+            previewBounds,
+            finalBounds);
+    }
+
+    [Fact]
+    public void PreviewGeometry_ShouldReuseCache_WhenInputHasNotChanged()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyClarity();
+        config.EnableRdpSimplify = false;
+
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreateStylus(new Point(24, 120), now, 0.76));
+        for (int i = 1; i <= 72; i++)
+        {
+            now += step;
+            renderer.OnMove(BrushInputSample.CreateStylus(new Point(24 + (i * 3.2), 120), now, 0.72));
+        }
+
+        var first = renderer.GetPreviewCoreGeometry();
+        var second = renderer.GetPreviewCoreGeometry();
+        first.Should().NotBeNull();
+        ReferenceEquals(first, second).Should().BeTrue("an unchanged active input should reuse the frozen preview geometry");
+
+        now += step;
+        renderer.OnMove(BrushInputSample.CreateStylus(new Point(24 + (72 * 3.2) + 0.2, 120), now, 0.72));
+        var afterRawMove = renderer.GetPreviewCoreGeometry();
+        afterRawMove.Should().NotBeNull();
+        ReferenceEquals(first, afterRawMove).Should().BeFalse("a new raw endpoint must invalidate the active preview");
+    }
+
+    private static IEnumerable<Point> EnumerateFigurePoints(PathFigure figure)
+    {
+        yield return figure.StartPoint;
+        foreach (var segment in figure.Segments)
+        {
+            switch (segment)
+            {
+                case LineSegment line:
+                    yield return line.Point;
+                    break;
+                case PolyLineSegment polyLine:
+                    foreach (var point in polyLine.Points)
+                    {
+                        yield return point;
+                    }
+                    break;
+                case BezierSegment bezier:
+                    yield return bezier.Point1;
+                    yield return bezier.Point2;
+                    yield return bezier.Point3;
+                    break;
+                case PolyBezierSegment polyBezier:
+                    foreach (var point in polyBezier.Points)
+                    {
+                        yield return point;
+                    }
+                    break;
+                case QuadraticBezierSegment quadratic:
+                    yield return quadratic.Point1;
+                    yield return quadratic.Point2;
+                    break;
+                case PolyQuadraticBezierSegment polyQuadratic:
+                    foreach (var point in polyQuadratic.Points)
+                    {
+                        yield return point;
+                    }
+                    break;
+                case ArcSegment arc:
+                    yield return arc.Point;
+                    break;
+            }
+        }
+    }
+
+    [Fact]
     public void OnUp_ShouldKeepMiddleBody_ForShortFlick_WhenTaperLengthExceedsArcLength()
     {
         var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();

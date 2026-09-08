@@ -97,7 +97,14 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private Geometry? _cachedPreviewGeometry;
     private Geometry? _previewBaseGeometry;
     private int _previewBasePointCount;
+    // 尾部起点长度随基座刷新一次性缓存；总长在追加点上增量维护，结构性变更后置无效。
+    private double _previewTailStartGlobalLength;
     private double _previewBaseGlobalTotalLength;
+    private int _previewGeometryVersion = -1;
+    private WpfPoint _previewCachedRawPosition;
+    private bool _previewCachedRawPositionValid;
+    private double _previewPolylineTotalLength;
+    private bool _previewPolylineLengthValid;
     private readonly List<StrokePoint> _previewSliceBuffer = new();
     private int _geometryVersion;
     private int _lastResampledPointCount;
@@ -167,13 +174,17 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewTailStartGlobalLength = 0.0;
         _previewBaseGlobalTotalLength = 0.0;
+        _previewPolylineTotalLength = 0.0;
+        _previewPolylineLengthValid = true;
         _previewSliceBuffer.Clear();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
         _smoothedPos = _positionFilter.Filter(point, 1.0 / 120.0);
         double nibAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
         _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, 0, 0, 0, 0, _strokeNoisePhase, _inkWetness, nibAngle, 1.0));
+        TrackAppendedPointLength();
         if (input.HasPressure)
         {
             _pressureAverage.Push(Math.Clamp(input.Pressure, 0, 1), _config.PressureSmoothWindow);
@@ -295,7 +306,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             double smoothedPressure = _pressureAverage.Push(
                 resolvedPressure,
                 _config.PressureSmoothWindow);
-            double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount, smoothedPressure, input.HasPressure);
+            double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount);
 
             // 倾斜→宽度基线（默认关闭）：笔杆越压平笔画越宽，模拟扁锋着纸面。
             if (_config.TiltWidthInfluence > 0.0 && input.AltitudeRadians.HasValue)
@@ -421,6 +432,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             dynamicWidthAlpha = Math.Clamp(dynamicWidthAlpha, 0.45, 0.95);
             double widthAlpha = Math.Clamp((_config.WidthSmoothing * 0.35) + (dynamicWidthAlpha * 0.65), 0.45, 0.96);
             _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
+            // 压力只在这一处进入最终宽度曲线。先完成速度/顿笔/低通，
+            // 再施加受限的压力修正，避免同一个压力信号被多层重复放大。
             if (input.HasPressure)
             {
                 double centeredPressure = MapPressureSigned(Math.Clamp(smoothedPressure, 0, 1), 0.04, 1.12);
@@ -451,6 +464,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 _inkWetness,
                 brushAngle,
                 orientationStrength));
+            TrackAppendedPointLength();
             TrimRawPointsIfNeeded();
             UpdateInkFlow();
             MarkGeometryDirty();
@@ -514,6 +528,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             _inkWetness,
             last.NibAngleRadians,
             last.NibStrength));
+        TrackAppendedPointLength();
         if (_config.EnableRdpSimplify)
         {
             double epsilon = Math.Max(_baseSize * _config.RdpEpsilonFactor, _config.RdpMinEpsilon);
@@ -547,7 +562,10 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
+        _previewTailStartGlobalLength = 0.0;
         _previewBaseGlobalTotalLength = 0.0;
+        _previewPolylineTotalLength = 0.0;
+        _previewPolylineLengthValid = true;
         _previewSliceBuffer.Clear();
         MarkGeometryDirty();
     }
@@ -797,7 +815,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         return angle;
     }
 
-    private double CalculateTargetWidth(double velocity, int pointIndex, double pressure, bool hasPressure)
+    private double CalculateTargetWidth(double velocity, int pointIndex)
     {
         // 起笔阶段：逐渐增加速度影响
         double velocityInfluence = 1.0;
@@ -826,13 +844,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
         var range = _config.MaxWidthFactor - _config.MinWidthFactor;
         var width = _baseSize * (_config.MinWidthFactor + (range * gammaAdjustedFactor));
-        if (hasPressure)
-        {
-            var centered = MapPressureSigned(Math.Clamp(pressure, 0, 1), 0.05, 1.16);
-            var pressureScale = 1.0 + (centered * _config.RealPressureWidthScale);
-            var pressureWidth = ClampWidth(width * Math.Clamp(pressureScale, 0.72, 1.58));
-            width = Lerp(width, pressureWidth, Math.Clamp(_config.RealPressureWidthInfluence, 0, 1));
-        }
         return ClampWidth(width);
     }
 
@@ -961,6 +972,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
         _points.Clear();
         _points.AddRange(compacted);
+        InvalidatePolylineLengthCache();
     }
 
     private double ResolveDecimationImportance(int index)

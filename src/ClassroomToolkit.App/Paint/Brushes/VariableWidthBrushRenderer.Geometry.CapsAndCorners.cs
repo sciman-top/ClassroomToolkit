@@ -25,7 +25,7 @@ internal partial class VariableWidthBrushRenderer
         if (includeEndCap)
         {
             var endCap = BuildCapData(samples, true);
-            AddCapV13(ctx, leftEdge.Last(), rightEdge.Last(), endCap);
+            AddCapV13(ctx, leftEdge.Last(), rightEdge.Last(), endCap, isEnd: true);
         }
         else
         {
@@ -38,7 +38,7 @@ internal partial class VariableWidthBrushRenderer
         if (includeStartCap)
         {
             var startCap = BuildCapData(samples, false);
-            AddCapV13(ctx, rightEdge[0], leftEdge[0], startCap);
+            AddCapV13(ctx, rightEdge[0], leftEdge[0], startCap, isEnd: false);
         }
         else
         {
@@ -93,6 +93,26 @@ internal partial class VariableWidthBrushRenderer
         double baseForTip = isEnd ? width : Math.Min(_baseSize * 0.8, width * 0.95);
 
         double tipLen = ClampTipLength(baseForTip);
+        bool exposedTaper = (isEnd ? _config.EndTaperStyle : _config.StartTaperStyle) == TaperCapStyle.Exposed;
+        if (exposedTaper)
+        {
+            // 收锋宽度已经接近零时，若仍用“端点宽度”决定外延，最终轮廓会
+            // 退化为圆钝的小圆帽。尖锋长度应参考笔画肩部宽度，但保持在
+            // 配置收锋长度的合理范围内，避免短笔画长尾或投影下的过度外延。
+            double shoulderWidth = samples.Max(sample => ClampWidth(sample.Width));
+            double configuredTaperLength = Math.Clamp(
+                _config.TaperLengthPx * Math.Clamp(_config.TaperLenScale, 0.6, 2.0),
+                2.0,
+                Math.Max(8.0, _baseSize * 6.0));
+            double exposedTipLength = Math.Min(
+                configuredTaperLength * 0.32,
+                shoulderWidth * 0.72);
+            tipLen = Math.Max(tipLen, exposedTipLength);
+            tipLen = Math.Clamp(
+                tipLen,
+                Math.Max(1.5, _baseSize * 0.18),
+                Math.Max(2.0, shoulderWidth * 1.05));
+        }
         double dryFactor = Math.Clamp(1.0 - _lastInkFlow, 0, 1);
         tipLen *= Lerp(0.9, 1.25, dryFactor);
         if (!isEnd)
@@ -139,22 +159,52 @@ internal partial class VariableWidthBrushRenderer
         return (dropStart / dpStart) * 0.45;
     }
 
-    private void AddCapV13(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, CapData cap)
+    private void AddCapV13(
+        StreamGeometryContext ctx,
+        WpfPoint from,
+        WpfPoint to,
+        CapData cap,
+        bool isEnd)
     {
         double sharpThreshold = _baseSize * 0.2;
         double dropThreshold = Lerp(2.4, 3.2, _lastInkFlow);
 
         double normalizedDrop = cap.PressureDropRate / Math.Max(_baseSize, 0.001);
-        bool useSharp = cap.Width < sharpThreshold && normalizedDrop > dropThreshold;
+        bool exposedTaper = (isEnd ? _config.EndTaperStyle : _config.StartTaperStyle) == TaperCapStyle.Exposed;
+        bool useSharp = exposedTaper || (cap.Width < sharpThreshold && normalizedDrop > dropThreshold);
 
         if (useSharp)
         {
-            ctx.LineTo(cap.TipPoint, true, true);
-            ctx.LineTo(to, true, true);
+            AddExposedTip(ctx, from, to, cap.TipPoint);
             return;
         }
 
         AddRoundedCapArc(ctx, from, to, cap.TipPoint);
+    }
+
+    private static void AddExposedTip(
+        StreamGeometryContext ctx,
+        WpfPoint from,
+        WpfPoint to,
+        WpfPoint tip)
+    {
+        var firstVector = tip - from;
+        var secondVector = to - tip;
+        if (firstVector.LengthSquared < 0.01 || secondVector.LengthSquared < 0.01)
+        {
+            ctx.LineTo(tip, true, true);
+            ctx.LineTo(to, true, true);
+            return;
+        }
+
+        // 两段 Bezier 都以真实 tip 为端点：外轮廓经过同一个尖点，
+        // 同时保留一点曲率，避免收锋看起来像生硬的三角形。
+        var firstControl = from + (firstVector * 0.78);
+        var firstTipControl = tip - (firstVector * 0.14);
+        var secondTipControl = tip + (secondVector * 0.14);
+        var secondControl = to - (secondVector * 0.78);
+        ctx.BezierTo(firstControl, firstTipControl, tip, true, true);
+        ctx.BezierTo(secondTipControl, secondControl, to, true, true);
     }
 
     private static void AddRoundedCapArc(StreamGeometryContext ctx, WpfPoint from, WpfPoint to, WpfPoint tip)

@@ -110,19 +110,11 @@ internal partial class VariableWidthBrushRenderer
                     currentWidth = samples[^1].Width * 0.52 + targetWidth * 0.48;
                 }
 
-                if (_config.SimulateEndTaper && progress > _config.EndTaperStartProgress)
+                // 开启 post-resample taper 时，端点宽度只在
+                // ApplyEndpointTaper 中统一计算；避免插值前后重复收锋。
+                if (_config.SimulateEndTaper && !_config.EnableEndpointTaperPostResample)
                 {
-                    double taperProgress = Math.Clamp(
-                        (progress - _config.EndTaperStartProgress) / (1.0 - _config.EndTaperStartProgress),
-                        0.0, 1.0);
-                    double taperCurve = 1.0 - (taperProgress * taperProgress);
-                    double taperFactor = _config.TaperMinWidthFactor + (1.0 - _config.TaperMinWidthFactor) * taperCurve;
-                    if (progress > 0.85)
-                    {
-                        double tailT = Math.Clamp((progress - 0.85) / 0.15, 0.0, 1.0);
-                        taperFactor *= Lerp(1.0, 0.84, tailT);
-                    }
-                    currentWidth *= taperFactor;
+                    currentWidth *= ResolveEndProgressTaperFactor(progress);
                 }
 
                 currentWidth = ClampWidth(currentWidth);
@@ -258,11 +250,9 @@ internal partial class VariableWidthBrushRenderer
             return;
         }
 
-        double maxRadius = 0.0;
-        for (int i = 0; i < samples.Count; i++)
-        {
-            maxRadius = Math.Max(maxRadius, samples[i].Width * 0.5);
-        }
+        // 收锋长度应由画笔尺寸决定，而不是由本笔速度造成的瞬时最大宽度
+        // 决定；否则同一支笔在快慢两种书写速度下会得到不同的基础收锋长。
+        double maxRadius = Math.Max(_baseSize * 0.5, _config.MinStrokeWidthPx * 0.5);
         double taperLenScale = Math.Clamp(_config.TaperLenScale, 0.6, 2.0);
         double taperAutoScaled = (taperLength * taperLenScale) + (taperAutoScaleK * maxRadius);
         taperLength = Math.Clamp(taperAutoScaled, taperMinLenDip, taperMaxLenDip);
@@ -331,6 +321,13 @@ internal partial class VariableWidthBrushRenderer
             double combinedFactor = isShortStroke
                 ? Math.Min(startFactor, endFactor)
                 : (startFactor * endFactor);
+            if (_config.SimulateEndTaper)
+            {
+                // 与端点距离 taper 在同一最终轮廓阶段合成，
+                // 这样采样密度变化不会重复压缩收锋宽度。
+                combinedFactor *= ResolveEndProgressTaperFactor(
+                    Math.Clamp(cumulative[i] / Math.Max(totalLength, 0.0001), 0.0, 1.0));
+            }
             if (isDotLikeStroke)
             {
                 double arcT = Math.Clamp(cumulative[i] / Math.Max(totalLength, 0.0001), 0.0, 1.0);
@@ -354,6 +351,30 @@ internal partial class VariableWidthBrushRenderer
                 sample.NibAngleRadians,
                 sample.NibStrength);
         }
+    }
+
+    private double ResolveEndProgressTaperFactor(double progress)
+    {
+        double startProgress = Math.Clamp(_config.EndTaperStartProgress, 0.0, 0.99);
+        if (progress <= startProgress)
+        {
+            return 1.0;
+        }
+
+        double taperProgress = Math.Clamp(
+            (progress - startProgress) / Math.Max(0.01, 1.0 - startProgress),
+            0.0,
+            1.0);
+        double taperCurve = 1.0 - (taperProgress * taperProgress);
+        double taperFactor = _config.TaperMinWidthFactor
+                           + ((1.0 - _config.TaperMinWidthFactor) * taperCurve);
+        if (progress > 0.85)
+        {
+            double tailT = Math.Clamp((progress - 0.85) / 0.15, 0.0, 1.0);
+            taperFactor *= Lerp(1.0, 0.84, tailT);
+        }
+
+        return Math.Clamp(taperFactor, 0.02, 1.0);
     }
 
     private static double ComputePolylineLength(IReadOnlyList<StrokePoint> points, int endExclusive = -1)
