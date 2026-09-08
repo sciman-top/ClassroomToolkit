@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -7,6 +8,11 @@ namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class Win32PresentationResolver
 {
+    // 演示态轮询与每次翻页注入都会在 UI 线程做全量窗口扫描，逐窗口查询进程名
+    // （开进程句柄、读镜像名，已退出 pid 还抛异常）是主要热点。进程名与 pid 短期内
+    // 稳定，用短 TTL 缓存消除重复查询；TTL 同时限制 pid 复用后名称短暂失真的窗口。
+    private const double ProcessNameCacheTtlSeconds = 10;
+    private static readonly ConcurrentDictionary<uint, (string Name, DateTime FetchedUtc)> ProcessNameCache = new();
     private static List<string> BuildClassNames(IntPtr hwnd)
     {
         var names = new List<string>();
@@ -93,6 +99,21 @@ public sealed partial class Win32PresentationResolver
         {
             return string.Empty;
         }
+
+        var nowUtc = DateTime.UtcNow;
+        if (ProcessNameCache.TryGetValue(processId, out var cached)
+            && (nowUtc - cached.FetchedUtc).TotalSeconds < ProcessNameCacheTtlSeconds)
+        {
+            return cached.Name;
+        }
+
+        var name = QueryProcessName(processId);
+        ProcessNameCache[processId] = (name, nowUtc);
+        return name;
+    }
+
+    private static string QueryProcessName(uint processId)
+    {
         try
         {
             using var process = Process.GetProcessById((int)processId);

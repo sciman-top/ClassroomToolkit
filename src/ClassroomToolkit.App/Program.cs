@@ -8,10 +8,18 @@ namespace ClassroomToolkit.App;
 
 internal static class Program
 {
-    private const string SingleInstanceMutexName = @"Local\ClassroomToolkit.SingleInstance";
+    private const string SingleInstanceMutexName = @"Global\ClassroomToolkit.SingleInstance";
+    private const string SessionSingleInstanceMutexName = @"Local\ClassroomToolkit.SingleInstance";
 
     // 互斥体必须存活整个进程生命周期；若被 GC 回收，句柄关闭会提前释放单实例锁。
     private static Mutex? _singleInstanceMutex;
+
+    private enum SingleInstanceAcquireOutcome
+    {
+        Acquired,
+        AlreadyRunning,
+        AccessDenied
+    }
 
     [STAThread]
     public static void Main()
@@ -32,32 +40,92 @@ internal static class Program
             return;
         }
 
-        var application = new App();
-        application.InitializeComponent();
-        application.Run();
+        // 全局异常处理器要到 OnStartup 才注册：OnStartup 之前的构造/XAML 解析/互斥阶段
+        // 失败必须在此兜底，否则静默闪退且无任何日志。
+        try
+        {
+            var application = new App();
+            application.InitializeComponent();
+            application.Run();
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            TryWriteStartupCrashLog("app-startup", ex);
+            ShowTopmostNotice($"ClassroomToolkit 启动失败：{ex.Message}", isError: true);
+            Environment.Exit(-1);
+        }
     }
 
     private static bool AcquireSingleInstance()
     {
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
-        if (createdNew)
+        // Global\ 提供跨登录会话互斥（快速用户切换/管理员第二会话），避免 settings/名册
+        // 双写者互相静默覆写；ACL 拒绝时降级回会话级 Local\，至少保留同会话互斥。
+        var global = TryAcquireMutex(SingleInstanceMutexName);
+        if (global.outcome == SingleInstanceAcquireOutcome.Acquired)
         {
+            _singleInstanceMutex = global.mutex;
             return true;
         }
+        if (global.outcome == SingleInstanceAcquireOutcome.AlreadyRunning)
+        {
+            NoticeAlreadyRunning();
+            return false;
+        }
 
-        _singleInstanceMutex.Dispose();
-        _singleInstanceMutex = null;
-        ShowTopmostNotice("ClassroomToolkit 已经在运行，请使用已打开的实例。");
-        return false;
+        var session = TryAcquireMutex(SessionSingleInstanceMutexName);
+        if (session.outcome == SingleInstanceAcquireOutcome.Acquired)
+        {
+            _singleInstanceMutex = session.mutex;
+            return true;
+        }
+        if (session.outcome == SingleInstanceAcquireOutcome.AlreadyRunning)
+        {
+            NoticeAlreadyRunning();
+            return false;
+        }
+
+        // 两级互斥都被 ACL 拒绝（极罕见）：按课堂可用性优先继续启动。
+        return true;
     }
 
-    private static void ShowTopmostNotice(string text)
+    private static (SingleInstanceAcquireOutcome outcome, Mutex? mutex) TryAcquireMutex(string name)
+    {
+        try
+        {
+            var mutex = new Mutex(initiallyOwned: true, name, out var createdNew);
+            if (createdNew)
+            {
+                return (SingleInstanceAcquireOutcome.Acquired, mutex);
+            }
+
+            mutex.Dispose();
+            return (SingleInstanceAcquireOutcome.AlreadyRunning, null);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (SingleInstanceAcquireOutcome.AccessDenied, null);
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            TryWriteStartupCrashLog($"mutex-acquire:{name}", ex);
+            return (SingleInstanceAcquireOutcome.AccessDenied, null);
+        }
+    }
+
+    private static void NoticeAlreadyRunning()
+    {
+        ShowTopmostNotice("ClassroomToolkit 已经在运行，请使用已打开的实例。", isError: false);
+    }
+
+    private static void ShowTopmostNotice(string text, bool isError)
     {
         try
         {
             const uint mbIconInformation = 0x40u;
+            const uint mbIconError = 0x10u;
             const uint mbTopmost = 0x40000u;
-            _ = MessageBox(IntPtr.Zero, text, "ClassroomToolkit", mbIconInformation | mbTopmost);
+            var icon = isError ? mbIconError : mbIconInformation;
+            _ = MessageBox(IntPtr.Zero, text, "ClassroomToolkit", icon | mbTopmost);
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

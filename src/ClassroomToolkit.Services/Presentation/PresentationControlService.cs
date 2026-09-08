@@ -230,6 +230,14 @@ public sealed class PresentationControlService
             }
         }
 
+        // 防抖抑制是有意的输入整形，不是策略失败：不得计入降级失败、也不得触发 Message 重试
+        //（重试同样会被防抖拦下）。直接按"未发送"返回。
+        if (targetType == PresentationType.Wps
+            && IsWpsDebounced(command, target.Handle, options.WpsDebounceMs))
+        {
+            return false;
+        }
+
         var sent = TrySendWithStrategy(target, command, options, strategy, out var effectiveType);
         if (!sent && strategy != InputStrategy.Message)
         {
@@ -312,10 +320,6 @@ public sealed class PresentationControlService
             return false;
         }
         targetType = plan.TargetType;
-        if (plan.TargetType == PresentationType.Wps && IsWpsDebounced(command, target.Handle, options.WpsDebounceMs))
-        {
-            return false;
-        }
         var keyDownOnly = plan.TargetType == PresentationType.Wps;
         if (plan.Strategy == InputStrategy.Raw && RequiresForeground(plan.TargetType))
         {

@@ -463,6 +463,47 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
+    public void WpsDebounceSuppression_ShouldNotCountAsFallbackFailure()
+    {
+        // 回归：防抖抑制是有意的输入整形，绝不能计入降级失败把 Raw 锁成 Message，
+        // 也不能触发同样会被防抖拦下的 Message 重试。
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new HandleAwareStrategyInputSender();
+        var handle = new IntPtr(1234);
+        sender.SetRawResult(handle, succeed: true);
+        var resolver = new Win32PresentationResolver();
+        var validator = new MockValidator();
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            resolver,
+            validator,
+            new StubForegroundController(initialForeground: true, ensureResult: true));
+        var target = new PresentationTarget(
+            handle,
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = true,
+            AllowWps = true,
+            LockStrategyWhenDegraded = true,
+            WpsDebounceMs = 50
+        };
+
+        var first = service.TrySendToTarget(target, PresentationCommand.Next, options);
+        var second = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        first.Should().BeTrue();
+        second.Should().BeFalse();
+        sender.RawAttemptsByHandle[handle].Should().Be(1);
+        sender.MessageAttemptsByHandle.Should().NotContainKey(handle);
+        service.IsWpsAutoForcedMessageForTarget(handle).Should().BeFalse();
+    }
+
+    [Fact]
     public void WpsDebounceMs_Zero_ShouldAllowImmediateRepeatedNavigation()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());

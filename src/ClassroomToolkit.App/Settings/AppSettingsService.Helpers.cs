@@ -315,7 +315,8 @@ public sealed partial class AppSettingsService
 
     private static int NormalizeWpsDebounceMs(int debounceMs)
     {
-        return Math.Max(0, debounceMs);
+        // 上限钳制防止损坏/误配的超大值把所有 WPS 导航持续抑制到不可用。
+        return Math.Clamp(debounceMs, 0, 2000);
     }
 
     private static double NormalizeBrushSize(double size, double fallback)

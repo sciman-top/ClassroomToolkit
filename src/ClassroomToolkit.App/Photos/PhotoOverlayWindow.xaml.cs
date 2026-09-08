@@ -31,6 +31,7 @@ public partial class PhotoOverlayWindow : Window
     private CancellationTokenSource? _photoLoadCts;
     private string? _cachedBitmapPath;
     private BitmapSource? _cachedBitmap;
+    private DateTime _cachedBitmapModifiedUtc;
     private Window? _zOrderAnchor;
     private static readonly SolidColorBrush OpaqueFrameGuardBrush = CreateOpaqueFrameGuardBrush();
 
@@ -215,6 +216,7 @@ public partial class PhotoOverlayWindow : Window
                     {
                         _cachedBitmapPath = path;
                         _cachedBitmap = bitmap;
+                        _cachedBitmapModifiedUtc = TryGetFileModifiedUtc(path);
                     }
                     PhotoOverlayDiagnostics.Log(
                         "apply-ui",
@@ -407,12 +409,38 @@ public partial class PhotoOverlayWindow : Window
             && !string.IsNullOrWhiteSpace(_cachedBitmapPath)
             && string.Equals(_cachedBitmapPath, path, StringComparison.OrdinalIgnoreCase))
         {
-            bitmap = _cachedBitmap;
-            return true;
+            // 路径相同不代表内容相同：老师可能课中替换照片文件，按 mtime 校验缓存有效性。
+            var currentModifiedUtc = TryGetFileModifiedUtc(path);
+            if (currentModifiedUtc == _cachedBitmapModifiedUtc)
+            {
+                bitmap = _cachedBitmap;
+                return true;
+            }
+
+            _cachedBitmapPath = null;
+            _cachedBitmap = null;
+            _cachedBitmapModifiedUtc = DateTime.MinValue;
+            PhotoOverlayDiagnostics.Log(
+                "cache-stale",
+                IOPath.GetFileName(path));
         }
 
         bitmap = null!;
         return false;
+    }
+
+    private static DateTime TryGetFileModifiedUtc(string path)
+    {
+        try
+        {
+            return File.GetLastWriteTimeUtc(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 读不出时间戳视为缓存失效（返回 MinValue 不等任何记录值），走重新加载路径。
+            Debug.WriteLine($"[PhotoOverlayWindow] file mtime read failed: {path} {ex.Message}");
+            return DateTime.MinValue;
+        }
     }
 
     private void ApplyLoadedBitmap(
