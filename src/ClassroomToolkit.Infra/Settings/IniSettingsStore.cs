@@ -203,12 +203,15 @@ public sealed class IniSettingsStore
     // 剥离 CR/LF，避免读回被截断并随下次保存固化。
     private static string SanitizeIniValue(string value)
     {
-        if (string.IsNullOrEmpty(value) || !(value.Contains('\r') || value.Contains('\n')))
+        if (string.IsNullOrEmpty(value)
+            || !(value.Contains('\r', StringComparison.Ordinal) || value.Contains('\n', StringComparison.Ordinal)))
         {
             return value;
         }
 
-        return value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+        return value
+            .Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal);
     }
 
     public void Save(Dictionary<string, Dictionary<string, string>> data)

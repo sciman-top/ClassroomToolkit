@@ -10,8 +10,6 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    private const int InkNoiseSeedVariants = 64;
-
     private static DrawingBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector? strokeDirection, double brushSize, int seed)
     {
         if (bounds.IsEmpty)

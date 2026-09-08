@@ -18,8 +18,17 @@ public sealed record StudentWorkbookLoadResult(
 /// <summary>工作簿拒绝覆盖（此前读取失败或加载后被外部修改）；SQLite 降级链路据此保留快照出路。</summary>
 public sealed class StudentWorkbookOverwriteRefusedException : InvalidOperationException
 {
+    public StudentWorkbookOverwriteRefusedException()
+    {
+    }
+
     public StudentWorkbookOverwriteRefusedException(string message)
         : base(message)
+    {
+    }
+
+    public StudentWorkbookOverwriteRefusedException(string message, Exception? innerException)
+        : base(message, innerException)
     {
     }
 }

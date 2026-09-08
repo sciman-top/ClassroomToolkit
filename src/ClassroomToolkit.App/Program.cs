@@ -149,5 +149,6 @@ internal static class Program
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 }

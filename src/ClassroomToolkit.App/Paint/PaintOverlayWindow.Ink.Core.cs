@@ -67,7 +67,6 @@ public partial class PaintOverlayWindow
     private bool _strokeInProgress;
     private WpfPoint? _lastEraserPoint;
     private bool _hasDrawing;
-    private readonly Random _inkRandom = new Random();
     private DateTime _lastCalligraphyPreviewUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
     private WpfPoint? _lastCalligraphyPreviewPoint;
     private double _calligraphyPreviewMinDistance = CalligraphyPreviewMinDistanceDefault;

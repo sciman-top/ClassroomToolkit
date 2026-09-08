@@ -1,13 +1,13 @@
 {
-  "generated_at_utc": "2026-08-29T11:40:51.8526518Z",
+  "generated_at_utc": "2026-09-08T00:53:42.3850998Z",
   "configuration": "Release",
   "scope": "src-projects",
   "analysis_level": "latest-all",
-  "diagnostics_total": 16,
+  "diagnostics_total": 19,
   "project_counts": [
     {
       "project": "ClassroomToolkit.App.csproj",
-      "count": 12
+      "count": 14
     },
     {
       "project": "ClassroomToolkit.Interop.csproj",
@@ -15,7 +15,7 @@
     },
     {
       "project": "ClassroomToolkit.Services.csproj",
-      "count": 2
+      "count": 3
     }
   ],
   "rule_counts": [
@@ -29,7 +29,7 @@
     },
     {
       "rule": "CA2007",
-      "count": 6
+      "count": 9
     },
     {
       "rule": "CA2213",
@@ -40,5 +40,139 @@
       "count": 4
     }
   ],
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/AppearanceDialog.xaml.cs",
+      "line": 9,
+      "column": 22,
+      "rule": "CA1515"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/AppearanceDialog.xaml.cs",
+      "line": 23,
+      "column": 36,
+      "rule": "CA1003"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/Ink/InkNoiseTileCache.cs",
+      "line": 73,
+      "column": 34,
+      "rule": "CA5394"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/Ink/InkNoiseTileCache.cs",
+      "line": 78,
+      "column": 24,
+      "rule": "CA5394"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/Ink/InkNoiseTileCache.cs",
+      "line": 81,
+      "column": 34,
+      "rule": "CA5394"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/Ink/InkNoiseTileCache.cs",
+      "line": 82,
+      "column": 29,
+      "rule": "CA5394"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/Paint/PaintOverlayWindow.Presentation.WpsHook.cs",
+      "line": 206,
+      "column": 43,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/UI/Themes/AppTheme.cs",
+      "line": 3,
+      "column": 13,
+      "rule": "CA1515"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/UI/Themes/ThemeManager.cs",
+      "line": 10,
+      "column": 21,
+      "rule": "CA1515"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/UI/Themes/ThemePreferenceService.cs",
+      "line": 3,
+      "column": 21,
+      "rule": "CA1515"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/ViewModels/RollCallViewModel.cs",
+      "line": 53,
+      "column": 46,
+      "rule": "CA2213"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.Lifecycle.cs",
+      "line": 49,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.Lifecycle.cs",
+      "line": 58,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+      "line": 93,
+      "column": 27,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.Lifecycle.cs",
+      "line": 49,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.Lifecycle.cs",
+      "line": 58,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/KeyboardHook.Lifecycle.cs",
+      "line": 49,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.Lifecycle.cs",
+      "line": 58,
+      "column": 23,
+      "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
+      "line": 93,
+      "column": 27,
+      "rule": "CA2007"
+    }
+  ]
 }
