@@ -142,14 +142,15 @@ if ($Profile -eq "full") {
         "scripts/quality/check-dependency-upgrade-feasibility.ps1"
     )
 
+    # The analyzer baseline is collected under the configuration declared inside
+    # analyzer-backlog-baseline.json; the check script aligns to it and fails
+    # loudly on mismatch, so the gate build configuration must not leak here.
     Invoke-NativeStep -Name "analyzer-latest-all" -FilePath $powerShellExe -Arguments @(
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "scripts/quality/check-analyzer-backlog-baseline.ps1",
-        "-Configuration",
-        $Configuration
+        "scripts/quality/check-analyzer-backlog-baseline.ps1"
     )
 }
 

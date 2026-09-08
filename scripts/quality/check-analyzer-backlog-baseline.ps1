@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-    [string]$Configuration = "Debug",
+    # Empty means "use the configuration declared by the baseline". An explicit
+    # value that disagrees with the baseline is a hard error: CA counts from
+    # different configurations are not comparable.
+    [string]$Configuration = "",
     [string]$BaselinePath = "scripts/quality/analyzer-backlog-baseline.json",
     [string]$ReportPath = ""
 )
@@ -104,6 +107,20 @@ if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
     throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
 }
 
+if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
+    throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
+}
+
+$baseline = Get-Content -LiteralPath $resolvedBaselinePath -Raw | ConvertFrom-Json
+$baselineConfiguration = [string]$baseline.configuration
+if ([string]::IsNullOrWhiteSpace($Configuration)) {
+    $Configuration = $baselineConfiguration
+}
+elseif (-not [string]::Equals($Configuration, $baselineConfiguration, [StringComparison]::OrdinalIgnoreCase)) {
+    throw ("[analyzer-backlog] Configuration mismatch: baseline was collected under '{0}' but check requested '{1}'. " +
+        "CA counts are only comparable within the same configuration; rerun with -Configuration {0} or regenerate the baseline.") -f $baselineConfiguration, $Configuration
+}
+
 $projectFiles = Get-ChildItem -LiteralPath $srcRoot -Filter "*.csproj" -File -Recurse | Sort-Object FullName
 if (-not $projectFiles) {
     throw "[analyzer-backlog] No src csproj files found under: $srcRoot"
@@ -180,7 +197,6 @@ if (-not [string]::IsNullOrWhiteSpace($reportDirectory)) {
 
 $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $resolvedReportPath -Encoding UTF8
 
-$baseline = Get-Content -LiteralPath $resolvedBaselinePath -Raw | ConvertFrom-Json
 $baselineRuleMap = @{}
 foreach ($entry in @($baseline.rule_counts)) {
     $baselineRuleMap[$entry.rule] = [int]$entry.count
