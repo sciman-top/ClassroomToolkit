@@ -8,18 +8,8 @@ namespace ClassroomToolkit.App;
 
 internal static class Program
 {
-    private const string SingleInstanceMutexName = @"Global\ClassroomToolkit.SingleInstance";
-    private const string SessionSingleInstanceMutexName = @"Local\ClassroomToolkit.SingleInstance";
-
     // 互斥体必须存活整个进程生命周期；若被 GC 回收，句柄关闭会提前释放单实例锁。
     private static Mutex? _singleInstanceMutex;
-
-    private enum SingleInstanceAcquireOutcome
-    {
-        Acquired,
-        AlreadyRunning,
-        AccessDenied
-    }
 
     [STAThread]
     public static void Main()
@@ -58,57 +48,24 @@ internal static class Program
 
     private static bool AcquireSingleInstance()
     {
-        // Global\ 提供跨登录会话互斥（快速用户切换/管理员第二会话），避免 settings/名册
-        // 双写者互相静默覆写；ACL 拒绝时降级回会话级 Local\，至少保留同会话互斥。
-        var global = TryAcquireMutex(SingleInstanceMutexName);
-        if (global.outcome == SingleInstanceAcquireOutcome.Acquired)
+        var outcome = Startup.SingleInstanceGate.AcquireWithFallback(
+            Startup.SingleInstanceGate.GlobalMutexName,
+            Startup.SingleInstanceGate.SessionMutexName,
+            out var mutex);
+        switch (outcome)
         {
-            _singleInstanceMutex = global.mutex;
-            return true;
-        }
-        if (global.outcome == SingleInstanceAcquireOutcome.AlreadyRunning)
-        {
-            NoticeAlreadyRunning();
-            return false;
-        }
-
-        var session = TryAcquireMutex(SessionSingleInstanceMutexName);
-        if (session.outcome == SingleInstanceAcquireOutcome.Acquired)
-        {
-            _singleInstanceMutex = session.mutex;
-            return true;
-        }
-        if (session.outcome == SingleInstanceAcquireOutcome.AlreadyRunning)
-        {
-            NoticeAlreadyRunning();
-            return false;
-        }
-
-        // 两级互斥都被 ACL 拒绝（极罕见）：按课堂可用性优先继续启动。
-        return true;
-    }
-
-    private static (SingleInstanceAcquireOutcome outcome, Mutex? mutex) TryAcquireMutex(string name)
-    {
-        try
-        {
-            var mutex = new Mutex(initiallyOwned: true, name, out var createdNew);
-            if (createdNew)
-            {
-                return (SingleInstanceAcquireOutcome.Acquired, mutex);
-            }
-
-            mutex.Dispose();
-            return (SingleInstanceAcquireOutcome.AlreadyRunning, null);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return (SingleInstanceAcquireOutcome.AccessDenied, null);
-        }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            TryWriteStartupCrashLog($"mutex-acquire:{name}", ex);
-            return (SingleInstanceAcquireOutcome.AccessDenied, null);
+            case Startup.SingleInstanceAcquireOutcome.Acquired:
+                _singleInstanceMutex = mutex;
+                return true;
+            case Startup.SingleInstanceAcquireOutcome.AlreadyRunning:
+                NoticeAlreadyRunning();
+                return false;
+            default:
+                // 两级互斥都被 ACL 拒绝（极罕见）：按课堂可用性优先继续启动，落盘留痕。
+                TryWriteStartupCrashLog(
+                    "single-instance",
+                    new InvalidOperationException("Global 与 Local 互斥体均被 ACL 拒绝，已降级为无互斥启动。"));
+                return true;
         }
     }
 
