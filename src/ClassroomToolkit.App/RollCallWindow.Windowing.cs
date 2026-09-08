@@ -144,6 +144,7 @@ public partial class RollCallWindow
         PaintModeManager.Instance.PaintModeChanged -= OnPaintModeChanged;
         PaintModeManager.Instance.IsDrawingChanged -= OnDrawingStateChanged;
         _speechService.SpeechUnavailable -= NotifySpeechError;
+        _speechService.CancelSpeaking();
         _remoteHookStartGate.NextGeneration();
         StopKeyboardHook();
         _remoteHookStartGate.Dispose();

@@ -20,6 +20,7 @@ namespace ClassroomToolkit.App;
 public partial class App : WpfApplication
 {
     internal const string StartupCompatibilityWarningShownPropertyKey = "StartupCompatibilityWarningShown";
+    private const int MaxErrorLogRetentionAttempts = 3;
     private static readonly object LogWriteLock = new();
     private static readonly ConfigurationService AppConfiguration = new();
     private static readonly string AppDataDirectory = ResolveAppDataDirectory(AppConfiguration);
@@ -27,6 +28,7 @@ public partial class App : WpfApplication
     private int _criticalDialogShowing;
     private int _errorLogRetentionApplied;
     private int _errorLogRetentionSucceeded;
+    private int _errorLogRetentionFailures;
     private int _globalExceptionHandlersRegistered;
     private IServiceProvider? _services;
 
@@ -106,9 +108,11 @@ public partial class App : WpfApplication
 
     protected override void OnExit(ExitEventArgs e)
     {
-        UnregisterGlobalExceptionHandlers();
+        // 先清理服务（日志排空、InkWAL flush 等），最后注销全局异常处理器：
+        // 清理期抛出的异常仍受兜底保护并可落盘记录。
         (_services as IDisposable)?.Dispose();
         _services = null;
+        UnregisterGlobalExceptionHandlers();
         base.OnExit(e);
     }
 
@@ -150,6 +154,11 @@ public partial class App : WpfApplication
     {
         if (e.ExceptionObject is not Exception ex)
         {
+            // 非 CLS 异常对象（罕见）：本回调是进程终止前最后观察点，至少留一条可检索记录。
+            LogException(
+                new InvalidOperationException(
+                    $"AppDomain.UnhandledException 收到非 Exception 异常对象：{e.ExceptionObject?.GetType().FullName ?? "null"}"),
+                "AppDomain.UnhandledException");
             return;
         }
 
@@ -263,6 +272,12 @@ public partial class App : WpfApplication
         {
             return;
         }
+        if (Volatile.Read(ref _errorLogRetentionFailures) >= MaxErrorLogRetentionAttempts)
+        {
+            // 失败退避闩锁：连续失败（只读目录/磁盘满）后放弃本会话重试，
+            // 避免每个被吞异常都附加一轮目录枚举放大 UI 卡顿。
+            return;
+        }
 
         if (Interlocked.Exchange(ref _errorLogRetentionApplied, 1) == 1)
         {
@@ -287,7 +302,7 @@ public partial class App : WpfApplication
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"日志保留清理失败: {ex.Message}");
-            Volatile.Write(ref _errorLogRetentionSucceeded, 0);
+            Interlocked.Increment(ref _errorLogRetentionFailures);
         }
         finally
         {

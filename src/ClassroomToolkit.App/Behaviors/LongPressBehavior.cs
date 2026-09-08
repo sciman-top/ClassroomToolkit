@@ -76,6 +76,10 @@ public static class LongPressBehavior
     {
         if (d is UIElement element)
         {
+            if (d is FrameworkElement frameworkElement)
+            {
+                frameworkElement.Unloaded -= OnElementUnloaded;
+            }
             element.PreviewMouseLeftButtonDown -= OnMouseDown;
             element.PreviewMouseLeftButtonUp -= OnMouseUp;
             element.MouseLeave -= OnMouseLeave;
@@ -90,7 +94,22 @@ public static class LongPressBehavior
                 element.PreviewTouchDown += OnTouchDown;
                 element.PreviewTouchUp += OnTouchUp;
                 element.LostTouchCapture += OnTouchLostCapture;
+                if (d is FrameworkElement loadedFrameworkElement)
+                {
+                    loadedFrameworkElement.Unloaded += OnElementUnloaded;
+                }
             }
+        }
+    }
+
+    private static void OnElementUnloaded(object sender, RoutedEventArgs e)
+    {
+        // 工具条被隐藏/关闭瞬间仍按住的元素：长按计时器必须停表，否则 ≤700ms 后
+        // 命令仍会触发，弹出孤儿取色窗或在已关闭窗口上改变板书状态。
+        if (sender is UIElement element)
+        {
+            StopPressTimer(element, resetTriggered: true);
+            SetTouchPressActive(element, isActive: false);
         }
     }
 

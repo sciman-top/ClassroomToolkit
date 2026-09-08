@@ -58,9 +58,10 @@ public sealed partial class RollCallViewModel
     internal void ApplyTimerState(bool isRollCallMode, TimerMode timerMode, int minutes, int seconds, int secondsLeft, int stopwatchSeconds, bool running)
     {
         IsRollCallMode = isRollCallMode;
-        _timerMinutes = minutes;
-        _timerSeconds = seconds;
-        _timerEngine.SetState(timerMode, minutes * 60 + seconds, secondsLeft, stopwatchSeconds, running);
+        // 设置文件可能被手工编辑出异常值：与 SetCountdown 同样钳制，防止 minutes * 60 在 int 域溢出回绕。
+        _timerMinutes = Math.Clamp(minutes, 0, 150);
+        _timerSeconds = Math.Clamp(seconds, 0, 59);
+        _timerEngine.SetState(timerMode, _timerMinutes * 60 + _timerSeconds, secondsLeft, stopwatchSeconds, running);
         ApplyReminderInterval();
         UpdateTimeDisplay();
         RaisePropertyChanged(nameof(TimerModeLabel), nameof(StartPauseLabel), nameof(TimerRunning), nameof(TimerSecondsLeft), nameof(CurrentTimerMode), nameof(IsRollCallMode));

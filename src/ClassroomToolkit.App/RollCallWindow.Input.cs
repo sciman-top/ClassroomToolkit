@@ -114,6 +114,7 @@ public partial class RollCallWindow
             {
                 SpeakStudentName();
                 UpdatePhotoDisplay();
+                ScheduleRollStateSave();
             }
         }
     }

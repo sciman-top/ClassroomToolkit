@@ -31,6 +31,40 @@ public sealed class SpeechServiceTests
     }
 
     [Fact]
+    public void SpeakCompletedError_ShouldNotifyUnavailableOnlyOnce()
+    {
+        // 回归：播报启动后的异步失败只在 SpeakCompleted.Error 可见，必须接上降级通知。
+        var service = new SpeechService();
+        var unavailableCount = 0;
+        service.SpeechUnavailable += () => Interlocked.Increment(ref unavailableCount);
+
+        try
+        {
+            service.RaiseSpeakCompletedForTest(new InvalidOperationException("audio-device-lost"));
+            service.RaiseSpeakCompletedForTest(new InvalidOperationException("audio-device-lost-again"));
+
+            unavailableCount.Should().Be(1);
+        }
+        finally
+        {
+            service.Dispose();
+        }
+    }
+
+    [Fact]
+    public void CancelSpeaking_ShouldNotThrow_BeforeAndAfterDispose()
+    {
+        var service = new SpeechService();
+
+        var beforeDispose = () => service.CancelSpeaking();
+        beforeDispose.Should().NotThrow();
+
+        service.Dispose();
+        var afterDispose = () => service.CancelSpeaking();
+        afterDispose.Should().NotThrow();
+    }
+
+    [Fact]
     public async Task SpeakAsync_AfterDispose_ShouldNotThrow()
     {
         var service = new SpeechService();

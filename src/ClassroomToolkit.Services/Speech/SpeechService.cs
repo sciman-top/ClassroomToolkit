@@ -33,7 +33,11 @@ public class SpeechService : IDisposable
                     return Task.CompletedTask;
                 }
 
-                _synthesizer ??= new SpeechSynthesizer();
+                if (_synthesizer == null)
+                {
+                    _synthesizer = new SpeechSynthesizer();
+                    _synthesizer.SpeakCompleted += OnSpeakCompleted;
+                }
 
                 if (!string.IsNullOrWhiteSpace(voiceId) && !string.Equals(voiceId, _lastVoiceId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -64,9 +68,62 @@ public class SpeechService : IDisposable
         return Task.CompletedTask;
     }
 
+    /// <summary>取消当前会话已排队/播放中的播报（如点名窗口关闭时），不销毁语音引擎。</summary>
+    public void CancelSpeaking()
+    {
+        try
+        {
+            lock (_syncRoot)
+            {
+                if (_disposed || _synthesizer == null)
+                {
+                    return;
+                }
+
+                _synthesizer.SpeakAsyncCancelAll();
+            }
+        }
+        catch (Exception ex) when (IsNonFatal(ex))
+        {
+            Debug.WriteLine(FormatDiagnostic("CancelSpeaking", ex));
+        }
+    }
+
     internal void NotifySpeechUnavailableForTest()
     {
         NotifySpeechUnavailable();
+    }
+
+    internal void RaiseSpeakCompletedForTest(Exception? error)
+    {
+        HandleSpeakCompleted(error);
+    }
+
+    private void OnSpeakCompleted(object? sender, SpeakCompletedEventArgs e)
+    {
+        HandleSpeakCompleted(e.Error);
+    }
+
+    private void HandleSpeakCompleted(Exception? error)
+    {
+        if (error == null)
+        {
+            return;
+        }
+
+        // SpeakCompleted 在线程池线程上触发：播报启动后的异步失败（音频设备变更、
+        // SAPI 运行时失败）在此才可见，必须接上降级通知，否则播报静默失效。
+        bool shouldNotifyUnavailable;
+        lock (_syncRoot)
+        {
+            shouldNotifyUnavailable = SpeechServiceUnavailableNotificationPolicy.ShouldNotify(ref _unavailableNotifiedState);
+        }
+
+        Debug.WriteLine(FormatDiagnostic("SpeakCompleted", error));
+        if (shouldNotifyUnavailable)
+        {
+            NotifySpeechUnavailable();
+        }
     }
 
     public void Dispose()
