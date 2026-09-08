@@ -9,7 +9,20 @@ using System.Text.Json;
 
 namespace ClassroomToolkit.Infra.Storage;
 
-public sealed record StudentWorkbookLoadResult(StudentWorkbook Workbook, bool CreatedTemplate, string? RollStateJson);
+public sealed record StudentWorkbookLoadResult(
+    StudentWorkbook Workbook,
+    bool CreatedTemplate,
+    string? RollStateJson,
+    bool OverwriteBlocked = false);
+
+/// <summary>工作簿拒绝覆盖（此前读取失败或加载后被外部修改）；SQLite 降级链路据此保留快照出路。</summary>
+public sealed class StudentWorkbookOverwriteRefusedException : InvalidOperationException
+{
+    public StudentWorkbookOverwriteRefusedException(string message)
+        : base(message)
+    {
+    }
+}
 
 public sealed class StudentWorkbookStore
 {
@@ -63,7 +76,15 @@ public sealed class StudentWorkbookStore
         try
         {
             var result = LoadExistingWorkbook(fullPath);
-            _overwriteBlockedPaths.TryRemove(fullPath, out _);
+            if (result.OverwriteBlocked)
+            {
+                _overwriteBlockedPaths[fullPath] = 0;
+            }
+            else
+            {
+                _overwriteBlockedPaths.TryRemove(fullPath, out _);
+            }
+
             return result;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
@@ -105,16 +126,27 @@ public sealed class StudentWorkbookStore
 
         var normalizedWorkbook = NormalizeWorkbook(classes, out var workbookNeedsRepair);
         var normalizedRollStateJson = EnsureRollStateJson(rollStateJson);
+        var overwriteBlocked = false;
         if (rollStateNeedsRepair
             || workbookNeedsRepair
             || mergedDuplicateClassSheets
             || !string.Equals(rollStateJson, normalizedRollStateJson, StringComparison.Ordinal))
         {
-            EnsureNormalizationBackup(path);
-            Save(normalizedWorkbook, path, normalizedRollStateJson);
+            if (TryEnsureNormalizationBackup(path))
+            {
+                Save(normalizedWorkbook, path, normalizedRollStateJson);
+            }
+            else
+            {
+                // 备份失败（只读目录/磁盘满/OneDrive 占用）：规范化内容仍可用于本会话（降级只读），
+                // 但必须拒绝后续覆盖——未备份的原始文件绝不能被整册覆写。
+                overwriteBlocked = true;
+                Debug.WriteLine(
+                    $"[StudentWorkbookStore] normalization backup failed; degrade to read-only session path={path}");
+            }
         }
 
-        return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson);
+        return new StudentWorkbookLoadResult(normalizedWorkbook, false, normalizedRollStateJson, overwriteBlocked);
     }
 
     public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
@@ -124,7 +156,7 @@ public sealed class StudentWorkbookStore
         var fullPath = Path.GetFullPath(path);
         if (File.Exists(fullPath) && _overwriteBlockedPaths.ContainsKey(fullPath))
         {
-            throw new InvalidOperationException(
+            throw new StudentWorkbookOverwriteRefusedException(
                 $"学生工作簿此前读取失败；拒绝覆盖原文件，需先恢复或替换后重新加载：{fullPath}");
         }
         EnsureNoExternalModification(fullPath);
@@ -194,7 +226,7 @@ public sealed class StudentWorkbookStore
         }
         if (!string.Equals(validated.ContentHash, currentContentHash, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(
+            throw new StudentWorkbookOverwriteRefusedException(
                 $"学生工作簿在加载后被外部修改；拒绝覆盖以避免丢失外部改动，请先重新加载名册或合并外部修改：{fullPath}");
         }
 
@@ -231,6 +263,21 @@ public sealed class StudentWorkbookStore
 
     private const string BackupFolderName = "backups";
     private const int MaxNormalizationBackups = 10;
+
+    private static bool TryEnsureNormalizationBackup(string path)
+    {
+        try
+        {
+            EnsureNormalizationBackup(path);
+            return true;
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine(
+                $"[StudentWorkbookStore] normalization backup failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
+            return false;
+        }
+    }
 
     private static void EnsureNormalizationBackup(string path)
     {

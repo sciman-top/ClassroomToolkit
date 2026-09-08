@@ -159,6 +159,26 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldPersistSnapshotAndSwallowRefusal_WhenBridgeRefusesOverwrite()
+    {
+        // 回归：xlsx 被拒绝覆盖时快照必须先写，否则降级会话整节点名状态无处持久化。
+        var workbook = CreateWorkbook();
+        var dbPath = CreateTempDbPath();
+        var adapter = new StudentWorkbookSqliteStoreAdapter(new OverwriteRefusingBridge(), _ => dbPath);
+
+        var save = () => adapter.Save(workbook, "students.xlsx", "{\"state\":\"session\"}");
+
+        save.Should().NotThrow();
+
+        // 快照即降级出路：xlsx 彻底不可读时（桥加载失败），仍能从快照回读本会话状态。
+        var fallbackAdapter = new StudentWorkbookSqliteStoreAdapter(new ThrowingStudentWorkbookStoreBridge(), _ => dbPath);
+        var actual = fallbackAdapter.LoadOrCreate("students.xlsx");
+
+        actual.RollStateJson.Should().Be("{\"state\":\"session\"}");
+        actual.Workbook.ClassNames.Should().Contain("班级1");
+    }
+
+    [Fact]
     public void Save_ShouldThrowArgumentException_WhenPathIsBlank()
     {
         var adapter = new StudentWorkbookSqliteStoreAdapter(new FakeStudentWorkbookStoreBridge(
@@ -500,6 +520,19 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
             LastSavedWorkbook = workbook;
             LastSavePath = path;
             LastRollStateJson = rollStateJson;
+        }
+    }
+
+    private sealed class OverwriteRefusingBridge : IStudentWorkbookStoreBridge
+    {
+        public StudentWorkbookLoadResult LoadOrCreate(string path)
+        {
+            throw new IOException("bridge-failure");
+        }
+
+        public void Save(StudentWorkbook workbook, string path, string? rollStateJson)
+        {
+            throw new StudentWorkbookOverwriteRefusedException("学生工作簿此前读取失败；拒绝覆盖原文件");
         }
     }
 

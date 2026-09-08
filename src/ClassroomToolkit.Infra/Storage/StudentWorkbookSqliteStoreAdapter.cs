@@ -89,9 +89,21 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        _bridge.Save(workbook, path, rollStateJson);
         var dbPath = ResolveDbPathSafe(path);
+        // 快照先行：xlsx 侧拒绝覆盖（此前读取失败/外部修改）时，快照是降级会话唯一的持久化出路。
+        // 否则 Load 侧有快照兜底、Save 侧却永远写不进任何介质，整节点名状态丢失。
         TryWriteSnapshotPackage(dbPath, workbook, rollStateJson);
+
+        try
+        {
+            _bridge.Save(workbook, path, rollStateJson);
+        }
+        catch (StudentWorkbookOverwriteRefusedException ex)
+        {
+            // xlsx 被拒绝覆盖：本会话状态已持久化到快照，下次加载由版本仲裁策略合并，
+            // 不向上抛出以避免老师每次点名操作都收到保存失败提示。
+            Debug.WriteLine($"[StudentWorkbookSqlite] bridge save refused; snapshot retained: {ex.Message}");
+        }
     }
 
     private string ResolveDbPathSafe(string workbookPath)

@@ -410,6 +410,58 @@ public sealed class StudentWorkbookStoreTests
     }
 
     [Fact]
+    public void LoadOrCreate_ShouldDegradeToReadOnlySession_WhenNormalizationBackupFails()
+    {
+        // 回归：备份失败（只读目录/磁盘满）时整册不可用会把"写不了"放大成"读不了"。
+        // 期望：规范化内容仍可本会话使用（降级只读），原始文件不被覆写，后续 Save 被拒绝。
+        var directory = TestPathHelper.CreateDirectory("ctool_workbook_ro_degrade");
+        var tempPath = Path.Combine(directory, "students.xlsx");
+        var backupFile = Path.Combine(directory, "backups");
+        try
+        {
+            using (var workbook = new XLWorkbook())
+            {
+                var sheet = workbook.Worksheets.Add("1班");
+                sheet.Cell(1, 1).Value = "学号";
+                sheet.Cell(1, 2).Value = "姓名";
+                sheet.Cell(2, 1).Value = "01";
+                sheet.Cell(2, 2).Value = "张三";
+                var stateSheet = workbook.Worksheets.Add(StudentWorkbookStore.RollStateSheetName);
+                stateSheet.Cell(1, 1).Value = StudentWorkbookStore.RollStateColumn;
+                stateSheet.Cell(2, 1).Value = "{malformed";
+                workbook.SaveAs(tempPath);
+            }
+            var originalBytes = File.ReadAllBytes(tempPath);
+            // 同名文件占位：EnsureNormalizationBackup 的 Directory.CreateDirectory 必然失败。
+            File.WriteAllText(backupFile, "blocker");
+            var store = new StudentWorkbookStore();
+
+            var loaded = store.LoadOrCreate(tempPath);
+
+            loaded.OverwriteBlocked.Should().BeTrue();
+            loaded.Workbook.GetActiveRoster().Students.Should().ContainSingle()
+                .Which.StudentId.Should().Be("01");
+            loaded.RollStateJson.Should().NotBe("{malformed");
+            File.ReadAllBytes(tempPath).Should().Equal(originalBytes);
+
+            var save = () => store.Save(loaded.Workbook, tempPath, loaded.RollStateJson);
+            save.Should().Throw<StudentWorkbookOverwriteRefusedException>();
+            File.ReadAllBytes(tempPath).Should().Equal(originalBytes);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+            if (File.Exists(backupFile))
+            {
+                File.Delete(backupFile);
+            }
+        }
+    }
+
+    [Fact]
     public void LoadOrCreate_ShouldBackupBeforeRewrite_WhenRowIsHalfFilled()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_half_row", ".xlsx");
