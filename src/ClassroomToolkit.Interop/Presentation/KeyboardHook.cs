@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
-public sealed partial class KeyboardHook : IDisposable
+public sealed partial class KeyboardHook : IKeyboardHookHandle
 {
     private const int WhKeyboardLl = 13;
 

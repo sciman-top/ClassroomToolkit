@@ -12,8 +12,19 @@ namespace ClassroomToolkit.Services.Input;
 public class GlobalHookService : IDisposable
 {
     private readonly object _syncRoot = new();
-    private readonly List<KeyboardHook> _activeHooks = new();
+    private readonly List<IKeyboardHookHandle> _activeHooks = new();
     private bool _disposed;
+
+    /// <summary>
+    /// 钩子句柄工厂。生产默认创建真实 KeyboardHook；测试经 InternalsVisibleTo
+    /// 注入假句柄，行为级验证注册-回滚契约而不安装系统级钩子。
+    /// </summary>
+    internal Func<KeyBinding, IKeyboardHookHandle> HookFactory { get; set; } =
+        static binding => new KeyboardHook
+        {
+            TargetBinding = binding,
+            SuppressWhenMatched = true
+        };
 
     [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing app contract.")]
     public event Action? HookUnavailable;
@@ -67,7 +78,7 @@ public class GlobalHookService : IDisposable
             return false;
         }
 
-        var startedHooks = new List<KeyboardHook>();
+        var startedHooks = new List<IKeyboardHookHandle>();
 
         try
         {
@@ -79,11 +90,7 @@ public class GlobalHookService : IDisposable
                     return false;
                 }
 
-                var hook = new KeyboardHook
-                {
-                    TargetBinding = binding,
-                    SuppressWhenMatched = true
-                };
+                var hook = HookFactory(binding);
                 hook.BindingTriggered += callback;
 
                 try
@@ -150,7 +157,7 @@ public class GlobalHookService : IDisposable
         StopHooks(hooks, "unregister-all");
     }
 
-    private static void CleanupHooks(List<KeyboardHook> hooks, Action<KeyBinding> callback)
+    private static void CleanupHooks(List<IKeyboardHookHandle> hooks, Action<KeyBinding> callback)
     {
         foreach (var hook in hooks)
         {
@@ -167,14 +174,14 @@ public class GlobalHookService : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        List<KeyboardHook>? hooks = null;
+        List<IKeyboardHookHandle>? hooks = null;
         lock (_syncRoot)
         {
             if (_disposed) return;
             _disposed = true;
             if (_activeHooks.Count > 0)
             {
-                hooks = new List<KeyboardHook>(_activeHooks);
+                hooks = new List<IKeyboardHookHandle>(_activeHooks);
                 _activeHooks.Clear();
             }
         }
@@ -193,7 +200,7 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private bool TryTrackActiveHooks(List<KeyboardHook> hooks)
+    private bool TryTrackActiveHooks(List<IKeyboardHookHandle> hooks)
     {
         lock (_syncRoot)
         {
@@ -207,7 +214,7 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private List<KeyboardHook> DrainActiveHooks()
+    private List<IKeyboardHookHandle> DrainActiveHooks()
     {
         lock (_syncRoot)
         {
@@ -216,13 +223,13 @@ public class GlobalHookService : IDisposable
                 return [];
             }
 
-            var hooks = new List<KeyboardHook>(_activeHooks);
+            var hooks = new List<IKeyboardHookHandle>(_activeHooks);
             _activeHooks.Clear();
             return hooks;
         }
     }
 
-    private static void StopHooks(IEnumerable<KeyboardHook> hooks, string reason)
+    private static void StopHooks(IEnumerable<IKeyboardHookHandle> hooks, string reason)
     {
         foreach (var hook in hooks)
         {
@@ -230,7 +237,7 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private static void TryStopHook(KeyboardHook hook, string reason)
+    private static void TryStopHook(IKeyboardHookHandle hook, string reason)
     {
         try
         {
