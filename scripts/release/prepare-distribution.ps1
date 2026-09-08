@@ -12,7 +12,8 @@ param(
     [switch]$SkipPublish,
     [switch]$SkipZip,
     [switch]$AllowOverwriteVersion,
-    [switch]$EnsureLatestRuntime
+    [Alias("EnsureLatestRuntime")]
+    [switch]$EnsureRuntimeInstaller
 )
 
 Set-StrictMode -Version Latest
@@ -104,17 +105,40 @@ function Ensure-RuntimeInstaller {
     param(
         [Parameter(Mandatory = $true)][string]$InstallerPath,
         [Parameter(Mandatory = $true)][string]$DownloadUrl,
+        [Parameter(Mandatory = $true)][string]$ExpectedVersion,
+        [Parameter(Mandatory = $true)][string]$ExpectedSha256,
+        [Parameter(Mandatory = $true)][string]$ExpectedPublisher,
         [string]$DownloadTargetPath = "",
         [switch]$AllowDownload
     )
 
-    $hasBinary = (Test-Path -LiteralPath $InstallerPath) -and -not (Test-GitLfsPointer -Path $InstallerPath)
-    if ($hasBinary) {
+    function Test-ValidRuntimeInstaller {
+        param([Parameter(Mandatory = $true)][string]$Path)
+
+        if (-not (Test-Path -LiteralPath $Path) -or (Test-GitLfsPointer -Path $Path)) {
+            return $false
+        }
+
+        $actualHash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        if (-not [string]::Equals($actualHash, $ExpectedSha256, [StringComparison]::OrdinalIgnoreCase)) {
+            return $false
+        }
+
+        $signature = Get-AuthenticodeSignature -LiteralPath $Path
+        if ($signature.Status -ne "Valid" -or $null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notlike "*$ExpectedPublisher*") {
+            return $false
+        }
+
+        $productVersion = (Get-Item -LiteralPath $Path).VersionInfo.ProductVersion
+        return $productVersion -like "$ExpectedVersion.*" -or $productVersion -eq $ExpectedVersion
+    }
+
+    if (Test-ValidRuntimeInstaller -Path $InstallerPath) {
         return $InstallerPath
     }
 
     if (-not $AllowDownload) {
-        throw "Runtime installer missing or still a Git LFS pointer: $InstallerPath. Run 'git lfs pull' or pass -EnsureLatestRuntime."
+        throw "Runtime installer is missing or failed integrity/version/signature validation: $InstallerPath. Pass -EnsureRuntimeInstaller to download the pinned runtime."
     }
 
     $targetPath = if ([string]::IsNullOrWhiteSpace($DownloadTargetPath)) {
@@ -129,6 +153,10 @@ function Ensure-RuntimeInstaller {
     New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
     Invoke-Step -Name "download-runtime-installer" -Action {
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $targetPath
+    }
+
+    if (-not (Test-ValidRuntimeInstaller -Path $targetPath)) {
+        throw "Downloaded runtime installer failed pinned SHA-256, Authenticode publisher, or product-version validation: $targetPath"
     }
 
     return $targetPath
@@ -197,15 +225,18 @@ function Write-StandardBootstrap {
         [Parameter(Mandatory = $true)][string]$Root,
         [Parameter(Mandatory = $true)][string]$AppExeName,
         [Parameter(Mandatory = $true)][string]$RuntimeMajor,
-        [Parameter(Mandatory = $true)][string]$RuntimeInstallerFileName
+        [Parameter(Mandatory = $true)][string]$RuntimeInstallerFileName,
+        [string]$AppDirectory = "app"
     )
+
+    $appRelativePath = if ($AppDirectory -eq ".") { $AppExeName } else { "$AppDirectory\$AppExeName" }
 
     $script = @"
 param()
 
 `$ErrorActionPreference = 'Stop'
 `$root = Split-Path -Parent `$MyInvocation.MyCommand.Path
-`$appExe = Join-Path `$root 'app\$AppExeName'
+`$appExe = Join-Path `$root '$appRelativePath'
 `$installer = Join-Path `$root 'prereq\$RuntimeInstallerFileName'
 `$requiredPrefix = 'Microsoft.WindowsDesktop.App $RuntimeMajor.'
 
@@ -321,8 +352,11 @@ $resolvedConfiguration = if ([string]::IsNullOrWhiteSpace($Configuration)) { [st
 $resolvedRid = if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) { [string]$releaseConfig.runtimeIdentifier } else { $RuntimeIdentifier }
 $appExeName = [string]$releaseConfig.appExecutableName
 $runtimeInstallerFileName = [string]$releaseConfig.runtimeInstaller.fileName
+$runtimeInstallerVersion = [string]$releaseConfig.runtimeInstaller.version
 $runtimeRequiredMajor = [string]$releaseConfig.runtimeInstaller.requiredMajor
 $runtimeDownloadUrl = [string]$releaseConfig.runtimeInstaller.downloadUrl
+$runtimeInstallerSha256 = [string]$releaseConfig.runtimeInstaller.sha256
+$runtimeInstallerPublisher = [string]$releaseConfig.runtimeInstaller.publisher
 
 Assert-SafeReleaseVersionSegment -Value $Version
 Assert-FileExists -Path $resolvedProjectPath -Label "project"
@@ -358,14 +392,21 @@ if ($buildStandard) {
     $resolvedRuntimeInstallerPath = Ensure-RuntimeInstaller `
         -InstallerPath $runtimeInstallerPath `
         -DownloadUrl $runtimeDownloadUrl `
+        -ExpectedVersion $runtimeInstallerVersion `
+        -ExpectedSha256 $runtimeInstallerSha256 `
+        -ExpectedPublisher $runtimeInstallerPublisher `
         -DownloadTargetPath $runtimeInstallerCachePath `
-        -AllowDownload:$EnsureLatestRuntime
+        -AllowDownload:$EnsureRuntimeInstaller
 
     $prereqDir = Join-Path $standardRoot "prereq"
     New-Item -ItemType Directory -Path $prereqDir -Force | Out-Null
     Copy-Item -LiteralPath $resolvedRuntimeInstallerPath -Destination (Join-Path $prereqDir $runtimeInstallerFileName) -Force
+    $installerPayloadPrereq = Join-Path $standardApp "prereq"
+    New-Item -ItemType Directory -Path $installerPayloadPrereq -Force | Out-Null
+    Copy-Item -LiteralPath $resolvedRuntimeInstallerPath -Destination (Join-Path $installerPayloadPrereq $runtimeInstallerFileName) -Force
 
     Write-StandardBootstrap -Root $standardRoot -AppExeName $appExeName -RuntimeMajor $runtimeRequiredMajor -RuntimeInstallerFileName $runtimeInstallerFileName
+    Write-StandardBootstrap -Root $standardApp -AppExeName $appExeName -RuntimeMajor $runtimeRequiredMajor -RuntimeInstallerFileName $runtimeInstallerFileName -AppDirectory "."
     Assert-FileExistsByName -Root $standardApp -Name "*.runtimeconfig.json"
     Assert-FileExistsByName -Root $standardApp -Name "e_sqlite3.dll"
     Assert-FileDoesNotExistByName -Root $standardApp -Name "pdfium.dll"
@@ -417,7 +458,7 @@ $manifest = [ordered]@{
     app_executable = $appExeName
     skip_publish = [bool]$SkipPublish
     skip_zip = [bool]$SkipZip
-    ensure_latest_runtime = [bool]$EnsureLatestRuntime
+    ensure_runtime_installer = [bool]$EnsureRuntimeInstaller
     outputs = [ordered]@{
         root = $releaseRoot
         standard = if ($buildStandard) { $standardRoot } else { $null }

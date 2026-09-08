@@ -87,11 +87,12 @@ public partial class PhotoOverlayWindow : Window
         _autoCloseTimer.Stop();
         var deferShowUntilBitmapReady = !IsVisible;
         var normalizedStudentId = studentId?.Trim();
+        var isShowingSamePhoto = IsShowingSamePhoto(path);
         PhotoOverlayDiagnostics.Log(
             "show-start",
-            $"req={requestId} path={IOPath.GetFileName(path)} studentId={normalizedStudentId ?? string.Empty} duration={durationSeconds} same={IsShowingSamePhoto(path)} visible={IsVisible} loading={LoadingMask.Visibility}");
+            $"req={requestId} path={IOPath.GetFileName(path)} studentId={normalizedStudentId ?? string.Empty} duration={durationSeconds} same={isShowingSamePhoto} visible={IsVisible} loading={LoadingMask.Visibility}");
 
-        if (IsShowingSamePhoto(path))
+        if (isShowingSamePhoto && TryGetCachedBitmap(path, out _))
         {
             Opacity = 1.0;
             _currentPhotoPath = path;

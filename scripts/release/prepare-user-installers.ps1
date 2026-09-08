@@ -7,7 +7,8 @@ param(
     [string]$Configuration = "Release",
     [string]$OutputRoot = "",
     [string]$ConfigPath = "scripts/release/release-config.json",
-    [switch]$EnsureLatestRuntime,
+    [Alias("EnsureLatestRuntime")]
+    [switch]$EnsureRuntimeInstaller,
     [switch]$AllowOverwriteVersion
 )
 
@@ -83,8 +84,8 @@ $distributionArguments = @(
     "-ConfigPath", $ConfigPath,
     "-SkipZip"
 )
-if ($EnsureLatestRuntime) {
-    $distributionArguments += "-EnsureLatestRuntime"
+if ($EnsureRuntimeInstaller) {
+    $distributionArguments += "-EnsureRuntimeInstaller"
 }
 if ($AllowOverwriteVersion) {
     $distributionArguments += "-AllowOverwriteVersion"
@@ -137,7 +138,27 @@ function Invoke-VelopackPack {
     }
 }
 
+function Assert-StandardInstallerPayload {
+    param(
+        [Parameter(Mandatory = $true)][string]$Root,
+        [Parameter(Mandatory = $true)][string]$RuntimeInstallerFileName
+    )
+
+    $requiredFiles = @(
+        (Join-Path $Root "bootstrap-runtime.ps1"),
+        (Join-Path $Root "启动.bat"),
+        (Join-Path $Root (Join-Path "prereq" $RuntimeInstallerFileName)))
+    foreach ($required in $requiredFiles) {
+        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            throw "Standard installer payload is incomplete: $required"
+        }
+    }
+}
+
 if ($PackageMode -in @("all", "standard")) {
+    Assert-StandardInstallerPayload `
+        -Root (Join-Path $releaseRoot "standard\app") `
+        -RuntimeInstallerFileName ([string]$releaseConfig.runtimeInstaller.fileName)
     Invoke-VelopackPack -Kind "standard" -PackageDirectory (Join-Path $releaseRoot "standard\app") -Channel "standard" -Framework $standardFramework
 }
 

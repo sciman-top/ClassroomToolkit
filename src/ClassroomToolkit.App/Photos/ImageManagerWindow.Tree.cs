@@ -12,7 +12,7 @@ namespace ClassroomToolkit.App.Photos;
 
 public partial class ImageManagerWindow
 {
-    private static TreeViewItem CreateFolderNode(string path, string header)
+    private TreeViewItem CreateFolderNode(string path, string header)
     {
         var item = new TreeViewItem { Header = CreateVisibleTreeHeader(header), Tag = path };
         item.Items.Add(CreateStatusNode("\u52a0\u8f7d\u4e2d..."));
@@ -20,23 +20,30 @@ public partial class ImageManagerWindow
         return item;
     }
 
-    private static void OnFolderExpanded(object sender, RoutedEventArgs e)
+    private void OnFolderExpanded(object sender, RoutedEventArgs e)
     {
-        _ = OnFolderExpandedAsync(sender);
+        _ = OnFolderExpandedAsync(sender, _lifecycleCancellation.Token);
     }
 
-    private static async Task OnFolderExpandedAsync(object sender)
+    private async Task OnFolderExpandedAsync(object sender, CancellationToken cancellationToken)
     {
+        if (sender is not TreeViewItem item)
+        {
+            return;
+        }
+
         var path = "unknown";
         try
         {
-            if (sender is not TreeViewItem item || item.Items.Count != 1 || item.Items[0] is not TreeViewItem placeholder)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (item.Items.Count != 1 || item.Items[0] is not TreeViewItem placeholder)
             {
                 return;
             }
 
             var placeholderText = ResolveTreeHeaderText(placeholder.Header);
-            if (!placeholderText.Contains("\u52a0\u8f7d\u4e2d", StringComparison.Ordinal))
+            if (!placeholderText.Contains("\u52a0\u8f7d\u4e2d", StringComparison.Ordinal)
+                && !placeholderText.Contains("\u52a0\u8f7d\u5931\u8d25", StringComparison.Ordinal))
             {
                 return;
             }
@@ -53,6 +60,7 @@ public partial class ImageManagerWindow
                 var result = new List<string>();
                 foreach (var dir in Directory.EnumerateDirectories(folderPath, "*", TopLevelIgnoreInaccessibleOptions))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var name = Path.GetFileName(dir);
                     if (string.IsNullOrWhiteSpace(name) || name.StartsWith('.'))
                     {
@@ -76,6 +84,7 @@ public partial class ImageManagerWindow
                 var upperBound = Math.Min(i + FolderNodeRenderBatchSize, directories.Count);
                 for (var j = i; j < upperBound; j++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var dir = directories[j];
                     var name = Path.GetFileName(dir);
                     if (!string.IsNullOrWhiteSpace(name))
@@ -90,11 +99,14 @@ public partial class ImageManagerWindow
                     {
                         return;
                     }
-                    await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                    await item.Dispatcher.InvokeAsync(
+                        () => { },
+                        DispatcherPriority.Background,
+                        cancellationToken);
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || _isClosing)
         {
             // Dispatcher/task cancellation can happen when tree view shuts down during async expansion.
         }
@@ -104,6 +116,12 @@ public partial class ImageManagerWindow
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
+            if (!_isClosing && !cancellationToken.IsCancellationRequested)
+            {
+                item.Items.Clear();
+                item.Items.Add(CreateStatusNode("加载失败，展开重试"));
+            }
+
             Debug.WriteLine(
                 ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
                     path,

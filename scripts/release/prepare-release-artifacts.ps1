@@ -7,7 +7,8 @@ param(
     [string]$Configuration = "Release",
     [string]$OutputRoot = "",
     [string]$SourceRef = "HEAD",
-    [switch]$EnsureLatestRuntime,
+    [Alias("EnsureLatestRuntime")]
+    [switch]$EnsureRuntimeInstaller,
     [switch]$AllowOverwriteVersion,
     [switch]$CreatePrivateMigration,
     [string]$MigrationSourceRoot = "",
@@ -38,14 +39,44 @@ function Invoke-ReleaseScript {
     Write-Host "[release-artifacts] PASS  $Name"
 }
 
+function Get-DeliveryArtifactHashes {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    $hashes = [ordered]@{}
+    foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Sort-Object FullName) {
+        $relative = $file.FullName.Substring($Root.Length).TrimStart('\').Replace('\', '/')
+        if ($relative -in @("release-manifest.json", "SHA256SUMS.txt")) {
+            continue
+        }
+        $hashes[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    return $hashes
+}
+
+function Write-DeliveryChecksums {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    $sumPath = Join-Path $Root "SHA256SUMS.txt"
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -File | Sort-Object FullName) {
+        if ($file.FullName -eq $sumPath) {
+            continue
+        }
+        $relative = $file.FullName.Substring($Root.Length).TrimStart('\').Replace('\', '/')
+        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        $lines.Add("$hash *$relative") | Out-Null
+    }
+    Set-Content -LiteralPath $sumPath -Value $lines -Encoding UTF8
+}
+
 $installerArguments = @(
     "-Version", $Version,
     "-PackageMode", $PackageMode,
     "-Configuration", $Configuration,
     "-OutputRoot", (Join-Path $OutputRoot ".staging")
 )
-if ($EnsureLatestRuntime) {
-    $installerArguments += "-EnsureLatestRuntime"
+if ($EnsureRuntimeInstaller) {
+    $installerArguments += "-EnsureRuntimeInstaller"
 }
 if ($AllowOverwriteVersion) {
     $installerArguments += "-AllowOverwriteVersion"
@@ -134,6 +165,8 @@ try {
         source_ref = $SourceRef
         source_commit = $sourceCommit
         staging_cleaned = $true
+        artifact_hashes = Get-DeliveryArtifactHashes -Root $releaseRoot
+        checksum_file = "SHA256SUMS.txt"
         outputs = [ordered]@{
             standard_installer = if ($PackageMode -in @("all", "standard")) { "installer/standard" } else { $null }
             offline_installer = if ($PackageMode -in @("all", "offline")) { "installer/offline" } else { $null }
@@ -142,6 +175,7 @@ try {
         }
     }
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $releaseRoot "release-manifest.json") -Encoding UTF8
+    Write-DeliveryChecksums -Root $releaseRoot
     $completed = $true
 }
 finally {

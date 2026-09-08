@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
@@ -172,30 +170,11 @@ public partial class PaintOverlayWindow
             return "empty";
         }
 
-        var builder = new StringBuilder(strokes.Count * 64);
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var stroke in strokes)
         {
-            builder.Append(stroke.Type).Append('|')
-                .Append(stroke.BrushStyle).Append('|')
-                .Append(stroke.ColorHex).Append('|')
-                .Append(stroke.Opacity).Append('|')
-                .Append(stroke.BrushSize.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
-                .Append(stroke.ReferenceWidth.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
-                .Append(stroke.ReferenceHeight.ToString("G17", CultureInfo.InvariantCulture)).Append('|')
-                .Append(stroke.GeometryPath ?? string.Empty).Append('|')
-                .Append(stroke.Ribbons.Count).Append('|');
-            foreach (var ribbon in stroke.Ribbons)
-            {
-                builder.Append(ribbon.GeometryPath ?? string.Empty).Append('@')
-                    .Append(ribbon.Opacity.ToString("G17", CultureInfo.InvariantCulture)).Append('@')
-                    .Append(ribbon.RibbonT.ToString("G17", CultureInfo.InvariantCulture)).Append(';');
-            }
-
-            builder.Append('\n');
+            InkExportFingerprintUtilities.AppendStrokePayload(hash, stroke);
         }
-
-        var bytes = Encoding.UTF8.GetBytes(builder.ToString());
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash);
+        return Convert.ToHexString(hash.GetHashAndReset());
     }
 }

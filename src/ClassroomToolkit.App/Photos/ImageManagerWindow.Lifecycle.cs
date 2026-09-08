@@ -15,11 +15,10 @@ public partial class ImageManagerWindow
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         _imageListScrollViewer = FindDescendant<ScrollViewer>(ImageList);
-        _ = SafeTaskRunner.Run(
-            "ImageManagerWindow.InitializeTree",
-            InitializeTreeAsync,
-            _lifecycleCancellation.Token,
-            ex => Debug.WriteLine($"ImageManager: InitializeTree scheduling failed: {ex.Message}"));
+        // Start on the WPF dispatcher. InitializeTreeAsync performs the small UI
+        // mutations before and after its background drive enumeration; wrapping
+        // the whole method in Task.Run would violate DispatcherObject affinity.
+        _ = InitializeTreeAsync(_lifecycleCancellation.Token);
         InitializeDefaultFolder();
         EnterInitialMaximizedState();
         ApplyAdaptiveLayout();

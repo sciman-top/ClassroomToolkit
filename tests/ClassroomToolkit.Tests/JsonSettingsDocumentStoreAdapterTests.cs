@@ -1,6 +1,7 @@
 using ClassroomToolkit.Infra.Settings;
 using AwesomeAssertions;
 using System.Text;
+using System.Text.Json;
 
 namespace ClassroomToolkit.Tests;
 
@@ -86,6 +87,50 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
 
             loaded["Paint"]["ink_cache_enabled"].Should().Be("True");
             loaded["Paint"]["brush_base_size"].Should().Be("12.5");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldPreserveUnknownSectionsKeysAndNestedJsonTypes()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "settings.json");
+        try
+        {
+            File.WriteAllText(
+                path,
+                """
+                {
+                  "Paint": {
+                    "brush_base_size": "12",
+                    "future_key": { "enabled": true }
+                  },
+                  "FutureSection": {
+                    "nested": { "name": "keep" },
+                    "items": [1, true, "three"]
+                  },
+                  "FutureScalarSection": "keep-me"
+                }
+                """);
+
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            var loaded = adapter.Load();
+            loaded["Paint"]["brush_base_size"] = "14";
+            adapter.Save(loaded);
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            document.RootElement.GetProperty("Paint").GetProperty("future_key").ValueKind
+                .Should().Be(JsonValueKind.Object);
+            document.RootElement.GetProperty("FutureSection").GetProperty("nested").ValueKind
+                .Should().Be(JsonValueKind.Object);
+            document.RootElement.GetProperty("FutureSection").GetProperty("items").ValueKind
+                .Should().Be(JsonValueKind.Array);
+            document.RootElement.GetProperty("FutureScalarSection").GetString().Should().Be("keep-me");
+            document.RootElement.GetProperty("Paint").GetProperty("brush_base_size").GetString().Should().Be("14");
         }
         finally
         {

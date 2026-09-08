@@ -13,8 +13,8 @@ public sealed class ImageManagerWindowFolderExpandLifecycleContractTests
             "Photos",
             "ImageManagerWindow*.cs");
 
-        source.Should().Contain("private static void OnFolderExpanded(object sender, RoutedEventArgs e)");
-        source.Should().Contain("_ = OnFolderExpandedAsync(sender);");
+        source.Should().Contain("private void OnFolderExpanded(object sender, RoutedEventArgs e)");
+        source.Should().Contain("_ = OnFolderExpandedAsync(sender, _lifecycleCancellation.Token);");
     }
 
     [Fact]

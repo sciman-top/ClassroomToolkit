@@ -11,7 +11,7 @@ public partial class PaintOverlayWindow
         SaveCurrentPageOnNavigate(forceBackground: false);
     }
 
-    private void SaveCurrentPageOnNavigate(
+    private bool SaveCurrentPageOnNavigate(
         bool forceBackground,
         bool persistToSidecar = true,
         bool finalizeActiveOperation = true)
@@ -28,7 +28,7 @@ public partial class PaintOverlayWindow
             {
                 MarkCrossPageFirstInputStage("save-skip", "scope!=photo");
             }
-            return;
+            return true;
         }
 
         var hadActiveInkOperation = IsInkOperationActive();
@@ -46,7 +46,7 @@ public partial class PaintOverlayWindow
             {
                 MarkCrossPageFirstInputStage("save-skip", "not-dirty");
             }
-            return;
+            return true;
         }
         var cacheKey = _currentCacheKey;
 
@@ -65,7 +65,7 @@ public partial class PaintOverlayWindow
             {
                 MarkCrossPageFirstInputStage("save-fast-return", "cache-hit + autosave");
             }
-            return;
+            return true;
         }
 
         List<InkStrokeData> strokes;
@@ -108,11 +108,12 @@ public partial class PaintOverlayWindow
         if (shouldPersistToSidecar)
         {
             // Method A: also persist to sidecar file on disk
-            PersistInkToSidecar(strokes, _currentDocumentPath, _currentPageIndex);
             if (IsCrossPageFirstInputTraceActive())
             {
                 MarkCrossPageFirstInputStage("save-sidecar-sync");
             }
+
+            return PersistInkToSidecar(strokes, _currentDocumentPath, _currentPageIndex);
         }
         else
         {
@@ -157,5 +158,6 @@ public partial class PaintOverlayWindow
         {
             MarkCrossPageFirstInputStage("save-exit");
         }
+        return true;
     }
 }

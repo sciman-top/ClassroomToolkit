@@ -120,7 +120,9 @@ public partial class PaintOverlayWindow
                         strokeDirection,
                         _calligraphyRenderMode,
                         suppressOverlays,
-                        maskSeed: null);
+                        maskSeed: null,
+                        bloomEnabled: _calligraphyInkBloomEnabled,
+                        sealEnabled: _calligraphySealEnabled);
                     return;
                 }
             }
@@ -135,7 +137,9 @@ public partial class PaintOverlayWindow
                 strokeDirection,
                 _calligraphyRenderMode,
                 suppressOverlays,
-                maskSeed: null);
+                maskSeed: null,
+                bloomEnabled: _calligraphyInkBloomEnabled,
+                sealEnabled: _calligraphySealEnabled);
             return;
         }
         RenderAndBlend(renderGeometry, brush, null, erase: false, null);

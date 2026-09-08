@@ -19,6 +19,7 @@ public partial class PaintOverlayWindow
 
     private const long PdfCacheMaxBytes = PhotoDocumentRuntimeDefaults.PdfCacheMaxBytes;
     private long _pdfCacheCurrentBytes;
+    private long _pdfRenderRequestId;
 
     private bool IsPdfModeActive()
     {
@@ -82,13 +83,16 @@ public partial class PaintOverlayWindow
                     }
                     ApplyPdfDocument(openedDocument, pageCount);
                     _lastPdfNavigationDirection = 1;
-                    if (!RenderPdfPage(_currentPageIndex))
+                    if (!RenderPdfPage(_currentPageIndex, hideLoadingOnCompletion: true))
                     {
                         HidePhotoLoadingOverlay();
                         ExitPhotoMode();
                         return;
                     }
-                    HidePhotoLoadingOverlay();
+                    if (PhotoBackground.Source != null)
+                    {
+                        HidePhotoLoadingOverlay();
+                    }
                 }, DispatcherPriority.Render);
                 if (!scheduledApply)
                 {
@@ -151,6 +155,7 @@ public partial class PaintOverlayWindow
 
     private void ClosePdfDocument()
     {
+        Interlocked.Increment(ref _pdfRenderRequestId);
         lock (_pdfRenderLock)
         {
             _pdfDocument?.Dispose();
@@ -169,12 +174,40 @@ public partial class PaintOverlayWindow
 
     #region PDF Rendering
 
-    private bool RenderPdfPage(int pageIndex, bool interactiveSwitch = false, BitmapSource? preloadedBitmap = null)
+    private bool RenderPdfPage(
+        int pageIndex,
+        bool interactiveSwitch = false,
+        BitmapSource? preloadedBitmap = null,
+        bool hideLoadingOnCompletion = false)
     {
-        var bitmap = CrossPageSwitchBitmapResolver.ResolveForInteractiveSwitch(
-            interactiveSwitch,
-            preloadedBitmap,
-            () => GetPdfPageBitmap(pageIndex));
+        BitmapSource? bitmap = preloadedBitmap;
+        if (bitmap == null)
+        {
+            TryGetCachedPdfPageBitmap(pageIndex, out bitmap, tryEnterTimeoutMs: 0);
+        }
+
+        if (bitmap == null)
+        {
+            if (!interactiveSwitch)
+            {
+                PhotoBackground.Source = null;
+                _photoBackgroundSourcePath = string.Empty;
+                RefreshPhotoBackgroundVisibility();
+            }
+
+            BeginPdfPageRender(pageIndex, interactiveSwitch, hideLoadingOnCompletion);
+            return true;
+        }
+
+        return ApplyRenderedPdfPage(pageIndex, bitmap, interactiveSwitch, hideLoadingOnCompletion);
+    }
+
+    private bool ApplyRenderedPdfPage(
+        int pageIndex,
+        BitmapSource bitmap,
+        bool interactiveSwitch,
+        bool hideLoadingOnCompletion)
+    {
         if (bitmap == null)
         {
             PhotoBackground.Source = null;
@@ -190,10 +223,72 @@ public partial class PaintOverlayWindow
         if (ShouldRefreshCrossPagePdfDisplay())
         {
             ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: true);
+            if (hideLoadingOnCompletion)
+            {
+                HidePhotoLoadingOverlay();
+            }
+
             return true;
         }
         ApplyLoadedBitmapTransform(bitmap, useCrossPageUnifiedPath: false);
+        if (hideLoadingOnCompletion)
+        {
+            HidePhotoLoadingOverlay();
+        }
+
         return true;
+    }
+
+    private void BeginPdfPageRender(int pageIndex, bool interactiveSwitch, bool hideLoadingOnCompletion)
+    {
+        var requestId = Interlocked.Increment(ref _pdfRenderRequestId);
+        var sourcePath = _currentDocumentPath;
+        var lifecycleToken = _overlayLifecycleCancellation.Token;
+        _ = SafeTaskRunner.Run(
+            "PaintOverlayWindow.RenderPdfPage",
+            async cancellationToken =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var bitmap = await Task.Run(
+                    () => GetPdfPageBitmap(pageIndex),
+                    cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                TryBeginInvoke(
+                    () =>
+                    {
+                        if (requestId != Volatile.Read(ref _pdfRenderRequestId)
+                            || ShouldIgnoreLifecycleTick()
+                            || !IsPdfModeActive()
+                            || _currentPageIndex != pageIndex
+                            || !string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return;
+                        }
+
+                        if (bitmap == null)
+                        {
+                            if (hideLoadingOnCompletion)
+                            {
+                                HidePhotoLoadingOverlay();
+                                ExitPhotoMode();
+                            }
+
+                            return;
+                        }
+
+                        ApplyRenderedPdfPage(pageIndex, bitmap, interactiveSwitch, hideLoadingOnCompletion);
+                        if (ShouldRefreshCrossPagePdfDisplay())
+                        {
+                            UpdateCrossPageDisplay();
+                        }
+                    },
+                    DispatcherPriority.Render);
+            },
+            lifecycleToken,
+            onError: ex => System.Diagnostics.Debug.WriteLine(
+                $"[PdfRender] async-render failed: {ex.GetType().Name} - {ex.Message}")
+        );
     }
 
     private bool TryGetCachedPdfPageBitmap(

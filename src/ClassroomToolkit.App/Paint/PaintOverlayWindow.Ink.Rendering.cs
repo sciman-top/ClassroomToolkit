@@ -113,7 +113,9 @@ public partial class PaintOverlayWindow
             strokeDirection,
             stroke.CalligraphyRenderMode,
             suppressOverlays,
-            stroke.MaskSeed);
+            stroke.MaskSeed,
+            stroke.CalligraphyInkBloomEnabled,
+            stroke.CalligraphySealEnabled);
     }
 
     private Geometry? ResolveStoredInkRenderGeometry(
@@ -171,12 +173,14 @@ public partial class PaintOverlayWindow
         Vector? strokeDirection,
         CalligraphyRenderMode renderMode,
         bool suppressOverlays,
-        int? maskSeed)
+        int? maskSeed,
+        bool bloomEnabled,
+        bool sealEnabled)
     {
         bool inkMode = renderMode == CalligraphyRenderMode.Ink;
         bool overlaysEnabled = !suppressOverlays
             && inkMode
-            && (_calligraphyInkBloomEnabled || _calligraphySealEnabled);
+            && (bloomEnabled || sealEnabled);
         int seededMaskValue = maskSeed ?? ResolveDeterministicMaskSeed(geometry, color, brushSize, renderMode);
         bool maskEligible = inkMode && IsInkMaskEligible(geometry, brushSize);
         MediaBrush? coreMask = maskEligible
@@ -188,7 +192,7 @@ public partial class PaintOverlayWindow
         };
         if (overlaysEnabled)
         {
-            if (_calligraphyInkBloomEnabled)
+            if (bloomEnabled)
             {
                 double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
                 commands.Add(new DrawCommand(
@@ -199,7 +203,7 @@ public partial class PaintOverlayWindow
                     null));
             }
 
-            if (_calligraphySealEnabled)
+            if (sealEnabled)
             {
                 // Seal is a final low-opacity source-over pass: it preserves a crisp
                 // deposited edge while remaining independently switchable from bloom.

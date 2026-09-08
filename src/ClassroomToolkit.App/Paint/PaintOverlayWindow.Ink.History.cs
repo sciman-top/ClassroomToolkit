@@ -186,7 +186,11 @@ public partial class PaintOverlayWindow
 
     private void SaveAndClearInkSurface()
     {
-        SaveCurrentPageOnNavigate(forceBackground: false);
+        if (!SaveCurrentPageOnNavigate(forceBackground: false))
+        {
+            return;
+        }
+
         ClearInkSurfaceState();
     }
 }

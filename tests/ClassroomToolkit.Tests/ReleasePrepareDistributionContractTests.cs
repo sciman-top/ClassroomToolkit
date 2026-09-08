@@ -50,7 +50,7 @@ public sealed class ReleasePrepareDistributionContractTests
     }
 
     [Fact]
-    public void ReleaseConfig_LatestRuntimeAlias_ShouldUsePatchNeutralFileName()
+    public void ReleaseConfig_RuntimeInstaller_ShouldPinVersionHashAndPublisher()
     {
         using var config = JsonDocument.Parse(File.ReadAllText(TestPathHelper.ResolveRepoPath(
             "scripts",
@@ -58,8 +58,22 @@ public sealed class ReleasePrepareDistributionContractTests
             "release-config.json")));
         var installer = config.RootElement.GetProperty("release").GetProperty("runtimeInstaller");
 
-        installer.GetProperty("downloadUrl").GetString().Should().Contain("aka.ms/dotnet/10.0/");
-        installer.GetProperty("fileName").GetString().Should().Be("windowsdesktop-runtime-10-latest-win-x64.exe");
+        installer.GetProperty("downloadUrl").GetString().Should().Contain("builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.11/");
+        installer.GetProperty("fileName").GetString().Should().Be("windowsdesktop-runtime-10.0.11-win-x64.exe");
+        installer.GetProperty("version").GetString().Should().Be("10.0.11");
+        installer.GetProperty("sha256").GetString().Should().MatchRegex("^[0-9A-F]{64}$");
+        installer.GetProperty("publisher").GetString().Should().Be("Microsoft Corporation");
+    }
+
+    [Fact]
+    public void PrepareDistribution_ShouldValidateRuntimeInstallerBeforePackaging()
+    {
+        var source = ReadPrepareDistributionScript();
+
+        source.Should().Contain("Get-FileHash -LiteralPath $Path -Algorithm SHA256");
+        source.Should().Contain("Get-AuthenticodeSignature -LiteralPath $Path");
+        source.Should().Contain("VersionInfo.ProductVersion");
+        source.Should().Contain("Test-ValidRuntimeInstaller");
     }
 
     private static string ReadPrepareDistributionScript()

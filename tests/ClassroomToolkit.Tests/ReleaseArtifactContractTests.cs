@@ -89,6 +89,20 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
         source.Should().Contain("ResolvedSourceCommit");
         source.Should().Contain("$sourceCommit = (& git rev-parse");
+        source.Should().Contain("Get-DeliveryArtifactHashes");
+        source.Should().Contain("Write-DeliveryChecksums");
+        source.Should().Contain("SHA256SUMS.txt");
+    }
+
+    [Fact]
+    public void StandardInstallerScript_ShouldRequireRuntimeBootstrapPayload()
+    {
+        var source = ReadScript("prepare-user-installers.ps1");
+
+        source.Should().Contain("function Assert-StandardInstallerPayload");
+        source.Should().Contain("bootstrap-runtime.ps1");
+        source.Should().Contain("启动.bat");
+        source.Should().Contain("prereq");
     }
 
     [Fact]

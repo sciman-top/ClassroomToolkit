@@ -8,6 +8,7 @@ public sealed class IniSettingsStore
 {
     private const long MaxIniFileBytes = 4L * 1024 * 1024;
     private readonly string _path;
+    private string[]? _loadedLines;
 
     public IniSettingsStore(string path)
     {
@@ -26,6 +27,7 @@ public sealed class IniSettingsStore
     public bool TryLoad(out Dictionary<string, Dictionary<string, string>> data)
     {
         data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        _loadedLines = null;
         if (!File.Exists(_path))
         {
             return true;
@@ -88,6 +90,7 @@ public sealed class IniSettingsStore
             }
             data[currentSection][key] = value;
         }
+        _loadedLines = lines;
         return true;
     }
 
@@ -218,16 +221,11 @@ public sealed class IniSettingsStore
     {
         ArgumentNullException.ThrowIfNull(data);
 
+        var lines = BuildPreservingLines(data);
         var builder = new StringBuilder();
-        foreach (var section in data)
+        foreach (var line in lines)
         {
-            builder.Append('[').Append(section.Key).Append(']').AppendLine();
-            var sectionData = section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pair in sectionData)
-            {
-                builder.Append(pair.Key).Append('=').Append(SanitizeIniValue(pair.Value)).AppendLine();
-            }
-            builder.AppendLine();
+            builder.AppendLine(line);
         }
         var directory = System.IO.Path.GetDirectoryName(_path);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -247,6 +245,175 @@ public sealed class IniSettingsStore
                 Debug.WriteLine(
                     $"[IniSettingsStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
+        _loadedLines = lines.ToArray();
+    }
+
+    private List<string> BuildPreservingLines(Dictionary<string, Dictionary<string, string>> data)
+    {
+        if (_loadedLines == null)
+        {
+            return BuildFreshLines(data);
+        }
+
+        var result = new List<string>(_loadedLines.Length + data.Count * 2);
+        var seenKeys = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var currentSection = (string?)null;
+
+        foreach (var rawLine in _loadedLines)
+        {
+            var trimmed = rawLine.Trim();
+            if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
+            {
+                AppendMissingKeys(result, currentSection, data, seenKeys);
+                currentSection = trimmed.Substring(1, trimmed.Length - 2).Trim();
+                result.Add(rawLine);
+                continue;
+            }
+
+            if (currentSection != null && TryParseKeyValue(trimmed, out var key, out _)
+                && TryGetSection(data, currentSection, out var sectionData))
+            {
+                if (!TryGetValue(sectionData, key, out var replacement))
+                {
+                    // Parsed keys are exposed by Load; their absence means the
+                    // caller intentionally removed them. Malformed lines do not
+                    // enter this branch and remain byte-for-byte preserved.
+                    continue;
+                }
+                var separatorIndex = FindSeparatorIndex(rawLine);
+                result.Add(string.Concat(rawLine.AsSpan(0, separatorIndex + 1), SanitizeIniValue(replacement)));
+                MarkSeen(seenKeys, currentSection, key);
+                continue;
+            }
+
+            result.Add(rawLine);
+        }
+
+        AppendMissingKeys(result, currentSection, data, seenKeys);
+        foreach (var section in data)
+        {
+            if (!ContainsSection(_loadedLines, section.Key))
+            {
+                if (result.Count > 0 && !string.IsNullOrWhiteSpace(result[^1]))
+                {
+                    result.Add(string.Empty);
+                }
+                result.Add("[" + section.Key + "]");
+                foreach (var pair in section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+                {
+                    result.Add(pair.Key + "=" + SanitizeIniValue(pair.Value));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static List<string> BuildFreshLines(Dictionary<string, Dictionary<string, string>> data)
+    {
+        var lines = new List<string>();
+        foreach (var section in data)
+        {
+            lines.Add("[" + section.Key + "]");
+            foreach (var pair in section.Value ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+            {
+                lines.Add(pair.Key + "=" + SanitizeIniValue(pair.Value));
+            }
+            lines.Add(string.Empty);
+        }
+        return lines;
+    }
+
+    private static void AppendMissingKeys(
+        List<string> result,
+        string? sectionName,
+        Dictionary<string, Dictionary<string, string>> data,
+        Dictionary<string, HashSet<string>> seenKeys)
+    {
+        if (sectionName == null || !TryGetSection(data, sectionName, out var sectionData))
+        {
+            return;
+        }
+
+        var seen = seenKeys.TryGetValue(sectionName, out var keys)
+            ? keys
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in sectionData ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+        {
+            if (seen.Contains(pair.Key))
+            {
+                continue;
+            }
+            result.Add(pair.Key + "=" + SanitizeIniValue(pair.Value));
+            seen.Add(pair.Key);
+        }
+        seenKeys[sectionName] = seen;
+    }
+
+    private static bool TryParseKeyValue(string line, out string key, out string value)
+    {
+        key = string.Empty;
+        value = string.Empty;
+        var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
+        if (separatorIndex < 0)
+        {
+            separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+        }
+        if (separatorIndex <= 0)
+        {
+            return false;
+        }
+        key = line.Substring(0, separatorIndex).Trim();
+        value = line.Substring(separatorIndex + 1).Trim();
+        return key.Length > 0;
+    }
+
+    private static int FindSeparatorIndex(string line)
+    {
+        var equals = line.IndexOf('=', StringComparison.Ordinal);
+        var colon = line.IndexOf(':', StringComparison.Ordinal);
+        if (equals < 0) return colon;
+        if (colon < 0) return equals;
+        return Math.Min(equals, colon);
+    }
+
+    private static bool TryGetSection(
+        Dictionary<string, Dictionary<string, string>> data,
+        string sectionName,
+        out Dictionary<string, string>? section)
+    {
+        if (data.TryGetValue(sectionName, out section))
+        {
+            return true;
+        }
+        section = null;
+        return false;
+    }
+
+    private static bool TryGetValue(Dictionary<string, string>? section, string key, out string value)
+    {
+        if (section != null && section.TryGetValue(key, out value!))
+        {
+            return true;
+        }
+        value = string.Empty;
+        return false;
+    }
+
+    private static void MarkSeen(Dictionary<string, HashSet<string>> seenKeys, string section, string key)
+    {
+        if (!seenKeys.TryGetValue(section, out var keys))
+        {
+            keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            seenKeys[section] = keys;
+        }
+        keys.Add(key);
+    }
+
+    private static bool ContainsSection(IEnumerable<string> lines, string sectionName)
+    {
+        var header = "[" + sectionName + "]";
+        return lines.Any(line => string.Equals(line.Trim(), header, StringComparison.OrdinalIgnoreCase));
     }
 
 }

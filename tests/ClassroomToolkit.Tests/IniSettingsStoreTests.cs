@@ -116,6 +116,37 @@ public sealed class IniSettingsStoreTests
     }
 
     [Fact]
+    public void Save_ShouldPreserveUnknownAndMalformedNonEmptyLines()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_preserve_unknown", ".ini");
+        try
+        {
+            File.WriteAllText(
+                path,
+                "; user comment\n[Paint]\nbrush_base_size=8\nfuture-line-without-separator\n[Future]\nkey=value\n");
+            var store = new IniSettingsStore(path);
+            store.TryLoad(out var data).Should().BeTrue();
+            data["Paint"]["brush_base_size"] = "9";
+
+            store.Save(data);
+
+            var saved = File.ReadAllText(path);
+            saved.Should().Contain("; user comment");
+            saved.Should().Contain("future-line-without-separator");
+            saved.Should().Contain("[Future]");
+            saved.Should().Contain("key=value");
+            saved.Should().Contain("brush_base_size=9");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Save_ShouldThrowArgumentNullException_WhenDataIsNull()
     {
         var path = TestPathHelper.CreateFilePath("ctool_ini_save_null", ".ini");

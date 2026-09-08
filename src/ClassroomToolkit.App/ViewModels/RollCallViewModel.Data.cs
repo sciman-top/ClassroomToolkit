@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using ClassroomToolkit.App;
@@ -18,6 +19,8 @@ public sealed partial class RollCallViewModel
     private RollCallLoadResult? _preloadedResult;
     private string? _preloadedPath;
     private DateTime _preloadedWriteTimeUtc;
+    private long _preloadedLength;
+    private string? _preloadedContentHash;
 
     public void WarmupData(string path)
     {
@@ -25,34 +28,36 @@ public sealed partial class RollCallViewModel
         if (string.IsNullOrWhiteSpace(path)) return;
         if (!File.Exists(path)) return;
 
-        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
+        if (!TryGetFileFingerprint(path, out var fingerprint))
         {
             return;
         }
 
         lock (_preloadLock)
         {
-            if (_preloadedResult != null && (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc))
+            if (_preloadedResult != null && !MatchesPreloadFingerprint(path, fingerprint))
             {
                 _preloadedResult = null;
             }
-            if (_preloadedResult != null && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == writeTimeUtc)
+            if (_preloadedResult != null && MatchesPreloadFingerprint(path, fingerprint))
             {
                 return;
             }
-            if (_preloadTask != null && string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) && _preloadedWriteTimeUtc == writeTimeUtc)
+            if (_preloadTask != null && MatchesPreloadFingerprint(path, fingerprint))
             {
                 return;
             }
 
             _preloadedPath = path;
-            _preloadedWriteTimeUtc = writeTimeUtc;
+            _preloadedWriteTimeUtc = fingerprint.WriteTimeUtc;
+            _preloadedLength = fingerprint.Length;
+            _preloadedContentHash = fingerprint.ContentHash;
             var expectedPath = path;
-            var expectedWriteTimeUtc = writeTimeUtc;
+            var expectedFingerprint = fingerprint;
             var preloadTask = Task.Run(() => LoadDataFromPath(expectedPath), _disposeCancellation.Token);
             _preloadTask = preloadTask;
             _ = preloadTask.ContinueWith(
-                task => CompletePreloadTask(task, expectedPath, expectedWriteTimeUtc),
+                task => CompletePreloadTask(task, expectedPath, expectedFingerprint),
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
@@ -150,15 +155,14 @@ public sealed partial class RollCallViewModel
             return null;
         }
 
-        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
+        if (!TryGetFileFingerprint(path, out var fingerprint))
         {
             return null;
         }
 
         lock (_preloadLock)
         {
-            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
-                || _preloadedWriteTimeUtc != writeTimeUtc)
+            if (!MatchesPreloadFingerprint(path, fingerprint))
             {
                 return null;
             }
@@ -176,7 +180,7 @@ public sealed partial class RollCallViewModel
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
 
-        if (!TryGetFileWriteTimeUtc(path, out var writeTimeUtc))
+        if (!TryGetFileFingerprint(path, out var fingerprint))
         {
             return null;
         }
@@ -186,7 +190,7 @@ public sealed partial class RollCallViewModel
 
         lock (_preloadLock)
         {
-            if (!string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase) || _preloadedWriteTimeUtc != writeTimeUtc)
+            if (!MatchesPreloadFingerprint(path, fingerprint))
             {
                 _preloadedResult = null;
                 return null;
@@ -236,7 +240,7 @@ public sealed partial class RollCallViewModel
     private void CompletePreloadTask(
         Task<RollCallLoadResult> preloadTask,
         string expectedPath,
-        DateTime expectedWriteTimeUtc)
+        FileFingerprint expectedFingerprint)
     {
         lock (_preloadLock)
         {
@@ -284,8 +288,7 @@ public sealed partial class RollCallViewModel
                     return;
                 }
 
-                if (string.Equals(_preloadedPath, expectedPath, StringComparison.OrdinalIgnoreCase)
-                    && _preloadedWriteTimeUtc == expectedWriteTimeUtc)
+                if (MatchesPreloadFingerprint(expectedPath, expectedFingerprint))
                 {
                     _preloadedResult = completedResult;
                 }
@@ -315,12 +318,28 @@ public sealed partial class RollCallViewModel
         return true;
     }
 
-    private static bool TryGetFileWriteTimeUtc(string path, out DateTime writeTimeUtc)
+    private bool MatchesPreloadFingerprint(string path, FileFingerprint fingerprint)
     {
-        writeTimeUtc = default;
+        return string.Equals(_preloadedPath, path, StringComparison.OrdinalIgnoreCase)
+            && _preloadedWriteTimeUtc == fingerprint.WriteTimeUtc
+            && _preloadedLength == fingerprint.Length
+            && string.Equals(_preloadedContentHash, fingerprint.ContentHash, StringComparison.Ordinal);
+    }
+
+    private static bool TryGetFileFingerprint(string path, out FileFingerprint fingerprint)
+    {
+        fingerprint = default;
         try
         {
-            writeTimeUtc = File.GetLastWriteTimeUtc(path);
+            var info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                return false;
+            }
+
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var contentHash = Convert.ToHexString(SHA256.HashData(stream));
+            fingerprint = new FileFingerprint(info.Length, info.LastWriteTimeUtc, contentHash);
             return true;
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
@@ -378,6 +397,8 @@ public sealed partial class RollCallViewModel
                 ex => System.Diagnostics.Debug.WriteLine($"RollCallViewModel: data load failed callback failed: {ex.Message}"));
         }
     }
+
+    private readonly record struct FileFingerprint(long Length, DateTime WriteTimeUtc, string ContentHash);
 
     private sealed record RollCallLoadResult(StudentWorkbook Workbook, Dictionary<string, ClassRollState> ClassStates, string? ErrorMessage);
 }

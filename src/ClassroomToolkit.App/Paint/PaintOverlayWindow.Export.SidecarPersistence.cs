@@ -12,12 +12,12 @@ public partial class PaintOverlayWindow
     /// Save current ink strokes to sidecar file (Method A).
     /// Called on page navigation, file close, and app exit.
     /// </summary>
-    private void PersistInkToSidecar(
+    private bool PersistInkToSidecar(
         List<InkStrokeData>? preparedStrokes = null,
         string? preparedSourcePath = null,
         int? preparedPageIndex = null)
     {
-        _ = TryPersistInkToSidecarStrict(preparedStrokes, preparedSourcePath, preparedPageIndex, out _);
+        return TryPersistInkToSidecarStrict(preparedStrokes, preparedSourcePath, preparedPageIndex, out _);
     }
 
     private bool TryPersistInkToSidecarStrict(

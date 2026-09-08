@@ -235,19 +235,15 @@ public partial class PaintOverlayWindow
         if (TryGetCachedPdfPageBitmap(
                 pageIndex,
                 out var cached,
-                tryEnterTimeoutMs: allowSynchronousResolve ? PhotoDocumentRuntimeDefaults.PdfCacheTryEnterTimeoutMs : 0))
+                tryEnterTimeoutMs: 0))
         {
             return cached;
         }
 
-        if (!allowSynchronousResolve)
-        {
-            return null;
-        }
-
-        // In cross-page mode, a cache miss can leave a large blank gap between pages.
-        // Fallback to direct render once so visible neighbors are always drawable.
-        return GetPdfPageBitmap(pageIndex);
+        // PDF rendering is synchronous inside the WinRT projection. A cache miss
+        // must never render on the dispatcher, even when the old caller requests
+        // a synchronous fallback; visible-page prefetch will update the seam later.
+        return null;
     }
 
     private void ScheduleNeighborImagePrefetch(int pageIndex)

@@ -32,7 +32,7 @@
 1. 预检：
    - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full`
 2. 打包：
-   - `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureLatestRuntime`
+   - `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureRuntimeInstaller`
 
 ## 5. 产物要求
 
@@ -53,6 +53,7 @@
   - 由固定 Git commit 的 `git archive` 生成，不包含未跟踪的课堂数据
 - 各交付物子目录：`installer/user-installers-manifest.json`、`portable/portable-package-manifest.json`、`source/source-package-manifest.json`
 - 版本目录根：`release-manifest.json`
+- 版本目录根：`SHA256SUMS.txt`，覆盖聚合完成后的最终交付文件；`release-manifest.json` 中的 `artifact_hashes` 记录除这两个自引用文件外的最终文件哈希。
 - 聚合入口会在 `artifacts/release/.staging/<version>/` 构建；成功后 `.staging/<version>/` 自动清理，最终版本目录不保留 `standard/`、`offline/`、`portable/` 或 `_runtime-cache/` staging 目录。
 - `artifacts/archive/legacy-outputs/` 只存放可恢复的旧候选、历史日志和旧验证报告，不上传到 GitHub Release。
 - 当前门禁证据固定写入 `artifacts/evidence/{quality,tests,validation,release-preflight}/current/`；重复运行覆盖 current 文件，不在活动目录按时间戳累积。

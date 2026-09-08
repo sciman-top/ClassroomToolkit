@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
@@ -22,6 +23,11 @@ public sealed class StudentWorkbookSqliteStoreAdapter
     private readonly IStudentWorkbookStoreBridge _bridge;
     private readonly Func<string, string> _dbPathResolver;
     private readonly record struct RollStateSnapshot(string? Json, long? Revision, DateTime? UpdatedAtUtc);
+    private sealed record WorkbookSourceFingerprint(
+        string FullPath,
+        long Length,
+        long LastWriteTimeUtcTicks,
+        string Sha256);
 
     public StudentWorkbookSqliteStoreAdapter()
         : this(new StudentWorkbookStoreBridge(), ResolveDbPath)
@@ -52,7 +58,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[StudentWorkbookSqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
-            if (TryReadWorkbookSnapshotPackage(dbPath, out var workbookFromSnapshot, out var rollStateFromSnapshot))
+            if (TryReadWorkbookSnapshotPackage(dbPath, path, out var workbookFromSnapshot, out var rollStateFromSnapshot))
             {
                 return new StudentWorkbookLoadResult(
                     workbookFromSnapshot,
@@ -79,7 +85,12 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             log: message => Debug.WriteLine(message),
             source: "StudentWorkbookSqlite");
 
-        TryWriteSnapshotPackage(dbPath, result.Workbook, effectiveRollState);
+        TryWriteSnapshotPackage(
+            dbPath,
+            path,
+            result.Workbook,
+            effectiveRollState,
+            TryCaptureSourceFingerprint(path));
 
         return result with { RollStateJson = effectiveRollState };
     }
@@ -92,7 +103,9 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         var dbPath = ResolveDbPathSafe(path);
         // 快照先行：xlsx 侧拒绝覆盖（此前读取失败/外部修改）时，快照是降级会话唯一的持久化出路。
         // 否则 Load 侧有快照兜底、Save 侧却永远写不进任何介质，整节点名状态丢失。
-        TryWriteSnapshotPackage(dbPath, workbook, rollStateJson);
+        var previousFingerprint = TryReadStoredSourceFingerprint(dbPath)
+            ?? TryCaptureSourceFingerprint(path);
+        TryWriteSnapshotPackage(dbPath, path, workbook, rollStateJson, previousFingerprint);
 
         try
         {
@@ -100,10 +113,20 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (StudentWorkbookOverwriteRefusedException ex)
         {
-            // xlsx 被拒绝覆盖：本会话状态已持久化到快照，下次加载由版本仲裁策略合并，
-            // 不向上抛出以避免老师每次点名操作都收到保存失败提示。
+            // xlsx 被拒绝覆盖：快照仍保留本会话状态，但必须让 Application/UI 知道
+            // 原始工作簿没有写入，避免出现“保存成功”的假象。
             Debug.WriteLine($"[StudentWorkbookSqlite] bridge save refused; snapshot retained: {ex.Message}");
+            throw;
         }
+
+        // Bridge 已成功原子写回 xlsx；更新快照的来源指纹，使下次 fallback
+        // 只接受与这次成功写回对应的工作簿内容。
+        TryWriteSnapshotPackage(
+            dbPath,
+            path,
+            workbook,
+            rollStateJson,
+            TryCaptureSourceFingerprint(path));
     }
 
     private string ResolveDbPathSafe(string workbookPath)
@@ -192,6 +215,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
 
     private static bool TryReadWorkbookSnapshotPackage(
         string dbPath,
+        string sourcePath,
         out StudentWorkbook workbook,
         out string? rollStateJson)
     {
@@ -228,6 +252,12 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return false;
             }
 
+            if (!IsSnapshotSourceCompatible(snapshot.Source, sourcePath))
+            {
+                Debug.WriteLine($"[StudentWorkbookSqlite] snapshot source fingerprint mismatch; refusing fallback path={sourcePath}");
+                return false;
+            }
+
             workbook = ToWorkbook(snapshot);
             rollStateJson = TryReadRollStateSnapshot(dbPath).Json;
             return true;
@@ -239,7 +269,12 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
     }
 
-    private static void TryWriteSnapshotPackage(string dbPath, StudentWorkbook workbook, string? rollStateJson)
+    private static void TryWriteSnapshotPackage(
+        string dbPath,
+        string sourcePath,
+        StudentWorkbook workbook,
+        string? rollStateJson,
+        WorkbookSourceFingerprint? source)
     {
         try
         {
@@ -253,7 +288,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             var effectiveUpdatedAtUtc = (rollStateUpdatedAtUtc ?? DateTime.UtcNow).ToUniversalTime().ToString("O");
 
             using var transaction = connection.BeginTransaction();
-            var snapshotJson = JsonSerializer.Serialize(FromWorkbook(workbook), SnapshotJsonOptions);
+            var snapshotJson = JsonSerializer.Serialize(FromWorkbook(workbook, source), SnapshotJsonOptions);
             using (var upsertWorkbook = connection.CreateCommand())
             {
                 upsertWorkbook.Transaction = transaction;
@@ -331,7 +366,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         SqliteStorageUtilities.EnsureColumnExists(connection, "student_workbook_state", "revision", "INTEGER NOT NULL DEFAULT 0");
     }
 
-    private static WorkbookSnapshot FromWorkbook(StudentWorkbook workbook)
+    private static WorkbookSnapshot FromWorkbook(StudentWorkbook workbook, WorkbookSourceFingerprint? source)
     {
         var classes = workbook.Classes.Values
             .Select(roster => new ClassRosterSnapshot(
@@ -347,7 +382,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                     new Dictionary<string, string>(student.ExtraFields, StringComparer.OrdinalIgnoreCase))).ToList()))
             .ToList();
 
-        return new WorkbookSnapshot(workbook.ActiveClass, classes);
+        return new WorkbookSnapshot(workbook.ActiveClass, classes, source);
     }
 
     private static StudentWorkbook ToWorkbook(WorkbookSnapshot snapshot)
@@ -381,7 +416,10 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         return new StudentWorkbook(classes, snapshot.ActiveClass);
     }
 
-    private sealed record WorkbookSnapshot(string ActiveClass, List<ClassRosterSnapshot> Classes);
+    private sealed record WorkbookSnapshot(
+        string ActiveClass,
+        List<ClassRosterSnapshot> Classes,
+        WorkbookSourceFingerprint? Source = null);
 
     private sealed record ClassRosterSnapshot(
         string ClassName,
@@ -396,6 +434,80 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         string RowId,
         string RowKey,
         Dictionary<string, string>? ExtraFields);
+
+    private static WorkbookSourceFingerprint? TryReadStoredSourceFingerprint(string dbPath)
+    {
+        try
+        {
+            if (!File.Exists(dbPath))
+            {
+                return null;
+            }
+
+            using var connection = SqliteStorageUtilities.CreateOpenConnection(dbPath);
+            EnsureSchema(connection);
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT workbook_json FROM student_workbook_snapshot WHERE id = $id LIMIT 1;";
+            command.Parameters.AddWithValue("$id", SingletonRowId);
+            var scalar = command.ExecuteScalar();
+            if (scalar is not string workbookJson || string.IsNullOrWhiteSpace(workbookJson))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<WorkbookSnapshot>(workbookJson, SnapshotJsonOptions)?.Source;
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[StudentWorkbookSqlite] stored source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool IsSnapshotSourceCompatible(
+        WorkbookSourceFingerprint? snapshotSource,
+        string sourcePath)
+    {
+        // Legacy snapshots can remain a recovery path only when the authority file
+        // is absent. If a file exists, an un-fingerprinted snapshot is unsafe.
+        if (snapshotSource == null)
+        {
+            return !File.Exists(sourcePath);
+        }
+
+        var current = TryCaptureSourceFingerprint(sourcePath);
+        return current != null
+            && string.Equals(snapshotSource.FullPath, current.FullPath, StringComparison.OrdinalIgnoreCase)
+            && snapshotSource.Length == current.Length
+            && snapshotSource.LastWriteTimeUtcTicks == current.LastWriteTimeUtcTicks
+            && string.Equals(snapshotSource.Sha256, current.Sha256, StringComparison.Ordinal);
+    }
+
+    private static WorkbookSourceFingerprint? TryCaptureSourceFingerprint(string sourcePath)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(sourcePath);
+            if (!File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            var info = new FileInfo(fullPath);
+            using var stream = File.OpenRead(fullPath);
+            var hash = Convert.ToHexString(SHA256.HashData(stream));
+            return new WorkbookSourceFingerprint(
+                fullPath,
+                info.Length,
+                info.LastWriteTimeUtc.Ticks,
+                hash);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[StudentWorkbookSqlite] source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
+            return null;
+        }
+    }
 
     private static DateTime? TryReadAuthorityUpdatedAtUtc(string workbookPath)
     {

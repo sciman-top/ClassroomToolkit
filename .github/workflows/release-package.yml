@@ -86,7 +86,7 @@ jobs:
             -Version "${{ steps.release_vars.outputs.version }}" `
             -PackageMode "${{ steps.release_vars.outputs.package_mode }}" `
             -Configuration Release `
-            -EnsureLatestRuntime `
+            -EnsureRuntimeInstaller `
             -AllowOverwriteVersion
 
       - name: Upload release artifacts
@@ -109,4 +109,5 @@ jobs:
             artifacts/release/${{ steps.release_vars.outputs.version }}/source/ClassroomToolkit-Source-*.zip
             artifacts/release/${{ steps.release_vars.outputs.version }}/source/source-package-manifest.json
             artifacts/release/${{ steps.release_vars.outputs.version }}/release-manifest.json
+            artifacts/release/${{ steps.release_vars.outputs.version }}/SHA256SUMS.txt
           fail_on_unmatched_files: true

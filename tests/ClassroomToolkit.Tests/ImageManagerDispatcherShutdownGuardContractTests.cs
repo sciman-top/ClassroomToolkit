@@ -15,7 +15,8 @@ public sealed class ImageManagerDispatcherShutdownGuardContractTests
 
         source.Should().Contain("if (item.Dispatcher.HasShutdownStarted || item.Dispatcher.HasShutdownFinished)");
         source.Should().Contain("if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished || _isClosing)");
-        source.Should().Contain("await item.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);");
+        source.Should().Contain("await item.Dispatcher.InvokeAsync(");
+        source.Should().Contain("DispatcherPriority.Background");
         source.Should().Contain("await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);");
     }
 }
