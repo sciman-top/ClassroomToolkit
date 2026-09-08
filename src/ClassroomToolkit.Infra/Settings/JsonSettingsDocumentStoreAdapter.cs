@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Domain.Utilities;
+
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Settings;
 
@@ -120,7 +121,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             },
             onTempCleanupFailure: static (tempPath, ex) =>
             {
-                Debug.WriteLine(
+                InfraDiagnosticsLog.Write(
                     $"[JsonSettingsDocumentStoreAdapter] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
 
@@ -190,7 +191,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
         Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 1);
         _rawRoot = null;
-        Debug.WriteLine(
+        InfraDiagnosticsLog.Write(
             $"[JsonSettingsDocumentStoreAdapter] {operation} failed path={_path} ex={ex.GetType().Name} msg={ex.Message}");
     }
 
@@ -257,7 +258,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         }
 
         var currentRejectCount = Interlocked.Increment(ref _oversizedSettingsRejectCount);
-        Debug.WriteLine(
+        InfraDiagnosticsLog.Write(
             $"[JsonSettingsDocumentStoreAdapter] oversized-settings-rejected operation={operation} path={_path} length={fileLength} max={MaxSettingsFileBytes} rejectCount={currentRejectCount}");
         throw CreateSettingsFileTooLargeException(operation, fileLength);
     }

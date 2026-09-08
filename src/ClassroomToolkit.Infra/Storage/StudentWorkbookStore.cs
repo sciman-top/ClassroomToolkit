@@ -3,9 +3,10 @@ using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
+
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -150,7 +151,7 @@ public sealed class StudentWorkbookStore
                 // 备份失败（只读目录/磁盘满/OneDrive 占用）：规范化内容仍可用于本会话（降级只读），
                 // 但必须拒绝后续覆盖——未备份的原始文件绝不能被整册覆写。
                 overwriteBlocked = true;
-                Debug.WriteLine(
+                InfraDiagnosticsLog.Write(
                     $"[StudentWorkbookStore] normalization backup failed; degrade to read-only session path={path}");
             }
         }
@@ -195,7 +196,7 @@ public sealed class StudentWorkbookStore
             },
             onTempCleanupFailure: static (tempPath, ex) =>
             {
-                Debug.WriteLine(
+                InfraDiagnosticsLog.Write(
                     $"[StudentWorkbookStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
         _overwriteBlockedPaths.TryRemove(fullPath, out _);
@@ -252,7 +253,7 @@ public sealed class StudentWorkbookStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine(
+            InfraDiagnosticsLog.Write(
                 $"[StudentWorkbookStore] record file state failed path={fullPath} ex={ex.GetType().Name} msg={ex.Message}");
             _lastValidatedFileStates.TryRemove(fullPath, out _);
         }
@@ -282,7 +283,7 @@ public sealed class StudentWorkbookStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine(
+            InfraDiagnosticsLog.Write(
                 $"[StudentWorkbookStore] normalization backup failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
         }
@@ -335,7 +336,7 @@ public sealed class StudentWorkbookStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine(
+            InfraDiagnosticsLog.Write(
                 $"[StudentWorkbookStore] backup prune failed dir={backupDirectory} ex={ex.GetType().Name} msg={ex.Message}");
         }
     }

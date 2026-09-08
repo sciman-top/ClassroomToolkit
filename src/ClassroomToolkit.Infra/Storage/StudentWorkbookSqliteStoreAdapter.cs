@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -9,6 +8,8 @@ using System.Text.Json;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using Microsoft.Data.Sqlite;
+
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -57,7 +58,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
             if (TryReadWorkbookSnapshotPackage(dbPath, path, out var workbookFromSnapshot, out var rollStateFromSnapshot))
             {
                 return new StudentWorkbookLoadResult(
@@ -82,7 +83,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
             cacheStateJson: sqliteSnapshot.Json,
             cacheRevision: sqliteSnapshot.Revision,
             cacheUpdatedAtUtc: sqliteSnapshot.UpdatedAtUtc,
-            log: message => Debug.WriteLine(message),
+            log: message => InfraDiagnosticsLog.Write(message),
             source: "StudentWorkbookSqlite");
 
         TryWriteSnapshotPackage(
@@ -115,7 +116,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         {
             // xlsx 被拒绝覆盖：快照仍保留本会话状态，但必须让 Application/UI 知道
             // 原始工作簿没有写入，避免出现“保存成功”的假象。
-            Debug.WriteLine($"[StudentWorkbookSqlite] bridge save refused; snapshot retained: {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] bridge save refused; snapshot retained: {ex.Message}");
             throw;
         }
 
@@ -139,11 +140,11 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return resolved;
             }
 
-            Debug.WriteLine("[StudentWorkbookSqlite] resolver returned empty path; fallback to default path policy.");
+            InfraDiagnosticsLog.Write("[StudentWorkbookSqlite] resolver returned empty path; fallback to default path policy.");
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
         }
 
         return ResolveDbPath(workbookPath);
@@ -208,7 +209,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] read failed: {ex.GetType().Name} - {ex.Message}");
             return default;
         }
     }
@@ -254,7 +255,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
 
             if (!IsSnapshotSourceCompatible(snapshot.Source, sourcePath))
             {
-                Debug.WriteLine($"[StudentWorkbookSqlite] snapshot source fingerprint mismatch; refusing fallback path={sourcePath}");
+                InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] snapshot source fingerprint mismatch; refusing fallback path={sourcePath}");
                 return false;
             }
 
@@ -264,7 +265,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] snapshot read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] snapshot read failed: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -338,7 +339,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] snapshot write failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] snapshot write failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -459,7 +460,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] stored source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] stored source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }
@@ -504,7 +505,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] source fingerprint read failed: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }
@@ -523,7 +524,7 @@ public sealed class StudentWorkbookSqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[StudentWorkbookSqlite] authority timestamp read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[StudentWorkbookSqlite] authority timestamp read failed: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }

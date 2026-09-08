@@ -139,6 +139,9 @@ internal static class AppCompositionRoot
 
     private static void AddLogging(IServiceCollection services, string appDataDirectory)
     {
+        var fileProvider = new FileLoggerProvider(
+            Path.Combine(appDataDirectory, "logs"),
+            resetExistingLogsOnStartup: false);
         services.AddLogging(builder =>
         {
 #if DEBUG
@@ -147,10 +150,23 @@ internal static class AppCompositionRoot
             builder.SetMinimumLevel(LogLevel.Information);
 #endif
             builder.AddConsole();
-            builder.AddProvider(new FileLoggerProvider(
-                Path.Combine(appDataDirectory, "logs"),
-                resetExistingLogsOnStartup: false));
+            builder.AddProvider(fileProvider);
         });
+
+        // Infra 存储层降级事件转发到文件日志：Release 无调试器时备份/快照失败才可留痕。
+        var infraLogger = fileProvider.CreateLogger("ClassroomToolkit.Infra");
+        InfraDiagnosticsLog.SetSink(message => LogInfraDiagnostics(infraLogger, message));
+    }
+
+    private static readonly Action<ILogger, string, Exception?> LogInfraDiagnosticsDelegate =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(1, "InfraDiagnostics"),
+            "Infra degradation: {Message}");
+
+    private static void LogInfraDiagnostics(ILogger logger, string message)
+    {
+        LogInfraDiagnosticsDelegate(logger, message, null);
     }
 
     private static bool TryBootstrapSettingsDocumentMigration(IConfigurationService configuration)

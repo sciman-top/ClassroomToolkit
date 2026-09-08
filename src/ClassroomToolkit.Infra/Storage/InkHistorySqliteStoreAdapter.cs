@@ -1,9 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using ClassroomToolkit.Application.Abstractions;
 using Microsoft.Data.Sqlite;
+
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -38,7 +39,7 @@ public sealed class InkHistorySqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkHistorySqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[InkHistorySqlite] bridge load failed: {ex.GetType().Name} - {ex.Message}");
             var fallback = TryReadSnapshot(dbPath, sourcePath, pageIndex);
             if (fallback != null && !string.IsNullOrWhiteSpace(fallback.StrokesJson))
             {
@@ -86,11 +87,11 @@ public sealed class InkHistorySqliteStoreAdapter
                 return resolved;
             }
 
-            Debug.WriteLine("[InkHistorySqlite] resolver returned empty path; fallback to default path policy.");
+            InfraDiagnosticsLog.Write("[InkHistorySqlite] resolver returned empty path; fallback to default path policy.");
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkHistorySqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[InkHistorySqlite] resolver failed: {ex.GetType().Name} - {ex.Message}");
         }
 
         return ResolveDbPath(sourcePath);
@@ -158,7 +159,7 @@ public sealed class InkHistorySqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkHistorySqlite] read failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[InkHistorySqlite] read failed: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }
@@ -207,7 +208,7 @@ public sealed class InkHistorySqliteStoreAdapter
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[InkHistorySqlite] write failed: {ex.GetType().Name} - {ex.Message}");
+            InfraDiagnosticsLog.Write($"[InkHistorySqlite] write failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 

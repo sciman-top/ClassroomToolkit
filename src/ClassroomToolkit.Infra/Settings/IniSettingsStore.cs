@@ -1,6 +1,7 @@
 using System.Text;
-using System.Diagnostics;
 using ClassroomToolkit.Domain.Utilities;
+
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Settings;
 
@@ -34,17 +35,17 @@ public sealed class IniSettingsStore
         }
         if (!TryValidateInputSize(_path, out var fileLength))
         {
-            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=size-check-failed length={fileLength}");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] load failed path={_path} reason=size-check-failed length={fileLength}");
             return false;
         }
         if (!TryReadAllLinesWithFallback(_path, out var lines))
         {
-            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=read-all-lines-fallback-failed");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] load failed path={_path} reason=read-all-lines-fallback-failed");
             return false;
         }
         if (ContainsNullCharacter(lines))
         {
-            Debug.WriteLine($"[IniSettingsStore] load failed path={_path} reason=null-character-detected");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] load failed path={_path} reason=null-character-detected");
             return false;
         }
 
@@ -131,7 +132,7 @@ public sealed class IniSettingsStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[IniSettingsStore] read bytes failed path={path}");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] read bytes failed path={path}");
             return false;
         }
 
@@ -183,7 +184,7 @@ public sealed class IniSettingsStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[IniSettingsStore] decode failed encoding={encoding.WebName} ex={ex.GetType().Name}");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] decode failed encoding={encoding.WebName} ex={ex.GetType().Name}");
             return false;
         }
     }
@@ -197,7 +198,7 @@ public sealed class IniSettingsStore
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
-            Debug.WriteLine($"[IniSettingsStore] GB18030 encoding unavailable: {ex.Message}");
+            InfraDiagnosticsLog.Write($"[IniSettingsStore] GB18030 encoding unavailable: {ex.Message}");
             return null;
         }
     }
@@ -242,7 +243,7 @@ public sealed class IniSettingsStore
                     return;
                 }
 
-                Debug.WriteLine(
+                InfraDiagnosticsLog.Write(
                     $"[IniSettingsStore] temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
         _loadedLines = lines.ToArray();
