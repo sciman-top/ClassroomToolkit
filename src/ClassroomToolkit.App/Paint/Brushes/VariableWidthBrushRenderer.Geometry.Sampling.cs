@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using WpfPoint = System.Windows.Point;
 
@@ -252,11 +251,22 @@ internal partial class VariableWidthBrushRenderer
         taperLength = Math.Clamp(taperAutoScaled, taperMinLenDip, taperMaxLenDip);
         _lastEffectiveTaperBaseDip = taperLength;
 
+        // 收锋长度随离笔速度缩放：慢收变钝、快甩出长锋（起点藏锋不受影响）。
+        double endVelocityFactor = Lerp(
+            Math.Min(_config.TaperLengthVelocityMinFactor, _config.TaperLengthVelocityMaxFactor),
+            Math.Max(_config.TaperLengthVelocityMinFactor, _config.TaperLengthVelocityMaxFactor),
+            Math.Clamp(_releaseSpeedNorm, 0.0, 1.0));
+        double endTaperLength = Math.Clamp(taperLength * endVelocityFactor, taperMinLenDip, taperMaxLenDip);
+
         bool isShortStroke = totalLength < (2.0 * taperLength);
         bool isDotLikeStroke = totalLength <= Math.Max(2.0, _baseSize * 0.85);
         double effectiveTaperLength = isShortStroke
             ? Math.Max(totalLength * 0.5, 0.5)
             : taperLength;
+        double effectiveEndTaperLength = isShortStroke
+            ? effectiveTaperLength
+            : endTaperLength;
+        LastEffectiveEndTaperLengthDip = effectiveEndTaperLength;
         double effectiveStrength = isDotLikeStroke
             ? Math.Min(strength, 0.72)
             : strength;
@@ -274,13 +284,13 @@ internal partial class VariableWidthBrushRenderer
             if (startDist <= effectiveTaperLength)
             {
                 double t = Math.Clamp(startDist / effectiveTaperLength, 0.0, 1.0);
-                startFactor = ResolveTaperFactor(_config.StartTaperStyle, t, effectiveStrength);
+                startFactor = ResolveTaperFactor(_config.StartTaperStyle, t, effectiveStrength, _config.TaperEasePower);
             }
 
-            if (endDist <= effectiveTaperLength)
+            if (endDist <= effectiveEndTaperLength)
             {
-                double t = Math.Clamp(endDist / effectiveTaperLength, 0.0, 1.0);
-                endFactor = ResolveTaperFactor(_config.EndTaperStyle, t, effectiveStrength);
+                double t = Math.Clamp(endDist / effectiveEndTaperLength, 0.0, 1.0);
+                endFactor = ResolveTaperFactor(_config.EndTaperStyle, t, effectiveStrength, _config.TaperEasePower);
             }
 
             if (isDotLikeStroke)
@@ -327,9 +337,14 @@ internal partial class VariableWidthBrushRenderer
         }
     }
 
-    private static double ResolveTaperFactor(TaperCapStyle style, double normalizedDistance, double strength)
+    private static double ResolveTaperFactor(TaperCapStyle style, double normalizedDistance, double strength, double easePower)
     {
         double smooth = normalizedDistance * normalizedDistance * (3.0 - (2.0 * normalizedDistance));
+        if (Math.Abs(easePower - 1.0) > 0.0001)
+        {
+            smooth = Math.Pow(smooth, Math.Max(0.05, easePower));
+        }
+
         switch (style)
         {
             case TaperCapStyle.Exposed:
@@ -345,78 +360,6 @@ internal partial class VariableWidthBrushRenderer
                     return Lerp(edge, 1.0, smooth);
                 }
         }
-    }
-
-    private List<StrokePoint> BuildCenterlineSamplesV10()
-    {
-        var samples = new List<StrokePoint>();
-        if (_points.Count == 0) return samples;
-        if (_points.Count == 1)
-        {
-            samples.Add(_points[0]);
-            return samples;
-        }
-
-        double totalLength = 0;
-        for (int i = 1; i < _points.Count; i++)
-        {
-            totalLength += (_points[i].Position - _points[i - 1].Position).Length;
-        }
-
-        double velocityRange = _maxVelocity - _minVelocity;
-        if (velocityRange < 0.001) velocityRange = 1.0;
-
-        double accumulatedLength = 0;
-
-        for (int i = 0; i < _points.Count - 1; i++)
-        {
-            var p0 = _points[Math.Max(i - 1, 0)];
-            var p1 = _points[i];
-            var p2 = _points[i + 1];
-            var p3 = _points[Math.Min(i + 2, _points.Count - 1)];
-
-            int upsampleSteps = ResolveUpsampleSteps(p0, p1, p2, p3);
-            int startStep = (i == 0) ? 0 : 1;
-            for (int step = startStep; step <= upsampleSteps; step++)
-            {
-                double t = step / (double)upsampleSteps;
-                var pos = CatmullRomPoint(p0.Position, p1.Position, p2.Position, p3.Position, t);
-
-                double speed = CatmullRomValue(p0.Speed, p1.Speed, p2.Speed, p3.Speed, t);
-                double accumulatedWidth = CatmullRomValue(p0.AccumulatedWidth, p1.AccumulatedWidth, p2.AccumulatedWidth, p3.AccumulatedWidth, t);
-                double noisePhase = CatmullRomValue(p0.NoisePhase, p1.NoisePhase, p2.NoisePhase, p3.NoisePhase, t);
-                double wetness = CatmullRomValue(p0.Wetness, p1.Wetness, p2.Wetness, p3.Wetness, t);
-                double nibAngle = LerpAngle(p1.NibAngleRadians, p2.NibAngleRadians, t);
-                double nibStrength = Lerp(p1.NibStrength, p2.NibStrength, t);
-
-                if (i > 0 || step > 0)
-                {
-                    double segmentLength = (pos - (samples.Count > 0 ? samples.Last().Position : p1.Position)).Length;
-                    accumulatedLength += segmentLength;
-                }
-                double progress = totalLength > 0 ? accumulatedLength / totalLength : 0;
-                progress = Math.Clamp(progress, 0, 1);
-
-                double normalizedSpeed = Math.Clamp((speed - _minVelocity) / velocityRange, 0, 1);
-                double width = CalculateWidthV10(p1.Width, normalizedSpeed, progress);
-
-                samples.Add(new StrokePoint(
-                    pos,
-                    width,
-                    speed,
-                    normalizedSpeed,
-                    progress,
-                    accumulatedWidth,
-                    noisePhase,
-                    Math.Clamp(wetness, 0.0, 1.0),
-                    nibAngle,
-                    Math.Clamp(nibStrength, 0.2, 2.0)));
-            }
-        }
-
-        SmoothWidthsV10(samples);
-
-        return samples;
     }
 
     private int ResolveUpsampleSteps(StrokePoint p0, StrokePoint p1, StrokePoint p2, StrokePoint p3, bool previewFastPath = false)
@@ -472,69 +415,5 @@ internal partial class VariableWidthBrushRenderer
         a.Normalize();
         b.Normalize();
         return Math.Abs(Vector.AngleBetween(a, b));
-    }
-
-    private double CalculateWidthV10(double baseWidth, double normalizedSpeed, double progress)
-    {
-        double velocityFactor = 1.0 - (_config.VelocityWidthFactor * normalizedSpeed);
-        velocityFactor = Math.Clamp(velocityFactor, 0.2, 1.0);
-
-        double blendedVelocityFactor = velocityFactor;
-
-        if (progress > _config.EndVelocityDecoupleStart)
-        {
-            double taperZoneProgress = Math.Clamp(
-                (progress - _config.EndVelocityDecoupleStart) / (1.0 - _config.EndVelocityDecoupleStart),
-                0.0, 1.0
-            );
-
-            blendedVelocityFactor = Lerp(velocityFactor, 1.0, taperZoneProgress);
-        }
-
-        double targetWidth = baseWidth * blendedVelocityFactor;
-
-        if (progress > _config.EndTaperStartProgress)
-        {
-            double taperProgress = Math.Clamp(
-                (progress - _config.EndTaperStartProgress) / (1.0 - _config.EndTaperStartProgress),
-                0.0, 1.0
-            );
-
-            double taperCurve = 1.0 - (taperProgress * taperProgress);
-            double taperFactor = _config.TaperMinWidthFactor + (1.0 - _config.TaperMinWidthFactor) * taperCurve;
-            if (progress > 0.85)
-            {
-                double tailT = Math.Clamp((progress - 0.85) / 0.15, 0.0, 1.0);
-                taperFactor *= Lerp(1.0, 0.84, tailT);
-            }
-            targetWidth *= taperFactor;
-
-            double minWidth = _baseSize * _config.TaperMinWidthFactor;
-            targetWidth = Math.Max(targetWidth, minWidth);
-        }
-
-        return ClampWidth(targetWidth);
-    }
-
-    private void SmoothWidthsV10(List<StrokePoint> samples)
-    {
-        if (samples.Count < 2) return;
-
-        for (int i = 1; i < samples.Count; i++)
-        {
-            double smoothed = samples[i - 1].Width * 0.65 + samples[i].Width * 0.35;
-            samples[i] = new StrokePoint(
-                samples[i].Position,
-                ClampWidth(smoothed),
-                samples[i].Speed,
-                samples[i].NormalizedSpeed,
-                samples[i].Progress,
-                samples[i].AccumulatedWidth,
-                samples[i].NoisePhase,
-                samples[i].Wetness,
-                samples[i].NibAngleRadians,
-                samples[i].NibStrength
-            );
-        }
     }
 }

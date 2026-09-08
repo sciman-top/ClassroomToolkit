@@ -35,6 +35,11 @@ internal interface IBrushRenderer
     Geometry? GetLastStrokeGeometry();
 
     /// <summary>
+    /// 获取当前可见笔尖位置（最后一个被接受的采样点），供预测段与滤波后的墨迹衔接。
+    /// </summary>
+    bool TryGetTipPosition(out WpfPoint tip);
+
+    /// <summary>
     /// 获取最后一笔的原始点数据（用于部分删除）
     /// </summary>
     List<StrokePointData>? GetLastStrokePoints();

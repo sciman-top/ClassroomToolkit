@@ -21,14 +21,12 @@ internal class BrushPhysicsConfig
     public double WidthLowPassMinAlpha { get; set; } = 0.72;
     public double WidthLowPassMaxAlpha { get; set; } = 0.94;
     public double WidthLowPassSpeedReference { get; set; } = 1.8;
-    public bool SimulateStartCap { get; set; } = true;
     public bool SimulateEndTaper { get; set; } = true;
     public double VelocityThreshold { get; set; } = 1.3;
     public int VelocitySmoothWindow { get; set; } = 6;
     public int PressureSmoothWindow { get; set; } = 7;
     public double RealPressureWidthInfluence { get; set; } = 0.55;
     public double RealPressureWidthScale { get; set; } = 0.32;
-    public double CapIgnoreVelocityRatio { get; set; } = 0.1;
     public double PositionSmoothingMinAlpha { get; set; } = 0.45;
     public double PositionSmoothingMaxAlpha { get; set; } = 0.9;
     public double PositionSmoothingSpeedReference { get; set; } = 2.0;
@@ -54,6 +52,13 @@ internal class BrushPhysicsConfig
     public double TaperLenScale { get; set; } = 1.0;
     public double TaperRadiusScaleK { get; set; } = 2.6;
     public double TaperStrength { get; set; } = 0.72;
+    // 收锋长度随离笔速度缩放：慢收（norm=0）用 MinFactor，快甩（norm=1）用 MaxFactor。
+    public double TaperLengthVelocityMinFactor { get; set; } = 0.62;
+    public double TaperLengthVelocityMaxFactor { get; set; } = 1.55;
+    // 收锋曲线指数：1.0 = 平滑 smoothstep（与原行为逐位一致）；>1 更尖，<1 更钝。
+    public double TaperEasePower { get; set; } = 1.0;
+    // 倾斜→宽度基线：0 关闭；>0 时笔杆越压平（altitude 越小）笔画越宽（0.35 ≈ 最大 +35%）。
+    public double TiltWidthInfluence { get; set; }
     public TaperCapStyle StartTaperStyle { get; set; } = TaperCapStyle.Hidden;
     public TaperCapStyle EndTaperStyle { get; set; } = TaperCapStyle.Hidden;
     // Dot-like head blend cap: larger => stronger head taper participation; smaller => thicker head.
@@ -65,8 +70,6 @@ internal class BrushPhysicsConfig
 
     // 笔锋效果参数
     public double StartCapLength { get; set; } = 0.05;
-    public double EndTaperLength { get; set; } = 0.3;  // v10: 增加到25%
-    public int MinTaperPoints { get; set; } = 5;
 
     // 修复蝌蚪头：起笔阶段忽略速度
     public int StartVelocityRampUpPoints { get; set; } = 6;
@@ -92,7 +95,6 @@ internal class BrushPhysicsConfig
     public double DunBiDecayRate { get; set; } = 0.2;     // 累积衰减速率
     public double FlyingWhiteNoiseFrequency { get; set; } = 4.2;  // 噪声频率
     public double FlyingWhiteNoiseReductionProgress { get; set; } = 0.78;  // 噪声减少起点
-    public double CapRoundThreshold { get; set; } = 0.72;   // 圆笔锋阈值（相对于 baseSize）
     public double TaperMinWidthFactor { get; set; } = 0.5; // 笔锋最小宽度因子
     public double FiberNoiseIntensity { get; set; } = 0.003; // 纸张纤维噪声强度
     public double FiberNoiseFrequency { get; set; } = 0.35; // 纸张纤维噪声频率
@@ -119,8 +121,6 @@ internal class BrushPhysicsConfig
     public double WetnessPressureInfluence { get; set; } = 0.4;
     public double WetnessSlowSpeedBoost { get; set; } = 0.35;
     public double PaperAbsorption { get; set; } = 0.48;
-    public double DynamicCoreOpacityDry { get; set; } = 0.84;
-    public double DynamicCoreOpacityWet { get; set; } = 1.0;
 
     public static BrushPhysicsConfig DefaultSmooth => CreateCalligraphyBalanced();
 
@@ -169,9 +169,7 @@ internal class BrushPhysicsConfig
             AnisotropyStrength = 0.045,
             OrientationAnisotropyMix = 0.78,
             OrientationStrengthMin = 0.4,
-            OrientationStrengthMax = 1.45,
-            DynamicCoreOpacityDry = 0.8,
-            DynamicCoreOpacityWet = 0.98
+            OrientationStrengthMax = 1.45
         };
     }
 
@@ -225,9 +223,7 @@ internal class BrushPhysicsConfig
             FlyingWhiteNoiseIntensity = 0.008,
             FiberNoiseIntensity = 0.0015,
             MultiRibbonOffsetJitter = 0.006,
-            MultiRibbonWidthJitter = 0.012,
-            DynamicCoreOpacityDry = 0.86,
-            DynamicCoreOpacityWet = 1.0
+            MultiRibbonWidthJitter = 0.012
         };
     }
 
@@ -279,9 +275,7 @@ internal class BrushPhysicsConfig
             AnisotropyStrength = 0.045,
             OrientationAnisotropyMix = 0.65,
             OrientationStrengthMin = 0.35,
-            OrientationStrengthMax = 1.35,
-            DynamicCoreOpacityDry = 0.84,
-            DynamicCoreOpacityWet = 1.0
+            OrientationStrengthMax = 1.35
         };
     }
 

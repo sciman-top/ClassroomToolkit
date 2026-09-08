@@ -164,6 +164,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
     private int _cachedRenderColorKey = int.MinValue;
     private readonly List<WpfPoint> _ribbonLeftBuffer = new();
     private readonly List<WpfPoint> _ribbonRightBuffer = new();
+    private readonly Dictionary<int, WpfPen> _segmentPenCache = new();
 
     public bool IsActive => _isActive;
     public int GeometryVersion => _geometryVersion;
@@ -337,6 +338,18 @@ internal class MarkerBrushRenderer : IBrushRenderer
         return result;
     }
 
+    public bool TryGetTipPosition(out WpfPoint tip)
+    {
+        if (_points.Count == 0)
+        {
+            tip = default;
+            return false;
+        }
+
+        tip = _points[_points.Count - 1].Position;
+        return true;
+    }
+
     public void Reset()
     {
         _points.Clear();
@@ -346,6 +359,36 @@ internal class MarkerBrushRenderer : IBrushRenderer
         _previewBasePointCount = 0;
         _previewBaseSourcePointsBuilt = 0;
         MarkGeometryDirty();
+    }
+
+    /// <summary>
+    /// SegmentUnion 每段都要 widen 一次；按 0.25dip 量化复用 Pen，
+    /// 量化偏差 ≤0.125dip，视觉不可分辨，长笔画不再每段分配 Pen。
+    /// </summary>
+    private WpfPen GetCachedSegmentPen(double width)
+    {
+        int key = (int)Math.Round(Math.Max(width, 0.1) * 4.0);
+        if (_segmentPenCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var pen = new WpfPen(System.Windows.Media.Brushes.Black, key / 4.0)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+            LineJoin = PenLineJoin.Round
+        };
+        if (pen.CanFreeze)
+        {
+            pen.Freeze();
+        }
+        if (_segmentPenCache.Count >= 128)
+        {
+            _segmentPenCache.Clear();
+        }
+        _segmentPenCache[key] = pen;
+        return pen;
     }
 
     private WpfColor GetMarkerColor()
@@ -498,12 +541,7 @@ internal class MarkerBrushRenderer : IBrushRenderer
                 continue;
             }
             double width = Math.Max(p0.Width, p1.Width);
-            var pen = new WpfPen(System.Windows.Media.Brushes.Black, Math.Max(width, 0.1))
-            {
-                StartLineCap = PenLineCap.Round,
-                EndLineCap = PenLineCap.Round,
-                LineJoin = PenLineJoin.Round
-            };
+            var pen = GetCachedSegmentPen(width);
             var segment = new StreamGeometry();
             using (var ctx = segment.Open())
             {

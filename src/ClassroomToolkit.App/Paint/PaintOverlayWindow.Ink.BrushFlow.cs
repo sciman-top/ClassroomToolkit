@@ -57,11 +57,27 @@ public partial class PaintOverlayWindow
 
     private void UpdateBrushStroke(BrushInputSample input)
     {
-        if (!TryUpdateBrushStrokeGeometry(input))
+        // 鼠标/提升触摸/个体 stylus 点每次事件只携带单个采样，快速运笔时事件间距大；
+        // 与 stylus 批量路径一致地补插中间样本，避免稀疏宽度锚点造成折线感。
+        BrushInputSample? lastChangedSample = null;
+        if (_lastBrushInputSample.HasValue)
         {
-            return;
+            var previous = _lastBrushInputSample.Value;
+            if ((input.Position - previous.Position).LengthSquared > 0.0001)
+            {
+                AppendInterpolatedBrushSamples(previous, input, ref lastChangedSample);
+            }
         }
-        FlushBrushStrokePreview(input);
+
+        if (TryUpdateBrushStrokeGeometry(input))
+        {
+            lastChangedSample = input;
+        }
+
+        if (lastChangedSample.HasValue)
+        {
+            FlushBrushStrokePreview(lastChangedSample.Value);
+        }
     }
 
     private bool TryUpdateBrushStrokeGeometry(BrushInputSample input)

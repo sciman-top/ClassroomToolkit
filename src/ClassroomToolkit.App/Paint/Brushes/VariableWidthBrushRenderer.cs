@@ -90,6 +90,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private double _accumulatedWidth;
     private double _lastInkFlow = 1.0;
     private Vector _lastStrokeDirection = new Vector(1, 0);
+    private double _releaseSpeedNorm;
     private bool _cacheDirty = true;
     private List<RibbonGeometry>? _cachedRibbons;
     private Geometry? _cachedCoreGeometry;
@@ -111,6 +112,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     public double LastInkFlow => _lastInkFlow;
     public Vector LastStrokeDirection => _lastStrokeDirection;
     public int LastResampledPointCount => _lastResampledPointCount;
+    public double LastEffectiveEndTaperLengthDip { get; private set; }
 
     public VariableWidthBrushRenderer()
         : this(BrushPhysicsConfig.DefaultSmooth)
@@ -145,6 +147,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _minVelocity = double.MaxValue;
         _maxVelocity = double.MinValue;
         _accumulatedWidth = 0; // v11: 重置累积宽度
+        _releaseSpeedNorm = 0;
         _noiseSeed = ResolveDeterministicNoiseSeed(point);
         _lastResampledPointCount = 0;
         _lastEffectiveTaperBaseDip = Math.Max(0.0, _config.TaperLengthPx);
@@ -280,12 +283,25 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             _maxVelocity = Math.Max(_maxVelocity, velocity);
 
             double smoothVelocity = _velocityAverage.Push(velocity, _config.VelocitySmoothWindow);
+            // 收锋速度：仅统计被接受的采样点（去抖窗口之后），慢速微步会被距离过滤自然聚合。
+            _releaseSpeedNorm = Lerp(
+                _releaseSpeedNorm,
+                Math.Clamp(smoothVelocity / Math.Max(_config.VelocityThreshold, 0.001), 0, 1),
+                0.45);
             double resolvedPressure = input.HasPressure ? Math.Clamp(input.Pressure, 0, 1) : 0.5;
             resolvedPressure = _pressureFilter.Filter(resolvedPressure, dtSeconds);
             double smoothedPressure = _pressureAverage.Push(
                 resolvedPressure,
                 _config.PressureSmoothWindow);
             double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount, smoothedPressure, input.HasPressure);
+
+            // 倾斜→宽度基线（默认关闭）：笔杆越压平笔画越宽，模拟扁锋着纸面。
+            if (_config.TiltWidthInfluence > 0.0 && input.AltitudeRadians.HasValue)
+            {
+                double altitude = Math.Clamp(input.AltitudeRadians.Value, 0.0, Math.PI * 0.5);
+                double tiltFactor = 1.0 - (altitude / (Math.PI * 0.5));
+                targetWidth = ClampWidth(targetWidth * (1.0 + (_config.TiltWidthInfluence * tiltFactor)));
+            }
 
             double brushAngle = ResolveEffectiveBrushAngle(input);
             double orientationStrength = ResolveOrientationStrength(input);
@@ -508,9 +524,11 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _minVelocity = double.MaxValue;
         _maxVelocity = double.MinValue;
         _accumulatedWidth = 0; // v11: 重置累积宽度
+        _releaseSpeedNorm = 0;
         _lastInkFlow = 1.0;
         _lastResampledPointCount = 0;
         _lastEffectiveTaperBaseDip = 0.0;
+        LastEffectiveEndTaperLengthDip = 0.0;
         _hasRawPoint = false;
         _positionFilter.Reset();
         _pressureFilter.Reset();
@@ -571,6 +589,18 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         return result;
     }
 
+    public bool TryGetTipPosition(out WpfPoint tip)
+    {
+        if (_points.Count == 0)
+        {
+            tip = default;
+            return false;
+        }
+
+        tip = _points[^1].Position;
+        return true;
+    }
+
     internal List<StrokePointData>? GetLastResampledStrokePointsForDiagnostics()
     {
         if (_points.Count < 2)
@@ -607,20 +637,25 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         }
 
         double maxSpeed = Math.Max(_maxVelocity, 0.001);
+        // InkFlow 只是纹理/干湿启发量：长笔画均匀抽样即可，避免每 move 全量 O(n) 扫描。
+        int stride = (int)Math.Ceiling(_points.Count / 256.0);
+        int sampledCount = 0;
         double speedSum = 0;
         double accumulationSum = 0;
         double wetnessSum = 0;
 
-        foreach (var point in _points)
+        for (int i = 0; i < _points.Count; i += stride)
         {
+            var point = _points[i];
             speedSum += Math.Clamp(point.Speed / maxSpeed, 0, 1);
             accumulationSum += point.AccumulatedWidth;
             wetnessSum += point.Wetness;
+            sampledCount++;
         }
 
-        double avgSpeed = speedSum / _points.Count;
+        double avgSpeed = speedSum / sampledCount;
         double avgAccumulation = accumulationSum / Math.Max(_baseSize, 0.001);
-        double avgWetness = wetnessSum / Math.Max(1, _points.Count);
+        double avgWetness = wetnessSum / Math.Max(1, sampledCount);
         double flow = 1.0 - avgSpeed;
         flow += Math.Clamp(avgAccumulation * 0.35, 0, 0.4);
         flow += Math.Clamp((avgWetness - 0.5) * 0.22, -0.12, 0.16);
@@ -930,6 +965,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     {
         private const int MaxCapacity = 64;
         private readonly double[] _values = new double[MaxCapacity];
+        private double _sum;
         private int _start;
         private int _count;
 
@@ -937,6 +973,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         {
             _start = 0;
             _count = 0;
+            _sum = 0;
         }
 
         public double Push(double value, int windowSize)
@@ -944,6 +981,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             int limit = Math.Clamp(windowSize, 1, MaxCapacity);
             if (_count == MaxCapacity)
             {
+                _sum -= _values[_start];
                 _start = (_start + 1) % MaxCapacity;
                 _count--;
             }
@@ -951,20 +989,22 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             int writeIndex = (_start + _count) % MaxCapacity;
             _values[writeIndex] = value;
             _count++;
+            _sum += value;
 
             while (_count > limit)
             {
+                _sum -= _values[_start];
                 _start = (_start + 1) % MaxCapacity;
                 _count--;
             }
 
-            double sum = 0.0;
-            for (int i = 0; i < _count; i++)
+            if (_count == 0)
             {
-                int idx = (_start + i) % MaxCapacity;
-                sum += _values[idx];
+                return 0;
             }
-            return sum / Math.Max(1, _count);
+
+            // 增量和的浮点漂移在（≤64 个同量级值）窗口内可忽略。
+            return _sum / _count;
         }
     }
 }

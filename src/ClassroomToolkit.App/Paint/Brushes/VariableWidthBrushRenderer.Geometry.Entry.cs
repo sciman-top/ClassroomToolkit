@@ -42,7 +42,7 @@ internal partial class VariableWidthBrushRenderer
             _previewBaseGeometry = null;
             _previewBasePointCount = 0;
             var samples = BuildCenterlineSamplesFinal(_points, previewFastPath: true);
-            preview = samples.Count < 2 ? null : BuildRibbonGeometry(samples, ribbonT: 0, noiseSeedOffset: 0);
+            preview = BuildPreviewCompositeGeometry(samples);
         }
         else
         {
@@ -85,7 +85,7 @@ internal partial class VariableWidthBrushRenderer
         return _cachedPreviewGeometry;
     }
 
-    private StreamGeometry? BuildPreviewGeometryForRange(int startInclusive, int endExclusive)
+    private Geometry? BuildPreviewGeometryForRange(int startInclusive, int endExclusive)
     {
         int start = Math.Max(0, startInclusive);
         int end = Math.Min(_points.Count, endExclusive);
@@ -102,7 +102,36 @@ internal partial class VariableWidthBrushRenderer
             return null;
         }
 
-        return BuildRibbonGeometry(samples, ribbonT: 0, noiseSeedOffset: 0);
+        return BuildPreviewCompositeGeometry(samples);
+    }
+
+    /// <summary>
+    /// 预览几何与最终几何使用相同的多毫结构，避免抬笔时宽度跳变；
+    /// 仅采样密度走快速路径。
+    /// </summary>
+    private Geometry? BuildPreviewCompositeGeometry(List<StrokePoint> samples)
+    {
+        if (samples.Count < 2)
+        {
+            return null;
+        }
+
+        var ribbons = BuildRibbonGeometries(samples);
+        if (ribbons.Count == 0)
+        {
+            return null;
+        }
+        if (ribbons.Count == 1)
+        {
+            return ribbons[0].Geometry;
+        }
+
+        var group = new GeometryGroup { FillRule = FillRule.Nonzero };
+        foreach (var ribbon in ribbons)
+        {
+            group.Children.Add(ribbon.Geometry);
+        }
+        return group;
     }
 
     private List<StrokePoint> CopyRangeToPreviewSliceBuffer(int startInclusive, int endExclusive)

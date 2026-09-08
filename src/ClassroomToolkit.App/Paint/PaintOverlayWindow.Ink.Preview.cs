@@ -134,7 +134,10 @@ public partial class PaintOverlayWindow
             lead2 *= BrushPredictionMaxDistanceDip / lead2.Length;
         }
 
-        var origin = _lastBrushInputSample.Value.Position;
+        // 预测段从滤波后的可见笔尖出发，避免转向时预测尖与墨迹脱节。
+        var origin = _activeRenderer != null && _activeRenderer.TryGetTipPosition(out var tipPosition)
+            ? tipPosition
+            : _lastBrushInputSample.Value.Position;
         p0 = origin;
         p1 = origin + lead1;
         p2 = origin + lead2;
