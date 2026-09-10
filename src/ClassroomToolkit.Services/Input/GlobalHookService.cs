@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Services.Input;
@@ -11,6 +12,8 @@ namespace ClassroomToolkit.Services.Input;
 
 public class GlobalHookService : IDisposable
 {
+    private const int StopRetryCount = 3;
+
     private readonly object _syncRoot = new();
     private readonly List<IKeyboardHookHandle> _activeHooks = new();
     private bool _disposed;
@@ -28,6 +31,17 @@ public class GlobalHookService : IDisposable
 
     [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing app contract.")]
     public event Action? HookUnavailable;
+
+    public int ResidualHookCount
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _activeHooks.Count;
+            }
+        }
+    }
 
     public Task<bool> RegisterHookAsync(
         IEnumerable<string> bindingTokens,
@@ -103,7 +117,7 @@ public class GlobalHookService : IDisposable
                 {
                     Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.GetType().Name} - {ex.Message}");
                     hook.BindingTriggered -= callback;
-                    TryStopHook(hook, "register-failed");
+                    RetainIfStopFailed(hook, "register-failed");
                     CleanupHooks(startedHooks, callback);
                     NotifyHookUnavailable();
                     return false;
@@ -112,7 +126,7 @@ public class GlobalHookService : IDisposable
                 if (IsDisposed() || !shouldKeepActive())
                 {
                     hook.BindingTriggered -= callback;
-                    TryStopHook(hook, "register-aborted");
+                    RetainIfStopFailed(hook, "register-aborted");
                     CleanupHooks(startedHooks, callback);
                     return false;
                 }
@@ -120,7 +134,7 @@ public class GlobalHookService : IDisposable
                 if (!hook.IsActive)
                 {
                     hook.BindingTriggered -= callback;
-                    TryStopHook(hook, "register-inactive");
+                    RetainIfStopFailed(hook, "register-inactive");
                     CleanupHooks(startedHooks, callback);
                     NotifyHookUnavailable();
                     return false;
@@ -153,16 +167,15 @@ public class GlobalHookService : IDisposable
 
     public void UnregisterAll()
     {
-        var hooks = DrainActiveHooks();
-        StopHooks(hooks, "unregister-all");
+        StopTrackedHooks("unregister-all");
     }
 
-    private static void CleanupHooks(List<IKeyboardHookHandle> hooks, Action<KeyBinding> callback)
+    private void CleanupHooks(List<IKeyboardHookHandle> hooks, Action<KeyBinding> callback)
     {
         foreach (var hook in hooks)
         {
             hook.BindingTriggered -= callback;
-            TryStopHook(hook, "cleanup");
+            RetainIfStopFailed(hook, "cleanup");
         }
     }
 
@@ -174,22 +187,22 @@ public class GlobalHookService : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        List<IKeyboardHookHandle>? hooks = null;
         lock (_syncRoot)
         {
-            if (_disposed) return;
-            _disposed = true;
-            if (_activeHooks.Count > 0)
+            if (_disposed)
             {
-                hooks = new List<IKeyboardHookHandle>(_activeHooks);
-                _activeHooks.Clear();
+                // A previous disposal may have failed to release a native hook. Keep
+                // the residual ownership reachable and retry on subsequent Dispose calls.
+                if (_activeHooks.Count == 0)
+                {
+                    return;
+                }
             }
+
+            _disposed = true;
         }
 
-        if (hooks is not null)
-        {
-            StopHooks(hooks, "dispose");
-        }
+        StopTrackedHooks("dispose");
     }
 
     private bool IsDisposed()
@@ -214,38 +227,81 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private List<IKeyboardHookHandle> DrainActiveHooks()
+    private void StopTrackedHooks(string reason)
     {
+        IKeyboardHookHandle[] hooks;
         lock (_syncRoot)
         {
             if (_activeHooks.Count == 0)
             {
-                return [];
+                return;
             }
 
-            var hooks = new List<IKeyboardHookHandle>(_activeHooks);
-            _activeHooks.Clear();
-            return hooks;
+            hooks = _activeHooks.ToArray();
         }
-    }
 
-    private static void StopHooks(IEnumerable<IKeyboardHookHandle> hooks, string reason)
-    {
         foreach (var hook in hooks)
         {
-            TryStopHook(hook, reason);
+            var stopped = false;
+            for (var attempt = 1; attempt <= StopRetryCount; attempt++)
+            {
+                if (TryStopHook(hook, reason))
+                {
+                    stopped = true;
+                    break;
+                }
+
+                // Keep cleanup bounded without blocking the caller. Residual ownership
+                // remains in _activeHooks for a later lifecycle retry.
+            }
+
+            if (stopped)
+            {
+                lock (_syncRoot)
+                {
+                    _activeHooks.Remove(hook);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[GlobalHookService] Residual hook retained after stop retries ({reason}).");
+            }
         }
     }
 
-    private static void TryStopHook(IKeyboardHookHandle hook, string reason)
+    private void RetainIfStopFailed(IKeyboardHookHandle hook, string reason)
+    {
+        if (TryStopHook(hook, reason))
+        {
+            return;
+        }
+
+        lock (_syncRoot)
+        {
+            if (!_activeHooks.Contains(hook))
+            {
+                _activeHooks.Add(hook);
+            }
+        }
+    }
+
+    private static bool TryStopHook(IKeyboardHookHandle hook, string reason)
     {
         try
         {
             hook.Dispose();
+            if (hook.IsActive)
+            {
+                Debug.WriteLine($"[GlobalHookService] Stop hook remained active ({reason}); retaining ownership.");
+                return false;
+            }
+
+            return true;
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
             Debug.WriteLine($"[GlobalHookService] Stop hook failed ({reason}): {ex.GetType().Name} - {ex.Message}");
+            return false;
         }
     }
 

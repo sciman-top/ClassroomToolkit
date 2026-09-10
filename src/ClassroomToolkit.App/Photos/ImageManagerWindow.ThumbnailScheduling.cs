@@ -32,7 +32,7 @@ public partial class ImageManagerWindow
     {
         public required ImageSource Thumbnail { get; init; }
         public required int PageCount { get; init; }
-        public required long ModifiedTicks { get; init; }
+        public required PhotoFileFingerprint Fingerprint { get; init; }
         public required LinkedListNode<string> LruNode { get; init; }
     }
 
@@ -313,33 +313,54 @@ public partial class ImageManagerWindow
         string path,
         bool isPdf,
         int decodeWidth,
-        DateTime modified,
         out ImageSource? thumbnail,
         out int pageCount)
     {
         var key = BuildThumbnailCacheKey(path, isPdf, decodeWidth);
+        ThumbnailCacheEntry? entry;
         lock (_thumbnailCacheLock)
         {
-            if (!_thumbnailCache.TryGetValue(key, out var entry))
+            if (!_thumbnailCache.TryGetValue(key, out entry) || entry is null)
+            {
+                thumbnail = null;
+                pageCount = 0;
+                return false;
+            }
+        }
+
+        // This method is called from the thumbnail worker, not from a render callback.
+        // Full content validation catches same-size/same-mtime replacements safely.
+        if (!PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
+            || !entry.Fingerprint.Matches(currentFingerprint))
+        {
+            lock (_thumbnailCacheLock)
+            {
+                if (_thumbnailCache.TryGetValue(key, out var currentEntry)
+                    && ReferenceEquals(currentEntry, entry))
+                {
+                    _thumbnailCache.Remove(key);
+                    _thumbnailCacheLru.Remove(entry.LruNode);
+                }
+            }
+            thumbnail = null;
+            pageCount = 0;
+            return false;
+        }
+
+        lock (_thumbnailCacheLock)
+        {
+            if (!_thumbnailCache.TryGetValue(key, out var currentEntry)
+                || !ReferenceEquals(currentEntry, entry))
             {
                 thumbnail = null;
                 pageCount = 0;
                 return false;
             }
 
-            if (entry.ModifiedTicks != modified.Ticks)
-            {
-                _thumbnailCache.Remove(key);
-                _thumbnailCacheLru.Remove(entry.LruNode);
-                thumbnail = null;
-                pageCount = 0;
-                return false;
-            }
-
-            _thumbnailCacheLru.Remove(entry.LruNode);
-            _thumbnailCacheLru.AddFirst(entry.LruNode);
-            thumbnail = entry.Thumbnail;
-            pageCount = entry.PageCount;
+            _thumbnailCacheLru.Remove(currentEntry.LruNode);
+            _thumbnailCacheLru.AddFirst(currentEntry.LruNode);
+            thumbnail = currentEntry.Thumbnail;
+            pageCount = currentEntry.PageCount;
             return true;
         }
     }
@@ -348,7 +369,7 @@ public partial class ImageManagerWindow
         string path,
         bool isPdf,
         int decodeWidth,
-        DateTime modified,
+        PhotoFileFingerprint fingerprint,
         ImageSource thumbnail,
         int pageCount)
     {
@@ -367,7 +388,7 @@ public partial class ImageManagerWindow
             {
                 Thumbnail = thumbnail,
                 PageCount = pageCount,
-                ModifiedTicks = modified.Ticks,
+                Fingerprint = fingerprint,
                 LruNode = node
             };
 

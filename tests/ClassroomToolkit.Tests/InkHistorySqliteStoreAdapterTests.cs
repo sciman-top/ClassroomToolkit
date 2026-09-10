@@ -84,6 +84,36 @@ public sealed class InkHistorySqliteStoreAdapterTests
     }
 
     [Fact]
+    public void Save_ShouldReportFalse_WhenBridgeRejects_ButStillPersistSqliteMirror()
+    {
+        var bridge = new FakeInkHistoryStoreBridge(
+            new InkHistoryLoadResult("lesson-b-rejected.pptx", 2, null, CreatedTemplate: false))
+        {
+            SaveResult = false
+        };
+        var dbPath = CreateTempDbPath();
+        var adapter = new InkHistorySqliteStoreAdapter(bridge, _ => dbPath);
+
+        var saved = adapter.Save("lesson-b-rejected.pptx", 2, "[{\"state\":2}]");
+
+        saved.Should().BeFalse();
+        bridge.SaveCalls.Should().Be(1);
+        ReadSqliteSnapshot(dbPath, "lesson-b-rejected.pptx", 2).Should().Be("[{\"state\":2}]");
+    }
+
+    [Fact]
+    public void Save_ShouldAttemptSqliteMirror_WhenBridgeThrowsNonFatal()
+    {
+        var dbPath = CreateTempDbPath();
+        var adapter = new InkHistorySqliteStoreAdapter(new ThrowingInkHistoryStoreBridge(), _ => dbPath);
+
+        var saved = adapter.Save("lesson-b-throwing.pptx", 2, "[{\"state\":3}]");
+
+        saved.Should().BeFalse();
+        ReadSqliteSnapshot(dbPath, "lesson-b-throwing.pptx", 2).Should().Be("[{\"state\":3}]");
+    }
+
+    [Fact]
     public void Save_ShouldThrowArgumentException_WhenSourcePathIsBlank()
     {
         var adapter = new InkHistorySqliteStoreAdapter(
@@ -383,6 +413,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
         public string? LastSaveSourcePath { get; private set; }
         public int LastSavePageIndex { get; private set; }
         public string? LastSavedStrokesJson { get; private set; }
+        public bool SaveResult { get; set; } = true;
 
         public InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex)
         {
@@ -394,12 +425,13 @@ public sealed class InkHistorySqliteStoreAdapterTests
             };
         }
 
-        public void Save(string sourcePath, int pageIndex, string? strokesJson)
+        public bool Save(string sourcePath, int pageIndex, string? strokesJson)
         {
             SaveCalls++;
             LastSaveSourcePath = sourcePath;
             LastSavePageIndex = pageIndex;
             LastSavedStrokesJson = strokesJson;
+            return SaveResult;
         }
     }
 
@@ -410,7 +442,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
             throw new IOException("bridge-failure");
         }
 
-        public void Save(string sourcePath, int pageIndex, string? strokesJson)
+        public bool Save(string sourcePath, int pageIndex, string? strokesJson)
         {
             throw new IOException("bridge-failure");
         }
@@ -423,7 +455,7 @@ public sealed class InkHistorySqliteStoreAdapterTests
             throw new AccessViolationException("fatal-bridge-failure");
         }
 
-        public void Save(string sourcePath, int pageIndex, string? strokesJson)
+        public bool Save(string sourcePath, int pageIndex, string? strokesJson)
         {
             throw new AccessViolationException("fatal-bridge-failure");
         }

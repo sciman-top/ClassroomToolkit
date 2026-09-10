@@ -64,7 +64,8 @@ public sealed class StudentWorkbookSqliteStoreAdapter
                 return new StudentWorkbookLoadResult(
                     workbookFromSnapshot,
                     CreatedTemplate: false,
-                    RollStateJson: rollStateFromSnapshot);
+                    RollStateJson: rollStateFromSnapshot,
+                    OverwriteBlocked: true);
             }
 
             throw;

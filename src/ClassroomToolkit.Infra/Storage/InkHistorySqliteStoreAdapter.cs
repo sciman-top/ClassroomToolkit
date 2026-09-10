@@ -67,14 +67,27 @@ public sealed class InkHistorySqliteStoreAdapter
         };
     }
 
-    public void Save(string sourcePath, int pageIndex, string? strokesJson)
+    public bool Save(string sourcePath, int pageIndex, string? strokesJson)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ThrowIfInvalidPageIndex(pageIndex);
 
-        _bridge.Save(sourcePath, pageIndex, strokesJson);
+        var bridgeSaved = false;
+        try
+        {
+            bridgeSaved = _bridge.Save(sourcePath, pageIndex, strokesJson);
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            // The SQLite snapshot is an independent recovery mirror. Still attempt
+            // it when the sidecar bridge is unavailable, but report the combined
+            // save as incomplete so the caller retains its retry/WAL state.
+            InfraDiagnosticsLog.Write($"[InkHistorySqlite] bridge save failed: {ex.GetType().Name} - {ex.Message}");
+        }
+
         var dbPath = ResolveDbPathSafe(sourcePath);
-        TryWriteSnapshot(dbPath, sourcePath, pageIndex, strokesJson);
+        var sqliteSaved = TryWriteSnapshot(dbPath, sourcePath, pageIndex, strokesJson);
+        return bridgeSaved && sqliteSaved;
     }
 
     private string ResolveDbPathSafe(string sourcePath)
@@ -164,7 +177,7 @@ public sealed class InkHistorySqliteStoreAdapter
         }
     }
 
-    private static void TryWriteSnapshot(
+    private static bool TryWriteSnapshot(
         string dbPath,
         string sourcePath,
         int pageIndex,
@@ -187,7 +200,7 @@ public sealed class InkHistorySqliteStoreAdapter
                 command.Parameters.AddWithValue("$sourcePath", sourcePath);
                 command.Parameters.AddWithValue("$pageIndex", pageIndex);
                 command.ExecuteNonQuery();
-                return;
+                return true;
             }
 
             command.CommandText =
@@ -205,10 +218,12 @@ public sealed class InkHistorySqliteStoreAdapter
                 "$updatedAtUtc",
                 (updatedAtUtc ?? DateTime.UtcNow).ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
             command.ExecuteNonQuery();
+            return true;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
             InfraDiagnosticsLog.Write($"[InkHistorySqlite] write failed: {ex.GetType().Name} - {ex.Message}");
+            return false;
         }
     }
 

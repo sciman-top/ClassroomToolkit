@@ -95,6 +95,15 @@ public sealed class InkHistoryPersistenceBridgeTests
         loaded.Should().BeNull();
     }
 
+    [Fact]
+    public void Save_ShouldReportFalse_WhenPersistenceRejectsSourcePath()
+    {
+        var persistence = new InkPersistenceService();
+        var bridge = new InkHistoryPersistenceBridge(persistence);
+
+        bridge.Save(string.Empty, 1, null).Should().BeFalse();
+    }
+
     private static JsonSerializerOptions CreateJsonOptions()
     {
         var options = new JsonSerializerOptions

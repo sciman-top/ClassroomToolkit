@@ -129,7 +129,13 @@ public partial class PaintOverlayWindow
                     return false;
                 }
 
-                _inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>());
+                if (!_inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>()))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[InkPersist] Hidden-page purge skipped because sidecar clear was not durable: source={sourcePath}, page={pageIndex}");
+                    return false;
+                }
+
                 _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
                 MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
 
@@ -385,5 +391,4 @@ public partial class PaintOverlayWindow
     public bool IsWhiteboardActive => IsBoardActive();
     public bool IsPresentationFullscreenActive => _presentationFullscreenActive;
 }
-
 

@@ -137,23 +137,22 @@ public partial class ImageManagerWindow
         }
 
         var decodeWidth = ResolveThumbnailDecodeWidth();
-        if (TryGetCachedThumbnail(
-                item.Path,
-                isPdf,
-                decodeWidth,
-                item.Modified,
-                out var cachedThumbnail,
-                out var cachedPageCount)
-            && cachedThumbnail != null)
-        {
-            _ = TryDispatchThumbnailUpdateAsync(item, cachedThumbnail, cachedPageCount, requestId, token);
-            return;
-        }
-
         _ = SafeTaskRunner.Run(
             "ImageManagerWindow.QueueThumbnailLoad",
             async _ =>
             {
+                if (TryGetCachedThumbnail(
+                        item.Path,
+                        isPdf,
+                        decodeWidth,
+                        out var cachedThumbnail,
+                        out var cachedPageCount)
+                    && cachedThumbnail != null)
+                {
+                    await TryDispatchThumbnailUpdateAsync(item, cachedThumbnail, cachedPageCount, requestId, token);
+                    return;
+                }
+
                 try { await _thumbnailSemaphore.WaitAsync(token); }
                 catch (OperationCanceledException) { return; }
                 catch (ObjectDisposedException) { return; }
@@ -181,9 +180,16 @@ public partial class ImageManagerWindow
                 }
                 finally { TryReleaseThumbnailSemaphore(); }
 
-                if (thumbnail != null && !_isClosing)
+                PhotoFileFingerprint? fingerprint = null;
+                if (thumbnail != null
+                    && PhotoFileFingerprintReader.TryRead(item.Path, out var currentFingerprint))
                 {
-                    PutThumbnailCache(item.Path, isPdf, decodeWidth, item.Modified, thumbnail, pageCount);
+                    fingerprint = currentFingerprint;
+                }
+
+                if (thumbnail != null && fingerprint.HasValue && !_isClosing)
+                {
+                    PutThumbnailCache(item.Path, isPdf, decodeWidth, fingerprint.Value, thumbnail, pageCount);
                 }
 
                 if (thumbnail == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))

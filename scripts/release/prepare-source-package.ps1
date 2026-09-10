@@ -40,12 +40,12 @@ function Assert-SafeReleaseVersionSegment {
 }
 
 Assert-SafeReleaseVersionSegment -Value $Version
-$trackedChanges = & git status --porcelain --untracked-files=no
+$worktreeChanges = @(& git status --porcelain --untracked-files=all)
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to inspect the Git worktree."
 }
-if (-not [string]::IsNullOrWhiteSpace(($trackedChanges -join "`n"))) {
-    throw "Source package requires a clean tracked worktree so the installer and source archive resolve to the same commit."
+if ($worktreeChanges.Count -gt 0) {
+    throw "Source package requires a clean checkout/worktree so the installer and source archive resolve to the same commit."
 }
 
 $commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
@@ -57,6 +57,10 @@ else {
 $commit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
 if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
     throw "Source reference does not resolve to a commit: $commitRef"
+}
+$currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
+if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $commit) {
+    throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$commit'."
 }
 
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version

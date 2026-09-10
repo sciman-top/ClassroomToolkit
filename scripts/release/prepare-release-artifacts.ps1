@@ -39,6 +39,17 @@ function Invoke-ReleaseScript {
     Write-Host "[release-artifacts] PASS  $Name"
 }
 
+function Assert-CleanSourceCheckout {
+    $statusLines = @(& git status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to inspect the Git worktree before release packaging."
+    }
+
+    if ($statusLines.Count -gt 0) {
+        throw "Release packaging requires a clean checkout/worktree; refusing to mix working-tree files with committed source."
+    }
+}
+
 function Get-DeliveryArtifactHashes {
     param([Parameter(Mandatory = $true)][string]$Root)
 
@@ -73,7 +84,8 @@ $installerArguments = @(
     "-Version", $Version,
     "-PackageMode", $PackageMode,
     "-Configuration", $Configuration,
-    "-OutputRoot", (Join-Path $OutputRoot ".staging")
+    "-OutputRoot", (Join-Path $OutputRoot ".staging"),
+    "-SourceRef", $SourceRef
 )
 if ($EnsureRuntimeInstaller) {
     $installerArguments += "-EnsureRuntimeInstaller"
@@ -88,6 +100,12 @@ $sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}"
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw "SourceRef does not resolve to a commit: $SourceRef"
 }
+Assert-CleanSourceCheckout
+$currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
+if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $sourceCommit) {
+    throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$sourceCommit'."
+}
+$installerArguments += @("-ResolvedSourceCommit", $sourceCommit)
 
 if (Test-Path -LiteralPath (Join-Path $outputRootPath $Version)) {
     if (-not $AllowOverwriteVersion) {

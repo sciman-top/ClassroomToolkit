@@ -185,6 +185,33 @@ public sealed class GlobalHookServiceLifecycleContractTests
     }
 
     [Fact]
+    public async Task UnregisterAll_ShouldRetainResidualHookAndRetryAfterTransientStopFailure()
+    {
+        var service = new GlobalHookService();
+        var fake = new FakeKeyboardHook { BoundBinding = new KeyBinding(VirtualKey.Tab, KeyModifiers.None), DisposeFailuresRemaining = 3 };
+        service.HookFactory = _ => fake;
+        try
+        {
+            (await service.RegisterHookAsync(
+                bindings: [fake.BoundBinding!],
+                callback: _ => { },
+                shouldKeepActive: () => true)).Should().BeTrue();
+
+            service.UnregisterAll();
+            service.ResidualHookCount.Should().Be(1);
+
+            fake.DisposeFailuresRemaining = 0;
+            service.UnregisterAll();
+            service.ResidualHookCount.Should().Be(0);
+            fake.IsActive.Should().BeFalse();
+        }
+        finally
+        {
+            service.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task Dispose_ShouldStopAllTrackedHooks_AndSuppressFurtherCallbacks()
     {
         var service = new GlobalHookService();
@@ -264,6 +291,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
         public bool ActiveAfterStart { get; set; } = true;
         public bool ThrowOnStart { get; set; }
         public bool ThrowOnDispose { get; set; }
+        public int DisposeFailuresRemaining { get; set; }
         public bool ClearHandlersOnDispose { get; set; }
         public bool Disposed { get; private set; }
         public bool IsActive { get; private set; }
@@ -292,8 +320,12 @@ public sealed class GlobalHookServiceLifecycleContractTests
 
         public void Dispose()
         {
-            if (ThrowOnDispose)
+            if (ThrowOnDispose || DisposeFailuresRemaining > 0)
             {
+                if (DisposeFailuresRemaining > 0)
+                {
+                    DisposeFailuresRemaining--;
+                }
                 throw new InvalidOperationException("dispose-boom");
             }
 
@@ -304,6 +336,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
             }
 
             Disposed = true;
+            IsActive = false;
         }
     }
 }

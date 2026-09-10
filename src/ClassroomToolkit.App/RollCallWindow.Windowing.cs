@@ -78,9 +78,7 @@ public partial class RollCallWindow
         ExecuteRollCallSafe("hide-rollcall-window", Hide);
         UpdateGroupNameDisplay();
         PersistSettings();
-        _viewModel.SaveState();
-        _rollStateSaveTimer.Stop();
-        _rollStateDirty = false;
+        TrySaveRollStateNow();
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
@@ -111,6 +109,15 @@ public partial class RollCallWindow
         {
             return;
         }
+
+        // 先完成两类持久化，再开始取消异步工作和解绑事件。真实写盘失败时取消
+        // Closing，保留窗口、dirty 标记与失败反馈，让教师修复占用/权限后重试。
+        if (!PersistSettings() || !TrySaveRollStateNow())
+        {
+            e.Cancel = true;
+            return;
+        }
+
         _closingCleanupStarted = true;
         _lifecycleCancellation.Cancel();
         _timer.Stop();
@@ -119,7 +126,6 @@ public partial class RollCallWindow
         _windowBoundsSaveTimer.Stop();
         _settingsSaveTimer.Stop();
         _hoverCheckTimer.Stop();
-        _rollStateDirty = false;
         Loaded -= OnLoaded;
         Closing -= OnClosing;
         PreviewKeyDown -= OnPreviewKeyDown;
@@ -156,8 +162,6 @@ public partial class RollCallWindow
             _groupOverlay = null;
         }
 
-        PersistSettings();
-        _viewModel.SaveState();
         _viewModel.Dispose();
         _lifecycleCancellation.Dispose();
     }
@@ -446,9 +450,13 @@ public partial class RollCallWindow
         {
             return;
         }
-        _windowBoundsDirty = false;
         CaptureWindowBounds();
-        SaveSettingsSafe();
+        var saved = SaveSettingsSafe();
+        _windowBoundsDirty = !saved;
+        if (!saved && !_closingCleanupStarted)
+        {
+            _windowBoundsSaveTimer.Start();
+        }
     }
 
     private void UpdateMinWindowSize()

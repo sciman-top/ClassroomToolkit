@@ -111,7 +111,7 @@ public partial class PaintOverlayWindow
         return options;
     }
 
-    private void PersistInkHistorySnapshot(
+    private bool PersistInkHistorySnapshot(
         string sourcePath,
         int pageIndex,
         List<InkStrokeData> strokes,
@@ -120,12 +120,11 @@ public partial class PaintOverlayWindow
         var historyAdapter = _inkHistorySnapshotStore;
         if (historyAdapter == null)
         {
-            persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
-            return;
+            return persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
         }
 
         var strokesJson = SerializeInkStrokes(strokes);
-        historyAdapter.Save(sourcePath, pageIndex, strokesJson);
+        return historyAdapter.Save(sourcePath, pageIndex, strokesJson);
     }
 
     private List<InkStrokeData> LoadInkHistorySnapshot(

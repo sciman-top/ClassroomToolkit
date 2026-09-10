@@ -25,4 +25,15 @@ public sealed class MainWindowExitLifecycleContractTests
         source.Should().Contain("_backgroundTasksCancellationDisposed || _backgroundTasksCancellation.IsCancellationRequested");
         source.Should().Contain("_floatingTopmostWatchdogTimer.Stop();");
     }
+
+    [Fact]
+    public void RequestExit_ShouldKeepWindowOpen_WhenFinalSettingsSaveFails()
+    {
+        var source = MainWindowContractSourceReader.ReadCombinedSource();
+
+        source.Should().Contain("CapturePaintToolbarPosition(save: false)");
+        source.Should().Contain("if (!SaveLauncherSettings())");
+        source.Should().Contain("return;");
+        source.Should().Contain("_allowClose = true;");
+    }
 }

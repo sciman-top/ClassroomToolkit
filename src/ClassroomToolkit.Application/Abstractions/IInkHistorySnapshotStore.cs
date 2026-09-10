@@ -10,5 +10,5 @@ public sealed record InkHistorySnapshotLoadResult(
 public interface IInkHistorySnapshotStore
 {
     InkHistorySnapshotLoadResult LoadOrCreate(string sourcePath, int pageIndex, bool writeSnapshot = true);
-    void Save(string sourcePath, int pageIndex, string? strokesJson);
+    bool Save(string sourcePath, int pageIndex, string? strokesJson);
 }

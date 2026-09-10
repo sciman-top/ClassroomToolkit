@@ -231,6 +231,7 @@ public sealed class StudentWorkbookSqliteStoreAdapterTests
 
         loaded.CreatedTemplate.Should().BeFalse();
         loaded.RollStateJson.Should().Be("{\"seed\":1}");
+        loaded.OverwriteBlocked.Should().BeTrue();
         loaded.Workbook.ClassNames.Should().Contain("高一1班");
         loaded.Workbook.GetActiveRoster().Students.Should().HaveCount(2);
     }

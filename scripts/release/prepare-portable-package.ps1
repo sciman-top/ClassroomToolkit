@@ -47,6 +47,35 @@ function Invoke-Step {
     Write-Host "[portable-package] PASS  $Name"
 }
 
+function Resolve-ReleaseSourceCommit {
+    $commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
+        "$SourceRef^{commit}"
+    }
+    else {
+        "$ResolvedSourceCommit^{commit}"
+    }
+
+    $commit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
+    if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
+        throw "Source reference does not resolve to a commit: $commitRef"
+    }
+
+    $statusLines = @(& git status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to inspect the Git worktree before portable packaging."
+    }
+    if ($statusLines.Count -gt 0) {
+        throw "Portable packaging requires a clean checkout/worktree; refusing to mix working-tree files with committed source."
+    }
+
+    $currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
+    if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $commit) {
+        throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$commit'."
+    }
+
+    return $commit
+}
+
 Assert-SafeReleaseVersionSegment -Value $Version
 $repositoryUri = $null
 if (-not [Uri]::TryCreate($RepositoryUrl, [UriKind]::Absolute, [ref]$repositoryUri)) {
@@ -64,6 +93,7 @@ $portableApp = Join-Path $portableRoot "app"
 $portableData = Join-Path $portableRoot "data"
 $portableDeliveryRoot = Join-Path $releaseRoot "portable"
 $portableZip = Join-Path $portableDeliveryRoot ("ClassroomToolkit-{0}-portable.zip" -f $Version)
+$sourceCommit = Resolve-ReleaseSourceCommit
 
 if (-not (Test-Path -LiteralPath $offlineApp)) {
     throw "Offline publish output is required for the portable package: $offlineApp"
@@ -79,16 +109,6 @@ foreach ($item in Get-ChildItem -LiteralPath $offlineApp -Force) {
 Set-Content -LiteralPath (Join-Path $portableRoot "portable.mode") -Value "mode=portable" -Encoding ASCII
 $launcher = "@echo off`r`nsetlocal`r`nstart `"`" `"%~dp0app\$AppExecutableName`"`r`n"
 Set-Content -LiteralPath (Join-Path $portableRoot "启动.bat") -Value $launcher -Encoding ASCII
-$commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
-    "$SourceRef^{commit}"
-}
-else {
-    "$ResolvedSourceCommit^{commit}"
-}
-$sourceCommit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw "Source reference does not resolve to a commit: $commitRef"
-}
 $repositoryPath = $repositoryUri.AbsolutePath.Trim('/').TrimEnd('/')
 $apiUrl = "https://api.github.com/repos/$repositoryPath/releases/latest"
 $metadata = [ordered]@{

@@ -63,6 +63,7 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
         "CA1822:Mark members as static",
         Justification = "Kept as instance member for compatibility with existing IWpsNavHookClient adapter contract.")]
     public bool Available => OperatingSystem.IsWindows();
+    public bool IsActive => _keyboardHook != IntPtr.Zero || _mouseHook != IntPtr.Zero;
 
     public void SetInterceptEnabled(bool enabled) => _interceptEnabled = enabled;
 

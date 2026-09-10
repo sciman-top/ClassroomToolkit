@@ -22,8 +22,8 @@ public sealed class InkHistorySnapshotStoreAdapter : IInkHistorySnapshotStore
             result.UpdatedAtUtc);
     }
 
-    public void Save(string sourcePath, int pageIndex, string? strokesJson)
+    public bool Save(string sourcePath, int pageIndex, string? strokesJson)
     {
-        _adapter.Save(sourcePath, pageIndex, strokesJson);
+        return _adapter.Save(sourcePath, pageIndex, strokesJson);
     }
 }

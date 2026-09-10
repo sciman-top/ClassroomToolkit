@@ -9,6 +9,8 @@ param(
     [string]$ProjectPath = "",
     [string]$OutputRoot = "",
     [string]$ConfigPath = "scripts/release/release-config.json",
+    [string]$SourceRef = "HEAD",
+    [string]$ResolvedSourceCommit = "",
     [switch]$SkipPublish,
     [switch]$SkipZip,
     [switch]$AllowOverwriteVersion,
@@ -83,6 +85,35 @@ function Invoke-Step {
         throw "[release-package] FAIL  $Name (exit=$LASTEXITCODE)"
     }
     Write-Host "[release-package] PASS  $Name"
+}
+
+function Resolve-ReleaseSourceCommit {
+    $commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
+        "$SourceRef^{commit}"
+    }
+    else {
+        "$ResolvedSourceCommit^{commit}"
+    }
+
+    $commit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
+    if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
+        throw "Source reference does not resolve to a commit: $commitRef"
+    }
+
+    $statusLines = @(& git status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to inspect the Git worktree before distribution packaging."
+    }
+    if ($statusLines.Count -gt 0) {
+        throw "Distribution packaging requires a clean checkout/worktree; refusing to mix working-tree files with committed source."
+    }
+
+    $currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
+    if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $commit) {
+        throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$commit'."
+    }
+
+    return $commit
 }
 
 function Test-GitLfsPointer {
@@ -360,6 +391,7 @@ $runtimeInstallerPublisher = [string]$releaseConfig.runtimeInstaller.publisher
 
 Assert-SafeReleaseVersionSegment -Value $Version
 Assert-FileExists -Path $resolvedProjectPath -Label "project"
+$sourceCommit = Resolve-ReleaseSourceCommit
 
 $releaseRoot = Join-Path (Resolve-AbsolutePath -Path $OutputRoot) $Version
 if (Test-Path -LiteralPath $releaseRoot) {
@@ -451,6 +483,8 @@ if ($buildOffline) {
 
 $manifest = [ordered]@{
     version = $Version
+    source_ref = $SourceRef
+    source_commit = $sourceCommit
     generated_at_utc = [DateTimeOffset]::UtcNow.ToString("o")
     package_mode = $PackageMode
     configuration = $resolvedConfiguration

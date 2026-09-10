@@ -125,14 +125,17 @@ public sealed partial class KeyboardHook
 
     public void Dispose()
     {
-        if (_disposed)
+        if (_disposed && _hookId == IntPtr.Zero)
         {
             return;
         }
 
         _disposed = true;
         Stop();
-        GC.SuppressFinalize(this);
+        if (_hookId == IntPtr.Zero)
+        {
+            GC.SuppressFinalize(this);
+        }
     }
 
     private static IntPtr SetHook(HookProc proc)

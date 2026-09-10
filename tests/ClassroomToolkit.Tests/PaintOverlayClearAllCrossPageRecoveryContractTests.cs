@@ -17,7 +17,11 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
 
         source.Should().Contain("_inkSidecarAutoSaveTimer?.Stop();");
         source.Should().Contain("_inkSidecarAutoSaveGate.NextGeneration();");
-        source.Should().Contain("PersistInkHistorySnapshot(sourcePath, pageIndex, new List<InkStrokeData>(), _inkPersistence);");
+        source.Should().Contain("MarkInkPageModified(sourcePath, pageIndex, \"empty\", Array.Empty<InkStrokeData>());");
+        source.Should().Contain("MarkInkPagePersistedIfUnchanged(sourcePath, pageIndex, \"empty\");");
+        source.Should().Contain("var persisted = PersistInkHistorySnapshot(");
+        source.Should().Contain("new List<InkStrokeData>(),");
+        source.Should().Contain("if (!persisted)");
     }
 
     [Fact]
@@ -53,6 +57,16 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
         var source = File.ReadAllText(GetPhotoSourcePath());
 
         source.Should().Contain("TryEnforceRuntimeEmptyGuardForCurrentPage()");
+    }
+
+    [Fact]
+    public void HiddenPagePurge_ShouldNotClearRuntimeAfterSidecarClearFails()
+    {
+        var source = File.ReadAllText(GetPhotoSourcePath());
+
+        source.Should().Contain("if (!_inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>()))");
+        source.Should().Contain("sidecar clear was not durable");
+        source.Should().Contain("_inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);");
     }
 
     [Fact]

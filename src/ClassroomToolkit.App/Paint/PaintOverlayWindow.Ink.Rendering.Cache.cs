@@ -78,8 +78,10 @@ public partial class PaintOverlayWindow
             strokeDirection,
             brushSize,
             seed,
-            InkOpacityMaskCache.PaintTextureVariant,
-            () => BuildInkOpacityMask(bounds, inkFlow, strokeDirection, brushSize, seed));
+            wetnessStart: null,
+            wetnessEnd: null,
+            textureVariant: InkOpacityMaskCache.PaintTextureVariant,
+            factory: () => BuildInkOpacityMask(bounds, inkFlow, strokeDirection, brushSize, seed));
     }
 
     private bool TryGetCachedStrokeColor(string? colorHex, out MediaColor color)

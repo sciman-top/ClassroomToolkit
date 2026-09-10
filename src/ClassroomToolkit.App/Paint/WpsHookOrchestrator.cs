@@ -83,10 +83,11 @@ internal sealed class WpsHookOrchestrator
             & TryApply(() => hookClient.SetInterceptWheel(true), "reset-wheel-intercept")
             & TryApply(() => hookClient.SetEmitWheelOnBlock(true), "reset-wheel-emission")
             & TryApply(() => hookClient.SetSuppressedKeyboardKeys([]), "clear-suppressed-keys")
-            & TryApply(hookClient.Stop, "stop");
+            & TryApply(hookClient.Stop, "stop")
+            & !hookClient.IsActive;
 
         return new WpsHookRuntimeState(
-            IsActive: false,
+            IsActive: hookClient.IsActive,
             BlockOnly: false,
             InterceptKeyboard: true,
             InterceptWheel: true,
@@ -103,11 +104,12 @@ internal sealed class WpsHookOrchestrator
 
         try
         {
-            return await hookClient.StartAsync().ConfigureAwait(false);
+            return await hookClient.StartAsync();
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
+            _ = ApplyDisabled(hookClient);
             return false;
         }
     }

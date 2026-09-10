@@ -199,16 +199,22 @@ public partial class PaintOverlayWindow
                 LogPresentationState("wps-hook-configuration-failed");
                 return;
             }
+            var startResult = _wpsNavHookActive;
             if (!_wpsNavHookActive)
             {
                 // 不用 ConfigureAwait(false)：StartAsync 内部重试依赖调用方上下文，
                 // LL 钩子必须回到 UI 线程安装；后续 Stop/状态回写也读取 UI 状态。
-                _wpsNavHookActive = await _wpsHookOrchestrator.TryStartSafeAsync(_wpsNavHookClient);
+                startResult = await _wpsHookOrchestrator.TryStartSafeAsync(_wpsNavHookClient);
             }
             if (!isCurrent())
             {
+                // StartAsync 的内部重试可能在 generation 失效后才完成；旧操作不能
+                // 把已安装的 native hook 留给下一模式。补偿停止并保留残留状态。
+                var staleCleanup = _wpsHookOrchestrator.ApplyDisabled(_wpsNavHookClient);
+                ApplyWpsHookRuntimeState(staleCleanup);
                 return;
             }
+            _wpsNavHookActive = startResult;
             if (!_wpsNavHookActive)
             {
                 StopWpsNavHook();

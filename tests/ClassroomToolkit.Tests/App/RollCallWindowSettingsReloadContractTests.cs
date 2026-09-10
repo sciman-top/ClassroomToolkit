@@ -80,14 +80,14 @@ public sealed class RollCallWindowSettingsReloadContractTests
         var stateSource = File.ReadAllText(GetStateSourcePath());
         var windowingSource = File.ReadAllText(GetWindowingSourcePath());
 
-        var syncPersistIndex = stateSource.IndexOf("private void PersistSettings()", StringComparison.Ordinal);
+        var syncPersistIndex = stateSource.IndexOf("private bool PersistSettings()", StringComparison.Ordinal);
         var persistBodyStart = stateSource.IndexOf('{', syncPersistIndex);
         var cancelTimerIndex = stateSource.IndexOf(
             "_settingsSaveTimer.Stop();",
             persistBodyStart + 1,
             StringComparison.Ordinal);
         var cancelDirtyIndex = stateSource.IndexOf(
-            "_settingsSaveDirty = false;",
+            "_settingsSaveDirty = !saved;",
             persistBodyStart + 1,
             StringComparison.Ordinal);
         syncPersistIndex.Should().BeGreaterThan(0);
@@ -97,6 +97,17 @@ public sealed class RollCallWindowSettingsReloadContractTests
 
         windowingSource.Should().Contain("_settingsSaveTimer.Stop();");
         windowingSource.Should().Contain("_settingsSaveTimer.Tick -= OnSettingsSaveTick;");
+    }
+
+    [Fact]
+    public void DirectSettingsDialogs_ShouldUseSaveRetryPath()
+    {
+        var inputSource = File.ReadAllText(GetInputSourcePath());
+        var stateSource = File.ReadAllText(GetStateSourcePath());
+
+        stateSource.Should().Contain("private bool SaveSettingsWithRetry()");
+        stateSource.Should().Contain("_settingsSaveDirty = !saved;");
+        inputSource.Split("SaveSettingsWithRetry();", StringSplitOptions.None).Length.Should().Be(3);
     }
 
     private static string GetSourcePath()

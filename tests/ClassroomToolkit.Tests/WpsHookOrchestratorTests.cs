@@ -234,6 +234,7 @@ public sealed class WpsHookOrchestratorTests
     private sealed class FakeWpsNavHookClient : IWpsNavHookClient
     {
         public bool Available { get; set; } = true;
+        public bool IsActive { get; private set; }
         public bool InterceptEnabled { get; private set; }
         public bool BlockOnly { get; private set; }
         public bool InterceptKeyboard { get; private set; } = true;
@@ -290,12 +291,14 @@ public sealed class WpsHookOrchestratorTests
                 throw StartException;
             }
 
+            IsActive = StartResult;
             return Task.FromResult(StartResult);
         }
 
         public void Stop()
         {
             StopCalled = true;
+            IsActive = false;
         }
 
         private void ThrowIfConfigurationRequested()

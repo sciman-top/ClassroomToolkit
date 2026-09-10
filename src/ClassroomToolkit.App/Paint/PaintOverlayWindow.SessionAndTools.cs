@@ -207,15 +207,33 @@ public partial class PaintOverlayWindow
         }
 
         MarkInkPageModified(sourcePath, pageIndex, "empty", Array.Empty<InkStrokeData>());
-        ClearInkWalSnapshot(sourcePath, pageIndex);
 
         if (_inkSaveEnabled && _inkPersistence != null)
         {
             _ = SafeActionExecutionExecutor.TryExecute(
                 () =>
                 {
-                    PersistInkHistorySnapshot(sourcePath, pageIndex, new List<InkStrokeData>(), _inkPersistence);
+                    var persisted = PersistInkHistorySnapshot(
+                        sourcePath,
+                        pageIndex,
+                        new List<InkStrokeData>(),
+                        _inkPersistence);
+                    if (!persisted)
+                    {
+                        // Keep the empty WAL snapshot and dirty marker. The retry path can
+                        // remove the sidecar after the lock is released; clearing WAL here
+                        // would make the old sidecar resurrect after a restart.
+                        ScheduleSidecarAutoSave();
+                        return;
+                    }
+
+                    MarkInkPagePersistedIfUnchanged(sourcePath, pageIndex, "empty");
                     _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
+                },
+                ex =>
+                {
+                    ScheduleSidecarAutoSave();
+                    System.Diagnostics.Debug.WriteLine($"[InkPersist] Clear-all save failed: {ex.Message}");
                 });
         }
 

@@ -37,7 +37,7 @@ internal sealed class InkHistoryPersistenceBridge : IInkHistoryStoreBridge
         return new InkHistoryLoadResult(sourcePath, pageIndex, strokesJson, createdTemplate, updatedAtUtc);
     }
 
-    public void Save(string sourcePath, int pageIndex, string? strokesJson)
+    public bool Save(string sourcePath, int pageIndex, string? strokesJson)
     {
         List<InkStrokeData> strokes;
         if (string.IsNullOrWhiteSpace(strokesJson))
@@ -49,7 +49,7 @@ internal sealed class InkHistoryPersistenceBridge : IInkHistoryStoreBridge
             strokes = JsonSerializer.Deserialize<List<InkStrokeData>>(strokesJson, JsonOptions) ?? new List<InkStrokeData>();
         }
 
-        _persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
+        return _persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
     }
 
     private static JsonSerializerOptions BuildJsonOptions()

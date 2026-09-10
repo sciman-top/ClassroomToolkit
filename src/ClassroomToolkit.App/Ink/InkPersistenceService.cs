@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ClassroomToolkit.App;
@@ -46,24 +47,29 @@ public sealed class InkPersistenceService
 
     private sealed class CachedInkDocument
     {
-        public DateTime LastWriteUtc { get; init; }
+        public FileFingerprint Fingerprint { get; init; }
         public InkDocumentData Document { get; init; } = new();
     }
+
+    private readonly record struct FileFingerprint(
+        long Length,
+        DateTime LastWriteUtc,
+        string Sha256);
 
     /// <summary>
     /// Save ink strokes for a specific page of the given source file.
     /// Merges into the existing document data if present.
     /// </summary>
-    public void SaveInkForFile(string sourceFilePath, int pageIndex, List<InkStrokeData> strokes)
+    public bool SaveInkForFile(string sourceFilePath, int pageIndex, List<InkStrokeData> strokes)
     {
         if (string.IsNullOrWhiteSpace(sourceFilePath) || pageIndex <= 0)
         {
-            return;
+            return false;
         }
 
         if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
         {
-            return;
+            return false;
         }
 
         lock (GetDocumentWriteGate(jsonPath))
@@ -96,35 +102,41 @@ public sealed class InkPersistenceService
             if (doc.Pages.Count == 0)
             {
                 // No strokes left — delete the sidecar file
-                DeleteJsonFileLocked(jsonPath);
+                if (!DeleteJsonFileLocked(jsonPath))
+                {
+                    Debug.WriteLine($"[InkPersistence] delete sidecar failed; retaining cache and recovery state path={jsonPath}");
+                    return false;
+                }
+
                 InvalidateCache(jsonPath);
-                return;
+                return true;
             }
 
             if (!TryEnsureInkFolder(sourceFilePath, out _))
             {
-                return;
+                return false;
             }
 
             var json = JsonSerializer.Serialize(doc, _options);
             WriteAllTextAtomically(jsonPath, json);
             RefreshCacheFromDisk(jsonPath, doc);
+            return true;
         }
     }
 
     /// <summary>
     /// Save entire document data for the given source file.
     /// </summary>
-    public void SaveDocument(string sourceFilePath, InkDocumentData doc)
+    public bool SaveDocument(string sourceFilePath, InkDocumentData doc)
     {
         if (string.IsNullOrWhiteSpace(sourceFilePath) || doc == null)
         {
-            return;
+            return false;
         }
 
         if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
         {
-            return;
+            return false;
         }
 
         lock (GetDocumentWriteGate(jsonPath))
@@ -134,19 +146,25 @@ public sealed class InkPersistenceService
 
             if (doc.Pages.Count == 0)
             {
-                DeleteJsonFileLocked(jsonPath);
+                if (!DeleteJsonFileLocked(jsonPath))
+                {
+                    Debug.WriteLine($"[InkPersistence] delete sidecar failed; retaining cache and recovery state path={jsonPath}");
+                    return false;
+                }
+
                 InvalidateCache(jsonPath);
-                return;
+                return true;
             }
 
             if (!TryEnsureInkFolder(sourceFilePath, out _))
             {
-                return;
+                return false;
             }
 
             var json = JsonSerializer.Serialize(doc, _options);
             WriteAllTextAtomically(jsonPath, json);
             RefreshCacheFromDisk(jsonPath, doc);
+            return true;
         }
     }
 
@@ -209,21 +227,26 @@ public sealed class InkPersistenceService
     /// <summary>
     /// Delete all ink data for the given source file.
     /// </summary>
-    public void DeleteInkForFile(string sourceFilePath)
+    public bool DeleteInkForFile(string sourceFilePath)
     {
         if (string.IsNullOrWhiteSpace(sourceFilePath))
         {
-            return;
+            return false;
         }
         if (!TryGetJsonPath(sourceFilePath, out var jsonPath))
         {
-            return;
+            return false;
         }
 
         lock (GetDocumentWriteGate(jsonPath))
         {
-            DeleteJsonFileLocked(jsonPath);
+            if (!DeleteJsonFileLocked(jsonPath))
+            {
+                return false;
+            }
+
             InvalidateCache(jsonPath);
+            return true;
         }
     }
 
@@ -354,17 +377,16 @@ public sealed class InkPersistenceService
 
     private InkDocumentData? LoadDocumentWithCache(string jsonPath)
     {
-        if (!File.Exists(jsonPath))
+        if (!TryGetFileFingerprint(jsonPath, out var fingerprint))
         {
             InvalidateCache(jsonPath);
             return null;
         }
 
-        var lastWriteUtc = GetLastWriteUtcSafe(jsonPath);
         lock (_cacheLock)
         {
             if (_documentCache.TryGetValue(jsonPath, out var cached)
-                && cached.LastWriteUtc == lastWriteUtc)
+                && cached.Fingerprint == fingerprint)
             {
                 return CloneDocument(cached.Document);
             }
@@ -377,11 +399,17 @@ public sealed class InkPersistenceService
             return null;
         }
 
+        if (!TryGetFileFingerprint(jsonPath, out var loadedFingerprint))
+        {
+            InvalidateCache(jsonPath);
+            return null;
+        }
+
         lock (_cacheLock)
         {
             _documentCache[jsonPath] = new CachedInkDocument
             {
-                LastWriteUtc = lastWriteUtc,
+                Fingerprint = loadedFingerprint,
                 Document = CloneDocument(loaded)
             };
         }
@@ -437,20 +465,17 @@ public sealed class InkPersistenceService
         return false;
     }
 
-    private static void DeleteJsonFile(string jsonPath)
+    private static bool DeleteJsonFile(string jsonPath)
     {
-        if (File.Exists(jsonPath))
-        {
-            _ = TryDeleteFileSafe(jsonPath);
-        }
+        return TryDeleteFileSafe(jsonPath);
     }
 
-    private static void DeleteJsonFileLocked(string jsonPath)
+    private static bool DeleteJsonFileLocked(string jsonPath)
     {
         // 注意：删除文档时不能把锁对象从 DocumentWriteGates 移除——移除后并发方会
         // GetOrAdd 出新锁对象，与新旧两把锁并行进入临界区，重新引入写覆盖。
         // 锁对象按路径常驻，单个对象开销可忽略。
-        DeleteJsonFile(jsonPath);
+        return DeleteJsonFile(jsonPath);
     }
 
     private static object GetDocumentWriteGate(string jsonPath)
@@ -463,15 +488,34 @@ public sealed class InkPersistenceService
         InkAtomicFileWriter.WriteAllText(path, content, "[InkPersistence]");
     }
 
-    private static DateTime GetLastWriteUtcSafe(string path)
+    private static bool TryGetFileFingerprint(string path, out FileFingerprint fingerprint)
     {
+        fingerprint = default;
         try
         {
-            return File.GetLastWriteTimeUtc(path);
+            var info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                return false;
+            }
+
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            var hash = Convert.ToHexString(SHA256.HashData(stream));
+            var refreshedInfo = new FileInfo(path);
+            fingerprint = new FileFingerprint(
+                refreshedInfo.Length,
+                refreshedInfo.LastWriteTimeUtc,
+                hash);
+            return true;
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            return DateTime.MinValue;
+            Debug.WriteLine($"[InkPersistence] file fingerprint failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
+            return false;
         }
     }
 
@@ -523,12 +567,17 @@ public sealed class InkPersistenceService
 
     private void RefreshCacheFromDisk(string jsonPath, InkDocumentData source)
     {
-        var lastWriteUtc = GetLastWriteUtcSafe(jsonPath);
+        if (!TryGetFileFingerprint(jsonPath, out var fingerprint))
+        {
+            InvalidateCache(jsonPath);
+            return;
+        }
+
         lock (_cacheLock)
         {
             _documentCache[jsonPath] = new CachedInkDocument
             {
-                LastWriteUtc = lastWriteUtc,
+                Fingerprint = fingerprint,
                 Document = CloneDocument(source)
             };
         }

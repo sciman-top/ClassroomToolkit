@@ -42,8 +42,8 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("git archive --format=zip");
         source.Should().Contain("git rev-parse --verify --end-of-options");
         source.Should().Contain("ResolvedSourceCommit");
-        source.Should().Contain("git status --porcelain --untracked-files=no");
-        source.Should().Contain("clean tracked worktree");
+        source.Should().Contain("git status --porcelain --untracked-files=all");
+        source.Should().Contain("clean checkout/worktree");
         source.Should().Contain("excludes_local_classroom_data = $true");
     }
 
@@ -92,6 +92,30 @@ public sealed class ReleaseArtifactContractTests
         source.Should().Contain("Get-DeliveryArtifactHashes");
         source.Should().Contain("Write-DeliveryChecksums");
         source.Should().Contain("SHA256SUMS.txt");
+        source.Should().Contain("Assert-CleanSourceCheckout");
+    }
+
+    [Fact]
+    public void ReleaseScripts_ShouldPropagateOneResolvedCommit_AndRejectDirtyCheckouts()
+    {
+        var aggregate = ReadScript("prepare-release-artifacts.ps1");
+        var installers = ReadScript("prepare-user-installers.ps1");
+        var distribution = ReadScript("prepare-distribution.ps1");
+        var portable = ReadScript("prepare-portable-package.ps1");
+        var source = ReadScript("prepare-source-package.ps1");
+
+        aggregate.Should().Contain("\"-ResolvedSourceCommit\", $sourceCommit");
+        aggregate.Should().Contain("\"-SourceRef\", $SourceRef");
+        installers.Should().Contain("\"-ResolvedSourceCommit\", $sourceCommit");
+        installers.Should().Contain("source_commit = $sourceCommit");
+        distribution.Should().Contain("source_commit = $sourceCommit");
+        portable.Should().Contain("source_commit = $sourceCommit");
+        source.Should().Contain("git status --porcelain --untracked-files=all");
+        foreach (var script in new[] { aggregate, installers, distribution, portable })
+        {
+            script.Should().Contain("Current checkout HEAD");
+            script.Should().Contain("clean checkout/worktree");
+        }
     }
 
     [Fact]

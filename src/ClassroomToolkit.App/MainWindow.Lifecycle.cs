@@ -156,8 +156,19 @@ public partial class MainWindow
             return;
         }
 
-        _allowClose = true;
         const string phase = "request-exit";
+
+        // Capture the last toolbar position into the shared settings snapshot and
+        // gate shutdown on the final durable settings write. If the settings file is
+        // locked or unavailable, keep the window open so a retry cannot lose the
+        // user's launcher/layout changes.
+        ExecuteLifecycleSafe(phase, "capture-toolbar-position", () => CapturePaintToolbarPosition(save: false));
+        if (!SaveLauncherSettings())
+        {
+            return;
+        }
+
+        _allowClose = true;
 
         if (exitPlan.ShouldCancelBackgroundTasks)
         {
@@ -167,8 +178,6 @@ public partial class MainWindow
         ExecuteLifecycleSafe(phase, "reset-toolbar-retouch-runtime", () => ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason.RequestExit));
         // 孤儿 sidecar 清理要枚举多个目录，放后台执行；退出不等它，未完成的清理由下次启动兜底。
         _ = Task.Run(TriggerInkCleanup);
-        ExecuteLifecycleSafe(phase, "capture-toolbar-position", () => CapturePaintToolbarPosition(save: true));
-        ExecuteLifecycleSafe(phase, "save-launcher-settings", SaveLauncherSettings);
         if (exitPlan.ShouldCloseBubbleWindow && _bubbleWindow != null)
         {
             var bubbleWindow = _bubbleWindow;
@@ -255,7 +264,7 @@ public partial class MainWindow
                 MessageBoxImage.Information));
     }
 
-    private void SaveSettings()
+    private bool SaveSettings()
     {
         try
         {
@@ -276,6 +285,7 @@ public partial class MainWindow
 
             _settingsService.Save(_settings);
             SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
+            return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
@@ -285,11 +295,12 @@ public partial class MainWindow
                 notificationPlan);
             if (!notificationPlan.ShouldNotify)
             {
-                return;
+                return false;
             }
 
             var detail = $"设置保存失败：{ex.Message}\n请检查设置文件权限或磁盘状态。";
             ShowMainInfoMessageSafe("settings-save-failed", detail);
+            return false;
         }
     }
 

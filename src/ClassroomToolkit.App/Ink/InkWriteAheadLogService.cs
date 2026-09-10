@@ -25,6 +25,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
     private const string WalFileName = ".ink-wal.json";
     private const string AcknowledgementFileName = ".ink-wal-ack.json";
     private const int FlushDelayMilliseconds = 400;
+    private const int DisposeFlushRetryCount = 3;
     private static readonly ConcurrentDictionary<string, object> WalFileLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly JsonSerializerOptions _options;
@@ -32,6 +33,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
     private readonly object _pendingGate = new();
     private readonly Dictionary<string, Dictionary<string, InkWalEntry?>> _pendingByWalPath = new(StringComparer.OrdinalIgnoreCase);
     private int _flushScheduled;
+    private int _disposeRequested;
     private int _disposed;
 
     public InkWriteAheadLogService()
@@ -55,7 +57,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
         var walPath = GetWalPath(sourcePath);
         lock (_pendingGate)
         {
-            if (Volatile.Read(ref _disposed) != 0)
+            if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _disposeRequested) != 0)
             {
                 return;
             }
@@ -83,7 +85,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
         var walPath = GetWalPath(sourcePath);
         lock (_pendingGate)
         {
-            if (Volatile.Read(ref _disposed) != 0)
+            if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _disposeRequested) != 0)
             {
                 return;
             }
@@ -92,6 +94,12 @@ internal sealed class InkWriteAheadLogService : IDisposable
             // 不会在 WAL 里留下会在下次会话复活旧墨迹的条目。
             GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = null;
             MergePendingToDiskCore(walPath);
+            if (_pendingByWalPath.ContainsKey(walPath))
+            {
+                // The synchronous merge can fail while another process holds the WAL.
+                // Keep the tombstone retryable even when no earlier Upsert timer exists.
+                ScheduleFlush();
+            }
         }
     }
 
@@ -164,9 +172,13 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 try
                 {
                     var strokes = InkPayloadNormalizer.NormalizeStrokes(entry.Strokes);
-                    persistence.SaveInkForFile(entry.SourcePath, entry.PageIndex, strokes.ToList());
+                    var persistedSuccessfully = persistence.SaveInkForFile(
+                        entry.SourcePath,
+                        entry.PageIndex,
+                        strokes.ToList());
                     var persisted = persistence.LoadInkPageForFile(entry.SourcePath, entry.PageIndex) ?? new List<InkStrokeData>();
-                    if (string.Equals(hashProvider(strokes), hashProvider(persisted), StringComparison.Ordinal))
+                    if (persistedSuccessfully
+                        && string.Equals(hashProvider(strokes), hashProvider(persisted), StringComparison.Ordinal))
                     {
                         keysToRemove.Add(pair.Key);
                         removedEntries[pair.Key] = entry;
@@ -200,6 +212,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
     /// </summary>
     public void FlushPending()
     {
+        var disposeTimer = false;
         lock (_pendingGate)
         {
             if (Volatile.Read(ref _disposed) != 0)
@@ -207,27 +220,23 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 return;
             }
 
-            // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
-            // 重新调度按防抖间隔延后重试，不做紧密循环。整个遍历持有生命周期锁，
-            // 使 Dispose 不会在刷盘尾部与新的调度交错。
-            var paths = _pendingByWalPath.Keys.ToArray();
-            foreach (var walPath in paths)
+            FlushPendingCore(scheduleRetry: true);
+            if (Volatile.Read(ref _disposeRequested) != 0 && _pendingByWalPath.Count == 0)
             {
-                MergePendingToDiskCore(walPath);
+                Volatile.Write(ref _disposed, 1);
+                disposeTimer = true;
             }
+        }
 
-            // 合并失败的路径也会在这里获得下一次重试机会。由于整个过程持锁，
-            // 不再存在“清标志与新 Upsert 交错”而漏调度的窗口。
-            Volatile.Write(ref _flushScheduled, 0);
-            if (_pendingByWalPath.Count > 0)
-            {
-                ScheduleFlush();
-            }
+        if (disposeTimer)
+        {
+            _flushTimer.Dispose();
         }
     }
 
     public void Dispose()
     {
+        var disposeTimer = false;
         lock (_pendingGate)
         {
             if (Volatile.Read(ref _disposed) != 0)
@@ -235,12 +244,56 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 return;
             }
 
-            FlushPending();
-            Volatile.Write(ref _disposed, 1);
+            for (var attempt = 1; attempt <= DisposeFlushRetryCount; attempt++)
+            {
+                // Do not mark the service disposed until every pending entry is durable.
+                // A locked WAL must remain retryable after this call returns.
+                FlushPendingCore(scheduleRetry: false);
+                if (_pendingByWalPath.Count == 0)
+                {
+                    Volatile.Write(ref _disposed, 1);
+                    disposeTimer = true;
+                    break;
+                }
+
+            }
+
+            if (!disposeTimer)
+            {
+                Volatile.Write(ref _disposeRequested, 1);
+                // Keep the timer alive so an external file lock can be released and
+                // the pending snapshot can become durable without a new UI action.
+                ScheduleFlush();
+                Debug.WriteLine(
+                    $"[InkWAL] dispose deferred; pending paths remain retryable count={_pendingByWalPath.Count}");
+            }
         }
 
-        _flushTimer.Dispose();
-        GC.SuppressFinalize(this);
+        if (disposeTimer)
+        {
+            _flushTimer.Dispose();
+            GC.SuppressFinalize(this);
+        }
+    }
+
+    private void FlushPendingCore(bool scheduleRetry)
+    {
+        // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
+        // 重新调度按防抖间隔延后重试，不做紧密循环。整个遍历持有生命周期锁，
+        // 使 Dispose 不会在刷盘尾部与新的调度交错。
+        var paths = _pendingByWalPath.Keys.ToArray();
+        foreach (var walPath in paths)
+        {
+            MergePendingToDiskCore(walPath);
+        }
+
+        // 合并失败的路径也会在这里获得下一次重试机会。由于整个过程持锁，
+        // 不再存在“清标志与新 Upsert 交错”而漏调度的窗口。
+        Volatile.Write(ref _flushScheduled, 0);
+        if (scheduleRetry && _pendingByWalPath.Count > 0)
+        {
+            ScheduleFlush();
+        }
     }
 
     private void ScheduleFlush()

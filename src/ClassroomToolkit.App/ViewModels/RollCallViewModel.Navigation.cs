@@ -239,12 +239,18 @@ public sealed partial class RollCallViewModel
         }
     }
 
-    public void SaveState()
+    public bool SaveState()
     {
-        if (_workbook == null || !_canPersistWorkbook) return;
+        // 没有数据或已明确进入只读降级时没有可写目标；调用方只应把真实写入
+        // 失败视为需要重试的错误，避免关闭窗口时对既知只读会话无限阻塞。
+        if (_workbook == null || !_canPersistWorkbook)
+        {
+            return true;
+        }
+
         StoreCurrentState();
 
-        _ = SafeActionExecutionExecutor.TryExecute(
+        return SafeActionExecutionExecutor.TryExecute(
             () => _workbookUseCase.Save(_dataPath, _workbook, _classStates),
             ex => SafeActionExecutionExecutor.TryExecute(
                 () => DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}"),

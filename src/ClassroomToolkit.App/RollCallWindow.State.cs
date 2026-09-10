@@ -48,8 +48,7 @@ public partial class RollCallWindow
         {
             return;
         }
-        _rollStateDirty = false;
-        _viewModel.SaveState();
+        TrySaveRollStateNow();
     }
 
     public void ApplySettings(AppSettings settings, bool updatePhoto = true)
@@ -126,21 +125,20 @@ public partial class RollCallWindow
         _settingsSaveTimer.Start();
     }
 
-    private void PersistSettings()
+    private bool PersistSettings()
     {
         if (!_settingsSnapshotApplied)
         {
             System.Diagnostics.Debug.WriteLine(
                 "RollCallWindow: Skip PersistSettings because settings snapshot has not been applied yet.");
-            return;
+            return true;
         }
 
         _settingsSaveTimer.Stop();
-        _settingsSaveDirty = false;
         CaptureWindowBounds();
         RollCallSettingsApplier.Apply(_settings, BuildPatchFromViewModel());
         ApplyTransientRollSettings();
-        SaveSettingsSafe();
+        return SaveSettingsWithRetry();
     }
 
     private void ApplyTransientRollSettings()
@@ -167,11 +165,10 @@ public partial class RollCallWindow
         {
             return;
         }
-        _settingsSaveDirty = false;
-        SaveSettingsSafe();
+        SaveSettingsWithRetry();
     }
 
-    private void SaveSettingsSafe()
+    private bool SaveSettingsSafe()
     {
         Exception? saveFailure = null;
         var saved = SafeActionExecutionExecutor.TryExecute(
@@ -185,7 +182,7 @@ public partial class RollCallWindow
         if (saved)
         {
             SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
-            return;
+            return true;
         }
 
         if (saveFailure != null)
@@ -196,12 +193,43 @@ public partial class RollCallWindow
                 notificationPlan);
             if (!notificationPlan.ShouldNotify)
             {
-                return;
+                return false;
             }
             var owner = System.Windows.Application.Current?.MainWindow;
             var detail = $"设置保存失败：{saveFailure.Message}\n请检查权限或磁盘状态。";
             ShowRollCallInfoMessageSafe("settings-save-failed", detail, owner);
         }
+
+        return false;
+    }
+
+    private bool SaveSettingsWithRetry()
+    {
+        _settingsSaveTimer.Stop();
+        var saved = SaveSettingsSafe();
+        _settingsSaveDirty = !saved;
+        if (!saved && !_closingCleanupStarted)
+        {
+            _settingsSaveTimer.Start();
+        }
+
+        return saved;
+    }
+
+    private bool TrySaveRollStateNow()
+    {
+        var saved = _viewModel.SaveState();
+        if (saved)
+        {
+            _rollStateSaveTimer.Stop();
+            _rollStateDirty = false;
+            return true;
+        }
+
+        // 保留 dirty 并重新排队；失败回调可能只提示一次，但状态不能因此
+        // 被当作已落盘。
+        ScheduleRollStateSave();
+        return false;
     }
 
     private static RollCallSettingsPatch BuildPatchFromDialog(RollCallSettingsDialog dialog)
@@ -270,7 +298,7 @@ public partial class RollCallWindow
         {
             UpdatePhotoDisplay(forceHide: true);
             PersistSettings();
-            _viewModel.SaveState();
+            TrySaveRollStateNow();
             UpdateMinWindowSize();
             SuppressRollClicks(TimeSpan.FromMilliseconds(RollCallRuntimeDefaults.ClassSwitchSuppressMs));
             return;

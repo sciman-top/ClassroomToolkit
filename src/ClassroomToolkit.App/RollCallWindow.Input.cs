@@ -131,7 +131,7 @@ public partial class RollCallWindow
         }
         var patch = BuildPatchFromDialog(dialog);
         RollCallSettingsApplier.Apply(_settings, patch);
-        SaveSettingsSafe();
+        SaveSettingsWithRetry();
         ApplySettings(_settings, updatePhoto: false);
         if (System.Windows.Application.Current?.MainWindow is MainWindow mainWindow)
         {
@@ -371,7 +371,7 @@ public partial class RollCallWindow
         {
             _viewModel.SetRemotePresenterKey(dialog.SelectedKey);
             _settings.RemotePresenterKey = _viewModel.RemotePresenterKey;
-            SaveSettingsSafe();
+            SaveSettingsWithRetry();
             RestartKeyboardHook();
         }
     }

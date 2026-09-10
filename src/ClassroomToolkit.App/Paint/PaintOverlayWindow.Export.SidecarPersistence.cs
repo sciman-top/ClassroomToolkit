@@ -52,7 +52,13 @@ public partial class PaintOverlayWindow
                 }
 
                 var hash = ComputeInkHash(strokes);
-                PersistInkHistorySnapshot(sourcePath, pageIndex, strokes, persistence);
+                if (!PersistInkHistorySnapshot(sourcePath, pageIndex, strokes, persistence))
+                {
+                    localError = "persistence-reported-failure";
+                    TrackInkWalSnapshot(sourcePath, pageIndex, strokes, hash);
+                    return false;
+                }
+
                 var persistedStrokes = LoadInkHistorySnapshot(sourcePath, pageIndex, persistence);
                 var persistedHash = ComputeInkHash(persistedStrokes);
                 if (!string.Equals(hash, persistedHash, StringComparison.Ordinal))
@@ -226,11 +232,14 @@ public partial class PaintOverlayWindow
         return SafeActionExecutionExecutor.TryExecute(
             () =>
             {
-                PersistInkHistorySnapshot(
+                if (!PersistInkHistorySnapshot(
                     snapshot.SourcePath,
                     snapshot.PageIndex,
                     snapshot.Strokes,
-                    snapshot.Persistence);
+                    snapshot.Persistence))
+                {
+                    return false;
+                }
                 if (snapshot.Strokes.Count == 0 && _inkExport != null)
                 {
                     _inkExport.RemoveCompositeOutputsForPage(snapshot.SourcePath, snapshot.PageIndex);

@@ -5,6 +5,7 @@ namespace ClassroomToolkit.App.Paint;
 internal interface IWpsNavHookClient
 {
     bool Available { get; }
+    bool IsActive { get; }
     void SetInterceptEnabled(bool enabled);
     void SetBlockOnly(bool enabled);
     void SetInterceptKeyboard(bool enabled);
@@ -25,6 +26,7 @@ internal sealed class WpsNavHookClient : IWpsNavHookClient
     }
 
     public bool Available => _hook.Available;
+    public bool IsActive => _hook.IsActive;
 
     public void SetInterceptEnabled(bool enabled) => _hook.SetInterceptEnabled(enabled);
     public void SetBlockOnly(bool enabled) => _hook.SetBlockOnly(enabled);

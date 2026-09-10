@@ -219,6 +219,72 @@ public sealed class InkPersistenceServiceTests : IDisposable
     }
 
     [Fact]
+    public void SaveEmptyStrokes_ShouldReportFailureAndRetainSidecar_WhenSidecarIsLocked()
+    {
+        var filePath = CreateTempFile("locked-empty.png");
+        var originalStrokes = new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        };
+        _service.SaveInkForFile(filePath, 1, originalStrokes).Should().BeTrue();
+
+        var jsonPath = InkPersistenceService.GetJsonPath(filePath);
+        using (var lockStream = new FileStream(jsonPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>()).Should().BeFalse();
+            File.Exists(jsonPath).Should().BeTrue();
+        }
+
+        var restarted = new InkPersistenceService();
+        restarted.LoadInkPageForFile(filePath, 1).Should().ContainSingle();
+    }
+
+    [Fact]
+    public void LoadInk_ShouldReloadContent_WhenSidecarTimestampIsRestored()
+    {
+        var filePath = CreateTempFile("same-timestamp.png");
+        var originalStrokes = new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+        };
+        _service.SaveInkForFile(filePath, 1, originalStrokes).Should().BeTrue();
+        var jsonPath = InkPersistenceService.GetJsonPath(filePath);
+        var originalTimestamp = File.GetLastWriteTimeUtc(jsonPath);
+        _service.LoadInkPageForFile(filePath, 1)![0].ColorHex.Should().Be("#FF0000");
+
+        var replacement = new InkDocumentData
+        {
+            SourcePath = filePath,
+            Pages =
+            {
+                new InkPageData
+                {
+                    PageIndex = 1,
+                    SourcePath = filePath,
+                    Strokes =
+                    {
+                        new InkStrokeData { ColorHex = "#00FF00", BrushSize = 1.0, GeometryPath = "M 0 0 L 1 1" }
+                    }
+                }
+            }
+        };
+        File.WriteAllText(
+            jsonPath,
+            System.Text.Json.JsonSerializer.Serialize(
+                replacement,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                }));
+        File.SetLastWriteTimeUtc(jsonPath, originalTimestamp);
+
+        var reloaded = _service.LoadInkPageForFile(filePath, 1);
+
+        reloaded.Should().ContainSingle();
+        reloaded![0].ColorHex.Should().Be("#00FF00");
+    }
+
+    [Fact]
     public void SaveMultiplePages_ShouldMerge()
     {
         var filePath = CreateTempFile("lecture.pdf");

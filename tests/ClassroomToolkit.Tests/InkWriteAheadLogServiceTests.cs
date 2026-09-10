@@ -229,6 +229,38 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
     }
 
     [Fact]
+    public void Dispose_ShouldKeepPendingSnapshotRetryable_WhenFinalFlushIsLocked()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_dispose_locked.png");
+        File.WriteAllText(sourcePath, "x");
+        var originalStrokes = new List<InkStrokeData>
+        {
+            new() { Type = InkStrokeType.Shape, GeometryPath = "M0,0 L1,1", ColorHex = "#FF0000", Opacity = 255, BrushSize = 2 }
+        };
+        var replacementStrokes = new List<InkStrokeData>
+        {
+            new() { Type = InkStrokeType.Shape, GeometryPath = "M2,2 L3,3", ColorHex = "#00FF00", Opacity = 255, BrushSize = 3 }
+        };
+        _wal.Upsert(sourcePath, 1, originalStrokes, ComputeInkHash(originalStrokes));
+        _wal.FlushPending();
+
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        using (var lockStream = new FileStream(walPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            _wal.Upsert(sourcePath, 1, replacementStrokes, ComputeInkHash(replacementStrokes));
+            _wal.Dispose();
+        }
+
+        // Dispose could not discard the in-memory entry. Once the lock is released,
+        // the same service remains able to flush it and a restarted service can recover it.
+        _wal.FlushPending();
+        using var restarted = new InkWriteAheadLogService();
+        restarted.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(1);
+        ComputeInkHash(_persistence.LoadInkPageForFile(sourcePath, 1)!)
+            .Should().Be(ComputeInkHash(replacementStrokes));
+    }
+
+    [Fact]
     public async Task ConcurrentUpserts_ShouldPreserveEveryWalEntry()
     {
         const int entryCount = 32;
@@ -317,9 +349,9 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
             act.Should().NotThrow();
         }
 
-        // 解锁后重试成功：旧条目随空映射一起删除。
-        _wal.FlushPending();
-        File.Exists(walPath).Should().BeFalse();
+        // 解锁后由 Remove 自己安排的重试成功：旧条目随空映射一起删除。
+        SpinWait.SpinUntil(() => !File.Exists(walPath), TimeSpan.FromSeconds(3))
+            .Should().BeTrue();
 
         // 恢复流程不得回放旧笔画，也不得覆盖已持久化的新墨迹。
         var recovered = _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash);
@@ -394,6 +426,40 @@ public sealed class InkWriteAheadLogServiceTests : IDisposable
                     BrushSize = 4
                 }
             }));
+    }
+
+    [Fact]
+    public void RecoverDirectory_ShouldRetainWal_WhenSidecarSaveReportsFailureEvenIfReadbackIsEmpty()
+    {
+        var sourcePath = Path.Combine(_tempDir, "lesson_recovery_save_failure.png");
+        File.WriteAllText(sourcePath, "x");
+        var existingStrokes = new List<InkStrokeData>
+        {
+            new()
+            {
+                Type = InkStrokeType.Shape,
+                GeometryPath = "M1,1 L2,2",
+                ColorHex = "#FFFFFF",
+                Opacity = 255,
+                BrushSize = 2
+            }
+        };
+        _persistence.SaveInkForFile(sourcePath, 1, existingStrokes).Should().BeTrue();
+
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        _wal.Upsert(sourcePath, 1, Array.Empty<InkStrokeData>(), ComputeInkHash(Array.Empty<InkStrokeData>()));
+        _wal.FlushPending();
+
+        using (var sidecarLock = new FileStream(
+                   InkPersistenceService.GetJsonPath(sourcePath),
+                   FileMode.Open,
+                   FileAccess.ReadWrite,
+                   FileShare.None))
+        {
+            _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(0);
+            File.Exists(walPath).Should().BeTrue();
+            File.Exists(InkPersistenceService.GetJsonPath(sourcePath)).Should().BeTrue();
+        }
     }
 
     private static string ComputeInkHash(IReadOnlyList<InkStrokeData> strokes)

@@ -111,14 +111,27 @@ public sealed partial class WpsSlideshowNavigationHook
 
     public void Dispose()
     {
-        if (_disposed)
+        if (_disposed && !IsActive)
         {
             return;
         }
 
         _disposed = true;
-        Stop();
+        for (var attempt = 1; attempt <= MaxHookRetries; attempt++)
+        {
+            Stop();
+            if (!IsActive)
+            {
+                NavigationRequested = null;
+                GC.SuppressFinalize(this);
+                return;
+            }
+
+            // Keep the retry bounded and non-blocking. A residual hook remains
+            // observable through IsActive/LastError for the owning lifecycle to retry.
+        }
+
         NavigationRequested = null;
-        GC.SuppressFinalize(this);
+        Debug.WriteLine($"[WpsNavHook] Dispose deferred; residual hook remains active error={LastError}");
     }
 }

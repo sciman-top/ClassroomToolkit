@@ -527,7 +527,7 @@ public partial class MainWindow
         });
     }
 
-    private void SaveLauncherSettings()
+    private bool SaveLauncherSettings()
     {
         _settings.LauncherX = (int)Math.Round(Left);
         _settings.LauncherY = (int)Math.Round(Top);
@@ -536,6 +536,6 @@ public partial class MainWindow
             _settings.LauncherBubbleX = (int)Math.Round(_bubbleWindow.Left);
             _settings.LauncherBubbleY = (int)Math.Round(_bubbleWindow.Top);
         }
-        SaveSettings();
+        return SaveSettings();
     }
 }

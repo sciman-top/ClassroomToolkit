@@ -31,7 +31,8 @@ public partial class PhotoOverlayWindow : Window
     private CancellationTokenSource? _photoLoadCts;
     private string? _cachedBitmapPath;
     private BitmapSource? _cachedBitmap;
-    private DateTime _cachedBitmapModifiedUtc;
+    private PhotoFileFingerprint _cachedBitmapFingerprint;
+    private bool _hasCachedBitmapFingerprint;
     private Window? _zOrderAnchor;
     private static readonly SolidColorBrush OpaqueFrameGuardBrush = CreateOpaqueFrameGuardBrush();
 
@@ -92,18 +93,9 @@ public partial class PhotoOverlayWindow : Window
             "show-start",
             $"req={requestId} path={IOPath.GetFileName(path)} studentId={normalizedStudentId ?? string.Empty} duration={durationSeconds} same={isShowingSamePhoto} visible={IsVisible} loading={LoadingMask.Visibility}");
 
-        if (isShowingSamePhoto && TryGetCachedBitmap(path, out _))
+        if (isShowingSamePhoto && HasCachedBitmapForPath(path))
         {
-            Opacity = 1.0;
-            _currentPhotoPath = path;
-            _currentStudentId = normalizedStudentId;
-            UpdateStudentName(studentName, visible: !string.IsNullOrWhiteSpace(studentName));
-            UpdateOverlayPositions();
-            UpdateAutoCloseTimer(durationSeconds);
-            EnsureOverlayVisible();
-            PhotoOverlayDiagnostics.Log(
-                "show-reuse",
-                $"req={requestId} path={IOPath.GetFileName(path)} duration={durationSeconds} timer=reset visible={IsVisible}");
+            QueueCachedBitmapValidation(path, normalizedStudentId, studentName, durationSeconds, requestId);
             return;
         }
 
@@ -179,6 +171,15 @@ public partial class PhotoOverlayWindow : Window
                     "load-start",
                     $"req={requestId} path={IOPath.GetFileName(path)}");
                 var bitmap = await LoadBitmapAsync(path);
+                PhotoFileFingerprint? loadedFingerprint = null;
+                if (bitmap != null)
+                {
+                    loadedFingerprint = await Task.Run(
+                        () => PhotoFileFingerprintReader.TryRead(path, out var fingerprint)
+                            ? fingerprint
+                            : (PhotoFileFingerprint?)null,
+                        cancellationToken);
+                }
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return;
@@ -213,11 +214,16 @@ public partial class PhotoOverlayWindow : Window
                         return;
                     }
 
-                    if (bitmap != null)
+                    if (bitmap != null && loadedFingerprint.HasValue)
                     {
                         _cachedBitmapPath = path;
                         _cachedBitmap = bitmap;
-                        _cachedBitmapModifiedUtc = TryGetFileModifiedUtc(path);
+                        _cachedBitmapFingerprint = loadedFingerprint.Value;
+                        _hasCachedBitmapFingerprint = true;
+                    }
+                    else if (bitmap != null)
+                    {
+                        ClearCachedBitmapReference();
                     }
                     PhotoOverlayDiagnostics.Log(
                         "apply-ui",
@@ -406,21 +412,19 @@ public partial class PhotoOverlayWindow : Window
 
     private bool TryGetCachedBitmap(string path, out BitmapSource bitmap)
     {
-        if (_cachedBitmap != null
-            && !string.IsNullOrWhiteSpace(_cachedBitmapPath)
-            && string.Equals(_cachedBitmapPath, path, StringComparison.OrdinalIgnoreCase))
+        if (HasCachedBitmapForPath(path))
         {
-            // 路径相同不代表内容相同：老师可能课中替换照片文件，按 mtime 校验缓存有效性。
-            var currentModifiedUtc = TryGetFileModifiedUtc(path);
-            if (currentModifiedUtc == _cachedBitmapModifiedUtc)
+            // 路径相同不代表内容相同：老师可能课中替换照片文件，按稳定文件指纹
+            // 校验缓存有效性。该方法只在明确的 ShowPhoto 缓存复用路径调用，不在绘制帧内。
+            if (_hasCachedBitmapFingerprint
+                && PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
+                && _cachedBitmapFingerprint.Matches(currentFingerprint))
             {
-                bitmap = _cachedBitmap;
+                bitmap = _cachedBitmap!;
                 return true;
             }
 
-            _cachedBitmapPath = null;
-            _cachedBitmap = null;
-            _cachedBitmapModifiedUtc = DateTime.MinValue;
+            ClearCachedBitmapReference();
             PhotoOverlayDiagnostics.Log(
                 "cache-stale",
                 IOPath.GetFileName(path));
@@ -430,18 +434,85 @@ public partial class PhotoOverlayWindow : Window
         return false;
     }
 
-    private static DateTime TryGetFileModifiedUtc(string path)
+    private bool HasCachedBitmapForPath(string path)
     {
-        try
-        {
-            return File.GetLastWriteTimeUtc(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // 读不出时间戳视为缓存失效（返回 MinValue 不等任何记录值），走重新加载路径。
-            Debug.WriteLine($"[PhotoOverlayWindow] file mtime read failed: {path} {ex.Message}");
-            return DateTime.MinValue;
-        }
+        return _cachedBitmap != null
+            && _hasCachedBitmapFingerprint
+            && !string.IsNullOrWhiteSpace(_cachedBitmapPath)
+            && string.Equals(_cachedBitmapPath, path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void QueueCachedBitmapValidation(
+        string path,
+        string? normalizedStudentId,
+        string? studentName,
+        int durationSeconds,
+        int requestId)
+    {
+        var expectedFingerprint = _cachedBitmapFingerprint;
+        Action<Exception> onValidationError = ex => Debug.WriteLine(
+            $"[PhotoOverlayWindow] cached bitmap validation failed: {ex.GetType().Name} - {ex.Message}");
+        _ = SafeTaskRunner.Run(
+            "PhotoOverlayWindow.ValidateCachedBitmap",
+            async cancellationToken =>
+            {
+                var isValid = PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
+                    && expectedFingerprint.Matches(currentFingerprint);
+                if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+                {
+                    return;
+                }
+
+                try
+                {
+                    await Dispatcher.InvokeAsync(
+                        () =>
+                        {
+                            if (requestId != Volatile.Read(ref _photoLoadRequestId))
+                            {
+                                return;
+                            }
+
+                            if (!isValid)
+                            {
+                                ClearCachedBitmapReference();
+                                PhotoOverlayDiagnostics.Log(
+                                    "cache-stale",
+                                    IOPath.GetFileName(path));
+                                ShowPhoto(path, studentName ?? string.Empty, normalizedStudentId ?? string.Empty, durationSeconds, _zOrderAnchor);
+                                return;
+                            }
+
+                            Opacity = 1.0;
+                            _currentPhotoPath = path;
+                            _currentStudentId = normalizedStudentId;
+                            UpdateStudentName(studentName, visible: !string.IsNullOrWhiteSpace(studentName));
+                            UpdateOverlayPositions();
+                            UpdateAutoCloseTimer(durationSeconds);
+                            EnsureOverlayVisible();
+                            PhotoOverlayDiagnostics.Log(
+                                "show-reuse",
+                                $"req={requestId} path={IOPath.GetFileName(path)} duration={durationSeconds} timer=reset visible={IsVisible}");
+                        },
+                        DispatcherPriority.Normal,
+                        cancellationToken);
+                }
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    Debug.WriteLine(
+                        $"[PhotoOverlayWindow] cached bitmap validation dispatch failed: {ex.GetType().Name} - {ex.Message}");
+                }
+            },
+            onValidationError,
+            CancellationToken.None);
+    }
+
+    private void ClearCachedBitmapReference()
+    {
+        _cachedBitmapPath = null;
+        _cachedBitmap = null;
+        _cachedBitmapFingerprint = default;
+        _hasCachedBitmapFingerprint = false;
     }
 
     private void ApplyLoadedBitmap(
