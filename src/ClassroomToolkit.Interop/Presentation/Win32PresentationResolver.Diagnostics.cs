@@ -24,8 +24,14 @@ public sealed partial class Win32PresentationResolver
     }
 
     [Conditional("DEBUG")]
-    private static void DebugFinalSelection(bool wpsValid, bool officeValid, int officeScore)
+    private static void DebugFinalSelection(
+        bool wpsValid,
+        int wpsScore,
+        bool officeValid,
+        int officeScore)
     {
-        Debug.WriteLine($"[Resolver] Final: wpsValid={wpsValid}, officeValid={officeValid}, officeScore={officeScore}");
+        Debug.WriteLine(
+            $"[Resolver] Final: wpsValid={wpsValid}, wpsScore={wpsScore}, "
+            + $"officeValid={officeValid}, officeScore={officeScore}");
     }
 }

@@ -59,16 +59,38 @@ public sealed partial class Win32PresentationResolver
             },
             IntPtr.Zero);
 
-        DebugFinalSelection(wpsTarget.IsValid, officeTarget.IsValid, officeScore);
-        if (wpsTarget.IsValid)
+        DebugFinalSelection(wpsTarget.IsValid, wpsScore, officeTarget.IsValid, officeScore);
+        return SelectBestTarget(wpsTarget, wpsScore, officeTarget, officeScore);
+    }
+
+    internal static PresentationTarget SelectBestTarget(
+        PresentationTarget wpsTarget,
+        int wpsScore,
+        PresentationTarget officeTarget,
+        int officeScore)
+    {
+        if (!wpsTarget.IsValid)
+        {
+            return officeTarget.IsValid ? officeTarget : PresentationTarget.Empty;
+        }
+
+        if (!officeTarget.IsValid)
         {
             return wpsTarget;
         }
-        if (officeTarget.IsValid)
+
+        if (wpsScore > officeScore)
+        {
+            return wpsTarget;
+        }
+
+        if (officeScore > wpsScore)
         {
             return officeTarget;
         }
 
+        // Equal evidence does not identify the intended application.  Returning
+        // no target is safer than silently sending a page-turn to the wrong app.
         return PresentationTarget.Empty;
     }
 
